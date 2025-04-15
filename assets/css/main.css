@@ -1,0 +1,6 @@
+@import "tailwindcss" theme(static);
+@import "@nuxt/ui";
+
+:root {
+    --ui-radius: var(--radius-lg);
+}
