@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
-import { authClient } from '~/utils/auth-client'
+import { authClient } from '~/server/utils/auth-client'
 
 const emit = defineEmits(['admin-created'])
 
