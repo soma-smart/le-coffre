@@ -3,7 +3,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 import { authClient } from '~/server/utils/auth-client'
 
-const emit = defineEmits(['admin-created'])
+const emit = defineEmits(['adminCreated'])
 
 definePageMeta({
   layout: 'centered',
@@ -43,21 +43,21 @@ async function createAdminAccount() {
   const result = schema.safeParse(state)
   if (result.success) {
     const { name, email, password } = result.data
-    const { data, error } = await authClient.signUp.email({
+    await authClient.signUp.email({
       email,
       password,
       name,
     }, {
-      onRequest: (ctx) => {
+      onRequest: (_ctx) => {
         // show loading
       },
-      onSuccess: (ctx) => {
+      onSuccess: (_ctx) => {
         console.log('Admin account created')
-        emit('admin-created')
+        emit('adminCreated')
         toast.add({ title: 'Success', description: 'Admin account created successfully.', color: 'success' })
       },
       onError: (ctx) => {
-        console.error('Unexpected error:', error)
+        console.error('Unexpected error:', ctx)
         toast.add({ title: 'Error', description: 'An unexpected error occurred. Please try again.', color: 'error' })
       },
     })

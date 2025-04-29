@@ -24,6 +24,11 @@ export default antfu({
       ],
       'n/no-missing-import': 'off', // doesn't like ts imports
       'n/no-process-exit': 'off',
-      '@typescript-eslint/no-explicit-any': 'off', // we use any in some places
+      'node/no-unsupported-features/node-builtins': [
+        'error',
+        {
+          ignores: ['crypto', 'localStorage', 'navigator'], // Add exceptions here
+        },
+      ],
     },
   })

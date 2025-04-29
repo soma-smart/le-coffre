@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
     result.data.threshold,
   )
 
-  const encryptedEncryptionKey = encryptKey(encryptionKey, randomMasterKey)
+  const _encryptedEncryptionKey = encryptKey(encryptionKey, randomMasterKey)
   // TODO: save encryptedEncryptionKey to db
 
   // convert Uint8Array to hex

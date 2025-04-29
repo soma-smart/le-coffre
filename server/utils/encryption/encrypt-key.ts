@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import crypto from 'node:crypto'
 
 export function encryptKey(encryptionKey: Uint8Array, masterKey: Uint8Array) {

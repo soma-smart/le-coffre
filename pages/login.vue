@@ -26,17 +26,17 @@ const state = reactive<Schema>({
 
 const toast = useToast()
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-  const { data, error } = await authClient.signIn.email({
+  await authClient.signIn.email({
     email: event.data.email,
     password: event.data.password,
     callbackURL: '/',
     rememberMe: event.data.rememberMe,
   }, {
     // callbacks
-    onRequest: (ctx) => {
+    onRequest: (_ctx) => {
       // show loading
     },
-    onSuccess: (ctx) => {
+    onSuccess: (_ctx) => {
       console.log('Login successful')
       toast.add({ title: 'Success', description: 'Logged in successfully.', color: 'success' })
     },
