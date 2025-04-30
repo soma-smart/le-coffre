@@ -1,10 +1,9 @@
-import { db } from '~/utils/database'
-import * as schema from '~/server/database/schema'
 import { eq } from 'drizzle-orm'
+import * as schema from '~/server/database/schema'
+import { db } from '~/utils/database'
 import { encrypt } from '../server/utils/encryption/encrypt-password'
 
-export const useDatabase = () => {
-
+export function useDatabase() {
   const getUserById = async (id: string) => {
     return await db.select().from(schema.user).where(eq(schema.user.id, id)).limit(1)
   }
@@ -25,7 +24,7 @@ export const useDatabase = () => {
 
     return await db.insert(schema.passwords).values({
       value: encrypted,
-      iv: JSON.stringify(iv)
+      iv: JSON.stringify(iv),
     }).returning()
   }
 
@@ -35,6 +34,6 @@ export const useDatabase = () => {
     getPasswords,
     getFolders,
     createPassword,
-    schema
+    schema,
   }
 }
