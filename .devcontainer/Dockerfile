@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install pre-commit
+
 # Verify installations
 RUN node --version && npm --version && python3 --version && pip3 --version
 

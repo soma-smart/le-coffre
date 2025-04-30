@@ -41,13 +41,5 @@
     "@types/better-sqlite3": "^7.6.13",
     "drizzle-kit": "^0.31.0",
     "node-gyp": "^11.2.0"
-  },
-  "simple-git-hooks": {
-    "pre-commit": "npx lint-staged --concurrent false"
-  },
-  "lint-staged": {
-    "*.{ts,js,json,md,yaml}": [
-      "eslint --fix"
-    ]
   }
 }
