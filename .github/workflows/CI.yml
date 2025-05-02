@@ -29,6 +29,6 @@ jobs:
       - name: build
         if: (${{ success() }} || ${{ failure() }})
         run: npm run build
-      # - name: test
-      #   if: (${{ success() }} || ${{ failure() }})
-      #   run: npm test:self
+      - name: test
+        if: (${{ success() }} || ${{ failure() }})
+        run: npm run test
