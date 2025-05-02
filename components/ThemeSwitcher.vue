@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import colors from 'tailwindcss/colors'
 import { omit } from '#ui/utils'
+import colors from 'tailwindcss/colors'
 
 const appConfig = useAppConfig()
 const colorMode = useColorMode()
@@ -13,7 +13,7 @@ const neutral = computed({
   set(option) {
     appConfig.ui.colors.neutral = option
     window.localStorage.setItem('nuxt-ui-neutral', appConfig.ui.colors.neutral)
-  }
+  },
 })
 
 const colorsToOmit = ['inherit', 'current', 'transparent', 'black', 'white', ...neutralColors]
@@ -26,7 +26,7 @@ const primary = computed({
     appConfig.ui.colors.primary = option
     window.localStorage.setItem('nuxt-ui-primary', appConfig.ui.colors.primary)
     setBlackAsPrimary(false)
-  }
+  },
 })
 
 const radiuses = [0, 0.125, 0.25, 0.375, 0.5]
@@ -35,16 +35,16 @@ const radius = computed({
     return appConfig.theme.radius
   },
   set(option) {
-    //TODO: setting radius here does not work
+    // TODO: setting radius here does not work
     appConfig.theme.radius = option
     window.localStorage.setItem('nuxt-ui-radius', String(appConfig.theme.radius))
-  }
+  },
 })
 
 const modes = [
   { label: 'light', icon: 'i-lucide-sun' },
   { label: 'dark', icon: 'i-lucide-moon' },
-  { label: 'system', icon: 'i-lucide-sun-moon' }
+  { label: 'system', icon: 'i-lucide-sun-moon' },
 ]
 const mode = computed({
   get() {
@@ -52,7 +52,7 @@ const mode = computed({
   },
   set(option) {
     colorMode.preference = option
-  }
+  },
 })
 
 function setBlackAsPrimary(value: boolean) {
@@ -64,8 +64,10 @@ function setBlackAsPrimary(value: boolean) {
 <template>
   <UPopover :ui="{ content: 'w-72 px-6 py-4 flex flex-col gap-4' }">
     <template #default="{ open }">
-      <UButton icon="i-lucide-swatch-book" color="neutral" :variant="open ? 'soft' : 'ghost'" square
-        aria-label="Color picker" :ui="{ leadingIcon: 'text-(--ui-primary)' }" />
+      <UButton
+        icon="i-lucide-swatch-book" color="neutral" :variant="open ? 'soft' : 'ghost'" square
+        aria-label="Color picker" :ui="{ leadingIcon: 'text-(--ui-primary)' }"
+      />
     </template>
 
     <template #content>
@@ -81,8 +83,10 @@ function setBlackAsPrimary(value: boolean) {
             </template>
           </ThemePickerButton>
 
-          <ThemePickerButton v-for="color in primaryColors" :key="color" :label="color" :chip="color"
-            :selected="!appConfig.theme.blackAsPrimary && primary === color" @click="primary = color" />
+          <ThemePickerButton
+            v-for="color in primaryColors" :key="color" :label="color" :chip="color"
+            :selected="!appConfig.theme.blackAsPrimary && primary === color" @click="primary = color"
+          />
         </div>
       </fieldset>
 
@@ -92,9 +96,11 @@ function setBlackAsPrimary(value: boolean) {
         </legend>
 
         <div class="grid grid-cols-3 gap-1 -mx-2">
-          <ThemePickerButton v-for="color in neutralColors" :key="color" :label="color"
+          <ThemePickerButton
+            v-for="color in neutralColors" :key="color" :label="color"
             :chip="color === 'neutral' ? 'old-neutral' : color" :selected="neutral === color"
-            @click="neutral = color" />
+            @click="neutral = color"
+          />
         </div>
       </fieldset>
 
@@ -104,8 +110,10 @@ function setBlackAsPrimary(value: boolean) {
         </legend>
 
         <div class="grid grid-cols-5 gap-1 -mx-2">
-          <ThemePickerButton v-for="r in radiuses" :key="r" :label="String(r)" class="justify-center px-0"
-            :selected="radius === r" @click="radius = r" />
+          <ThemePickerButton
+            v-for="r in radiuses" :key="r" :label="String(r)" class="justify-center px-0"
+            :selected="radius === r" @click="radius = r"
+          />
         </div>
       </fieldset>
 
@@ -115,8 +123,10 @@ function setBlackAsPrimary(value: boolean) {
         </legend>
 
         <div class="grid grid-cols-3 gap-1 -mx-2">
-          <ThemePickerButton v-for="m in modes" :key="m.label" v-bind="m" :selected="colorMode.preference === m.label"
-            @click="mode = m.label" />
+          <ThemePickerButton
+            v-for="m in modes" :key="m.label" v-bind="m" :selected="colorMode.preference === m.label"
+            @click="mode = m.label"
+          />
         </div>
       </fieldset>
     </template>

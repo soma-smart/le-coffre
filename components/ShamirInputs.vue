@@ -4,14 +4,14 @@ import * as z from 'zod'
 const schema = z
   .object({
     shares: z.number().min(2, 'Must be at least 2').max(16, 'Must be at most 16'),
-    threshold: z.number().min(2, 'Must be at least 2').max(16, 'Must be at most 16')
+    threshold: z.number().min(2, 'Must be at least 2').max(16, 'Must be at most 16'),
   })
 
 type Schema = z.output<typeof schema>
 
 const state = reactive<Schema>({
   shares: 5,
-  threshold: 3
+  threshold: 3,
 })
 
 watch(
@@ -20,7 +20,7 @@ watch(
     if (state.threshold && newShares && state.threshold > newShares) {
       state.threshold = newShares
     }
-  }
+  },
 )
 
 watch(
@@ -29,7 +29,7 @@ watch(
     if (state.shares && newThreshold && newThreshold > state.shares) {
       state.shares = newThreshold
     }
-  }
+  },
 )
 
 const isValidSSSConfig = computed(() => {
@@ -39,9 +39,8 @@ const isValidSSSConfig = computed(() => {
 
 defineExpose({
   isValidSSSConfig,
-  state
+  state,
 })
-
 </script>
 
 <template>
@@ -49,11 +48,11 @@ defineExpose({
     <UForm :schema="schema" :state="state" class="space-y-4">
       <div class="flex">
         <UFormField label="Number of shares" name="shares" class="flex-1 mr-2">
-        <UInputNumber v-model="state.shares" :min="2" :max="16" class="w-full" />
+          <UInputNumber v-model="state.shares" :min="2" :max="16" class="w-full" />
         </UFormField>
 
         <UFormField label="Threshold" name="threshold" class="flex-1">
-        <UInputNumber v-model="state.threshold" :min="2" :max="16" class="w-full" />
+          <UInputNumber v-model="state.threshold" :min="2" :max="16" class="w-full" />
         </UFormField>
       </div>
       <!-- Icons representing threshold and remaining shares -->
@@ -78,7 +77,7 @@ defineExpose({
         <span> to reconstruct the key.</span>
         <span> You can lose </span>
         <span class="font-bold text-red-500">
-            {{ (state.shares ?? 0) - (state.threshold ?? 0) }}
+          {{ (state.shares ?? 0) - (state.threshold ?? 0) }}
         </span>
         <span> parts.</span>
       </p>

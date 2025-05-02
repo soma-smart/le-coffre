@@ -15,16 +15,16 @@ const items = ref<EntryModel[][]>([
           icon: 'i-lucide-house',
           children: [
             { label: 'Overview', icon: 'i-lucide-book' },
-            { label: 'Getting started', icon: 'i-lucide-rocket' }
-          ]
+            { label: 'Getting started', icon: 'i-lucide-rocket' },
+          ],
         },
         {
           label: 'Installation',
-          icon: 'i-lucide-cloud-download'
-        }
-      ]
-    }
-  ]
+          icon: 'i-lucide-cloud-download',
+        },
+      ],
+    },
+  ],
 ])
 </script>
 

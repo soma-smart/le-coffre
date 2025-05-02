@@ -1,15 +1,15 @@
-import { authClient } from "~/utils/auth-client"
+import { authClient } from '~/server/utils/auth-client'
 
-export const signOut = async () => {
+export async function signOut() {
   const router = useRouter()
   const toast = useToast()
 
   await authClient.signOut({
     fetchOptions: {
       onSuccess: () => {
-        router.push("/login")
+        router.push('/login')
         toast.add({ title: 'Logout', description: 'You have been logged out.', color: 'success' })
       },
     },
-  });
+  })
 }

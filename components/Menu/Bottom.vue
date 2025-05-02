@@ -8,14 +8,14 @@ const items = ref<NavigationMenuItem[][]>([
       icon: 'i-simple-icons-github',
       badge: '3.8k',
       to: '#',
-      target: '_blank'
+      target: '_blank',
     },
     {
       label: 'Help',
       icon: 'i-lucide-circle-help',
-      disabled: true
-    }
-  ]
+      disabled: true,
+    },
+  ],
 ])
 </script>
 

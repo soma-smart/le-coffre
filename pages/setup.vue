@@ -2,15 +2,14 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'centered'
+  layout: 'centered',
 })
 
 useHead({
-  title: 'Setup'
+  title: 'Setup',
 })
-
 </script>
 
 <template>
-    <SetupStepper />
+  <SetupStepper />
 </template>

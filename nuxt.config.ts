@@ -5,8 +5,8 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
-      BETTER_AUTH_URL: "http://localhost:3000"
-    }
+      BETTER_AUTH_URL: 'http://localhost:3000',
+    },
   },
-  devtools: { enabled: true }
+  devtools: { enabled: true },
 })

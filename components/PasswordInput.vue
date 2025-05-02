@@ -1,18 +1,18 @@
 <script setup lang="ts">
-const toast = useToast()
-
 const props = withDefaults(defineProps<{
   modelValue: string
   disabled?: boolean
   copyButton?: boolean
 }>(), {
   disabled: false,
-  copyButton: true
+  copyButton: true,
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
 }>()
+
+const toast = useToast()
 
 const show = ref(false)
 const copied = ref(false)
@@ -30,8 +30,8 @@ function copyToClipboard() {
   navigator.clipboard.writeText(inputValue.value)
   copied.value = true
   toast.add({
-    title: "Password copied",
-    description: "The password has been copied in the clipboard"
+    title: 'Password copied',
+    description: 'The password has been copied in the clipboard',
   })
 }
 </script>
@@ -69,7 +69,6 @@ function copyToClipboard() {
       size="sm"
       :icon="copied ? 'i-lucide-copy-check' : 'i-lucide-copy'"
       @click="copyToClipboard"
-    >
-    </UButton>
+    />
   </div>
 </template>

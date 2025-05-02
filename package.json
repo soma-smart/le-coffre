@@ -1,28 +1,45 @@
 {
   "name": "nuxt-app",
-  "private": true,
   "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "typecheck": "tsc",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@antfu/eslint-config": "^4.12.0",
     "@nuxt/image": "^1.10.0",
     "@nuxt/ui": "^3.0.2",
-    "@types/better-sqlite3": "^7.6.13",
     "better-auth": "^1.2.6",
     "better-sqlite3": "^11.9.1",
+    "drizzle-orm": "^0.43.1",
+    "eslint": "^9.25.1",
+    "eslint-plugin-n": "^17.17.0",
+    "lint-staged": "^15.5.1",
     "nuxt": "^3.16.2",
     "shamir-secret-sharing": "^0.0.4",
     "sharp": "^0.34.1",
+    "tailwindcss": "^4.1.4",
+    "typecheck": "^0.1.2",
     "vue": "^3.5.13",
-    "vue-router": "^4.5.0"
+    "vue-router": "^4.5.0",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.35",
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.31.0",
     "node-gyp": "^11.2.0"
   }
 }

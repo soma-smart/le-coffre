@@ -9,13 +9,18 @@ Le Coffre uses the following security measures to ensure the safety of your pass
 2. This master key serve to encrypt the encryption key.
 3. Each password is uniquely salted with a random 256-byte key generated at the time of password creation and encrypted using the encryption key.
 
-
 ## Init
 1. Shamir process starts.
 2. User is invited to create an admin account (mail, password, name).
 3. Once completed, user is redirected to the admin panel where the user can setup providers, manage users,
 password entries...
 
+## ORM
+
+When changing the database schema, you need to regenerate the migration file:
+```bash
+npx drizzle-kit generate
+```
 
 ## TODO
 - [ ] Generate encryption key when master key is created
@@ -34,19 +39,16 @@ password entries...
 - [ ] Allow regeneration of Shamir shares / encryption key generation and reencryption of all passwords
 - [ ] Allow import/export of passwords from other password managers (Keepass, CSV, JSON, etc.)
 
-
 ## Library used
 - Nuxt
 - Nuxt UI
 - Better Auth
 - shamir-secret-sharing
 
-
 ## Production deployment
 
 1. Behind a reverse proxy (nginx, caddy, etc.) with SSL termination.
 2. Use the hardened Docker image provided.
-
 
 ## Security considerations
 
@@ -61,8 +63,6 @@ See: https://github.com/hashicorp/vault/issues/1446 for comparable issue.
 6. Consider using a web application firewall (WAF) to protect the application from common web-based attacks, such as SQL injection and cross-site scripting (XSS).
 7. Limit the number of users who have administrative access to the application, and regularly review user permissions to ensure that only authorized users have access to sensitive data.
 8. Limit access to the application to trusted IP addresses / networks, and use a VPN or other secure connection method to access the application remotely.
-
-
 
 ## Setup
 
@@ -133,4 +133,3 @@ yarn preview
 # bun
 bun run preview
 ```
-
