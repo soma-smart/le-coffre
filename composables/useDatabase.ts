@@ -1,19 +1,5 @@
-import * as schema from '~/server/database/schema'
 import { db } from '~/utils/database'
-import { encrypt } from '../server/utils/encryption/encrypt-password'
 
 export function useDatabase() {
   return db
-}
-
-export async function createPassword(value: string) {
-  // TODO: getEncryptionKey saved in memory
-  const encryptionKey = new Uint8Array(32)
-
-  const { encrypted, iv } = encrypt(value, encryptionKey)
-
-  return await db.insert(schema.password).values({
-    value: encrypted,
-    iv: JSON.stringify(iv),
-  }).returning()
 }
