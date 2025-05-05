@@ -15,7 +15,8 @@
     "lint:fix": "eslint --fix .",
     "typecheck": "tsc",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test:unit": "vitest"
   },
   "dependencies": {
     "@antfu/eslint-config": "^4.12.0",
