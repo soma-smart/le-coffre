@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import { describe, expect, it } from 'vitest'
 
-import { encryptKey } from './server/utils/encryption/encrypt-key'
+import { encryptKey } from '~/server/utils/encryption/encrypt-key'
 
 // filepath: server/utils/encryption/encrypt-key.test.ts
 
