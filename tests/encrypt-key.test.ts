@@ -1,10 +1,12 @@
-import { describe, expect, test } from 'vitest'
-import { encryptKey } from 'server/utils/encryption/encrypt-key'
+import { Buffer } from 'node:buffer'
+import { describe, expect, it } from 'vitest'
+
+import { encryptKey } from './server/utils/encryption/encrypt-key'
 
 // filepath: server/utils/encryption/encrypt-key.test.ts
 
 describe('encryptKey', () => {
-  test('should return an object with iv and encrypted properties', () => {
+  it('should return an object with iv and encrypted properties', () => {
     const encryptionKey = new Uint8Array(32) // Example 256-bit key
     const masterKey = new Uint8Array(32) // Example 256-bit key
 
@@ -14,7 +16,7 @@ describe('encryptKey', () => {
     expect(result).toHaveProperty('encrypted')
   })
 
-  test('iv should be an array of length 16', () => {
+  it('iv should be an array of length 16', () => {
     const encryptionKey = new Uint8Array(32)
     const masterKey = new Uint8Array(32)
 
@@ -24,7 +26,7 @@ describe('encryptKey', () => {
     expect(iv).toHaveLength(16)
   })
 
-  test('encrypted should be a Buffer or Uint8Array', () => {
+  it('encrypted should be a Buffer or Uint8Array', () => {
     const encryptionKey = new Uint8Array(32)
     const masterKey = new Uint8Array(32)
 

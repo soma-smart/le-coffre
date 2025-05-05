@@ -37,10 +37,6 @@ jobs:
       - name: Run Unit Tests
         if: (${{ success() }} || ${{ failure() }})
         run: npm run test:unit
-      
-      #- name: Run End-to-End Tests
-      #  if: (${{ success() }} || ${{ failure() }})
-      #  run: npm run test:e2e
 
       - name: Build Project
         if: (${{ success() }} || ${{ failure() }})

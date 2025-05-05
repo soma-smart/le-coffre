@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/ui',
     '@nuxt/image',
-    '@nuxt/test-utils/module'
+    '@nuxt/test-utils/module',
   ],
   css: ['~/assets/css/main.css'],
   runtimeConfig: {

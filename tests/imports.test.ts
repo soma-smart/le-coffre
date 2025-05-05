@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 describe('import vue components', () => {
-  test('normal imports as expected', async () => {
+  it('normal imports as expected', async () => {
     const { default: MenuTop } = await import('../components/Menu/Top.vue')
     expect(MenuTop).toBeDefined()
   })
