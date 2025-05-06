@@ -6,6 +6,9 @@ import pluginN from 'eslint-plugin-n'
 
 export default antfu({
   typescript: true,
+  ignores: [
+    'server/database/migrations/*',
+  ],
 })
   .append(pluginN.configs['flat/recommended'], {
     plugins: [pluginN],
