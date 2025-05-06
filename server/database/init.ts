@@ -18,7 +18,7 @@ export async function insertInitialDataIfNeeded() {
   }
 
   const initialData = [
-    { name: 'setup_completed', value: 'true' },
+    { name: 'setup_completed', value: 'false' },
   ]
 
   await useDatabase()
