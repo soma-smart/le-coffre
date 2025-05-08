@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { useDatabase } from '~/composables/useDatabase'
+import { ConfigKey, setConfiguration } from '~/server/database/configuration'
 import { password } from '~/server/database/schema'
 
 const createPasswordSchema = z.object({
@@ -23,6 +24,8 @@ export default defineEventHandler(async (event) => {
     const body = await readValidatedBody(event, value => createPasswordSchema.parse(value))
 
     const result = await createPassword(body.value)
+
+    await setConfiguration(ConfigKey.SetupCompleted, true)
 
     return {
       success: true,

@@ -8,20 +8,10 @@ export enum ConfigKey {
 
 type ConfigValue = string | number | boolean | object | null
 
-const storage = useStorage<ConfigValue>('kv:global-config')
-
 export async function getConfiguration(key: ConfigKey): Promise<ConfigValue> {
-  const cached = await storage.getItem<ConfigValue>(key)
-  if (cached != null) {
-    return cached
-  }
-
-  // Cache miss, fetch from database
-  const result = useDatabase().select().from(globalConfig).where(eq(globalConfig.name, key)).get()
-
-  if (result) {
-    await storage.setItem(key, result.value as ConfigValue)
-    return result.value as ConfigValue
+  const result = await useDatabase().select().from(globalConfig).where(eq(globalConfig.name, key))
+  if (result.length > 0) {
+    return result[0].value as ConfigValue
   }
 
   return null as ConfigValue
@@ -29,29 +19,21 @@ export async function getConfiguration(key: ConfigKey): Promise<ConfigValue> {
 
 export async function setConfiguration(key: ConfigKey, value: ConfigValue): Promise<void> {
   const db = useDatabase()
-  const existing = db.select().from(globalConfig).where(eq(globalConfig.name, key)).get()
+  const existing = await getConfiguration(key)
+  console.log(`Changing config entry '${key}' from ${existing} to ${value}`)
 
-  if (existing) {
-    db.update(globalConfig).set({ value }).where(eq(globalConfig.name, key)).run()
+  if (existing != null) {
+    await db.update(globalConfig).set({ value }).where(eq(globalConfig.name, key))
   }
   else {
-    db.insert(globalConfig).values({ name: key, value }).run()
+    await db.insert(globalConfig).values({ name: key, value })
   }
-
-  await storage.setItem(key, value)
 }
 
 export async function isSetupCompleted() {
-  const setupCompleted = await getConfiguration(ConfigKey.SetupCompleted)
-  return setupCompleted === 'true'
+  return await getConfiguration(ConfigKey.SetupCompleted)
 }
 
 export async function insertInitialData() {
-  const initialData = [
-    { name: ConfigKey.SetupCompleted, value: 'false' },
-  ]
-
-  await useDatabase()
-    .insert(globalConfig)
-    .values(initialData)
+  await setConfiguration(ConfigKey.SetupCompleted, false)
 }
