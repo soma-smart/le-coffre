@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { useDatabase } from '~/composables/useDatabase'
-import { ConfigKey, setConfiguration } from '~/server/database/configuration'
+import { ConfigKey, getConfiguration, setConfiguration } from '~/server/database/configuration'
 import { password } from '~/server/database/schema'
 
 const createPasswordSchema = z.object({
@@ -21,6 +21,15 @@ async function createPassword(value: string) {
 
 export default defineEventHandler(async (event) => {
   try {
+    // Check if the setup process is already completed
+    const setupCompleted = await getConfiguration(ConfigKey.SetupCompleted)
+    if (setupCompleted) {
+      setResponseStatus(event, 400)
+      return {
+        success: false,
+        error: 'Setup already completed.',
+      }
+    }
     const body = await readValidatedBody(event, value => createPasswordSchema.parse(value))
 
     const result = await createPassword(body.value)
