@@ -15,10 +15,44 @@ CREATE TABLE `account` (
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `passwords` (
+CREATE TABLE `folder` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`parent_id` integer,
+	`icon` text NOT NULL,
+	`color` text NOT NULL,
+	FOREIGN KEY (`parent_id`) REFERENCES `folder`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `global_config` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`name` text NOT NULL,
+	`value` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `password` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`value` text NOT NULL,
 	`iv` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `password_metadata` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`password_id` integer NOT NULL,
+	`url` text NOT NULL,
+	`description` text NOT NULL,
+	FOREIGN KEY (`password_id`) REFERENCES `password`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `permission` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`user_id` integer NOT NULL,
+	`folder_id` integer NOT NULL,
+	`can_update` integer NOT NULL,
+	`can_delete` integer NOT NULL,
+	`can_read` integer NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`folder_id`) REFERENCES `folder`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `session` (

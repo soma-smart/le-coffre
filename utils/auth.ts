@@ -9,7 +9,6 @@ export const auth = betterAuth({
     provider: 'sqlite', // or "pg" or "mysql"
     schema: {
       ...schema,
-      // user: schema.users,
     },
   }),
   baseURL: 'http://localhost:3000',

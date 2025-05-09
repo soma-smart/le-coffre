@@ -47,30 +47,24 @@ export const verification = sqliteTable('verification', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }),
 })
 
-export const passwords = sqliteTable('passwords', {
+export const password = sqliteTable('password', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   value: text('value').notNull(),
   iv: text('iv').notNull(),
 })
 
-export const users = sqliteTable('users', {
+export const folder = sqliteTable('folder', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-})
-
-export const folders = sqliteTable('folders', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  parent_id: integer('parent_id').references((): AnySQLiteColumn => folders.id),
+  parent_id: integer('parent_id').references((): AnySQLiteColumn => folder.id),
   icon: text('icon').notNull(),
   color: text('color').notNull(),
 })
 
-export const permissions = sqliteTable('permissions', {
+export const permission = sqliteTable('permission', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  user_id: integer('user_id').notNull().references(() => users.id),
-  folder_id: integer('folder_id').notNull().references(() => folders.id),
+  user_id: integer('user_id').notNull().references(() => user.id),
+  folder_id: integer('folder_id').notNull().references(() => folder.id),
   canUpdate: integer('can_update', { mode: 'boolean' }).notNull(),
   canDelete: integer('can_delete', { mode: 'boolean' }).notNull(),
   canRead: integer('can_read', { mode: 'boolean' }).notNull(),
@@ -78,7 +72,13 @@ export const permissions = sqliteTable('permissions', {
 
 export const passwordMetadata = sqliteTable('password_metadata', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  password_id: integer('password_id').notNull().references(() => passwords.id),
+  password_id: integer('password_id').notNull().references(() => password.id),
   url: text('url').notNull(),
   description: text('description').notNull(),
+})
+
+export const globalConfig = sqliteTable('global_config', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  value: text('', { mode: 'json' }).notNull(),
 })

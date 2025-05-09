@@ -5,6 +5,3 @@ repos:
         name: ESLint
         entry: npm run lint
         language: node
-      - id: typecheck
-        name: Type Checking
-        entry: npm run typecheck
