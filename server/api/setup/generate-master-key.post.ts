@@ -1,8 +1,7 @@
-import crypto from 'node:crypto'
-import { split } from 'shamir-secret-sharing'
 import { z } from 'zod'
 import { ConfigKey, getConfiguration, setConfiguration } from '~/server/database/configuration'
 import { encryptEncryptionKey } from '~/server/utils/encryption/encryption-key'
+import { generateMasterKey, getSplitShares } from '~/server/utils/encryption/generate-master-key'
 
 const generateMasterKeySchema = z
   .object({
@@ -33,23 +32,16 @@ export default defineEventHandler(async (event) => {
     throw new Error('Invalid input')
   }
 
-  const encryptionKey = crypto.getRandomValues(new Uint8Array(32))
-
-  const randomMasterKey = crypto.getRandomValues(new Uint8Array(32))
+  const encryptionKey = generateEncryptionKey()
+  const randomMasterKey = generateMasterKey()
 
   const encryptedEncryptionKey = encryptEncryptionKey(encryptionKey, randomMasterKey)
   await setConfiguration(ConfigKey.EncryptionKey, encryptedEncryptionKey)
 
-  const shares = await split(
+  const hexShares = await getSplitShares(
     randomMasterKey,
     result.data.shares,
     result.data.threshold,
-  )
-  // convert the shares from Uint8Array to hex
-  const hexShares = shares.map(share =>
-    Array.from(share)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join(''),
   )
 
   return {
