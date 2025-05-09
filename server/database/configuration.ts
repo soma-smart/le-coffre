@@ -4,6 +4,7 @@ import { globalConfig } from '~/server/database/schema'
 
 export enum ConfigKey {
   SetupCompleted = 'setup_completed',
+  EncryptionKey = 'encryption_key',
 }
 
 type ConfigValue = string | number | boolean | object | null
