@@ -85,7 +85,7 @@ async function sharesHaveBeenSavedSecurely() {
   </UModal>
 
   <UCard>
-    <UStepper ref="stepper" :items="items" class="w-4xl w-full sm:w-4xl" :disabled="true">
+    <UStepper ref="stepper" :items="items" class="w-full sm:w-4xl" :disabled="true">
       <template #start>
         <h1 class="text-2xl font-bold">
           Welcome onboard!
