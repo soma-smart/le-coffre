@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
+import type { SetupStatus } from '~/shared/types/setup'
 import * as z from 'zod'
 
 definePageMeta({
@@ -46,6 +47,20 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     },
   })
 }
+
+const { data } = await useFetch<SetupStatus>('/api/admin/setup/status')
+const isSetupComplete = computed(() => data?.value?.setupComplete)
+onMounted(() => {
+  if (!isSetupComplete.value) {
+    const toast = useToast()
+    toast.add({
+      title: 'Setup Required',
+      description: 'Please complete the setup process before logging in.',
+      color: 'warning',
+    })
+    navigateTo('/setup')
+  }
+})
 </script>
 
 <template>
