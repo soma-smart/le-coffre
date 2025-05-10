@@ -1,4 +1,4 @@
-import { authClient } from '~/server/utils/auth-client'
+import { authClient } from '~/utils/auth-client'
 
 export async function signOut() {
   const router = useRouter()

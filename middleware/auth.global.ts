@@ -1,4 +1,4 @@
-import { authClient } from '~/server/utils/auth-client'
+import { authClient } from '~/utils/auth-client'
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const publicPages = ['/login', '/register', '/setup']
