@@ -120,9 +120,6 @@ bun run build
 # docker
 docker build -t le-coffre .
 docker run -p 3000:3000 le-coffre:latest
-
-# docker compose
-docker compose up --build
 ```
 
 Locally preview production build:
