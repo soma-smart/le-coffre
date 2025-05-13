@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { ConfigKey, getConfiguration, setConfiguration } from '~/server/database/configuration'
+import { ConfigKey, getGlobalConfiguration, setGlobalConfiguration } from '~/server/database/configuration'
 import { encryptEncryptionKey } from '~/server/utils/encryption/encryption-key'
 import { generateMasterKey, getSplitShares } from '~/server/utils/encryption/generate-master-key'
 
@@ -14,7 +14,7 @@ const generateMasterKeySchema = z
 
 export default defineEventHandler(async (event) => {
   // Check if the setup process is already completed
-  const setupCompleted = await getConfiguration(ConfigKey.SetupCompleted)
+  const setupCompleted = await getGlobalConfiguration(ConfigKey.SetupCompleted)
   if (setupCompleted) {
     setResponseStatus(event, 400)
     return {
@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  await setConfiguration(ConfigKey.SetupCompleted, true)
+  await setGlobalConfiguration(ConfigKey.SetupCompleted, true)
 
   const result = await readValidatedBody(event, body =>
     generateMasterKeySchema.safeParse(body))
@@ -36,7 +36,9 @@ export default defineEventHandler(async (event) => {
   const randomMasterKey = generateMasterKey()
 
   const encryptedEncryptionKey = encryptEncryptionKey(encryptionKey, randomMasterKey)
-  await setConfiguration(ConfigKey.EncryptionKey, encryptedEncryptionKey)
+  await setGlobalConfiguration(ConfigKey.EncryptionKey, encryptedEncryptionKey)
+
+  // TODO: unseal database here
 
   const hexShares = await getSplitShares(
     randomMasterKey,

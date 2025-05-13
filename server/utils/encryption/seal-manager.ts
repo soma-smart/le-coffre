@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import { consola } from 'consola'
 import { combine } from 'shamir-secret-sharing'
-import { ConfigKey, getConfiguration } from '~/server/database/configuration'
+import { ConfigKey, getGlobalConfiguration } from '~/server/database/configuration'
 
 export async function isSealed(): Promise<boolean> {
   consola.info('Checking if the database is sealed...')
@@ -31,7 +31,7 @@ export async function unsealDatabase(shares: string[]): Promise<void> {
     encrypted: string
     iv: string
   }
-  const encryptedEncryptionKey = await getConfiguration(ConfigKey.EncryptionKey) as EncryptedEncryptionKey
+  const encryptedEncryptionKey = await getGlobalConfiguration(ConfigKey.EncryptionKey) as EncryptedEncryptionKey
 
   // Decrypt the encryption key using the master key
   const decryptedEncryptionKey = decryptEncryptionKey(
