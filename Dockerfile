@@ -5,8 +5,8 @@ ARG NODE_VERSION=20-bullseye-slim
 FROM node:${NODE_VERSION} AS builder
 
 # Install only the necessary tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
@@ -24,12 +24,11 @@ RUN npm install && \
 FROM node:${NODE_VERSION} AS runner
 
 # Install only the necessary tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
 # Create a non-root user for security reasons
 # Create the working directory and set permissions
-RUN useradd -m lecoffreuser && \
+RUN apt-get update && apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd -m lecoffreuser && \
     mkdir -p /app && \
     chown -R lecoffreuser:lecoffreuser /app
 WORKDIR /app
