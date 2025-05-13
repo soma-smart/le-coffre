@@ -1,7 +1,7 @@
 import { consola } from 'consola'
 import { eq } from 'drizzle-orm'
-import { useDatabase } from '~/composables/useDatabase'
 import { globalConfig } from '~/server/database/schema'
+import { useDatabase } from '~/server/utils/useDatabase'
 
 export enum ConfigKey {
   SetupCompleted = 'setup_completed',
