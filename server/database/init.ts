@@ -1,9 +1,10 @@
+import { consola } from 'consola'
 import { insertInitialData, isSetupCompleted } from './configuration'
 
 export async function insertInitialDataIfNeeded() {
   const setupCompleted = await isSetupCompleted()
   if (setupCompleted) {
-    console.log('Setup already completed, skipping initial data insertion.')
+    consola.info('Setup already completed, skipping initial data insertion.')
     return
   }
 

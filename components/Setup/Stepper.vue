@@ -42,7 +42,12 @@ async function generateMasterKey() {
   })
   console.log('Master key from server:', result)
   showSSS.value = true
-  shares.value = result.shares
+  if ('shares' in result) {
+    shares.value = result.shares
+  }
+  else {
+    console.error('Error generating master key:', result.error)
+  }
   isGeneratingMasterKey.value = false
 }
 
@@ -80,7 +85,7 @@ async function sharesHaveBeenSavedSecurely() {
   </UModal>
 
   <UCard>
-    <UStepper ref="stepper" :items="items" class="w-4xl w-full sm:w-4xl" :disabled="true">
+    <UStepper ref="stepper" :items="items" class="w-full sm:w-4xl" :disabled="true">
       <template #start>
         <h1 class="text-2xl font-bold">
           Welcome onboard!

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-import { authClient } from '~/server/utils/auth-client'
+import { authClient } from '~/utils/auth-client'
 
 const session = authClient.useSession()
 const name = computed(() => {
@@ -89,8 +89,8 @@ const items = ref<DropdownMenuItem[][]>([
       label: 'Logout',
       icon: 'i-lucide-log-out',
       kbds: ['shift', 'meta', 'q'],
-      onClick: () => {
-        signOut()
+      onClick: async () => {
+        await signOut()
       },
     },
   ],

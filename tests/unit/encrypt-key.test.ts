@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer'
 import { describe, expect, it } from 'vitest'
 
-import { encryptKey } from '~/server/utils/encryption/encrypt-key'
+import { encryptEncryptionKey } from '~/server/utils/encryption/encryption-key'
 
 // filepath: server/utils/encryption/encrypt-key.test.ts
 
@@ -10,28 +10,32 @@ describe('encryptKey', () => {
     const encryptionKey = new Uint8Array(32) // Example 256-bit key
     const masterKey = new Uint8Array(32) // Example 256-bit key
 
-    const result = encryptKey(encryptionKey, masterKey)
+    const result = encryptEncryptionKey(encryptionKey, masterKey)
 
     expect(result).toHaveProperty('iv')
     expect(result).toHaveProperty('encrypted')
   })
 
-  it('iv should be an array of length 16', () => {
-    const encryptionKey = new Uint8Array(32)
-    const masterKey = new Uint8Array(32)
+  it('should return iv and encrypted as hex strings', () => {
+    const encryptionKey = new Uint8Array(32) // Example 256-bit key
+    const masterKey = new Uint8Array(32) // Example 256-bit key
 
-    const { iv } = encryptKey(encryptionKey, masterKey)
+    const result = encryptEncryptionKey(encryptionKey, masterKey)
 
-    expect(Array.isArray(iv)).toBe(true)
-    expect(iv).toHaveLength(16)
+    expect(result.iv).toMatch(/^[0-9a-f]{32}$/)
+    expect(result.encrypted).toMatch(/^[0-9a-f]{64}$/)
   })
 
-  it('encrypted should be a Buffer or Uint8Array', () => {
-    const encryptionKey = new Uint8Array(32)
-    const masterKey = new Uint8Array(32)
+  it('should encrypt the key with the provided master key', () => {
+    const encryptionKey = new Uint8Array(32).fill(1) // Example 256-bit key
+    const masterKey = new Uint8Array(32).fill(2) // Example 256-bit key
 
-    const { encrypted } = encryptKey(encryptionKey, masterKey)
+    const result = encryptEncryptionKey(encryptionKey, masterKey)
 
-    expect(encrypted instanceof Buffer || encrypted instanceof Uint8Array).toBe(true)
+    const ivBuffer = Buffer.from(result.iv, 'hex')
+    const encryptedBuffer = Buffer.from(result.encrypted, 'hex')
+
+    expect(ivBuffer.length).toBe(16)
+    expect(encryptedBuffer.length).toBe(32)
   })
 })

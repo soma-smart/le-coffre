@@ -19,5 +19,8 @@ WORKDIR /workspace
 # Expose port 3000
 EXPOSE 3000
 
+# Set ENV to DEV
+ENV ENV=DEV
+
 # Default command
 CMD ["bash"]

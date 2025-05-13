@@ -1,14 +1,16 @@
+import { consola } from 'consola'
 import { eq } from 'drizzle-orm'
 import { useDatabase } from '~/composables/useDatabase'
 import { globalConfig } from '~/server/database/schema'
 
 export enum ConfigKey {
   SetupCompleted = 'setup_completed',
+  EncryptionKey = 'encryption_key',
 }
 
 type ConfigValue = string | number | boolean | object | null
 
-export async function getConfiguration(key: ConfigKey): Promise<ConfigValue> {
+export async function getGlobalConfiguration(key: ConfigKey): Promise<ConfigValue> {
   const result = await useDatabase().select().from(globalConfig).where(eq(globalConfig.name, key))
   if (result.length > 0) {
     return result[0].value as ConfigValue
@@ -17,10 +19,10 @@ export async function getConfiguration(key: ConfigKey): Promise<ConfigValue> {
   return null as ConfigValue
 }
 
-export async function setConfiguration(key: ConfigKey, value: ConfigValue): Promise<void> {
+export async function setGlobalConfiguration(key: ConfigKey, value: ConfigValue): Promise<void> {
   const db = useDatabase()
-  const existing = await getConfiguration(key)
-  console.log(`Changing config entry '${key}' from ${existing} to ${value}`)
+  const existing = await getGlobalConfiguration(key)
+  consola.debug(`Changing config entry '${key}' from ${existing} to ${value}`)
 
   if (existing != null) {
     await db.update(globalConfig).set({ value }).where(eq(globalConfig.name, key))
@@ -31,9 +33,9 @@ export async function setConfiguration(key: ConfigKey, value: ConfigValue): Prom
 }
 
 export async function isSetupCompleted() {
-  return await getConfiguration(ConfigKey.SetupCompleted)
+  return await getGlobalConfiguration(ConfigKey.SetupCompleted)
 }
 
 export async function insertInitialData() {
-  await setConfiguration(ConfigKey.SetupCompleted, false)
+  await setGlobalConfiguration(ConfigKey.SetupCompleted, false)
 }

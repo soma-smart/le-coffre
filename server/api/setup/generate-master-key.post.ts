@@ -1,7 +1,7 @@
-import crypto from 'node:crypto'
-import { split } from 'shamir-secret-sharing'
 import { z } from 'zod'
-import { encryptKey } from '~/server/utils/encryption/encrypt-key'
+import { ConfigKey, getGlobalConfiguration, setGlobalConfiguration } from '~/server/database/configuration'
+import { encryptEncryptionKey } from '~/server/utils/encryption/encryption-key'
+import { generateMasterKey, getSplitShares } from '~/server/utils/encryption/generate-master-key'
 
 const generateMasterKeySchema = z
   .object({
@@ -13,31 +13,37 @@ const generateMasterKeySchema = z
   })
 
 export default defineEventHandler(async (event) => {
+  // Check if the setup process is already completed
+  const setupCompleted = await getGlobalConfiguration(ConfigKey.SetupCompleted)
+  if (setupCompleted) {
+    setResponseStatus(event, 400)
+    return {
+      success: false,
+      error: 'Setup already completed.',
+    }
+  }
+
+  await setGlobalConfiguration(ConfigKey.SetupCompleted, true)
+
   const result = await readValidatedBody(event, body =>
-    generateMasterKeySchema.safeParse(body)) // or `.parse` to directly throw an error
+    generateMasterKeySchema.safeParse(body))
 
   if (!result.success) {
     throw new Error('Invalid input')
   }
 
-  const encryptionKey = crypto.getRandomValues(new Uint8Array(32))
+  const encryptionKey = generateEncryptionKey()
+  const randomMasterKey = generateMasterKey()
 
-  const randomMasterKey = crypto.getRandomValues(new Uint8Array(32))
+  const encryptedEncryptionKey = encryptEncryptionKey(encryptionKey, randomMasterKey)
+  await setGlobalConfiguration(ConfigKey.EncryptionKey, encryptedEncryptionKey)
 
-  const shares = await split(
+  // TODO: unseal database here
+
+  const hexShares = await getSplitShares(
     randomMasterKey,
     result.data.shares,
     result.data.threshold,
-  )
-
-  const _encryptedEncryptionKey = encryptKey(encryptionKey, randomMasterKey)
-  // TODO: save encryptedEncryptionKey to db
-
-  // convert Uint8Array to hex
-  const hexShares = shares.map(share =>
-    Array.from(share)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join(''),
   )
 
   return {

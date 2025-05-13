@@ -52,7 +52,7 @@ watch(() => open.value, (newValue) => {
       <UContextMenu :items="menuItems">
         <UButton
           class="group justify-start my-1" :icon="modelValue.icon" :label="modelValue.label" color="neutral"
-          variant="subtle" block @click="toggle"
+          variant="ghost" block @click="toggle"
         >
           <template #trailing>
             <UIcon
