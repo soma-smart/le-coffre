@@ -1,3 +1,4 @@
+import { consola } from 'consola'
 import { z } from 'zod'
 import { ConfigKey, getGlobalConfiguration, setGlobalConfiguration } from '~/server/database/configuration'
 import { encryptEncryptionKey } from '~/server/utils/encryption/encryption-key'
@@ -35,16 +36,31 @@ export default defineEventHandler(async (event) => {
   const encryptionKey = generateEncryptionKey()
   const randomMasterKey = generateMasterKey()
 
-  const encryptedEncryptionKey = encryptEncryptionKey(encryptionKey, randomMasterKey)
-  await setGlobalConfiguration(ConfigKey.EncryptionKey, encryptedEncryptionKey)
-
-  // TODO: unseal database here
+  const { encrypted, iv, authTag } = encryptEncryptionKey(encryptionKey, randomMasterKey)
+  await setGlobalConfiguration(ConfigKey.EncryptionKey, {
+    encrypted,
+    iv,
+    authTag,
+  })
 
   const hexShares = await getSplitShares(
     randomMasterKey,
     result.data.shares,
     result.data.threshold,
   )
+
+  try {
+    await unsealDatabase(hexShares)
+    consola.info('Database unsealed successfully.')
+  }
+  catch (error) {
+    consola.error('Failed to unseal the database:', error)
+    setResponseStatus(event, 500)
+    return {
+      success: false,
+      error: 'Failed to unseal the database',
+    }
+  }
 
   return {
     shares: hexShares,

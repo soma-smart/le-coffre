@@ -22,7 +22,7 @@ export async function sealDatabase(): Promise<void> {
 export async function unsealDatabase(shares: string[]): Promise<void> {
   consola.info('Unsealing the database from shares...')
   // Get master key from shares
-  const buffers = shares.map(share => Buffer.from(share, 'hex'))
+  const buffers = shares.map(share => new Uint8Array(Buffer.from(share, 'hex')))
   const masterKey = await combine(buffers)
 
   // Get encrypted encryption key from database
@@ -30,6 +30,7 @@ export async function unsealDatabase(shares: string[]): Promise<void> {
   interface EncryptedEncryptionKey {
     encrypted: string
     iv: string
+    authTag: string
   }
   const encryptedEncryptionKey = await getGlobalConfiguration(ConfigKey.EncryptionKey) as EncryptedEncryptionKey
 
@@ -38,8 +39,12 @@ export async function unsealDatabase(shares: string[]): Promise<void> {
     encryptedEncryptionKey.encrypted,
     masterKey,
     encryptedEncryptionKey.iv,
+    encryptedEncryptionKey.authTag,
   )
 
+  // Convert the Uint8Array to a hexadecimal string before storing
+  const encryptionKeyHex = Buffer.from(decryptedEncryptionKey).toString('hex')
+  consola.log('Decrypted encryption key:', encryptionKeyHex)
   // Store the encryption key in memory
-  useStorage().setItem('encryptionKey', decryptedEncryptionKey)
+  useStorage().setItem('encryptionKey', encryptionKeyHex)
 }
