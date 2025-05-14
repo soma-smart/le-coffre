@@ -10,4 +10,5 @@ useHead({
 
 <template>
   <p>{{ session.data }}</p>
+  <CreateEntry />
 </template>
