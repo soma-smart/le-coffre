@@ -1,34 +1,34 @@
 version: 2
 updates:
   # Check for updates to npm dependencies
-  - package-ecosystem: "npm"
-    directory: "/"
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 10
     labels:
-      - "dependencies"
-      - "npm"
+      - dependencies
+      - npm
     compatibility-score: 70
 
   # Check for updates to GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/.github/workflows"
+  - package-ecosystem: github-actions
+    directory: /.github/workflows
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 3
     labels:
-      - "dependencies"
-      - "github-actions"
+      - dependencies
+      - github-actions
     compatibility-score: 70
 
   # Check for updates to Docker dependencies
-  - package-ecosystem: "docker"
-    directory: "/"
+  - package-ecosystem: docker
+    directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
     labels:
-      - "dependencies"
-      - "docker"
+      - dependencies
+      - docker
     compatibility-score: 70
