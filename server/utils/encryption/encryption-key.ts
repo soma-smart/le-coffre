@@ -21,7 +21,7 @@ export function decryptEncryptionKey(encryptedKey: string, masterKey: Uint8Array
   const authTagBuffer = Buffer.from(authTag, 'hex')
 
   const decipher = crypto.createDecipheriv('aes-256-gcm', masterKey, ivBuffer)
-  // Définir le tag d'authentification avant update/final
+
   decipher.setAuthTag(authTagBuffer)
 
   const decrypted = Buffer.concat([decipher.update(encryptedBuffer), decipher.final()])

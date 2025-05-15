@@ -6,7 +6,7 @@ export function encrypt(password: string, encryptionKey: Uint8Array) {
   let encrypted = cipher.update(password, 'utf8', 'hex')
   encrypted += cipher.final('hex')
 
-  // Récupérer le tag d'authentification
+  // Retrieve the authentication tag
   const authTag = cipher.getAuthTag()
 
   return {

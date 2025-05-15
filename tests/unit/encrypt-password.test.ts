@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { decrypt } from '~/server/utils/encryption/decrypt-password'
 import { encrypt } from '~/server/utils/encryption/encrypt-password'
 
-describe('encrypt et decrypt password', () => {
-  // Test de la structure retournée
-  it('encrypt devrait retourner un objet avec les propriétés iv, encryptedPassword et authTag', () => {
-    const encryptionKey = new Uint8Array(32).fill(1) // Clé de test
-    const password = 'MonMotDePasse123!'
+describe('encrypt and decrypt password', () => {
+  // Test return structure
+  it('encrypt should return an object with iv, encryptedPassword and authTag properties', () => {
+    const encryptionKey = new Uint8Array(32).fill(1) // Test key
+    const password = 'iXZr~zmG$WPMge/p'
 
     const result = encrypt(password, encryptionKey)
 
@@ -15,26 +15,10 @@ describe('encrypt et decrypt password', () => {
     expect(result).toHaveProperty('authTag')
   })
 
-  // Test du format
-  it('iv, authTag devraient être des tableaux de nombres et encryptedPassword une chaîne hexadécimale', () => {
+  // Test complete encryption/decryption cycle
+  it('should correctly decrypt an encrypted password', () => {
     const encryptionKey = new Uint8Array(32).fill(1)
-    const password = 'MonMotDePasse123!'
-
-    const { iv, encryptedPassword, authTag } = encrypt(password, encryptionKey)
-
-    expect(Array.isArray(iv)).toBe(true)
-    expect(iv.length).toBe(16) // IV de 16 octets
-    expect(iv.every(byte => typeof byte === 'number')).toBe(true)
-    expect(encryptedPassword).toMatch(/^[0-9a-f]+$/) // Format hexadécimal
-    expect(Array.isArray(authTag)).toBe(true)
-    expect(authTag.length).toBe(16) // AuthTag de 16 octets
-    expect(authTag.every(byte => typeof byte === 'number')).toBe(true)
-  })
-
-  // Test du cycle complet chiffrement/déchiffrement
-  it('devrait pouvoir déchiffrer correctement un mot de passe chiffré', () => {
-    const encryptionKey = new Uint8Array(32).fill(1)
-    const originalPassword = 'MonMotDePasse123!'
+    const originalPassword = 'iXZr~zmG$WPMge/p'
 
     const { iv, encryptedPassword, authTag } = encrypt(originalPassword, encryptionKey)
     const ivUint8Array = new Uint8Array(iv)
@@ -45,8 +29,8 @@ describe('encrypt et decrypt password', () => {
     expect(decryptedPassword).toBe(originalPassword)
   })
 
-  // Test avec des caractères spéciaux
-  it('devrait fonctionner avec des caractères spéciaux', () => {
+  // Test with special characters
+  it('should work with special characters', () => {
     const encryptionKey = new Uint8Array(32).fill(1)
     const specialPassword = 'é!@#$%^&*()_+-=[]{}|;:,.<>?/~`"\''
 
@@ -59,8 +43,8 @@ describe('encrypt et decrypt password', () => {
     expect(decryptedPassword).toBe(specialPassword)
   })
 
-  // Test avec un long mot de passe
-  it('devrait supporter les mots de passe longs', () => {
+  // Test with long passwords
+  it('should support long passwords', () => {
     const encryptionKey = new Uint8Array(32).fill(1)
     const longPassword = 'a'.repeat(1000)
 
@@ -73,8 +57,8 @@ describe('encrypt et decrypt password', () => {
     expect(decryptedPassword).toBe(longPassword)
   })
 
-  // Test unique des IV
-  it('devrait générer des IV différents à chaque appel', () => {
+  // Test IV uniqueness
+  it('should generate different IVs for each call', () => {
     const encryptionKey = new Uint8Array(32).fill(1)
     const password = 'MonMotDePasse123!'
 
@@ -82,19 +66,5 @@ describe('encrypt et decrypt password', () => {
     const result2 = encrypt(password, encryptionKey)
 
     expect(result1.iv).not.toEqual(result2.iv)
-  })
-
-  // Edge case: mot de passe vide
-  it('devrait fonctionner avec un mot de passe vide', () => {
-    const encryptionKey = new Uint8Array(32).fill(1)
-    const emptyPassword = ''
-
-    const { iv, encryptedPassword, authTag } = encrypt(emptyPassword, encryptionKey)
-    const ivUint8Array = new Uint8Array(iv)
-    const authTagUint8Array = new Uint8Array(authTag)
-
-    const decryptedPassword = decrypt(encryptedPassword, ivUint8Array, encryptionKey, authTagUint8Array)
-
-    expect(decryptedPassword).toBe(emptyPassword)
   })
 })

@@ -11,13 +11,12 @@ const passwordSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  // Vérifier que l'utilisateur est authentifié
+  // Check that the user is authenticated
   const session = await auth.api.getSession(toWebRequest(event))
   if (!session || !session.user) {
     setResponseStatus(event, 401)
     return {
-      success: false,
-      error: 'Unauthorized',
+      error: 'User not authenticated',
     }
   }
 

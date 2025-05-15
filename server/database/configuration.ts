@@ -46,6 +46,6 @@ export async function getEncryptionKey(): Promise<Uint8Array | null> {
   if (!encryptionKeyHex)
     return null
 
-  // Convertir la chaîne hex en Uint8Array
+  // Convert hex in Uint8Array
   return new Uint8Array(Buffer.from(encryptionKeyHex as string, 'hex'))
 }
