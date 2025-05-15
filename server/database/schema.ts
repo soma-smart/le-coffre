@@ -51,6 +51,7 @@ export const password = sqliteTable('password', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   value: text('value').notNull(),
   iv: text('iv').notNull(),
+  authtag: text('auth_tag').notNull(),
 })
 
 export const folder = sqliteTable('folder', {

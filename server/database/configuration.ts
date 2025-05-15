@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { consola } from 'consola'
 import { eq } from 'drizzle-orm'
 import { globalConfig } from '~/server/database/schema'
@@ -38,4 +39,13 @@ export async function isSetupCompleted() {
 
 export async function insertInitialData() {
   await setGlobalConfiguration(ConfigKey.SetupCompleted, false)
+}
+
+export async function getEncryptionKey(): Promise<Uint8Array | null> {
+  const encryptionKeyHex = await useStorage().getItem('encryptionKey')
+  if (!encryptionKeyHex)
+    return null
+
+  // Convert hex in Uint8Array
+  return new Uint8Array(Buffer.from(encryptionKeyHex as string, 'hex'))
 }
