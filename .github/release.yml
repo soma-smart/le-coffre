@@ -1,0 +1,57 @@
+# Configuration for GitHub release automation
+
+changelog:
+  categories:
+    - title: 🚀 Features
+      labels:
+        - feature
+        - enhancement
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+        - fix
+    - title: 🛠 Maintenance
+      labels:
+        - refactor
+        - chore
+    - title: 👒 Dependencies
+      labels:
+        - dependencies
+  sort: DESC # Sort commits in descending order
+  template: |
+    ## Changes in this release
+    {% for category in categories %}
+    ### {{ category.title }}
+    {% for pull in category.pullRequests %}
+    - {{ pull.title }} (by @{{ pull.author.login }})
+    {% endfor %}
+    {% endfor %}
+
+autolabeler:
+  - pattern: '^feat:'
+    label: feature
+  - pattern: '^fix:'
+    label: bug
+  - pattern: '^chore:'
+    label: chore
+  - pattern: '^refactor:'
+    label: refactor
+  - pattern: '^deps:'
+    label: dependencies
+
+categories:
+  - title: 🚀 Features
+    labels:
+      - feature
+      - enhancement
+  - title: 🐛 Bug Fixes
+    labels:
+      - bug
+      - fix
+  - title: 🛠 Maintenance
+    labels:
+      - refactor
+      - chore
+  - title: 👒 Dependencies
+    labels:
+      - dependencies
