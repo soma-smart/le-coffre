@@ -48,13 +48,13 @@ jobs:
           cache-from: type=registry,ref=${{ env.CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:latest
           cache-to: type=inline
           no-cache: false
-          
+
       - name: Tag image as latest
         run: |
           docker pull ${{ env.CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ github.sha }}
           docker tag ${{ env.CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ github.sha }} ${{ env.CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:latest
           docker push ${{ env.CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:latest
-          
+
       - name: Set outputs
         id: set_outputs
         run: |
