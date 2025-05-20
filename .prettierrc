@@ -7,6 +7,6 @@
   "printWidth": 80,
   "bracketSpacing": true,
   "arrowParens": "always",
-  "vueIndentScriptAndStyle": true,
+  "vueIndentScriptAndStyle": false,
   "endOfLine": "lf"
 }
