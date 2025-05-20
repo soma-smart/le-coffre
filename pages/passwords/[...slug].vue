@@ -6,6 +6,8 @@ const route = useRoute()
 <template>
   <h1>Passwords path:</h1>
   <ul>
-    <li v-for="(segment, i) in route.params.slug" :key="i">{{ segment }}</li>
+    <li v-for="(segment, i) in route.params.slug" :key="i">
+      {{ segment }}
+    </li>
   </ul>
 </template>

@@ -10,10 +10,7 @@
           >
             Le Coffre
           </h1>
-          <UIcon
-            name="i-lucide-vault"
-            class="text-3xl text-primary-500 dark:text-primary-500"
-          />
+          <UIcon name="i-lucide-vault" class="text-3xl text-primary-500 dark:text-primary-500" />
         </div>
       </NuxtLink>
 
