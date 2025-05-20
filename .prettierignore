@@ -1,0 +1,10 @@
+# Ignore artifacts:
+build
+coverage
+
+# Ignore all migrations files:
+server/database/migrations/*
+
+README.md
+.devcontainer/*
+.vscode/*

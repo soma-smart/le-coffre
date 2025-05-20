@@ -13,6 +13,8 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
+    "prettier": "prettier . --check",
+    "prettier:fix": "prettier . --write",
     "typecheck": "nuxt typecheck",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -43,9 +45,11 @@
     "@types/better-sqlite3": "^7.6.13",
     "@vue/test-utils": "^2.4.6",
     "drizzle-kit": "^0.31.0",
+    "eslint-config-prettier": "^10.1.5",
     "happy-dom": "^17.4.6",
     "node-gyp": "^11.2.0",
     "playwright-core": "^1.52.0",
+    "prettier": "3.5.3",
     "vitest": "^3.1.2"
   }
 }
