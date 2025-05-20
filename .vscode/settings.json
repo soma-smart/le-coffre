@@ -1,8 +1,15 @@
 {
   "editor.tabSize": 2,
   "files.insertFinalNewline": true,
+  "eslint.useFlatConfig": true,
+  "editor.formatOnSave": true,
+  "eslint.format.enable": true,
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
+    "source.fixAll": true,
   },
-  "editor.formatOnSave": true
+  "eslint.validate": [
+    "javascript",
+    "vue",
+    "typescript",
+  ]
 }

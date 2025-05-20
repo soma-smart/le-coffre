@@ -4,19 +4,15 @@ import { defineNuxtConfig } from 'nuxt/config'
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2024-11-01',
-  modules: [
-    '@nuxt/ui',
-    '@nuxt/image',
-    '@nuxt/test-utils/module',
-  ],
+  modules: ['@nuxt/ui', '@nuxt/image', '@nuxt/test-utils/module', '@nuxt/eslint'],
+  devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     public: {
       BETTER_AUTH_URL: 'http://localhost:3000',
     },
   },
-  devtools: { enabled: true },
+  compatibilityDate: '2024-11-01',
   hooks: {
     close: () => {
       const migrationsSrc = resolve('server/database/migrations')
