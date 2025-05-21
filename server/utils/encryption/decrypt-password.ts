@@ -1,5 +1,5 @@
-import type { AuthTag, EncryptionKey, InitializationVector } from './types'
 import crypto from 'node:crypto'
+import type { AuthTag, EncryptionKey, InitializationVector } from './types'
 
 export function decrypt(encrypted: string, iv: InitializationVector, encryptionKey: EncryptionKey, authTag: AuthTag) {
   const decipher = crypto.createDecipheriv('aes-256-gcm', encryptionKey, iv)

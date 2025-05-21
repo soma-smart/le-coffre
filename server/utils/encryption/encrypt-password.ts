@@ -1,5 +1,5 @@
-import type { EncryptionKey } from './types'
 import crypto from 'node:crypto'
+import type { EncryptionKey } from './types'
 
 export function encrypt(password: string, encryptionKey: EncryptionKey) {
   const iv = crypto.getRandomValues(new Uint8Array(16))

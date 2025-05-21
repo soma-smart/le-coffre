@@ -99,14 +99,20 @@ const items = computed<DropdownMenuItem[][]>(() => [
 
 <template>
   <UDropdownMenu
-    :items="items" :ui="{
+    :items="items"
+    :ui="{
       content: 'w-48',
     }"
   >
     <UButton
-      block :label="name" color="neutral" variant="soft" :avatar="{
+      block
+      :label="name"
+      color="neutral"
+      variant="soft"
+      :avatar="{
         src: 'https://github.com/nuxt.png',
-      }" trailing-icon="i-lucide-chevron-up"
+      }"
+      trailing-icon="i-lucide-chevron-up"
     />
   </UDropdownMenu>
 </template>

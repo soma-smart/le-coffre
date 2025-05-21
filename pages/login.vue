@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
-import type { SetupStatus } from '~/shared/types/setup'
 import * as z from 'zod'
+import type { SetupStatus } from '~/shared/types/setup'
 
 definePageMeta({
   layout: 'centered',
@@ -73,7 +73,13 @@ onMounted(() => {
         </h1>
       </div>
     </template>
-    <UForm method="post" :schema="schema" :state="state" class="space-y-4" @submit.prevent="onSubmit">
+    <UForm
+      method="post"
+      :schema="schema"
+      :state="state"
+      class="space-y-4"
+      @submit.prevent="onSubmit"
+    >
       <UFormField label="Email" name="email">
         <UInput v-model="state.email" type="email" class="w-full" />
       </UFormField>
@@ -86,7 +92,12 @@ onMounted(() => {
         <UCheckbox v-model="state.rememberMe" label="Remember me" />
       </UFormField>
 
-      <UButton block color="primary" type="submit" class="justify-center">
+      <UButton
+        block
+        color="primary"
+        type="submit"
+        class="justify-center"
+      >
         <span class="flex items-center gap-2">
           Login
           <UIcon name="i-lucide-log-in" />

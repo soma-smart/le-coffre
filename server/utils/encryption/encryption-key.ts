@@ -1,6 +1,6 @@
-import type { EncryptionKey, MasterKey } from './types'
 import { Buffer } from 'node:buffer'
 import crypto from 'node:crypto'
+import type { EncryptionKey, MasterKey } from './types'
 
 export function encryptEncryptionKey(encryptionKey: EncryptionKey, masterKey: MasterKey): { iv: string, encrypted: string, authTag: string } {
   const iv = crypto.randomBytes(16)
