@@ -1,6 +1,7 @@
-import type { TreeItem } from '@nuxt/ui'
+import type { NavigationMenuItem } from '@nuxt/ui'
 
-export interface FolderItem extends TreeItem {
+export interface FolderItem extends NavigationMenuItem {
   label: string
   slug: string
+  children?: FolderItem[]
 };

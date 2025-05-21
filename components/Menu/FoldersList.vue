@@ -1,11 +1,54 @@
 <script setup lang="ts">
 import type { ContextMenuItem } from '@nuxt/ui'
-import type { FolderItem } from '~/shared/types/folderItem'
 import { ref } from 'vue'
 
+const route = useRoute()
 const router = useRouter()
 
 const { data, pending, error } = await useFetch<FolderItem[]>('/api/folders/list')
+
+/**
+ * Annotate each folder item with:
+ *  - active: true iff its fullPath === slug
+ *  - defaultOpen: true if any descendant isActive
+ *  - children: recursively processed
+ */
+function annotateActive(
+  items: FolderItem[],
+  slug: string[],
+  parentPath: string[] = [],
+): (FolderItem & { active: boolean, defaultOpen?: boolean, children?: any })[] {
+  return items.map((item) => {
+    const fullPath = [...parentPath, item.slug]
+
+    // First process children so we know if any of them (or their descendants) are active
+    const children = item.children
+      ? annotateActive(item.children as FolderItem[], slug, fullPath)
+      : undefined
+
+    // Check exact match for this node
+    const isActive
+      = slug.length === fullPath.length && slug.every((seg, i) => seg === fullPath[i])
+
+    // If any child (or deeper descendant) is active, this node should defaultOpen
+    const isAncestorOpen = !!children?.some(child => child.active || child.defaultOpen)
+
+    return {
+      ...item,
+      active: isActive,
+      // only add defaultOpen if this node has children and one of them is active/ancestor
+      ...(children ? { defaultOpen: isAncestorOpen } : {}),
+      children,
+    }
+  })
+}
+
+const items = computed(() => {
+  const slug = Array.isArray(route.params.slug)
+    ? (route.params.slug as string[])
+    : []
+  return data.value ? annotateActive(data.value, slug) : []
+})
 
 const menuItems = ref<ContextMenuItem[][]>([
   [
@@ -66,26 +109,28 @@ function handleItemClick(item: any) {
   <div v-else-if="error">
     Error: {{ error.message }}
   </div>
-  <UTree v-else size="xl" :items="data">
-    <template #item="{ item, expanded }">
-      <UContextMenu :items="menuItems">
-        <div class="flex items-center justify-between w-full cursor-pointer  transition-colors">
-          <!-- Left: Context menu trigger + icons -->
-          <div class="flex items-center rounded-xl w-full" @click="handleItemClick(item)">
-            <UIcon v-if="expanded" name="i-lucide-folder-open" />
-            <UIcon v-else name="i-lucide-folder" />
-            <span class="ml-2 flex items-center">
-              {{ item.label }}
-              <UIcon v-if="item.icon" :name="item.icon" class="text-lg ml-2" />
+  <UNavigationMenu orientation="vertical" :items="items" class="data-[orientation=vertical]:w-48">
+    <template #item="{ item }">
+      <UContextMenu :items="menuItems" @click="handleItemClick(item)">
+        <div
+          class="group flex items-center justify-between w-full cursor-pointer px-2 py-1 rounded-md transition-colors"
+          @click="handleItemClick(item)"
+        >
+          <!-- Left: folder icon + label -->
+          <div class="flex items-center space-x-2">
+            <UIcon v-if="item.icon" :name="item.icon" class="text-lg" />
+            <span class="flex items-center space-x-1">
+              <span>{{ item.label }}</span>
             </span>
           </div>
-          <!-- Right: Chevron for expanding/collapsing -->
+
+          <!-- Right: chevron, rotates via the same data-state -->
           <UIcon
             v-if="item.children" name="i-lucide-chevron-down"
-            class="w-4 h-4 mr-3 transform transition-transform duration-200" :class="[{ 'rotate-180': expanded }]"
+            class="w-4 h-4 transform transition-transform duration-200 data-[state=open]:rotate-180"
           />
         </div>
       </UContextMenu>
     </template>
-  </UTree>
+  </UNavigationMenu>
 </template>
