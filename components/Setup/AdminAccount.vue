@@ -82,7 +82,12 @@ async function createAdminAccount() {
       </p>
     </div>
 
-    <UForm :schema="schema" :state="state" class="space-y-6" @submit="onSubmit">
+    <UForm
+      :schema="schema"
+      :state="state"
+      class="space-y-6"
+      @submit="onSubmit"
+    >
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <UFormField label="Name" name="name">
           <UInput v-model="state.name" class="w-full" />

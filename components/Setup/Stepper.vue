@@ -58,7 +58,12 @@ async function sharesHaveBeenSavedSecurely() {
 </script>
 
 <template>
-  <UModal v-model:open="showSSS" :dismissible="false" title="Shares of the master key" :close="false">
+  <UModal
+    v-model:open="showSSS"
+    :dismissible="false"
+    title="Shares of the master key"
+    :close="false"
+  >
     <template #body>
       <p class="mt-4">
         The master key has been generated successfully! Please save the following shares securely:
@@ -73,7 +78,9 @@ async function sharesHaveBeenSavedSecurely() {
 
       <UCheckbox
         v-model="isSSSBeenSavedSecurely"
-        label="Shares have been saved securely." description="There is no way to recover them if you lose them." class="mt-8"
+        label="Shares have been saved securely."
+        description="There is no way to recover them if you lose them."
+        class="mt-8"
       />
 
       <div class="flex justify-center mt-4">
@@ -85,7 +92,12 @@ async function sharesHaveBeenSavedSecurely() {
   </UModal>
 
   <UCard>
-    <UStepper ref="stepper" :items="items" class="w-full sm:w-4xl" :disabled="true">
+    <UStepper
+      ref="stepper"
+      :items="items"
+      class="w-full sm:w-4xl"
+      :disabled="true"
+    >
       <template #start>
         <h1 class="text-2xl font-bold">
           Welcome onboard!
@@ -127,7 +139,8 @@ async function sharesHaveBeenSavedSecurely() {
         </p>
         <p class="mt-4">
           As it's critical to the security of your vault, we will use <ULink
-            to="https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing" target="_blank"
+            to="https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing"
+            target="_blank"
           >
             Shamir's Secret Sharing (SSS)
           </ULink> to split the
@@ -157,8 +170,13 @@ async function sharesHaveBeenSavedSecurely() {
 
         <div class="flex justify-center mt-4">
           <UButton
-            icon="i-lucide-shield-ellipsis" color="success" variant="outline" size="xl"
-            :loading="isGeneratingMasterKey" :disabled="!shamirRef?.isValidSSSConfig" @click="generateMasterKey"
+            icon="i-lucide-shield-ellipsis"
+            color="success"
+            variant="outline"
+            size="xl"
+            :loading="isGeneratingMasterKey"
+            :disabled="!shamirRef?.isValidSSSConfig"
+            @click="generateMasterKey"
           >
             Generate parts of the master key
           </UButton>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { omit } from '#ui/utils'
 import colors from 'tailwindcss/colors'
+import { omit } from '#ui/utils'
 
 const appConfig = useAppConfig()
 const colorMode = useColorMode()
@@ -65,8 +65,12 @@ function setBlackAsPrimary(value: boolean) {
   <UPopover :ui="{ content: 'w-72 px-6 py-4 flex flex-col gap-4' }">
     <template #default="{ open }">
       <UButton
-        icon="i-lucide-swatch-book" color="neutral" :variant="open ? 'soft' : 'ghost'" square
-        aria-label="Color picker" :ui="{ leadingIcon: 'text-(--ui-primary)' }"
+        icon="i-lucide-swatch-book"
+        color="neutral"
+        :variant="open ? 'soft' : 'ghost'"
+        square
+        aria-label="Color picker"
+        :ui="{ leadingIcon: 'text-(--ui-primary)' }"
       />
     </template>
 
@@ -84,8 +88,12 @@ function setBlackAsPrimary(value: boolean) {
           </ThemePickerButton>
 
           <ThemePickerButton
-            v-for="color in primaryColors" :key="color" :label="color" :chip="color"
-            :selected="!appConfig.theme.blackAsPrimary && primary === color" @click="primary = color"
+            v-for="color in primaryColors"
+            :key="color"
+            :label="color"
+            :chip="color"
+            :selected="!appConfig.theme.blackAsPrimary && primary === color"
+            @click="primary = color"
           />
         </div>
       </fieldset>
@@ -97,8 +105,11 @@ function setBlackAsPrimary(value: boolean) {
 
         <div class="grid grid-cols-3 gap-1 -mx-2">
           <ThemePickerButton
-            v-for="color in neutralColors" :key="color" :label="color"
-            :chip="color === 'neutral' ? 'old-neutral' : color" :selected="neutral === color"
+            v-for="color in neutralColors"
+            :key="color"
+            :label="color"
+            :chip="color === 'neutral' ? 'old-neutral' : color"
+            :selected="neutral === color"
             @click="neutral = color"
           />
         </div>
@@ -111,8 +122,12 @@ function setBlackAsPrimary(value: boolean) {
 
         <div class="grid grid-cols-5 gap-1 -mx-2">
           <ThemePickerButton
-            v-for="r in radiuses" :key="r" :label="String(r)" class="justify-center px-0"
-            :selected="radius === r" @click="radius = r"
+            v-for="r in radiuses"
+            :key="r"
+            :label="String(r)"
+            class="justify-center px-0"
+            :selected="radius === r"
+            @click="radius = r"
           />
         </div>
       </fieldset>
@@ -124,7 +139,10 @@ function setBlackAsPrimary(value: boolean) {
 
         <div class="grid grid-cols-3 gap-1 -mx-2">
           <ThemePickerButton
-            v-for="m in modes" :key="m.label" v-bind="m" :selected="colorMode.preference === m.label"
+            v-for="m in modes"
+            :key="m.label"
+            v-bind="m"
+            :selected="colorMode.preference === m.label"
             @click="mode = m.label"
           />
         </div>

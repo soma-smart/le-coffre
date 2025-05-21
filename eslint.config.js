@@ -1,40 +1,40 @@
-// @ts-check
+import createConfigForNuxt from '@nuxt/eslint-config'
+import stylistic from '@stylistic/eslint-plugin'
 
-import antfu from '@antfu/eslint-config'
-
-import pluginN from 'eslint-plugin-n'
-
-export default antfu({
-  typescript: true,
+export default createConfigForNuxt({
+  features: {
+    stylistic: stylistic.configs.recommended,
+  },
   ignores: [
     'server/database/migrations/*',
   ],
 })
-  .append(pluginN.configs['flat/recommended'], {
-    plugins: [pluginN],
-    rules: {
-      'eqeqeq': ['warn', 'always', { null: 'never' }],
-      'no-debugger': ['error'],
-      'no-console': 'off',
-      'no-empty': ['warn', { allowEmptyCatch: true }],
-      'no-process-exit': 'off',
-      'no-useless-escape': 'off',
-      'prefer-const': [
-        'warn',
-        {
-          destructuring: 'all',
-        },
-      ],
-      'n/no-missing-import': 'off', // doesn't like ts imports
-      'n/no-process-exit': 'off',
-      'node/no-unsupported-features/node-builtins': [
-        'error',
-        {
-          ignores: [
-            'navigator', // Not supported by node
-            'localStorage', // Experimental
-          ],
-        },
-      ],
+  .override('nuxt/rules',
+    {
+      rules: {
+        'quotes': ['warn', 'single', { avoidEscape: true }],
+        'eqeqeq': ['warn', 'always', { null: 'never' }],
+        'no-debugger': ['error'],
+        'no-console': 'off',
+        'no-empty': ['warn', { allowEmptyCatch: true }],
+        'no-process-exit': 'off',
+        'no-useless-escape': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        'prefer-const': [
+          'warn',
+          {
+            destructuring: 'all',
+          },
+        ],
+        'vue/max-attributes-per-line': ['error', {
+          singleline: {
+            max: 3,
+          },
+          multiline: {
+            max: 1,
+          },
+        }],
+        'vue/no-multiple-template-root': 'off',
+      },
     },
-  })
+  )

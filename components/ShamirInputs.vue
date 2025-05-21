@@ -48,11 +48,21 @@ defineExpose({
     <UForm :schema="schema" :state="state" class="space-y-4">
       <div class="flex">
         <UFormField label="Number of shares" name="shares" class="flex-1 mr-2">
-          <UInputNumber v-model="state.shares" :min="2" :max="16" class="w-full" />
+          <UInputNumber
+            v-model="state.shares"
+            :min="2"
+            :max="16"
+            class="w-full"
+          />
         </UFormField>
 
         <UFormField label="Threshold" name="threshold" class="flex-1">
-          <UInputNumber v-model="state.threshold" :min="2" :max="16" class="w-full" />
+          <UInputNumber
+            v-model="state.threshold"
+            :min="2"
+            :max="16"
+            class="w-full"
+          />
         </UFormField>
       </div>
       <!-- Icons representing threshold and remaining shares -->

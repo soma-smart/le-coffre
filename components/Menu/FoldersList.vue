@@ -126,7 +126,8 @@ function handleItemClick(item: any) {
 
           <!-- Right: chevron, rotates via the same data-state -->
           <UIcon
-            v-if="item.children" name="i-lucide-chevron-down"
+            v-if="item.children"
+            name="i-lucide-chevron-down"
             class="w-4 h-4 transform transition-transform duration-200 data-[state=open]:rotate-180"
           />
         </div>
