@@ -18,12 +18,15 @@ CREATE TABLE `account` (
 CREATE TABLE `folder` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
+	`slug` text NOT NULL,
 	`parent_id` integer,
 	`icon` text NOT NULL,
 	`color` text NOT NULL,
 	FOREIGN KEY (`parent_id`) REFERENCES `folder`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `folder_name_unique` ON `folder` (`name`);--> statement-breakpoint
+CREATE UNIQUE INDEX `folder_slug_unique` ON `folder` (`slug`);--> statement-breakpoint
 CREATE TABLE `global_config` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
@@ -33,7 +36,8 @@ CREATE TABLE `global_config` (
 CREATE TABLE `password` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`value` text NOT NULL,
-	`iv` text NOT NULL
+	`iv` text NOT NULL,
+	`auth_tag` text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `password_metadata` (

@@ -5,10 +5,10 @@ import { authClient } from '~/utils/auth-client'
 
 const session = authClient.useSession()
 const name = computed(() => {
-  return session.value?.data?.user?.name || session.value?.data?.user?.email || 'User'
+  return session.value?.data?.user?.name
 })
 
-const items = ref<DropdownMenuItem[][]>([
+const items = computed<DropdownMenuItem[][]>(() => [
   [
     {
       label: name.value,

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4fa2416f-45e0-4a28-b97e-397a203b182d",
+  "id": "b5918fff-11e4-455f-b82c-565cc85b94fe",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account": {
@@ -136,6 +136,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "parent_id": {
           "name": "parent_id",
           "type": "integer",
@@ -158,7 +165,22 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "folder_name_unique": {
+          "name": "folder_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        },
+        "folder_slug_unique": {
+          "name": "folder_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "folder_parent_id_folder_id_fk": {
           "name": "folder_parent_id_folder_id_fk",
@@ -228,6 +250,13 @@
         },
         "iv": {
           "name": "iv",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "auth_tag": {
+          "name": "auth_tag",
           "type": "text",
           "primaryKey": false,
           "notNull": true,

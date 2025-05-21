@@ -1,1 +1,0 @@
-ALTER TABLE `password` ADD `auth_tag` text NOT NULL;
