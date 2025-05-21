@@ -150,19 +150,47 @@ bun run preview
 
 ### Process of creation of the encryption key
 
+During initialization, the administrator configures two essential parameters:
+
+- The total number of shares (P) for the Master Key
+- The reconstruction threshold (N), which defines the minimum number of shares needed to reconstruct the Master Key
+- The system then generates two 256-bit cryptographic keys:
+
+Master Key: Primary key which:
+
+- Is used to encrypt the Encryption Key before storing it in the database
+- Is immediately divided into P distinct shares using Shamir's algorithm
+- Is never kept whole in the system after its creation
+
+Encryption Key: Operational key which:
+
+- Is temporarily stored in memory for encryption/decryption operations
+- Is also stored in the database, but only in a form encrypted by the Master Key
+- Enables the encryption and decryption of passwords and sensitive data
+
+Shamir's algorithm ensures that at least N shares out of P are necessary to reconstruct the Master Key.
+This approach provides enhanced security: even if some shares are compromised,
+the Master Key remains protected as long as fewer than N shares are exposed.
+
+When the application restarts, an unsealing process requires providing at least N shares to temporarily reconstruct the Master Key,
+decrypt the Encryption Key, and place it in memory for use.
+
+All encryption and decryption operations use the AES-256-GCM algorithm,
+providing both confidentiality and data authenticity.
+
 ```mermaid
 flowchart TD
-    A(["Shares Nb."]) -- Admin's Choice &amp; &gt; Thresold --> B@{ label: "Shamir's Secret Sharing" }
-    B -- Generates --> C["Shares Keys"]
-    n1(["Thresold Nb."]) -- Admin's Choice --> B
-    n2(["Master Key"]) --> B
-    n4(["Encryption Key"]) -- Generation of random Encryption Key --> n5["Encrypted Encryption Key"]
-    n2 -- Encrypt --> n5
-    n5 -- Stored --> n6["DB"]
-    n4 -- Stored --> n7["Memory"]
-    B@{ shape: rounded}
-    n6@{ shape: cyl}
-    n7@{ shape: das}
+    A[System initialization] -->|Admin configuration| B[Shamir parameters]
+    B -->|Number of shares P & threshold N| C[Key generation]
+    C -->|256 random bits| D[Master Key]
+    C -->|256 random bits| E[Encryption Key]
+    D -->|Encrypts| F[Encrypted Encryption Key]
+    D -->|Split using Shamir| G[P shares of Master Key]
+    F -->|Secure storage| H[Database]
+    E -->|Temporary storage| I[Application memory]
+    J[Unsealing] -->|Minimum N shares required| K[Master Key reconstruction]
+    K -->|Decrypts| L[Encryption Key recovery]
+    L -->|Used for| M[Password encryption/decryption]
 ```
 
 ### Process of encryption and decryption of a password
