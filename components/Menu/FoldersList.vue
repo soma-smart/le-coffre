@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ContextMenuItem } from '@nuxt/ui'
-import { ref } from 'vue'
+import type { FolderItem } from '~/shared/types/folderItem'
 
 const route = useRoute()
 const router = useRouter()
