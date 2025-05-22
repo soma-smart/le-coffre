@@ -2,6 +2,38 @@
 
 Le Coffre is an open-source password manager that allows you to securely store and manage passwords in a collaboration-friendly environment.
 
+## Table of Contents
+
+- [License](#license)
+- [Contributing](#contributing)
+- [Security implementation](#security-implementation)
+- [Init](#init)
+- [ORM](#orm)
+- [TODO](#todo)
+- [Library used](#library-used)
+- [Production deployment](#production-deployment)
+- [Security considerations](#security-considerations)
+- [Setup](#setup)
+- [Development Server](#development-server)
+- [Production](#production)
+- [Security](#security)
+  - [Process of creation of the encryption key](#process-of-creation-of-the-encryption-key)
+  - [Process of encryption and decryption of a password](#process-of-encryption-and-decryption-of-a-password)
+
+## License
+
+This project is licensed under the MIT License. You are free to use, modify, and distribute this project under the terms of the license.
+
+## Contributing
+We welcome contributions from the community! To contribute:  
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Commit your changes with clear and descriptive messages.
+4. Open a pull request and describe your changes.
+
+Please read our CONTRIBUTING.md for detailed guidelines.
+
 ## Security implementation
 
 Le Coffre uses the following security measures to ensure the safety of your passwords:
