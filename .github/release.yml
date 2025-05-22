@@ -36,23 +36,3 @@ changelog:
     - {{ pull.title }} (by @{{ pull.author.login }})
     {% endfor %}
     {% endfor %}
-
-autolabeler:
-  - pattern: '^feat:'
-    label: feature
-  - pattern: '^fix:'
-    label: bug
-  - pattern: '^chore:'
-    label: chore
-  - pattern: '^refactor:'
-    label: refactor
-  - pattern: '^deps:'
-    label: dependencies
-  - pattern: '^docs:'
-    label: documentation
-  - pattern: '^test:'
-    label: test
-  - pattern: '^ci:'
-    label: ci
-  - pattern: '^cd:'
-    label: cd
