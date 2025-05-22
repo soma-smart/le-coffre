@@ -1,0 +1,19 @@
+# Automatically label pull requests based on their title
+feature:
+ - head-branch: '^feat/.*'
+bug:
+ - head-branch: '^fix/.*'
+chore:
+ - head-branch: '^chore/.*'
+refactor:
+ - head-branch: '^refactor/.*'
+dependencies:
+ - head-branch: '^deps/.*'
+documentation:
+ - head-branch: '^docs/.*'
+test:
+ - head-branch: '^test/.*'
+ci:
+ - head-branch: '^ci/.*'
+cd:
+ - head-branch: '^cd/.*'
