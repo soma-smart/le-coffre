@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { Schema } from '~/shared/schemas/newFolder'
+import { schema } from '~/shared/schemas/newFolder'
 
 const state = reactive<Partial<Schema>>({
   name: 'My folder name',
@@ -11,10 +12,13 @@ const toast = useToast()
 const open = ref(false)
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
+  console.log('Creating folder with data:', event.data)
   // make POST request to create a new folder
-  await $fetch('/api/folders/tata', {
+  await $fetch('/api/folders', {
     method: 'POST',
-    body: event.data,
+    body: {
+      name: state.name,
+    },
   })
 
   toast.add({ title: 'Success', description: 'The folder has been created.', color: 'success' })
@@ -39,7 +43,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         :schema="schema"
         :state="state"
         class="space-y-4"
-        @submit="onSubmit"
+        method="post"
+        @submit.prevent="onSubmit"
       >
         <UFormField label="Name" name="name">
           <UInput v-model="state.name" />
