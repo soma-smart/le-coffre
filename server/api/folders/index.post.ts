@@ -1,7 +1,11 @@
+import { requireAuth } from '~/server/utils/requireAuth'
 import { schema } from '~/shared/schemas/newFolder'
 
 export default defineEventHandler(async (event) => {
-  // TODO: protect this endpoint with authentication
+  const session = await requireAuth(event)
+  if ('error' in session)
+    return session
+
   const result = await readValidatedBody(event, body =>
     schema.safeParse(body))
 

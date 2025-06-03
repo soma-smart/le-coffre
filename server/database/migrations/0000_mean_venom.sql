@@ -17,11 +17,13 @@ CREATE TABLE `account` (
 --> statement-breakpoint
 CREATE TABLE `folder` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`owner_id` integer NOT NULL,
 	`name` text NOT NULL,
 	`slug` text NOT NULL,
 	`parent_id` integer,
 	`icon` text NOT NULL,
 	`color` text NOT NULL,
+	FOREIGN KEY (`owner_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`parent_id`) REFERENCES `folder`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
@@ -31,6 +33,16 @@ CREATE TABLE `global_config` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`value` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `group` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`owner_id` text NOT NULL,
+	FOREIGN KEY (`owner_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `password` (
@@ -50,13 +62,16 @@ CREATE TABLE `password_metadata` (
 --> statement-breakpoint
 CREATE TABLE `permission` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`user_id` integer NOT NULL,
+	`user_id` text,
+	`group_id` text,
 	`folder_id` integer NOT NULL,
 	`can_update` integer NOT NULL,
 	`can_delete` integer NOT NULL,
 	`can_read` integer NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`folder_id`) REFERENCES `folder`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`group_id`) REFERENCES `group`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`folder_id`) REFERENCES `folder`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "userOrGroupCheck" CHECK(("permission"."user_id" IS NOT NULL AND "permission"."group_id" IS NULL) OR ("permission"."user_id" IS NULL AND "permission"."group_id" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE `session` (

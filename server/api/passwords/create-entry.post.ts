@@ -1,10 +1,10 @@
 import { Buffer } from 'node:buffer'
 import { consola } from 'consola'
 import { z } from 'zod'
-import { auth } from '~/server/config/auth'
 import { getEncryptionKey } from '~/server/database/configuration'
 import { password } from '~/server/database/schema'
 import { useDatabase } from '~/server/utils/useDatabase'
+import { requireAuth } from '~/server/utils/requireAuth'
 
 const passwordSchema = z.object({
   userPassword: z.string().min(1, 'Password is required'),
@@ -12,13 +12,9 @@ const passwordSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   // Check that the user is authenticated
-  const session = await auth.api.getSession(toWebRequest(event))
-  if (!session || !session.user) {
-    setResponseStatus(event, 401)
-    return {
-      error: 'User not authenticated',
-    }
-  }
+  const session = await requireAuth(event)
+  if ('error' in session)
+    return session
 
   const result = await readValidatedBody(event, body =>
     passwordSchema.safeParse(body))
