@@ -100,7 +100,7 @@ async function createAdminAccount() {
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <UFormField label="Password" name="password">
-          <PasswordInput v-model="state.password" :copy-button="false" />
+          <PasswordInput v-model="state.password" :copy-button="false" :can-be-generated="true" />
         </UFormField>
 
         <UFormField label="Password confirmation" name="passwordConfirmation">

@@ -3,9 +3,11 @@ const props = withDefaults(defineProps<{
   modelValue: string
   disabled?: boolean
   copyButton?: boolean
+  canBeGenerated?: boolean
 }>(), {
   disabled: false,
   copyButton: true,
+  canBeGenerated: false,
 })
 
 const emit = defineEmits<{
@@ -76,6 +78,7 @@ async function generateRandomPassword() {
       @click="copyToClipboard"
     />
     <UButton
+      v-if="canBeGenerated"
       color="neutral"
       variant="link"
       size="sm"
