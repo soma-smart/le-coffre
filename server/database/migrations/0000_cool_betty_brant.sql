@@ -17,7 +17,7 @@ CREATE TABLE `account` (
 --> statement-breakpoint
 CREATE TABLE `folder` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`owner_id` integer NOT NULL,
+	`owner_id` text NOT NULL,
 	`name` text NOT NULL,
 	`slug` text NOT NULL,
 	`parent_id` integer,
@@ -27,7 +27,6 @@ CREATE TABLE `folder` (
 	FOREIGN KEY (`parent_id`) REFERENCES `folder`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `folder_name_unique` ON `folder` (`name`);--> statement-breakpoint
 CREATE UNIQUE INDEX `folder_slug_unique` ON `folder` (`slug`);--> statement-breakpoint
 CREATE TABLE `global_config` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,

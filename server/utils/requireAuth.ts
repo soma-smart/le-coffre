@@ -1,9 +1,9 @@
 // server/utils/requireAuth.ts
-import { toWebRequest, type H3Event } from 'h3'
+import type { H3Event } from 'h3'
 import { auth } from '~/server/config/auth'
 
 export async function requireAuth(event: H3Event) {
-  const session = await auth.api.getSession(toWebRequest(event))
+  const session = await auth.api.getSession({ headers: event.headers })
 
   if (!session || !session.user) {
     setResponseStatus(event, 401)

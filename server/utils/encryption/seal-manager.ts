@@ -44,7 +44,6 @@ export async function unsealDatabase(shares: string[]): Promise<void> {
 
   // Convert the Uint8Array to a hexadecimal string before storing
   const encryptionKeyHex = Buffer.from(decryptedEncryptionKey).toString('hex')
-  consola.log('Decrypted encryption key:', encryptionKeyHex)
   // Store the encryption key in memory
   useStorage().setItem('encryptionKey', encryptionKeyHex)
 }

@@ -66,8 +66,8 @@ export const password = sqliteTable('password', {
 
 export const folder = sqliteTable('folder', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  owner_id: integer('owner_id').notNull().references(() => user.id),
-  name: text('name').notNull().unique(),
+  owner_id: text('owner_id').notNull().references(() => user.id),
+  name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
   parent_id: integer('parent_id').references((): AnySQLiteColumn => folder.id),
   icon: text('icon').notNull(),
