@@ -18,7 +18,7 @@ export async function generateUniqueSlug(
 
   // Vérifier si le slug de base existe déjà
   const existingSlugs = useDatabase().select().from(folder).where(like(folder.slug, `${baseSlug}%`)).all()
-  console.log(existingSlugs)
+
   // Si aucun slug similaire n'existe, retourner le slug de base
   if (existingSlugs.length === 0) {
     return baseSlug
