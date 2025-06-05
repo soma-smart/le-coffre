@@ -81,8 +81,9 @@ function buildItemPath(
   for (const node of currentItems) {
     const newPath = [...path, node.slug]
 
-    if (node.slug === item.slug && node.children === item.children)
+    if (node.slug === item.slug) {
       return newPath
+    }
 
     if (node.children) {
       const result = buildItemPath(item, node.children as FolderItem[], newPath)
@@ -95,9 +96,14 @@ function buildItemPath(
 
 function handleItemClick(item: any) {
   const fullPath = buildItemPath(item)
-  if (fullPath) {
+
+  if (fullPath && fullPath.length > 0) {
     const encodedPath = fullPath.map(encodeURIComponent).join('/')
     router.push(`/passwords/${encodedPath}`)
+  }
+  else {
+    // Fallback for root items or when path building fails
+    router.push(`/passwords/${encodeURIComponent(item.slug)}`)
   }
 }
 </script>
@@ -126,7 +132,7 @@ function handleItemClick(item: any) {
 
           <!-- Right: chevron, rotates via the same data-state -->
           <UIcon
-            v-if="item.children"
+            v-if="item.children.length > 0"
             name="i-lucide-chevron-down"
             class="w-4 h-4 transform transition-transform duration-200 data-[state=open]:rotate-180"
           />
