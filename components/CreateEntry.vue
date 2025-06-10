@@ -25,6 +25,7 @@ async function createEntry() {
     <PasswordInput
       v-model="password"
       :disabled="false"
+      :can-be-generated="true"
       placeholder="Enter your password"
       :ui="{ trailing: 'flex gap-1 pe-1 items-center' }"
       class="w-full"

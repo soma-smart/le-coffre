@@ -25,6 +25,7 @@
     "better-auth": "^1.2.6",
     "better-sqlite3": "^11.9.1",
     "drizzle-orm": "^0.43.1",
+    "generate-password": "^1.7.1",
     "lint-staged": "^15.5.1",
     "nuxt": "^3.17.2",
     "shamir-secret-sharing": "^0.0.4",

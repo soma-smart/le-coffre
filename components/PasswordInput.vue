@@ -3,9 +3,11 @@ const props = withDefaults(defineProps<{
   modelValue: string
   disabled?: boolean
   copyButton?: boolean
+  canBeGenerated?: boolean
 }>(), {
   disabled: false,
   copyButton: true,
+  canBeGenerated: false,
 })
 
 const emit = defineEmits<{
@@ -33,6 +35,11 @@ function copyToClipboard() {
     title: 'Password copied',
     description: 'The password has been copied in the clipboard',
   })
+}
+
+async function generateRandomPassword() {
+  const result = await $fetch('/api/passwords/generate')
+  inputValue.value = result
 }
 </script>
 
@@ -69,6 +76,14 @@ function copyToClipboard() {
       size="sm"
       :icon="copied ? 'i-lucide-copy-check' : 'i-lucide-copy'"
       @click="copyToClipboard"
+    />
+    <UButton
+      v-if="canBeGenerated"
+      color="neutral"
+      variant="link"
+      size="sm"
+      icon="mdi:dice"
+      @click="generateRandomPassword"
     />
   </div>
 </template>

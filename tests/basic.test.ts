@@ -1,12 +1,8 @@
-import { fileURLToPath } from 'node:url'
 import { $fetch, isDev, setup } from '@nuxt/test-utils'
 import { describe, expect, it } from 'vitest'
 
 describe('frontend', async () => {
-  await setup({
-    rootDir: fileURLToPath(new URL('..', import.meta.url)),
-    server: true,
-  })
+  await setup()
 
   it('renders Setup word on /setup page', async () => {
     expect(await $fetch('/setup')).toMatch('Setup')

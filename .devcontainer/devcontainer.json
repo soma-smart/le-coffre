@@ -15,7 +15,8 @@
         "bradlc.vscode-tailwindcss",
         "Nuxtr.nuxt-vscode-extentions",
         "qwtel.sqlite-viewer",
-        "Gruntfuggly.todo-tree"
+        "Gruntfuggly.todo-tree",
+        "vitest.explorer"
       ]
     },
     "settings": {
