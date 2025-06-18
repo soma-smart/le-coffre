@@ -160,6 +160,9 @@ docker build -t le-coffre .
 docker volume create le-coffre-volume
 # Run a container using the named volume
 docker run -p 3000:3000 le-coffre:latest --volume le-coffre-volume:/app
+
+# Pull docker image
+docker pull rg.fr-par.scw.cloud/soma-smart-cr/le-coffre:latest
 ```
 
 Locally preview production build:
