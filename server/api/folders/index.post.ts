@@ -1,9 +1,7 @@
 import { consola } from 'consola'
 import { requireAuth } from '~/server/utils/requireAuth'
 import { newFolderSchema } from '~/shared/schemas/newFolder'
-import { generateUniqueSlug } from '~/server/utils/folder/generateSlug'
-import { folder } from '~/server/database/schema'
-import { useDatabase } from '~/server/utils/useDatabase'
+import { createFolderService } from '~/server/utils/folder/createFolder'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -25,24 +23,12 @@ export default defineEventHandler(async (event) => {
     }
 
     const { name } = result.data
+    const response = await createFolderService.createFolder(session.user.id, name)
 
-    const slug = await generateUniqueSlug(name)
-
-    const insertResult = await useDatabase().insert(folder).values({
-      owner_id: session.user.id,
-      name,
-      slug,
-      icon: 'i-lucide-folder',
-      color: '#4f46e5',
-    }).returning()
-
-    return {
-      success: true,
-      inserted: insertResult,
-    }
+    return response
   }
   catch (error) {
-    consola.error('Error creating folder:', error)
+    consola.error('Error handling folder creation request:', error)
     setResponseStatus(event, 500)
     return {
       success: false,

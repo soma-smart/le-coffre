@@ -15,6 +15,7 @@ export async function generateUniqueSlug(
     .trim()
     .replace(/\s+/g, '-') // Remplace les espaces par des tirets
     .replace(/[^\w-]+/g, '') // Supprime les caractères spéciaux
+    .replace(/-+/g, '-') // Unifie les tirets multiples en un seul
 
   // Vérifier si le slug de base existe déjà
   const existingSlugs = useDatabase().select().from(folder).where(like(folder.slug, `${baseSlug}%`)).all()
