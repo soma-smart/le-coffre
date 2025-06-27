@@ -16,7 +16,7 @@
     "typecheck": "nuxt typecheck",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test:unit": "vitest"
+    "test:unit": "vitest run tests/unit"
   },
   "dependencies": {
     "@nuxt/eslint": "^1.4.1",
