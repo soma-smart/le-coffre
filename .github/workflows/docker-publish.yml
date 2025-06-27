@@ -38,9 +38,9 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:${{ github.ref_name }}
-            ${{ env.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:latest
-          cache-from: type=registry,ref=${{ env.DOCKER_USERNAME }}/${{ env.PROJECT_NAME }}:latest
+            ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ github.ref_name }}
+            ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:latest
+          cache-from: type=registry,ref=${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:latest
           cache-to: type=inline
           no-cache: false
 
