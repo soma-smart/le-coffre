@@ -1,0 +1,15 @@
+[project]
+name = "le-coffre"
+version = "0.1.0"
+description = "A secure vault application"
+
+[tool.pytest.ini_options]
+pythonpath = "."
+
+[tool.poetry.dependencies]
+python = ">=3.12.3"
+fastapi = "0.116.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "7.4.4"
+pytest-watch = "4.2.0"
