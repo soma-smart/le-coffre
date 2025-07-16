@@ -1,4 +1,5 @@
 from src.domain.setup_info import SetupInfo
+from .crypto.shamir_service import ShamirSecretService
 
 
 def setup_master_password(
@@ -13,5 +14,5 @@ def setup_master_password(
     if threshold > nb_shared:
         raise Exception("Threshold cannot be greater than number of shares")
 
-    shares = [f"share_{i+1}" for i in range(nb_shared)]
+    shares = ShamirSecretService().split_secret(threshold, nb_shared)
     return SetupInfo(shares=shares)
