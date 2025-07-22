@@ -6,7 +6,7 @@ from src.domain.vault_setup import setup_master_password
 from src.domain.setup_info import SetupInfo
 
 
-class SetupMasterPasswordUseCase:
+class SetupLecoffreUseCase:
     def __init__(self, store: SetupStateStore):
         self.store = store
 

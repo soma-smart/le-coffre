@@ -10,16 +10,16 @@ from src.domain.setup_info import SetupInfo
 
 @pytest.fixture
 def mock_usecase():
-    mock_setup_master_password_usecase = Mock()
+    mock_setup_lecoffre_usecase = Mock()
 
     class Container(containers.DeclarativeContainer):
-        setup_master_password_usecase = providers.Factory(
-            lambda: mock_setup_master_password_usecase,
+        setup_lecoffre_usecase = providers.Factory(
+            lambda: mock_setup_lecoffre_usecase,
         )
 
     container = Container()
     container.wire(modules=[setup_route])
-    return mock_setup_master_password_usecase
+    return mock_setup_lecoffre_usecase
 
 
 @pytest.fixture
@@ -28,36 +28,36 @@ def client(mock_usecase):
 
 
 def test_setup_route_exists(client):
-	with pytest.raises(RequestValidationError):
-		client.post("/setup")
+    with pytest.raises(RequestValidationError):
+        client.post("/setup")
 
 
 @pytest.mark.parametrize("args", ["nb_shared=2", "threshold=1"])
 def test_given_missing_param_when_setup_route_called_then_fails(client, args):
-	with pytest.raises(RequestValidationError):
-		client.post("/setup?" + args)
+    with pytest.raises(RequestValidationError):
+        client.post("/setup?" + args)
 
 
 @pytest.mark.parametrize("args", [[], ["1"], ["1", "2", "3", "4"]])
 def test_given_use_case_succeeding_when_setup_route_called_then_returns_setup_info(
-	client, mock_usecase, args
+    client, mock_usecase, args
 ):
-	mock_usecase.execute.return_value = SetupInfo(args)
+    mock_usecase.execute.return_value = SetupInfo(args)
 
-	response = client.post("/setup?nb_shared=2&threshold=1")
+    response = client.post("/setup?nb_shared=2&threshold=1")
 
-	assert response.status_code == 200
-	assert response.json() == {"shares": args}
-	mock_usecase.execute.assert_called_once_with(2, 1)
+    assert response.status_code == 200
+    assert response.json() == {"shares": args}
+    mock_usecase.execute.assert_called_once_with(2, 1)
 
 
 def test_given_use_case_failing_when_setup_route_called_then_returns_400(
-	client, mock_usecase
+    client, mock_usecase
 ):
-	mock_usecase.execute.side_effect = Exception("Test")
+    mock_usecase.execute.side_effect = Exception("Test")
 
-	with pytest.raises(HTTPException) as e:
-		client.post("/setup?nb_shared=2&threshold=1")
+    with pytest.raises(HTTPException) as e:
+        client.post("/setup?nb_shared=2&threshold=1")
 
-	assert e.value.status_code == 400
-	assert e.value.detail == "Test"
+    assert e.value.status_code == 400
+    assert e.value.detail == "Test"

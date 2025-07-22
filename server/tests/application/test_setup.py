@@ -1,7 +1,7 @@
 import pytest
 
 
-from src.application.usecase.setup_master_password import SetupMasterPasswordUseCase
+from src.application.usecase.setup_lecoffre import SetupLecoffreUseCase
 
 
 class MockSetupStore:
@@ -18,7 +18,7 @@ class MockSetupStore:
 @pytest.fixture()
 def setup_use_case():
     store = MockSetupStore()
-    return SetupMasterPasswordUseCase(store)
+    return SetupLecoffreUseCase(store)
 
 
 @pytest.mark.parametrize("num_shares, threshold", [(5, 3), (6, 4), (7, 5)])
