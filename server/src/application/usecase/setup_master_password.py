@@ -1,7 +1,8 @@
 from typing import Optional
 
-from src.domain.vault_setup import setup_master_password
 from src.application.port.setup_state_store import SetupStateStore
+
+from src.domain.vault_setup import setup_master_password
 from src.domain.setup_info import SetupInfo
 
 
