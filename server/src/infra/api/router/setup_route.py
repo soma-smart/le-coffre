@@ -20,4 +20,4 @@ def setup_master_password(
         setup_info: SetupInfo = usecase.execute(nb_shared, threshold)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return "yolo"
+    return setup_info
