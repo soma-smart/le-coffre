@@ -1,13 +1,13 @@
 from typing import Optional
 
-from src.application.port.setup_state_store import SetupStateStore
+from src.application.port.setup_state_repo import SetupStateRepo
 
 from src.domain.vault_setup import setup_master_password
 from src.domain.setup_info import SetupInfo
 
 
 class SetupLecoffreUseCase:
-    def __init__(self, store: SetupStateStore):
+    def __init__(self, store: SetupStateRepo):
         self.store = store
 
     def execute(self, nb_shared: int, threshold: int) -> SetupInfo:

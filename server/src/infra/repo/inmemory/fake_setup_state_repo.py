@@ -1,8 +1,8 @@
-from src.application.port.setup_state_store import SetupStateStore
+from src.application.port.setup_state_repo import SetupStateRepo
 from src.domain.setup_info import SetupInfo
 
 
-class InMemorySetupStateStore(SetupStateStore):
+class FakeSetupStateRepo(SetupStateRepo):
     def __init__(self):
         self._setup = None
 

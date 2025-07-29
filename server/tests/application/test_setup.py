@@ -1,23 +1,12 @@
 import pytest
 
-
+from src.infra.repo.inmemory.fake_setup_state_repo import FakeSetupStateRepo
 from src.application.usecase.setup_lecoffre import SetupLecoffreUseCase
-
-
-class MockSetupStore:
-    def __init__(self):
-        self._setup_info = None
-
-    def get_setup(self):
-        return self._setup_info
-
-    def mark_setup(self, setup_info):
-        self._setup_info = setup_info
 
 
 @pytest.fixture()
 def setup_use_case():
-    store = MockSetupStore()
+    store = FakeSetupStateRepo()
     return SetupLecoffreUseCase(store)
 
 
