@@ -21,14 +21,14 @@ class CreateVaultUseCase:
         self.vault_repo = vault_repo
         self.shamir_gateway = shamir_gateway
 
-    def execute(self, nb_shares: int, threshold: int) -> Vault:
+    def execute(self, nb_shares: int, threshold: int) -> list[str]:
         existing_vault: Optional[Vault] = self.vault_repo.get()
 
         vault = self.__create_vault(existing_vault, nb_shares, threshold)
 
         self.vault_repo.save(vault)
 
-        return vault
+        return vault.shares
 
     def __create_vault(
         self, existing_vault: Optional[Vault], nb_shares: int, threshold: int

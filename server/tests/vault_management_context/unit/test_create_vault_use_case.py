@@ -1,42 +1,27 @@
 import pytest
 
-from src.vault_management_context.adapters.secondary.gateways.crypto_shamir_gateway import (
-    CryptoShamirGateway,
+from src.vault_management_context.business_logic.models.value_objects.vault import (
+    Vault,
 )
 from src.vault_management_context.business_logic.use_cases.create_vault_use_case import (
     CreateVaultUseCase,
 )
-from src.vault_management_context.business_logic.models.value_objects.vault import (
-    Vault,
-)
-from src.vault_management_context.adapters.secondary.gateways.fake_vault_repository import (
-    FakeVaultRepository,
-)
+from tests.vault_management_context.fixtures import vault_repository, shamir_gateway
 
 
 @pytest.fixture()
-def vault_repo():
-    return FakeVaultRepository()
+def use_case(vault_repository, shamir_gateway):
+    return CreateVaultUseCase(vault_repository, shamir_gateway)
 
 
-@pytest.fixture()
-def shamir_gateway():
-    return CryptoShamirGateway()
+def test_should_create_shares(use_case, vault_repository):
+    shares = use_case.execute(5, 3)
+
+    assert vault_repository.get().shares == shares
 
 
-@pytest.fixture()
-def use_case(vault_repo, shamir_gateway):
-    return CreateVaultUseCase(vault_repo, shamir_gateway)
-
-
-def test_should_create_vault(use_case, vault_repo):
-    vault = use_case.execute(5, 3)
-
-    assert vault_repo.get() == vault
-
-
-def test_should_failt_when_vault_is_already_created(use_case, vault_repo):
-    vault_repo.save(Vault(5, 3, []))
+def test_should_failt_when_vault_is_already_created(use_case, vault_repository):
+    vault_repository.save(Vault(5, 3, []))
 
     with pytest.raises(ValueError) as exc_info:
         use_case.execute(5, 3)

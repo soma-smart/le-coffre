@@ -2,7 +2,11 @@
   "editor.tabSize": 2,
   "files.insertFinalNewline": true,
   "eslint.useFlatConfig": true,
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
+  "[python]": {
+    "editor.formatOnSave": true,
+    "python.languageServer": "Pylance"
+  },
   "eslint.format.enable": true,
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit"
