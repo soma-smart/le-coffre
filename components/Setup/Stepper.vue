@@ -33,7 +33,7 @@ const shares = ref<string[]>([])
 
 async function generateMasterKey() {
   isGeneratingMasterKey.value = true
-  const result = await $fetch('/api/setup/generate-master-key', {
+  const result = await $fetch('/api/vault/setup', {
     method: 'POST',
     body: {
       shares: shamirRef.value.state.shares,
