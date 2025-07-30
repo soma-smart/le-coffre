@@ -1,7 +1,7 @@
 from Crypto.Random import get_random_bytes
 from Crypto.Protocol.SecretSharing import Shamir
 
-from src.vault_management_context.business_logic.gateways import (
+from src.vault_management_context.application.gateways import (
     ShamirGateway,
 )
 

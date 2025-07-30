@@ -1,14 +1,14 @@
 from typing import Optional
 
-from src.vault_management_context.business_logic.models.value_objects import (
+from src.vault_management_context.domain.models import (
     Vault,
 )
-from src.vault_management_context.business_logic.gateways import (
+from src.vault_management_context.application.gateways import (
     VaultRepository,
     ShamirGateway,
 )
-from src.vault_management_context.business_logic.models.domain_services import (
-    VaultDomainService,
+from src.vault_management_context.domain.services import (
+    VaultCreationService,
 )
 
 
@@ -31,7 +31,7 @@ class CreateVaultUseCase:
     def __create_vault(
         self, existing_vault: Optional[Vault], nb_shares: int, threshold: int
     ) -> Vault:
-        VaultDomainService.pre_check(existing_vault)
+        VaultCreationService.pre_check(existing_vault)
 
         shares = self.shamir_gateway.split_secret(nb_shares, threshold)
-        return VaultDomainService.create_vault(nb_shares, threshold, shares)
+        return VaultCreationService.create_vault(nb_shares, threshold, shares)

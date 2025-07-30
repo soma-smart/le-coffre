@@ -2,15 +2,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.vault_management_context.business_logic.models.value_objects import Vault
-from src.vault_management_context.adapters.primary.api.controllers import (
+from src.vault_management_context.domain.models import Vault
+from src.vault_management_context.adapters.primary.api.routes import (
     vault_management_route,
 )
 from src.vault_management_context.adapters.primary.api.app_dependencies import (
     get_vault_repository,
     get_shamir_gateway,
 )
-from tests.vault_management_context.fixtures import vault_repository, shamir_gateway
 
 
 @pytest.fixture

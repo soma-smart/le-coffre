@@ -5,9 +5,9 @@ from src.vault_management_context.adapters.primary.api.app_dependencies import (
     get_create_vault_usecase,
     get_vault_status_usecase,
 )
-from src.vault_management_context.business_logic.use_cases import (
+from src.vault_management_context.application.use_cases import (
     CreateVaultUseCase,
-    VaultStatusUseCase,
+    GetVaultStatusUseCase,
 )
 
 router = APIRouter(prefix="/api/vault")
@@ -35,6 +35,8 @@ def create_vault(
 
 
 @router.head("", status_code=200)
-def get_vault_status(usecase: VaultStatusUseCase = Depends(get_vault_status_usecase)):
+def get_vault_status(
+    usecase: GetVaultStatusUseCase = Depends(get_vault_status_usecase),
+):
     if not usecase.execute():
         raise HTTPException(status_code=404, detail="Vault not found")

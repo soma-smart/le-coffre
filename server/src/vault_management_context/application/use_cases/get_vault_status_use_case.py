@@ -1,7 +1,7 @@
-from src.vault_management_context.business_logic.gateways import VaultRepository
+from src.vault_management_context.application.gateways import VaultRepository
 
 
-class VaultStatusUseCase:
+class GetVaultStatusUseCase:
     def __init__(self, vault_repository: VaultRepository):
         self.vault_repository = vault_repository
 

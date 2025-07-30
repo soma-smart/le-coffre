@@ -1,9 +1,9 @@
 from typing import Optional
 
-from src.vault_management_context.business_logic.models.value_objects import Vault
+from src.vault_management_context.domain.models import Vault
 
 
-class VaultDomainService:
+class VaultCreationService:
     @staticmethod
     def pre_check(existing_vault: Optional[Vault]):
         if existing_vault is not None:

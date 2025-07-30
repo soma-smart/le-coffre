@@ -5,11 +5,9 @@ from src.vault_management_context.adapters.secondary.gateways import (
     FakeVaultRepository,
 )
 
-
 @pytest.fixture()
 def vault_repository():
     return FakeVaultRepository()
-
 
 @pytest.fixture()
 def shamir_gateway():

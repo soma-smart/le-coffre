@@ -1,11 +1,11 @@
 from fastapi import Depends
 from starlette.requests import Request
 
-from src.vault_management_context.business_logic.use_cases import (
+from src.vault_management_context.application.use_cases import (
     CreateVaultUseCase,
-    VaultStatusUseCase,
+    GetVaultStatusUseCase,
 )
-from src.vault_management_context.business_logic.gateways import (
+from src.vault_management_context.application.gateways import (
     VaultRepository,
     ShamirGateway,
 )
@@ -29,4 +29,4 @@ def get_create_vault_usecase(
 def get_vault_status_usecase(
     vault_repository: VaultRepository = Depends(get_vault_repository),
 ):
-    return VaultStatusUseCase(vault_repository)
+    return GetVaultStatusUseCase(vault_repository)

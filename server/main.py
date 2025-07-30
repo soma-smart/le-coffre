@@ -6,7 +6,7 @@ from src.vault_management_context.adapters.secondary.gateways import (
     CryptoShamirGateway,
 )
 
-from src.vault_management_context.adapters.primary.api.controllers import (
+from src.vault_management_context.adapters.primary.api.routes import (
     vault_management_route,
 )
 
