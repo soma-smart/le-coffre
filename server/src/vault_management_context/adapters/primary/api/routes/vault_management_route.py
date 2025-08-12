@@ -9,7 +9,8 @@ from vault_management_context.application.use_cases import (
     CreateVaultUseCase,
     GetVaultStatusUseCase,
 )
-from vault_management_context.domain.models.share import Share
+from vault_management_context.domain.entities.share import Share
+from vault_management_context.domain.exceptions import VaultManagementDomainError
 
 router = APIRouter(prefix="/api/vault")
 
@@ -30,8 +31,10 @@ def create_vault(
 ):
     try:
         shares: list[Share] = usecase.execute(request.nb_shares, request.threshold)
-    except Exception as e:
+    except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error")
     return {"shares": shares}
 
 

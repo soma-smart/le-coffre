@@ -1,21 +1,20 @@
 from typing import List, Optional
 
-from vault_management_context.domain.models import Vault, Share
+from vault_management_context.domain.entities import Vault, Share
+from vault_management_context.domain.value_objects import VaultConfiguration
+from vault_management_context.domain.exceptions import VaultAlreadyExistsError
 
 
 class VaultCreationService:
     @staticmethod
     def pre_check(existing_vault: Optional[Vault]):
         if existing_vault is not None:
-            raise ValueError("Already setup")
+            raise VaultAlreadyExistsError()
 
     @staticmethod
-    def create_vault(nb_shares: int, threshold: int, shares: List[Share]) -> Vault:
-        if nb_shares < 2:
-            raise ValueError("Number of shares must be at least 2")
-        if threshold < 2:
-            raise ValueError("Threshold must be at least 2")
-        if threshold > nb_shares:
-            raise ValueError("Threshold cannot be greater than number of shares")
-
-        return Vault(nb_shares=nb_shares, threshold=threshold, shares=shares)
+    def create_vault(configuration: VaultConfiguration, shares: List[Share]) -> Vault:
+        return Vault(
+            nb_shares=configuration.share_count.value,
+            threshold=configuration.threshold.value,
+            shares=shares,
+        )

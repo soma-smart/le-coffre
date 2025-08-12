@@ -2,7 +2,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from vault_management_context.domain.models import Vault
+from vault_management_context.domain.entities import Vault
 from vault_management_context.adapters.primary.api.routes.vault_management_route import (
     router as vault_management_route,
 )

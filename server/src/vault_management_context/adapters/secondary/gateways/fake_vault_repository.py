@@ -1,6 +1,6 @@
 from typing import Optional
 
-from vault_management_context.domain.models import (
+from vault_management_context.domain.entities import (
     Vault,
 )
 from vault_management_context.application.gateways.vault_repository import (

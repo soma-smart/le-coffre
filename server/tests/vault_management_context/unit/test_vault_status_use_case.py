@@ -4,7 +4,7 @@ from vault_management_context.application.gateways import (
     VaultRepository,
 )
 from vault_management_context.application.use_cases import GetVaultStatusUseCase
-from vault_management_context.domain.models import Vault
+from vault_management_context.domain.entities import Vault
 
 
 @pytest.fixture()
