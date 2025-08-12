@@ -28,6 +28,12 @@ domain/services : Domain Services
 
 Rules:
 - TDD should only apply on UseCase app logics. Everything else in App or Domain layers should not be tested directly
+- Unit Test should update the repositories, execute the use case and check that the repositories are correct. With FakeRepositories for simplicity
 - Tests should use pytest (not unitest, no classes), fixtures. avoid python patches
 - Don't write comments if they repeat exactly what the code is doing
 - Don't write comments of a refactoring process
+- Never run a single folder, file or test when executing unit test. Always run all the unit tests
+- At the end of your developments steps, run all the tests (e2e and unit)
+- Use uv to run tests
+
+Wait for any instructions
