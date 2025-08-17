@@ -3,12 +3,8 @@ from pydantic import BaseModel
 
 from vault_management_context.adapters.primary.api.app_dependencies import (
     get_create_vault_usecase,
-    get_vault_status_usecase,
 )
-from vault_management_context.application.use_cases import (
-    CreateVaultUseCase,
-    GetVaultStatusUseCase,
-)
+from vault_management_context.application.use_cases import CreateVaultUseCase
 from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
@@ -36,11 +32,3 @@ def create_vault(
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")
     return {"shares": shares}
-
-
-@router.head("", status_code=200)
-def get_vault_status(
-    usecase: GetVaultStatusUseCase = Depends(get_vault_status_usecase),
-):
-    if not usecase.execute():
-        raise HTTPException(status_code=404, detail="Vault not found")

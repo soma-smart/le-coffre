@@ -1,2 +1,1 @@
-from .fake_vault_repository import FakeVaultRepository
 from .crypto_shamir_gateway import CryptoShamirGateway

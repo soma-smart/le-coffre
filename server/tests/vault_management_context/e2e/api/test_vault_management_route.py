@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from typing import List
 
-from vault_management_context.domain.entities import Vault, Share
+from vault_management_context.domain.entities import Share
 from vault_management_context.adapters.primary.api.routes.vault_management_route import (
     router as vault_management_route,
 )
@@ -47,17 +47,3 @@ def test_can_create_the_vault(client, vault_repository, shamir_gateway):
     generated_vault = vault_repository.get()
     assert generated_vault.nb_shares == nb_shares
     assert generated_vault.threshold == 3
-
-
-def test_should_not_see_vault_when_vault_is_not_setup(client):
-    response = client.head("/api/vault")
-
-    assert response.status_code == 404
-
-
-def test_should_see_vault_when_vault_is_setup(client, vault_repository):
-    vault_repository.save(Vault(nb_shares=5, threshold=3))
-
-    response = client.head("/api/vault")
-
-    assert response.status_code == 200
