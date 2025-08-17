@@ -3,7 +3,6 @@ name = "Le-Coffre"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "dependency-injector==4.48.1",
   "fastapi[standard]>=0.116.1",
   "PyCryptodome==3.23.0",
 ]
