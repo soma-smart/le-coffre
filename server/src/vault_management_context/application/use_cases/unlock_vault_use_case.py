@@ -4,6 +4,7 @@ from vault_management_context.domain.entities import Share
 from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
     ShareReconstructionError,
+    VaultUnlockedError,
 )
 from vault_management_context.application.gateways import VaultRepository, ShamirGateway
 from vault_management_context.application.gateways import (
@@ -40,5 +41,7 @@ class UnlockVaultUseCase:
                 vault.encrypted_key,
                 master_secret,
             )
+        except VaultUnlockedError as e:
+            raise e
         except Exception as e:
             raise ShareReconstructionError() from e

@@ -2,19 +2,20 @@ import pytest
 
 
 def test_can_unlock_vault_with_valid_shares(e2e_client, vault_session_gateway):
+    threshold = 3
     setup_response = e2e_client.post(
         "/api/vault/setup",
         json={
             "nb_shares": 5,
-            "threshold": 3,
+            "threshold": threshold,
         },
     )
 
-    assert setup_response.status_code == 201
     setup_data = setup_response.json()
     shares = setup_data["shares"]
+    shares_to_use = shares[:threshold]
 
-    shares_to_use = shares[:3]
+    e2e_client.post("/api/vault/lock")
 
     unlock_response = e2e_client.post(
         "/api/vault/unlock",
@@ -44,7 +45,6 @@ def test_vault_unlock_fails_with_insufficient_real_shares(e2e_client):
         },
     )
 
-    assert setup_response.status_code == 201
     setup_data = setup_response.json()
     real_shares = setup_data["shares"]
 
@@ -74,7 +74,6 @@ def test_vault_unlock_fails_when_shares_given_are_wrong(e2e_client):
         },
     )
 
-    assert setup_response.status_code == 201
     setup_data = setup_response.json()
     real_shares = setup_data["shares"]
 

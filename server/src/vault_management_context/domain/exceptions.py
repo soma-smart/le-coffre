@@ -25,6 +25,13 @@ class VaultLockedException(VaultManagementDomainError):
         super().__init__("Vault is already locked")
 
 
+class VaultUnlockedError(VaultManagementDomainError):
+    """Raised when attempting to unlock a vault already unlocked"""
+
+    def __init__(self):
+        super().__init__("Vault is already unlocked")
+
+
 class ShareReconstructionError(VaultManagementDomainError):
     def __init__(
         self, message: str = "Failed to reconstruct secret from provided shares"

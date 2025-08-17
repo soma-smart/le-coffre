@@ -40,7 +40,6 @@ def test_should_create_shares_and_store_encrypted_key(
     encrypted_key = "encrypted_vault_key_123"
     decrypted_key = "generated_vault_key"
 
-    # Setup mocks
     shamir_result = ShamirResult(shares=expected_shares, master_key=master_key)
     shamir_gateway.set_shamir_result(shamir_result)
     encryption_gateway.set_encrypted_key(encrypted_key)

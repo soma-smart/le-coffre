@@ -1,7 +1,3 @@
-"""
-End-to-End test fixtures - using REAL implementations for integration testing
-"""
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -15,16 +11,10 @@ from vault_management_context.adapters.primary.api.app_dependencies import (
     get_encryption_gateway,
     get_vault_session_gateway,
 )
-from vault_management_context.adapters.secondary.gateways.in_memory_vault_repository import (
+from vault_management_context.adapters.secondary.gateways import (
     InMemoryVaultRepository,
-)
-from vault_management_context.adapters.secondary.gateways.crypto_shamir_gateway import (
     CryptoShamirGateway,
-)
-from vault_management_context.adapters.secondary.gateways.aes_encryption_gateway import (
     AesEncryptionGateway,
-)
-from vault_management_context.adapters.secondary.gateways.in_memory_vault_session_gateway import (
     InMemoryVaultSessionGateway,
 )
 
@@ -64,5 +54,4 @@ def e2e_client(
     client.app.dependency_overrides[get_vault_session_gateway] = (
         lambda: vault_session_gateway
     )
-
     return client
