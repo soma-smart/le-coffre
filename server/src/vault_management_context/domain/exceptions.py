@@ -18,6 +18,13 @@ class VaultNotSetupException(VaultManagementDomainError):
         super().__init__("Vault has not been setup yet")
 
 
+class VaultLockedException(VaultManagementDomainError):
+    """Raised when attempting to lock a vault that is already locked"""
+
+    def __init__(self):
+        super().__init__("Vault is already locked")
+
+
 class ShareReconstructionError(VaultManagementDomainError):
     def __init__(
         self, message: str = "Failed to reconstruct secret from provided shares"

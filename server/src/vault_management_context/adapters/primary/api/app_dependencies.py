@@ -4,6 +4,7 @@ from starlette.requests import Request
 from vault_management_context.application.use_cases import (
     CreateVaultUseCase,
     UnlockVaultUseCase,
+    LockVaultUseCase,
 )
 from vault_management_context.application.gateways import (
     VaultRepository,
@@ -49,3 +50,10 @@ def get_unlock_vault_usecase(
     return UnlockVaultUseCase(
         vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway
     )
+
+
+def get_lock_vault_usecase(
+    vault_repository: VaultRepository = Depends(get_vault_repository),
+    vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
+):
+    return LockVaultUseCase(vault_repository, vault_session_gateway)
