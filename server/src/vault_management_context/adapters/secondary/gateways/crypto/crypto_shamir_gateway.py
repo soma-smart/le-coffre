@@ -17,8 +17,8 @@ class CryptoShamirGateway(ShamirGateway):
         secret = get_random_bytes(16)
 
         shares = Shamir.split(
-            configuration.threshold.value,
-            configuration.share_count.value,
+            configuration.threshold,
+            configuration.share_count,
             secret,
             False,
         )

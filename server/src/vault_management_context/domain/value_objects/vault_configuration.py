@@ -7,8 +7,7 @@ from vault_management_context.domain.exceptions import (
 )
 
 
-@dataclass(frozen=True)
-class ShareCount:
+class ShareCount(int):
     """Represents the number of Shamir shares for a vault
 
     Domain Rules:
@@ -16,18 +15,16 @@ class ShareCount:
     - Cannot be negative or zero
     """
 
-    value: int = field()
-
-    def __post_init__(self):
-        if self.value < 2:
-            raise InvalidShareCountError(self.value)
+    def __new__(cls, value: int):
+        if value < 2:
+            raise InvalidShareCountError(value)
+        return int.__new__(cls, value)
 
     def __str__(self) -> str:
-        return str(self.value)
+        return str(int(self))
 
 
-@dataclass(frozen=True)
-class Threshold:
+class Threshold(int):
     """Represents the minimum number of shares needed to unlock a vault
 
     Domain Rules:
@@ -35,14 +32,13 @@ class Threshold:
     - Cannot be negative or zero
     """
 
-    value: int = field()
-
-    def __post_init__(self):
-        if self.value < 2:
-            raise InvalidThresholdError(self.value)
+    def __new__(cls, value: int):
+        if value < 2:
+            raise InvalidThresholdError(value)
+        return int.__new__(cls, value)
 
     def __str__(self) -> str:
-        return str(self.value)
+        return str(int(self))
 
 
 @dataclass(frozen=True)
@@ -57,10 +53,8 @@ class VaultConfiguration:
     threshold: Threshold = field()
 
     def __post_init__(self):
-        if self.threshold.value > self.share_count.value:
-            raise ThresholdExceedsShareCountError(
-                self.threshold.value, self.share_count.value
-            )
+        if self.threshold > self.share_count:
+            raise ThresholdExceedsShareCountError(self.threshold, self.share_count)
 
     @classmethod
     def create(cls, nb_shares: int, threshold: int) -> "VaultConfiguration":

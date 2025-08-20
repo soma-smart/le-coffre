@@ -33,7 +33,7 @@ class VaultCreationService:
             The created vault entity
         """
         return Vault(
-            nb_shares=configuration.share_count.value,
-            threshold=configuration.threshold.value,
+            nb_shares=configuration.share_count,
+            threshold=configuration.threshold,
             encrypted_key=encrypted_key,
         )
