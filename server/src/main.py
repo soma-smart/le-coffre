@@ -10,7 +10,7 @@ from vault_management_context.adapters.secondary.gateways import (
     InMemoryVaultSessionGateway,
     create_tables,
 )
-from vault_management_context.adapters.primary.api.routes import (
+from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
 )
 

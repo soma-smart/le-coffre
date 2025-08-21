@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import logging
 
-from vault_management_context.adapters.primary.api.app_dependencies import (
+from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_vault_usecase,
 )
 from vault_management_context.application.use_cases import CreateVaultUseCase
