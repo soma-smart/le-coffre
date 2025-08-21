@@ -1,13 +1,22 @@
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict
+from uuid import UUID
+
 from password_management_context.application.gateways import PasswordRepository
+from password_management_context.domain.entities import Password
 
 
 class InMemoryPasswordRepository(PasswordRepository):
     def __init__(self):
-        self.storage: Dict[Tuple[Optional[str], str], str] = {}
+        self.storage: Dict[UUID, Password] = {}
 
-    def save(self, name: str, value: str, folder: Optional[str] = None):
-        self.storage[(folder, name)] = value
+    def save(self, password: Password) -> None:
+        self.storage[password.id] = password
 
-    def get(self, name: str, folder: Optional[str] = None) -> str:
-        return self.storage.get((folder, name), "")
+    def get_by_id(self, id: UUID) -> Password:
+        if id not in self.storage:
+            raise PasswordNotFoundError(f"Password with ID {id} not found")
+        return self.storage[id]
+
+
+class PasswordNotFoundError(Exception):
+    pass
