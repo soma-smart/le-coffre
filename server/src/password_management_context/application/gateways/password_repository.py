@@ -1,4 +1,4 @@
-from typing import Optional, Protocol
+from typing import List, Optional, Protocol
 from uuid import UUID
 
 from password_management_context.domain.entities import Password
@@ -10,5 +10,9 @@ class PasswordRepository(Protocol):
         ...
 
     def get_by_id(self, id: UUID) -> Password:
-        """Get password by UUID - returns entity with encrypted value"""
+        """Get password by UUID"""
+        ...
+
+    def list_all(self, folder: Optional[str] = None) -> List[Password]:
+        """List all passwords"""
         ...

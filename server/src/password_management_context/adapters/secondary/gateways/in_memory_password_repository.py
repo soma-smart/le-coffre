@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from password_management_context.application.gateways import PasswordRepository
@@ -17,3 +17,6 @@ class InMemoryPasswordRepository(PasswordRepository):
         if id not in self.storage:
             raise PasswordNotFoundError(id)
         return self.storage[id]
+
+    def list_all(self, folder: Optional[str] = None) -> List[Password]:
+        return [p for p in self.storage.values() if p.folder == folder]
