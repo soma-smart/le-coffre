@@ -16,3 +16,7 @@ class PasswordRepository(Protocol):
     def list_all(self, folder: Optional[str] = None) -> List[Password]:
         """List all passwords"""
         ...
+
+    def delete(self, id: UUID) -> None:
+        """Delete password by UUID"""
+        ...

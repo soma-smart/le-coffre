@@ -20,3 +20,8 @@ class InMemoryPasswordRepository(PasswordRepository):
 
     def list_all(self, folder: Optional[str] = None) -> List[Password]:
         return [p for p in self.storage.values() if p.folder == folder]
+
+    def delete(self, id: UUID) -> None:
+        if id not in self.storage:
+            raise PasswordNotFoundError(id)
+        del self.storage[id]
