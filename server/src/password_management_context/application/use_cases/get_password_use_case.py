@@ -2,7 +2,9 @@ from uuid import UUID
 
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.responses import PasswordResponse
+from password_management_context.domain.services import PasswordAccessService
 from shared_kernel.encryption import EncryptionService
+from shared_kernel.access_control import AccessChecker
 
 
 class GetPasswordUseCase:
@@ -10,20 +12,26 @@ class GetPasswordUseCase:
         self,
         password_repository: PasswordRepository,
         encryption_service: EncryptionService,
+        access_checker: AccessChecker,
     ):
         self.password_repository = password_repository
         self.encryption_service = encryption_service
+        self.access_checker = access_checker
 
-    def execute(self, password_id: UUID) -> PasswordResponse:
+    def execute(self, user_id: UUID, password_id: UUID) -> PasswordResponse:
         password_entity = self.password_repository.get_by_id(password_id)
 
+        authorized_password = PasswordAccessService.ensure_access_and_get_password(
+            self.access_checker, user_id, password_entity
+        )
+
         decrypted_password = self.encryption_service.decrypt(
-            password_entity.encrypted_value
+            authorized_password.encrypted_value
         )
 
         return PasswordResponse(
-            id=password_entity.id,
-            name=password_entity.name,
+            id=authorized_password.id,
+            name=authorized_password.name,
             decrypted_password=decrypted_password,
-            folder=password_entity.folder,
+            folder=authorized_password.folder,
         )

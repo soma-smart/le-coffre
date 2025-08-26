@@ -17,11 +17,10 @@ def test_given_owned_password_when_reading_should_grant_access(
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
-    action = "read"
 
     rights_repository.add_ownership(user_id, password_id)
 
-    result = use_case.execute(user_id, password_id, action)
+    result = use_case.execute(user_id, password_id)
 
     assert result.granted is True
 
@@ -31,8 +30,7 @@ def test_given_not_owned_password_when_reading_should_deny_access(
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
-    action = "read"
 
-    result = use_case.execute(user_id, password_id, action)
+    result = use_case.execute(user_id, password_id)
 
     assert result.granted is False
