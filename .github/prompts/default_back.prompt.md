@@ -8,6 +8,8 @@ I need you for the back of my app, in python fastapi.
 
 Contexts:
 - Vault Management context : Secure the Keepass with Shamir logic, secure passwords, lock/unlock, migrate, etc...
+- Password Management context : Password CRUD, Policies, expiration, history
+- Rights access context : Read, Update, Share passwords/folders, invitations, revocations, groups access
 
 Folders architecture:
 server/tests/ : Tests, regrouped by bonded context.

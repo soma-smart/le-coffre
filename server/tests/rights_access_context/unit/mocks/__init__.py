@@ -1,0 +1,1 @@
+from .fake_rights_repository import FakeRightsRepository
