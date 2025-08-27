@@ -14,8 +14,9 @@ def use_case(password_repository):
     return DeletePasswordUseCase(password_repository)
 
 
-def test_sould_delete_password_when_it_exists(
-    use_case: DeletePasswordUseCase, password_repository: InMemoryPasswordRepository
+def test_should_delete_password_when_it_exists(
+    use_case: DeletePasswordUseCase,
+    password_repository: InMemoryPasswordRepository
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     name = "name"
