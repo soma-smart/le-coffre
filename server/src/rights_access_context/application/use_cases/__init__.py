@@ -1,1 +1,2 @@
 from .check_access_use_case import CheckAccessUseCase
+from .share_access_use_case import ShareAccessUseCase

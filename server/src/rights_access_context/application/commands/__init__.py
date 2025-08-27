@@ -1,0 +1,1 @@
+from .share_resource_command import ShareResourceCommand
