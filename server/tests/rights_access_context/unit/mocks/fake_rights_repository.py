@@ -1,11 +1,11 @@
 from uuid import UUID
 
-from rights_access_context.application.gateways import (
-    RightsRepository,
+from rights_access_context.adapters.secondary import (
+    InMemoryRightsRepository,
 )
 
 
-class FakeRightsRepository(RightsRepository):
+class FakeRightsRepository(InMemoryRightsRepository):
     def __init__(self):
         self.owned_resources = {}
 

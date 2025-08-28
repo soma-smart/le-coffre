@@ -1,0 +1,1 @@
+from .in_memory_rights_repository import InMemoryRightsRepository
