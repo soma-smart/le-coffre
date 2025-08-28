@@ -1,7 +1,11 @@
 import pytest
 
 from rights_access_context.adapters.primary import (
-    AccessCheckerAdapter,
+    AccessControllerAdapter,
+)
+from rights_access_context.application.use_cases import (
+    CheckAccessUseCase,
+    GrantAccessUseCase,
 )
 from .mocks import FakeRightsRepository
 
@@ -12,5 +16,7 @@ def rights_repository():
 
 
 @pytest.fixture()
-def access_checker(rights_repository: FakeRightsRepository):
-    return AccessCheckerAdapter(rights_repository)
+def access_controller(rights_repository: FakeRightsRepository):
+    check_use_case = CheckAccessUseCase(rights_repository)
+    grant_use_case = GrantAccessUseCase(rights_repository)
+    return AccessControllerAdapter(check_use_case, grant_use_case)

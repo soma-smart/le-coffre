@@ -1,2 +1,3 @@
 from .check_access_use_case import CheckAccessUseCase
+from .grant_access_use_case import GrantAccessUseCase
 from .share_access_use_case import ShareAccessUseCase

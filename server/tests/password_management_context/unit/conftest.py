@@ -3,7 +3,7 @@ import pytest
 from password_management_context.adapters.secondary.gateways import (
     InMemoryPasswordRepository,
 )
-from .mocks import FakeEncryptionService, FakeAccessChecker
+from .mocks import FakeEncryptionService, FakeAccessController
 
 
 @pytest.fixture
@@ -17,5 +17,5 @@ def encryption_service():
 
 
 @pytest.fixture
-def access_checker():
-    return FakeAccessChecker()
+def access_controller():
+    return FakeAccessController()

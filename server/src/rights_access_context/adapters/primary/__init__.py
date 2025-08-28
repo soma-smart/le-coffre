@@ -1,1 +1,3 @@
-from .access_checker_adapter import AccessCheckerAdapter
+from .access_controller_adapter import AccessControllerAdapter
+
+__all__ = ["AccessControllerAdapter"]
