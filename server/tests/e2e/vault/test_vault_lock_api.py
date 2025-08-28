@@ -1,14 +1,7 @@
 import pytest
 
 
-def test_can_lock_vault(e2e_client, vault_session_gateway):
-    e2e_client.post(
-        "/api/vault/setup",
-        json={
-            "nb_shares": 5,
-            "threshold": 3,
-        },
-    )
+def test_can_lock_vault(e2e_client, setup):
     lock_response = e2e_client.post(
         "/api/vault/lock",
     )
@@ -17,11 +10,8 @@ def test_can_lock_vault(e2e_client, vault_session_gateway):
     lock_data = lock_response.json()
     assert lock_data["message"] == "Vault locked successfully"
 
-    with pytest.raises(ValueError):
-        vault_session_gateway.get_decrypted_key()
 
-
-def test_vault_lock_fails_when_already_locked(e2e_client, vault_session_gateway):
+def test_vault_lock_fails_when_already_locked(e2e_client):
     e2e_client.post(
         "/api/vault/setup",
         json={

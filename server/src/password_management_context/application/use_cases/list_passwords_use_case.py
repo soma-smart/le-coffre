@@ -29,7 +29,7 @@ class ListPasswordsUseCase:
             password_response = PasswordResponse(
                 id=password_entity.id,
                 name=password_entity.name,
-                decrypted_password=decrypted_password,
+                password=decrypted_password,
                 folder=password_entity.folder,
             )
             password_responses.append(password_response)

@@ -19,7 +19,7 @@ def use_case(password_repository, encryption_service, access_controller):
     )
 
 
-def test_should_return_decrypted_password_when_user_has_access(
+def test_should_return_password_when_user_has_access(
     use_case: GetPasswordUseCase,
     password_repository,
     access_controller: FakeAccessController,
@@ -38,7 +38,7 @@ def test_should_return_decrypted_password_when_user_has_access(
 
     assert result.id == password_entity.id
     assert result.name == password_entity.name
-    assert result.decrypted_password == "supersecret"
+    assert result.password == "supersecret"
 
 
 def test_should_raise_access_denied_when_user_has_no_access(
@@ -72,7 +72,7 @@ def test_should_raise_exception_when_password_not_found(
         use_case.execute(user_id, non_existent_password_id)
 
 
-def test_should_return_decrypted_password_with_access_controller(
+def test_should_return_password_with_access_controller(
     use_case: GetPasswordUseCase,
     password_repository,
     access_controller: FakeAccessController,
@@ -91,4 +91,4 @@ def test_should_return_decrypted_password_with_access_controller(
 
     assert result.id == password_entity.id
     assert result.name == password_entity.name
-    assert result.decrypted_password == "supersecret"
+    assert result.password == "supersecret"

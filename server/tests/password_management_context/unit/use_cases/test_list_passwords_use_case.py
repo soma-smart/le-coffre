@@ -22,11 +22,11 @@ def test_should_return_empty_list_on_default_folder_when_no_passwords(
     assert result == []
 
 
-def test_should_return_all_passwords_decrypted_on_default_folder_when_passwords_exist(
+def test_should_return_all_passwords_on_default_folder_when_passwords_exist(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
 ):
-    decrypted_password = "gmail_secret"
+    password = "gmail_secret"
 
     password1 = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
@@ -50,7 +50,7 @@ def test_should_return_all_passwords_decrypted_on_default_folder_when_passwords_
 
     assert result[0].id == password1.id
     assert result[0].name == password1.name
-    assert result[0].decrypted_password == decrypted_password
+    assert result[0].password == password
     assert result[0].folder is None
 
 
@@ -59,7 +59,7 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
     password_repository: InMemoryPasswordRepository,
 ):
     folder_name = "Personal"
-    decrypted_password = "gmail_secret"
+    password = "gmail_secret"
 
     password1 = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
@@ -81,7 +81,7 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
     assert len(result) == 1
     assert result[0].id == password1.id
     assert result[0].name == password1.name
-    assert result[0].decrypted_password == decrypted_password
+    assert result[0].password == password
     assert result[0].folder == password1.folder
 
 

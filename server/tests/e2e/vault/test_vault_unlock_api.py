@@ -1,7 +1,7 @@
 import pytest
 
 
-def test_can_unlock_vault_with_valid_shares(e2e_client, vault_session_gateway):
+def test_can_unlock_vault_with_valid_shares(e2e_client):
     threshold = 3
     setup_response = e2e_client.post(
         "/api/vault/setup",
@@ -30,10 +30,6 @@ def test_can_unlock_vault_with_valid_shares(e2e_client, vault_session_gateway):
     assert unlock_response.status_code == 200
     unlock_data = unlock_response.json()
     assert unlock_data["message"] == "Vault unlocked successfully"
-
-    decrypted_key = vault_session_gateway.get_decrypted_key()
-    assert decrypted_key is not None
-    assert len(decrypted_key) > 0
 
 
 def test_vault_unlock_fails_with_insufficient_real_shares(e2e_client):

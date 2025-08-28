@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/passwords", tags=["Password Management"])
 class GetPasswordResponse(BaseModel):
     id: UUID
     name: str
-    decrypted_password: str
+    password: str
     folder: str | None = None
 
 
@@ -46,7 +46,7 @@ def get_password(
         return GetPasswordResponse(
             id=password_response.id,
             name=password_response.name,
-            decrypted_password=password_response.decrypted_password,
+            password=password_response.password,
             folder=password_response.folder,
         )
     except PasswordNotFoundError as e:

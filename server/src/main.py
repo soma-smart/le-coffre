@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
 
-from config import DATABASE_URL
+from config import get_database_url
 
 from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
@@ -40,7 +40,7 @@ from rights_access_context.adapters.secondary import InMemoryRightsRepository
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    engine = create_engine(DATABASE_URL)
+    engine = create_engine(get_database_url())
     create_tables(engine)
 
     with Session(engine) as session:

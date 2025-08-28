@@ -1,3 +1,5 @@
 import os
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///local_db.sqlite")
+
+def get_database_url():
+    return os.environ.get("DATABASE_URL", "sqlite:///local_db.sqlite")

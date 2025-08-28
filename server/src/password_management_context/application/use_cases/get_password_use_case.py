@@ -32,6 +32,6 @@ class GetPasswordUseCase:
         return PasswordResponse(
             id=authorized_password.id,
             name=authorized_password.name,
-            decrypted_password=decrypted_password,
+            password=decrypted_password,
             folder=authorized_password.folder,
         )
