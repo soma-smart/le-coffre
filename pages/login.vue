@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
-import type { SetupStatus } from '~/shared/types/setup'
 
 definePageMeta({
   layout: 'centered',
@@ -48,9 +47,15 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   })
 }
 
-const { data } = await useFetch<SetupStatus>('/api/admin/setup/status')
-const isSetupComplete = computed(() => data?.value?.setupComplete)
-onMounted(() => {
+const isSetupComplete = ref(false)
+onMounted(async () => {
+  try {
+    const response = await $fetch.raw('/api/vault', { method: 'HEAD' })
+    isSetupComplete.value = response.status === 200
+  }
+  catch {
+    isSetupComplete.value = false
+  }
   if (!isSetupComplete.value) {
     const toast = useToast()
     toast.add({

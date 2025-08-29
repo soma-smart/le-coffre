@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  ci:
+  front-ci:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
@@ -41,3 +41,25 @@ jobs:
       - name: Build Project
         if: (${{ success() }} || ${{ failure() }})
         run: npm run build
+
+  back-ci:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Install dependencies
+        working-directory: server/
+        run: |
+          pip install uv
+          uv sync --frozen --no-cache
+
+      - name: Run Unit Tests
+        working-directory: server/
+        run: uv run pytest

@@ -49,14 +49,6 @@ Le Coffre uses the following security measures to ensure the safety of your pass
 3. Once completed, user is redirected to the admin panel where the user can setup providers, manage users,
    password entries...
 
-## ORM
-
-When changing the database schema, you need to regenerate the migration file:
-
-```bash
-npx drizzle-kit generate
-```
-
 ## TODO
 
 - [ ] Generate encryption key when master key is created

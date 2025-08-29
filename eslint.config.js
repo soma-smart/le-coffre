@@ -5,9 +5,6 @@ export default createConfigForNuxt({
   features: {
     stylistic: stylistic.configs.recommended,
   },
-  ignores: [
-    'server/database/migrations/*',
-  ],
 })
   .override('nuxt/rules',
     {

@@ -39,7 +39,7 @@ function copyToClipboard() {
 
 async function generateRandomPassword() {
   const result = await $fetch('/api/passwords/generate')
-  inputValue.value = result
+  inputValue.value = (result as string)
 }
 </script>
 
