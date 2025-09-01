@@ -17,3 +17,11 @@ class FakeAccessController(AccessController):
 
     def add_access_permission(self, user_id: UUID, resource_id: UUID) -> None:
         self.access_permissions[f"{user_id}:{resource_id}"] = True
+    
+    def check_update_access(self, user_id: UUID, resource_id: UUID) -> bool:
+        """Check if user has update access to resource"""
+        return self.access_permissions.get(f"{user_id}:{resource_id}:update", False)
+
+    def grant_update_access(self, user_id: UUID, resource_id: UUID) -> None:
+        """Grant update access to a resource for a specific user"""
+        self.access_permissions[f"{user_id}:{resource_id}:update"] = True

@@ -4,6 +4,7 @@ from rights_access_context.application.use_cases import (
     CheckAccessUseCase,
     GrantAccessUseCase,
 )
+from rights_access_context.domain.value_objects.permission import Permission
 from shared_kernel.access_control import AccessController
 
 
@@ -20,3 +21,10 @@ class AccessControllerAdapter(AccessController):
 
     def grant_access(self, user_id: UUID, resource_id: UUID) -> None:
         self.grant_use_case.execute(user_id, resource_id)
+
+    def check_update_access(self, user_id: UUID, resource_id: UUID) -> bool:
+        access_result = self.check_use_case.execute(user_id, resource_id, Permission.UPDATE)
+        return access_result.granted
+
+    def grant_update_access(self, user_id: UUID, resource_id: UUID) -> None:
+        self.grant_use_case.execute(user_id, resource_id, Permission.UPDATE)
