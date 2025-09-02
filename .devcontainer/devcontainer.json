@@ -1,13 +1,10 @@
 {
-  "name": "Node devcontainer",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
-  "forwardPorts": [
-    3000
-  ],
-  "postCreateCommand": "pre-commit install",
-  "remoteUser": "root",
+  "name": "Le Coffre devcontainer",
+  "dockerComposeFile": "../docker-compose.dev.yml",
+  "service": "backend",
+  "workspaceFolder": "/app",
+  "forwardPorts": [5173, 8000],
+  "postCreateCommand": "uv run pre-commit install",
   "customizations": {
     "vscode": {
       "extensions": [
