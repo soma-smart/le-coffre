@@ -4,8 +4,10 @@ from authentication_context.application.commands import (
 from authentication_context.application.responses import (
     AuthenticateWithSSOResponse,
 )
+from authentication_context.application.gateways.sso_provider_gateway import (
+    SSOProviderGateway,
+)
 from authentication_context.application.gateways import (
-    SSOTokenValidationGateway,
     JWTTokenGateway,
 )
 from authentication_context.domain.exceptions import InvalidSSOTokenException
@@ -14,17 +16,17 @@ from authentication_context.domain.exceptions import InvalidSSOTokenException
 class AuthenticateWithSSOUseCase:
     def __init__(
         self,
-        sso_token_validation_gateway: SSOTokenValidationGateway,
+        sso_provider_gateway: SSOProviderGateway,
         jwt_token_gateway: JWTTokenGateway,
     ):
-        self.sso_token_validation_gateway = sso_token_validation_gateway
+        self.sso_provider_gateway = sso_provider_gateway
         self.jwt_token_gateway = jwt_token_gateway
 
     async def execute(
         self, command: AuthenticateWithSSOCommand
     ) -> AuthenticateWithSSOResponse:
-        validation_result = await self.sso_token_validation_gateway.validate_token(
-            command.token, command.provider
+        validation_result = await self.sso_provider_gateway.validate_token(
+            command.token
         )
 
         if not validation_result.is_valid:
