@@ -11,7 +11,11 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest==7.4.4", "pytest-watcher==0.4.3"]
+dev = [
+  "pytest==7.4.4",
+  "pytest-asyncio>=0.23.8",
+  "pytest-watcher==0.4.3",
+]
 sqlite = ["sqlite-utils==3.38"]
 postgres = ["psycopg2==2.9.10", "psycopg[binary]==3.2.9"]
 
