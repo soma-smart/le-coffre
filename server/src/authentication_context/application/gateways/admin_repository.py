@@ -13,6 +13,10 @@ class AdminRepository(Protocol):
         """Get an admin account by ID"""
         ...
 
+    def get_by_email(self, email: str) -> Optional[AdminAccount]:
+        """Get an admin account by email"""
+        ...
+
     def exists_any(self) -> bool:
         """Check if any admin account exists"""
         ...

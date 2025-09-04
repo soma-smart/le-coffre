@@ -3,3 +3,4 @@ from .jwt_token_gateway import JWTTokenGateway
 from .state_generation_gateway import StateGenerationGateway
 from .admin_repository import AdminRepository
 from .password_hashing_gateway import PasswordHashingGateway
+from .session_repository import SessionRepository

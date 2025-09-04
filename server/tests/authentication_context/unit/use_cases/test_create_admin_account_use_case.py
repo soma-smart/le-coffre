@@ -63,7 +63,7 @@ def test_should_raise_exception_when_admin_already_exists(
 
 
 def test_should_hash_password_before_storing_admin(
-    use_case: CreateAdminAccountUseCase, admin_repository, password_hashing_gateway
+    use_case: CreateAdminAccountUseCase, admin_repository
 ):
     admin_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"

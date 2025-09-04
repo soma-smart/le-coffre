@@ -3,3 +3,4 @@ from .fake_jwt_token_gateway import FakeJWTTokenGateway
 from .fake_state_generation_gateway import FakeStateGenerationGateway
 from .fake_admin_repository import FakeAdminRepository
 from .fake_password_hashing_gateway import FakePasswordHashingGateway
+from .fake_session_repository import FakeSessionRepository

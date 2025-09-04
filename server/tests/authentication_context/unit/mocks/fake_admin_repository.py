@@ -14,5 +14,11 @@ class FakeAdminRepository:
     def get_by_id(self, admin_id: UUID) -> Optional[AdminAccount]:
         return self._admins.get(admin_id)
 
+    def get_by_email(self, email: str) -> Optional[AdminAccount]:
+        for admin in self._admins.values():
+            if admin.email == email:
+                return admin
+        return None
+
     def exists_any(self) -> bool:
         return len(self._admins) > 0

@@ -12,3 +12,11 @@ class UnsupportedSSOProviderException(AuthenticationDomainError):
 
 class AdminAlreadyExistsException(AuthenticationDomainError):
     pass
+
+
+class InvalidCredentialsException(AuthenticationDomainError):
+    pass
+
+
+class AdminNotFoundException(AuthenticationDomainError):
+    pass

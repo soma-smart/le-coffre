@@ -35,11 +35,13 @@ async def test_should_authenticate_valid_sso_token(
         claims=expected_claims,
     )
 
+    jwt_token_gateway.set_unique_jwt_part("uniqueness")
+
     command = AuthenticateWithSSOCommand(token=token)
 
     response = await use_case.execute(command)
 
-    assert response.jwt_token == f"jwt_token_for_{expected_user_id}"
+    assert response.jwt_token == f"jwt_token_for_{expected_user_id}_uniqueness"
     assert response.external_user_id == expected_user_id
     assert response.email == expected_email
     assert response.display_name == expected_name
