@@ -12,14 +12,16 @@ from ..mocks import FakeAccessController
 
 @pytest.fixture
 def use_case(password_repository, encryption_service, access_controller):
-    return ListPasswordsUseCase(password_repository, encryption_service, access_controller)
+    return ListPasswordsUseCase(
+        password_repository, encryption_service, access_controller
+    )
 
 
 def test_should_return_empty_list_on_default_folder_when_no_passwords(
     use_case: ListPasswordsUseCase,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    result = use_case.execute(requester_id=requester_id )
+    result = use_case.execute(requester_id=requester_id)
 
     assert result == []
 
@@ -105,6 +107,7 @@ def test_should_raise_exception_when_folder_does_not_exist(
 
     assert folder_name in str(exc_info.value)
 
+
 def test_should_return_only_passwords_user_has_access_to(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
@@ -136,6 +139,7 @@ def test_should_return_only_passwords_user_has_access_to(
     assert result[0].name == password1.name
     assert result[0].password == "gmail_secret"
     assert result[0].folder is None
+
 
 def test_should_return_empty_list_when_no_passwords_user_has_access_to(
     use_case: ListPasswordsUseCase,

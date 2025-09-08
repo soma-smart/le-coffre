@@ -19,7 +19,9 @@ class ListPasswordsUseCase:
         self.encryption_service = encryption_service
         self.access_controller = access_controller
 
-    def execute(self, requester_id: UUID, folder: Optional[str] = None) -> List[PasswordResponse]:
+    def execute(
+        self, requester_id: UUID, folder: Optional[str] = None
+    ) -> List[PasswordResponse]:
         password_entities = self.password_repository.list_all(folder)
 
         if folder and len(password_entities) == 0:
@@ -30,7 +32,7 @@ class ListPasswordsUseCase:
             check_permission = self.access_controller.check_access(
                 requester_id, password_entity.id
             )
-            if check_permission.granted == Granted.ACCESS or check_permission.granted == Granted.VIEW_ONLY:
+            if check_permission.granted in (Granted.ACCESS, Granted.VIEW_ONLY):
                 decrypted_password = self.encryption_service.decrypt(
                     password_entity.encrypted_value
                 )
