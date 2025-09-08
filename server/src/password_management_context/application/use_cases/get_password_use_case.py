@@ -3,9 +3,8 @@ from uuid import UUID
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.responses import PasswordResponse
 from password_management_context.domain.exceptions import PasswordNotFoundError
-from rights_access_context.application.responses.access_result import Granted
+from shared_kernel.access_control import Granted, AccessController, AccessDeniedError
 from shared_kernel.encryption import EncryptionService
-from shared_kernel.access_control import AccessController, AccessDeniedError
 
 
 class GetPasswordUseCase:

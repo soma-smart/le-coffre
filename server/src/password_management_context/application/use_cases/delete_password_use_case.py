@@ -1,9 +1,7 @@
 from uuid import UUID
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.domain.exceptions import PasswordNotFoundError
-from rights_access_context.application.responses.access_result import Granted
-from shared_kernel.access_control.access_controller import AccessController
-from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.access_control import Granted, AccessController, AccessDeniedError
 
 
 class DeletePasswordUseCase:

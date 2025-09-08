@@ -1,6 +1,6 @@
 from typing import Protocol
 from uuid import UUID
-from rights_access_context.application.responses import AccessResult
+from .access_result import AccessResult
 
 
 class AccessController(Protocol):

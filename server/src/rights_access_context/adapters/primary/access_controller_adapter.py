@@ -5,8 +5,7 @@ from rights_access_context.application.use_cases import (
     GrantAccessUseCase,
 )
 from rights_access_context.domain.value_objects.permission import Permission
-from shared_kernel.access_control import AccessController
-from rights_access_context.application.responses import AccessResult
+from shared_kernel.access_control import AccessController, AccessResult
 
 
 class AccessControllerAdapter(AccessController):
