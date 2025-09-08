@@ -24,9 +24,7 @@ class GetPasswordUseCase:
         check_permission = self.access_controller.check_access(
             requester_id, password_id
         )
-        if check_permission.granted == Granted.VIEW_ONLY:
-            raise AccessDeniedError(requester_id, password_id)
-        if check_permission.granted == Granted.NOT_FOUND:
+        if check_permission.granted != Granted.ACCESS:
             raise PasswordNotFoundError(password_id)
 
         password_entity = self.password_repository.get_by_id(password_id)
