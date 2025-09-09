@@ -1,7 +1,16 @@
 from typing import Protocol
 from uuid import UUID
 
+from rights_access_context.domain.value_objects.permission import Permission
+
 
 class RightsRepository(Protocol):
-    def grant_access(self, user_id: UUID, resource_id: UUID) -> None: ...
-    def has_access(self, user_id: UUID, resource_id: UUID) -> bool: ...
+    def has_permission(
+        self, user_id: UUID, resource_id: UUID, permission: Permission = Permission.READ
+    ) -> bool: ...
+    def add_permission(
+        self, user_id: UUID, resource_id: UUID, permission: Permission = Permission.READ
+    ) -> None: ...
+    def get_all_permissions(
+        self, user_id: UUID, resource_id: UUID
+    ) -> set[Permission]: ...

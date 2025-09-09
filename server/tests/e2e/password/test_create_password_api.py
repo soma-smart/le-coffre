@@ -1,4 +1,3 @@
-import pytest
 from uuid import UUID
 
 
@@ -42,7 +41,7 @@ def test_cannot_read_a_password_of_another_user(e2e_client, setup):
         f"/api/passwords/{response.json()['id']}?user_id={other_user}"
     )
 
-    assert retrieved_password.status_code == 403
+    assert retrieved_password.status_code == 404
 
 
 def test_can_read_a_shared_password_of_another_user(e2e_client, setup):

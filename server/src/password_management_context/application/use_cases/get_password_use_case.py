@@ -2,9 +2,9 @@ from uuid import UUID
 
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.responses import PasswordResponse
-from password_management_context.domain.services import PasswordAccessService
+from password_management_context.domain.exceptions import PasswordNotFoundError
+from shared_kernel.access_control import Granted, AccessController
 from shared_kernel.encryption import EncryptionService
-from shared_kernel.access_control import AccessController
 
 
 class GetPasswordUseCase:
@@ -19,9 +19,13 @@ class GetPasswordUseCase:
         self.access_controller = access_controller
 
     def execute(self, requester_id: UUID, password_id: UUID) -> PasswordResponse:
-        PasswordAccessService.ensure_access(
-            self.access_controller, requester_id, password_id
+        if not self.password_repository.get_by_id(password_id):
+            raise PasswordNotFoundError(password_id)
+        check_permission = self.access_controller.check_access(
+            requester_id, password_id
         )
+        if check_permission.granted != Granted.ACCESS:
+            raise PasswordNotFoundError(password_id)
 
         password_entity = self.password_repository.get_by_id(password_id)
 

@@ -7,7 +7,6 @@ from password_management_context.adapters.secondary.gateways import (
 )
 from password_management_context.domain.exceptions import PasswordNotFoundError
 from password_management_context.domain.entities import Password
-from shared_kernel.access_control import AccessDeniedError
 
 from ..mocks import FakeAccessController
 
@@ -56,7 +55,7 @@ def test_should_raise_access_denied_when_user_has_no_access(
     )
     password_repository.save(password)
 
-    with pytest.raises(AccessDeniedError):
+    with pytest.raises(PasswordNotFoundError):
         use_case.execute(user_id, password_id)
 
 

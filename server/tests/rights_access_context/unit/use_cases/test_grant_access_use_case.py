@@ -4,6 +4,7 @@ from uuid import UUID
 from rights_access_context.application.use_cases import (
     GrantAccessUseCase,
 )
+from rights_access_context.domain.value_objects import Permission
 from ..mocks import FakeRightsRepository
 
 
@@ -20,4 +21,4 @@ def test_should_grant_access_to_user_for_resource(
 
     use_case.execute(user_id, resource_id)
 
-    assert rights_repository.has_access(user_id, resource_id) is True
+    assert rights_repository.has_permission(user_id, resource_id) is True
