@@ -35,3 +35,25 @@ def test_should_get_user_by_id(
     assert retrieved_user.username == username
     assert retrieved_user.email == email
     assert retrieved_user.password_hashed == "hashed(securepassword123)"
+
+
+def test_should_get_user_by_email(
+  use_case: GetUserUseCase,
+  user_repository: InMemoryUserRepository
+):
+    uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    username = "testuser"
+    email = "testuser@example.com"
+    password = "securepassword123"
+
+    command = CreateUserCommand(
+        id=uuid, username=username, email=email, password=password
+    )
+    user_repository.save(command)
+
+    retrieved_user = use_case.execute_by_email(email)
+    assert retrieved_user is not None
+    assert retrieved_user.id == uuid
+    assert retrieved_user.username == username
+    assert retrieved_user.email == email
+    assert retrieved_user.password_hashed == "hashed(securepassword123)"
