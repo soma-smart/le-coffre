@@ -5,7 +5,7 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile.dev
-    command: uv run fastapi dev src/main.py
+    command: uv run fastapi dev src/main.py --host 0.0.0.0
     volumes:
       - ./server/app:/app/app
     ports:
