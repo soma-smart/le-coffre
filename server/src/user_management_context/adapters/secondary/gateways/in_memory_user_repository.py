@@ -13,8 +13,19 @@ class InMemoryUserRepository(UserRepository):
         if user_id not in self.storage:
             raise UserNotFoundError(user_id)
         return self.storage.get(user_id)
+    
+    def get_by_email(self, email: str) -> Optional[User]:
+        for user in self.storage.values():
+            if user.email == email:
+                return user
+        raise UserNotFoundError(email)
 
     def save(self, user: User) -> None:
         if any(u.username == user.username for u in self.storage.values()):
             raise UserAlreadyExistsError(user.username)
         self.storage[user.id] = user
+
+    def delete(self, user_id: UUID) -> None:
+        if user_id not in self.storage:
+            raise UserNotFoundError(user_id)
+        del self.storage[user_id]
