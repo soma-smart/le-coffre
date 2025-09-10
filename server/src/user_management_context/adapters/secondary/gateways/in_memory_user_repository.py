@@ -2,7 +2,10 @@ from typing import Optional
 from uuid import UUID
 from user_management_context.application.gateways import UserRepository
 from user_management_context.domain.entities import User
-from user_management_context.domain.exceptions import UserNotFoundError, UserAlreadyExistsError
+from user_management_context.domain.exceptions import (
+    UserNotFoundError,
+    UserAlreadyExistsError
+)
 
 
 class InMemoryUserRepository(UserRepository):
@@ -32,3 +35,8 @@ class InMemoryUserRepository(UserRepository):
         if user_id not in self.storage:
             raise UserNotFoundError(user_id)
         del self.storage[user_id]
+
+    def update(self, user: User) -> None:
+        if user.id not in self.storage:
+            raise UserNotFoundError(user.id)
+        self.storage[user.id] = user
