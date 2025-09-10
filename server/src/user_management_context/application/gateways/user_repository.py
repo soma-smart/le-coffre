@@ -10,6 +10,9 @@ class UserRepository(Protocol):
     def get_by_email(self, email: str) -> User:
         ...
 
+    def list_all(self) -> list[User]:
+        ...
+
     def save(self, user: User) -> None:
         ...
 
