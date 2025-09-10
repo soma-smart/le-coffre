@@ -1,6 +1,6 @@
 import pytest
 
-from user_management_context.adapters.secondary.gateways import (
+from user_management_context.adapters.output.interfaces import (
     InMemoryUserRepository,
 )
 from .mocks.fake_hash_gateway import FakeHashingGateway
