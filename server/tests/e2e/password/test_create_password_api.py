@@ -1,5 +1,7 @@
 from uuid import UUID
 
+STRONG_PASSWORD = "StrongP@ssw0rd123"
+
 
 def test_can_read_a_created_password(e2e_client, setup):
     user_id = str(UUID("12345678-1234-5678-1234-567812345678"))
@@ -9,7 +11,7 @@ def test_can_read_a_created_password(e2e_client, setup):
         json={
             "user_id": user_id,
             "name": "Test Password",
-            "password": "secret123",
+            "password": STRONG_PASSWORD,
         },
     )
 
@@ -21,7 +23,7 @@ def test_can_read_a_created_password(e2e_client, setup):
 
     assert retrieved_password.status_code == 200
     assert retrieved_password.json()["name"] == "Test Password"
-    assert retrieved_password.json()["password"] == "secret123"
+    assert retrieved_password.json()["password"] == STRONG_PASSWORD
 
 
 def test_cannot_read_a_password_of_another_user(e2e_client, setup):
@@ -33,7 +35,7 @@ def test_cannot_read_a_password_of_another_user(e2e_client, setup):
         json={
             "user_id": user_id,
             "name": "Test Password",
-            "password": "secret123",
+            "password": STRONG_PASSWORD,
         },
     )
 
@@ -53,7 +55,7 @@ def test_can_read_a_shared_password_of_another_user(e2e_client, setup):
         json={
             "user_id": user_id,
             "name": "Test Password",
-            "password": "secret123",
+            "password": STRONG_PASSWORD,
             "shared_with": [other_user],
         },
     )
@@ -71,4 +73,18 @@ def test_can_read_a_shared_password_of_another_user(e2e_client, setup):
 
     assert retrieved_password.status_code == 200
     assert retrieved_password.json()["name"] == "Test Password"
-    assert retrieved_password.json()["password"] == "secret123"
+    assert retrieved_password.json()["password"] == STRONG_PASSWORD
+
+def test_cannot_create_weak_password(e2e_client, setup):
+    user_id = str(UUID("12345678-1234-5678-1234-567812345678"))
+    weak_password = "weakpass"
+    response = e2e_client.post(
+        "/api/passwords",
+        json={
+            "user_id": user_id,
+            "name": "Weak Password",
+            "password": weak_password,
+        },
+    )
+
+    assert response.status_code == 400
