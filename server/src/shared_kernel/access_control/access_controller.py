@@ -27,3 +27,11 @@ class AccessController(Protocol):
     def grant_delete_access(self, user_id: UUID, resource_id: UUID) -> None:
         """Grant delete access to a resource for a specific user"""
         ...
+
+    def check_create_access(self, user_id: UUID, resource_id: UUID) -> AccessResult:
+        """Check if user has create access to resource"""
+        ...
+
+    def grant_create_access(self, user_id: UUID, resource_id: UUID) -> None:
+        """Grant create access to a resource for a specific user"""
+        ...

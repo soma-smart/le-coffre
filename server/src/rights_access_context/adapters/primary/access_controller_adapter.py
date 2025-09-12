@@ -32,3 +32,9 @@ class AccessControllerAdapter(AccessController):
 
     def grant_delete_access(self, user_id: UUID, resource_id: UUID) -> None:
         self.grant_use_case.execute(user_id, resource_id, Permission.DELETE)
+
+    def check_create_access(self, user_id, resource_id) -> AccessResult:
+        return self.check_use_case.execute(user_id, resource_id, Permission.CREATE)
+
+    def grant_create_access(self, user_id, resource_id) -> None:
+        self.grant_use_case.execute(user_id, resource_id, Permission.CREATE)

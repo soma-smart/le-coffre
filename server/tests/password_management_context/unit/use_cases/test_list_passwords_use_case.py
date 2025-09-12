@@ -7,7 +7,7 @@ from password_management_context.adapters.secondary.gateways import (
 )
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
-from ..mocks import FakeAccessController
+from shared_kernel.access_control import AccessController
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def test_should_return_empty_list_on_default_folder_when_no_passwords(
 def test_should_return_all_passwords_on_default_folder_when_passwords_exist(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: FakeAccessController,
+    access_controller: AccessController,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     password = "gmail_secret"
@@ -65,7 +65,7 @@ def test_should_return_all_passwords_on_default_folder_when_passwords_exist(
 def test_should_return_passwords_from_specific_folder_when_folder_provided(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: FakeAccessController,
+    access_controller: AccessController,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     folder_name = "Personal"
@@ -111,7 +111,7 @@ def test_should_raise_exception_when_folder_does_not_exist(
 def test_should_return_only_passwords_user_has_access_to(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: FakeAccessController,
+    access_controller: AccessController,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     password1 = Password(

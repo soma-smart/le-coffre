@@ -4,7 +4,8 @@ from uuid import UUID
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.use_cases import CreatePasswordUseCase
-from ..mocks import FakeAccessController
+
+from shared_kernel.access_control import AccessController
 
 
 @pytest.fixture
@@ -66,7 +67,7 @@ def test_should_create_password_in_folder_with_encrypted_value(
 
 
 def test_should_grant_access_to_user_when_creating_password(
-    use_case: CreatePasswordUseCase, access_controller: FakeAccessController
+    use_case: CreatePasswordUseCase, access_controller: AccessController
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -84,7 +85,7 @@ def test_should_grant_access_to_user_when_creating_password(
 
 def test_should_grant_access_with_access_controller(
     use_case: CreatePasswordUseCase,
-    access_controller: FakeAccessController,
+    access_controller: AccessController,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")

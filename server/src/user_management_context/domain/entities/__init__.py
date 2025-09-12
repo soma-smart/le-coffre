@@ -1,3 +1,3 @@
-from .user import User
+from .user import User, Resource
 
-__all__ = ["User"]
+__all__ = ["User", "Resource"]

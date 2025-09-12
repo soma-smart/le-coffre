@@ -67,7 +67,9 @@ async def lifespan(app: FastAPI):
         password_repository = InMemoryPasswordRepository()
         encrypt_use_case = EncryptUseCase(encryption_gateway, vault_session_gateway)
         decrypt_use_case = DecryptUseCase(encryption_gateway, vault_session_gateway)
-        encryption_service = EncryptionApi(encrypt_use_case, decrypt_use_case)
+        encryption_service = EncryptionApi(
+            encrypt_use_case, decrypt_use_case
+        )  # Expose encryption service via API
 
         app.state.password_repository = password_repository
         app.state.encryption_service = encryption_service

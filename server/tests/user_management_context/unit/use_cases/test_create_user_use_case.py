@@ -12,21 +12,27 @@ from user_management_context.domain.exceptions import (
 from user_management_context.application.interfaces.haching_gateway import (
     HashingGateway,
 )
+from shared_kernel.access_control import AccessController
 
 
 @pytest.fixture
 def use_case(
     user_repository: UserRepository,
     hash_gateway: HashingGateway,
+    access_controller: AccessController,
 ):
-    return CreateUserUseCase(user_repository, hash_gateway)
+    return CreateUserUseCase(user_repository, hash_gateway, access_controller)
 
 
 def test_should_create_user(
     use_case: CreateUserUseCase,
     user_repository: UserRepository,
     hash_gateway: HashingGateway,
+    access_controller: AccessController,
 ):
+    requester_id = UUID("00000000-0000-0000-0000-000000000000")
+    access_controller.grant_create_access(requester_id, user_repository.resource_id)
+
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"
     email = "testuser@example.com"
@@ -37,7 +43,7 @@ def test_should_create_user(
         id=uuid, username=username, email=email, password=password
     )
 
-    user_id = use_case.execute(command)
+    user_id = use_case.execute(requester_id, command)
 
     created_user = user_repository.get_by_id(user_id)
     assert created_user is not None
@@ -58,7 +64,12 @@ def test_should_raise_not_existing_username(
 
 def test_should_raise_when_user_already_exists(
     use_case: CreateUserUseCase,
+    user_repository: UserRepository,
+    access_controller: AccessController,
 ):
+    requester_id = UUID("00000000-0000-0000-0000-000000000000")
+    access_controller.grant_create_access(requester_id, user_repository.resource_id)
+
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"
     email = "testuser@example.com"
@@ -66,6 +77,6 @@ def test_should_raise_when_user_already_exists(
     command = CreateUserCommand(
         id=uuid, username=username, email=email, password=password
     )
-    use_case.execute(command)
+    use_case.execute(requester_id, command)
     with pytest.raises(UserAlreadyExistsError) as _:
-        use_case.execute(command)
+        use_case.execute(requester_id, command)

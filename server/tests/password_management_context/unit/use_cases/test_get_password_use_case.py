@@ -8,7 +8,7 @@ from password_management_context.adapters.secondary.gateways import (
 from password_management_context.domain.exceptions import PasswordNotFoundError
 from password_management_context.domain.entities import Password
 
-from ..mocks import FakeAccessController
+from shared_kernel.access_control import AccessController
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def use_case(password_repository, encryption_service, access_controller):
 def test_should_return_password_when_user_has_access(
     use_case: GetPasswordUseCase,
     password_repository,
-    access_controller: FakeAccessController,
+    access_controller: AccessController,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     password_entity = Password(
@@ -60,7 +60,7 @@ def test_should_raise_access_denied_when_user_has_no_access(
 
 
 def test_should_raise_exception_when_password_not_found(
-    use_case: GetPasswordUseCase, access_controller: FakeAccessController
+    use_case: GetPasswordUseCase, access_controller: AccessController
 ):
     user_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
     non_existent_password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -74,7 +74,7 @@ def test_should_raise_exception_when_password_not_found(
 def test_should_return_password_with_access_controller(
     use_case: GetPasswordUseCase,
     password_repository,
-    access_controller: FakeAccessController,
+    access_controller: AccessController,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     password_entity = Password(
