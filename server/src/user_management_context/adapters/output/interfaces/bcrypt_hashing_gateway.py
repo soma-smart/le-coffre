@@ -1,4 +1,4 @@
-from application.interfaces.haching_gateway import HashingGateway
+from user_management_context.application.interfaces import HashingGateway
 from passlib.context import CryptContext
 
 context = CryptContext(schemes=["bcrypt"], deprecated="auto")
