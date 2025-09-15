@@ -13,15 +13,13 @@ class InMemoryUserRepository(UserRepository):
         self.storage: dict[UUID, User] = {}
 
     def get_by_id(self, user_id: UUID) -> Optional[User]:
-        if user_id not in self.storage:
-            raise UserNotFoundError(user_id)
         return self.storage.get(user_id)
 
     def get_by_email(self, email: str) -> Optional[User]:
         for user in self.storage.values():
             if user.email == email:
                 return user
-        raise UserNotFoundError(email)
+        return None
 
     def list_all(self) -> list[User]:
         return list(self.storage.values())

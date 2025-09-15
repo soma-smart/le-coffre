@@ -34,8 +34,7 @@ def test_when_admin_should_delete_user(
 
     use_case.execute(command)
 
-    with pytest.raises(UserNotFoundError):
-        user_repository.get_by_id(user_uuid)
+    assert user_repository.get_by_id(user_uuid) is None
 
 
 def test_should_raise_not_admin_error_when_requesting_user_is_not_admin(
