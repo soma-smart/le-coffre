@@ -3,6 +3,9 @@ from uuid import UUID
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.domain.entities import Password
+from password_management_context.domain.services.password_complexity_service import (
+    PasswordComplexityService,
+)
 from shared_kernel.encryption import EncryptionService
 from shared_kernel.access_control import AccessController
 
@@ -19,6 +22,8 @@ class CreatePasswordUseCase:
         self.access_controller = access_controller
 
     def execute(self, command: CreatePasswordCommand) -> UUID:
+        PasswordComplexityService.validate(command.decrypted_password)
+
         encrypted_value = self.encryption_service.encrypt(command.decrypted_password)
 
         password = Password.create(
