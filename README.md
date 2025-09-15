@@ -115,8 +115,9 @@ bun install
 
 Open with VSCode or any other IDE compatible with devcontainer.
 Automatically both front and back will be started with hot reload.
-Front : http://localhost:5173
-Back : http://localhost:8000
+Front : http://127.0.0.1:5173
+Back : http://127.0.0.1:8000
+Swagger: http://127.0.0.1:8000/openapi.json
 
 
 ## Production
