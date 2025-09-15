@@ -5,7 +5,7 @@ from typing import Optional
 
 @dataclass
 class CreateUserCommand:
-    id: Optional[UUID]
+    id: UUID
     username: str
     email: str
     password: str

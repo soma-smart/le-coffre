@@ -17,8 +17,3 @@ def user_repository():
 @pytest.fixture
 def hash_gateway():
     return FakeHashingGateway()
-
-
-@pytest.fixture
-def access_controller():
-    return FakeAccessController()
