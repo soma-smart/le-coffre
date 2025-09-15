@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 from user_management_context.application.interfaces import UserRepository
-from user_management_context.domain.entities import User, Resource
+from user_management_context.domain.entities import User
 from user_management_context.domain.exceptions import (
     UserNotFoundError,
     UserAlreadyExistsError,
@@ -11,7 +11,6 @@ from user_management_context.domain.exceptions import (
 class InMemoryUserRepository(UserRepository):
     def __init__(self):
         self.storage: dict[UUID, User] = {}
-        self.resources: Resource = Resource()
 
     def get_by_id(self, user_id: UUID) -> Optional[User]:
         if user_id not in self.storage:
@@ -41,7 +40,3 @@ class InMemoryUserRepository(UserRepository):
         if user.id not in self.storage:
             raise UserNotFoundError(user.id)
         self.storage[user.id] = user
-
-    @property
-    def resource_id(self) -> Resource:
-        return self.resources.id

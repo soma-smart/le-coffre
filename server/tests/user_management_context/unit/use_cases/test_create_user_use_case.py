@@ -12,7 +12,6 @@ from user_management_context.domain.exceptions import (
 from user_management_context.application.interfaces.hashing_gateway import (
     HashingGateway,
 )
-from shared_kernel.access_control import AccessController
 
 
 @pytest.fixture

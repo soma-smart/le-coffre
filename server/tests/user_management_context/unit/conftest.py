@@ -4,9 +4,6 @@ from user_management_context.adapters.output.interfaces import (
     InMemoryUserRepository,
 )
 from .mocks import FakeHashingGateway
-from tests.mocks.fake_access_controller import (
-    FakeAccessController,
-)
 
 
 @pytest.fixture
