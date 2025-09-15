@@ -5,9 +5,9 @@ from .delete_password_use_case import DeletePasswordUseCase
 from .update_password_use_case import UpdatePasswordUseCase
 
 __all__ = [
-  "CreatePasswordUseCase",
-  "GetPasswordUseCase",
-  "ListPasswordsUseCase",
-  "DeletePasswordUseCase",
-  "UpdatePasswordUseCase"
+    "CreatePasswordUseCase",
+    "GetPasswordUseCase",
+    "ListPasswordsUseCase",
+    "DeletePasswordUseCase",
+    "UpdatePasswordUseCase",
 ]

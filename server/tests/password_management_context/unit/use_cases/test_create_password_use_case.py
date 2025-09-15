@@ -22,6 +22,7 @@ from tests.mocks.fake_access_controller import (
     FakeAccessController,
 )
 
+
 @pytest.fixture
 def use_case(password_repository, encryption_service, access_controller):
     return CreatePasswordUseCase(

@@ -75,6 +75,7 @@ def test_can_read_a_shared_password_of_another_user(e2e_client, setup):
     assert retrieved_password.json()["name"] == "Test Password"
     assert retrieved_password.json()["password"] == STRONG_PASSWORD
 
+
 def test_cannot_create_weak_password(e2e_client, setup):
     user_id = str(UUID("12345678-1234-5678-1234-567812345678"))
     weak_password = "weakpass"

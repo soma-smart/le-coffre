@@ -4,7 +4,7 @@ from . import (
     user_delete_routes,
     user_create_routes,
     user_update_routes,
-    user_list_routes
+    user_list_routes,
 )
 
 

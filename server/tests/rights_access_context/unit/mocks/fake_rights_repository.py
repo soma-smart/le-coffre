@@ -10,5 +10,6 @@ from rights_access_context.application.gateways import (
 )
 from rights_access_context.domain.value_objects import Permission
 
+
 class FakeRightsRepository(InMemoryRightsRepository):
     pass
