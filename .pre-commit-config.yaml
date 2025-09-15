@@ -1,7 +1,0 @@
-repos:
-  - repo: local
-    hooks:
-      - id: eslint
-        name: ESLint
-        entry: npm run lint
-        language: node
