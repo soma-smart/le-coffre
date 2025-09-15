@@ -17,6 +17,7 @@ from .models import ValidatedUser
 from .exceptions import (
     MissingTokenError,
 )
+from .constants import ADMIN_ROLE
 
 
 def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
@@ -56,8 +57,8 @@ async def get_current_user(
             user_id=response.user_id,
             email=response.email,
             display_name=response.display_name,
-            roles=["admin"],  # For now, all authenticated users are admins
             session_id=response.session_id,
+            roles=[ADMIN_ROLE],  # For now, all authenticated users are admins
         )
 
     except (

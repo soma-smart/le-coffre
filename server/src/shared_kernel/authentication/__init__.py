@@ -10,6 +10,8 @@ from .exceptions import (
     NotAdminError,
     MissingRoleError,
 )
+from .admin_permission_checker import AdminPermissionChecker
+from .constants import ADMIN_ROLE
 
 __all__ = [
     "ValidatedUser",
@@ -21,4 +23,6 @@ __all__ = [
     "MissingTokenError",
     "NotAdminError",
     "MissingRoleError",
+    "AdminPermissionChecker",
+    "ADMIN_ROLE",
 ]

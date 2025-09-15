@@ -8,6 +8,7 @@ from vault_management_context.application.use_cases.lock_vault_use_case import (
     LockVaultUseCase,
 )
 from vault_management_context.domain.exceptions import VaultManagementDomainError
+from shared_kernel.authentication import get_current_user, ValidatedUser, NotAdminError
 
 router = APIRouter(prefix="/api/vault", tags=["Vault Operations"])
 
@@ -23,17 +24,23 @@ class LockVaultPostResponse(BaseModel):
     summary="Lock the vault",
 )
 def lock_vault(
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: LockVaultUseCase = Depends(get_lock_vault_usecase),
 ):
     """
     Lock the vault by clearing the decrypted key from memory.
 
     The vault must be unlocked to be locked again.
+    Only administrators can lock the vault.
+
+    - **Authorization**: Bearer token
     """
     try:
-        usecase.execute()
+        usecase.execute(current_user.to_authenticated_user())
         return {"message": "Vault locked successfully"}
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except NotAdminError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail="Internal server error")

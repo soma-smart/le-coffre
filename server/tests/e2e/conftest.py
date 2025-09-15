@@ -36,3 +36,27 @@ def setup(e2e_client):
             "threshold": 3,
         },
     )
+
+
+@pytest.fixture
+def admin_token(e2e_client):
+    # First register an admin user
+    admin_data = {
+        "email": "admin@example.com",
+        "password": "admin",
+        "display_name": "System Administrator",
+    }
+    
+    register_response = e2e_client.post("/api/auth/register-admin", json=admin_data)
+    assert register_response.status_code == 201
+    
+    # Then login to get the token
+    login_response = e2e_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@example.com",
+            "password": "admin",
+        },
+    )
+    assert login_response.status_code == 200
+    return login_response.json()["jwt_token"]

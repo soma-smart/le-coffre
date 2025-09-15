@@ -11,6 +11,7 @@ from authentication_context.domain.exceptions import (
     InvalidCredentialsException,
     AdminNotFoundException,
 )
+from shared_kernel.authentication.constants import ADMIN_ROLE
 
 
 class AdminLoginUseCase:
@@ -39,7 +40,7 @@ class AdminLoginUseCase:
         token = await self._token_gateway.generate_token(
             user_id=user_password.id,
             email=user_password.email,
-            roles=["admin"],
+            roles=[ADMIN_ROLE],
             claims={"display_name": user_password.display_name},
         )
 

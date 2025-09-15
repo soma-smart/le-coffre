@@ -4,6 +4,7 @@ from user_management_context.application.interfaces import UserRepository
 from user_management_context.application.commands import CreateUserCommand
 from user_management_context.domain.entities import User
 from user_management_context.domain.exceptions import AdminAlreadyExistsError
+from shared_kernel.authentication.constants import ADMIN_ROLE
 
 
 class CreateAdminUseCase:
@@ -17,10 +18,10 @@ class CreateAdminUseCase:
 
         admin = User(
             id=command.id,
-            username=command.username,
             email=command.email,
+            username=command.username,
             name=command.name,
-            roles=["admin"],
+            roles=[ADMIN_ROLE],
         )
 
         self.user_repository.save(admin)

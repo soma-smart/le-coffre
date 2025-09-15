@@ -6,6 +6,7 @@ from user_management_context.domain.exceptions import (
     UserNotFoundError,
     UserAlreadyExistsError,
 )
+from shared_kernel.authentication.constants import ADMIN_ROLE
 
 
 class InMemoryUserRepository(UserRepository):
@@ -41,7 +42,7 @@ class InMemoryUserRepository(UserRepository):
 
     def get_admin(self) -> Optional[User]:
         for user in self.storage.values():
-            if "admin" in user.roles:
+            if ADMIN_ROLE in user.roles:
                 return user
 
         return None
