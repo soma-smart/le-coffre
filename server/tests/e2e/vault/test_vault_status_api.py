@@ -1,4 +1,4 @@
-def test_can_access_vault_status(e2e_client):
+def test_can_access_vault_status(e2e_client, admin_token):
     # Initial status should be NOT_SETUP
     not_setup_response = e2e_client.get("/api/vault/status")
 
@@ -21,7 +21,8 @@ def test_can_access_vault_status(e2e_client):
     assert unlocked_data["status"] == "UNLOCKED"
 
     # Lock the vault to have LOCKED status
-    e2e_client.post("/api/vault/lock")
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    e2e_client.post("/api/vault/lock", headers=headers)
     locked_response = e2e_client.get("/api/vault/status")
     assert locked_response.status_code == 200
     locked_data = locked_response.json()
