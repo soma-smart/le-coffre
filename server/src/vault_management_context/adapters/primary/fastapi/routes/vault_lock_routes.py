@@ -10,7 +10,7 @@ from vault_management_context.application.use_cases.lock_vault_use_case import (
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 from shared_kernel.authentication import get_current_user, ValidatedUser, NotAdminError
 
-router = APIRouter(prefix="/api/vault", tags=["Vault Operations"])
+router = APIRouter(prefix="/api/vault", tags=["Vault"])
 
 
 class LockVaultPostResponse(BaseModel):
@@ -42,5 +42,5 @@ def lock_vault(
         raise HTTPException(status_code=400, detail=str(e))
     except NotAdminError as e:
         raise HTTPException(status_code=403, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")

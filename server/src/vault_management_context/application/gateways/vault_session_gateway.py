@@ -3,7 +3,7 @@ from typing import Protocol
 
 class VaultSessionGateway(Protocol):
     def store_decrypted_key(self, decrypted_key: str) -> None:
-        """Store the decrypted vault key in memory for the session
+        """Store the decrypted vault key for the session
 
         Args:
             decrypted_key: The decrypted vault key
@@ -11,22 +11,22 @@ class VaultSessionGateway(Protocol):
         ...
 
     def get_decrypted_key(self) -> str:
-        """Get the decrypted vault key from memory
+        """Get the decrypted vault key
 
         Returns:
             The decrypted vault key
 
         Raises:
-            ValueError: If no decrypted key is stored in memory
+            ValueError: If no decrypted key is stored
         """
         ...
 
     def clear_decrypted_key(self) -> None:
-        """Clear the decrypted vault key from memory"""
+        """Clear the decrypted vault key"""
         ...
 
     def is_vault_locked(self) -> bool:
-        """Check if the vault is locked (i.e., no decrypted key is stored in memory)
+        """Check if the vault is locked (i.e., no decrypted key is stored)
 
         Returns:
             True if the vault is locked, False otherwise
