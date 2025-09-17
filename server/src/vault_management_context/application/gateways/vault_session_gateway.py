@@ -24,3 +24,11 @@ class VaultSessionGateway(Protocol):
     def clear_decrypted_key(self) -> None:
         """Clear the decrypted vault key from memory"""
         ...
+
+    def is_vault_locked(self) -> bool:
+        """Check if the vault is locked (i.e., no decrypted key is stored in memory)
+
+        Returns:
+            True if the vault is locked, False otherwise
+        """
+        ...

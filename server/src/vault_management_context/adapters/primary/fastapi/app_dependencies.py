@@ -5,6 +5,7 @@ from vault_management_context.application.use_cases import (
     CreateVaultUseCase,
     UnlockVaultUseCase,
     LockVaultUseCase,
+    GetVaultStatusUseCase,
 )
 from vault_management_context.application.gateways import (
     VaultRepository,
@@ -57,3 +58,10 @@ def get_lock_vault_usecase(
     vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
 ):
     return LockVaultUseCase(vault_repository, vault_session_gateway)
+
+
+def get_vault_status_usecase(
+    vault_repository: VaultRepository = Depends(get_vault_repository),
+    vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
+):
+    return GetVaultStatusUseCase(vault_repository, vault_session_gateway)

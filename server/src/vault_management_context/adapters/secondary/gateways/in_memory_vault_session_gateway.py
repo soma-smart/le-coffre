@@ -18,3 +18,6 @@ class InMemoryVaultSessionGateway(VaultSessionGateway):
 
     def clear_decrypted_key(self) -> None:
         self._decrypted_key = None
+
+    def is_vault_locked(self) -> bool:
+        return self._decrypted_key is None
