@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
+
+import Slider from 'primevue/slider'
+import DatePicker from 'primevue/datepicker'
+import { ref } from 'vue'
+const value = ref(50)
+const date = ref(null)
 </script>
 
 <template>
@@ -14,8 +20,11 @@ import HelloWorld from './components/HelloWorld.vue'
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/about">About</RouterLink>
       </nav>
+      <DatePicker v-model="date" />
+
     </div>
   </header>
+  <Slider v-model="value" class="w-56" />
 
   <RouterView />
 </template>
