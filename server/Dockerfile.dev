@@ -1,6 +1,8 @@
 FROM ghcr.io/astral-sh/uv:python3.13-alpine
 
-WORKDIR /app
+RUN apk add --no-cache git
+
+WORKDIR /app/server
 
 COPY pyproject.toml ./
 

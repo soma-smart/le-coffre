@@ -2,17 +2,13 @@
   "name": "Backend - Le Coffre",
   "dockerComposeFile": "../../docker-compose.dev.yml",
   "service": "backend",
-  "workspaceFolder": "/app",
+  "workspaceFolder": "/app/server",
   "forwardPorts": [8000],
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbaeumer.vscode-eslint",
-        "bradlc.vscode-tailwindcss",
-        "Nuxtr.nuxt-vscode-extentions",
         "qwtel.sqlite-viewer",
-        "Gruntfuggly.todo-tree",
-        "vitest.explorer"
+        "Gruntfuggly.todo-tree"
       ]
     },
     "settings": {

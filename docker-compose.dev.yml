@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.dev
     command: uv run fastapi dev src/main.py --host 0.0.0.0
     volumes:
-      - ./server/app:/app/app
+      - ./:/app
     ports:
       - "8000:8000"
     develop:
@@ -22,8 +22,7 @@ services:
       dockerfile: Dockerfile.dev
     command: bun dev
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./:/app
     ports:
       - "5173:5173"
     develop:
