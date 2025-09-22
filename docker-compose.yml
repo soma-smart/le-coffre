@@ -4,13 +4,11 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile
 
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.prod
-    ports:
-      - "8080:80"
+      dockerfile: Dockerfile
     depends_on:
       - backend

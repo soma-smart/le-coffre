@@ -15,7 +15,8 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "openapi-ts": "openapi-ts"
   },
   "dependencies": {
     "pinia": "^3.0.3",
@@ -23,6 +24,7 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "0.83.1",
     "@playwright/test": "^1.55.0",
     "@tsconfig/node22": "^22.0.2",
     "@types/jsdom": "^21.1.7",

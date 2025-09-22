@@ -1,6 +1,6 @@
 # le-coffre
 
-This template should help get you started developing with Vue 3 in Vite.
+Frontend for Le Coffre.
 
 ## Recommended IDE Setup
 
@@ -13,6 +13,13 @@ TypeScript cannot handle type information for `.vue` imports by default, so we r
 ## Customize configuration
 
 See [Vite Configuration Reference](https://vite.dev/config/).
+
+## Generate TS Types from OpenAPI Spec
+
+```sh
+bun run openapi-ts
+```
+
 
 ## Project Setup
 
@@ -63,5 +70,6 @@ bun test:e2e --debug
 bun lint
 ```
 
-
+```sh
 bun format
+```

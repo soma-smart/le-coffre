@@ -18,5 +18,10 @@
   ],
   "python.analysis.extraPaths": [
     "server/src"
+  ],
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "file": ".github/prompts/copilot-commit-message-instructions.md"
+    }
   ]
 }
