@@ -25,7 +25,7 @@ Le Coffre is an open-source password manager that allows you to securely store a
 This project is licensed under the MIT License. You are free to use, modify, and distribute this project under the terms of the license.
 
 ## Contributing
-We welcome contributions from the community! To contribute:  
+We welcome contributions from the community! To contribute:
 
 1. Fork the repository.
 2. Create a new branch for your feature or bug fix.
@@ -113,39 +113,19 @@ bun install
 
 ## Development Server
 
-Start the development server on `http://localhost:3000`:
+Open with VSCode or any other IDE compatible with devcontainer.
+Automatically both front and back will be started with hot reload.
+Front : http://127.0.0.1:5173
+Back : http://127.0.0.1:8000
+Swagger: http://127.0.0.1:8000/openapi.json
 
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
+Within each front/ or back/ folder you will find a README.md with more details.
 
 ## Production
 
 Build the application for production:
 
 ```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-
 # Build docker
 docker build -t le-coffre .
 # Create a named volume
@@ -157,21 +137,6 @@ docker run -p 3000:3000 le-coffre:latest --volume le-coffre-volume:/app
 docker pull rg.fr-par.scw.cloud/soma-smart-cr/le-coffre:latest
 ```
 
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
 
 ## Security
 
