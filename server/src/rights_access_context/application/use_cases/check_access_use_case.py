@@ -14,6 +14,8 @@ class CheckAccessUseCase:
     def execute(
         self, user_id: UUID, resource_id: UUID, permission: Permission = Permission.READ
     ) -> AccessResult:
+        if self.rights_repository.is_owner(user_id, resource_id):
+            return AccessResult(granted=Granted.ACCESS, is_owner=True)
         all_permissions = self.rights_repository.get_all_permissions(
             user_id, resource_id
         )

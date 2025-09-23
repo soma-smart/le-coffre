@@ -4,7 +4,6 @@ from uuid import UUID
 from rights_access_context.application.use_cases import (
     GrantAccessUseCase,
 )
-from rights_access_context.domain.value_objects import Permission
 from ..mocks import FakeRightsRepository
 
 

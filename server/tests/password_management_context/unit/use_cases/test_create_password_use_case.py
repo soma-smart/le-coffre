@@ -98,25 +98,7 @@ def test_should_grant_access_to_user_when_creating_password(
 
     use_case.execute(command)
 
-    assert (user_id, uuid) in access_controller.granted_accesses
-
-
-def test_should_grant_access_with_access_controller(
-    use_case: CreatePasswordUseCase,
-    access_controller: FakeAccessController,
-):
-    uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    name = "name"
-    decrypted_password = STRONG_PASSWORD
-
-    command = CreatePasswordCommand(
-        user_id=user_id, id=uuid, name=name, decrypted_password=decrypted_password
-    )
-
-    use_case.execute(command)
-
-    assert (user_id, uuid) in access_controller.granted_accesses
+    assert access_controller.check_access(user_id, uuid)
 
 
 def test_should_reject_password_with_multiple_complexity_violations(

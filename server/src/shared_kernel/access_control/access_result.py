@@ -11,3 +11,4 @@ class Granted(Enum):
 @dataclass(frozen=True)
 class AccessResult:
     granted: Granted
+    is_owner: bool = False

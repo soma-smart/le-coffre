@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from uuid import UUID, uuid4
+from uuid import UUID
 import logging
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
@@ -29,7 +29,7 @@ class UpdatePasswordRequest(BaseModel):
     status_code=201,
     summary="Update an existing password",
 )
-def create_password(
+def update_password(
     password_id: UUID,
     request: UpdatePasswordRequest,
     usecase: UpdatePasswordUseCase = Depends(get_update_password_usecase),
@@ -44,7 +44,6 @@ def create_password(
     - **folder**: Optional folder to organize the password
     """
     try:
-        password_id = uuid4()
         command = UpdatePasswordCommand(
             requester_id=request.user_id,
             id=password_id,

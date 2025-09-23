@@ -27,3 +27,11 @@ class AccessController(Protocol):
     def grant_delete_access(self, user_id: UUID, resource_id: UUID) -> None:
         """Grant delete access to a resource for a specific user"""
         ...
+
+    def set_owner(self, user_id: UUID, resource_id: UUID) -> None:
+        """Set the owner of a resource"""
+        ...
+
+    def is_owner(self, user_id: UUID, resource_id: UUID) -> bool:
+        """Check if the user is the owner of the resource"""
+        ...
