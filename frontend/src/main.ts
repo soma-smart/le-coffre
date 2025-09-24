@@ -8,14 +8,19 @@ import Aura from '@primeuix/themes/aura';
 
 import App from './App.vue'
 import router from './router'
+import AppState from './plugins/appState';
 
 const app = createApp(App)
 app.use(PrimeVue, {
     theme: {
-        preset: Aura
+        preset: Aura,
+        options: {
+            prefix: 'p',
+            darkModeSelector: 'app-dark',
+        }
     }
 });
 app.use(createPinia())
 app.use(router)
-
+app.use(AppState);
 app.mount('#app')

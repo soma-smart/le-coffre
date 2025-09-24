@@ -22,6 +22,7 @@
     "@primeuix/themes": "^1.2.3",
     "@tailwindcss/vite": "^4.1.13",
     "pinia": "^3.0.3",
+    "primeicons": "^7.0.0",
     "primevue": "^4.3.9",
     "tailwindcss-primeui": "^0.6.1",
     "vue": "^3.5.21",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "0.83.1",
     "@playwright/test": "^1.55.0",
+    "@primevue/auto-import-resolver": "^4.3.9",
     "@tsconfig/node22": "^22.0.2",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.18.1",
@@ -50,6 +52,7 @@
     "prettier": "3.6.2",
     "tailwindcss": "^4.1.13",
     "typescript": "~5.8.3",
+    "unplugin-vue-components": "^29.1.0",
     "vite": "^7.1.5",
     "vite-plugin-vue-devtools": "^8.0.1",
     "vitest": "^3.2.4",
