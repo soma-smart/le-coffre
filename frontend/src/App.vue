@@ -3,5 +3,6 @@
 </script>
 
 <template>
+  <ThemeSwitcher />
   <RouterView />
 </template>

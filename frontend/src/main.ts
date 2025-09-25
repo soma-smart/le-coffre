@@ -16,11 +16,13 @@ app.use(PrimeVue, {
         preset: Aura,
         options: {
             prefix: 'p',
-            darkModeSelector: 'app-dark',
+            darkModeSelector: '.p-dark',
+            cssLayer: false,
         }
     }
 });
 app.use(createPinia())
 app.use(router)
 app.use(AppState);
+
 app.mount('#app')
