@@ -1,11 +1,11 @@
-from typing import Protocol, Type, Callable
+from typing import Protocol, Type, Callable, TypeVar
 
-from pubsub import DomainEvent
+from shared_kernel.pubsub import DomainEvent
+
+T = TypeVar("T", bound=DomainEvent)
 
 
 class DomainEventPublisher(Protocol):
     def publish(self, event: DomainEvent) -> None: ...
 
-    def subscribe(
-        self, event_type: Type[DomainEvent], handler: Callable[[DomainEvent], None]
-    ) -> None: ...
+    def subscribe(self, event_type: Type[T], handler: Callable[[T], None]) -> None: ...

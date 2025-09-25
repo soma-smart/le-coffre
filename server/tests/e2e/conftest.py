@@ -46,10 +46,10 @@ def admin_token(e2e_client):
         "password": "admin",
         "display_name": "System Administrator",
     }
-    
+
     register_response = e2e_client.post("/api/auth/register-admin", json=admin_data)
     assert register_response.status_code == 201
-    
+
     # Then login to get the token
     login_response = e2e_client.post(
         "/api/auth/login",

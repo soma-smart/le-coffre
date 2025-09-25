@@ -30,7 +30,7 @@ class UpdatePasswordUseCase:
 
         encrypted_value = self.encryption_service.encrypt(new_password.password)
 
-        updated_password = Password.create(
+        updated_password = Password(
             id=new_password.id,
             name=new_password.name,
             encrypted_value=encrypted_value,
