@@ -14,7 +14,7 @@ from authentication_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
 
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 class RegisterAdminRequest(BaseModel):

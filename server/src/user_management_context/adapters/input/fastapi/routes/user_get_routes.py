@@ -11,7 +11,7 @@ from user_management_context.domain.exceptions import (
     UserNotFoundError,
 )
 
-router = APIRouter(prefix="/api/users", tags=["User Management"])
+router = APIRouter(prefix="/users", tags=["User Management"])
 
 
 class GetUserResponse(BaseModel):

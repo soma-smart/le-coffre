@@ -12,7 +12,7 @@ from password_management_context.domain.exceptions import (
 )
 from shared_kernel.access_control.exceptions import AccessDeniedError
 
-router = APIRouter(prefix="/api/passwords", tags=["Password Management"])
+router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
 @router.delete(

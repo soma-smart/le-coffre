@@ -8,7 +8,7 @@ from user_management_context.adapters.input.fastapi.app_dependencies import (
 )
 from user_management_context.application.use_cases import ListUserUseCase
 
-router = APIRouter(prefix="/api/users", tags=["User Management"])
+router = APIRouter(prefix="/users", tags=["User Management"])
 
 
 class ListUserResponse(BaseModel):

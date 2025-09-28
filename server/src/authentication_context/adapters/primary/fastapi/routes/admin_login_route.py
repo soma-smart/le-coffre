@@ -13,7 +13,7 @@ from authentication_context.domain.exceptions import (
     AdminNotFoundException,
 )
 
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 class AdminLoginRequest(BaseModel):

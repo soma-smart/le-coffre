@@ -12,7 +12,7 @@ from user_management_context.domain.exceptions import (
     UserAlreadyExistsError,
 )
 
-router = APIRouter(prefix="/api/users", tags=["User Management"])
+router = APIRouter(prefix="/users", tags=["User Management"])
 
 
 class CreateUserRequest(BaseModel):

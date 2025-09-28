@@ -8,24 +8,12 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Button: typeof import('primevue/button')['default']
     Drawer: typeof import('primevue/drawer')['default']
-    InputSwitch: typeof import('primevue/inputswitch')['default']
-    RadioButton: typeof import('primevue/radiobutton')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SelectButton: typeof import('primevue/selectbutton')['default']
-    Sidebar: typeof import('primevue/sidebar')['default']
-    Step: typeof import('primevue/step')['default']
-    StepList: typeof import('primevue/steplist')['default']
-    StepPanel: typeof import('primevue/steppanel')['default']
-    StepPanels: typeof import('primevue/steppanels')['default']
-    Stepper: typeof import('primevue/stepper')['default']
     ThemeSwitcher: typeof import('./src/components/ThemeSwitcher.vue')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
-  }
-  export interface GlobalDirectives {
-    StyleClass: typeof import('primevue/styleclass')['default']
   }
 }

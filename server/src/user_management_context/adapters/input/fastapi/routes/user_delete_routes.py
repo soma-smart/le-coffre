@@ -12,7 +12,7 @@ from user_management_context.domain.exceptions import (
 )
 from shared_kernel.authentication import get_current_user, ValidatedUser, NotAdminError
 
-router = APIRouter(prefix="/api/users", tags=["User Management"])
+router = APIRouter(prefix="/users", tags=["User Management"])
 
 
 @router.delete(

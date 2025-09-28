@@ -10,7 +10,7 @@ from vault_management_context.application.use_cases.lock_vault_use_case import (
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 from shared_kernel.authentication import get_current_user, ValidatedUser, NotAdminError
 
-router = APIRouter(prefix="/api/vault", tags=["Vault"])
+router = APIRouter(prefix="/vault", tags=["Vault"])
 
 
 class LockVaultPostResponse(BaseModel):
