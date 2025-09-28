@@ -5,7 +5,8 @@
             <i class="pi pi-palette" />
         </button>
 
-        <Drawer v-model:visible="drawerVisible" position="right" header="Theme Customizer">
+        <Drawer v-model:visible="drawerVisible" position="right" header="Theme Customizer"
+            class="!w-full md:!w-80 lg:!w-[34rem]">
             <div class="flex flex-col gap-6">
                 <div class="flex items-center">
                     <span class="font-medium flex-1">Dark Theme</span>
@@ -45,8 +46,8 @@
                     <span class="text-sm font-medium">Preset</span>
                     <div
                         class="inline-flex p-[0.28rem] items-start gap-[0.28rem] rounded-[0.71rem] border border-[#00000003] w-full">
-                        <SelectButton v-model="$appState.theme" @update:modelValue="onPresetChange" :options="presets"
-                            :allowEmpty="false" />
+                        <SelectButton :fluid="true" v-model="$appState.theme" @update:modelValue="onPresetChange"
+                            :options="presets" :allowEmpty="false" />
                     </div>
                 </div>
 
@@ -66,6 +67,7 @@ import Aura from '@primeuix/themes/aura';
 import Lara from '@primeuix/themes/lara';
 import Nora from '@primeuix/themes/nora';
 import Material from '@primeuix/themes/material';
+import type { PaletteDesignToken } from '@primeuix/themes/types';
 
 // Access global properties
 const { proxy } = getCurrentInstance();
@@ -79,7 +81,7 @@ const presets = Object.keys(themePresetsData);
 // Reactive state
 const iconClass = ref('pi-moon');
 const selectedPrimaryColor = ref('noir');
-const selectedSurfaceColor = ref(null);
+const selectedSurfaceColor = ref<string | null>(null);
 const drawerVisible = ref(false);
 
 // ... (primaryColors and surfaces arrays are unchanged) ...
@@ -167,6 +169,10 @@ const onThemeToggler = () => {
 const getPresetExt = () => {
     const color = primaryColors.find((c) => c.name === selectedPrimaryColor.value);
 
+    if (!color) {
+        return {};
+    }
+
     if (color.name === 'noir') {
         return {
             semantic: {
@@ -205,7 +211,7 @@ const getPresetExt = () => {
     }
 };
 
-const applyTheme = (type, color) => {
+const applyTheme = (type: string, color: { palette: PaletteDesignToken | undefined; }) => {
     if (type === 'primary') {
         updatePreset(getPresetExt());
     } else if (type === 'surface') {
@@ -213,7 +219,7 @@ const applyTheme = (type, color) => {
     }
 };
 
-const updateColors = (type, color) => {
+const updateColors = (type: string, color: { name: string; palette: PaletteDesignToken | undefined; }) => {
     if (type === 'primary') {
         selectedPrimaryColor.value = color.name;
     } else if (type === 'surface') {
@@ -223,12 +229,12 @@ const updateColors = (type, color) => {
     saveSettings();
 };
 
-const onRippleChange = (value) => {
+const onRippleChange = (value: boolean) => {
     $primevue.config.ripple = value;
     saveSettings();
 };
 
-const onPresetChange = (value) => {
+const onPresetChange = (value: string) => {
     $appState.theme = value;
     const preset = themePresetsData[value];
     const surfacePalette = surfaces.find((s) => s.name === selectedSurfaceColor.value)?.palette;
