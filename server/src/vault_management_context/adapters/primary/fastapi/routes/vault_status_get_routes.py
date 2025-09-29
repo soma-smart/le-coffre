@@ -5,7 +5,7 @@ from vault_management_context.adapters.primary.fastapi.app_dependencies import (
 )
 from vault_management_context.application.responses import VaultStatus
 
-router = APIRouter(prefix="/api/vault", tags=["Vault"])
+router = APIRouter(prefix="/vault", tags=["Vault"])
 
 
 class VaultStatusResponse(BaseModel):

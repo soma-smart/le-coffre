@@ -118,7 +118,7 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, root_path="/api")
 app.include_router(get_vault_management_router())
 app.include_router(get_password_management_router())
 app.include_router(get_rights_access_router())

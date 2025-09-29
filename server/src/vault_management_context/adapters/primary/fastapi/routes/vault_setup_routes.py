@@ -9,7 +9,7 @@ from vault_management_context.application.use_cases import CreateVaultUseCase
 from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
-router = APIRouter(prefix="/api/vault", tags=["Vault"])
+router = APIRouter(prefix="/vault", tags=["Vault"])
 
 
 class CreateVaultPostRequest(BaseModel):

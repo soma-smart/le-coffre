@@ -13,7 +13,7 @@ from rights_access_context.domain.exceptions import (
     RightAccessDomainError,
 )
 
-router = APIRouter(prefix="/api", tags=["Access Rights"])
+router = APIRouter(tags=["Access Rights"])
 
 
 class ShareAccessRequest(BaseModel):

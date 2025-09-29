@@ -32,13 +32,14 @@ services:
       dockerfile: Dockerfile.dev
     command: bun dev --host 0.0.0.0
     volumes:
-      - ./:/app
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
     expose:
       - "5173"
     develop:
       watch:
         - action: sync
           path: ./frontend
-          target: /app
+          target: /app/frontend
           ignore:
             - node_modules/
