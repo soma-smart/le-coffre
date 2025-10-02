@@ -68,7 +68,7 @@ def create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider
 def create_existing_sso_user(
     user_id, email, display_name, sso_user_id, sso_provider, last_login=None
 ):
-    """Helper pour créer un SsoUser existant en base"""
+    """Helper to create an existing SsoUser in database"""
     return SsoUser(
         internal_user_id=user_id,
         email=email,
