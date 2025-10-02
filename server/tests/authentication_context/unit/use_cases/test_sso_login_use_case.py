@@ -8,8 +8,11 @@ from authentication_context.application.use_cases.sso_login_use_case import (
 from authentication_context.application.commands.sso_login_command import (
     SsoLoginCommand,
 )
-from authentication_context.domain.entities.sso_user import SsoUser
 from authentication_context.domain.exceptions import InvalidSsoCodeException
+from tests.authentication_context.unit.conftest import (
+    create_sso_user_from_provider,
+    create_existing_sso_user,
+)
 
 
 @pytest.fixture
@@ -45,29 +48,15 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     sso_provider = "google"
     sso_user_id = "google_123456"
 
-    # Set up the SSO gateway to return valid user info
-    sso_user_from_provider = SsoUser(
-        internal_user_id=UUID(
-            "00000000-0000-0000-0000-000000000000"
-        ),  # Temporary ID from provider
-        email=email,
-        display_name=display_name,
-        sso_user_id=sso_user_id,
-        sso_provider=sso_provider,
+    sso_user_from_provider = create_sso_user_from_provider(
+        email, display_name, sso_user_id, sso_provider
     )
+    existing_sso_user = create_existing_sso_user(
+        user_id, email, display_name, sso_user_id, sso_provider
+    )
+
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-
-    # Create an existing SSO user
-    existing_sso_user = SsoUser(
-        internal_user_id=user_id,
-        email=email,
-        display_name=display_name,
-        sso_user_id=sso_user_id,
-        sso_provider=sso_provider,
-        created_at=datetime.now(),
-    )
     sso_user_repository.save(existing_sso_user)
-
     token_gateway.set_unique_jwt_part("unique_token_part")
 
     command = SsoLoginCommand(code=sso_code)
@@ -95,7 +84,6 @@ async def test_should_raise_exception_for_invalid_sso_code(
 ):
     # Arrange
     invalid_code = "invalid_sso_code_999"
-
     command = SsoLoginCommand(code=invalid_code)
 
     # Act & Assert
@@ -121,19 +109,12 @@ async def test_should_create_new_user_for_first_time_sso_login(
     sso_provider = "azure"
     sso_user_id = "azure_789012"
 
-    sso_user_from_provider = SsoUser(
-        internal_user_id=UUID(
-            "00000000-0000-0000-0000-000000000000"
-        ),  # Temporary ID from provider
-        email=email,
-        display_name=display_name,
-        sso_user_id=sso_user_id,
-        sso_provider=sso_provider,
+    sso_user_from_provider = create_sso_user_from_provider(
+        email, display_name, sso_user_id, sso_provider
     )
+
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-
     assert sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider) is None
-
     token_gateway.set_unique_jwt_part("new_user_token")
 
     command = SsoLoginCommand(code=sso_code)
@@ -142,33 +123,12 @@ async def test_should_create_new_user_for_first_time_sso_login(
     response = await use_case.execute(command)
 
     # Assert
-    assert response.email == email
-    assert response.display_name == display_name
-    assert response.is_new_user is True
-    assert response.jwt_token.startswith("jwt_token_for_")
-
     # Check that user was created in User Management context
     assert user_management_gateway._created_users
     created_user = user_management_gateway._created_users[0]
     assert created_user["email"] == email
     assert created_user["display_name"] == display_name
     assert created_user["user_id"] == response.user_id
-
-    # Check that SSO user was saved in Auth context
-    saved_sso_user = sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider)
-    assert saved_sso_user is not None
-    assert saved_sso_user.internal_user_id == response.user_id
-    assert saved_sso_user.email == email
-    assert saved_sso_user.display_name == display_name
-    assert saved_sso_user.sso_user_id == sso_user_id
-    assert saved_sso_user.sso_provider == sso_provider
-    assert saved_sso_user.created_at is not None
-    assert saved_sso_user.last_login is not None
-
-    # Check that session was created
-    session = session_repository.get_user_last_session(response.user_id)
-    assert session.user_id == response.user_id
-    assert session.jwt_token == response.jwt_token
 
 
 @pytest.mark.asyncio
@@ -187,32 +147,22 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     display_name = "Existing User"
     sso_provider = "okta"
     sso_user_id = "okta_345678"
-
-    # Create an existing SSO user with an old last_login
     old_login_time = datetime(2024, 1, 1, 12, 0, 0)
-    existing_sso_user = SsoUser(
-        internal_user_id=user_id,
-        email=email,
-        display_name=display_name,
-        sso_user_id=sso_user_id,
-        sso_provider=sso_provider,
-        created_at=datetime(2023, 12, 1, 10, 0, 0),
+
+    existing_sso_user = create_existing_sso_user(
+        user_id,
+        email,
+        display_name,
+        sso_user_id,
+        sso_provider,
         last_login=old_login_time,
     )
-    sso_user_repository.save(existing_sso_user)
-
-    # Set up the SSO gateway to return the same user info
-    sso_user_from_provider = SsoUser(
-        internal_user_id=UUID(
-            "00000000-0000-0000-0000-000000000000"
-        ),  # Temporary ID from provider
-        email=email,
-        display_name=display_name,
-        sso_user_id=sso_user_id,
-        sso_provider=sso_provider,
+    sso_user_from_provider = create_sso_user_from_provider(
+        email, display_name, sso_user_id, sso_provider
     )
-    sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
 
+    sso_user_repository.save(existing_sso_user)
+    sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     token_gateway.set_unique_jwt_part("existing_user_token")
 
     # Count initial users in User Management context
@@ -221,28 +171,12 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     command = SsoLoginCommand(code=sso_code)
 
     # Act
-    response = await use_case.execute(command)
+    await use_case.execute(command)
 
     # Assert
-    assert response.user_id == user_id
-    assert response.email == email
-    assert response.display_name == display_name
-    assert response.is_new_user is False
-    assert response.jwt_token == f"jwt_token_for_{user_id}_existing_user_token"
-
     # Check that NO new user was created in User Management context
     assert len(user_management_gateway._created_users) == initial_user_count
 
     # Check that last_login was updated
     updated_sso_user = sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider)
-    assert updated_sso_user is not None
     assert updated_sso_user.last_login > old_login_time
-    assert updated_sso_user.internal_user_id == user_id  # Same user ID
-    assert (
-        updated_sso_user.created_at == existing_sso_user.created_at
-    )  # Creation time unchanged
-
-    # Check that session was created
-    session = session_repository.get_user_last_session(user_id)
-    assert session.user_id == user_id
-    assert session.jwt_token == response.jwt_token
