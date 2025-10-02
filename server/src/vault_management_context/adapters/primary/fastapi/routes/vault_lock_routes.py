@@ -8,7 +8,8 @@ from vault_management_context.application.use_cases.lock_vault_use_case import (
     LockVaultUseCase,
 )
 from vault_management_context.domain.exceptions import VaultManagementDomainError
-from shared_kernel.authentication import get_current_user, ValidatedUser, NotAdminError
+from shared_kernel.authentication import ValidatedUser, NotAdminError
+from shared_kernel.authentication.dependencies import get_current_user
 
 router = APIRouter(prefix="/vault", tags=["Vault"])
 
