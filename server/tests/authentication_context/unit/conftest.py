@@ -7,6 +7,7 @@ from tests.authentication_context.unit.mocks import (
     FakeUserPasswordRepository,
     FakeUserManagementGateway,
     FakeSsoGateway,
+    FakeSsoUserRepository,
 )
 
 
@@ -43,3 +44,8 @@ def user_management_gateway():
 @pytest.fixture
 def sso_gateway():
     return FakeSsoGateway()
+
+
+@pytest.fixture
+def sso_user_repository():
+    return FakeSsoUserRepository()

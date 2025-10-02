@@ -10,3 +10,7 @@ class UserManagementGateway(Protocol):
     async def can_create_admin(self) -> bool:
         """Check if an admin can be created (no admin exists yet)"""
         ...
+
+    async def create_user(self, user_id: UUID, email: str, display_name: str) -> None:
+        """Create a regular user in the user management context"""
+        ...

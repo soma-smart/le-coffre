@@ -32,3 +32,11 @@ class UserNotFoundException(InvalidSessionException):
 
 class InsufficientRoleException(InvalidSessionException):
     pass
+
+
+class InvalidSsoCodeException(AuthenticationDomainError):
+    pass
+
+
+class SsoUserAlreadyExistsException(AuthenticationDomainError):
+    pass

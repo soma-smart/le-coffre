@@ -5,3 +5,4 @@ from .session_repository import SessionRepository
 from .user_password_repository import UserPasswordRepository
 from .user_management_gateway import UserManagementGateway
 from .sso_gateway import SsoGateway
+from .sso_user_repository import SsoUserRepository

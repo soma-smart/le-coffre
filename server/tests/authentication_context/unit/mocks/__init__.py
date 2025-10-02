@@ -5,3 +5,4 @@ from .fake_session_repository import FakeSessionRepository
 from .fake_user_management_gateway import FakeUserManagementGateway
 from .fake_user_password_repository import FakeUserPasswordRepository
 from .fake_sso_gateway import FakeSsoGateway
+from .fake_sso_user_repository import FakeSsoUserRepository
