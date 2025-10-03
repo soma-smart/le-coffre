@@ -1,7 +1,7 @@
 import pytest
 from uuid import UUID
 from datetime import datetime
-from tests.authentication_context.unit.mocks import (
+from tests.authentication_context.unit.fakes import (
     FakeTokenGateway,
     FakeStateGenerationGateway,
     FakePasswordHashingGateway,

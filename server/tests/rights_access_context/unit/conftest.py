@@ -7,7 +7,7 @@ from rights_access_context.application.use_cases import (
     CheckAccessUseCase,
     GrantAccessUseCase,
 )
-from .mocks import FakeRightsRepository
+from .fakes import FakeRightsRepository
 
 
 @pytest.fixture()

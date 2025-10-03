@@ -3,7 +3,7 @@ import pytest
 from rights_access_context.application.use_cases import (
     ShareAccessUseCase,
 )
-from ..mocks import FakeRightsRepository
+from ..fakes import FakeRightsRepository
 from rights_access_context.application.commands import ShareResourceCommand
 from rights_access_context.domain.exceptions import PermissionDeniedError
 

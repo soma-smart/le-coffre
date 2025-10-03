@@ -4,7 +4,7 @@ from uuid import UUID
 from rights_access_context.application.use_cases import (
     GetOwnerAccessUseCase,
 )
-from ..mocks import FakeRightsRepository
+from ..fakes import FakeRightsRepository
 
 # Test data constants
 USER_ID = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")

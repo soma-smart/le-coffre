@@ -4,7 +4,7 @@ from uuid import UUID
 from rights_access_context.application.use_cases import (
     GrantAccessUseCase,
 )
-from ..mocks import FakeRightsRepository
+from ..fakes import FakeRightsRepository
 
 
 @pytest.fixture()

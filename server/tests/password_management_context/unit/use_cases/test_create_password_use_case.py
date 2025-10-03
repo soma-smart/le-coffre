@@ -18,7 +18,7 @@ from password_management_context.domain.services.password_complexity_service imp
     PasswordComplexityService,
 )
 
-from tests.mocks.fake_access_controller import (
+from tests.fakes.fake_access_controller import (
     FakeAccessController,
 )
 
