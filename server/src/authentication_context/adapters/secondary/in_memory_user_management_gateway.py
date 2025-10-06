@@ -1,7 +1,14 @@
 from uuid import UUID
+from dataclasses import dataclass
 
 from authentication_context.application.gateways import UserManagementGateway
-from authentication_context.domain.entities import User
+
+
+@dataclass
+class User:
+    user_id: UUID
+    email: str
+    display_name: str
 
 
 class InMemoryUserManagementGateway(UserManagementGateway):
