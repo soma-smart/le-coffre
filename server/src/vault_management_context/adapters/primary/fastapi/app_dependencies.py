@@ -3,6 +3,7 @@ from starlette.requests import Request
 
 from vault_management_context.application.use_cases import (
     CreateVaultUseCase,
+    ValidateVaultSetupUseCase,
     UnlockVaultUseCase,
     LockVaultUseCase,
     GetVaultStatusUseCase,
@@ -65,3 +66,14 @@ def get_vault_status_usecase(
     vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
 ):
     return GetVaultStatusUseCase(vault_repository, vault_session_gateway)
+
+
+def get_validate_vault_setup_usecase(
+    vault_repository: VaultRepository = Depends(get_vault_repository),
+    shamir_gateway: ShamirGateway = Depends(get_shamir_gateway),
+    encryption_gateway: EncryptionGateway = Depends(get_encryption_gateway),
+    vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
+):
+    return ValidateVaultSetupUseCase(
+        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway
+    )

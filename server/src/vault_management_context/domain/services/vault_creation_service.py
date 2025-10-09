@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import uuid4
 
 from vault_management_context.domain.entities import Vault
 from vault_management_context.domain.value_objects import VaultConfiguration
@@ -14,9 +15,9 @@ class VaultCreationService:
             existing_vault: Any existing vault to check against
 
         Raises:
-            VaultAlreadyExistsError: If a vault already exists for this organization
+            VaultAlreadyExistsError: If a vault already exists and is not in pending status
         """
-        if existing_vault is not None:
+        if existing_vault is not None and existing_vault.status != "PENDING":
             raise VaultAlreadyExistsError()
 
     @staticmethod
@@ -30,10 +31,12 @@ class VaultCreationService:
             encrypted_key: The encrypted vault key
 
         Returns:
-            The created vault entity
+            The created vault entity in PENDING status
         """
         return Vault(
             nb_shares=configuration.share_count,
             threshold=configuration.threshold,
             encrypted_key=encrypted_key,
+            setup_id=str(uuid4()),
+            status="PENDING",
         )

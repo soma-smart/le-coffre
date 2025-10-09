@@ -5,3 +5,4 @@ class VaultStatus(Enum):
     LOCKED = "LOCKED"
     UNLOCKED = "UNLOCKED"
     NOT_SETUP = "NOT_SETUP"
+    PENDING = "PENDING"
