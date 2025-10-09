@@ -1,6 +1,7 @@
 import pytest
 
 from vault_management_context.domain.entities.vault import Vault
+from vault_management_context.application.responses.vault_status import VaultStatus
 
 
 def test_when_no_vault_should_not_get_any(vault_repository):
@@ -14,7 +15,7 @@ def test_when_vault_in_repo_should_get_it(vault_repository):
         threshold=2, 
         encrypted_key="encrypted_key",
         setup_id="test-setup-id",
-        status="COMPLETED"
+        status=VaultStatus.SETUPED.value
     )
 
     vault_repository.save(vault)
@@ -27,7 +28,7 @@ def test_when_updating_vault_should_update_it(vault_repository):
         threshold=2, 
         encrypted_key="encrypted_key",
         setup_id="test-setup-id",
-        status="COMPLETED"
+        status=VaultStatus.SETUPED.value
     )
     vault_repository.save(vault)
 
@@ -36,7 +37,7 @@ def test_when_updating_vault_should_update_it(vault_repository):
         threshold=2, 
         encrypted_key="new_encrypted_key",
         setup_id="test-setup-id",
-        status="COMPLETED"
+        status=VaultStatus.SETUPED.value
     )
     vault_repository.save(updated_vault)
 

@@ -7,6 +7,7 @@ from vault_management_context.domain.exceptions import (
     VaultAlreadySetuped,
     VaultSetupIdNotFound,
 )
+from vault_management_context.application.responses.vault_status import VaultStatus
 
 
 @pytest.fixture()
@@ -21,7 +22,7 @@ def test_should_validate_setup_with_correct_setup_id(use_case, vault_repository)
         threshold=2,
         encrypted_key="encrypted_key",
         setup_id=setup_id,
-        status="PENDING"
+        status=VaultStatus.PENDING.value
     )
     vault_repository.save(vault)
 
@@ -30,7 +31,7 @@ def test_should_validate_setup_with_correct_setup_id(use_case, vault_repository)
 
     # Verify vault status is updated
     stored_vault = vault_repository.get()
-    assert stored_vault.status == "COMPLETED"
+    assert stored_vault.status == VaultStatus.SETUPED.value
 
 
 def test_should_fail_when_no_vault_exists(use_case):
@@ -47,7 +48,7 @@ def test_should_fail_when_vault_not_in_pending_state(use_case, vault_repository)
         threshold=2,
         encrypted_key="encrypted_key",
         setup_id=setup_id,
-        status="COMPLETED"  # Already completed
+        status=VaultStatus.SETUPED.value  # Already completed
     )
     vault_repository.save(vault)
 
@@ -63,7 +64,7 @@ def test_should_fail_when_setup_id_does_not_match(use_case, vault_repository):
         threshold=2,
         encrypted_key="encrypted_key",
         setup_id="correct-setup-id",
-        status="PENDING"
+        status=VaultStatus.PENDING.value
     )
     vault_repository.save(vault)
 

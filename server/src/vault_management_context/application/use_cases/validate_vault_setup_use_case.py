@@ -9,6 +9,7 @@ from vault_management_context.domain.exceptions import (
     VaultAlreadySetuped,
     VaultSetupIdNotFound,
 )
+from vault_management_context.application.responses.vault_status import VaultStatus
 
 
 class ValidateVaultSetupUseCase:
@@ -37,13 +38,12 @@ class ValidateVaultSetupUseCase:
         if existing_vault is None:
             raise NoVaultExisting()
             
-        if existing_vault.status != "PENDING":
+        if existing_vault.status != VaultStatus.PENDING.value:
             raise VaultAlreadySetuped()
             
         if existing_vault.setup_id != setup_id:
             raise VaultSetupIdNotFound()
         
         # Vault is valid and in pending state, complete the setup
-        # Set status to COMPLETED (vault setup is done, but vault might be locked/unlocked based on session)
-        existing_vault.status = "COMPLETED"
+        existing_vault.status = VaultStatus.SETUPED.value
         self.vault_repo.save(existing_vault)

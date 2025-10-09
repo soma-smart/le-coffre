@@ -3,6 +3,7 @@ from typing import Optional
 from vault_management_context.domain.entities import Vault
 from vault_management_context.domain.value_objects import VaultConfiguration
 from vault_management_context.domain.exceptions import VaultAlreadyExistsError
+from vault_management_context.application.responses.vault_status import VaultStatus
 
 
 class VaultCreationService:
@@ -16,7 +17,7 @@ class VaultCreationService:
         Raises:
             VaultAlreadyExistsError: If a vault already exists and is not in pending status
         """
-        if existing_vault is not None and existing_vault.status not in ("PENDING",):
+        if existing_vault is not None and existing_vault.status not in (VaultStatus.PENDING.value,):
             raise VaultAlreadyExistsError()
 
     @staticmethod
@@ -38,5 +39,5 @@ class VaultCreationService:
             threshold=configuration.threshold,
             encrypted_key=encrypted_key,
             setup_id=setup_id,
-            status="PENDING",
+            status=VaultStatus.PENDING.value,
         )

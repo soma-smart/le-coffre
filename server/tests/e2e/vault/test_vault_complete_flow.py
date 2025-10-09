@@ -22,10 +22,10 @@ def test_complete_vault_setup_flow(e2e_client):
     assert len(setup_data1["shares"]) == 3
     setup_id1 = setup_data1["setup_id"]
     
-    # Check status
+    # Check status - should be UNLOCKED because session key is stored
     status_response1 = e2e_client.get("/api/vault/status")
     assert status_response1.status_code == 200
-    assert status_response1.json()["status"] == "PENDING"
+    assert status_response1.json()["status"] == "UNLOCKED"
     
     # Step 2: Setup again (should be allowed in PENDING state)
     setup_response2 = e2e_client.post(
@@ -42,10 +42,10 @@ def test_complete_vault_setup_flow(e2e_client):
     setup_id2 = setup_data2["setup_id"]
     assert setup_id2 != setup_id1  # Should be different
     
-    # Check status (still PENDING)
+    # Check status (still UNLOCKED)
     status_response2 = e2e_client.get("/api/vault/status")
     assert status_response2.status_code == 200
-    assert status_response2.json()["status"] == "PENDING"
+    assert status_response2.json()["status"] == "UNLOCKED"
     
     # Step 3: Try to validate with wrong setup_id (should fail)
     validate_response_wrong = e2e_client.post(
@@ -66,11 +66,11 @@ def test_complete_vault_setup_flow(e2e_client):
     validate_data = validate_response.json()
     assert validate_data["message"] == "Vault setup completed successfully"
     
-    # Check status (should now be LOCKED since no session key is active)
+    # Check status (should still be UNLOCKED since session key remains active)
     status_response3 = e2e_client.get("/api/vault/status")
     assert status_response3.status_code == 200
     status = status_response3.json()["status"]
-    assert status == "LOCKED"  # Vault is completed but locked due to no session
+    assert status == "UNLOCKED"  # Vault is validated and still unlocked
     
     # Step 5: Try to setup again (should fail now that vault is validated)
     setup_response3 = e2e_client.post(
@@ -83,10 +83,10 @@ def test_complete_vault_setup_flow(e2e_client):
     error_data = setup_response3.json()
     assert "already been created" in error_data["detail"]
     
-    # Check status (should remain the same)
+    # Check status (should remain UNLOCKED)
     status_response4 = e2e_client.get("/api/vault/status")
     assert status_response4.status_code == 200
-    assert status_response4.json()["status"] == status  # Same as before
+    assert status_response4.json()["status"] == "UNLOCKED"
     
     # Step 6: Try to validate already validated vault (should fail)
     validate_response2 = e2e_client.post(

@@ -1,6 +1,7 @@
 import pytest
 from uuid import UUID
 
+from vault_management_context.application.responses.vault_status import VaultStatus
 from vault_management_context.domain.entities import Share, Vault
 from vault_management_context.domain.value_objects import ShamirResult
 from vault_management_context.domain.exceptions import (
@@ -43,7 +44,7 @@ def test_should_unlock_vault_with_valid_shares_and_decrypt_key(
         threshold=2, 
         encrypted_key=encrypted_key,
         setup_id="test-setup-id",
-        status="COMPLETED"
+        status=VaultStatus.SETUPED.value
     ))
 
     shamir_gateway.set_shamir_result(ShamirResult(shares, master_key))
@@ -86,7 +87,7 @@ def test_should_fail_when_shamir_reconstruction_fails(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
     encrypted_key = "encrypted_vault_key_hex"
-    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status="COMPLETED"))
+    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status=VaultStatus.SETUPED.value))
 
     shares = [Share(0, "share0"), Share(1, "share1")]
     master_secret = "master_secret"
@@ -105,7 +106,7 @@ def test_should_fail_when_vault_is_already_unlock(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
     encrypted_key = "encrypted_vault_key_hex"
-    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status="COMPLETED"))
+    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status=VaultStatus.SETUPED.value))
 
     shares = [Share(0, "share0"), Share(1, "share1")]
     master_key = "master_key"
@@ -129,7 +130,7 @@ def test_should_raise_not_admin_error_when_requesting_user_is_not_admin(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6"), roles=[]
     )
     encrypted_key = "encrypted_vault_key_hex"
-    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status="COMPLETED"))
+    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status=VaultStatus.SETUPED.value))
 
     shares = [Share(0, "share0"), Share(1, "share1")]
     master_key = "master_key"

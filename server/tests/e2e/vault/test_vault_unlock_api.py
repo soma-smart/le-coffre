@@ -24,7 +24,12 @@ def test_can_unlock_vault_with_valid_shares(e2e_client, admin_token):
         json={"setup_id": setup_id},
     )
     assert validate_response.status_code == 200
+    
+    # Lock the vault first
+    lock_response = e2e_client.post("/api/vault/lock", headers=headers)
+    assert lock_response.status_code == 200
 
+    # Now unlock it with shares
     unlock_response = e2e_client.post(
         "/api/vault/unlock",
         json={
