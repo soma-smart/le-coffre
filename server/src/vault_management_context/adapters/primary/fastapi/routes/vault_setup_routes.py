@@ -4,9 +4,8 @@ import logging
 
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_vault_usecase,
-    get_validate_vault_setup_usecase,
 )
-from vault_management_context.application.use_cases import CreateVaultUseCase, ValidateVaultSetupUseCase
+from vault_management_context.application.use_cases import CreateVaultUseCase
 from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
@@ -21,14 +20,6 @@ class CreateVaultPostRequest(BaseModel):
 class CreateVaultPostResponse(BaseModel):
     setup_id: str
     shares: list[Share]
-
-
-class ValidateSetupRequest(BaseModel):
-    setup_id: str
-
-
-class ValidateSetupResponse(BaseModel):
-    message: str
 
 
 @router.post(
@@ -58,29 +49,3 @@ def create_vault(
         raise HTTPException(status_code=500, detail="Internal server error")
 
     return {"setup_id": result.setup_id, "shares": result.shares}
-
-
-@router.post(
-    "/validate-setup",
-    response_model=ValidateSetupResponse,
-    status_code=200,
-    summary="Validate and complete vault setup",
-)
-def validate_vault_setup(
-    request: ValidateSetupRequest,
-    usecase: ValidateVaultSetupUseCase = Depends(get_validate_vault_setup_usecase),
-):
-    """
-    Validate and complete vault setup using the setup_id from initial setup.
-
-    - **setup_id**: The unique identifier returned from the initial setup
-    """
-    try:
-        usecase.execute(request.setup_id)
-    except VaultManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logging.error(e)
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-    return {"message": "Vault setup completed successfully"}

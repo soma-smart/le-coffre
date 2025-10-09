@@ -38,29 +38,31 @@ def test_should_create_shares_and_store_encrypted_key(
     ]
     master_key = "master_secret_from_shamir"
     encrypted_key = "encrypted_vault_key_123"
-    decrypted_key = "generated_vault_key"
 
     shamir_result = ShamirResult(shares=expected_shares, master_key=master_key)
     shamir_gateway.set_shamir_result(shamir_result)
 
     encryption_gateway.set_encrypted_data(encrypted_key)
-    encryption_gateway.set_decrypted_data(decrypted_key)
-    encryption_gateway.set_master_key(master_key)
+    encryption_gateway.set_master_key(master_key)  # Set the master key
 
-    shares = use_case.execute(5, 3)
+    result = use_case.execute(5, 3)
 
-    assert shares == expected_shares
+    # Check that result is VaultSetupResponse with setup_id and shares
+    assert result.shares == expected_shares
+    assert result.setup_id is not None
+    assert len(result.setup_id) > 20  # UUID should be long
+    
     stored_vault = vault_repository.get()
     assert stored_vault.nb_shares == 5
     assert stored_vault.threshold == 3
     assert stored_vault.encrypted_key == encrypted_key
-
-    # Verify the decrypted key is stored in the session
-    assert vault_session_gateway.get_decrypted_key() == decrypted_key
+    assert stored_vault.status == "PENDING"
+    assert stored_vault.setup_id == result.setup_id
 
 
 def test_should_fail_when_vault_is_already_created(use_case, vault_repository):
-    vault_repository.save(Vault(nb_shares=5, threshold=3, encrypted_key="test"))
+    # Create a vault that is already validated (not in PENDING state)
+    vault_repository.save(Vault(nb_shares=5, threshold=3, encrypted_key="test", status="SETUPED"))
 
     with pytest.raises(VaultAlreadyExistsError) as exc_info:
         use_case.execute(5, 3)
@@ -68,6 +70,25 @@ def test_should_fail_when_vault_is_already_created(use_case, vault_repository):
     assert (
         str(exc_info.value) == "A vault has already been created for this organization"
     )
+
+
+def test_should_allow_re_setup_when_vault_is_pending(use_case, vault_repository, shamir_gateway, encryption_gateway):
+    # Create a vault in PENDING state
+    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key="test", status="PENDING", setup_id="old-id"))
+
+    expected_shares = [Share(0, "1"), Share(1, "2")]
+    master_key = "master_secret_from_shamir"
+    encrypted_key = "encrypted_vault_key_123"
+
+    shamir_result = ShamirResult(shares=expected_shares, master_key=master_key)
+    shamir_gateway.set_shamir_result(shamir_result)
+    encryption_gateway.set_encrypted_data(encrypted_key)
+    encryption_gateway.set_master_key(master_key)  # Set the master key
+
+    # Should be able to re-setup
+    result = use_case.execute(2, 2)
+    assert result.shares == expected_shares
+    assert result.setup_id != "old-id"  # Should get new setup_id
 
 
 def test_should_fail_when_nb_shares_is_less_than_2(use_case):
