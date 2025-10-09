@@ -60,6 +60,17 @@ def test_can_validate_vault_setup(e2e_client):
 
 
 def test_validate_with_invalid_setup_id_fails(e2e_client):
+    # First create a vault to have something in the database
+    setup_response = e2e_client.post(
+        "/api/vault/setup",
+        json={
+            "nb_shares": 3,
+            "threshold": 2,
+        },
+    )
+    assert setup_response.status_code == 201
+    
+    # Now try with invalid setup id
     response = e2e_client.post(
         "/api/vault/validate-setup",
         json={
