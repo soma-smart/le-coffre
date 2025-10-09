@@ -23,7 +23,8 @@ def test_should_return_locked_when_vault_is_locked(
         nb_shares=3, 
         threshold=2, 
         encrypted_key="encrypted_vault_key_hex",
-        status="SETUPED"  # Vault is completed, not pending
+        setup_id="test-setup-id",
+        status="COMPLETED"  # Vault is completed, not pending
     ))
     vault_session_gateway.clear_decrypted_key()
 
@@ -39,7 +40,8 @@ def test_should_return_unlocked_when_vault_is_unlocked(
         nb_shares=3, 
         threshold=2, 
         encrypted_key="encrypted_vault_key_hex",
-        status="SETUPED"  # Vault is completed, not pending
+        setup_id="test-setup-id",
+        status="COMPLETED"  # Vault is completed, not pending
     ))
     vault_session_gateway.store_decrypted_key("decrypted_vault_key")
 

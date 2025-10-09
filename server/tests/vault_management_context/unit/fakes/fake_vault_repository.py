@@ -23,6 +23,6 @@ class FakeVaultRepository(VaultRepository):
             nb_shares=nb_shares, 
             threshold=threshold, 
             encrypted_key=encrypted_key,
-            setup_id=None,
+            setup_id="test-setup-id",
             status="PENDING"
         )

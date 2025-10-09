@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import logging
+from uuid import UUID
 
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_validate_vault_setup_usecase,
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/vault", tags=["Vault"])
 
 
 class ValidateSetupRequest(BaseModel):
-    setup_id: str
+    setup_id: UUID
 
 
 class ValidateSetupResponse(BaseModel):
@@ -35,7 +36,7 @@ def validate_vault_setup(
     - **setup_id**: The unique identifier returned from the initial setup
     """
     try:
-        usecase.execute(request.setup_id)
+        usecase.execute(str(request.setup_id))
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

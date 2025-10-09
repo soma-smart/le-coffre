@@ -10,7 +10,7 @@ class VaultTable(SQLModel, table=True):
     nb_shares: int = Field(description="Number of Shamir shares")
     threshold: int = Field(description="Minimum shares needed to unlock")
     encrypted_key: str = Field(description="Encrypted vault key")
-    setup_id: Optional[str] = Field(default=None, description="Unique setup identifier")
+    setup_id: str = Field(description="Unique setup identifier")
     status: str = Field(default="PENDING", description="Vault status")
 
 

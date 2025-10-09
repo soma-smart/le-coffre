@@ -64,3 +64,24 @@ class ThresholdExceedsShareCountError(VaultManagementDomainError):
         super().__init__(
             f"Threshold {threshold} cannot exceed share count {share_count} - impossible to unlock vault"
         )
+
+
+class NoVaultExisting(VaultManagementDomainError):
+    """Raised when no vault exists for validation"""
+
+    def __init__(self):
+        super().__init__("No vault found")
+
+
+class VaultAlreadySetuped(VaultManagementDomainError):
+    """Raised when attempting to validate a vault that is already setup"""
+
+    def __init__(self):
+        super().__init__("Vault is not in pending state")
+
+
+class VaultSetupIdNotFound(VaultManagementDomainError):
+    """Raised when the provided setup ID doesn't match the vault's setup ID"""
+
+    def __init__(self):
+        super().__init__("Invalid setup ID")

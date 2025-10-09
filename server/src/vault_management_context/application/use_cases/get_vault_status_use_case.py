@@ -24,6 +24,7 @@ class GetVaultStatusUseCase:
         if existing_vault.status == "PENDING":
             return VaultStatus.PENDING
 
+        # For COMPLETED or any other status, check session state
         is_locked = self.vault_session_gateway.is_vault_locked()
         if is_locked:
             return VaultStatus.LOCKED

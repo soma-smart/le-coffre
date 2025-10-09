@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 import logging
+from uuid import UUID, uuid4
 
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_vault_usecase,
@@ -18,7 +19,7 @@ class CreateVaultPostRequest(BaseModel):
 
 
 class CreateVaultPostResponse(BaseModel):
-    setup_id: str
+    setup_id: UUID
     shares: list[Share]
 
 
@@ -41,11 +42,12 @@ def create_vault(
     Returns shares and a setup_id for validation.
     """
     try:
-        result = usecase.execute(request.nb_shares, request.threshold)
+        setup_id = uuid4()
+        result = usecase.execute(request.nb_shares, request.threshold, setup_id)
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logging.error(e)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-    return {"setup_id": result.setup_id, "shares": result.shares}
+    return {"setup_id": setup_id, "shares": result.shares}

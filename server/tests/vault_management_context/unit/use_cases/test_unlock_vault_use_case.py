@@ -38,7 +38,13 @@ def test_should_unlock_vault_with_valid_shares_and_decrypt_key(
     encrypted_key = "encrypted_vault_key_hex"
     shares = [Share(0, "share0"), Share(1, "share1")]
 
-    vault_repository.save(Vault(3, 2, encrypted_key))
+    vault_repository.save(Vault(
+        nb_shares=3, 
+        threshold=2, 
+        encrypted_key=encrypted_key,
+        setup_id="test-setup-id",
+        status="COMPLETED"
+    ))
 
     shamir_gateway.set_shamir_result(ShamirResult(shares, master_key))
     encryption_gateway.set_decrypted_data(vault_key)
@@ -80,7 +86,7 @@ def test_should_fail_when_shamir_reconstruction_fails(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
     encrypted_key = "encrypted_vault_key_hex"
-    vault_repository.save(Vault(3, 2, encrypted_key))
+    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status="COMPLETED"))
 
     shares = [Share(0, "share0"), Share(1, "share1")]
     master_secret = "master_secret"
@@ -99,7 +105,7 @@ def test_should_fail_when_vault_is_already_unlock(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
     encrypted_key = "encrypted_vault_key_hex"
-    vault_repository.save(Vault(3, 2, encrypted_key))
+    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status="COMPLETED"))
 
     shares = [Share(0, "share0"), Share(1, "share1")]
     master_key = "master_key"
@@ -123,7 +129,7 @@ def test_should_raise_not_admin_error_when_requesting_user_is_not_admin(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6"), roles=[]
     )
     encrypted_key = "encrypted_vault_key_hex"
-    vault_repository.save(Vault(3, 2, encrypted_key))
+    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key=encrypted_key, setup_id="test-setup-id", status="COMPLETED"))
 
     shares = [Share(0, "share0"), Share(1, "share1")]
     master_key = "master_key"

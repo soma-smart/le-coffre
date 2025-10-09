@@ -2,7 +2,11 @@ import pytest
 
 from vault_management_context.domain.entities import Vault
 from vault_management_context.application.use_cases import ValidateVaultSetupUseCase
-from vault_management_context.application.use_cases.validate_vault_setup_use_case import VaultSetupValidationError
+from vault_management_context.domain.exceptions import (
+    NoVaultExisting,
+    VaultAlreadySetuped,
+    VaultSetupIdNotFound,
+)
 
 
 @pytest.fixture()
@@ -26,11 +30,11 @@ def test_should_validate_setup_with_correct_setup_id(use_case, vault_repository)
 
     # Verify vault status is updated
     stored_vault = vault_repository.get()
-    assert stored_vault.status == "SETUPED"
+    assert stored_vault.status == "COMPLETED"
 
 
 def test_should_fail_when_no_vault_exists(use_case):
-    with pytest.raises(VaultSetupValidationError) as exc_info:
+    with pytest.raises(NoVaultExisting) as exc_info:
         use_case.execute("any-setup-id")
 
     assert str(exc_info.value) == "No vault found"
@@ -43,11 +47,11 @@ def test_should_fail_when_vault_not_in_pending_state(use_case, vault_repository)
         threshold=2,
         encrypted_key="encrypted_key",
         setup_id=setup_id,
-        status="SETUPED"  # Already completed
+        status="COMPLETED"  # Already completed
     )
     vault_repository.save(vault)
 
-    with pytest.raises(VaultSetupValidationError) as exc_info:
+    with pytest.raises(VaultAlreadySetuped) as exc_info:
         use_case.execute(setup_id)
 
     assert str(exc_info.value) == "Vault is not in pending state"
@@ -63,7 +67,7 @@ def test_should_fail_when_setup_id_does_not_match(use_case, vault_repository):
     )
     vault_repository.save(vault)
 
-    with pytest.raises(VaultSetupValidationError) as exc_info:
+    with pytest.raises(VaultSetupIdNotFound) as exc_info:
         use_case.execute("wrong-setup-id")
 
     assert str(exc_info.value) == "Invalid setup ID"

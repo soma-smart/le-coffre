@@ -4,21 +4,20 @@ from vault_management_context.domain.entities import Vault
 from vault_management_context.application.gateways import (
     VaultRepository,
 )
-from vault_management_context.domain.exceptions import VaultManagementDomainError
-
-
-class VaultSetupValidationError(VaultManagementDomainError):
-    def __init__(self, message: str = "Invalid setup ID or vault not in pending state"):
-        super().__init__(message)
+from vault_management_context.domain.exceptions import (
+    NoVaultExisting,
+    VaultAlreadySetuped,
+    VaultSetupIdNotFound,
+)
 
 
 class ValidateVaultSetupUseCase:
     def __init__(
         self,
         vault_repo: VaultRepository,
-        shamir_gateway=None,  # Not needed for validation
-        encryption_gateway=None,  # Not needed for validation
-        vault_session_gateway=None,  # Not needed for validation
+        shamir_gateway=None,  # Not used in this simplified version
+        encryption_gateway=None,  # Not used in this simplified version
+        vault_session_gateway=None,  # Not used in this simplified version
     ) -> None:
         self.vault_repo = vault_repo
 
@@ -29,19 +28,22 @@ class ValidateVaultSetupUseCase:
             setup_id: The unique setup identifier from the initial setup
             
         Raises:
-            VaultSetupValidationError: If setup_id is invalid or vault not in pending state
+            NoVaultExisting: If no vault exists
+            VaultAlreadySetuped: If vault is not in pending state
+            VaultSetupIdNotFound: If setup_id doesn't match
         """
         existing_vault: Optional[Vault] = self.vault_repo.get()
         
         if existing_vault is None:
-            raise VaultSetupValidationError("No vault found")
+            raise NoVaultExisting()
             
         if existing_vault.status != "PENDING":
-            raise VaultSetupValidationError("Vault is not in pending state")
+            raise VaultAlreadySetuped()
             
         if existing_vault.setup_id != setup_id:
-            raise VaultSetupValidationError("Invalid setup ID")
+            raise VaultSetupIdNotFound()
         
         # Vault is valid and in pending state, complete the setup
-        existing_vault.status = "SETUPED"
+        # Set status to COMPLETED (vault setup is done, but vault might be locked/unlocked based on session)
+        existing_vault.status = "COMPLETED"
         self.vault_repo.save(existing_vault)
