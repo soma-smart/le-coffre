@@ -6,6 +6,7 @@ from authentication_context.application.use_cases import (
     AdminLoginUseCase,
     ValidateUserTokenUseCase,
     GetSsoAuthorizeUrlUseCase,
+    SsoSetSettingsUseCase,
 )
 from authentication_context.application.gateways import (
     UserPasswordRepository,
@@ -93,3 +94,7 @@ def get_validate_token_usecase(
 
 def get_sso_url_usecase(sso_gateway: SsoGateway = Depends(get_sso_gateway)):
     return GetSsoAuthorizeUrlUseCase(sso_gateway)
+
+
+def set_sso_settings_usecase(sso_gateway: SsoGateway = Depends(get_sso_gateway)):
+    return SsoSetSettingsUseCase(sso_gateway)

@@ -13,6 +13,8 @@ class InMemorySSOGateway(SsoGateway):
     ) -> None:
         self.authorize_url = authorize_url
         self._valid_codes = valid_codes or {}
+        self._client_id = None
+        self._client_secret = None
 
     async def get_authorize_url(self) -> str:
         return self.authorize_url
@@ -30,3 +32,7 @@ class InMemorySSOGateway(SsoGateway):
             sso_user_id=user_data["sso_user_id"],
             sso_provider=user_data["provider"],
         )
+
+    def set_settings(self, client_id: str, client_secret: str) -> None:
+        self._client_id = client_id
+        self._client_secret = client_secret

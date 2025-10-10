@@ -40,3 +40,7 @@ class InvalidSsoCodeException(AuthenticationDomainError):
 
 class SsoUserAlreadyExistsException(AuthenticationDomainError):
     pass
+
+
+class InvalidSsoSettingsException(AuthenticationDomainError):
+    pass

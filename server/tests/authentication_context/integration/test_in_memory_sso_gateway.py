@@ -55,3 +55,16 @@ async def test_should_return_consistent_user_for_same_code(sso_gateway):
     assert user1.email == user2.email == "jane.smith@company.com"
     assert user1.display_name == user2.display_name == "Jane Smith"
     assert user1.sso_provider == user2.sso_provider == "azure"
+
+
+def test_should_set_sso_settings(sso_gateway):
+    # Arrange
+    client_id = "new_client_id_abc"
+    client_secret = "new_client_secret_xyz"
+
+    # Act
+    sso_gateway.set_settings(client_id, client_secret)
+
+    # Assert
+    assert sso_gateway._client_id == client_id
+    assert sso_gateway._client_secret == client_secret

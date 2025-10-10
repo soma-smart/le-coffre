@@ -6,6 +6,8 @@ class FakeSsoGateway:
     def __init__(self):
         self._authorize_url = ""
         self._valid_codes = {}  # code -> SsoUser mapping
+        self._client_id = ""
+        self._client_secret = ""
 
     async def get_authorize_url(self) -> str:
         return self._authorize_url
@@ -19,6 +21,10 @@ class FakeSsoGateway:
         if code not in self._valid_codes:
             raise InvalidSsoCodeException(f"Invalid SSO code: {code}")
         return self._valid_codes[code]
+
+    def set_settings(self, client_id: str, client_secret: str) -> None:
+        self._client_id = client_id
+        self._client_secret = client_secret
 
     def set_valid_code(self, code: str, user_info: SsoUser) -> None:
         """Helper method for tests to set valid codes"""
