@@ -1,26 +1,33 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import BlankLayout from "../layouts/BlankLayout.vue";
-import { createVaultVaultSetupPost } from "@/client";
+import { createVaultVaultSetupPost, type Share } from "@/client";
+import { useToast } from "primevue";
+
+const toast = useToast();
 
 const shamirRef = ref()
 const isGeneratingMasterKey = ref(false)
 const showModal = ref(false)
 const storedSharesConfirmed = ref(false)
+const shares = ref<Share[]>([])
 
 async function generateMasterKey() {
     isGeneratingMasterKey.value = true
-
+    console.log(shamirRef.value.state.shares, shamirRef.value.state.threshold);
     const response = await createVaultVaultSetupPost({
         body: {
-            nb_shares: 3,
-            threshold: 5
+            nb_shares: shamirRef.value.state.shares,
+            threshold: shamirRef.value.state.threshold,
         },
     });
-    console.log(response);
-    setTimeout(() => {
-        isGeneratingMasterKey.value = false
-    }, 3000)
+    isGeneratingMasterKey.value = false
+    // if error
+    if (response.error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: response.error.detail, life: 3000 });
+        return
+    }
+    shares.value = response.data.shares
     showModal.value = true
 }
 </script>
@@ -30,14 +37,10 @@ async function generateMasterKey() {
         <Dialog v-model:visible="showModal" :closable="false" modal header="Shares of the master key"
             :style="{ width: '32rem' }">
             <span class="text-surface-500 dark:text-surface-400 block mb-8">Please store the following shares
-                securely:</span>
-            <div class="flex items-center gap-4 mb-4">
-                <label for="username" class="font-semibold w-24">Username</label>
-                <InputText id="username" class="flex-auto" autocomplete="off" />
-            </div>
-            <div class="flex items-center gap-4 mb-2">
-                <label for="email" class="font-semibold w-24">Email</label>
-                <InputText id="email" class="flex-auto" autocomplete="off" />
+                securely (index and secret):</span>
+            <div v-for="(share, idx) in shares" :key="idx" class="flex items-center gap-4 mb-2">
+                <label class="font-semibold w-24">Share {{ idx + 1 }}</label>
+                <InputText :value="share.secret" class="flex-auto" readonly />
             </div>
             <Divider />
 
