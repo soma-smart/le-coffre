@@ -1,7 +1,7 @@
 import pytest
 
 
-def test_complete_admin_authentication_flow(e2e_client, setup):
+def test_complete_admin_authentication_flow(e2e_client):
     """
     End-to-end test that:
     1. Registers an admin

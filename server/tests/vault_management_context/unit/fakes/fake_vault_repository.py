@@ -20,5 +20,9 @@ class FakeVaultRepository(VaultRepository):
         self, nb_shares: int, threshold: int, encrypted_key: str = "test_key"
     ) -> None:
         self._vault = Vault(
-            nb_shares=nb_shares, threshold=threshold, encrypted_key=encrypted_key
+            nb_shares=nb_shares, 
+            threshold=threshold, 
+            encrypted_key=encrypted_key,
+            setup_id="test-setup-id",
+            status="PENDING"
         )

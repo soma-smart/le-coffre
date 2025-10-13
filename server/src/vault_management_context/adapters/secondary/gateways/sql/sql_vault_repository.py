@@ -23,6 +23,8 @@ class SqlVaultRepository(VaultRepository):
             nb_shares=vault_row.nb_shares,
             threshold=vault_row.threshold,
             encrypted_key=vault_row.encrypted_key,
+            setup_id=vault_row.setup_id,
+            status=vault_row.status,
         )
 
     def save(self, vault: Vault) -> None:
@@ -40,6 +42,8 @@ class SqlVaultRepository(VaultRepository):
         existing_vault.nb_shares = vault.nb_shares
         existing_vault.threshold = vault.threshold
         existing_vault.encrypted_key = vault.encrypted_key
+        existing_vault.setup_id = vault.setup_id
+        existing_vault.status = vault.status
 
     def _create(self, vault: Vault) -> None:
         vault_row = VaultTable(
@@ -47,5 +51,7 @@ class SqlVaultRepository(VaultRepository):
             nb_shares=vault.nb_shares,
             threshold=vault.threshold,
             encrypted_key=vault.encrypted_key,
+            setup_id=vault.setup_id,
+            status=vault.status,
         )
         self._session.add(vault_row)

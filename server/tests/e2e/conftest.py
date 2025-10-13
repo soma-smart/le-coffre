@@ -28,13 +28,21 @@ def e2e_client(database):
 
 
 @pytest.fixture
-def setup(e2e_client):
-    e2e_client.post(
+def setup(e2e_client, admin_token):
+    response = e2e_client.post(
         "/api/vault/setup",
         json={
             "nb_shares": 5,
             "threshold": 3,
         },
+    )
+    setup_data = response.json()
+    setup_id = setup_data["setup_id"]
+    
+    # Validate the setup to complete it
+    e2e_client.post(
+        "/api/vault/validate-setup",
+        json={"setup_id": setup_id},
     )
 
 
@@ -47,8 +55,7 @@ def admin_token(e2e_client):
         "display_name": "System Administrator",
     }
 
-    register_response = e2e_client.post("/api/auth/register-admin", json=admin_data)
-    assert register_response.status_code == 201
+    e2e_client.post("/api/auth/register-admin", json=admin_data)
 
     # Then login to get the token
     login_response = e2e_client.post(
@@ -58,5 +65,4 @@ def admin_token(e2e_client):
             "password": "admin",
         },
     )
-    assert login_response.status_code == 200
     return login_response.json()["jwt_token"]

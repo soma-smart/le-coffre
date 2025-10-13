@@ -1,4 +1,5 @@
 from typing import Optional
+from uuid import UUID
 
 from vault_management_context.domain.entities import Vault, Share
 from vault_management_context.domain.value_objects import VaultConfiguration
@@ -12,6 +13,8 @@ from vault_management_context.application.gateways import (
     VaultSessionGateway,
 )
 from vault_management_context.application.services import KeySessionManager
+from vault_management_context.application.responses.vault_setup_response import VaultSetupResponse
+from vault_management_context.application.responses.vault_status import VaultStatus
 
 
 class CreateVaultUseCase:
@@ -27,7 +30,7 @@ class CreateVaultUseCase:
         self.encryption_gateway = encryption_gateway
         self.vault_session_gateway = vault_session_gateway
 
-    def execute(self, nb_shares: int, threshold: int) -> list[Share]:
+    def execute(self, nb_shares: int, threshold: int, setup_id: UUID) -> VaultSetupResponse:
         existing_vault: Optional[Vault] = self.vault_repo.get()
         configuration = VaultConfiguration.create(nb_shares, threshold)
 
@@ -39,8 +42,13 @@ class CreateVaultUseCase:
             shamir_result.master_key
         )
 
-        vault = VaultCreationService.create_vault_entity(configuration, encrypted_key)
+        vault = VaultCreationService.create_vault_entity(configuration, encrypted_key, str(setup_id))
 
+        # Always store the session key when creating vault
+        # Clear any existing session key first (for re-setup scenario)
+        if not self.vault_session_gateway.is_vault_locked():
+            self.vault_session_gateway.clear_decrypted_key()
+        
         KeySessionManager.decrypt_and_store_key(
             self.encryption_gateway,
             self.vault_session_gateway,
@@ -50,4 +58,7 @@ class CreateVaultUseCase:
 
         self.vault_repo.save(vault)
 
-        return shamir_result.shares
+        return VaultSetupResponse(
+            setup_id=str(setup_id),
+            shares=shamir_result.shares
+        )

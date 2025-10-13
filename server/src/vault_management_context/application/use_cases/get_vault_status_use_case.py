@@ -21,6 +21,7 @@ class GetVaultStatusUseCase:
         if existing_vault is None:
             return VaultStatus.NOT_SETUP
 
+        # Always check session state for PENDING and SETUPED vaults
         is_locked = self.vault_session_gateway.is_vault_locked()
         if is_locked:
             return VaultStatus.LOCKED

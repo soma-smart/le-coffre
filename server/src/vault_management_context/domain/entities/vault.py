@@ -6,3 +6,5 @@ class Vault:
     nb_shares: int
     threshold: int
     encrypted_key: str
+    setup_id: str
+    status: str

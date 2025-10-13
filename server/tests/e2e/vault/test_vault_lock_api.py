@@ -4,6 +4,7 @@ import pytest
 def test_can_lock_vault(e2e_client, setup, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
 
+    # Vault is already unlocked after setup, just lock it
     lock_response = e2e_client.post(
         "/api/vault/lock",
         headers=headers,
