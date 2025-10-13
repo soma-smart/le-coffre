@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
 
@@ -130,3 +132,13 @@ app.include_router(get_password_management_router())
 app.include_router(get_rights_access_router())
 app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
+
+
+@app.get("/assets/{full_path:path}")
+async def serve_assets_vue_app(full_path: str):
+    return FileResponse(f"static/assets/{full_path}")
+
+
+@app.get("/{full_path:path}")
+async def serve_vue_app(full_path: str):
+    return FileResponse("static/index.html")
