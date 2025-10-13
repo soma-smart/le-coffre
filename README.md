@@ -131,7 +131,7 @@ docker build -t le-coffre .
 # Create a named volume
 docker volume create le-coffre-volume
 # Run a container using the named volume
-docker run -p 3000:3000 le-coffre:latest --volume le-coffre-volume:/app
+docker run -p 8000:8000 le-coffre:latest --volume le-coffre-volume:/app
 
 # Pull docker image
 docker pull rg.fr-par.scw.cloud/soma-smart-cr/le-coffre:latest
