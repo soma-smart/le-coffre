@@ -1,5 +1,5 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
+import os
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
@@ -136,9 +136,13 @@ app.include_router(get_authentication_router())
 
 @app.get("/assets/{full_path:path}")
 async def serve_assets_vue_app(full_path: str):
-    return FileResponse(f"static/assets/{full_path}")
+    # Prevent directory traversal
+    if ".." in full_path or full_path.startswith("/"):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    return FileResponse(os.path.join("static", "assets", full_path))
 
 
+# Place this catch-all route after all other routes to avoid intercepting API endpoints
 @app.get("/{full_path:path}")
 async def serve_vue_app(full_path: str):
     return FileResponse("static/index.html")

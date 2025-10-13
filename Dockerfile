@@ -13,8 +13,7 @@ WORKDIR /app/server
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 COPY server/pyproject.toml server/uv.lock* ./
 
-RUN uv sync --frozen --no-cache --no-dev && \
-    uv add gunicorn uvicorn
+RUN uv sync --frozen --no-cache --no-dev
 
 
 # --- Stage 3: Final image ---
