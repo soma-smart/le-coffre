@@ -24,4 +24,4 @@ logs
 !.env.example
 
 # Database
-database.sqlite
+*.sqlite

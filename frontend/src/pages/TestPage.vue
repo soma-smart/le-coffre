@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { createVaultApiVaultSetupPost } from '@/client';
-import { client } from '@/client/client.gen';
+import { createVaultVaultSetupPost } from '@/client';
+// import { client } from '@/client/client.gen';
 
 async function setupVault() {
     console.log('Setting up vault...');
-    client.setConfig({
-        baseUrl: "http://127.0.0.1:8123/",
-    });
-    const response = await createVaultApiVaultSetupPost({
+    // client.setConfig({
+    //     baseUrl: "http://127.0.0.1:8123/",
+    // });
+    const response = await createVaultVaultSetupPost({
         body: {
             nb_shares: 3,
             threshold: 5

@@ -46,7 +46,7 @@
                     <span class="text-sm font-medium">Preset</span>
                     <div
                         class="inline-flex p-[0.28rem] items-start gap-[0.28rem] rounded-[0.71rem] border border-[#00000003] w-full">
-                        <SelectButton :fluid="true" v-model="$appState.theme" @update:modelValue="onPresetChange"
+                        <SelectButton :fluid="true" v-model="themeModel" @update:modelValue="onPresetChange"
                             :options="presets" :allowEmpty="false" />
                     </div>
                 </div>
@@ -61,18 +61,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, getCurrentInstance, onMounted } from 'vue';
+import { ref, computed, onMounted, inject } from 'vue';
 import { $t, updatePreset, updateSurfacePalette } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 import Lara from '@primeuix/themes/lara';
 import Nora from '@primeuix/themes/nora';
 import Material from '@primeuix/themes/material';
 import type { PaletteDesignToken } from '@primeuix/themes/types';
+import { usePrimeVue } from 'primevue/config';
+import { AppStateKey, type AppState } from '@/plugins/appState';
+
 
 // Access global properties
-const { proxy } = getCurrentInstance();
-const $primevue = proxy.$primevue;
-const $appState = proxy.$appState;
+const $primevue = usePrimeVue();
+const $appState = inject<AppState>(AppStateKey);
+
+const themeModel = computed({
+    get: () => $appState ? $appState.theme : '',
+    set: (val) => {
+        if ($appState) $appState.theme = val;
+    }
+});
+
 
 // Theme presets data
 const themePresetsData = { Aura, Lara, Nora, Material };
@@ -123,7 +133,7 @@ const saveSettings = () => {
     const settings = {
         primaryColor: selectedPrimaryColor.value,
         surfaceColor: selectedSurfaceColor.value,
-        theme: $appState.theme,
+        theme: $appState?.theme,
         ripple: $primevue.config.ripple,
         dark: document.documentElement.classList.contains('p-dark')
     };
@@ -139,7 +149,9 @@ const loadSettings = () => {
         // Set reactive state from saved values
         selectedPrimaryColor.value = settings.primaryColor;
         selectedSurfaceColor.value = settings.surfaceColor;
-        $appState.theme = settings.theme;
+        if ($appState) {
+            $appState.theme = settings.theme;
+        }
         $primevue.config.ripple = settings.ripple;
 
         // Apply dark mode if it was enabled
@@ -184,7 +196,7 @@ const getPresetExt = () => {
             }
         };
     } else {
-        if ($appState.theme === 'Nora') {
+        if ($appState?.theme === 'Nora') {
             return {
                 semantic: {
                     primary: color.palette,
@@ -234,8 +246,10 @@ const onRippleChange = (value: boolean) => {
     saveSettings();
 };
 
-const onPresetChange = (value: string) => {
-    $appState.theme = value;
+const onPresetChange = (value: keyof typeof themePresetsData) => {
+    if ($appState) {
+        $appState.theme = value;
+    }
     const preset = themePresetsData[value];
     const surfacePalette = surfaces.find((s) => s.name === selectedSurfaceColor.value)?.palette;
 

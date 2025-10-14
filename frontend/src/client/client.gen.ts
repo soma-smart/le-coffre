@@ -14,5 +14,5 @@ import { type ClientOptions as DefaultClientOptions, type Config, createClient, 
 export type CreateClientConfig<T extends DefaultClientOptions = ClientOptions> = (override?: Config<DefaultClientOptions & T>) => Config<Required<DefaultClientOptions> & T>;
 
 export const client = createClient(createConfig<ClientOptions>({
-    baseUrl: 'http://backend:8123'
+    baseUrl: '/api'
 }));

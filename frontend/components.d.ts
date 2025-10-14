@@ -8,11 +8,28 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Button: typeof import('primevue/button')['default']
+    Card: typeof import('primevue/card')['default']
+    Checkbox: typeof import('primevue/checkbox')['default']
+    Dialog: typeof import('primevue/dialog')['default']
+    Divider: typeof import('primevue/divider')['default']
     Drawer: typeof import('primevue/drawer')['default']
+    InputNumber: typeof import('primevue/inputnumber')['default']
+    Password: typeof import('primevue/password')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SelectButton: typeof import('primevue/selectbutton')['default']
+    ShamirInputs: typeof import('./src/components/ShamirInputs.vue')['default']
+    SharesModal: typeof import('./src/components/SharesModal.vue')['default']
+    Step: typeof import('primevue/step')['default']
+    StepGenerateMasterKey: typeof import('./src/components/setup/StepGenerateMasterKey.vue')['default']
+    StepList: typeof import('primevue/steplist')['default']
+    StepPanel: typeof import('primevue/steppanel')['default']
+    StepPanels: typeof import('primevue/steppanels')['default']
+    Stepper: typeof import('primevue/stepper')['default']
+    StepWelcome: typeof import('./src/components/setup/StepWelcome.vue')['default']
     ThemeSwitcher: typeof import('./src/components/ThemeSwitcher.vue')['default']
+    Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }

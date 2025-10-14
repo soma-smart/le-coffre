@@ -3,6 +3,7 @@
 </script>
 
 <template>
+  <Toast />
   <ThemeSwitcher />
   <RouterView />
 </template>
