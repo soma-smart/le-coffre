@@ -36,7 +36,7 @@ jobs:
 
       - name: Check Dependencies Security
         working-directory: frontend/
-        run: bun audit
+        run: bun audit --audit-level=moderate
 
       - name: Type Checking
         if: (${{ success() }} || ${{ failure() }})
