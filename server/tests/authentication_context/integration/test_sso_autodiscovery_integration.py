@@ -1,4 +1,4 @@
-"""Tests d'intégration pour l'auto-découverte SSO."""
+"""Integration tests for SSO auto-discovery."""
 
 import pytest
 from unittest.mock import patch
