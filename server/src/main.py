@@ -27,9 +27,6 @@ from password_management_context.adapters.secondary.gateways import (
     InMemoryPasswordRepository,
 )
 
-from rights_access_context.adapters.primary.fastapi.routes import (
-    get_rights_access_router,
-)
 from rights_access_context.adapters.primary import AccessControllerAdapter
 from rights_access_context.application.use_cases import (
     CheckAccessUseCase,
@@ -125,6 +122,5 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, root_path="/api")
 app.include_router(get_vault_management_router())
 app.include_router(get_password_management_router())
-app.include_router(get_rights_access_router())
 app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
