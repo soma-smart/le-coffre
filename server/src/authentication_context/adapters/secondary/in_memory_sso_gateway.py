@@ -48,7 +48,3 @@ class InMemorySSOGateway(SsoGateway):
     ) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
-        # self._authorization_endpoint = authorization_endpoint
-        # self._token_endpoint = token_endpoint
-        # self._userinfo_endpoint = userinfo_endpoint
-        # self._jwks_uri = jwks_uri
