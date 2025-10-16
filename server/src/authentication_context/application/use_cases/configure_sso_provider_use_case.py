@@ -64,7 +64,7 @@ class ConfigureSsoProviderUseCase:
                 response.raise_for_status()
                 config = response.json()
 
-                # Validation des champs requis
+                # Validate required fields
                 required_fields = ["authorization_endpoint", "token_endpoint"]
                 missing_fields = [
                     field for field in required_fields if field not in config
