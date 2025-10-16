@@ -33,7 +33,6 @@ from rights_access_context.adapters.primary.fastapi.routes import (
 from rights_access_context.adapters.primary import AccessControllerAdapter
 from rights_access_context.application.use_cases import (
     CheckAccessUseCase,
-    GrantAccessUseCase,
     GetOwnerAccessUseCase,
     SetOwnerAccessUseCase,
 )
@@ -89,11 +88,10 @@ async def lifespan(app: FastAPI):
         # Rights access dependencies
         rights_repository = InMemoryRightsRepository()
         check_use_case = CheckAccessUseCase(rights_repository)
-        grant_use_case = GrantAccessUseCase(rights_repository)
         set_owner_use_case = SetOwnerAccessUseCase(rights_repository)
         get_owner_use_case = GetOwnerAccessUseCase(rights_repository)
         access_controller = AccessControllerAdapter(
-            check_use_case, grant_use_case, set_owner_use_case, get_owner_use_case
+            check_use_case, set_owner_use_case, get_owner_use_case
         )
 
         app.state.rights_repository = rights_repository

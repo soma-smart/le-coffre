@@ -7,18 +7,19 @@ from password_management_context.adapters.secondary.gateways import (
 )
 from password_management_context.domain.exceptions import PasswordNotFoundError
 from password_management_context.domain.entities import Password
+from tests.fakes import FakeAccessController
 from shared_kernel.access_control.access_controller import AccessController
 
 
 @pytest.fixture
-def use_case(password_repository, access_controller: AccessController):
+def use_case(password_repository, access_controller: FakeAccessController):
     return DeletePasswordUseCase(password_repository, access_controller)
 
 
 def test_given_delete_access_when_deleting_should_success(
     use_case: DeletePasswordUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: AccessController,
+    access_controller: FakeAccessController,
 ):
     requester_user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
