@@ -1,4 +1,4 @@
-"""Tests pour ConfigureSsoProviderUseCase."""
+"""Tests for ConfigureSsoProviderUseCase."""
 
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
