@@ -1,13 +1,5 @@
 from uuid import UUID
-import jwt
-
-STRONG_PASSWORD = "StrongP@ssw0rd123"
-
-
-def get_user_id_from_token(token: str) -> str:
-    """Extract user_id from JWT token"""
-    decoded = jwt.decode(token, options={"verify_signature": False})
-    return decoded["user_id"]
+from utils import get_user_id_from_token, STRONG_PASSWORD
 
 
 def test_can_read_a_created_password(e2e_client, setup):
