@@ -14,12 +14,14 @@ from group_management_context.domain.exceptions import (
 from group_management_context.domain.group import Group
 
 
+MIN_GROUP_NAME_LENGTH = 10
+
 class CreateGroupUseCase:
     def __init__(self, group_repository: GroupRepository):
         self._group_repository = group_repository
 
     def execute(self, command: CreateGroupCommand) -> CreateGroupResponse:
-        if len(command.name) < 10:
+        if len(command.name) < MIN_GROUP_NAME_LENGTH:
             raise GroupNameTooShortException()
         
         if self._group_repository.exists_by_name(command.name):
