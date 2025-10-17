@@ -19,14 +19,9 @@ from shared_kernel.authentication.dependencies import get_current_user
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
-class UnsharePasswordResponse(BaseModel):
-    message: str
-
-
 @router.delete(
     "/{password_id}/share/{user_id}",
-    response_model=UnsharePasswordResponse,
-    status_code=200,
+    status_code=204,
     summary="Revoke password access from a user",
 )
 def unshare_password(
@@ -52,9 +47,7 @@ def unshare_password(
         )
         usecase.execute(command)
 
-        return UnsharePasswordResponse(
-            message=f"Password {password_id} access revoked from user {user_id}"
-        )
+        return
     except PermissionDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except CannotUnshareWithOwnerError as e:

@@ -77,7 +77,7 @@ def test_can_read_a_shared_password_of_another_user(e2e_client, setup, admin_tok
         json={"user_id": other_user},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert share_response.status_code == 200
+    assert share_response.status_code == 201
 
     retrieved_password = e2e_client.get(
         f"/api/passwords/{password_id}?user_id={other_user}"

@@ -54,7 +54,7 @@ def test_share_password_workflow(e2e_client, setup, admin_token):
         json={"user_id": shared_user_id},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert share_response.status_code == 200
+    assert share_response.status_code == 201
     assert "successfully shared" in share_response.json()["message"]
     assert str(password_id) in share_response.json()["message"]
     assert str(shared_user_id) in share_response.json()["message"]
@@ -72,10 +72,7 @@ def test_share_password_workflow(e2e_client, setup, admin_token):
         f"/api/passwords/{password_id}/share/{shared_user_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert unshare_response.status_code == 200
-    assert "access revoked" in unshare_response.json()["message"]
-    assert str(password_id) in unshare_response.json()["message"]
-    assert str(shared_user_id) in unshare_response.json()["message"]
+    assert unshare_response.status_code == 204
 
     # Step 7: Verify shared user can no longer access the password
     get_after_unshare = e2e_client.get(
@@ -138,7 +135,7 @@ def test_share_password_with_multiple_users(e2e_client, setup, admin_token):
         json={"user_id": user1_id},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert share1_response.status_code == 200
+    assert share1_response.status_code == 201
 
     # Share with user 2
     share2_response = e2e_client.post(
@@ -146,7 +143,7 @@ def test_share_password_with_multiple_users(e2e_client, setup, admin_token):
         json={"user_id": user2_id},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert share2_response.status_code == 200
+    assert share2_response.status_code == 201
 
     # Verify both users have access
     user1_access = e2e_client.get(
@@ -164,7 +161,7 @@ def test_share_password_with_multiple_users(e2e_client, setup, admin_token):
         f"/api/passwords/{password_id}/share/{user1_id}",
         headers={"Authorization": f"Bearer {admin_token}"},
     )
-    assert unshare_response.status_code == 200
+    assert unshare_response.status_code == 204
 
     # Verify user 1 no longer has access but user 2 still does
     user1_no_access = e2e_client.get(
