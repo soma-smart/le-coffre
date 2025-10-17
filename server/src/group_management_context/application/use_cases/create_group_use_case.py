@@ -1,12 +1,6 @@
-from group_management_context.application.commands.create_group_command import (
-    CreateGroupCommand,
-)
-from group_management_context.application.gateways.group_repository import (
-    GroupRepository,
-)
-from group_management_context.application.responses.create_group_response import (
-    CreateGroupResponse,
-)
+from group_management_context.application.commands import CreateGroupCommand
+from group_management_context.application.gateways import GroupRepository
+from group_management_context.application.responses import CreateGroupResponse
 from group_management_context.domain.exceptions import (
     GroupNameAlreadyExistsException,
     GroupNameTooShortException,
@@ -22,7 +16,7 @@ class CreateGroupUseCase:
 
     def execute(self, command: CreateGroupCommand) -> CreateGroupResponse:
         if len(command.name) < MIN_GROUP_NAME_LENGTH:
-            raise GroupNameTooShortException()
+            raise GroupNameTooShortException(MIN_GROUP_NAME_LENGTH)
         
         if self._group_repository.exists_by_name(command.name):
             raise GroupNameAlreadyExistsException(command.name)

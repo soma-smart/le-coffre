@@ -1,17 +1,13 @@
 from uuid import UUID
 import pytest
 
-from group_management_context.application.commands.create_group_command import (
-    CreateGroupCommand,
-)
-from group_management_context.application.use_cases.create_group_use_case import CreateGroupUseCase
+from group_management_context.application.commands import CreateGroupCommand
+from group_management_context.application.use_cases import CreateGroupUseCase
 from group_management_context.domain.exceptions import (
     GroupNameAlreadyExistsException,
     GroupNameTooShortException,
 )
-from .fakes.fake_group_repository import (
-    FakeGroupRepository,
-)
+from .fakes import FakeGroupRepository
 
 
 @pytest.fixture

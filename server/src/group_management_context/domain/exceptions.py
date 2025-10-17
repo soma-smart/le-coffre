@@ -3,8 +3,8 @@ class GroupDomainException(Exception):
 
 
 class GroupNameTooShortException(GroupDomainException):
-    def __init__(self):
-        super().__init__("Group name must be at least 10 characters long")
+    def __init__(self, min_len: int):
+        super().__init__(f"Group name must be at least {min_len} characters long")
 
 
 class GroupNameAlreadyExistsException(GroupDomainException):
