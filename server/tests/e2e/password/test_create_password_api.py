@@ -55,7 +55,18 @@ def test_cannot_read_a_password_of_another_user(e2e_client, setup):
 
 def test_can_read_a_shared_password_of_another_user(e2e_client, setup, admin_token):
     user_id = get_user_id_from_token(admin_token)
-    other_user = str(UUID("12345678-1234-5678-1234-567812345678"))
+    
+    # Create the other user first
+    other_user_response = e2e_client.post(
+        "/api/users/",
+        json={
+            "username": "otheruser",
+            "email": "other@example.com",
+            "name": "Other User",
+        },
+    )
+    assert other_user_response.status_code == 201
+    other_user = other_user_response.json()["id"]
 
     response = e2e_client.post(
         "/api/passwords",

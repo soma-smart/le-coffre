@@ -1,1 +1,2 @@
 from .in_memory_rights_repository import InMemoryRightsRepository
+from .user_repository_adapter import UserRepositoryAdapter

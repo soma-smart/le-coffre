@@ -1,14 +1,20 @@
 from rights_access_context.application.commands import ShareResourceCommand
+from rights_access_context.application.gateways import UserManagementGateway
 from rights_access_context.domain.exceptions import (
     PermissionDeniedError,
+    UserNotFoundError,
 )
 
 
 class ShareAccessUseCase:
-    def __init__(self, rights_repository):
+    def __init__(self, rights_repository, user_management_gateway: UserManagementGateway):
         self.rights_repository = rights_repository
+        self.user_management_gateway = user_management_gateway
 
     def execute(self, command: ShareResourceCommand):
+        if not self.user_management_gateway.user_exists(command.user_id):
+            raise UserNotFoundError(command.user_id)
+
         if not self.rights_repository.is_owner(
             command.owner_id, command.resource_id
         ):

@@ -8,12 +8,17 @@ from rights_access_context.application.use_cases import (
     SetOwnerAccessUseCase,
     GetOwnerAccessUseCase
 )
-from .fakes import FakeRightsRepository
+from .fakes import FakeRightsRepository, FakeUserManagementGateway
 
 
 @pytest.fixture()
 def rights_repository():
     return FakeRightsRepository()
+
+
+@pytest.fixture()
+def user_management_gateway():
+    return FakeUserManagementGateway()
 
 
 @pytest.fixture()

@@ -17,3 +17,10 @@ class CannotUnshareWithOwnerError(RightAccessDomainError):
         super().__init__(
             f"Cannot unshare resource {resource_id}: user {target_user_id} is an owner."
         )
+
+
+class UserNotFoundError(RightAccessDomainError):
+    def __init__(self, user_id: UUID):
+        super().__init__(
+            f"User {user_id} does not exist."
+        )

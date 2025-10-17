@@ -11,6 +11,7 @@ from rights_access_context.application.commands import ShareResourceCommand
 from rights_access_context.domain.exceptions import (
     PermissionDeniedError,
     RightAccessDomainError,
+    UserNotFoundError,
 )
 from shared_kernel.authentication import ValidatedUser
 from shared_kernel.authentication.dependencies import get_current_user
@@ -56,6 +57,8 @@ def share_password(
         return SharePasswordResponse(
             message=f"Password {password_id} successfully shared with user {request.user_id}"
         )
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except PermissionDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except RightAccessDomainError as e:

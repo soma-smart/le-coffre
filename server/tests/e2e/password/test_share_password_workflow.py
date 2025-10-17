@@ -16,7 +16,18 @@ def test_share_password_workflow(e2e_client, setup, admin_token):
     """
     # Setup users - use admin as owner since they have the auth token
     owner_id = get_user_id_from_token(admin_token)
-    shared_user_id = str(uuid4())
+    
+    # Create a user to share with
+    shared_user_response = e2e_client.post(
+        "/api/users/",
+        json={
+            "username": "shareduser",
+            "email": "shared@example.com",
+            "name": "Shared User",
+        },
+    )
+    assert shared_user_response.status_code == 201
+    shared_user_id = shared_user_response.json()["id"]
 
     # Step 1: Create a password as owner
     create_response = e2e_client.post(
@@ -93,8 +104,29 @@ def test_share_password_with_multiple_users(e2e_client, setup, admin_token):
     Test sharing a password with multiple users
     """
     owner_id = get_user_id_from_token(admin_token)
-    user1_id = str(uuid4())
-    user2_id = str(uuid4())
+    
+    # Create users to share with
+    user1_response = e2e_client.post(
+        "/api/users/",
+        json={
+            "username": "user1",
+            "email": "user1@example.com",
+            "name": "User 1",
+        },
+    )
+    assert user1_response.status_code == 201
+    user1_id = user1_response.json()["id"]
+    
+    user2_response = e2e_client.post(
+        "/api/users/",
+        json={
+            "username": "user2",
+            "email": "user2@example.com",
+            "name": "User 2",
+        },
+    )
+    assert user2_response.status_code == 201
+    user2_id = user2_response.json()["id"]
 
     # Create password
     create_response = e2e_client.post(
@@ -179,3 +211,32 @@ def test_cannot_unshare_with_owner(e2e_client, setup, admin_token):
     )
     assert unshare_response.status_code == 400
     assert "owner" in unshare_response.json()["detail"].lower()
+
+
+def test_cannot_share_with_nonexistent_user(e2e_client, setup, admin_token):
+    """
+    Test that sharing with a non-existent user returns 404
+    """
+    owner_id = get_user_id_from_token(admin_token)
+    nonexistent_user_id = str(uuid4())
+
+    # Create password
+    create_response = e2e_client.post(
+        "/api/passwords",
+        json={
+            "user_id": owner_id,
+            "name": "Test Password",
+            "password": STRONG_PASSWORD,
+        },
+    )
+    assert create_response.status_code == 201
+    password_id = create_response.json()["id"]
+
+    # Try to share with non-existent user
+    share_response = e2e_client.post(
+        f"/api/passwords/{password_id}/share",
+        json={"user_id": nonexistent_user_id},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert share_response.status_code == 404
+    assert "does not exist" in share_response.json()["detail"]
