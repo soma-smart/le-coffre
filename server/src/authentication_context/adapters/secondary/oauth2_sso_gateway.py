@@ -91,7 +91,7 @@ class OAuth2SsoGateway(SsoGateway):
         # Generate authorization URL with state parameter for security
         authorization_url, state = client.create_authorization_url(
             self._authorization_endpoint,
-            state=client.token.get("state") if client.token else None,
+            state=client.token.get("state") if isinstance(client.token, dict) else None,
         )
 
         return authorization_url
