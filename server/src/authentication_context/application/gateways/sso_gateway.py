@@ -16,3 +16,10 @@ class SsoGateway(Protocol):
         userinfo_endpoint: str,
         jwks_uri: str = "",
     ) -> None: ...
+
+    async def configure_with_discovery(
+        self,
+        client_id: str,
+        client_secret: str,
+        discovery_url: str,
+    ) -> None: ...

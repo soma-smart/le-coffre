@@ -67,6 +67,55 @@ class OAuth2SsoGateway(SsoGateway):
         self._jwks_uri = jwks_uri
         self._oauth_client = None  # Reset client to pick up new credentials
 
+    async def configure_with_discovery(
+        self,
+        client_id: str,
+        client_secret: str,
+        discovery_url: str,
+    ) -> None:
+        """Configure OAuth2 client via OpenID Connect auto-discovery."""
+        # Discover endpoints from OpenID Connect configuration
+        config = await self._discover_endpoints(discovery_url)
+
+        # Configure with discovered endpoints
+        self.configure(
+            client_id=client_id,
+            client_secret=client_secret,
+            authorization_endpoint=config["authorization_endpoint"],
+            token_endpoint=config["token_endpoint"],
+            userinfo_endpoint=config["userinfo_endpoint"],
+            jwks_uri=config["jwks_uri"],
+        )
+
+    async def _discover_endpoints(self, discovery_url: str) -> dict:
+        """Discover OpenID Connect endpoints from configuration URL."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(discovery_url)
+                response.raise_for_status()
+                config = response.json()
+
+                # Validate required fields
+                required_fields = ["authorization_endpoint", "token_endpoint"]
+                missing_fields = [
+                    field for field in required_fields if field not in config
+                ]
+                if missing_fields:
+                    raise ValueError(f"Missing fields in discovery: {missing_fields}")
+
+                return {
+                    "authorization_endpoint": config["authorization_endpoint"],
+                    "token_endpoint": config["token_endpoint"],
+                    "userinfo_endpoint": config.get("userinfo_endpoint", ""),
+                    "jwks_uri": config.get("jwks_uri", ""),
+                }
+        except httpx.TimeoutException:
+            raise ValueError("Timeout in discovering endpoints")
+        except httpx.HTTPStatusError as e:
+            raise ValueError(f"HTTP error during discovery: {e.response.status_code}")
+        except Exception as e:
+            raise ValueError(f"Error during discovery of endpoints: {str(e)}")
+
     def _get_oauth_client(self) -> AsyncOAuth2Client:
         """Get or create the OAuth2 client."""
         if self._oauth_client is None:

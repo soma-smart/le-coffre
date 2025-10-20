@@ -1,4 +1,3 @@
-import httpx
 from authentication_context.application.gateways import SsoGateway
 from authentication_context.domain.exceptions import InvalidSsoSettingsException
 
@@ -7,9 +6,8 @@ class ConfigureSsoProviderUseCase:
     """
     Use case to configure SSO provider via OpenID Connect auto-discovery.
 
-    This use case handles the complete SSO configuration flow:
-    1. Discovers endpoints from OpenID Connect configuration URL
-    2. Configures the SSO gateway with discovered endpoints and credentials
+    This use case handles the complete SSO configuration flow by delegating
+    the discovery and configuration to the SSO gateway.
     """
 
     def __init__(self, sso_gateway: SsoGateway):
@@ -38,49 +36,14 @@ class ConfigureSsoProviderUseCase:
             )
 
         try:
-            # Discover endpoints from OpenID Connect configuration
-            config = await self._discover_endpoints(discovery_url)
-
-            # Configure the gateway with discovered endpoints
-            self._sso_gateway.configure(
+            # Delegate discovery and configuration to the gateway
+            await self._sso_gateway.configure_with_discovery(
                 client_id=client_id,
                 client_secret=client_secret,
-                authorization_endpoint=config["authorization_endpoint"],
-                token_endpoint=config["token_endpoint"],
-                userinfo_endpoint=config["userinfo_endpoint"],
-                jwks_uri=config["jwks_uri"],
+                discovery_url=discovery_url,
             )
 
         except ValueError as e:
             raise InvalidSsoSettingsException(f"Auto-discovery failed: {str(e)}")
         except Exception as e:
             raise InvalidSsoSettingsException(f"Configuration failed: {str(e)}")
-
-    async def _discover_endpoints(self, discovery_url: str) -> dict:
-        """Discover OpenID Connect endpoints from configuration URL."""
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(discovery_url)
-                response.raise_for_status()
-                config = response.json()
-
-                # Validate required fields
-                required_fields = ["authorization_endpoint", "token_endpoint"]
-                missing_fields = [
-                    field for field in required_fields if field not in config
-                ]
-                if missing_fields:
-                    raise ValueError(f"Missing fields in discovery: {missing_fields}")
-
-                return {
-                    "authorization_endpoint": config["authorization_endpoint"],
-                    "token_endpoint": config["token_endpoint"],
-                    "userinfo_endpoint": config.get("userinfo_endpoint", ""),
-                    "jwks_uri": config.get("jwks_uri", ""),
-                }
-        except httpx.TimeoutException:
-            raise ValueError("Timeout in discovering endpoints")
-        except httpx.HTTPStatusError as e:
-            raise ValueError(f"HTTP error during discovery: {e.response.status_code}")
-        except Exception as e:
-            raise ValueError(f"Error during discovery of endpoints: {str(e)}")
