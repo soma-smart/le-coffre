@@ -45,7 +45,7 @@ class SqlPasswordRepository(PasswordRepository):
             self._session.delete(db_obj)
             self._session.commit()
 
-    def update(self, password: Password) -> None:
+    def update(self, password: Password):
         """Update password"""
         statement = select(PasswordTable).where(PasswordTable.id == password.id)
         db_obj = self._session.exec(statement).first()
