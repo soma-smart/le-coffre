@@ -5,7 +5,6 @@ from uuid import UUID
 
 class PasswordTable(SQLModel, table=True):
     __tablename__ = "PasswordTable"
-    #__table_args__ = (CheckConstraint("id = 1", name="unique_password_id"),)
 
     id: UUID = Field(default_factory=UUID, nullable=False, primary_key=True, index=True)
     name: str = Field(description="Password name")

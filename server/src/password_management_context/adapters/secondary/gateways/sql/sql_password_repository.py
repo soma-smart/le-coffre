@@ -2,6 +2,7 @@ from typing import List, Optional, Protocol
 from uuid import UUID
 from .model.password import PasswordTable
 from sqlmodel import Session, select
+from password_management_context.domain.exceptions import PasswordNotFoundError
 
 from password_management_context.domain.entities import Password
 from password_management_context.application.gateways import PasswordRepository
@@ -22,6 +23,8 @@ class SqlPasswordRepository(PasswordRepository):
         """Get password by UUID"""
         statement = select(PasswordTable).where(PasswordTable.id == id)
         result = self._session.exec(statement).first()
+        if result is None:
+            raise PasswordNotFoundError(id)
         return result
 
     def list_all(self, folder: Optional[str] = None) -> List[Password]:
