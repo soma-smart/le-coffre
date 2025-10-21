@@ -47,6 +47,8 @@ class SqlPasswordRepository(PasswordRepository):
         """Update password"""
         statement = select(PasswordTable).where(PasswordTable.id == password.id)
         db_obj = self._session.exec(statement).first()
+        if db_obj is None:
+            raise PasswordNotFoundError(password.id)
         if db_obj:
             for field, value in vars(password).items():
                 setattr(db_obj, field, value)

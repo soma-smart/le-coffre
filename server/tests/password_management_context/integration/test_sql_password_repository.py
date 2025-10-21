@@ -22,6 +22,12 @@ def test_update_password(sql_password_repository):
     sql_password_repository.update(password)
     updated = sql_password_repository.get_by_id(password_id)
     assert updated.name == "New"
+    
+def test_update_nonexistent_password(sql_password_repository):
+    non_existent_id = uuid4()
+    password = Password(id=non_existent_id, name="NonExistent", encrypted_value="abc", folder=None)
+    with pytest.raises(PasswordNotFoundError):
+        sql_password_repository.update(password)
 
 def test_delete_password(sql_password_repository):
     password_id = uuid4()
