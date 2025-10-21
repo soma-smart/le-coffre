@@ -39,6 +39,8 @@ class SqlPasswordRepository(PasswordRepository):
         """Delete password by UUID"""
         statement = select(PasswordTable).where(PasswordTable.id == id)
         db_obj = self._session.exec(statement).first()
+        if db_obj is None:
+            raise PasswordNotFoundError(id)
         if db_obj:
             self._session.delete(db_obj)
             self._session.commit()

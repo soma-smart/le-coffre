@@ -36,6 +36,11 @@ def test_delete_password(sql_password_repository):
     sql_password_repository.delete(password_id)
     with pytest.raises(PasswordNotFoundError):
         sql_password_repository.get_by_id(password_id)
+        
+def test_delete_nonexistent_password(sql_password_repository):  
+    non_existent_id = uuid4()
+    with pytest.raises(PasswordNotFoundError):
+        sql_password_repository.delete(non_existent_id)
 
 def test_list_all_without_folders(sql_password_repository, passwords = [Password(id=uuid4(), name=f"Pwd{i}", encrypted_value="enc", folder=None) for i in range(4)]):
     folder_password = Password(id=uuid4(), name=f"nofolderpwd", encrypted_value="enc", folder="folder1")
