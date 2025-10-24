@@ -1,6 +1,25 @@
-FROM ghcr.io/astral-sh/uv:python3.13-alpine
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
-RUN apk add --no-cache git
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    sudo \
+    bash \
+    curl \
+    libxcursor1 \
+    libgtk-3-0 \
+    libgdk-pixbuf2.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo-gobject2 \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG USER_UID=1000
+ARG USER_GID=1000
+ARG USERNAME=devuser
+
+RUN groupadd -g $USER_GID $USERNAME \
+    && useradd -m -u $USER_UID -g $USERNAME -s /bin/bash $USERNAME \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
 
 WORKDIR /app/server
 
@@ -9,5 +28,11 @@ COPY pyproject.toml ./
 RUN uv sync --no-cache
 
 COPY . .
+
+RUN chown -R $USERNAME:$USERNAME /app
+
+USER $USERNAME
+
+RUN uv run playwright install --with-deps chromium
 
 CMD [ "tail", "-f", "/dev/null" ]
