@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
+import os
 
 from config import get_database_url
 
@@ -49,7 +50,7 @@ from authentication_context.adapters.secondary import (
     InMemorySessionRepository,
     JwtTokenGateway,
     InMemoryUserManagementGateway,
-    InMemorySSOGateway,
+    OAuth2SsoGateway,
     InMemorySsoUserRepository,
 )
 
@@ -107,7 +108,16 @@ async def lifespan(app: FastAPI):
         token_gateway = JwtTokenGateway()
         session_repository = InMemorySessionRepository()
         user_management_gateway = InMemoryUserManagementGateway()
-        sso_gateway = InMemorySSOGateway()
+        
+        # SSO Gateway with OAuth2/OIDC support
+        # Base URL should be the public URL of your application
+        base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+        sso_gateway = OAuth2SsoGateway(
+            base_url=base_url,
+            redirect_uri=f"{base_url}/api/auth/sso/callback",
+            scope="openid email profile",
+            provider="oauth2"
+        )
         sso_user_repository = InMemorySsoUserRepository()
 
         app.state.user_password_repository = user_password_repository

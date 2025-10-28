@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import patch, AsyncMock
-from authentication_context.adapters.secondary.in_memory_sso_gateway import (
-    InMemorySSOGateway,
+from authentication_context.adapters.secondary.oauth2_sso_gateway import (
+    OAuth2SsoGateway,
 )
 
 
@@ -12,7 +12,7 @@ async def test_configure_sso_with_autodiscovery(api_client):
     """Test configuration SSO with OpenID Connect auto-discovery."""
 
     with patch.object(
-        InMemorySSOGateway, "configure_with_discovery", new_callable=AsyncMock
+        OAuth2SsoGateway, "configure_with_discovery", new_callable=AsyncMock
     ) as mock_configure:
         # Test with auto-discovery
         response = api_client.post(
@@ -36,7 +36,7 @@ async def test_configure_sso_with_autodiscovery(api_client):
 async def test_configure_sso_with_autodiscovery_error(api_client):
     """Test SSO configuration with auto-discovery error."""
     with patch.object(
-        InMemorySSOGateway, "configure_with_discovery", new_callable=AsyncMock
+        OAuth2SsoGateway, "configure_with_discovery", new_callable=AsyncMock
     ) as mock_configure:
         mock_configure.side_effect = ValueError("Error discovering endpoints: HTTP 404")
 

@@ -197,30 +197,3 @@ def test_should_configure_microsoft_with_predefined_config():
     assert tenant_id in gateway._token_endpoint
     assert gateway._userinfo_endpoint == "https://graph.microsoft.com/v1.0/me"
 
-
-def test_should_configure_keycloak_with_predefined_config():
-    """Test configuration with Keycloak using hardcoded endpoints."""
-    gateway = OAuth2SsoGateway(
-        base_url="https://app.example.com",
-        redirect_uri="https://app.example.com/auth/callback",
-        provider="keycloak",
-    )
-
-    base_url = "https://keycloak.example.com"
-    realm = "myrealm"
-    # Configuration with Keycloak endpoints for a specific instance
-    realm_url = f"{base_url}/realms/{realm}"
-    gateway.configure(
-        client_id="test_client_id",
-        client_secret="test_client_secret",
-        authorization_endpoint=f"{realm_url}/protocol/openid-connect/auth",
-        token_endpoint=f"{realm_url}/protocol/openid-connect/token",
-        userinfo_endpoint=f"{realm_url}/protocol/openid-connect/userinfo",
-        jwks_uri=f"{realm_url}/protocol/openid-connect/certs",
-    )
-
-    expected_base = f"{base_url}/realms/{realm}/protocol/openid-connect"
-    assert gateway._authorization_endpoint == f"{expected_base}/auth"
-    assert gateway._token_endpoint == f"{expected_base}/token"
-    assert gateway._userinfo_endpoint == f"{expected_base}/userinfo"
-    assert gateway._jwks_uri == f"{expected_base}/certs"

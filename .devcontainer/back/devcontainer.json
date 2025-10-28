@@ -5,7 +5,7 @@
   "workspaceFolder": "/app/server",
   "forwardPorts": [8000, 8080],
   "remoteUser": "devuser",
-  "postCreateCommand": "uv sync && bash /app/.devcontainer/back/setup-keycloak.sh",
+  "postCreateCommand": "uv sync",
   "customizations": {
     "vscode": {
       "extensions": [
