@@ -3,10 +3,11 @@ import httpx
 from urllib.parse import urlparse, parse_qs, quote
 
 from authentication_context.adapters.secondary import OAuth2SsoGateway
+from authentication_context.application.gateways import SsoGateway
 
 
 @pytest.fixture
-def oauth2_sso_gateway(oidc_server) -> OAuth2SsoGateway:
+def sso_gateway(oidc_server) -> OAuth2SsoGateway:
     """OAuth2 SSO Gateway configured to use the OIDC mock server."""
     gateway = OAuth2SsoGateway(
         base_url="http://localhost:8000",
@@ -16,16 +17,16 @@ def oauth2_sso_gateway(oidc_server) -> OAuth2SsoGateway:
 
 
 @pytest.mark.asyncio
-async def test_configure_sso_with_oidc_discovery(oauth2_sso_gateway, oidc_server):
+async def test_configure_sso_with_oidc_discovery(sso_gateway: SsoGateway, oidc_server):
     """Test that the OIDC discovery endpoint is accessible and returns valid configuration."""
 
-    await oauth2_sso_gateway.configure_with_discovery(
+    await sso_gateway.configure_with_discovery(
         client_id=oidc_server["client_id"],
         client_secret=oidc_server["client_secret"],
         discovery_url=oidc_server["discovery_url"],
     )
 
-    auth_url = await oauth2_sso_gateway.get_authorize_url()
+    auth_url = await sso_gateway.get_authorize_url()
 
     assert (
         oidc_server["issuer_url"] in auth_url
@@ -37,20 +38,20 @@ async def test_configure_sso_with_oidc_discovery(oauth2_sso_gateway, oidc_server
 
 
 @pytest.mark.asyncio
-async def test_complete_oauth2_flow(oauth2_sso_gateway, oidc_test_user):
+async def test_complete_oauth2_flow(sso_gateway: SsoGateway, oidc_test_user):
     """Test complete OAuth2 flow: configure -> authorize -> callback -> token exchange."""
-    
+
     oidc_server = oidc_test_user["oidc_server"]
 
     # Step 1: Configure SSO via OIDC discovery
-    await oauth2_sso_gateway.configure_with_discovery(
+    await sso_gateway.configure_with_discovery(
         client_id=oidc_server["client_id"],
         client_secret=oidc_server["client_secret"],
         discovery_url=oidc_server["discovery_url"],
     )
 
     # Step 2: Get authorization URL
-    auth_url = await oauth2_sso_gateway.get_authorize_url()
+    auth_url = await sso_gateway.get_authorize_url()
     assert auth_url, "Authorization URL should be generated"
 
     # Step 3: Simulate user authorization by posting directly to the mock provider
@@ -60,9 +61,12 @@ async def test_complete_oauth2_flow(oauth2_sso_gateway, oidc_test_user):
         data={"sub": oidc_test_user["sub"]},
         follow_redirects=False,
     )
-    
+
     # The mock provider should redirect with an authorization code
-    assert response.status_code in [302, 303], f"Expected redirect, got {response.status_code}"
+    assert response.status_code in [
+        302,
+        303,
+    ], f"Expected redirect, got {response.status_code}"
     callback_url = response.headers.get("location")
     assert callback_url, "Should have a redirect location"
 
@@ -74,7 +78,7 @@ async def test_complete_oauth2_flow(oauth2_sso_gateway, oidc_test_user):
     assert auth_code, f"Authorization code not found in callback URL: {callback_url}"
 
     # Step 5: Exchange authorization code for tokens and user info
-    sso_user = await oauth2_sso_gateway.validate_callback(auth_code)
+    sso_user = await sso_gateway.validate_callback(auth_code)
 
     # Verify SSO user data
     assert (
@@ -86,16 +90,16 @@ async def test_complete_oauth2_flow(oauth2_sso_gateway, oidc_test_user):
 
 
 @pytest.mark.asyncio
-async def test_oauth2_flow_with_invalid_code(oauth2_sso_gateway, oidc_server):
+async def test_oauth2_flow_with_invalid_code(sso_gateway: SsoGateway, oidc_server):
     """Test that invalid authorization code is rejected."""
-    await oauth2_sso_gateway.configure_with_discovery(
+    await sso_gateway.configure_with_discovery(
         client_id=oidc_server["client_id"],
         client_secret=oidc_server["client_secret"],
         discovery_url=oidc_server["discovery_url"],
     )
 
     with pytest.raises(Exception) as exc_info:
-        await oauth2_sso_gateway.validate_callback("invalid-code-xyz123")
+        await sso_gateway.validate_callback("invalid-code-xyz123")
 
     # The exception should indicate authentication failure
     error_message = str(exc_info.value).lower()
@@ -107,10 +111,10 @@ async def test_oauth2_flow_with_invalid_code(oauth2_sso_gateway, oidc_server):
 
 
 @pytest.mark.asyncio
-async def test_oidc_discovery_with_invalid_url(oauth2_sso_gateway):
+async def test_oidc_discovery_with_invalid_url(sso_gateway: SsoGateway):
     """Test that invalid discovery URL fails gracefully."""
     with pytest.raises(Exception) as exc_info:
-        await oauth2_sso_gateway.configure_with_discovery(
+        await sso_gateway.configure_with_discovery(
             client_id="test-client",
             client_secret="test-secret",
             discovery_url="https://invalid-domain-xyz123.com/.well-known/openid-configuration",
@@ -120,7 +124,7 @@ async def test_oidc_discovery_with_invalid_url(oauth2_sso_gateway):
 @pytest.mark.asyncio
 async def test_multiple_users_authentication(oidc_server):
     """Test that multiple users can authenticate independently."""
-    
+
     # Create two different users
     user1_data = {
         "sub": "alice@example.com",
@@ -132,7 +136,7 @@ async def test_multiple_users_authentication(oidc_server):
         "email": "bob@example.com",
         "name": "Bob Jones",
     }
-    
+
     httpx.put(
         f"{oidc_server['issuer_url']}/users/{quote(user1_data['sub'])}",
         json=user1_data,
@@ -141,7 +145,7 @@ async def test_multiple_users_authentication(oidc_server):
         f"{oidc_server['issuer_url']}/users/{quote(user2_data['sub'])}",
         json=user2_data,
     )
-    
+
     # Configure gateway
     gateway = OAuth2SsoGateway(
         base_url="http://localhost:8000",
@@ -152,26 +156,30 @@ async def test_multiple_users_authentication(oidc_server):
         client_secret=oidc_server["client_secret"],
         discovery_url=oidc_server["discovery_url"],
     )
-    
+
     # Authenticate as user1
     auth_url1 = await gateway.get_authorize_url()
-    response1 = httpx.post(auth_url1, data={"sub": user1_data["sub"]}, follow_redirects=False)
+    response1 = httpx.post(
+        auth_url1, data={"sub": user1_data["sub"]}, follow_redirects=False
+    )
     callback_url1 = response1.headers.get("location")
     code1 = parse_qs(urlparse(callback_url1).query).get("code", [None])[0]
     sso_user1 = await gateway.validate_callback(code1)
-    
+
     assert sso_user1.email == user1_data["email"]
     assert sso_user1.display_name == user1_data["name"]
-    
+
     # Authenticate as user2
     auth_url2 = await gateway.get_authorize_url()
-    response2 = httpx.post(auth_url2, data={"sub": user2_data["sub"]}, follow_redirects=False)
+    response2 = httpx.post(
+        auth_url2, data={"sub": user2_data["sub"]}, follow_redirects=False
+    )
     callback_url2 = response2.headers.get("location")
     code2 = parse_qs(urlparse(callback_url2).query).get("code", [None])[0]
     sso_user2 = await gateway.validate_callback(code2)
-    
+
     assert sso_user2.email == user2_data["email"]
     assert sso_user2.display_name == user2_data["name"]
-    
+
     # Verify they're different users
     assert sso_user1.email != sso_user2.email

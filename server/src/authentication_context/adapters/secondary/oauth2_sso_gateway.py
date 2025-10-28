@@ -49,7 +49,7 @@ class OAuth2SsoGateway(SsoGateway):
 
         self._oauth_client: AsyncOAuth2Client | None = None
 
-    def configure(
+    def _configure(
         self,
         client_id: str,
         client_secret: str,
@@ -78,7 +78,7 @@ class OAuth2SsoGateway(SsoGateway):
         config = await self._discover_endpoints(discovery_url)
 
         # Configure with discovered endpoints
-        self.configure(
+        self._configure(
             client_id=client_id,
             client_secret=client_secret,
             authorization_endpoint=config["authorization_endpoint"],

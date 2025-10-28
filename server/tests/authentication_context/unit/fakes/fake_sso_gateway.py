@@ -1,8 +1,10 @@
 from authentication_context.domain.entities import SsoUser
 from authentication_context.domain.exceptions import InvalidSsoCodeException
 
+from authentication_context.application.gateways import SsoGateway
 
-class FakeSsoGateway:
+
+class FakeSsoGateway(SsoGateway):
     def __init__(self):
         self._authorize_url = ""
         self._valid_codes = {}  # code -> SsoUser mapping
@@ -12,27 +14,27 @@ class FakeSsoGateway:
     async def get_authorize_url(self) -> str:
         return self._authorize_url
 
-    def set_authorize_url(self, url: str) -> None:
-        """Helper method for tests to set the URL that will be returned"""
-        self._authorize_url = url
-
     async def validate_callback(self, code: str) -> SsoUser:
         """Validate the SSO callback code and return user info"""
         if code not in self._valid_codes:
             raise InvalidSsoCodeException(f"Invalid SSO code: {code}")
         return self._valid_codes[code]
 
-    def configure(
+    async def configure_with_discovery(
         self,
         client_id: str,
         client_secret: str,
-        authorization_endpoint: str,
-        token_endpoint: str,
-        userinfo_endpoint: str,
-        jwks_uri: str = "",
+        discovery_url: str,
     ) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
+        self._discovery_url = discovery_url
+
+    def set_authorize_url(self, url: str) -> None:
+        """Helper method for tests to set the URL that will be returned"""
+        self._authorize_url = url
+
+    ## Helpers for fake gateway
 
     def set_valid_code(self, code: str, user_info: SsoUser) -> None:
         """Helper method for tests to set valid codes"""

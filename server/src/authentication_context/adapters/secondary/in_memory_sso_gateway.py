@@ -37,7 +37,7 @@ class InMemorySSOGateway(SsoGateway):
             sso_provider=user_data["provider"],
         )
 
-    def configure(
+    def _configure(
         self,
         client_id: str,
         client_secret: str,
@@ -61,12 +61,12 @@ class InMemorySSOGateway(SsoGateway):
     ) -> None:
         """
         Mock implementation of configure_with_discovery for testing.
-        
+
         In real tests, this would simulate a successful discovery.
         """
         # Mock discovery response based on discovery_url
         if "google" in discovery_url:
-            self.configure(
+            self._configure(
                 client_id=client_id,
                 client_secret=client_secret,
                 authorization_endpoint="https://accounts.google.com/o/oauth2/v2/auth",
@@ -75,7 +75,7 @@ class InMemorySSOGateway(SsoGateway):
                 jwks_uri="https://www.googleapis.com/oauth2/v3/certs",
             )
         elif "microsoft" in discovery_url:
-            self.configure(
+            self._configure(
                 client_id=client_id,
                 client_secret=client_secret,
                 authorization_endpoint="https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
@@ -85,7 +85,7 @@ class InMemorySSOGateway(SsoGateway):
             )
         else:
             # Generic mock configuration
-            self.configure(
+            self._configure(
                 client_id=client_id,
                 client_secret=client_secret,
                 authorization_endpoint="https://example.com/oauth/authorize",

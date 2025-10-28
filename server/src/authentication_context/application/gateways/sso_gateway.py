@@ -7,16 +7,6 @@ class SsoGateway(Protocol):
 
     async def validate_callback(self, code: str) -> SsoUser: ...
 
-    def configure(
-        self,
-        client_id: str,
-        client_secret: str,
-        authorization_endpoint: str,
-        token_endpoint: str,
-        userinfo_endpoint: str,
-        jwks_uri: str = "",
-    ) -> None: ...
-
     async def configure_with_discovery(
         self,
         client_id: str,
