@@ -40,36 +40,26 @@ async def test_execute_success_with_auto_discovery(use_case, mock_sso_gateway):
 
 
 @pytest.mark.asyncio
-async def test_execute_missing_required_parameters(use_case):
+@pytest.mark.parametrize(
+    "client_id, client_secret, discovery_url",
+    [
+        ("", "test_secret", "https://provider.com/.well-known/openid_configuration"),
+        ("test_client_id", "", "https://provider.com/.well-known/openid_configuration"),
+        ("test_client_id", "test_secret", ""),
+    ],
+)
+async def test_execute_missing_required_parameters(
+    use_case, client_id, client_secret, discovery_url
+):
     """Test validation with missing required parameters."""
     with pytest.raises(
         InvalidSsoSettingsException,
         match="Client ID, client secret, and discovery URL are required",
     ):
         await use_case.execute(
-            client_id="",
-            client_secret="test_secret",
-            discovery_url="https://provider.com/.well-known/openid_configuration",
-        )
-
-    with pytest.raises(
-        InvalidSsoSettingsException,
-        match="Client ID, client secret, and discovery URL are required",
-    ):
-        await use_case.execute(
-            client_id="test_client_id",
-            client_secret="",
-            discovery_url="https://provider.com/.well-known/openid_configuration",
-        )
-
-    with pytest.raises(
-        InvalidSsoSettingsException,
-        match="Client ID, client secret, and discovery URL are required",
-    ):
-        await use_case.execute(
-            client_id="test_client_id",
-            client_secret="test_secret",
-            discovery_url="",
+            client_id=client_id,
+            client_secret=client_secret,
+            discovery_url=discovery_url,
         )
 
 
