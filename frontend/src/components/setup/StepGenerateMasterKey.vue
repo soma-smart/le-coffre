@@ -23,12 +23,12 @@ async function generateMasterKey() {
         });
 
         if (response.error) {
-            toast.add({ severity: 'error', summary: 'Error', detail: response.error.detail, life: 3000 });
+            toast.add({ severity: 'error', summary: 'Error', detail: response.error.detail, life: 5000 });
             return;
         }
         emit('shares-generated', response.data.shares);
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'API Error', detail: 'An unexpected error occurred.', life: 3000 });
+        toast.add({ severity: 'error', summary: 'API Error', detail: 'An unexpected error occurred.', life: 5000 });
         console.error(error);
     } finally {
         isGeneratingMasterKey.value = false;

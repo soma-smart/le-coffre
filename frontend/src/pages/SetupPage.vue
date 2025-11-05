@@ -6,6 +6,8 @@ import type { Share } from "@/client";
 import SharesModal from "@/components/SharesModal.vue";
 import StepWelcome from "@/components/setup/StepWelcome.vue";
 import StepGenerateMasterKey from "@/components/setup/StepGenerateMasterKey.vue";
+import StepAdminAccountForm from "@/components/setup/StepAdminAccountForm.vue";
+import SetupDone from "@/components/setup/SetupDone.vue";
 
 const showModal = ref(false);
 const shares = ref<Share[]>([]);
@@ -45,31 +47,11 @@ const handleModalConfirmed = () => {
                     </StepPanel>
 
                     <StepPanel v-slot="{ activateCallback }" value="3">
-                        <div class="flex flex-col h-48">
-                            <div
-                                class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
-                                Admin Account Form
-                            </div>
-                        </div>
-                        <div class="flex pt-6 justify-between">
-                            <Button label="Back" severity="secondary" icon="pi pi-arrow-left"
-                                @click="activateCallback('2')" />
-                            <Button label="Next" icon="pi pi-arrow-right" iconPos="right"
-                                @click="activateCallback('4')" />
-                        </div>
+                        <StepAdminAccountForm @account-created="activateCallback('4')" />
                     </StepPanel>
 
-                    <StepPanel v-slot="{ activateCallback }" value="4">
-                        <div class="flex flex-col h-48">
-                            <div
-                                class="border-2 border-dashed border-surface-200 dark:border-surface-700 rounded bg-surface-50 dark:bg-surface-950 flex-auto flex justify-center items-center font-medium">
-                                Setup Done
-                            </div>
-                        </div>
-                        <div class="pt-6">
-                            <Button label="Back" severity="secondary" icon="pi pi-arrow-left"
-                                @click="activateCallback('3')" />
-                        </div>
+                    <StepPanel value="4">
+                        <SetupDone />
                     </StepPanel>
                 </StepPanels>
             </Stepper>

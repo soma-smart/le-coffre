@@ -18,7 +18,7 @@ const copiedState = ref<{ [key: number]: boolean }>({});
 const copyShare = async (secret: string, index: number) => {
     try {
         await navigator.clipboard.writeText(secret);
-        toast.add({ severity: 'success', summary: 'Copied', detail: 'Share copied to clipboard', life: 3000 });
+        toast.add({ severity: 'success', summary: 'Copied', detail: 'Share copied to clipboard', life: 5000 });
 
         copiedState.value[index] = true;
 
@@ -28,7 +28,7 @@ const copyShare = async (secret: string, index: number) => {
         // }, 2000);
 
     } catch (err) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to copy share', life: 3000 });
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to copy share', life: 5000 });
         console.error('Failed to copy share:', err);
     }
 };
@@ -45,21 +45,21 @@ const handleConfirm = () => {
             securely (index and secret):</span>
 
         <div v-for="(share, idx) in shares" :key="idx" class="flex items-center gap-2 mb-2">
-            <label class="font-semibold shrink-0">Share {{ idx + 1 }}</label>
-            <Password :model-value="share.secret" fluid :feedback="false" toggleMask readonly
-                class="readonly-password w-full" />
+            <label class="font-semibold shrink-0" :for="`share-secret-${idx}`">Share {{ idx + 1 }}</label>
+            <Password :inputId="`share-secret-${idx}`" :model-value="share.secret" fluid :feedback="false" toggleMask
+                readonly class="readonly-password w-full" />
 
             <Button :icon="copiedState[idx] ? 'pi pi-check' : 'pi pi-copy'" text rounded aria-label="Copy share secret"
                 @click="copyShare(share.secret, idx)" />
         </div>
         <Divider />
 
-        <div class="flex items-center gap-4 mb-2">
-            <Checkbox id="storedShares" v-model="storedSharesConfirmed" :binary="true" />
-            <label for="storedShares" class="ml-2">
+        <Form class="flex items-center gap-4 mb-2">
+            <Checkbox inputId="storedSharesCheckbox" v-model="storedSharesConfirmed" :binary="true" />
+            <label for="storedSharesCheckbox" class="ml-2">
                 I have stored the above shares and their indices securely. I cannot retrieve them later.
             </label>
-        </div>
+        </Form>
 
         <template #footer>
             <Button icon="pi pi-check" label="Continue" severity="danger" @click="handleConfirm" autofocus
