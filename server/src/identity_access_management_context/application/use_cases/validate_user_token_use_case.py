@@ -42,6 +42,10 @@ class ValidateUserTokenUseCase:
         if not session:
             raise SessionNotFoundException("Session not found or expired")
 
+        if session.is_expired():
+            self._session_repository.delete(session.id)
+            raise SessionNotFoundException("Session expired")
+
         # Try to find user in UserPassword repository (admin users)
         user_password = self._user_password_repository.get_by_id(session.user_id)
         if user_password:

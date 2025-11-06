@@ -1,5 +1,6 @@
 import pytest
 from uuid import UUID
+from datetime import datetime, UTC, timedelta
 
 from identity_access_management_context.application.use_cases import (
     ValidateUserTokenUseCase,
@@ -365,3 +366,86 @@ async def test_should_return_empty_roles_when_token_has_no_roles(
 
     # Then response should include roles=[]
     assert response.roles == []
+
+
+@pytest.mark.asyncio
+async def test_given_expired_session_when_validate_token_then_session_is_deleted(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository,
+    token_gateway,
+    session_repository,
+):
+    # Given an expired session (created 25 hours ago with default 24-hour TTL)
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "expired@lecoffre.com"
+    display_name = "Expired User"
+    jwt_token = "jwt_token_for_expired_session"
+
+    user_password = UserPassword(
+        id=user_id,
+        email=email,
+        password_hash="hashed_password",
+        display_name=display_name,
+    )
+    user_password_repository.save(user_password)
+
+    # Create session with past created_at to simulate expiration
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session.created_at = datetime.now(UTC) - timedelta(hours=25)
+    session.expires_at = session.created_at + timedelta(hours=24)
+    session_repository.save(session)
+
+    token_gateway.set_valid_token(
+        jwt_token, user_id, email, ["user"], {"display_name": display_name}
+    )
+
+    # When validating the token
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
+
+    try:
+        await use_case.execute(command)
+    except SessionNotFoundException:
+        pass
+
+    # Then the session should be deleted from repository
+    deleted_session = session_repository.get_by_token(jwt_token)
+    assert deleted_session is None
+
+
+@pytest.mark.asyncio
+async def test_given_expired_session_when_validate_token_then_session_not_found_exception_raised(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository,
+    token_gateway,
+    session_repository,
+):
+    # Given an expired session (created 25 hours ago with default 24-hour TTL)
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "expired@lecoffre.com"
+    display_name = "Expired User"
+    jwt_token = "jwt_token_for_expired_session_2"
+
+    user_password = UserPassword(
+        id=user_id,
+        email=email,
+        password_hash="hashed_password",
+        display_name=display_name,
+    )
+    user_password_repository.save(user_password)
+
+    # Create session with past created_at to simulate expiration
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session.created_at = datetime.now(UTC) - timedelta(hours=25)
+    session.expires_at = session.created_at + timedelta(hours=24)
+    session_repository.save(session)
+
+    token_gateway.set_valid_token(
+        jwt_token, user_id, email, ["user"], {"display_name": display_name}
+    )
+
+    # When validating the token
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
+
+    # Then SessionNotFoundException should be raised with "Session expired" message
+    with pytest.raises(SessionNotFoundException, match="Session expired"):
+        await use_case.execute(command)
