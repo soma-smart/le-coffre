@@ -1,10 +1,11 @@
 from typing import Any, Dict
-from uuid import uuid4
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
-from identity_access_management_context.application.gateways import SsoGateway
-from identity_access_management_context.domain.entities import SsoUser
+from identity_access_management_context.application.gateways import (
+    SsoGateway,
+    SsoUserInfo,
+)
 from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
 from urllib.parse import urlencode
 
@@ -146,14 +147,14 @@ class OAuth2SsoGateway(SsoGateway):
 
         return authorization_url
 
-    async def validate_callback(self, code: str) -> SsoUser:
+    async def validate_callback(self, code: str) -> SsoUserInfo:
         """
         Validate OAuth2 authorization code and return user information.
 
         This method:
         1. Exchanges the authorization code for access token
         2. Fetches user information from the provider
-        3. Returns a standardized SsoUser object
+        3. Returns a standardized SsoUserInfo object (provider data only)
         """
         if not self._token_endpoint or not self._userinfo_endpoint:
             raise ValueError("Token and userinfo endpoints not configured")
@@ -185,8 +186,7 @@ class OAuth2SsoGateway(SsoGateway):
             display_name = self._extract_display_name(user_info)
             sso_user_id = self._extract_user_id(user_info)
 
-            return SsoUser(
-                internal_user_id=uuid4(),  # Temporary - will be set by use case
+            return SsoUserInfo(
                 email=email,
                 display_name=display_name,
                 sso_user_id=sso_user_id,

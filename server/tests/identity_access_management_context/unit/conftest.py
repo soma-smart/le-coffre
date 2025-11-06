@@ -6,6 +6,7 @@ from identity_access_management_context.adapters.secondary import (
     InMemorySsoUserRepository,
 )
 from identity_access_management_context.domain.entities import SsoUser
+from identity_access_management_context.application.gateways import SsoUserInfo
 from tests.identity_access_management_context.unit.fakes.fake_user_password_repository import (
     FakeUserPasswordRepository,
 )
@@ -68,10 +69,9 @@ def sso_user_repository():
 
 def create_sso_user_from_provider(
     email: str, display_name: str, sso_user_id: str, sso_provider: str
-) -> SsoUser:
+) -> SsoUserInfo:
     """Helper to create SSO user data as returned from provider"""
-    return SsoUser(
-        internal_user_id=None,
+    return SsoUserInfo(
         email=email,
         display_name=display_name,
         sso_user_id=sso_user_id,

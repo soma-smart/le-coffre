@@ -1,20 +1,21 @@
-from identity_access_management_context.domain.entities import SsoUser
+from identity_access_management_context.application.gateways import (
+    SsoGateway,
+    SsoUserInfo,
+)
 from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
-
-from identity_access_management_context.application.gateways import SsoGateway
 
 
 class FakeSsoGateway(SsoGateway):
     def __init__(self):
         self._authorize_url = ""
-        self._valid_codes = {}  # code -> SsoUser mapping
+        self._valid_codes = {}  # code -> SsoUserInfo mapping
         self._client_id = ""
         self._client_secret = ""
 
     async def get_authorize_url(self) -> str:
         return self._authorize_url
 
-    async def validate_callback(self, code: str) -> SsoUser:
+    async def validate_callback(self, code: str) -> SsoUserInfo:
         """Validate the SSO callback code and return user info"""
         if code not in self._valid_codes:
             raise InvalidSsoCodeException(f"Invalid SSO code: {code}")
@@ -36,7 +37,7 @@ class FakeSsoGateway(SsoGateway):
 
     ## Helpers for fake gateway
 
-    def set_valid_code(self, code: str, user_info: SsoUser) -> None:
+    def set_valid_code(self, code: str, user_info: SsoUserInfo) -> None:
         """Helper method for tests to set valid codes"""
         self._valid_codes[code] = user_info
 

@@ -1,12 +1,18 @@
 from fastapi import APIRouter
-from . import (
+from .user import (
     user_get_routes,
     user_delete_routes,
     user_create_routes,
     user_update_routes,
     user_list_routes,
+)
+
+from .admin import (
     admin_login_route,
     register_admin_with_password_route,
+)
+
+from .sso import (
     configure_sso_provider_route,
     get_sso_url_route,
     sso_callback_route,
