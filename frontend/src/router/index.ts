@@ -9,17 +9,17 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
+      name: 'Hme',
       component: HomeView,
     },
     {
       path: '/about',
-      name: 'about',
+      name: 'About',
       component: () => import('../pages/AboutPage.vue'),
     },
     {
       path: '/test',
-      name: 'test',
+      name: 'Test',
       component: TestView
     },
     {
@@ -27,6 +27,11 @@ const router = createRouter({
       name: 'Setup',
       component: SetupView,
       meta: { skipSetupCheck: true }
+    },
+    {
+      path: '/login',
+      name: 'Login',
+      component: () => import('../pages/LoginPage.vue'),
     }
   ],
 })

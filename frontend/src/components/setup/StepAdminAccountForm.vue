@@ -29,7 +29,7 @@ const resolver = ref(zodResolver(
         })
 ));
 
-const onFormSubmit = async ({ valid, values }) => {
+const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof formValues }) => {
     // Early return if form is invalid (extra safety check)
     if (!valid) {
         return;
