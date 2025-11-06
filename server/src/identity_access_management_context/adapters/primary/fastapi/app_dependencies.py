@@ -23,6 +23,7 @@ from identity_access_management_context.application.gateways import (
     SsoGateway,
     SsoUserRepository,
 )
+from shared_kernel.time import TimeProvider
 
 
 def get_user_repository(request: Request) -> UserRepository:
@@ -55,6 +56,10 @@ def get_sso_gateway(request: Request) -> SsoGateway:
 
 def get_sso_user_repository(request: Request) -> SsoUserRepository:
     return request.app.state.sso_user_repository
+
+
+def get_time_provider(request: Request) -> TimeProvider:
+    return request.app.state.time_provider
 
 
 # User Management Use Cases
@@ -98,12 +103,14 @@ def get_admin_login_usecase(
     ),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     session_repository: SessionRepository = Depends(get_session_repository),
+    time_provider: TimeProvider = Depends(get_time_provider),
 ):
     return AdminLoginUseCase(
         user_password_repository,
         password_hashing_gateway,
         token_gateway,
         session_repository,
+        time_provider,
     )
 
 
@@ -153,6 +160,7 @@ def get_sso_login_usecase(
     ),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     session_repository: SessionRepository = Depends(get_session_repository),
+    time_provider: TimeProvider = Depends(get_time_provider),
 ):
     return SsoLoginUseCase(
         sso_gateway,
@@ -160,4 +168,5 @@ def get_sso_login_usecase(
         user_management_gateway,
         token_gateway,
         session_repository,
+        time_provider,
     )

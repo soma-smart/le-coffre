@@ -36,6 +36,7 @@ async def test_should_validate_token_and_return_user_details(
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -52,7 +53,11 @@ async def test_should_validate_token_and_return_user_details(
     user_password_repository.save(user_password)
 
     # Setup session
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(
+        user_id=user_id,
+        jwt_token=jwt_token,
+        time_provider=time_provider,
+    )
     session_repository.save(session)
 
     # Setup JWT token validation
@@ -104,6 +109,7 @@ async def test_should_raise_exception_when_user_no_longer_exists(
     use_case: ValidateUserTokenUseCase,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     jwt_token = "jwt_token_for_deleted_user"
@@ -113,7 +119,7 @@ async def test_should_raise_exception_when_user_no_longer_exists(
         jwt_token, user_id, "deleted@lecoffre.com", ["admin"], {}
     )
 
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
@@ -127,6 +133,7 @@ async def test_should_validate_token_with_admin_role(
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -143,7 +150,7 @@ async def test_should_validate_token_with_admin_role(
     user_password_repository.save(user_password)
 
     # Setup session
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     # Setup JWT token validation with admin role
@@ -167,6 +174,7 @@ async def test_should_raise_exception_when_required_role_not_in_token(
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "user@lecoffre.com"
@@ -183,7 +191,7 @@ async def test_should_raise_exception_when_required_role_not_in_token(
     user_password_repository.save(user_password)
 
     # Setup session
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     # Setup JWT token validation with only "user" role (missing "admin")
@@ -203,6 +211,7 @@ async def test_should_validate_token_for_sso_user(
     sso_user_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     user_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
     email = "sso_user@example.com"
@@ -220,7 +229,7 @@ async def test_should_validate_token_for_sso_user(
     sso_user_repository.save(sso_user)
 
     # Setup session
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     # Setup JWT token validation
@@ -243,6 +252,7 @@ async def test_should_raise_exception_when_sso_user_not_found(
     use_case: ValidateUserTokenUseCase,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     user_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
     email = "nonexistent_sso@example.com"
@@ -251,7 +261,7 @@ async def test_should_raise_exception_when_sso_user_not_found(
     # Setup valid JWT token and session but no SSO user
     token_gateway.set_valid_token(jwt_token, user_id, email, ["user"], {})
 
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
@@ -265,6 +275,7 @@ async def test_should_return_admin_roles_for_admin_user_token(
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     # Given an admin user with password authentication and JWT containing ["admin"] role
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -280,7 +291,7 @@ async def test_should_return_admin_roles_for_admin_user_token(
     )
     user_password_repository.save(user_password)
 
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     token_gateway.set_valid_token(
@@ -301,6 +312,7 @@ async def test_should_return_multiple_roles_when_token_has_multiple_roles(
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     # Given a user with JWT containing ["user", "editor", "viewer"] roles
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -317,7 +329,7 @@ async def test_should_return_multiple_roles_when_token_has_multiple_roles(
     )
     user_password_repository.save(user_password)
 
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     token_gateway.set_valid_token(
@@ -338,6 +350,7 @@ async def test_should_return_empty_roles_when_token_has_no_roles(
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     # Given a user with JWT containing empty roles list
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -353,7 +366,7 @@ async def test_should_return_empty_roles_when_token_has_no_roles(
     )
     user_password_repository.save(user_password)
 
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token, time_provider=time_provider)
     session_repository.save(session)
 
     token_gateway.set_valid_token(
@@ -374,8 +387,13 @@ async def test_given_expired_session_when_validate_token_then_session_is_deleted
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
-    # Given an expired session (created 25 hours ago with default 24-hour TTL)
+    # Given: Set current time
+    current_time = datetime.now(UTC)
+    time_provider.set_current_time(current_time)
+    
+    # Create a session (will use current_time as created_at)
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "expired@lecoffre.com"
     display_name = "Expired User"
@@ -389,17 +407,22 @@ async def test_given_expired_session_when_validate_token_then_session_is_deleted
     )
     user_password_repository.save(user_password)
 
-    # Create session with past created_at to simulate expiration
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
-    session.created_at = datetime.now(UTC) - timedelta(hours=25)
-    session.expires_at = session.created_at + timedelta(hours=24)
+    # Create session at current time
+    session = AuthenticationSession(
+        user_id=user_id,
+        jwt_token=jwt_token,
+        time_provider=time_provider,
+    )
     session_repository.save(session)
 
     token_gateway.set_valid_token(
         jwt_token, user_id, email, ["user"], {"display_name": display_name}
     )
 
-    # When validating the token
+    # When: Advance time by 25 hours (session expires after 24 hours)
+    expired_time = current_time + timedelta(hours=25)
+    time_provider.set_current_time(expired_time)
+
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
 
     try:
@@ -418,8 +441,13 @@ async def test_given_expired_session_when_validate_token_then_session_not_found_
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
-    # Given an expired session (created 25 hours ago with default 24-hour TTL)
+    # Given: Set current time
+    current_time = datetime.now(UTC)
+    time_provider.set_current_time(current_time)
+    
+    # Create a session (will use current_time as created_at)
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "expired@lecoffre.com"
     display_name = "Expired User"
@@ -433,17 +461,22 @@ async def test_given_expired_session_when_validate_token_then_session_not_found_
     )
     user_password_repository.save(user_password)
 
-    # Create session with past created_at to simulate expiration
-    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
-    session.created_at = datetime.now(UTC) - timedelta(hours=25)
-    session.expires_at = session.created_at + timedelta(hours=24)
+    # Create session at current time
+    session = AuthenticationSession(
+        user_id=user_id,
+        jwt_token=jwt_token,
+        time_provider=time_provider,
+    )
     session_repository.save(session)
 
     token_gateway.set_valid_token(
         jwt_token, user_id, email, ["user"], {"display_name": display_name}
     )
 
-    # When validating the token
+    # When: Advance time by 25 hours (session expires after 24 hours)
+    expired_time = current_time + timedelta(hours=25)
+    time_provider.set_current_time(expired_time)
+
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
 
     # Then SessionNotFoundException should be raised with "Session expired" message

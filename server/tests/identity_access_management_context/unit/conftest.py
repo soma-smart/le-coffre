@@ -25,6 +25,9 @@ from tests.identity_access_management_context.unit.fakes.fake_user_management_ga
 from tests.identity_access_management_context.unit.fakes.fake_sso_gateway import (
     FakeSsoGateway,
 )
+from tests.identity_access_management_context.unit.fakes.fake_time_provider import (
+    FakeTimeProvider,
+)
 
 
 @pytest.fixture
@@ -50,6 +53,11 @@ def token_gateway():
 @pytest.fixture
 def session_repository():
     return FakeSessionRepository()
+
+
+@pytest.fixture
+def time_provider():
+    return FakeTimeProvider()
 
 
 @pytest.fixture

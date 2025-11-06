@@ -22,6 +22,7 @@ def use_case(
     user_management_gateway,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
@@ -29,6 +30,7 @@ def use_case(
         user_management_gateway=user_management_gateway,
         token_gateway=token_gateway,
         session_repository=session_repository,
+        time_provider=time_provider,
     )
 
 

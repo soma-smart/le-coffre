@@ -12,6 +12,7 @@ from identity_access_management_context.domain.exceptions import (
     AdminNotFoundException,
 )
 from shared_kernel.authentication.constants import ADMIN_ROLE
+from shared_kernel.time import TimeProvider
 
 
 class AdminLoginUseCase:
@@ -21,11 +22,13 @@ class AdminLoginUseCase:
         password_hashing_gateway: PasswordHashingGateway,
         token_gateway: TokenGateway,
         session_repository: SessionRepository,
+        time_provider: TimeProvider,
     ):
         self._user_password_repository = user_password_repository
         self._password_hashing_gateway = password_hashing_gateway
         self._token_gateway = token_gateway
         self._session_repository = session_repository
+        self._time_provider = time_provider
 
     async def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
         user_password = self._user_password_repository.get_by_email(command.email)
@@ -44,7 +47,11 @@ class AdminLoginUseCase:
             claims={"display_name": user_password.display_name},
         )
 
-        session = AuthenticationSession(user_id=user_password.id, jwt_token=token.value)
+        session = AuthenticationSession(
+            user_id=user_password.id,
+            jwt_token=token.value,
+            time_provider=self._time_provider,
+        )
         self._session_repository.save(session)
 
         return AdminLoginResponse(

@@ -1,5 +1,6 @@
 import pytest
 from uuid import UUID
+from datetime import datetime, UTC, timedelta
 
 from identity_access_management_context.application.use_cases import AdminLoginUseCase
 from identity_access_management_context.application.commands import AdminLoginCommand
@@ -16,12 +17,14 @@ def use_case(
     password_hashing_gateway,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     return AdminLoginUseCase(
         user_password_repository,
         password_hashing_gateway,
         token_gateway,
         session_repository,
+        time_provider,
     )
 
 
@@ -100,11 +103,16 @@ async def test_should_store_new_session_on_successful_login(
     user_password_repository,
     token_gateway,
     session_repository,
+    time_provider,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
     password_hash = "hashed(secure123!)"
     old_jwt_token = f"jwt_token_for_{user_id}_uniqueness"
+
+    # Create first session at initial time
+    initial_time = datetime.now(UTC)
+    time_provider.set_current_time(initial_time)
 
     user_password = UserPassword(
         id=user_id, email=email, password_hash=password_hash, display_name="Admin User"
@@ -115,12 +123,17 @@ async def test_should_store_new_session_on_successful_login(
         AuthenticationSession(
             user_id=user_id,
             jwt_token=old_jwt_token,
+            time_provider=time_provider,
         )
     )
 
-    token_gateway.set_unique_jwt_part("other_uniqueness")
-
     old_session = session_repository.get_user_last_session(user_id)
+
+    # Advance time before creating new session
+    new_time = initial_time + timedelta(hours=1)
+    time_provider.set_current_time(new_time)
+
+    token_gateway.set_unique_jwt_part("other_uniqueness")
 
     command = AdminLoginCommand(email=email, password="secure123!")
 

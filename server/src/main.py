@@ -5,6 +5,7 @@ import os
 
 from config import get_database_url
 
+from shared_kernel.time import UtcTimeProvider
 from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
 )
@@ -98,14 +99,15 @@ async def lifespan(app: FastAPI):
         app.state.rights_repository = rights_repository
         app.state.access_controller = access_controller
 
-        # User management dependencies
+        # IAM dependencies
+        app.state.time_provider = UtcTimeProvider()
+
         user_repository = InMemoryUserRepository()
         create_user_usecase = CreateUserUseCase(user_repository)
         can_create_admin_usecase = CanCreateAdminUseCase(user_repository)
 
         app.state.user_repository = user_repository
 
-        # Authentication dependencies
         user_password_repository = InMemoryUserPasswordRepository()
         password_hashing_gateway = BcryptHashingGateway()
         token_gateway = JwtTokenGateway()

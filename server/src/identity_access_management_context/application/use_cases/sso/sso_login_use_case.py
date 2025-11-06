@@ -18,6 +18,7 @@ from identity_access_management_context.domain.entities.sso_user import SsoUser
 from identity_access_management_context.domain.entities.authentication_session import (
     AuthenticationSession,
 )
+from shared_kernel.time import TimeProvider
 
 
 class SsoLoginUseCase:
@@ -38,12 +39,14 @@ class SsoLoginUseCase:
         user_management_gateway: UserManagementGateway,
         token_gateway: TokenGateway,
         session_repository: SessionRepository,
+        time_provider: TimeProvider,
     ):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
         self._user_management_gateway = user_management_gateway
         self._token_gateway = token_gateway
         self._session_repository = session_repository
+        self._time_provider = time_provider
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
         # Step 1: Validate SSO code and get user info from provider
@@ -97,7 +100,11 @@ class SsoLoginUseCase:
         )
 
         # Step 5: Create session
-        session = AuthenticationSession(user_id=user_id, jwt_token=token.value)
+        session = AuthenticationSession(
+            user_id=user_id,
+            jwt_token=token.value,
+            time_provider=self._time_provider,
+        )
         self._session_repository.save(session)
 
         return SsoLoginResponse(
