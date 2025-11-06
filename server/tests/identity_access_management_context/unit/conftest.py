@@ -1,5 +1,5 @@
 import pytest
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from identity_access_management_context.adapters.secondary import (
     InMemoryUserRepository,

@@ -65,7 +65,7 @@ async def get_current_user(
             email=response.email,
             display_name=response.display_name,
             session_id=response.session_id,
-            roles=[ADMIN_ROLE],  # For now, all authenticated users are admins
+            roles=response.roles,
         )
 
     except (

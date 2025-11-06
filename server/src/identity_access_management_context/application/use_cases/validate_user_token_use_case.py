@@ -1,5 +1,9 @@
-from identity_access_management_context.application.commands import ValidateUserTokenCommand
-from identity_access_management_context.application.responses import ValidateUserTokenResponse
+from identity_access_management_context.application.commands import (
+    ValidateUserTokenCommand,
+)
+from identity_access_management_context.application.responses import (
+    ValidateUserTokenResponse,
+)
 from identity_access_management_context.application.gateways import (
     UserPasswordRepository,
     TokenGateway,
@@ -64,4 +68,5 @@ class ValidateUserTokenUseCase:
             email=email,
             display_name=display_name,
             session_id=session.id,
+            roles=token_obj.roles if token_obj.roles else [],
         )

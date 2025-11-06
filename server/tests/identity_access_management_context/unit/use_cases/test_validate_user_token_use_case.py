@@ -1,8 +1,12 @@
 import pytest
 from uuid import UUID
 
-from identity_access_management_context.application.use_cases import ValidateUserTokenUseCase
-from identity_access_management_context.application.commands import ValidateUserTokenCommand
+from identity_access_management_context.application.use_cases import (
+    ValidateUserTokenUseCase,
+)
+from identity_access_management_context.application.commands import (
+    ValidateUserTokenCommand,
+)
 from identity_access_management_context.domain.entities import (
     UserPassword,
     AuthenticationSession,
@@ -252,3 +256,112 @@ async def test_should_raise_exception_when_sso_user_not_found(
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
     with pytest.raises(UserNotFoundException):
         await use_case.execute(command)
+
+
+@pytest.mark.asyncio
+async def test_should_return_admin_roles_for_admin_user_token(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository,
+    token_gateway,
+    session_repository,
+):
+    # Given an admin user with password authentication and JWT containing ["admin"] role
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    display_name = "Admin User"
+    jwt_token = "jwt_token_for_admin@lecoffre.com_abc123"
+
+    user_password = UserPassword(
+        id=user_id,
+        email=email,
+        password_hash="hashed_password",
+        display_name=display_name,
+    )
+    user_password_repository.save(user_password)
+
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session_repository.save(session)
+
+    token_gateway.set_valid_token(
+        jwt_token, user_id, email, ["admin"], {"display_name": display_name}
+    )
+
+    # When validating the token
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
+    response = await use_case.execute(command)
+
+    # Then response should include roles=["admin"]
+    assert response.roles == ["admin"]
+
+
+@pytest.mark.asyncio
+async def test_should_return_multiple_roles_when_token_has_multiple_roles(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository,
+    token_gateway,
+    session_repository,
+):
+    # Given a user with JWT containing ["user", "editor", "viewer"] roles
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "multi_role@lecoffre.com"
+    display_name = "Multi Role User"
+    jwt_token = "jwt_token_for_multi_role@lecoffre.com_xyz"
+    roles = ["user", "editor", "viewer"]
+
+    user_password = UserPassword(
+        id=user_id,
+        email=email,
+        password_hash="hashed_password",
+        display_name=display_name,
+    )
+    user_password_repository.save(user_password)
+
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session_repository.save(session)
+
+    token_gateway.set_valid_token(
+        jwt_token, user_id, email, roles, {"display_name": display_name}
+    )
+
+    # When validating the token
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
+    response = await use_case.execute(command)
+
+    # Then response should include roles=["user", "editor", "viewer"]
+    assert response.roles == roles
+
+
+@pytest.mark.asyncio
+async def test_should_return_empty_roles_when_token_has_no_roles(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository,
+    token_gateway,
+    session_repository,
+):
+    # Given a user with JWT containing empty roles list
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "no_role@lecoffre.com"
+    display_name = "No Role User"
+    jwt_token = "jwt_token_for_no_role@lecoffre.com_abc"
+
+    user_password = UserPassword(
+        id=user_id,
+        email=email,
+        password_hash="hashed_password",
+        display_name=display_name,
+    )
+    user_password_repository.save(user_password)
+
+    session = AuthenticationSession(user_id=user_id, jwt_token=jwt_token)
+    session_repository.save(session)
+
+    token_gateway.set_valid_token(
+        jwt_token, user_id, email, [], {"display_name": display_name}
+    )
+
+    # When validating the token
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
+    response = await use_case.execute(command)
+
+    # Then response should include roles=[]
+    assert response.roles == []
