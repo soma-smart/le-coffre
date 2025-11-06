@@ -2,13 +2,19 @@ import { defineStore } from 'pinia';
 import { getVaultStatusVaultStatusGet } from '@/client';
 import { type VaultStatus } from '@/client';
 
+type MaybeVaultStatus = VaultStatus | null;
+const NOT_SETUP = 'NOT_SETUP';
+
 interface SetupState {
-    vaultStatus: VaultStatus;
+    vaultStatus: MaybeVaultStatus;
+    _pending?: Promise<VaultStatus> | null;
 }
+
 
 export const useSetupStore = defineStore('setup', {
     state: (): SetupState => ({
-        vaultStatus: 'NOT_SETUP', // Initial state is NOT_SETUP
+        vaultStatus: null,
+        _pending: null,
     }),
     actions: {
         /**
@@ -21,15 +27,31 @@ export const useSetupStore = defineStore('setup', {
                 return this.vaultStatus;
             }
 
-            const status = await getVaultStatusVaultStatusGet();
+            if (this._pending) {
+                return this._pending;
+            }
 
-            this.vaultStatus = status.data?.status ?? 'NOT_SETUP';
-            return this.vaultStatus;
+            this._pending = (async () => {
+                try {
+                    const response = await getVaultStatusVaultStatusGet();
+                    const status = response.data?.status ?? NOT_SETUP;
+                    this.vaultStatus = status;
+                    return status;
+                } catch (error) {
+                    console.error('Error fetching vault status:', error);
+                    this.vaultStatus = NOT_SETUP;
+                    return this.vaultStatus;
+                } finally {
+                    this._pending = null;
+                }
+            })();
+
+            return this._pending;
         },
 
         async isSetup(): Promise<boolean> {
             const status = await this.checkSetupStatus();
-            return status !== 'NOT_SETUP';
+            return status !== NOT_SETUP;
         }
     },
 });
