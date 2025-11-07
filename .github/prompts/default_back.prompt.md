@@ -32,7 +32,7 @@ The app is divided into the following bounded contexts, each with its own respon
 4. **Identity & Access Management Context**:
    - User authentication (login, SSO, password recovery).
    - User management (profiles, permissions, groups, admin tools).
-   - Session management and token handling.
+   - Access Token, Refresh Token
    - Admin account management.
 
 ### Folder Structure:

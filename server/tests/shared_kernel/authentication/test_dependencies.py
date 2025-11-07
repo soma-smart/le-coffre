@@ -17,7 +17,6 @@ async def test_get_current_user_should_use_roles_from_token_response():
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "sso_user@lecoffre.com"
     display_name = "SSO User"
-    session_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
     jwt_token = "Bearer valid_jwt_token_for_sso_user"
 
     mock_usecase = Mock(spec=ValidateUserTokenUseCase)
@@ -27,7 +26,6 @@ async def test_get_current_user_should_use_roles_from_token_response():
             user_id=user_id,
             email=email,
             display_name=display_name,
-            session_id=session_id,
             roles=["user"],
         )
     )
@@ -42,7 +40,6 @@ async def test_get_current_user_should_use_roles_from_token_response():
     assert validated_user.user_id == user_id
     assert validated_user.email == email
     assert validated_user.display_name == display_name
-    assert validated_user.session_id == session_id
 
 
 @pytest.mark.asyncio
@@ -51,7 +48,6 @@ async def test_get_current_user_should_preserve_admin_role_for_admin_users():
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
     display_name = "Admin User"
-    session_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
     jwt_token = "Bearer valid_jwt_token_for_admin"
 
     mock_usecase = Mock(spec=ValidateUserTokenUseCase)
@@ -61,7 +57,6 @@ async def test_get_current_user_should_preserve_admin_role_for_admin_users():
             user_id=user_id,
             email=email,
             display_name=display_name,
-            session_id=session_id,
             roles=["admin"],
         )
     )
@@ -76,4 +71,3 @@ async def test_get_current_user_should_preserve_admin_role_for_admin_users():
     assert validated_user.user_id == user_id
     assert validated_user.email == email
     assert validated_user.display_name == display_name
-    assert validated_user.session_id == session_id

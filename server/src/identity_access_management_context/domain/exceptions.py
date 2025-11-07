@@ -26,10 +26,6 @@ class InvalidTokenException(InvalidSessionException):
     pass
 
 
-class SessionNotFoundException(InvalidSessionException):
-    pass
-
-
 class InsufficientRoleException(InvalidSessionException):
     pass
 

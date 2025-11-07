@@ -47,7 +47,6 @@ from identity_access_management_context.adapters.secondary import (
     InMemoryUserRepository,
     BcryptHashingGateway,
     InMemoryUserPasswordRepository,
-    InMemorySessionRepository,
     JwtTokenGateway,
     UserManagementGatewayAdapter,
     OAuth2SsoGateway,
@@ -122,7 +121,6 @@ async def lifespan(app: FastAPI):
             access_token_expiration_minutes=get_jwt_access_token_expiration_minutes(),
             refresh_token_expiration_days=get_jwt_refresh_token_expiration_days(),
         )
-        session_repository = InMemorySessionRepository()
         user_management_gateway = UserManagementGatewayAdapter(
             create_user_usecase, can_create_admin_usecase
         )
@@ -141,7 +139,6 @@ async def lifespan(app: FastAPI):
         app.state.user_password_repository = user_password_repository
         app.state.password_hashing_gateway = password_hashing_gateway
         app.state.token_gateway = token_gateway
-        app.state.session_repository = session_repository
         app.state.user_management_gateway = user_management_gateway
         app.state.sso_gateway = sso_gateway
         app.state.sso_user_repository = sso_user_repository

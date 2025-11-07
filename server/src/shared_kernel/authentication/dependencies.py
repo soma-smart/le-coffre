@@ -10,12 +10,10 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.gateways import (
     UserPasswordRepository,
     TokenGateway,
-    SessionRepository,
     SsoUserRepository,
 )
 from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
-    SessionNotFoundException,
     UserNotFoundException,
 )
 from .models import ValidatedUser
@@ -31,13 +29,11 @@ def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
         request.app.state.user_password_repository
     )
     token_gateway: TokenGateway = request.app.state.token_gateway
-    session_repository: SessionRepository = request.app.state.session_repository
     sso_user_repository: SsoUserRepository = request.app.state.sso_user_repository
 
     return ValidateUserTokenUseCase(
         user_password_repository,
         token_gateway,
-        session_repository,
         sso_user_repository,
     )
 
@@ -64,13 +60,11 @@ async def get_current_user(
             user_id=response.user_id,
             email=response.email,
             display_name=response.display_name,
-            session_id=response.session_id,
             roles=response.roles,
         )
 
     except (
         InvalidTokenException,
-        SessionNotFoundException,
         UserNotFoundException,
         MissingTokenError,
     ) as e:

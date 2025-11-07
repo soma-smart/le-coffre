@@ -1,7 +1,6 @@
 from .entities import (
     User,
     AdminAccount,
-    AuthenticationSession,
     SsoUser,
     UserPassword,
 )
@@ -22,7 +21,6 @@ __all__ = [
     # Entities
     "User",
     "AdminAccount",
-    "AuthenticationSession",
     "SsoUser",
     "UserPassword",
     # Value Objects

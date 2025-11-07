@@ -21,16 +21,12 @@ def use_case(
     sso_user_repository,
     user_management_gateway,
     token_gateway,
-    session_repository,
-    time_provider,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
         sso_user_repository=sso_user_repository,
         user_management_gateway=user_management_gateway,
         token_gateway=token_gateway,
-        session_repository=session_repository,
-        time_provider=time_provider,
     )
 
 
@@ -40,7 +36,6 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     sso_gateway,
     sso_user_repository,
     token_gateway,
-    session_repository,
 ):
     # Arrange
     sso_code = "valid_sso_code_123"
@@ -72,11 +67,6 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     assert response.email == email
     assert response.display_name == display_name
     assert response.is_new_user is False
-
-    # Check that session was created
-    session = session_repository.get_user_last_session(user_id)
-    assert session.user_id == user_id
-    assert session.jwt_token == response.jwt_token
 
 
 @pytest.mark.asyncio
