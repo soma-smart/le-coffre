@@ -12,6 +12,8 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
 )
 from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.authentication import ValidatedUser
+from shared_kernel.authentication.dependencies import get_current_user
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
@@ -31,17 +33,17 @@ class GetPasswordResponse(BaseModel):
 )
 def get_password(
     password_id: UUID,
-    user_id: UUID,
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: GetPasswordUseCase = Depends(get_get_password_usecase),
 ):
     """
     Retrieve a password by its ID with user authentication.
 
     - **password_id**: The ID of the password to retrieve
-    - **user_id**: ID of the user requesting access
+    - **Authorization**: Bearer token required
     """
     try:
-        password_response = usecase.execute(user_id, password_id)
+        password_response = usecase.execute(current_user.user_id, password_id)
 
         return GetPasswordResponse(
             id=password_response.id,

@@ -13,11 +13,16 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile.dev
+      args:
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+        USERNAME: devuser
     command: uv run fastapi dev src/main.py --host 0.0.0.0
     volumes:
       - ./:/app
     expose:
       - "8000"
+    user: "${USER_UID:-1000}:${USER_GID:-1000}"
     develop:
       watch:
         - action: sync

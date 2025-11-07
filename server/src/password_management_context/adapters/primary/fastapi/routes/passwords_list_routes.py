@@ -12,6 +12,8 @@ from password_management_context.domain.exceptions import (
     FolderNotFoundError,
 )
 from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.authentication import ValidatedUser
+from shared_kernel.authentication.dependencies import get_current_user
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
@@ -30,15 +32,18 @@ class GetPasswordListResponse(BaseModel):
     summary="List all passwords, optionally filtered by folder",
 )
 def list_passwords(
-    user_id: UUID,
     folder: str | None = None,
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),
 ):
     """
     List all passwords, optionally filtered by folder.
+
+    - **folder**: Optional folder name to filter passwords
+    - **Authorization**: Bearer token required
     """
     try:
-        passwords = usecase.execute(user_id, folder)
+        passwords = usecase.execute(current_user.user_id, folder)
         return [
             GetPasswordListResponse(
                 id=password.id,

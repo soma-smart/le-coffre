@@ -13,12 +13,13 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
 )
 from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.authentication import ValidatedUser
+from shared_kernel.authentication.dependencies import get_current_user
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
 class UpdatePasswordRequest(BaseModel):
-    user_id: UUID
     name: str
     password: str
     folder: str | None = None
@@ -32,20 +33,21 @@ class UpdatePasswordRequest(BaseModel):
 def update_password(
     password_id: UUID,
     request: UpdatePasswordRequest,
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: UpdatePasswordUseCase = Depends(get_update_password_usecase),
 ):
     """
     Update an existing password.
 
-    - **user_id**: ID of the user asking for the password
     - **password_id**: ID of the resource
     - **name**: Name/title for the password entry
     - **password**: The actual password to store (will be encrypted)
     - **folder**: Optional folder to organize the password
+    - **Authorization**: Bearer token required
     """
     try:
         command = UpdatePasswordCommand(
-            requester_id=request.user_id,
+            requester_id=current_user.user_id,
             id=password_id,
             name=request.name,
             password=request.password,

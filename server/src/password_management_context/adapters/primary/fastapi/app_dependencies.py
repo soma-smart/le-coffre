@@ -20,7 +20,7 @@ from rights_access_context.application.gateways import (
     UserManagementGateway,
 )
 from rights_access_context.adapters.secondary import UserRepositoryAdapter
-from user_management_context.application.interfaces import UserRepository
+from identity_access_management_context.application.gateways import UserRepository
 
 
 def get_password_repository(request: Request) -> PasswordRepository:
@@ -98,7 +98,9 @@ def get_user_management_gateway(
 
 def get_share_access_usecase(
     rights_repository: RightsRepository = Depends(get_rights_repository),
-    user_management_gateway: UserManagementGateway = Depends(get_user_management_gateway),
+    user_management_gateway: UserManagementGateway = Depends(
+        get_user_management_gateway
+    ),
 ):
     return ShareAccessUseCase(rights_repository, user_management_gateway)
 

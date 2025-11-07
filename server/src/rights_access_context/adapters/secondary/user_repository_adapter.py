@@ -1,6 +1,6 @@
 from uuid import UUID
 from rights_access_context.application.gateways import UserManagementGateway
-from user_management_context.application.interfaces import UserRepository
+from identity_access_management_context.application.gateways import UserRepository
 
 
 class UserRepositoryAdapter(UserManagementGateway):

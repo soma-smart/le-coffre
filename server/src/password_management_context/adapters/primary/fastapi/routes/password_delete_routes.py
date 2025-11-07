@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends
 from uuid import UUID
 import logging
 
@@ -11,6 +11,8 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
 )
 from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.authentication import ValidatedUser
+from shared_kernel.authentication.dependencies import get_current_user
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
@@ -22,17 +24,17 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 )
 def delete_password(
     password_id: UUID,
-    user_id: UUID = Query(..., description="ID of the user deleting the password"),
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: DeletePasswordUseCase = Depends(get_delete_password_usecase),
 ):
     """
     Delete a password entry.
 
-    - **user_id**: ID of the user deleting the password
     - **password_id**: ID of the password to delete
+    - **Authorization**: Bearer token required
     """
     try:
-        usecase.execute(user_id, password_id)
+        usecase.execute(current_user.user_id, password_id)
         return
     except PasswordNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

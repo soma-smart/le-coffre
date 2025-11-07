@@ -1,17 +1,12 @@
-from uuid import UUID
-
-
-def test_owner_has_full_access_to_password(e2e_client, setup):
-    user_id = str(UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6"))
-
+def test_owner_has_full_access_to_password(e2e_client, setup, admin_token):
     # Create a password as the owner
     create_response = e2e_client.post(
         "/api/passwords",
         json={
-            "user_id": user_id,
             "name": "Owner's Password",
             "password": "OwnerP@ssw0rd!",
         },
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     create_data = create_response.json()
     password_id = create_data["id"]
@@ -19,7 +14,7 @@ def test_owner_has_full_access_to_password(e2e_client, setup):
     # Ensure the owner can retrieve the password
     get_response = e2e_client.get(
         f"/api/passwords/{password_id}",
-        params={"user_id": user_id},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert get_response.status_code == 200
     get_data = get_response.json()
@@ -29,16 +24,16 @@ def test_owner_has_full_access_to_password(e2e_client, setup):
     update_response = e2e_client.put(
         f"/api/passwords/{password_id}",
         json={
-            "user_id": user_id,
             "name": "Updated Owner's Password",
             "password": "NewOwnerP@ssw0rd!",
         },
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert update_response.status_code == 201
 
     # ensure the owner can delete the password
     delete_response = e2e_client.delete(
         f"/api/passwords/{password_id}",
-        params={"user_id": user_id},
+        headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert delete_response.status_code == 204

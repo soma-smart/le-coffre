@@ -1,9 +1,17 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
+import os
 
-from config import get_database_url
+from config import (
+    get_database_url,
+    get_jwt_secret_key,
+    get_jwt_algorithm,
+    get_jwt_access_token_expiration_minutes,
+    get_jwt_refresh_token_expiration_days,
+)
 
+from shared_kernel.time import UtcTimeProvider
 from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
 )
@@ -35,20 +43,23 @@ from rights_access_context.application.use_cases import (
 )
 from rights_access_context.adapters.secondary import InMemoryRightsRepository
 
-from user_management_context.adapters.output.interfaces import InMemoryUserRepository
-from user_management_context.adapters.input.fastapi.routes import (
-    get_user_management_router,
-)
-
-from authentication_context.adapters.primary.fastapi.routes import (
-    get_authentication_router,
-)
-from authentication_context.adapters.secondary import (
+from identity_access_management_context.adapters.secondary import (
+    InMemoryUserRepository,
     BcryptHashingGateway,
     InMemoryUserPasswordRepository,
     InMemorySessionRepository,
     JwtTokenGateway,
-    InMemoryUserManagementGateway,
+    UserManagementGatewayAdapter,
+    OAuth2SsoGateway,
+    InMemorySsoUserRepository,
+)
+from identity_access_management_context.adapters.primary.fastapi.routes import (
+    get_user_management_router,
+    get_authentication_router,
+)
+from identity_access_management_context.application.use_cases import (
+    CreateUserUseCase,
+    CanCreateAdminUseCase,
 )
 
 from shared_kernel.pubsub import InMemoryDomainEventPublisher
@@ -94,23 +105,46 @@ async def lifespan(app: FastAPI):
         app.state.rights_repository = rights_repository
         app.state.access_controller = access_controller
 
-        # User management dependencies
+        # IAM dependencies
+        app.state.time_provider = UtcTimeProvider()
+
         user_repository = InMemoryUserRepository()
+        create_user_usecase = CreateUserUseCase(user_repository)
+        can_create_admin_usecase = CanCreateAdminUseCase(user_repository)
 
         app.state.user_repository = user_repository
 
-        # Authentication dependencies
         user_password_repository = InMemoryUserPasswordRepository()
         password_hashing_gateway = BcryptHashingGateway()
-        token_gateway = JwtTokenGateway()
+        token_gateway = JwtTokenGateway(
+            secret_key=get_jwt_secret_key(),
+            algorithm=get_jwt_algorithm(),
+            access_token_expiration_minutes=get_jwt_access_token_expiration_minutes(),
+            refresh_token_expiration_days=get_jwt_refresh_token_expiration_days(),
+        )
         session_repository = InMemorySessionRepository()
-        user_management_gateway = InMemoryUserManagementGateway()
+        user_management_gateway = UserManagementGatewayAdapter(
+            create_user_usecase, can_create_admin_usecase
+        )
+
+        # SSO Gateway with OAuth2/OIDC support
+        # Base URL should be the public URL of your application
+        base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+        sso_gateway = OAuth2SsoGateway(
+            base_url=base_url,
+            redirect_uri=f"{base_url}/api/auth/sso/callback",
+            scope="openid email profile",
+            provider="oauth2",
+        )
+        sso_user_repository = InMemorySsoUserRepository()
 
         app.state.user_password_repository = user_password_repository
         app.state.password_hashing_gateway = password_hashing_gateway
         app.state.token_gateway = token_gateway
         app.state.session_repository = session_repository
         app.state.user_management_gateway = user_management_gateway
+        app.state.sso_gateway = sso_gateway
+        app.state.sso_user_repository = sso_user_repository
 
         # Domain event publisher
         domain_event_publisher = InMemoryDomainEventPublisher()

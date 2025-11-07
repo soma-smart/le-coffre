@@ -29,14 +29,11 @@ The app is divided into the following bounded contexts, each with its own respon
    - Manage access to passwords and folders.
    - Handle sharing, invitations, revocations, and group access.
 
-4. **Authentication Context**:
-   - User login and registration.
-   - Support for SSO (Single Sign-On).
-   - Password recovery mechanisms.
-
-5. **User Management Context**:
-   - Manage user profiles, permissions, and groups.
-   - Provide admin tools for managing team members.
+4. **Identity & Access Management Context**:
+   - User authentication (login, SSO, password recovery).
+   - User management (profiles, permissions, groups, admin tools).
+   - Session management and token handling.
+   - Admin account management.
 
 ### Folder Structure:
 The app follows a strict folder structure for clean architecture:
@@ -65,5 +62,7 @@ The app follows a strict folder structure for clean architecture:
 - Write clean, maintainable code with no redundant comments.
 - Refactor to use Commands, Responses, Services, and Domain logic after all tests pass.
 - Write tests with pytest, with function-based tests.
+- Always put imports at the Top of the file.
+- Never write a summary into a file, only in the conversation
 
 Wait for instructions to begin.

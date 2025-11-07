@@ -1,10 +1,7 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 
 @dataclass
 class Share:
     index: int
     secret: str
-
-    def to_dict(self) -> dict:
-        return asdict(self)

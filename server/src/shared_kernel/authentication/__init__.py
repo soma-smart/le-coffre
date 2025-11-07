@@ -9,6 +9,7 @@ from .exceptions import (
 )
 from .admin_permission_checker import AdminPermissionChecker
 from .constants import ADMIN_ROLE
+from .dependencies import get_current_user
 
 __all__ = [
     "ValidatedUser",
@@ -21,4 +22,5 @@ __all__ = [
     "MissingRoleError",
     "AdminPermissionChecker",
     "ADMIN_ROLE",
+    "get_current_user",
 ]
