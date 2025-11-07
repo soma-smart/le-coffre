@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
 import os
 
-from config import get_database_url
+from config import get_database_url, get_jwt_secret_key, get_jwt_algorithm
 
 from shared_kernel.time import UtcTimeProvider
 from vault_management_context.adapters.primary.fastapi.routes import (
@@ -110,7 +110,10 @@ async def lifespan(app: FastAPI):
 
         user_password_repository = InMemoryUserPasswordRepository()
         password_hashing_gateway = BcryptHashingGateway()
-        token_gateway = JwtTokenGateway()
+        token_gateway = JwtTokenGateway(
+            secret_key=get_jwt_secret_key(),
+            algorithm=get_jwt_algorithm()
+        )
         session_repository = InMemorySessionRepository()
         user_management_gateway = UserManagementGatewayAdapter(
             create_user_usecase, can_create_admin_usecase
