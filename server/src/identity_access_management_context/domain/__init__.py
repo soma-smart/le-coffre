@@ -5,6 +5,10 @@ from .entities import (
     SsoUser,
     UserPassword,
 )
+from .value_objects import (
+    AccessToken,
+    RefreshToken,
+)
 from .exceptions import (
     IdentityAccessManagementDomainError,
     AuthenticationDomainError,
@@ -21,6 +25,9 @@ __all__ = [
     "AuthenticationSession",
     "SsoUser",
     "UserPassword",
+    # Value Objects
+    "AccessToken",
+    "RefreshToken",
     # Exceptions
     "IdentityAccessManagementDomainError",
     "AuthenticationDomainError",

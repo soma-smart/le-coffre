@@ -177,3 +177,36 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     # Check that last_login was updated
     updated_sso_user = sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider)
     assert updated_sso_user.last_login > old_login_time
+
+
+@pytest.mark.asyncio
+async def test_should_return_refresh_token_on_successful_sso_login(
+    use_case: SsoLoginUseCase,
+    sso_gateway,
+    sso_user_repository,
+    token_gateway,
+):
+    sso_code = "valid_sso_code_123"
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    display_name = "John Doe"
+    sso_provider = "google"
+    sso_user_id = "google_123456"
+
+    sso_user_from_provider = create_sso_user_from_provider(
+        email, display_name, sso_user_id, sso_provider
+    )
+    existing_sso_user = create_existing_sso_user(
+        user_id, email, display_name, sso_user_id, sso_provider
+    )
+
+    sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
+    sso_user_repository.save(existing_sso_user)
+    token_gateway.set_unique_jwt_part("unique_token_part")
+
+    command = SsoLoginCommand(code=sso_code)
+
+    response = await use_case.execute(command)
+
+    assert response.refresh_token == f"refresh_token_for_{user_id}_unique_token_part"
+    assert response.refresh_token != response.jwt_token

@@ -7,9 +7,17 @@ from identity_access_management_context.application.gateways import TokenGateway
 
 
 class JwtTokenGateway(TokenGateway):
-    def __init__(self, secret_key: str = "your-secret-key", algorithm: str = "HS256"):
+    def __init__(
+        self,
+        secret_key: str,
+        algorithm: str,
+        access_token_expiration_minutes: int,
+        refresh_token_expiration_days: int,
+    ):
         self._secret_key = secret_key
         self._algorithm = algorithm
+        self._access_token_expiration_minutes = access_token_expiration_minutes
+        self._refresh_token_expiration_days = refresh_token_expiration_days
 
     async def generate_token(
         self,
@@ -28,7 +36,8 @@ class JwtTokenGateway(TokenGateway):
             "user_id": user_id_str,
             "email": email,
             "roles": roles,
-            "exp": datetime.now(UTC) + timedelta(hours=24),
+            "exp": datetime.now(UTC)
+            + timedelta(minutes=self._access_token_expiration_minutes),
             "iat": datetime.now(UTC),
             **claims,
         }
@@ -42,6 +51,29 @@ class JwtTokenGateway(TokenGateway):
             roles=roles,
             claims=claims,
         )
+
+    async def generate_refresh_token(
+        self,
+        user_id: UUID,
+        email: str,
+        roles: List[str],
+    ) -> str:
+        user_id_str = str(user_id)
+
+        payload = {
+            "user_id": user_id_str,
+            "email": email,
+            "roles": roles,
+            "type": "refresh",
+            "exp": datetime.now(UTC)
+            + timedelta(days=self._refresh_token_expiration_days),
+            "iat": datetime.now(UTC),
+        }
+
+        refresh_token_value = jwt.encode(
+            payload, self._secret_key, algorithm=self._algorithm
+        )
+        return refresh_token_value
 
     async def validate_token(self, token: str) -> Optional[Token]:
         try:

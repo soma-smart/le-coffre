@@ -99,6 +99,12 @@ class SsoLoginUseCase:
             claims={"display_name": display_name},
         )
 
+        refresh_token = await self._token_gateway.generate_refresh_token(
+            user_id=user_id,
+            email=email,
+            roles=["user"],
+        )
+
         # Step 5: Create session
         session = AuthenticationSession(
             user_id=user_id,
@@ -109,6 +115,7 @@ class SsoLoginUseCase:
 
         return SsoLoginResponse(
             jwt_token=token.value,
+            refresh_token=refresh_token,
             user_id=user_id,
             email=email,
             display_name=display_name,

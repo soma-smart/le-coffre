@@ -15,7 +15,7 @@ class FakeTokenGateway(TokenGateway):
     def set_valid_token(
         self,
         token: str,
-        user_id: Union[UUID, str],
+        user_id: UUID,
         email: str,
         roles: List[str],
         claims: Dict[str, Any] | None = None,
@@ -29,7 +29,7 @@ class FakeTokenGateway(TokenGateway):
 
     async def generate_token(
         self,
-        user_id: Union[UUID, str],
+        user_id: UUID,
         email: str,
         roles: List[str],
         claims: Dict[str, Any] | None = None,
@@ -48,6 +48,15 @@ class FakeTokenGateway(TokenGateway):
         )
         self.generated_tokens[token_str] = token_obj
         return token_obj
+
+    async def generate_refresh_token(
+        self,
+        user_id: UUID,
+        email: str,
+        roles: List[str],
+    ) -> str:
+        refresh_token_str = f"refresh_token_for_{user_id}_{self.unique_part}"
+        return refresh_token_str
 
     async def validate_token(self, token: str) -> Token | None:
         return self.generated_tokens.get(token)

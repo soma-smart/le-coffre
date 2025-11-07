@@ -24,4 +24,11 @@ class TokenGateway(Protocol):
         claims: Dict[str, Any] | None = None,
     ) -> Token: ...
 
+    async def generate_refresh_token(
+        self,
+        user_id: UUID,
+        email: str,
+        roles: List[str],
+    ) -> str: ...
+
     async def validate_token(self, token: str) -> Optional[Token]: ...

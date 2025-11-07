@@ -47,6 +47,12 @@ class AdminLoginUseCase:
             claims={"display_name": user_password.display_name},
         )
 
+        refresh_token = await self._token_gateway.generate_refresh_token(
+            user_id=user_password.id,
+            email=user_password.email,
+            roles=[ADMIN_ROLE],
+        )
+
         session = AuthenticationSession(
             user_id=user_password.id,
             jwt_token=token.value,
@@ -56,6 +62,7 @@ class AdminLoginUseCase:
 
         return AdminLoginResponse(
             jwt_token=token.value,
+            refresh_token=refresh_token,
             admin_id=user_password.id,
             email=user_password.email,
         )

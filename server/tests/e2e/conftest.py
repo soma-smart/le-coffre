@@ -2,11 +2,21 @@ import pytest
 import tempfile
 import os
 import httpx
+import secrets
 from urllib.parse import quote
 from fastapi.testclient import TestClient
 import oidc_provider_mock
 
 from main import app, lifespan
+
+
+@pytest.fixture(scope="function")
+def env_vars():
+    os.environ["JWT_SECRET_KEY"] = secrets.token_urlsafe(32)
+    os.environ["JWT_ALGORITHM"] = "HS256"
+    yield
+    del os.environ["JWT_SECRET_KEY"]
+    del os.environ["JWT_ALGORITHM"]
 
 
 @pytest.fixture(scope="function")
@@ -25,7 +35,7 @@ def database():
 
 
 @pytest.fixture
-def e2e_client(database):
+def e2e_client(database, env_vars):
     with TestClient(app) as client:
         yield client
 
