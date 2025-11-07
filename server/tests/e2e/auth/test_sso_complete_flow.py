@@ -39,17 +39,17 @@ async def test_complete_sso_authentication_flow(
             "discovery_url": oidc_server["discovery_url"],
         },
     )
-    assert (
-        configure_response.status_code == 200
-    ), f"SSO configuration failed: {configure_response.text}"
+    assert configure_response.status_code == 200, (
+        f"SSO configuration failed: {configure_response.text}"
+    )
     print("✅ SSO configured successfully")
 
     # Step 2: Get SSO authorization URL
     print("\n🔗 Step 2: Getting SSO authorization URL...")
     url_response = e2e_client.get("/api/auth/sso/url")
-    assert (
-        url_response.status_code == 200
-    ), f"Failed to get SSO URL: {url_response.text}"
+    assert url_response.status_code == 200, (
+        f"Failed to get SSO URL: {url_response.text}"
+    )
 
     sso_url_data = url_response.json()
     if isinstance(sso_url_data, str):
@@ -68,9 +68,9 @@ async def test_complete_sso_authentication_flow(
     invalid_callback_response = e2e_client.get(
         "/api/auth/sso/callback?code=invalid-code-12345"
     )
-    assert (
-        invalid_callback_response.status_code == 400
-    ), f"Expected 400 but got {invalid_callback_response.status_code}"
+    assert invalid_callback_response.status_code == 400, (
+        f"Expected 400 but got {invalid_callback_response.status_code}"
+    )
     error_data = invalid_callback_response.json()
     assert (
         "SSO authentication failed" in error_data["detail"]
@@ -105,21 +105,24 @@ async def test_complete_sso_authentication_flow(
     valid_callback_response = e2e_client.get(
         f"/api/auth/sso/callback?code={valid_code}"
     )
-    assert (
-        valid_callback_response.status_code == 200
-    ), f"Valid callback failed: {valid_callback_response.text}"
+    assert valid_callback_response.status_code == 200, (
+        f"Valid callback failed: {valid_callback_response.text}"
+    )
 
     callback_data = valid_callback_response.json()
-    assert "access_token" in callback_data, "Response should contain access_token"
+    assert "message" in callback_data, "Response should contain message"
     assert "user" in callback_data, "Response should contain user info"
 
-    sso_token = callback_data["access_token"]
+    # Extract SSO token from cookie
+    sso_token = valid_callback_response.cookies.get("access_token")
+    assert sso_token is not None, "access_token cookie should be set"
+
     user_info = callback_data["user"]
 
     assert user_info["email"] == e2e_test_user["email"], "Email should match test user"
-    assert (
-        user_info["display_name"] == e2e_test_user["name"]
-    ), "Display name should match test user"
+    assert user_info["display_name"] == e2e_test_user["name"], (
+        "Display name should match test user"
+    )
     print(f"✅ SSO login successful for {user_info['email']}")
 
     # Step 6: Validate token by creating a password (this proves the JWT token works)
@@ -133,9 +136,9 @@ async def test_complete_sso_authentication_flow(
         },
         headers={"Authorization": f"Bearer {sso_token}"},
     )
-    assert (
-        create_password_response.status_code == 201
-    ), f"Failed to create password with SSO token: {create_password_response.text}"
+    assert create_password_response.status_code == 201, (
+        f"Failed to create password with SSO token: {create_password_response.text}"
+    )
 
     password_data = create_password_response.json()
     assert password_data["name"] == "My SSO Test Password", "Password name should match"

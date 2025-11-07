@@ -1,5 +1,6 @@
-from uuid import UUID
-from utils import get_user_id_from_token, STRONG_PASSWORD
+from utils import STRONG_PASSWORD
+from fastapi.testclient import TestClient
+from main import app
 
 
 def test_can_read_a_created_password(e2e_client, setup, admin_token):
@@ -45,7 +46,10 @@ def test_cannot_read_a_password_of_another_user(e2e_client, setup, admin_token):
     assert retrieved_password.status_code == 200
 
     # Try to access the password with an invalid token (should fail)
-    retrieved_password = e2e_client.get(
+    # Use a fresh client without cookies to test invalid token
+    fresh_client = TestClient(app)
+
+    retrieved_password = fresh_client.get(
         f"/api/passwords/{password_id}",
         headers={"Authorization": "Bearer invalid_token_xyz"},
     )

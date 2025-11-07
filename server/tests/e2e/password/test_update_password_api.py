@@ -1,4 +1,6 @@
 from uuid import UUID
+from fastapi.testclient import TestClient
+from main import app
 
 
 def test_can_update_password(e2e_client, setup, admin_token):
@@ -63,7 +65,10 @@ def test_update_password_requires_authentication(e2e_client, setup, admin_token)
     password_id = create_response.json()["id"]
 
     # Attempt to update the password without authentication
-    update_response = e2e_client.put(
+    # Use a fresh client without cookies to test missing authentication
+    fresh_client = TestClient(app)
+    
+    update_response = fresh_client.put(
         f"/api/passwords/{password_id}",
         json={
             "name": "Updated Password Name",
@@ -71,4 +76,4 @@ def test_update_password_requires_authentication(e2e_client, setup, admin_token)
             "folder": folder,
         },
     )
-    assert update_response.status_code == 422  # Missing authorization header
+    assert update_response.status_code == 401  # Unauthorized (changed from 422)

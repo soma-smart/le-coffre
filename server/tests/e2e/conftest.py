@@ -7,7 +7,7 @@ from urllib.parse import quote
 from fastapi.testclient import TestClient
 import oidc_provider_mock
 
-from main import app, lifespan
+from main import app
 
 
 @pytest.fixture(scope="function")
@@ -76,9 +76,9 @@ def e2e_test_user(oidc_server):
         f"{oidc_server['issuer_url']}/users/{quote(user_data['sub'])}",
         json=user_data,
     )
-    assert (
-        response.status_code == 204
-    ), f"Failed to create e2e test user: {response.text}"
+    assert response.status_code == 204, (
+        f"Failed to create e2e test user: {response.text}"
+    )
 
     return {
         "sub": user_data["sub"],
@@ -108,15 +108,15 @@ def sso_user_token(e2e_client, oidc_server, e2e_test_user):
             "discovery_url": oidc_server["discovery_url"],
         },
     )
-    assert (
-        configure_response.status_code == 200
-    ), f"SSO configuration failed: {configure_response.text}"
+    assert configure_response.status_code == 200, (
+        f"SSO configuration failed: {configure_response.text}"
+    )
 
     # Step 2: Get SSO authorization URL
     url_response = e2e_client.get("/api/auth/sso/url")
-    assert (
-        url_response.status_code == 200
-    ), f"Failed to get SSO URL: {url_response.text}"
+    assert url_response.status_code == 200, (
+        f"Failed to get SSO URL: {url_response.text}"
+    )
 
     sso_url_data = url_response.json()
     if isinstance(sso_url_data, str):
@@ -149,16 +149,20 @@ def sso_user_token(e2e_client, oidc_server, e2e_test_user):
     valid_callback_response = e2e_client.get(
         f"/api/auth/sso/callback?code={valid_code}"
     )
-    assert (
-        valid_callback_response.status_code == 200
-    ), f"Valid callback failed: {valid_callback_response.text}"
+    assert valid_callback_response.status_code == 200, (
+        f"Valid callback failed: {valid_callback_response.text}"
+    )
 
     callback_data = valid_callback_response.json()
-    assert "access_token" in callback_data, "Response should contain access_token"
+    assert "message" in callback_data, "Response should contain message"
     assert "user" in callback_data, "Response should contain user info"
 
+    # Extract token from cookie
+    token = valid_callback_response.cookies.get("access_token")
+    assert token is not None, "access_token cookie should be set"
+
     return {
-        "token": callback_data["access_token"],
+        "token": token,
         "user_id": callback_data["user"]["user_id"],
         "email": callback_data["user"]["email"],
         "display_name": callback_data["user"]["display_name"],
@@ -183,9 +187,9 @@ def second_sso_user(oidc_server):
         f"{oidc_server['issuer_url']}/users/{quote(user_data['sub'])}",
         json=user_data,
     )
-    assert (
-        response.status_code == 204
-    ), f"Failed to create second test user: {response.text}"
+    assert response.status_code == 204, (
+        f"Failed to create second test user: {response.text}"
+    )
 
     return {
         "sub": user_data["sub"],
@@ -213,14 +217,14 @@ def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
                 "discovery_url": oidc_server["discovery_url"],
             },
         )
-        assert (
-            configure_response.status_code == 200
-        ), f"SSO configuration failed: {configure_response.text}"
+        assert configure_response.status_code == 200, (
+            f"SSO configuration failed: {configure_response.text}"
+        )
         url_response = e2e_client.get("/api/auth/sso/url")
 
-    assert (
-        url_response.status_code == 200
-    ), f"Failed to get SSO URL: {url_response.text}"
+    assert url_response.status_code == 200, (
+        f"Failed to get SSO URL: {url_response.text}"
+    )
 
     sso_url_data = url_response.json()
     if isinstance(sso_url_data, str):
@@ -253,16 +257,20 @@ def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
     valid_callback_response = e2e_client.get(
         f"/api/auth/sso/callback?code={valid_code}"
     )
-    assert (
-        valid_callback_response.status_code == 200
-    ), f"Valid callback failed: {valid_callback_response.text}"
+    assert valid_callback_response.status_code == 200, (
+        f"Valid callback failed: {valid_callback_response.text}"
+    )
 
     callback_data = valid_callback_response.json()
-    assert "access_token" in callback_data, "Response should contain access_token"
+    assert "message" in callback_data, "Response should contain message"
     assert "user" in callback_data, "Response should contain user info"
 
+    # Extract token from cookie
+    token = valid_callback_response.cookies.get("access_token")
+    assert token is not None, "access_token cookie should be set"
+
     return {
-        "token": callback_data["access_token"],
+        "token": token,
         "user_id": callback_data["user"]["user_id"],
         "email": callback_data["user"]["email"],
         "display_name": callback_data["user"]["display_name"],
@@ -299,7 +307,7 @@ def admin_token(e2e_client):
 
     e2e_client.post("/api/auth/register-admin", json=admin_data)
 
-    # Then login to get the token
+    # Then login to get the token from cookies
     login_response = e2e_client.post(
         "/api/auth/login",
         json={
@@ -307,4 +315,68 @@ def admin_token(e2e_client):
             "password": "admin",
         },
     )
-    return login_response.json()["jwt_token"]
+
+    # Extract token from cookie
+    cookies = login_response.cookies
+    return cookies.get("access_token")
+
+
+@pytest.fixture
+def authenticated_admin_client(e2e_client):
+    """
+    Returns a TestClient with an authenticated admin session via cookies.
+    This fixture creates an admin, logs in, and the cookies are automatically
+    handled by the TestClient for subsequent requests.
+    """
+    # First register an admin user
+    admin_data = {
+        "email": "admin@example.com",
+        "password": "admin",
+        "display_name": "System Administrator",
+    }
+
+    e2e_client.post("/api/auth/register-admin", json=admin_data)
+
+    # Then login - this will set the cookies on the client
+    login_response = e2e_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@example.com",
+            "password": "admin",
+        },
+    )
+
+    # Verify login was successful
+    assert login_response.status_code == 200
+
+    # The TestClient automatically stores cookies, so subsequent requests
+    # will include the access_token cookie
+    return e2e_client
+
+
+@pytest.fixture
+def admin_cookies(e2e_client):
+    """
+    Returns a dict of cookies after admin login.
+    Useful for manual cookie management in tests.
+    """
+    # First register an admin user
+    admin_data = {
+        "email": "admin@example.com",
+        "password": "admin",
+        "display_name": "System Administrator",
+    }
+
+    e2e_client.post("/api/auth/register-admin", json=admin_data)
+
+    # Then login to get the cookies
+    login_response = e2e_client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@example.com",
+            "password": "admin",
+        },
+    )
+
+    # Extract cookies from response
+    return login_response.cookies

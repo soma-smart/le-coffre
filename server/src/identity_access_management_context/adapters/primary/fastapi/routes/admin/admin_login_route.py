@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 import logging
 from pydantic import BaseModel
 from uuid import UUID
@@ -12,6 +12,7 @@ from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     AdminNotFoundException,
 )
+from config import get_cookie_secure_setting
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -22,7 +23,6 @@ class AdminLoginRequest(BaseModel):
 
 
 class AdminLoginResponse(BaseModel):
-    jwt_token: str
     admin_id: UUID
     email: str
     message: str
@@ -36,6 +36,7 @@ class AdminLoginResponse(BaseModel):
 )
 async def admin_login(
     request: AdminLoginRequest,
+    response: Response,
     usecase: AdminLoginUseCase = Depends(get_admin_login_usecase),
 ):
     """
@@ -44,7 +45,7 @@ async def admin_login(
     - **email**: Email address of the admin user
     - **password**: Password of the admin user
 
-    Returns a JWT token and admin information.
+    Returns admin information and sets an HTTP-only secure cookie with the JWT token.
     """
     try:
         command = AdminLoginCommand(
@@ -52,12 +53,32 @@ async def admin_login(
             password=request.password,
         )
 
-        response = await usecase.execute(command)
+        result = await usecase.execute(command)
+
+        # Set JWT token in HTTP-only secure cookie
+        is_secure = get_cookie_secure_setting()
+        response.set_cookie(
+            key="access_token",
+            value=result.jwt_token,
+            httponly=True,
+            secure=is_secure,  # HTTPS only in production
+            samesite="lax",  # CSRF protection
+            max_age=3600,  # 1 hour
+        )
+
+        # Also set refresh token in cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=result.refresh_token,
+            httponly=True,
+            secure=is_secure,  # HTTPS only in production
+            samesite="lax",
+            max_age=3600 * 24 * 7,  # 7 days
+        )
 
         return AdminLoginResponse(
-            jwt_token=response.jwt_token,
-            admin_id=response.admin_id,
-            email=response.email,
+            admin_id=result.admin_id,
+            email=result.email,
             message="Login successful",
         )
 

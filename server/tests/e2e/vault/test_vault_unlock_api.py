@@ -1,4 +1,5 @@
-import pytest
+from fastapi.testclient import TestClient
+from main import app
 
 
 def test_can_unlock_vault_with_valid_shares(e2e_client, admin_token):
@@ -17,14 +18,14 @@ def test_can_unlock_vault_with_valid_shares(e2e_client, admin_token):
     shares = setup_data["shares"]
     shares_to_use = shares[:threshold]
     setup_id = setup_data["setup_id"]
-    
+
     # Validate the setup to complete it
     validate_response = e2e_client.post(
         "/api/vault/validate-setup",
         json={"setup_id": setup_id},
     )
     assert validate_response.status_code == 200
-    
+
     # Lock the vault first
     lock_response = e2e_client.post("/api/vault/lock", headers=headers)
     assert lock_response.status_code == 200
@@ -60,7 +61,7 @@ def test_vault_unlock_fails_with_insufficient_real_shares(e2e_client, admin_toke
     setup_data = setup_response.json()
     real_shares = setup_data["shares"]
     setup_id = setup_data["setup_id"]
-    
+
     # Validate the setup to complete it
     validate_response = e2e_client.post(
         "/api/vault/validate-setup",
@@ -100,7 +101,7 @@ def test_vault_unlock_fails_when_shares_given_are_wrong(e2e_client, admin_token)
     setup_data = setup_response.json()
     real_shares = setup_data["shares"]
     setup_id = setup_data["setup_id"]
-    
+
     # Validate the setup to complete it
     validate_response = e2e_client.post(
         "/api/vault/validate-setup",
@@ -136,7 +137,7 @@ def test_vault_unlock_fails_without_authentication(e2e_client):
     shares = setup_data["shares"]
     shares_to_use = shares[:3]
     setup_id = setup_data["setup_id"]
-    
+
     # Validate the setup to complete it
     validate_response = e2e_client.post(
         "/api/vault/validate-setup",
@@ -144,7 +145,10 @@ def test_vault_unlock_fails_without_authentication(e2e_client):
     )
     assert validate_response.status_code == 200
 
-    unlock_response = e2e_client.post(
+    # Use a fresh client without cookies to test missing authentication
+    fresh_client = TestClient(app)
+
+    unlock_response = fresh_client.post(
         "/api/vault/unlock",
         json={
             "shares": [
@@ -154,7 +158,7 @@ def test_vault_unlock_fails_without_authentication(e2e_client):
         },
     )
 
-    assert unlock_response.status_code == 422  # Missing authorization header
+    assert unlock_response.status_code == 401  # Unauthorized (changed from 422)
 
 
 def test_vault_unlock_fails_with_invalid_token(e2e_client):
@@ -170,7 +174,7 @@ def test_vault_unlock_fails_with_invalid_token(e2e_client):
     shares = setup_data["shares"]
     shares_to_use = shares[:3]
     setup_id = setup_data["setup_id"]
-    
+
     # Validate the setup to complete it
     validate_response = e2e_client.post(
         "/api/vault/validate-setup",

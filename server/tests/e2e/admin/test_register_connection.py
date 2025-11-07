@@ -1,4 +1,5 @@
-import pytest
+from fastapi.testclient import TestClient
+from main import app
 
 
 def test_complete_admin_authentication_flow(e2e_client):
@@ -42,15 +43,16 @@ def test_complete_admin_authentication_flow(e2e_client):
     login_result = login_response.json()
 
     assert login_result["email"] == admin_data["email"]
-    assert "jwt_token" in login_result
     assert login_result["message"] == "Login successful"
 
-    jwt_token = login_result["jwt_token"]
+    # Extract JWT token from cookie
+    jwt_token = login_response.cookies.get("access_token")
+    assert jwt_token is not None
 
     # Step 4: Create a random user to delete later
     user_data = {
         "username": "testuser_1234",
-        "email": f"test_1234@example.com",
+        "email": "test_1234@example.com",
         "name": "Test User",
     }
 
@@ -62,13 +64,16 @@ def test_complete_admin_authentication_flow(e2e_client):
     # Step 5: Check that the user exists
     assert e2e_client.get(f"/api/users/{user_id}").status_code == 200
 
-    # Step 6: Try to delete user without authorization header (should fail)
-    delete_response_no_auth = e2e_client.delete(f"/api/users/{user_id}")
-    assert delete_response_no_auth.status_code == 422
+    # Step 6: Try to delete user without authorization (no header, no cookie) - should fail
+    # Create a fresh client without cookies to test unauthorized access
+    fresh_client = TestClient(app)
+    delete_response_no_auth = fresh_client.delete(f"/api/users/{user_id}")
+    assert delete_response_no_auth.status_code == 401  # Changed from 422 to 401
 
     # Step 7: Try to delete user with invalid token (should fail)
+    # Use fresh client to test that invalid header token fails
     invalid_headers = {"Authorization": "Bearer invalid_token"}
-    delete_response_invalid = e2e_client.delete(
+    delete_response_invalid = fresh_client.delete(
         f"/api/users/{user_id}", headers=invalid_headers
     )
     assert delete_response_invalid.status_code == 401

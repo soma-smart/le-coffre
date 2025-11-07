@@ -1,4 +1,6 @@
 from uuid import UUID
+from fastapi.testclient import TestClient
+from main import app
 
 
 def test_can_delete_password(e2e_client, setup, admin_token):
@@ -53,7 +55,10 @@ def test_delete_password_requires_authentication(e2e_client, setup, admin_token)
     password_id = create_response.json()["id"]
 
     # Attempt to delete the password without authentication
-    delete_response = e2e_client.delete(
+    # Use a fresh client without cookies to test missing authentication
+    fresh_client = TestClient(app)
+
+    delete_response = fresh_client.delete(
         f"/api/passwords/{password_id}",
     )
-    assert delete_response.status_code == 422  # Missing authorization header
+    assert delete_response.status_code == 401  # Unauthorized (changed from 422)

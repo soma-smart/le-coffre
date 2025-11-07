@@ -51,3 +51,17 @@ def get_jwt_access_token_expiration_minutes() -> int:
 def get_jwt_refresh_token_expiration_days() -> int:
     """Get JWT refresh token expiration time in days. Default is 7 days."""
     return int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
+
+
+def is_production() -> bool:
+    """Check if running in production environment."""
+    return os.environ.get("ENVIRONMENT", "development") == "production"
+
+
+def get_cookie_secure_setting() -> bool:
+    """
+    Get cookie secure setting based on environment.
+    In production, cookies should only be sent over HTTPS (secure=True).
+    In development/testing, allow HTTP (secure=False).
+    """
+    return is_production()

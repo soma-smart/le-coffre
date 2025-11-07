@@ -1,4 +1,5 @@
-import pytest
+from fastapi.testclient import TestClient
+from main import app
 
 
 def test_can_lock_vault(e2e_client, setup, admin_token):
@@ -39,11 +40,17 @@ def test_vault_lock_fails_when_already_locked(e2e_client, admin_token):
 
 
 def test_vault_lock_fails_without_authentication(e2e_client, setup):
-    lock_response = e2e_client.post("/api/vault/lock")
-    assert lock_response.status_code == 422
+    # Use a fresh client without cookies to test missing authentication
+    fresh_client = TestClient(app)
+
+    lock_response = fresh_client.post("/api/vault/lock")
+    assert lock_response.status_code == 401  # Unauthorized (changed from 422)
 
 
 def test_vault_lock_fails_with_invalid_token(e2e_client, setup):
+    # Use a fresh client without cookies to test invalid token
+    fresh_client = TestClient(app)
+
     headers = {"Authorization": "Bearer invalid_token"}
-    lock_response = e2e_client.post("/api/vault/lock", headers=headers)
+    lock_response = fresh_client.post("/api/vault/lock", headers=headers)
     assert lock_response.status_code == 401
