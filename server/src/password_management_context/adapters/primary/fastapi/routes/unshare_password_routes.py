@@ -13,8 +13,10 @@ from rights_access_context.domain.exceptions import (
     CannotUnshareWithOwnerError,
     RightAccessDomainError,
 )
-from shared_kernel.authentication import ValidatedUser
-from shared_kernel.authentication.dependencies import get_current_user
+from identity_access_management_context.adapters.primary.dependencies import (
+    ValidatedUser,
+    get_current_user,
+)
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
@@ -36,7 +38,7 @@ def unshare_password(
     - **password_id**: UUID of the password to unshare
     - **user_id**: UUID of the user to revoke access from
     - **Authorization**: Bearer token required (owner only)
-    
+
     Note: Cannot unshare with the owner of the password.
     """
     try:

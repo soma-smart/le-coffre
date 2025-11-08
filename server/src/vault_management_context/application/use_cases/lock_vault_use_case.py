@@ -6,7 +6,10 @@ from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
     VaultLockedException,
 )
-from shared_kernel.authentication import AuthenticatedUser, AdminPermissionChecker
+from identity_access_management_context.adapters.primary.dependencies import (
+    AuthenticatedUser,
+    AdminPermissionChecker,
+)
 
 
 class LockVaultUseCase:

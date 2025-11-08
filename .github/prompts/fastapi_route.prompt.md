@@ -26,7 +26,7 @@ You are helping me implement FastAPI routes (primary adapters) for one or multip
    - Use proper type hints (UUID, str, int, etc.)
 
 4. **Authentication**:
-   - Use `get_current_user` from `shared_kernel.authentication.dependencies` when needed
+   - Use `get_current_user` from `identity_access_management_context.adapters.primary.dependencies` when needed
    - Import `ValidatedUser` for authenticated routes
    - Handle role-based access control as required
 
@@ -76,8 +76,7 @@ from <context>.adapters.primary.fastapi.app_dependencies import get_<action>_<en
 from <context>.application.use_cases import <Action><Entity>UseCase
 from <context>.application.commands import <Action><Entity>Command
 from <context>.domain.exceptions import <EntityNotFoundError>
-from shared_kernel.authentication import ValidatedUser
-from shared_kernel.authentication.dependencies import get_current_user
+from identity_access_management_context.adapters.primary.dependencies import ValidatedUser, get_current_user
 
 router = APIRouter(prefix="/<entities>", tags=["<Context> Management"])
 

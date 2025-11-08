@@ -13,8 +13,10 @@ from rights_access_context.domain.exceptions import (
     RightAccessDomainError,
     UserNotFoundError,
 )
-from shared_kernel.authentication import ValidatedUser
-from shared_kernel.authentication.dependencies import get_current_user
+from identity_access_management_context.adapters.primary.dependencies import (
+    ValidatedUser,
+    get_current_user,
+)
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 

@@ -4,8 +4,12 @@ from identity_access_management_context.application.gateways import UserReposito
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import AdminAlreadyExistsError
-from identity_access_management_context.application.services import AdminExistenceService
-from shared_kernel.authentication.constants import ADMIN_ROLE
+from identity_access_management_context.application.services import (
+    AdminExistenceService,
+)
+from identity_access_management_context.adapters.primary.dependencies.constants import (
+    ADMIN_ROLE,
+)
 
 
 class CreateAdminUseCase:

@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from shared_kernel.authentication import AuthenticatedUser
+from identity_access_management_context.adapters.primary.dependencies import (
+    AuthenticatedUser,
+)
 
 
 @dataclass

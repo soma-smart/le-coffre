@@ -20,7 +20,6 @@ from .models import ValidatedUser
 from .exceptions import (
     MissingTokenError,
 )
-from .constants import ADMIN_ROLE
 
 
 def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:

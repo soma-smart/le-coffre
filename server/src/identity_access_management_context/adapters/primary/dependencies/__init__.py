@@ -9,7 +9,7 @@ from .exceptions import (
 )
 from .admin_permission_checker import AdminPermissionChecker
 from .constants import ADMIN_ROLE
-from .dependencies import get_current_user
+from .authentication import get_current_user
 
 __all__ = [
     "ValidatedUser",

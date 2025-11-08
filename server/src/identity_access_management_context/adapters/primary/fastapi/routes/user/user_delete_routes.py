@@ -10,8 +10,11 @@ from identity_access_management_context.application.commands import DeleteUserCo
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundError,
 )
-from shared_kernel.authentication import ValidatedUser, NotAdminError
-from shared_kernel.authentication.dependencies import get_current_user
+from identity_access_management_context.adapters.primary.dependencies import (
+    ValidatedUser,
+    NotAdminError,
+    get_current_user,
+)
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
