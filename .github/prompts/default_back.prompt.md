@@ -57,8 +57,9 @@ The app follows a strict folder structure for clean architecture:
 
 ### Development Rules:
 - Follow strict TDD: Red, Green, Refactor.
+- Prefer updating test than creating new one
 - Use `uv` to run tests and FastAPI.
-- Avoid modifying `PYTHONPATH`.
+- Never modify `PYTHONPATH`.
 - Write clean, maintainable code with no redundant comments.
 - Refactor to use Commands, Responses, Services, and Domain logic after all tests pass.
 - Write tests with pytest, with function-based tests.
