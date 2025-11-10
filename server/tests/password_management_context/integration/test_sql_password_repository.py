@@ -70,7 +70,8 @@ def test_list_all_with_folder(sql_password_repository):
     for pwd in passwords:
         assert pwd.id in retrieved_ids
 
-def test_list_all_passwords(sql_password_repository, passwords = 4):
+def test_list_all_passwords(sql_password_repository):
+    passwords = [Password(id=uuid4(), name=f"Pwd{i}", encrypted_value="enc", folder=None) for i in range(4)]
     for pwd in passwords:
         sql_password_repository.save(pwd)
     all_passwords = sql_password_repository.list_all()
