@@ -1,3 +1,6 @@
+"""HTTP/FastAPI adapter-level authentication exceptions."""
+
+
 class AuthenticationError(Exception):
     """Base authentication error"""
 

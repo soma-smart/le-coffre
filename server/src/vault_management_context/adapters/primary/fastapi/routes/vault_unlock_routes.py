@@ -10,9 +10,7 @@ from vault_management_context.application.use_cases.unlock_vault_use_case import
 )
 from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import VaultManagementDomainError
-from identity_access_management_context.adapters.primary.dependencies import (
-    get_current_user,
-)
+from identity_access_management_context.adapters.primary import get_current_user
 from shared_kernel.domain import NotAdminError, AuthenticatedUser
 
 router = APIRouter(prefix="/vault", tags=["Vault"])

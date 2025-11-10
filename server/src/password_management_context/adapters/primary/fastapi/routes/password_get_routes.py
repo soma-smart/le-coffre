@@ -12,9 +12,7 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
 )
 from shared_kernel.domain import AccessDeniedError, AuthenticatedUser
-from identity_access_management_context.adapters.primary.dependencies import (
-    get_current_user,
-)
+from identity_access_management_context.adapters.primary import get_current_user
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 

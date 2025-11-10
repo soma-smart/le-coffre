@@ -17,13 +17,16 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
 from shared_kernel.domain import AuthenticatedUser
-from .exceptions import (
-    MissingTokenError,
-)
+from .exceptions import MissingTokenError
 
 
 def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
+    """
+    Creates ValidateUserTokenUseCase with dependencies from app state.
 
+    This function extracts the necessary repositories and gateways from the
+    FastAPI app state to instantiate the use case.
+    """
     user_password_repository: UserPasswordRepository = (
         request.app.state.user_password_repository
     )
@@ -42,9 +45,20 @@ async def get_current_user(
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
 ) -> AuthenticatedUser:
     """
-    Validates the JWT token and returns the current authenticated user.
+    FastAPI dependency that validates JWT token and returns authenticated user.
 
-    Raises HTTPException with 401 status for invalid tokens.
+    This dependency is used across all contexts to authenticate users
+    from HTTP requests.
+
+    Args:
+        authorization: Bearer token from HTTP Authorization header
+        validate_usecase: Use case for validating tokens (injected)
+
+    Returns:
+        AuthenticatedUser with user_id and roles
+
+    Raises:
+        HTTPException: 401 for authentication failures, 500 for server errors
     """
     try:
         if not authorization.startswith("Bearer "):
