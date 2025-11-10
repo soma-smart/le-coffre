@@ -13,8 +13,8 @@ from rights_access_context.domain.exceptions import (
     CannotUnshareWithOwnerError,
     RightAccessDomainError,
 )
+from shared_kernel.domain import AuthenticatedUser
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
     get_current_user,
 )
 
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 def unshare_password(
     password_id: UUID,
     user_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: UnshareAccessUseCase = Depends(get_unshare_access_usecase),
 ):
     """

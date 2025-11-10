@@ -11,10 +11,9 @@ from vault_management_context.application.use_cases.unlock_vault_use_case import
 from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
-    NotAdminError,
     get_current_user,
 )
+from shared_kernel.domain import NotAdminError, AuthenticatedUser
 
 router = APIRouter(prefix="/vault", tags=["Vault"])
 
@@ -57,7 +56,7 @@ class UnlockVaultPostResponse(BaseModel):
 )
 def unlock_vault(
     request: UnlockVaultPostRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: UnlockVaultUseCase = Depends(get_unlock_vault_usecase),
 ):
     """
@@ -72,7 +71,7 @@ def unlock_vault(
         shares = [
             Share(share_req.index, share_req.secret) for share_req in request.shares
         ]
-        usecase.execute(shares, current_user.to_authenticated_user())
+        usecase.execute(shares, current_user)
         return {"message": "Vault unlocked successfully"}
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))

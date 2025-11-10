@@ -6,9 +6,7 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundError,
     UserAlreadyExistsError,
 )
-from identity_access_management_context.adapters.primary.dependencies.constants import (
-    ADMIN_ROLE,
-)
+from shared_kernel.domain import ADMIN_ROLE
 
 
 class InMemoryUserRepository(UserRepository):

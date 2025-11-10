@@ -6,10 +6,7 @@ from identity_access_management_context.application.use_cases import DeleteUserU
 from identity_access_management_context.application.commands import DeleteUserCommand
 from identity_access_management_context.domain.exceptions import UserNotFoundError
 from identity_access_management_context.domain.entities import User
-from identity_access_management_context.adapters.primary.dependencies import (
-    AuthenticatedUser,
-    NotAdminError,
-)
+from shared_kernel.domain import AuthenticatedUser, NotAdminError
 
 
 @pytest.fixture

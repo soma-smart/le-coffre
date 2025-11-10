@@ -11,9 +11,8 @@ from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     FolderNotFoundError,
 )
-from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.domain import AccessDeniedError, AuthenticatedUser
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
     get_current_user,
 )
 
@@ -35,7 +34,7 @@ class GetPasswordListResponse(BaseModel):
 )
 def list_passwords(
     folder: str | None = None,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),
 ):
     """

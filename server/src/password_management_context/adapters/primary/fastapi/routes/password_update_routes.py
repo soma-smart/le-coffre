@@ -12,9 +12,8 @@ from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
-from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.domain import AccessDeniedError, AuthenticatedUser
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
     get_current_user,
 )
 
@@ -35,7 +34,7 @@ class UpdatePasswordRequest(BaseModel):
 def update_password(
     password_id: UUID,
     request: UpdatePasswordRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: UpdatePasswordUseCase = Depends(get_update_password_usecase),
 ):
     """

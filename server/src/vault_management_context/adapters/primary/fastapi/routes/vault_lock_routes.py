@@ -9,10 +9,9 @@ from vault_management_context.application.use_cases.lock_vault_use_case import (
 )
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
-    NotAdminError,
     get_current_user,
 )
+from shared_kernel.domain import NotAdminError, AuthenticatedUser
 
 router = APIRouter(prefix="/vault", tags=["Vault"])
 
@@ -28,7 +27,7 @@ class LockVaultPostResponse(BaseModel):
     summary="Lock the vault",
 )
 def lock_vault(
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: LockVaultUseCase = Depends(get_lock_vault_usecase),
 ):
     """
@@ -40,7 +39,7 @@ def lock_vault(
     - **Authorization**: Bearer token
     """
     try:
-        usecase.execute(current_user.to_authenticated_user())
+        usecase.execute(current_user)
         return {"message": "Vault locked successfully"}
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))

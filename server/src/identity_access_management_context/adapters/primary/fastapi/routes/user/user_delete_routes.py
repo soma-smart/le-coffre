@@ -11,10 +11,9 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundError,
 )
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
-    NotAdminError,
     get_current_user,
 )
+from shared_kernel.domain import NotAdminError, AuthenticatedUser
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -26,7 +25,7 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 )
 def delete_user(
     user_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: DeleteUserUseCase = Depends(get_delete_user_usecase),
 ):
     """
@@ -38,7 +37,7 @@ def delete_user(
     """
     try:
         command = DeleteUserCommand(
-            requesting_user=current_user.to_authenticated_user(),
+            requesting_user=current_user,
             user_id=user_id,
         )
         usecase.execute(command)

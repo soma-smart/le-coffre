@@ -1,8 +1,6 @@
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.application.commands import DeleteUserCommand
-from identity_access_management_context.adapters.primary.dependencies import (
-    AdminPermissionChecker,
-)
+from shared_kernel.domain import AdminPermissionService
 
 
 class DeleteUserUseCase:
@@ -10,7 +8,7 @@ class DeleteUserUseCase:
         self.user_repository = user_repository
 
     def execute(self, command: DeleteUserCommand) -> None:
-        AdminPermissionChecker.ensure_admin(command.requesting_user, "delete users")
+        AdminPermissionService.ensure_admin(command.requesting_user, "delete users")
         user_id = command.user_id
 
         self.user_repository.delete(user_id)

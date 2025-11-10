@@ -10,9 +10,8 @@ from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
-from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.domain import AccessDeniedError, AuthenticatedUser
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
     get_current_user,
 )
 
@@ -26,7 +25,7 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 )
 def delete_password(
     password_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: DeletePasswordUseCase = Depends(get_delete_password_usecase),
 ):
     """

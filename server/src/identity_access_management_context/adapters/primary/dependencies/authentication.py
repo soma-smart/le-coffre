@@ -16,7 +16,7 @@ from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
     UserNotFoundException,
 )
-from .models import ValidatedUser
+from shared_kernel.domain import AuthenticatedUser
 from .exceptions import (
     MissingTokenError,
 )
@@ -40,9 +40,9 @@ def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
 async def get_current_user(
     authorization: str = Header(..., description="Bearer token"),
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
-) -> ValidatedUser:
+) -> AuthenticatedUser:
     """
-    Validates the JWT token and returns the current user information.
+    Validates the JWT token and returns the current authenticated user.
 
     Raises HTTPException with 401 status for invalid tokens.
     """
@@ -55,10 +55,8 @@ async def get_current_user(
         command = ValidateUserTokenCommand(jwt_token=token)
         response = await validate_usecase.execute(command)
 
-        return ValidatedUser(
+        return AuthenticatedUser(
             user_id=response.user_id,
-            email=response.email,
-            display_name=response.display_name,
             roles=response.roles,
         )
 

@@ -11,10 +11,9 @@ from rights_access_context.application.commands import ShareResourceCommand
 from rights_access_context.domain.exceptions import (
     PermissionDeniedError,
     RightAccessDomainError,
-    UserNotFoundError,
 )
+from shared_kernel.domain import UserNotFoundError, AuthenticatedUser
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
     get_current_user,
 )
 
@@ -38,7 +37,7 @@ class SharePasswordResponse(BaseModel):
 def share_password(
     password_id: UUID,
     request: SharePasswordRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: ShareAccessUseCase = Depends(get_share_access_usecase),
 ):
     """

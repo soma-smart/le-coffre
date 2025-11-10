@@ -6,9 +6,7 @@ from identity_access_management_context.application.use_cases import (
 from identity_access_management_context.adapters.secondary import InMemoryUserRepository
 
 from identity_access_management_context.domain.entities import User
-from identity_access_management_context.adapters.primary.dependencies.constants import (
-    ADMIN_ROLE,
-)
+from shared_kernel.domain import ADMIN_ROLE
 from uuid import uuid4
 
 

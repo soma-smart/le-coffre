@@ -12,10 +12,7 @@ from vault_management_context.domain.exceptions import (
 from vault_management_context.application.use_cases.unlock_vault_use_case import (
     UnlockVaultUseCase,
 )
-from identity_access_management_context.adapters.primary.dependencies import (
-    AuthenticatedUser,
-    NotAdminError,
-)
+from shared_kernel.domain import AuthenticatedUser, NotAdminError
 
 
 @pytest.fixture()

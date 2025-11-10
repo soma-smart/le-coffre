@@ -9,9 +9,8 @@ from password_management_context.adapters.primary.fastapi.app_dependencies impor
 from password_management_context.application.use_cases import CreatePasswordUseCase
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.domain.exceptions import PasswordManagementDomainError
-from shared_kernel.access_control.exceptions import AccessDeniedError
+from shared_kernel.domain import AccessDeniedError, AuthenticatedUser
 from identity_access_management_context.adapters.primary.dependencies import (
-    ValidatedUser,
     get_current_user,
 )
 
@@ -38,7 +37,7 @@ class CreatePasswordResponse(BaseModel):
 )
 def create_password(
     request: CreatePasswordRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
+    current_user: AuthenticatedUser = Depends(get_current_user),
     usecase: CreatePasswordUseCase = Depends(get_create_password_usecase),
 ):
     """

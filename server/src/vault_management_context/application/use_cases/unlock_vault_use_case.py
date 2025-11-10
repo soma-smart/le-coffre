@@ -12,10 +12,7 @@ from vault_management_context.application.gateways import (
     VaultSessionGateway,
 )
 from vault_management_context.application.services import KeySessionManager
-from identity_access_management_context.adapters.primary.dependencies import (
-    AuthenticatedUser,
-    AdminPermissionChecker,
-)
+from shared_kernel.domain import AuthenticatedUser, AdminPermissionService
 
 
 class UnlockVaultUseCase:
@@ -32,7 +29,7 @@ class UnlockVaultUseCase:
         self._vault_session_gateway = vault_session_gateway
 
     def execute(self, shares: List[Share], requesting_user: AuthenticatedUser) -> None:
-        AdminPermissionChecker.ensure_admin(requesting_user, "unlock the vault")
+        AdminPermissionService.ensure_admin(requesting_user, "unlock the vault")
 
         vault = self._vault_repository.get()
         if vault is None:
