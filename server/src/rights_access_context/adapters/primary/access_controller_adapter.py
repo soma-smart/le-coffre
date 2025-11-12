@@ -6,7 +6,8 @@ from rights_access_context.application.use_cases import (
     GetOwnerAccessUseCase,
 )
 from rights_access_context.domain.value_objects.permission import Permission
-from shared_kernel.access_control import AccessController, AccessResult
+from shared_kernel.application.gateways import AccessController
+from shared_kernel.access_control import AccessResult
 
 
 class AccessControllerAdapter(AccessController):

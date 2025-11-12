@@ -7,7 +7,7 @@ from password_management_context.adapters.secondary.gateways import (
 )
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
-from shared_kernel.access_control import AccessController
+from shared_kernel.application.gateways import AccessController
 
 
 @pytest.fixture

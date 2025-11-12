@@ -6,8 +6,7 @@ from password_management_context.domain.entities import Password
 from password_management_context.domain.services.password_complexity_service import (
     PasswordComplexityService,
 )
-from shared_kernel.application.gateways import EncryptionGateway
-from shared_kernel.access_control import AccessController
+from shared_kernel.application.gateways import EncryptionGateway, AccessController
 
 
 class CreatePasswordUseCase:

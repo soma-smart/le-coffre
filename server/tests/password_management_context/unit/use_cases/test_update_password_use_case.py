@@ -8,7 +8,7 @@ from password_management_context.application.use_cases import UpdatePasswordUseC
 from password_management_context.domain.entities import Password
 from password_management_context.application.commands import UpdatePasswordCommand
 from password_management_context.domain.exceptions import PasswordNotFoundError
-from shared_kernel.access_control.access_controller import AccessController
+from shared_kernel.application.gateways import AccessController
 
 
 @pytest.fixture

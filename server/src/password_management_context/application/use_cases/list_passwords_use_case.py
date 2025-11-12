@@ -4,8 +4,8 @@ from uuid import UUID
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.responses import PasswordResponse
 from password_management_context.domain.exceptions import FolderNotFoundError
-from shared_kernel.access_control import Granted, AccessController
-from shared_kernel.application.gateways import EncryptionGateway
+from shared_kernel.access_control import Granted
+from shared_kernel.application.gateways import EncryptionGateway, AccessController
 
 
 class ListPasswordsUseCase:

@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from shared_kernel.access_control import AccessController, AccessResult, Granted
+from shared_kernel.access_control import AccessResult, Granted
+from shared_kernel.application.gateways import AccessController
 
 
 class FakeAccessController(AccessController):

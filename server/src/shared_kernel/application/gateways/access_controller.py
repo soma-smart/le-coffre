@@ -1,6 +1,6 @@
 from typing import Protocol
 from uuid import UUID
-from .access_result import AccessResult
+from ...access_control.access_result import AccessResult
 
 
 class AccessController(Protocol):

@@ -8,7 +8,6 @@ from password_management_context.adapters.secondary.gateways import (
 from password_management_context.domain.exceptions import PasswordNotFoundError
 from password_management_context.domain.entities import Password
 from tests.fakes import FakeAccessController
-from shared_kernel.access_control.access_controller import AccessController
 
 
 @pytest.fixture
