@@ -3,18 +3,18 @@ from password_management_context.domain.entities import Password
 from password_management_context.application.commands import UpdatePasswordCommand
 from password_management_context.domain.exceptions import PasswordNotFoundError
 from shared_kernel.access_control import Granted, AccessController, AccessDeniedError
-from shared_kernel.encryption import EncryptionService
+from shared_kernel.application.gateways import EncryptionGateway
 
 
 class UpdatePasswordUseCase:
     def __init__(
         self,
         password_repository: PasswordRepository,
-        encryption_service: EncryptionService,
+        encryption_gateway: EncryptionGateway,
         access_controller: AccessController,
     ):
         self.password_repository = password_repository
-        self.encryption_service = encryption_service
+        self.encryption_gateway = encryption_gateway
         self.access_controller = access_controller
 
     def execute(self, new_password: UpdatePasswordCommand) -> None:
@@ -28,7 +28,7 @@ class UpdatePasswordUseCase:
         if check_permission.granted == Granted.NOT_FOUND:
             raise PasswordNotFoundError(new_password.id)
 
-        encrypted_value = self.encryption_service.encrypt(new_password.password)
+        encrypted_value = self.encryption_gateway.encrypt(new_password.password)
 
         updated_password = Password(
             id=new_password.id,

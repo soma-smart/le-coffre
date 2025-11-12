@@ -1,3 +1,3 @@
-from .fake_encryption_service import FakeEncryptionService
+from .fake_encryption_gateway import FakeEncryptionGateway
 
-__all__ = ["FakeEncryptionService"]
+__all__ = ["FakeEncryptionGateway"]

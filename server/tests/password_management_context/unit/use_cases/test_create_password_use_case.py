@@ -25,10 +25,11 @@ from tests.fakes.fake_access_controller import (
 
 STRONG_PASSWORD = "StrongP@ssw0rd123"
 
+
 @pytest.fixture
-def use_case(password_repository, encryption_service, access_controller):
+def use_case(password_repository, encryption_gateway, access_controller):
     return CreatePasswordUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, encryption_gateway, access_controller
     )
 
 

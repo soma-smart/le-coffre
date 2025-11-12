@@ -4,18 +4,18 @@ from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.responses import PasswordResponse
 from password_management_context.domain.exceptions import PasswordNotFoundError
 from shared_kernel.access_control import Granted, AccessController
-from shared_kernel.encryption import EncryptionService
+from shared_kernel.application.gateways import EncryptionGateway
 
 
 class GetPasswordUseCase:
     def __init__(
         self,
         password_repository: PasswordRepository,
-        encryption_service: EncryptionService,
+        encryption_gateway: EncryptionGateway,
         access_controller: AccessController,
     ):
         self.password_repository = password_repository
-        self.encryption_service = encryption_service
+        self.encryption_gateway = encryption_gateway
         self.access_controller = access_controller
 
     def execute(self, requester_id: UUID, password_id: UUID) -> PasswordResponse:
@@ -29,7 +29,7 @@ class GetPasswordUseCase:
 
         password_entity = self.password_repository.get_by_id(password_id)
 
-        decrypted_password = self.encryption_service.decrypt(
+        decrypted_password = self.encryption_gateway.decrypt(
             password_entity.encrypted_value
         )
 

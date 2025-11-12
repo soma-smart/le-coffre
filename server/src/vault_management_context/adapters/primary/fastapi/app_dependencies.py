@@ -25,7 +25,7 @@ def get_shamir_gateway(request: Request) -> ShamirGateway:
 
 
 def get_encryption_gateway(request: Request) -> EncryptionGateway:
-    return request.app.state.encryption_gateway
+    return request.app.state.vault_encryption_gateway
 
 
 def get_vault_session_gateway(request: Request) -> VaultSessionGateway:

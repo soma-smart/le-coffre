@@ -5,18 +5,18 @@ from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.responses import PasswordResponse
 from password_management_context.domain.exceptions import FolderNotFoundError
 from shared_kernel.access_control import Granted, AccessController
-from shared_kernel.encryption import EncryptionService
+from shared_kernel.application.gateways import EncryptionGateway
 
 
 class ListPasswordsUseCase:
     def __init__(
         self,
         password_repository: PasswordRepository,
-        encryption_service: EncryptionService,
+        encryption_gateway: EncryptionGateway,
         access_controller: AccessController,
     ):
         self.password_repository = password_repository
-        self.encryption_service = encryption_service
+        self.encryption_gateway = encryption_gateway
         self.access_controller = access_controller
 
     def execute(
@@ -33,7 +33,7 @@ class ListPasswordsUseCase:
                 requester_id, password_entity.id
             )
             if check_permission.granted in (Granted.ACCESS, Granted.VIEW_ONLY):
-                decrypted_password = self.encryption_service.decrypt(
+                decrypted_password = self.encryption_gateway.decrypt(
                     password_entity.encrypted_value
                 )
 

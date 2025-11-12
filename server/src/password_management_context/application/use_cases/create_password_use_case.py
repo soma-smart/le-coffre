@@ -6,7 +6,7 @@ from password_management_context.domain.entities import Password
 from password_management_context.domain.services.password_complexity_service import (
     PasswordComplexityService,
 )
-from shared_kernel.encryption import EncryptionService
+from shared_kernel.application.gateways import EncryptionGateway
 from shared_kernel.access_control import AccessController
 
 
@@ -14,17 +14,17 @@ class CreatePasswordUseCase:
     def __init__(
         self,
         password_repository: PasswordRepository,
-        encryption_service: EncryptionService,
+        encryption_gateway: EncryptionGateway,
         access_controller: AccessController,
     ):
         self.password_repository = password_repository
-        self.encryption_service = encryption_service
+        self.encryption_gateway = encryption_gateway
         self.access_controller = access_controller
 
     def execute(self, command: CreatePasswordCommand) -> UUID:
         PasswordComplexityService.validate(command.decrypted_password)
 
-        encrypted_value = self.encryption_service.encrypt(command.decrypted_password)
+        encrypted_value = self.encryption_gateway.encrypt(command.decrypted_password)
 
         password = Password(
             id=command.id,

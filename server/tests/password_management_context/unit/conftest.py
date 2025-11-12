@@ -3,7 +3,7 @@ import pytest
 from password_management_context.adapters.secondary.gateways import (
     InMemoryPasswordRepository,
 )
-from .fakes import FakeEncryptionService
+from .fakes import FakeEncryptionGateway
 from tests.fakes import FakeAccessController, FakeDomainEventPublisher
 
 
@@ -13,8 +13,8 @@ def password_repository():
 
 
 @pytest.fixture
-def encryption_service():
-    return FakeEncryptionService()
+def encryption_gateway():
+    return FakeEncryptionGateway()
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
-from shared_kernel.encryption import EncryptionService
+from shared_kernel.application.gateways import EncryptionGateway
 
 
-class FakeEncryptionService(EncryptionService):
+class FakeEncryptionGateway(EncryptionGateway):
     def encrypt(self, plaintext: str) -> str:
         return f"encrypted({plaintext})"
 

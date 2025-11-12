@@ -13,10 +13,10 @@ from shared_kernel.access_control.access_controller import AccessController
 
 @pytest.fixture
 def use_case(
-    password_repository, encryption_service, access_controller: AccessController
+    password_repository, encryption_gateway, access_controller: AccessController
 ):
     return UpdatePasswordUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, encryption_gateway, access_controller
     )
 
 

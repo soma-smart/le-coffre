@@ -1,7 +1,7 @@
 from typing import Protocol
 
 
-class EncryptionService(Protocol):
+class EncryptionGateway(Protocol):
     def encrypt(self, plaintext: str) -> str:
         """Encrypts the given plaintext."""
         ...
