@@ -2,8 +2,12 @@ from password_management_context.application.gateways import PasswordRepository
 from password_management_context.domain.entities import Password
 from password_management_context.application.commands import UpdatePasswordCommand
 from password_management_context.domain.exceptions import PasswordNotFoundError
-from shared_kernel.access_control import Granted, AccessDeniedError
-from shared_kernel.application.gateways import EncryptionGateway, AccessController
+from shared_kernel.application.gateways import (
+    EncryptionGateway,
+    AccessController,
+    Granted,
+)
+from shared_kernel.domain.exceptions import AccessDeniedError
 
 
 class UpdatePasswordUseCase:

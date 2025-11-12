@@ -3,7 +3,7 @@ from uuid import UUID
 from rights_access_context.application.gateways import (
     RightsRepository,
 )
-from shared_kernel.access_control import AccessResult, Granted
+from shared_kernel.application.gateways import AccessResult, Granted
 from rights_access_context.domain.value_objects import Permission
 
 

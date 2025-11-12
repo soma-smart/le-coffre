@@ -1,6 +1,19 @@
 from typing import Protocol
 from uuid import UUID
-from ...access_control.access_result import AccessResult
+from enum import Enum
+from dataclasses import dataclass
+
+
+class Granted(Enum):
+    NOT_FOUND = "NotFound"
+    VIEW_ONLY = "ViewOnly"
+    ACCESS = "Access"
+
+
+@dataclass(frozen=True)
+class AccessResult:
+    granted: Granted
+    is_owner: bool = False
 
 
 class AccessController(Protocol):

@@ -6,7 +6,7 @@ from rights_access_context.application.use_cases import (
 )
 from ..fakes import FakeRightsRepository
 from rights_access_context.domain.value_objects import Permission
-from shared_kernel.access_control import Granted
+from shared_kernel.application.gateways import Granted
 
 # Test data constants
 USER_ID = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
