@@ -11,7 +11,7 @@ from config import (
     get_jwt_refresh_token_expiration_days,
 )
 
-from shared_kernel.time import UtcTimeProvider
+from shared_kernel.adapters.secondary import UtcTimeProvider
 from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
 )

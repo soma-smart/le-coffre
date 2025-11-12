@@ -1,7 +1,8 @@
 from datetime import datetime, UTC
+from shared_kernel.application.gateways import TimeProvider
 
 
-class FakeTimeProvider:
+class FakeTimeProvider(TimeProvider):
     def __init__(self, fixed_time: datetime | None = None):
         self._fixed_time = fixed_time or datetime.now(UTC)
 
