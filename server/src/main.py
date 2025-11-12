@@ -61,7 +61,7 @@ from identity_access_management_context.application.use_cases import (
     CanCreateAdminUseCase,
 )
 
-from shared_kernel.pubsub import InMemoryDomainEventPublisher
+from shared_kernel.adapters.secondary import InMemoryDomainEventPublisher
 
 
 @asynccontextmanager

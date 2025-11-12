@@ -2,7 +2,8 @@ import pytest
 from datetime import datetime
 from uuid import uuid4, UUID
 
-from shared_kernel.pubsub import DomainEvent, InMemoryDomainEventPublisher
+from shared_kernel.domain.entities import DomainEvent
+from shared_kernel.adapters.secondary import InMemoryDomainEventPublisher
 
 
 class SampleTestEvent(DomainEvent):

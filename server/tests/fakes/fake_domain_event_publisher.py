@@ -1,5 +1,5 @@
 from typing import List, Type, Callable, TypeVar
-from shared_kernel.pubsub import DomainEvent
+from shared_kernel.domain.entities import DomainEvent
 
 T = TypeVar("T", bound=DomainEvent)
 

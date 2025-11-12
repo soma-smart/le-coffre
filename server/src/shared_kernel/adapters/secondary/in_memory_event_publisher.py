@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List, Type
 
-from shared_kernel.pubsub import DomainEvent
+from shared_kernel.domain.entities import DomainEvent
 
 
 class InMemoryDomainEventPublisher:
