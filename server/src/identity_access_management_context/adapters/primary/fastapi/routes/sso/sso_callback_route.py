@@ -62,7 +62,7 @@ async def sso_callback(
             httponly=True,
             secure=is_secure,  # HTTPS only in production
             samesite="lax",  # CSRF protection
-            max_age=3600 * 24 * 7,  # 7 days
+            max_age=3600,  # 1 hour
         )
 
         # Also set refresh token in cookie
@@ -72,7 +72,7 @@ async def sso_callback(
             httponly=True,
             secure=is_secure,  # HTTPS only in production
             samesite="lax",
-            max_age=3600 * 24 * 30,  # 30 days
+            max_age=3600 * 24 * 7,  # 7 days
         )
 
         return SsoCallbackResponse(
