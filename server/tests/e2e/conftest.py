@@ -3,7 +3,7 @@ import tempfile
 import os
 import httpx
 import secrets
-from urllib.parse import quote
+from urllib.parse import quote, urlparse, parse_qs
 from fastapi.testclient import TestClient
 import oidc_provider_mock
 
@@ -137,8 +137,6 @@ def sso_user_token(e2e_client, oidc_server, e2e_test_user):
         303,
     ], f"Expected redirect, got {auth_response.status_code}"
 
-    from urllib.parse import urlparse, parse_qs
-
     callback_url = auth_response.headers.get("location")
     parsed = urlparse(callback_url)
     query_params = parse_qs(parsed.query)
@@ -245,8 +243,6 @@ def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
         303,
     ], f"Expected redirect, got {auth_response.status_code}"
 
-    from urllib.parse import urlparse, parse_qs
-
     callback_url = auth_response.headers.get("location")
     parsed = urlparse(callback_url)
     query_params = parse_qs(parsed.query)
@@ -278,8 +274,8 @@ def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
 
 
 @pytest.fixture
-def setup(e2e_client, admin_token):
-    response = e2e_client.post(
+def setup(authenticated_admin_client):
+    response = authenticated_admin_client.post(
         "/api/vault/setup",
         json={
             "nb_shares": 5,
@@ -290,7 +286,7 @@ def setup(e2e_client, admin_token):
     setup_id = setup_data["setup_id"]
 
     # Validate the setup to complete it
-    e2e_client.post(
+    authenticated_admin_client.post(
         "/api/vault/validate-setup",
         json={"setup_id": setup_id},
     )
@@ -380,3 +376,54 @@ def admin_cookies(e2e_client):
 
     # Extract cookies from response
     return login_response.cookies
+
+
+@pytest.fixture
+def authenticated_sso_user_client(e2e_client, oidc_server, e2e_test_user):
+    """
+    Returns a TestClient with an authenticated SSO user session via cookies.
+    The cookies are automatically handled by the TestClient for subsequent requests.
+    """
+    # Configure SSO with the mock OIDC provider
+    configure_response = e2e_client.post(
+        "/api/auth/sso/configure",
+        json={
+            "client_id": oidc_server["client_id"],
+            "client_secret": oidc_server["client_secret"],
+            "discovery_url": oidc_server["discovery_url"],
+        },
+    )
+    assert configure_response.status_code == 200
+
+    # Get SSO authorization URL
+    url_response = e2e_client.get("/api/auth/sso/url")
+    assert url_response.status_code == 200
+
+    sso_url_data = url_response.json()
+    if isinstance(sso_url_data, str):
+        sso_url = sso_url_data
+    elif isinstance(sso_url_data, dict) and "url" in sso_url_data:
+        sso_url = sso_url_data["url"]
+    else:
+        sso_url = str(sso_url_data)
+
+    # Simulate user authorization
+    auth_response = httpx.post(
+        sso_url,
+        data={"sub": e2e_test_user["sub"]},
+        follow_redirects=False,
+    )
+    assert auth_response.status_code in [302, 303]
+
+    callback_url = auth_response.headers.get("location")
+    parsed = urlparse(callback_url)
+    query_params = parse_qs(parsed.query)
+    valid_code = query_params.get("code", [None])[0]
+    assert valid_code
+
+    # Exchange code for token - this will set cookies on the client
+    callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}")
+    assert callback_response.status_code == 200
+
+    # The TestClient now has the cookies set
+    return e2e_client

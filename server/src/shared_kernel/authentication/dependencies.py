@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, Header, Cookie
+from fastapi import Depends, HTTPException, Cookie
 from typing import Optional
 from starlette.requests import Request
 
@@ -42,33 +42,20 @@ def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
 
 
 async def get_current_user(
-    authorization: Optional[str] = Header(None, description="Bearer token"),
     access_token: Optional[str] = Cookie(None, description="JWT token from cookie"),
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
 ) -> ValidatedUser:
     """
-    Validates the JWT token and returns the current user information.
+    Validates the JWT token from cookie and returns the current user information.
 
-    Priority order for token extraction:
-    1. Cookie (access_token) - recommended method
-    2. Authorization header (Bearer token) - fallback for backward compatibility
-
-    Raises HTTPException with 401 status for invalid tokens.
+    Expects the JWT token in the 'access_token' cookie.
+    Raises HTTPException with 401 status for invalid or missing tokens.
     """
     try:
-        token = None
-
-        # Try to get token from cookie first (recommended)
-        if access_token:
-            token = access_token
-        # Fallback to Authorization header for backward compatibility
-        elif authorization and authorization.startswith("Bearer "):
-            token = authorization.split(" ")[1]
-
-        if not token:
+        if not access_token:
             raise MissingTokenError("No authentication token provided")
 
-        command = ValidateUserTokenCommand(jwt_token=token)
+        command = ValidateUserTokenCommand(jwt_token=access_token)
         response = await validate_usecase.execute(command)
 
         return ValidatedUser(

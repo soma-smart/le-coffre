@@ -134,7 +134,6 @@ async def test_complete_sso_authentication_flow(
             "password": "SuperSecure123!@#",
             "folder": "SSO Tests",
         },
-        headers={"Authorization": f"Bearer {sso_token}"},
     )
     assert create_password_response.status_code == 201, (
         f"Failed to create password with SSO token: {create_password_response.text}"

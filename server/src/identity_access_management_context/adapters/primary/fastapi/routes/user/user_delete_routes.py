@@ -29,7 +29,7 @@ def delete_user(
     """
     Delete a user by its ID.
 
-    - **Authorization**: Bearer token
+    - **Authentication**: Requires authentication via access_token cookie
 
     Returns status code 204 (No Content) on successful deletion.
     """

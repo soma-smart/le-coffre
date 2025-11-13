@@ -39,7 +39,7 @@ def get_user_me(
     """
     Retrieve the authenticated user's information.
 
-    - **Authentication**: Requires authentication via access_token cookie or Bearer token (for backward compatibility)
+    - **Authentication**: Requires authentication via access_token cookie
 
     Returns the current user's profile including id, username, email, name, and roles.
     """

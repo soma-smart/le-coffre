@@ -39,6 +39,8 @@ def test_login_sets_cookies(e2e_client):
     access_token_cookie = cookies.get("access_token")
     assert access_token_cookie is not None
     assert len(access_token_cookie) > 0
+    assert cookies.get("refresh_token") is not None
+    assert len(cookies.get("refresh_token")) > 0
 
 
 def test_authenticated_request_with_cookie(authenticated_admin_client, setup):
@@ -82,23 +84,22 @@ def test_authenticated_request_without_auth_fails(e2e_client, setup):
     assert create_response.status_code == 401
 
 
-def test_cookie_authentication_has_priority_over_header(e2e_client, setup):
+def test_cookie_authentication_works(e2e_client, setup):
     """
-    Test that cookie authentication takes priority over header authentication.
-    This ensures the new method is preferred.
+    Test that cookie authentication works correctly.
     """
     # Register and login to get cookies
     admin_data = {
-        "email": "cookie_priority@example.com",
+        "email": "cookie_auth@example.com",
         "password": "password123",
-        "display_name": "Cookie Priority Admin",
+        "display_name": "Cookie Auth Admin",
     }
     e2e_client.post("/api/auth/register-admin", json=admin_data)
 
     login_response = e2e_client.post(
         "/api/auth/login",
         json={
-            "email": "cookie_priority@example.com",
+            "email": "cookie_auth@example.com",
             "password": "password123",
         },
     )
@@ -106,48 +107,37 @@ def test_cookie_authentication_has_priority_over_header(e2e_client, setup):
     assert login_response.status_code == 200
 
     # Now the client has valid cookies
-    # Try to make a request with an INVALID header (but valid cookie)
     password_data = {
-        "name": "Priority Test Entry",
+        "name": "Cookie Auth Test Entry",
         "password": "MyS3cur3P@ss!",
         "folder": "Tests",
     }
-
-    # This should succeed because the cookie is valid, even though the header is invalid
     create_response = e2e_client.post(
         "/api/passwords/",
         json=password_data,
-        headers={"Authorization": "Bearer invalid_token_should_be_ignored"},
     )
 
-    # Should succeed because cookie takes priority
     assert create_response.status_code == 201
 
 
-def test_header_authentication_still_works_for_backward_compatibility(
-    admin_token, setup
-):
+def test_request_without_cookie_fails(setup):
     """
-    Test that header-based authentication still works for backward compatibility.
-    This is important for existing tests and clients that don't use cookies.
-    Uses a fresh client without cookies to ensure we're testing header-only auth.
+    Test that requests without cookies fail properly for protected endpoints.
+    Uses a fresh client without cookies to ensure authentication is required.
     """
-    # Use a fresh client without cookies to test header-only authentication
+    # Use a fresh client without cookies
     fresh_client = TestClient(app)
 
-    user_data = {
-        "username": "headeruser",
-        "email": "headeruser@example.com",
-        "name": "Header User",
+    password_data = {
+        "name": "Test Password",
+        "password": "MyS3cur3P@ss!",
+        "folder": "Test",
     }
 
-    # Use old-style header authentication without cookies
+    # This should fail without authentication (protected endpoint)
     create_response = fresh_client.post(
-        "/api/users/",
-        json=user_data,
-        headers={"Authorization": f"Bearer {admin_token}"},
+        "/api/passwords/",
+        json=password_data,
     )
 
-    assert create_response.status_code == 201
-    created_user = create_response.json()
-    assert created_user["email"] == "headeruser@example.com"
+    assert create_response.status_code == 401
