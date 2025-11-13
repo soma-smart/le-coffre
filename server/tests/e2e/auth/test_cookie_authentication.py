@@ -4,11 +4,8 @@ This test verifies that JWT tokens are properly set in cookies
 and can be used for authentication.
 """
 
-from fastapi.testclient import TestClient
-from main import app
 
-
-def test_login_sets_cookies(e2e_client):
+def test_login_sets_cookie_and_returns_user_info(e2e_client):
     """Test that login endpoint sets access_token and refresh_token cookies."""
     # Register an admin user
     admin_data = {
@@ -54,8 +51,6 @@ def test_authenticated_request_with_cookie(authenticated_admin_client, setup):
         "password": "MyS3cur3P@ss!",
         "folder": "Cookie Tests",
     }
-
-    # No need to set Authorization header - cookies should work
     create_response = authenticated_admin_client.post(
         "/api/passwords/", json=password_data
     )
@@ -65,12 +60,8 @@ def test_authenticated_request_with_cookie(authenticated_admin_client, setup):
     assert created_password["name"] == "Cookie Test Entry"
 
 
-def test_authenticated_request_without_auth_fails(e2e_client, setup):
+def test_authenticated_request_without_auth_fails(unauthenticated_client, setup):
     """Test that requests without authentication fail."""
-    # Create a fresh client without cookies
-
-    fresh_client = TestClient(app)
-
     # Try to create a password (requires authentication)
     password_data = {
         "name": "Test Entry",
@@ -78,7 +69,7 @@ def test_authenticated_request_without_auth_fails(e2e_client, setup):
         "folder": "Test",
     }
 
-    create_response = fresh_client.post("/api/passwords/", json=password_data)
+    create_response = unauthenticated_client.post("/api/passwords/", json=password_data)
 
     # Should fail because no authentication provided
     assert create_response.status_code == 401
@@ -120,14 +111,11 @@ def test_cookie_authentication_works(e2e_client, setup):
     assert create_response.status_code == 201
 
 
-def test_request_without_cookie_fails(setup):
+def test_request_without_cookie_fails(unauthenticated_client, setup):
     """
     Test that requests without cookies fail properly for protected endpoints.
     Uses a fresh client without cookies to ensure authentication is required.
     """
-    # Use a fresh client without cookies
-    fresh_client = TestClient(app)
-
     password_data = {
         "name": "Test Password",
         "password": "MyS3cur3P@ss!",
@@ -135,7 +123,7 @@ def test_request_without_cookie_fails(setup):
     }
 
     # This should fail without authentication (protected endpoint)
-    create_response = fresh_client.post(
+    create_response = unauthenticated_client.post(
         "/api/passwords/",
         json=password_data,
     )

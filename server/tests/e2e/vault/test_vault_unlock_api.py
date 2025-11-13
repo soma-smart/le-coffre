@@ -1,7 +1,3 @@
-from fastapi.testclient import TestClient
-from main import app
-
-
 def test_can_unlock_vault_with_valid_shares(e2e_client, admin_token):
     headers = {"Authorization": f"Bearer {admin_token}"}
 
@@ -124,7 +120,7 @@ def test_vault_unlock_fails_when_shares_given_are_wrong(e2e_client, admin_token)
     assert "Failed to reconstruct secret from provided shares" in unlock_data["detail"]
 
 
-def test_vault_unlock_fails_without_authentication(e2e_client):
+def test_vault_unlock_fails_without_authentication(e2e_client, unauthenticated_client):
     setup_response = e2e_client.post(
         "/api/vault/setup",
         json={
@@ -145,10 +141,7 @@ def test_vault_unlock_fails_without_authentication(e2e_client):
     )
     assert validate_response.status_code == 200
 
-    # Use a fresh client without cookies to test missing authentication
-    fresh_client = TestClient(app)
-
-    unlock_response = fresh_client.post(
+    unlock_response = unauthenticated_client.post(
         "/api/vault/unlock",
         json={
             "shares": [
@@ -158,7 +151,7 @@ def test_vault_unlock_fails_without_authentication(e2e_client):
         },
     )
 
-    assert unlock_response.status_code == 401  # Unauthorized (changed from 422)
+    assert unlock_response.status_code == 401  # Unauthorized
 
 
 def test_vault_unlock_fails_with_invalid_token(e2e_client):

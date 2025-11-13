@@ -318,6 +318,29 @@ def admin_token(e2e_client):
 
 
 @pytest.fixture
+def client_factory(database, env_vars):
+    """
+    Factory to create TestClient instances that share the same database and env_vars.
+    All clients created by this factory will use the same DATABASE_URL and JWT settings.
+    """
+
+    def _make_client():
+        return TestClient(app)
+
+    return _make_client
+
+
+@pytest.fixture
+def unauthenticated_client(client_factory):
+    """
+    Returns a fresh TestClient without authentication.
+    Uses client_factory to ensure it shares the same database and env_vars
+    as other clients in the test.
+    """
+    return client_factory()
+
+
+@pytest.fixture
 def authenticated_admin_client(e2e_client):
     """
     Returns a TestClient with an authenticated admin session via cookies.

@@ -1,6 +1,4 @@
 from utils import STRONG_PASSWORD
-from fastapi.testclient import TestClient
-from main import app
 
 
 def test_can_read_a_created_password(authenticated_admin_client, setup):
@@ -23,7 +21,9 @@ def test_can_read_a_created_password(authenticated_admin_client, setup):
     assert retrieved_password.json()["password"] == STRONG_PASSWORD
 
 
-def test_cannot_read_a_password_of_another_user(authenticated_admin_client, setup):
+def test_cannot_read_a_password_of_another_user(
+    authenticated_admin_client, unauthenticated_client, setup
+):
     # Create password as admin
     response = authenticated_admin_client.post(
         "/api/passwords",
@@ -42,10 +42,7 @@ def test_cannot_read_a_password_of_another_user(authenticated_admin_client, setu
     assert retrieved_password.status_code == 200
 
     # Try to access the password without authentication (should fail)
-    # Use a fresh client without cookies
-    fresh_client = TestClient(app)
-
-    retrieved_password = fresh_client.get(
+    retrieved_password = unauthenticated_client.get(
         f"/api/passwords/{password_id}",
     )
 

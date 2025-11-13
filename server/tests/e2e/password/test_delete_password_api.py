@@ -1,6 +1,4 @@
 from uuid import UUID
-from fastapi.testclient import TestClient
-from main import app
 
 
 def test_can_delete_password(authenticated_admin_client, setup):
@@ -35,7 +33,9 @@ def test_delete_nonexistent_password(authenticated_admin_client, setup):
     assert delete_response.status_code == 404
 
 
-def test_delete_password_requires_authentication(authenticated_admin_client, setup):
+def test_delete_password_requires_authentication(
+    authenticated_admin_client, unauthenticated_client, setup
+):
     folder = "Auth Test Folder"
 
     # Create a password
@@ -51,10 +51,7 @@ def test_delete_password_requires_authentication(authenticated_admin_client, set
     password_id = create_response.json()["id"]
 
     # Attempt to delete the password without authentication
-    # Use a fresh client without cookies to test missing authentication
-    fresh_client = TestClient(app)
-
-    delete_response = fresh_client.delete(
+    delete_response = unauthenticated_client.delete(
         f"/api/passwords/{password_id}",
     )
-    assert delete_response.status_code == 401  # Unauthorized (changed from 422)
+    assert delete_response.status_code == 401  # Unauthorized

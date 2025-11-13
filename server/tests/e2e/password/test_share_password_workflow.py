@@ -1,10 +1,8 @@
 from uuid import uuid4
 from utils import STRONG_PASSWORD
-from fastapi.testclient import TestClient
-from main import app
 
 
-def test_share_password_workflow(database, env_vars, oidc_server, sso_user_token):
+def test_share_password_workflow(client_factory, oidc_server, sso_user_token):
     """
     Complete workflow: Create password → Share → Verify access → Unshare → Verify no access
     Uses a second user from SSO to test sharing functionality.
@@ -14,8 +12,8 @@ def test_share_password_workflow(database, env_vars, oidc_server, sso_user_token
     shared_user_id = sso_user_token["user_id"]
 
     # Create separate clients for admin and SSO user to avoid cookie interference
-    admin_client = TestClient(app)
-    sso_client = TestClient(app)
+    admin_client = client_factory()
+    sso_client = client_factory()
 
     # Register and login admin to set cookies
     admin_data = {
@@ -105,7 +103,7 @@ def test_share_password_workflow(database, env_vars, oidc_server, sso_user_token
 
 
 def test_share_password_with_multiple_users(
-    setup, sso_user_token, second_sso_user_token
+    client_factory, setup, sso_user_token, second_sso_user_token
 ):
     """
     Test sharing a password with multiple SSO users
@@ -116,9 +114,9 @@ def test_share_password_with_multiple_users(
     user2_token = second_sso_user_token["token"]
 
     # Create separate clients for admin and each user to avoid cookie interference
-    admin_client = TestClient(app)
-    user1_client = TestClient(app)
-    user2_client = TestClient(app)
+    admin_client = client_factory()
+    user1_client = client_factory()
+    user2_client = client_factory()
 
     # Setup admin client with cookies
     admin_data = {
