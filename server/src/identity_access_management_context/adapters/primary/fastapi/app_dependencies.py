@@ -13,6 +13,7 @@ from identity_access_management_context.application.use_cases import (
     GetSsoAuthorizeUrlUseCase,
     ConfigureSsoProviderUseCase,
     SsoLoginUseCase,
+    RefreshAccessTokenUseCase,
 )
 from identity_access_management_context.application.gateways import (
     UserRepository,
@@ -176,4 +177,14 @@ def get_sso_login_usecase(
         token_gateway,
         session_repository,
         time_provider,
+    )
+
+
+def get_refresh_access_token_usecase(
+    token_gateway: TokenGateway = Depends(get_token_gateway),
+    user_repository: UserRepository = Depends(get_user_repository),
+):
+    return RefreshAccessTokenUseCase(
+        token_gateway,
+        user_repository,
     )

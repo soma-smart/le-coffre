@@ -19,6 +19,8 @@ from .sso import (
     sso_callback_route,
 )
 
+from . import refresh_access_token_routes
+
 
 def get_user_management_router():
     user_management_router = APIRouter()
@@ -41,5 +43,6 @@ def get_authentication_router():
     authentication_router.include_router(configure_sso_provider_route.router)
     authentication_router.include_router(get_sso_url_route.router)
     authentication_router.include_router(sso_callback_route.router)
+    authentication_router.include_router(refresh_access_token_routes.router)
 
     return authentication_router
