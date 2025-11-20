@@ -183,8 +183,12 @@ def get_sso_login_usecase(
 def get_refresh_access_token_usecase(
     token_gateway: TokenGateway = Depends(get_token_gateway),
     user_repository: UserRepository = Depends(get_user_repository),
+    session_repository: SessionRepository = Depends(get_session_repository),
+    time_provider: TimeProvider = Depends(get_time_provider),
 ):
     return RefreshAccessTokenUseCase(
         token_gateway,
         user_repository,
+        session_repository,
+        time_provider,
     )
