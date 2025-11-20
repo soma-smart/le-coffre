@@ -1,4 +1,5 @@
-from fastapi import Depends, HTTPException, Cookie
+from fastapi import Depends, HTTPException
+from fastapi.security.api_key import APIKeyCookie
 from typing import Optional
 from starlette.requests import Request
 
@@ -25,6 +26,12 @@ from .exceptions import (
 )
 
 
+# Security scheme for Swagger documentation
+cookie_scheme = APIKeyCookie(
+    name="access_token", scheme_name="CookieAuth", auto_error=False
+)
+
+
 def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
     user_password_repository: UserPasswordRepository = (
         request.app.state.user_password_repository
@@ -42,7 +49,7 @@ def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
 
 
 async def get_current_user(
-    access_token: Optional[str] = Cookie(None, description="JWT token from cookie"),
+    access_token: Optional[str] = Depends(cookie_scheme),
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
 ) -> ValidatedUser:
     """
