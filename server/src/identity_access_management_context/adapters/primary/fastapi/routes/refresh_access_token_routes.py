@@ -54,7 +54,7 @@ async def refresh_access_token(
     try:
         if not refresh_token_cookie:
             raise HTTPException(
-                status_code=401,
+                status_code=400,
                 detail="Refresh token cookie is required",
             )
 
