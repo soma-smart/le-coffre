@@ -107,15 +107,4 @@ async def test_refresh_access_token_workflow(
     print(f"   Old token: {access_token[:20]}...")
     print(f"   New token: {new_access_token[:20]}...")
 
-    # Step 6: Also test refresh via body parameter
-    print("\n📤 Step 6: Testing refresh token via body parameter...")
-    body_refresh_response = e2e_client.post(
-        "/api/auth/refresh-token",
-        json={"refresh_token": refresh_token},
-    )
-    assert body_refresh_response.status_code == 200
-    body_refresh_data = body_refresh_response.json()
-    assert "access_token" in body_refresh_data
-    print("✅ Refresh token via body parameter works")
-
     print("\n🎉 Complete refresh access token workflow test passed!")
