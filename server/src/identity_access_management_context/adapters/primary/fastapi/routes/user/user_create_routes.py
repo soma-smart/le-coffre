@@ -11,6 +11,8 @@ from identity_access_management_context.application.commands import CreateUserCo
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyExistsError,
 )
+from shared_kernel.authentication import ValidatedUser, get_current_user
+
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -36,6 +38,7 @@ class CreateUserResponse(BaseModel):
 )
 def create_user(
     request: CreateUserRequest,
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: CreateUserUseCase = Depends(get_create_user_usecase),
 ):
     """
@@ -44,6 +47,8 @@ def create_user(
     - **username**: Username for the new user
     - **email**: Email address for the new user
     - **password**: Password for the new user (will be hashed)
+
+    - **Authentication**: Requires authentication via access_token cookie
 
     Returns the created user information with generated ID.
     """
