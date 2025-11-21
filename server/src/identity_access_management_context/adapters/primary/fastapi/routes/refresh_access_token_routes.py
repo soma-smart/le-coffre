@@ -15,8 +15,7 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
-from config import get_cookie_secure_setting
-
+from config import get_cookie_secure_setting, get_access_token_cookie_max_age_seconds
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -60,9 +59,7 @@ async def refresh_access_token(
 
         command = RefreshAccessTokenCommand(refresh_token=refresh_token_cookie)
         # Set new access token in HTTP-only secure cookie
-        result = await usecase.execute(
-            command
-        )
+        result = await usecase.execute(command)
         is_secure = get_cookie_secure_setting()
         response.set_cookie(
             key="access_token",
@@ -70,7 +67,7 @@ async def refresh_access_token(
             httponly=True,
             secure=is_secure,
             samesite="lax",
-            max_age=3600,  # 1 hour
+            max_age=get_access_token_cookie_max_age_seconds(),  # 1 hour
         )
 
         return RefreshAccessTokenResponse(
