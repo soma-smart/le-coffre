@@ -40,11 +40,13 @@ def share_password(
     usecase: ShareAccessUseCase = Depends(get_share_access_usecase),
 ):
     """
-    Share a password with another user by granting them access.
+    Share a password with another user.
 
     - **password_id**: UUID of the password to share
     - **user_id**: UUID of the user to grant access to
-    - **Authorization**: Bearer token required (owner only)
+    - **Authentication**: Requires authentication via access_token cookie (owner only)
+
+    Returns status code 201 on successful sharing.
     """
     try:
         command = ShareResourceCommand(

@@ -97,3 +97,32 @@ class JwtTokenGateway(TokenGateway):
             return None
         except jwt.InvalidTokenError:
             return None
+
+    async def validate_refresh_token(self, refresh_token: str) -> Optional[Token]:
+        try:
+            payload = jwt.decode(
+                refresh_token, self._secret_key, algorithms=[self._algorithm]
+            )
+
+            # Check if it's a refresh token
+            if payload.get("type") != "refresh":
+                return None
+
+            user_id = UUID(payload.get("user_id"))
+
+            # Extract claims (everything except standard fields)
+            standard_fields = {"user_id", "email", "roles", "exp", "iat", "type"}
+            claims = {k: v for k, v in payload.items() if k not in standard_fields}
+
+            return Token(
+                value=refresh_token,
+                user_id=user_id,
+                email=payload.get("email", ""),
+                roles=payload.get("roles", []),
+                claims=claims,
+            )
+
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None

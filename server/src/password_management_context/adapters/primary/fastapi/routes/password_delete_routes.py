@@ -28,10 +28,12 @@ def delete_password(
     usecase: DeletePasswordUseCase = Depends(get_delete_password_usecase),
 ):
     """
-    Delete a password entry.
+    Delete a password by its ID.
 
     - **password_id**: ID of the password to delete
-    - **Authorization**: Bearer token required
+    - **Authentication**: Requires authentication via access_token cookie
+
+    Returns status code 204 (No Content) on successful deletion.
     """
     try:
         usecase.execute(current_user.user_id, password_id)

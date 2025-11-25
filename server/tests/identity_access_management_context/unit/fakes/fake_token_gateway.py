@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List
 from uuid import UUID
 from identity_access_management_context.application.gateways import TokenGateway, Token
 
@@ -8,6 +8,7 @@ class FakeTokenGateway(TokenGateway):
         self.generated_tokens = {}
         self.generation_calls = []
         self.unique_part = ""
+        self.valid_refresh_tokens = {}
 
     def set_unique_jwt_part(self, unique_part: str):
         self.unique_part = unique_part
@@ -60,3 +61,22 @@ class FakeTokenGateway(TokenGateway):
 
     async def validate_token(self, token: str) -> Token | None:
         return self.generated_tokens.get(token)
+
+    def set_valid_refresh_token(
+        self,
+        refresh_token: str,
+        user_id: UUID,
+        email: str,
+        roles: List[str],
+    ) -> None:
+        token_obj = Token(
+            value=refresh_token,
+            user_id=user_id,
+            email=email,
+            roles=roles,
+            claims={"user_id": str(user_id), "email": email, "roles": roles},
+        )
+        self.valid_refresh_tokens[refresh_token] = token_obj
+
+    async def validate_refresh_token(self, refresh_token: str) -> Token | None:
+        return self.valid_refresh_tokens.get(refresh_token)

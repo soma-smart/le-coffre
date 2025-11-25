@@ -3,6 +3,7 @@ from starlette.requests import Request
 
 from identity_access_management_context.application.use_cases import (
     GetUserUseCase,
+    GetUserMeUseCase,
     DeleteUserUseCase,
     UpdateUserUseCase,
     CreateUserUseCase,
@@ -12,6 +13,7 @@ from identity_access_management_context.application.use_cases import (
     GetSsoAuthorizeUrlUseCase,
     ConfigureSsoProviderUseCase,
     SsoLoginUseCase,
+    RefreshAccessTokenUseCase,
 )
 from identity_access_management_context.application.gateways import (
     UserRepository,
@@ -93,6 +95,12 @@ def get_list_user_usecase(
     return ListUserUseCase(user_repository)
 
 
+def get_get_user_me_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+):
+    return GetUserMeUseCase(user_repository)
+
+
 # Authentication Use Cases
 def get_admin_login_usecase(
     user_password_repository: UserPasswordRepository = Depends(
@@ -167,6 +175,20 @@ def get_sso_login_usecase(
         sso_user_repository,
         user_management_gateway,
         token_gateway,
+        session_repository,
+        time_provider,
+    )
+
+
+def get_refresh_access_token_usecase(
+    token_gateway: TokenGateway = Depends(get_token_gateway),
+    user_repository: UserRepository = Depends(get_user_repository),
+    session_repository: SessionRepository = Depends(get_session_repository),
+    time_provider: TimeProvider = Depends(get_time_provider),
+):
+    return RefreshAccessTokenUseCase(
+        token_gateway,
+        user_repository,
         session_repository,
         time_provider,
     )

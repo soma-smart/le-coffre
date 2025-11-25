@@ -37,13 +37,13 @@ def update_password(
     usecase: UpdatePasswordUseCase = Depends(get_update_password_usecase),
 ):
     """
-    Update an existing password.
+    Update an existing password by its ID.
 
     - **password_id**: ID of the resource
     - **name**: Name/title for the password entry
     - **password**: The actual password to store (will be encrypted)
     - **folder**: Optional folder to organize the password
-    - **Authorization**: Bearer token required
+    - **Authentication**: Requires authentication via access_token cookie
     """
     try:
         command = UpdatePasswordCommand(
