@@ -2,7 +2,7 @@ import pytest
 from uuid import UUID
 
 from identity_access_management_context.application.use_cases import (
-    RegisterAdminWithPasswordUseCase,
+    RegisterWithPasswordUseCase,
 )
 from identity_access_management_context.application.commands import (
     RegisterWithPasswordCommand,
@@ -16,14 +16,14 @@ from identity_access_management_context.domain.exceptions import (
 def use_case(
     user_password_repository, password_hashing_gateway, user_management_gateway
 ):
-    return RegisterAdminWithPasswordUseCase(
+    return RegisterWithPasswordUseCase(
         user_password_repository, password_hashing_gateway, user_management_gateway
     )
 
 
 @pytest.mark.asyncio
 async def test_should_register_first_user_as_admin_with_password_and_return_user_id(
-    use_case: RegisterAdminWithPasswordUseCase,
+    use_case: RegisterWithPasswordUseCase,
     user_password_repository,
     user_management_gateway,
 ):
@@ -49,7 +49,7 @@ async def test_should_register_first_user_as_admin_with_password_and_return_user
 
 @pytest.mark.asyncio
 async def test_should_raise_exception_when_email_already_exists(
-    use_case: RegisterAdminWithPasswordUseCase, user_password_repository
+    use_case: RegisterWithPasswordUseCase, user_password_repository
 ):
     # Pre-register an admin with the same email
     existing_user_id = UUID("00000000-0000-0000-0000-000000000001")
@@ -79,7 +79,7 @@ async def test_should_raise_exception_when_email_already_exists(
 
 @pytest.mark.asyncio
 async def test_should_hash_password_before_storing_credentials(
-    use_case: RegisterAdminWithPasswordUseCase, user_password_repository
+    use_case: RegisterWithPasswordUseCase, user_password_repository
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -99,7 +99,7 @@ async def test_should_hash_password_before_storing_credentials(
 
 @pytest.mark.asyncio
 async def test_should_delegate_admin_creation_to_user_management_context_for_first_user(
-    use_case: RegisterAdminWithPasswordUseCase, user_management_gateway
+    use_case: RegisterWithPasswordUseCase, user_management_gateway
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -120,7 +120,7 @@ async def test_should_delegate_admin_creation_to_user_management_context_for_fir
 
 @pytest.mark.asyncio
 async def test_should_create_regular_user_for_second_registration(
-    use_case: RegisterAdminWithPasswordUseCase, user_management_gateway
+    use_case: RegisterWithPasswordUseCase, user_management_gateway
 ):
     # First user - should become admin
     first_user_id = UUID("00000000-0000-0000-0000-000000000001")

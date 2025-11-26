@@ -7,7 +7,7 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
     get_register_admin_usecase,
 )
 from identity_access_management_context.application.use_cases import (
-    RegisterAdminWithPasswordUseCase,
+    RegisterWithPasswordUseCase,
 )
 from identity_access_management_context.application.commands import (
     RegisterWithPasswordCommand,
@@ -40,7 +40,7 @@ class RegisterUserResponse(BaseModel):
 )
 async def register_admin(
     request: RegisterUserRequest,
-    usecase: RegisterAdminWithPasswordUseCase = Depends(get_register_admin_usecase),
+    usecase: RegisterWithPasswordUseCase = Depends(get_register_admin_usecase),
 ):
     """
     Register the first admin user for the system.

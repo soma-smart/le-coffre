@@ -10,7 +10,7 @@ from .user import (
 
 from .admin import (
     admin_login_route,
-    register_admin_with_password_route,
+    register_with_password_route,
 )
 
 from .sso import (
@@ -39,7 +39,7 @@ def get_authentication_router():
     authentication_router = APIRouter()
 
     authentication_router.include_router(admin_login_route.router)
-    authentication_router.include_router(register_admin_with_password_route.router)
+    authentication_router.include_router(register_with_password_route.router)
     authentication_router.include_router(configure_sso_provider_route.router)
     authentication_router.include_router(get_sso_url_route.router)
     authentication_router.include_router(sso_callback_route.router)

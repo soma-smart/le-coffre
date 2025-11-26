@@ -14,7 +14,7 @@ from identity_access_management_context.domain.exceptions import (
 )
 
 
-class RegisterAdminWithPasswordUseCase:
+class RegisterWithPasswordUseCase:
     def __init__(
         self,
         user_password_repository: UserPasswordRepository,

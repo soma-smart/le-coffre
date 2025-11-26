@@ -9,7 +9,7 @@ from identity_access_management_context.application.use_cases import (
     CreateUserUseCase,
     ListUserUseCase,
     AdminLoginUseCase,
-    RegisterAdminWithPasswordUseCase,
+    RegisterWithPasswordUseCase,
     GetSsoAuthorizeUrlUseCase,
     ConfigureSsoProviderUseCase,
     SsoLoginUseCase,
@@ -122,7 +122,7 @@ def get_admin_login_usecase(
     )
 
 
-def get_register_admin_with_password_usecase(
+def get_register_with_password_usecase(
     user_password_repository: UserPasswordRepository = Depends(
         get_user_password_repository
     ),
@@ -133,7 +133,7 @@ def get_register_admin_with_password_usecase(
         get_user_management_gateway
     ),
 ):
-    return RegisterAdminWithPasswordUseCase(
+    return RegisterWithPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
         user_management_gateway,
@@ -141,7 +141,7 @@ def get_register_admin_with_password_usecase(
 
 
 # Alias for backward compatibility
-get_register_admin_usecase = get_register_admin_with_password_usecase
+get_register_admin_usecase = get_register_with_password_usecase
 
 
 def get_sso_authorize_url_usecase(

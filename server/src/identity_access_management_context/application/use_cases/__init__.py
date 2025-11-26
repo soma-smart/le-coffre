@@ -11,8 +11,8 @@ from .refresh_access_token_use_case import RefreshAccessTokenUseCase
 
 # Import from subdirectories
 from .admin.admin_login_use_case import AdminLoginUseCase
-from .admin.register_admin_with_password_use_case import (
-    RegisterAdminWithPasswordUseCase,
+from .admin.register_with_password_use_case import (
+    RegisterWithPasswordUseCase,
 )
 from .sso.get_sso_authorize_url_use_case import GetSsoAuthorizeUrlUseCase
 from .sso.configure_sso_provider_use_case import ConfigureSsoProviderUseCase
@@ -30,7 +30,7 @@ __all__ = [
     "ValidateUserTokenUseCase",
     "RefreshAccessTokenUseCase",
     "AdminLoginUseCase",
-    "RegisterAdminWithPasswordUseCase",
+    "RegisterWithPasswordUseCase",
     "GetSsoAuthorizeUrlUseCase",
     "ConfigureSsoProviderUseCase",
     "SsoLoginUseCase",
