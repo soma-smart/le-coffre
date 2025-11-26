@@ -3,7 +3,7 @@ from uuid import UUID
 
 
 @dataclass
-class RegisterAdminWithPasswordCommand:
+class RegisterWithPasswordCommand:
     id: UUID
     email: str
     password: str

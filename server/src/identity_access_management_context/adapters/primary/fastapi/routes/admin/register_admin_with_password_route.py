@@ -9,21 +9,23 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
 from identity_access_management_context.application.use_cases import (
     RegisterAdminWithPasswordUseCase,
 )
-from identity_access_management_context.application.commands import RegisterAdminWithPasswordCommand
+from identity_access_management_context.application.commands import (
+    RegisterWithPasswordCommand,
+)
 from identity_access_management_context.domain.exceptions import (
-    AdminAlreadyExistsException,
+    UserAlreadyExistsException,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-class RegisterAdminRequest(BaseModel):
+class RegisterUserRequest(BaseModel):
     email: str
     password: str
     display_name: str
 
 
-class RegisterAdminResponse(BaseModel):
+class RegisterUserResponse(BaseModel):
     id: UUID
     email: str
     display_name: str
@@ -33,11 +35,11 @@ class RegisterAdminResponse(BaseModel):
 @router.post(
     "/register-admin",
     status_code=201,
-    response_model=RegisterAdminResponse,
+    response_model=RegisterUserResponse,
     summary="Register the first admin user",
 )
 async def register_admin(
-    request: RegisterAdminRequest,
+    request: RegisterUserRequest,
     usecase: RegisterAdminWithPasswordUseCase = Depends(get_register_admin_usecase),
 ):
     """
@@ -50,25 +52,25 @@ async def register_admin(
     Returns the created admin information with generated ID.
     """
     try:
-        admin_id = uuid4()
+        user_id = uuid4()
 
-        command = RegisterAdminWithPasswordCommand(
-            id=admin_id,
+        command = RegisterWithPasswordCommand(
+            id=user_id,
             email=request.email,
             password=request.password,
             display_name=request.display_name,
         )
 
-        created_admin_id = await usecase.execute(command)
+        created_user_id = await usecase.execute(command)
 
-        return RegisterAdminResponse(
-            id=created_admin_id,
+        return RegisterUserResponse(
+            id=created_user_id,
             email=request.email,
             display_name=request.display_name,
             message="Admin registered successfully",
         )
 
-    except AdminAlreadyExistsException as e:
+    except UserAlreadyExistsException as e:
         raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         logging.error(e)

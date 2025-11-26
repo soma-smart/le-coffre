@@ -1,6 +1,8 @@
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from identity_access_management_context.application.gateways import UserManagementGateway
+from identity_access_management_context.application.gateways import (
+    UserManagementGateway,
+)
 from identity_access_management_context.application.use_cases import (
     CreateUserUseCase,
     CanCreateAdminUseCase,
