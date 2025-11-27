@@ -1,4 +1,6 @@
-from fastapi import Depends, HTTPException, Header
+from fastapi import Depends, HTTPException
+from fastapi.security.api_key import APIKeyCookie
+from typing import Optional
 from starlette.requests import Request
 
 from identity_access_management_context.application.use_cases import (
@@ -22,11 +24,15 @@ from .models import ValidatedUser
 from .exceptions import (
     MissingTokenError,
 )
-from .constants import ADMIN_ROLE
+
+
+# Security scheme for Swagger documentation
+cookie_scheme = APIKeyCookie(
+    name="access_token", scheme_name="CookieAuth", auto_error=False
+)
 
 
 def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
-
     user_password_repository: UserPasswordRepository = (
         request.app.state.user_password_repository
     )
@@ -43,21 +49,20 @@ def get_validate_token_usecase(request: Request) -> ValidateUserTokenUseCase:
 
 
 async def get_current_user(
-    authorization: str = Header(..., description="Bearer token"),
+    access_token: Optional[str] = Depends(cookie_scheme),
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
 ) -> ValidatedUser:
     """
-    Validates the JWT token and returns the current user information.
+    Validates the JWT token from cookie and returns the current user information.
 
-    Raises HTTPException with 401 status for invalid tokens.
+    Expects the JWT token in the 'access_token' cookie.
+    Raises HTTPException with 401 status for invalid or missing tokens.
     """
     try:
-        if not authorization.startswith("Bearer "):
-            raise MissingTokenError("Invalid authorization header format")
+        if not access_token:
+            raise MissingTokenError("No authentication token provided")
 
-        token = authorization.split(" ")[1]
-
-        command = ValidateUserTokenCommand(jwt_token=token)
+        command = ValidateUserTokenCommand(jwt_token=access_token)
         response = await validate_usecase.execute(command)
 
         return ValidatedUser(
@@ -75,5 +80,5 @@ async def get_current_user(
         MissingTokenError,
     ) as e:
         raise HTTPException(status_code=401, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Authentication service error")

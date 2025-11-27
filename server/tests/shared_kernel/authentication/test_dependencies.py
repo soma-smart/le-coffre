@@ -13,12 +13,12 @@ from identity_access_management_context.application.use_cases import (
 
 @pytest.mark.asyncio
 async def test_get_current_user_should_use_roles_from_token_response():
-    # Given a valid JWT token with ["user"] role
+    # Given a valid JWT token with ["user"] role in cookie
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "sso_user@lecoffre.com"
     display_name = "SSO User"
     session_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    jwt_token = "Bearer valid_jwt_token_for_sso_user"
+    jwt_token = "valid_jwt_token_for_sso_user"
 
     mock_usecase = Mock(spec=ValidateUserTokenUseCase)
     mock_usecase.execute = AsyncMock(
@@ -32,9 +32,9 @@ async def test_get_current_user_should_use_roles_from_token_response():
         )
     )
 
-    # When get_current_user() is called
+    # When get_current_user() is called with cookie
     validated_user = await get_current_user(
-        authorization=jwt_token, validate_usecase=mock_usecase
+        access_token=jwt_token, validate_usecase=mock_usecase
     )
 
     # Then ValidatedUser should have roles=["user"]
@@ -47,12 +47,12 @@ async def test_get_current_user_should_use_roles_from_token_response():
 
 @pytest.mark.asyncio
 async def test_get_current_user_should_preserve_admin_role_for_admin_users():
-    # Given a valid JWT token with ["admin"] role
+    # Given a valid JWT token with ["admin"] role in cookie
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
     display_name = "Admin User"
     session_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    jwt_token = "Bearer valid_jwt_token_for_admin"
+    jwt_token = "valid_jwt_token_for_admin"
 
     mock_usecase = Mock(spec=ValidateUserTokenUseCase)
     mock_usecase.execute = AsyncMock(
@@ -66,9 +66,9 @@ async def test_get_current_user_should_preserve_admin_role_for_admin_users():
         )
     )
 
-    # When get_current_user() is called
+    # When get_current_user() is called with cookie
     validated_user = await get_current_user(
-        authorization=jwt_token, validate_usecase=mock_usecase
+        access_token=jwt_token, validate_usecase=mock_usecase
     )
 
     # Then ValidatedUser should have roles=["admin"]

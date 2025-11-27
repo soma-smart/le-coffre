@@ -11,6 +11,7 @@ from identity_access_management_context.application.commands import UpdateUserCo
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundError,
 )
+from shared_kernel.authentication import ValidatedUser, get_current_user
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -29,6 +30,7 @@ class UpdateUserRequest(BaseModel):
 def update_user(
     user_id: UUID,
     request: UpdateUserRequest,
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: UpdateUserUseCase = Depends(get_update_user_usecase),
 ):
     """
@@ -38,6 +40,8 @@ def update_user(
     - **username**: New username for the user
     - **email**: New email for the user
     - **password**: New password for the user (will be hashed)
+
+    - **Authentication**: Requires authentication via access_token cookie
 
     Returns the updated user ID.
     """

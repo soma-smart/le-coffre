@@ -42,6 +42,10 @@ class InvalidSsoSettingsException(AuthenticationDomainError):
     pass
 
 
+class InvalidRefreshTokenException(AuthenticationDomainError):
+    pass
+
+
 # User-related exceptions
 class UserNotFoundException(IdentityAccessManagementDomainError):
     """Raised when attempting to get a user that doesn't exist"""

@@ -40,7 +40,7 @@ def get_password(
     Retrieve a password by its ID with user authentication.
 
     - **password_id**: The ID of the password to retrieve
-    - **Authorization**: Bearer token required
+    - **Authentication**: Requires authentication via access_token cookie
     """
     try:
         password_response = usecase.execute(current_user.user_id, password_id)

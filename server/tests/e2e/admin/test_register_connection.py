@@ -1,15 +1,12 @@
-import pytest
-
-
-def test_complete_admin_authentication_flow(e2e_client):
+def test_complete_admin_authentication_flow(e2e_client, unauthenticated_client):
     """
     End-to-end test that:
     1. Registers an admin
     2. Logs in with the admin credentials
     3. Creates a random user
-    4. Tries to delete the user without token (should fail)
-    5. Tries to delete the user with invalid token (should fail)
-    6. Deletes the user with valid admin token (should succeed)
+    4. Tries to delete the user without cookie (should fail)
+    5. Tries to delete the user with invalid cookie (should fail)
+    6. Deletes the user with valid admin cookie (should succeed)
     """
     admin_data = {
         "email": "admin@example.com",
@@ -42,15 +39,16 @@ def test_complete_admin_authentication_flow(e2e_client):
     login_result = login_response.json()
 
     assert login_result["email"] == admin_data["email"]
-    assert "jwt_token" in login_result
     assert login_result["message"] == "Login successful"
 
-    jwt_token = login_result["jwt_token"]
+    # Extract JWT token from cookie
+    jwt_token = login_response.cookies.get("access_token")
+    assert jwt_token is not None
 
     # Step 4: Create a random user to delete later
     user_data = {
         "username": "testuser_1234",
-        "email": f"test_1234@example.com",
+        "email": "test_1234@example.com",
         "name": "Test User",
     }
 
@@ -62,22 +60,18 @@ def test_complete_admin_authentication_flow(e2e_client):
     # Step 5: Check that the user exists
     assert e2e_client.get(f"/api/users/{user_id}").status_code == 200
 
-    # Step 6: Try to delete user without authorization header (should fail)
-    delete_response_no_auth = e2e_client.delete(f"/api/users/{user_id}")
-    assert delete_response_no_auth.status_code == 422
+    # Step 6: Try to delete user without authorization (no cookie) - should fail
+    delete_response_no_auth = unauthenticated_client.delete(f"/api/users/{user_id}")
+    assert delete_response_no_auth.status_code == 401
 
-    # Step 7: Try to delete user with invalid token (should fail)
-    invalid_headers = {"Authorization": "Bearer invalid_token"}
-    delete_response_invalid = e2e_client.delete(
-        f"/api/users/{user_id}", headers=invalid_headers
-    )
+    # Step 7: Try to delete user with invalid cookie (should fail)
+    unauthenticated_client.cookies.set("access_token", "invalid_token")
+    delete_response_invalid = unauthenticated_client.delete(f"/api/users/{user_id}")
     assert delete_response_invalid.status_code == 401
 
-    # Step 8: Delete user with valid admin token (should succeed)
-    valid_headers = {"Authorization": f"Bearer {jwt_token}"}
-    delete_response_valid = e2e_client.delete(
-        f"/api/users/{user_id}", headers=valid_headers
-    )
+    # Step 8: Delete user with valid admin cookie (should succeed)
+    # e2e_client already has the valid cookie from login
+    delete_response_valid = e2e_client.delete(f"/api/users/{user_id}")
     assert delete_response_valid.status_code == 204
 
     # Step 9: Verify user is actually deleted by trying to get it
