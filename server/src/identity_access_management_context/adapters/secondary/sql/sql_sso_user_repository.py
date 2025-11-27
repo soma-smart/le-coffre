@@ -16,7 +16,7 @@ class SqlSsoUserRepository:
         self._sessions = Session
 
     def save(self, sso_user: SsoUser) -> None:
-        data = {k: v for k, v in vars(sso_user).items() if v is not None} #Création d'un dictionnaiore qui filtre les attributs None
+        data = {k: v for k, v in vars(sso_user).items() if v is not None} #Creating a dictionary without None values
         db_obj =  SsoUsersTable(**data)
         self._sessions.add(db_obj)
         try:

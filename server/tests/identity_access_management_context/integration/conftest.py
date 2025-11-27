@@ -34,7 +34,7 @@ def database_engine_SsoUsers():
     os.close(db_fd)
     try:
         engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-        SsoUsersTable.metadata.create_all(engine)  # <-- Création de la table
+        SsoUsersTable.metadata.create_all(engine)  # Creating Tables
         yield engine
     finally:
         os.unlink(db_path)
