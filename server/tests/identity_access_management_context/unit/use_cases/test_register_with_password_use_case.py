@@ -70,7 +70,7 @@ async def test_should_raise_exception_when_email_already_exists(
         id=new_user_id,
         email=existing_email,
         password="secure123!",
-        display_name="New Admin",
+        display_name="New User",
     )
 
     with pytest.raises(UserAlreadyExistsException):
