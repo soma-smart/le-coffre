@@ -13,7 +13,7 @@ def test_login_sets_cookie_and_returns_user_info(e2e_client):
         "password": "securepassword123",
         "display_name": "Test Admin",
     }
-    register_response = e2e_client.post("/api/auth/register-admin", json=admin_data)
+    register_response = e2e_client.post("/api/auth/register", json=admin_data)
     assert register_response.status_code == 201
 
     # Login
@@ -85,7 +85,7 @@ def test_cookie_authentication_works(e2e_client, setup):
         "password": "password123",
         "display_name": "Cookie Auth Admin",
     }
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
+    e2e_client.post("/api/auth/register", json=admin_data)
 
     login_response = e2e_client.post(
         "/api/auth/login",

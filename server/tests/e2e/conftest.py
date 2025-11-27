@@ -301,7 +301,7 @@ def admin_token(e2e_client):
         "display_name": "System Administrator",
     }
 
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
+    e2e_client.post("/api/auth/register", json=admin_data)
 
     # Then login to get the token from cookies
     login_response = e2e_client.post(
@@ -354,7 +354,7 @@ def authenticated_admin_client(e2e_client):
         "display_name": "System Administrator",
     }
 
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
+    e2e_client.post("/api/auth/register", json=admin_data)
 
     # Then login - this will set the cookies on the client
     login_response = e2e_client.post(
@@ -386,7 +386,7 @@ def admin_cookies(e2e_client):
         "display_name": "System Administrator",
     }
 
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
+    e2e_client.post("/api/auth/register", json=admin_data)
 
     # Then login to get the cookies
     login_response = e2e_client.post(

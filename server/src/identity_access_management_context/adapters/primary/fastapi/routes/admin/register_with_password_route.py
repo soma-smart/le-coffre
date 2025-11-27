@@ -33,23 +33,22 @@ class RegisterUserResponse(BaseModel):
 
 
 @router.post(
-    "/register-admin",
+    "/register",
     status_code=201,
     response_model=RegisterUserResponse,
-    summary="Register the first admin user",
+    summary="Register users",
 )
-async def register_admin(
+async def register_user(
     request: RegisterUserRequest,
     usecase: RegisterWithPasswordUseCase = Depends(get_register_admin_usecase),
 ):
     """
-    Register the first admin user for the system.
+    Register the first user for the system.
 
-    - **email**: Email address for the admin user
-    - **password**: Password for the admin user (will be hashed)
-    - **display_name**: Display name for the admin user
-
-    Returns the created admin information with generated ID.
+    - **email**: Email address for the user
+    - **password**: Password for the user (will be hashed)
+    - **display_name**: Display name for the user
+    Returns the created user information with generated ID.
     """
     try:
         user_id = uuid4()
@@ -67,7 +66,7 @@ async def register_admin(
             id=created_user_id,
             email=request.email,
             display_name=request.display_name,
-            message="Admin registered successfully",
+            message="User registered successfully",
         )
 
     except UserAlreadyExistsException as e:

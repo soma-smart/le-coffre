@@ -15,7 +15,7 @@ def test_complete_admin_authentication_flow(e2e_client, unauthenticated_client):
     }
 
     # Step 1: Register admin
-    register_response = e2e_client.post("/api/auth/register-admin", json=admin_data)
+    register_response = e2e_client.post("/api/auth/register", json=admin_data)
 
     assert register_response.status_code == 201
     register_data = register_response.json()

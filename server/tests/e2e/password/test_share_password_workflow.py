@@ -21,7 +21,7 @@ def test_share_password_workflow(client_factory, oidc_server, sso_user_token):
         "password": "admin",
         "display_name": "System Administrator",
     }
-    admin_client.post("/api/auth/register-admin", json=admin_data)
+    admin_client.post("/api/auth/register", json=admin_data)
     admin_client.post(
         "/api/auth/login",
         json={"email": "admin@example.com", "password": "admin"},
@@ -124,7 +124,7 @@ def test_share_password_with_multiple_users(
         "password": "admin",
         "display_name": "System Administrator",
     }
-    admin_client.post("/api/auth/register-admin", json=admin_data)
+    admin_client.post("/api/auth/register", json=admin_data)
     admin_client.post(
         "/api/auth/login",
         json={"email": "admin@example.com", "password": "admin"},
