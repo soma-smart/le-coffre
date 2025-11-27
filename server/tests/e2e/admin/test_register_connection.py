@@ -22,7 +22,7 @@ def test_complete_admin_authentication_flow(e2e_client, unauthenticated_client):
 
     assert register_data["email"] == admin_data["email"]
     assert register_data["display_name"] == admin_data["display_name"]
-    assert register_data["message"] == "Admin registered successfully"
+    assert register_data["message"] == "User registered successfully"
 
     # Step 2: Try login with wrong password
     login_data = {"email": admin_data["email"], "password": "wrong_password"}
