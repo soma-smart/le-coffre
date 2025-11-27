@@ -54,3 +54,20 @@ def test_get_user_by_sso_user_id(sql_sso_user_repository):
     assert retrieved_user.display_name == sso_user.display_name
     assert retrieved_user.sso_user_id == sso_user.sso_user_id
     assert retrieved_user.sso_provider == sso_user.sso_provider
+
+def test_get_user_by_iud(sql_sso_user_repository):
+    iud = uuid4()
+    sso_user = SsoUser(
+        internal_user_id=iud,
+        email="test@soma-smart.com",
+        display_name="Test User",
+        sso_user_id="sso123",
+        sso_provider="google"
+    )
+    sql_sso_user_repository.save(sso_user)
+    retrieved_user = sql_sso_user_repository.get_by_user_id(iud)
+    assert retrieved_user is not None 
+    assert retrieved_user.email == sso_user.email
+    assert retrieved_user.display_name == sso_user.display_name
+    assert retrieved_user.sso_user_id == sso_user.sso_user_id
+    assert retrieved_user.sso_provider == sso_user.sso_provider
