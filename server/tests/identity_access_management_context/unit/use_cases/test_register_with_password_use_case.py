@@ -51,7 +51,7 @@ async def test_should_register_first_user_as_admin_with_password_and_return_user
 async def test_should_raise_exception_when_email_already_exists(
     use_case: RegisterWithPasswordUseCase, user_password_repository
 ):
-    # Pre-register an admin with the same email
+    # Pre-register a user with the same email
     existing_user_id = UUID("00000000-0000-0000-0000-000000000001")
     existing_email = "admin@lecoffre.com"
     from identity_access_management_context.domain.entities import UserPassword
