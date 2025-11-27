@@ -64,7 +64,7 @@ async def test_should_raise_exception_when_email_already_exists(
     )
     user_password_repository.save(existing_user)
 
-    # Try to register another admin with the same email
+    # Try to register another user with the same email
     new_user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     command = RegisterWithPasswordCommand(
         id=new_user_id,
