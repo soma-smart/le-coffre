@@ -10,6 +10,7 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyExistsException,
 )
+from identity_access_management_context.domain.entities import UserPassword
 
 
 @pytest.fixture
@@ -54,13 +55,12 @@ async def test_should_raise_exception_when_email_already_exists(
     # Pre-register a user with the same email
     existing_user_id = UUID("00000000-0000-0000-0000-000000000001")
     existing_email = "admin@lecoffre.com"
-    from identity_access_management_context.domain.entities import UserPassword
 
     existing_user = UserPassword(
         id=existing_user_id,
         email=existing_email,
         password_hash="existing_hash",
-        display_name="Existing Admin",
+        display_name="Existing User",
     )
     user_password_repository.save(existing_user)
 
