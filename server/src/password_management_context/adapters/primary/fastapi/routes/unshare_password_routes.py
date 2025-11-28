@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 from uuid import UUID
 import logging
 
@@ -31,12 +30,14 @@ def unshare_password(
     usecase: UnshareAccessUseCase = Depends(get_unshare_access_usecase),
 ):
     """
-    Revoke a user's access to a password.
+    Remove sharing of a password from a specific user.
 
     - **password_id**: UUID of the password to unshare
     - **user_id**: UUID of the user to revoke access from
-    - **Authorization**: Bearer token required (owner only)
-    
+    - **Authentication**: Requires authentication via access_token cookie (owner only)
+
+    Returns status code 204 (No Content) on successful unsharing.
+
     Note: Cannot unshare with the owner of the password.
     """
     try:

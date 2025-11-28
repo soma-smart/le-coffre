@@ -1,4 +1,4 @@
-from typing import Protocol, List, Optional
+from typing import Protocol, Optional
 from uuid import UUID
 
 from identity_access_management_context.domain.entities import AuthenticationSession

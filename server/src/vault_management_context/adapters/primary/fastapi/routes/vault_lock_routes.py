@@ -34,7 +34,7 @@ def lock_vault(
     The vault must be unlocked to be locked again.
     Only administrators can lock the vault.
 
-    - **Authorization**: Bearer token
+    - **Authorization**: Requires authentication via access_token cookie
     """
     try:
         usecase.execute(current_user.to_authenticated_user())

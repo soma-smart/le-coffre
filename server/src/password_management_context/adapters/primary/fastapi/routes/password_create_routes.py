@@ -44,7 +44,7 @@ def create_password(
     - **name**: Name/title for the password entry
     - **password**: The actual password to store (will be encrypted)
     - **folder**: Optional folder to organize the password
-    - **Authorization**: Bearer token required
+    - **Authentication**: Requires authentication via access_token cookie
     """
     try:
         password_id = uuid4()

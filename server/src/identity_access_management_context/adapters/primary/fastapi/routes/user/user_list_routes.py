@@ -7,6 +7,7 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
     get_list_user_usecase,
 )
 from identity_access_management_context.application.use_cases import ListUserUseCase
+from shared_kernel.authentication import ValidatedUser, get_current_user
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -25,10 +26,13 @@ class ListUserResponse(BaseModel):
     summary="List all users",
 )
 def list_users(
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: ListUserUseCase = Depends(get_list_user_usecase),
 ):
     """
     Retrieve all users.
+
+    - **Authentication**: Requires authentication via access_token cookie
 
     Returns a list of all users in the system.
     """

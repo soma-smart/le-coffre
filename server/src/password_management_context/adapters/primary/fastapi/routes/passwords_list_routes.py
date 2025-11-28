@@ -37,10 +37,12 @@ def list_passwords(
     usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),
 ):
     """
-    List all passwords, optionally filtered by folder.
+    List all passwords for the authenticated user, optionally filtered by folder.
 
     - **folder**: Optional folder name to filter passwords
-    - **Authorization**: Bearer token required
+    - **Authentication**: Requires authentication via access_token cookie
+
+    Returns a list of passwords accessible by the user.
     """
     try:
         passwords = usecase.execute(current_user.user_id, folder)
