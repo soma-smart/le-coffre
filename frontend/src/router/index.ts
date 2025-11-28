@@ -37,6 +37,12 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  // If we are not logged in, redirect to login
+  const isLoggedIn = localStorage.getItem('login') === 'true';
+  if (!isLoggedIn && to.name !== 'Login') {
+    return { name: 'Login' };
+  }
+
   const setupStore = useSetupStore();
 
   // If the route is marked to skip the check, allow navigation

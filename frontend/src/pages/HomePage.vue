@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import MainLayout from "../layouts/MainLayout.vue";
 </script>
 
 <template>
-  <main>
+  <MainLayout>
     <p>Coucou</p>
-  </main>
+  </MainLayout>
 </template>

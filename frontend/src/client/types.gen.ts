@@ -19,10 +19,6 @@ export type AdminLoginRequest = {
  */
 export type AdminLoginResponse = {
     /**
-     * Jwt Token
-     */
-    jwt_token: string;
-    /**
      * Admin Id
      */
     admin_id: string;
@@ -37,13 +33,31 @@ export type AdminLoginResponse = {
 };
 
 /**
+ * ConfigureSsoProviderRequest
+ * Configure SSO provider with OpenID Connect auto-discovery.
+ */
+export type ConfigureSsoProviderRequest = {
+    /**
+     * Client Id
+     * Client ID OAuth2
+     */
+    client_id: string;
+    /**
+     * Client Secret
+     * Client secret OAuth2
+     */
+    client_secret: string;
+    /**
+     * Discovery Url
+     * OpenID Connect discovery URL (.well-known/openid_configuration)
+     */
+    discovery_url: string;
+};
+
+/**
  * CreatePasswordRequest
  */
 export type CreatePasswordRequest = {
-    /**
-     * User Id
-     */
-    user_id: string;
     /**
      * Name
      */
@@ -135,6 +149,10 @@ export type CreateVaultPostRequest = {
  */
 export type CreateVaultPostResponse = {
     /**
+     * Setup Id
+     */
+    setup_id: string;
+    /**
      * Shares
      */
     shares: Array<Share>;
@@ -182,6 +200,32 @@ export type GetPasswordResponse = {
      * Folder
      */
     folder?: string | null;
+};
+
+/**
+ * GetUserMeResponse
+ */
+export type GetUserMeResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Username
+     */
+    username: string;
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Roles
+     */
+    roles: Array<string>;
 };
 
 /**
@@ -249,6 +293,16 @@ export type LockVaultPostResponse = {
 };
 
 /**
+ * RefreshAccessTokenResponse
+ */
+export type RefreshAccessTokenResponse = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * RegisterAdminRequest
  */
 export type RegisterAdminRequest = {
@@ -303,17 +357,23 @@ export type Share = {
 };
 
 /**
- * ShareAccessRequest
+ * SharePasswordRequest
  */
-export type ShareAccessRequest = {
+export type SharePasswordRequest = {
     /**
-     * From Id
+     * User Id
      */
-    from_id: string;
+    user_id: string;
+};
+
+/**
+ * SharePasswordResponse
+ */
+export type SharePasswordResponse = {
     /**
-     * To Id
+     * Message
      */
-    to_id: string;
+    message: string;
 };
 
 /**
@@ -328,6 +388,39 @@ export type ShareRequest = {
      * Secret
      */
     secret: string;
+};
+
+/**
+ * SsoCallbackResponse
+ */
+export type SsoCallbackResponse = {
+    /**
+     * Message
+     */
+    message: string;
+    user: SsoUserInfo;
+};
+
+/**
+ * SsoUserInfo
+ */
+export type SsoUserInfo = {
+    /**
+     * User Id
+     */
+    user_id: string;
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Is New User
+     */
+    is_new_user: boolean;
 };
 
 /**
@@ -355,10 +448,6 @@ export type UnlockVaultPostResponse = {
  * UpdatePasswordRequest
  */
 export type UpdatePasswordRequest = {
-    /**
-     * User Id
-     */
-    user_id: string;
     /**
      * Name
      */
@@ -392,6 +481,26 @@ export type UpdateUserRequest = {
 };
 
 /**
+ * ValidateSetupRequest
+ */
+export type ValidateSetupRequest = {
+    /**
+     * Setup Id
+     */
+    setup_id: string;
+};
+
+/**
+ * ValidateSetupResponse
+ */
+export type ValidateSetupResponse = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * ValidationError
  */
 export type ValidationError = {
@@ -412,7 +521,7 @@ export type ValidationError = {
 /**
  * VaultStatus
  */
-export type VaultStatus = 'LOCKED' | 'UNLOCKED' | 'NOT_SETUP';
+export type VaultStatus = 'LOCKED' | 'UNLOCKED' | 'NOT_SETUP' | 'PENDING' | 'SETUPED';
 
 /**
  * VaultStatusResponse
@@ -446,15 +555,33 @@ export type CreateVaultVaultSetupPostResponses = {
 
 export type CreateVaultVaultSetupPostResponse = CreateVaultVaultSetupPostResponses[keyof CreateVaultVaultSetupPostResponses];
 
+export type ValidateVaultSetupVaultValidateSetupPostData = {
+    body: ValidateSetupRequest;
+    path?: never;
+    query?: never;
+    url: '/vault/validate-setup';
+};
+
+export type ValidateVaultSetupVaultValidateSetupPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ValidateVaultSetupVaultValidateSetupPostError = ValidateVaultSetupVaultValidateSetupPostErrors[keyof ValidateVaultSetupVaultValidateSetupPostErrors];
+
+export type ValidateVaultSetupVaultValidateSetupPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ValidateSetupResponse;
+};
+
+export type ValidateVaultSetupVaultValidateSetupPostResponse = ValidateVaultSetupVaultValidateSetupPostResponses[keyof ValidateVaultSetupVaultValidateSetupPostResponses];
+
 export type UnlockVaultVaultUnlockPostData = {
     body: UnlockVaultPostRequest;
-    headers: {
-        /**
-         * Authorization
-         * Bearer token
-         */
-        authorization: string;
-    };
     path?: never;
     query?: never;
     url: '/vault/unlock';
@@ -480,26 +607,10 @@ export type UnlockVaultVaultUnlockPostResponse = UnlockVaultVaultUnlockPostRespo
 
 export type LockVaultVaultLockPostData = {
     body?: never;
-    headers: {
-        /**
-         * Authorization
-         * Bearer token
-         */
-        authorization: string;
-    };
     path?: never;
     query?: never;
     url: '/vault/lock';
 };
-
-export type LockVaultVaultLockPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type LockVaultVaultLockPostError = LockVaultVaultLockPostErrors[keyof LockVaultVaultLockPostErrors];
 
 export type LockVaultVaultLockPostResponses = {
     /**
@@ -559,13 +670,7 @@ export type DeletePasswordPasswordsPasswordIdDeleteData = {
          */
         password_id: string;
     };
-    query: {
-        /**
-         * User Id
-         * ID of the user deleting the password
-         */
-        user_id: string;
-    };
+    query?: never;
     url: '/passwords/{password_id}';
 };
 
@@ -595,12 +700,7 @@ export type GetPasswordPasswordsPasswordIdGetData = {
          */
         password_id: string;
     };
-    query: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
+    query?: never;
     url: '/passwords/{password_id}';
 };
 
@@ -658,12 +758,7 @@ export type ListPasswordsPasswordsListFolderGetData = {
          */
         folder: string | null;
     };
-    query: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
+    query?: never;
     url: '/passwords/list/{folder}';
 };
 
@@ -686,43 +781,88 @@ export type ListPasswordsPasswordsListFolderGetResponses = {
 
 export type ListPasswordsPasswordsListFolderGetResponse = ListPasswordsPasswordsListFolderGetResponses[keyof ListPasswordsPasswordsListFolderGetResponses];
 
-export type ShareAccessResourceIdSharePostData = {
-    body: ShareAccessRequest;
+export type SharePasswordPasswordsPasswordIdSharePostData = {
+    body: SharePasswordRequest;
     path: {
         /**
-         * Resource Id
+         * Password Id
          */
-        resource_id: string;
+        password_id: string;
     };
     query?: never;
-    url: '/{resource_id}/share';
+    url: '/passwords/{password_id}/share';
 };
 
-export type ShareAccessResourceIdSharePostErrors = {
+export type SharePasswordPasswordsPasswordIdSharePostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ShareAccessResourceIdSharePostError = ShareAccessResourceIdSharePostErrors[keyof ShareAccessResourceIdSharePostErrors];
+export type SharePasswordPasswordsPasswordIdSharePostError = SharePasswordPasswordsPasswordIdSharePostErrors[keyof SharePasswordPasswordsPasswordIdSharePostErrors];
 
-export type ShareAccessResourceIdSharePostResponses = {
+export type SharePasswordPasswordsPasswordIdSharePostResponses = {
     /**
      * Successful Response
      */
-    201: unknown;
+    201: SharePasswordResponse;
 };
+
+export type SharePasswordPasswordsPasswordIdSharePostResponse = SharePasswordPasswordsPasswordIdSharePostResponses[keyof SharePasswordPasswordsPasswordIdSharePostResponses];
+
+export type UnsharePasswordPasswordsPasswordIdShareUserIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Password Id
+         */
+        password_id: string;
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/passwords/{password_id}/share/{user_id}';
+};
+
+export type UnsharePasswordPasswordsPasswordIdShareUserIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UnsharePasswordPasswordsPasswordIdShareUserIdDeleteError = UnsharePasswordPasswordsPasswordIdShareUserIdDeleteErrors[keyof UnsharePasswordPasswordsPasswordIdShareUserIdDeleteErrors];
+
+export type UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponse = UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponses[keyof UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponses];
+
+export type GetUserMeUsersMeGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/me';
+};
+
+export type GetUserMeUsersMeGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: GetUserMeResponse;
+};
+
+export type GetUserMeUsersMeGetResponse = GetUserMeUsersMeGetResponses[keyof GetUserMeUsersMeGetResponses];
 
 export type DeleteUserUsersUserIdDeleteData = {
     body?: never;
-    headers: {
-        /**
-         * Authorization
-         * Bearer token
-         */
-        authorization: string;
-    };
     path: {
         /**
          * User Id
@@ -851,6 +991,31 @@ export type CreateUserUsersPostResponses = {
 
 export type CreateUserUsersPostResponse = CreateUserUsersPostResponses[keyof CreateUserUsersPostResponses];
 
+export type AdminLoginAuthLoginPostData = {
+    body: AdminLoginRequest;
+    path?: never;
+    query?: never;
+    url: '/auth/login';
+};
+
+export type AdminLoginAuthLoginPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AdminLoginAuthLoginPostError = AdminLoginAuthLoginPostErrors[keyof AdminLoginAuthLoginPostErrors];
+
+export type AdminLoginAuthLoginPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: AdminLoginResponse;
+};
+
+export type AdminLoginAuthLoginPostResponse = AdminLoginAuthLoginPostResponses[keyof AdminLoginAuthLoginPostResponses];
+
 export type RegisterAdminAuthRegisterAdminPostData = {
     body: RegisterAdminRequest;
     path?: never;
@@ -876,30 +1041,103 @@ export type RegisterAdminAuthRegisterAdminPostResponses = {
 
 export type RegisterAdminAuthRegisterAdminPostResponse = RegisterAdminAuthRegisterAdminPostResponses[keyof RegisterAdminAuthRegisterAdminPostResponses];
 
-export type AdminLoginAuthLoginPostData = {
-    body: AdminLoginRequest;
+export type ConfigureSsoProviderAuthSsoConfigurePostData = {
+    body: ConfigureSsoProviderRequest;
     path?: never;
     query?: never;
-    url: '/auth/login';
+    url: '/auth/sso/configure';
 };
 
-export type AdminLoginAuthLoginPostErrors = {
+export type ConfigureSsoProviderAuthSsoConfigurePostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type AdminLoginAuthLoginPostError = AdminLoginAuthLoginPostErrors[keyof AdminLoginAuthLoginPostErrors];
+export type ConfigureSsoProviderAuthSsoConfigurePostError = ConfigureSsoProviderAuthSsoConfigurePostErrors[keyof ConfigureSsoProviderAuthSsoConfigurePostErrors];
 
-export type AdminLoginAuthLoginPostResponses = {
+export type ConfigureSsoProviderAuthSsoConfigurePostResponses = {
     /**
      * Successful Response
      */
-    200: AdminLoginResponse;
+    200: unknown;
 };
 
-export type AdminLoginAuthLoginPostResponse = AdminLoginAuthLoginPostResponses[keyof AdminLoginAuthLoginPostResponses];
+export type GetSsoUrlAuthSsoUrlGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/sso/url';
+};
+
+export type GetSsoUrlAuthSsoUrlGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
+export type SsoCallbackAuthSsoCallbackGetData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Code
+         * Authorization code from SSO provider
+         */
+        code: string;
+        /**
+         * State
+         * State parameter for CSRF protection
+         */
+        state?: string;
+    };
+    url: '/auth/sso/callback';
+};
+
+export type SsoCallbackAuthSsoCallbackGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SsoCallbackAuthSsoCallbackGetError = SsoCallbackAuthSsoCallbackGetErrors[keyof SsoCallbackAuthSsoCallbackGetErrors];
+
+export type SsoCallbackAuthSsoCallbackGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: SsoCallbackResponse;
+};
+
+export type SsoCallbackAuthSsoCallbackGetResponse = SsoCallbackAuthSsoCallbackGetResponses[keyof SsoCallbackAuthSsoCallbackGetResponses];
+
+export type RefreshAccessTokenAuthRefreshTokenPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/refresh-token';
+};
+
+export type RefreshAccessTokenAuthRefreshTokenPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RefreshAccessTokenAuthRefreshTokenPostError = RefreshAccessTokenAuthRefreshTokenPostErrors[keyof RefreshAccessTokenAuthRefreshTokenPostErrors];
+
+export type RefreshAccessTokenAuthRefreshTokenPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RefreshAccessTokenResponse;
+};
+
+export type RefreshAccessTokenAuthRefreshTokenPostResponse = RefreshAccessTokenAuthRefreshTokenPostResponses[keyof RefreshAccessTokenAuthRefreshTokenPostResponses];
 
 export type ClientOptions = {
     baseUrl: `${string}://${string}/api` | (string & {});
