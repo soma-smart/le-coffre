@@ -1,5 +1,6 @@
 import './assets/main.css'
 
+import './customClient'
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import PrimeVue from 'primevue/config';
@@ -12,14 +13,14 @@ import AppState from './plugins/appState';
 
 const app = createApp(App)
 app.use(PrimeVue, {
-    theme: {
-        preset: Aura,
-        options: {
-            prefix: 'p',
-            darkModeSelector: '.p-dark',
-            cssLayer: false,
-        }
+  theme: {
+    preset: Aura,
+    options: {
+      prefix: 'p',
+      darkModeSelector: '.p-dark',
+      cssLayer: false,
     }
+  }
 });
 app.use(createPinia())
 app.use(router)

@@ -2,11 +2,12 @@
 import { adminLoginAuthLoginPost } from '@/client';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { useToast } from 'primevue';
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ref } from 'vue';
 import z from 'zod';
 
 const router = useRouter()
+const route = useRoute()
 const toast = useToast();
 
 const formValues = {
@@ -40,8 +41,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     // Add login: true to localStorage
     localStorage.setItem('login', 'true');
 
-    // Redirect to main page using router
-    router.push('/');
+    // Redirect to the page specified in query or to home page
+    const redirectPath = route.query.redirect as string || '/';
+    router.push(redirectPath);
 
   }
 };
