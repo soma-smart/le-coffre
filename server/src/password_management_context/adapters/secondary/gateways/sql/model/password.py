@@ -1,10 +1,10 @@
 from typing import Optional
-from sqlmodel import CheckConstraint, SQLModel, Field
+from sqlmodel import SQLModel, Field
 from uuid import UUID
 
 
 class PasswordTable(SQLModel, table=True):
-    __tablename__ = "PasswordTable"
+    __tablename__: str = "PasswordTable"
 
     id: UUID = Field(default_factory=UUID, nullable=False, primary_key=True, index=True)
     name: str = Field(description="Password name")
@@ -14,4 +14,3 @@ class PasswordTable(SQLModel, table=True):
 
 def create_password_table(engine):
     SQLModel.metadata.create_all(engine)
-    

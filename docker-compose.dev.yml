@@ -8,7 +8,6 @@ services:
     depends_on:
       - backend
       - frontend
-
   backend:
     build:
       context: ./server
@@ -28,14 +27,13 @@ services:
         - action: sync
           path: ./server/app
           target: /app/app
-
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
     command: bun dev --host 0.0.0.0
     volumes:
-      - ./frontend:/app/frontend
+      - ./:/app/
       - /app/frontend/node_modules
     expose:
       - "5173"

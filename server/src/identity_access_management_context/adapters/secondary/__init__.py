@@ -8,6 +8,7 @@ from .oauth2_sso_gateway import OAuth2SsoGateway
 from .in_memory_sso_user_repository import InMemorySsoUserRepository
 from .in_memory_user_management_gateway import InMemoryUserManagementGateway
 from .in_memory_sso_gateway import InMemorySSOGateway
+from .sql.sql_sso_user_repository import SqlSsoUserRepository
 
 __all__ = [
     "InMemoryUserRepository",
@@ -20,4 +21,5 @@ __all__ = [
     "InMemorySsoUserRepository",
     "InMemoryUserManagementGateway",
     "InMemorySSOGateway",
+    "SqlSsoUserRepository",
 ]
