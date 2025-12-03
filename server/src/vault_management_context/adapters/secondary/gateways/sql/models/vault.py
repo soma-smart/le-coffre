@@ -1,9 +1,8 @@
 from sqlmodel import CheckConstraint, SQLModel, Field
-from typing import Optional
 
 
 class VaultTable(SQLModel, table=True):
-    __tablename__ = "vault"
+    __tablename__: str = "vault"
     __table_args__ = (CheckConstraint("id = 1", name="only_one_vault"),)
 
     id: int = Field(primary_key=True, default=1, nullable=False)
