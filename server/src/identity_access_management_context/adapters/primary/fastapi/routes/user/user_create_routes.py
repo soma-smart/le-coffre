@@ -21,6 +21,7 @@ class CreateUserRequest(BaseModel):
     username: str
     email: str
     name: str
+    password: str
 
 
 class CreateUserResponse(BaseModel):
@@ -46,6 +47,7 @@ def create_user(
 
     - **username**: Username for the new user
     - **email**: Email address for the new user
+    - **name**: Full name for the new user
     - **password**: Password for the new user (will be hashed)
 
     - **Authentication**: Requires authentication via access_token cookie
@@ -60,6 +62,7 @@ def create_user(
             username=request.username,
             email=request.email,
             name=request.name,
+            password=request.password,
         )
 
         created_user_id = usecase.execute(command)

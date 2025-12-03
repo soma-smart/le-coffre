@@ -109,13 +109,16 @@ async def lifespan(app: FastAPI):
         app.state.time_provider = UtcTimeProvider()
 
         user_repository = InMemoryUserRepository()
-        create_user_usecase = CreateUserUseCase(user_repository)
+        user_password_repository = InMemoryUserPasswordRepository()
+        password_hashing_gateway = BcryptHashingGateway()
+
+        create_user_usecase = CreateUserUseCase(
+            user_repository, password_hashing_gateway
+        )
         can_create_admin_usecase = CanCreateAdminUseCase(user_repository)
 
         app.state.user_repository = user_repository
 
-        user_password_repository = InMemoryUserPasswordRepository()
-        password_hashing_gateway = BcryptHashingGateway()
         token_gateway = JwtTokenGateway(
             secret_key=get_jwt_secret_key(),
             algorithm=get_jwt_algorithm(),

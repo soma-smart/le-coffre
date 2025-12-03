@@ -50,6 +50,7 @@ def test_complete_admin_authentication_flow(e2e_client, unauthenticated_client):
         "username": "testuser_1234",
         "email": "test_1234@example.com",
         "name": "Test User",
+        "password": "user_password123",
     }
 
     create_user_response = e2e_client.post("/api/users/", json=user_data)

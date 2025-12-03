@@ -5,14 +5,17 @@ from identity_access_management_context.application.gateways import UserReposito
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.use_cases import CreateUserUseCase
 from identity_access_management_context.domain.exceptions import (
-    UserNotFoundError,
     UserAlreadyExistsError,
+)
+from tests.identity_access_management_context.unit.fakes import (
+    FakePasswordHashingGateway,
 )
 
 
 @pytest.fixture
 def use_case(user_repository: UserRepository):
-    return CreateUserUseCase(user_repository)
+    password_hashing_gateway = FakePasswordHashingGateway()
+    return CreateUserUseCase(user_repository, password_hashing_gateway)
 
 
 def test_should_create_user(
@@ -23,8 +26,11 @@ def test_should_create_user(
     username = "testuser"
     email = "testuser@example.com"
     name = "Test User"
+    password = "secure_password123"
 
-    command = CreateUserCommand(id=uuid, username=username, email=email, name=name)
+    command = CreateUserCommand(
+        id=uuid, username=username, email=email, name=name, password=password
+    )
 
     user_id = use_case.execute(command)
 
@@ -34,6 +40,7 @@ def test_should_create_user(
     assert created_user.username == username
     assert created_user.email == email
     assert created_user.name == name
+    assert created_user.password_hash == "hashed(secure_password123)"
 
 
 def test_should_raise_when_user_already_exists(
@@ -43,8 +50,11 @@ def test_should_raise_when_user_already_exists(
     username = "testuser"
     email = "testuser@example.com"
     name = "Test User"
+    password = "secure_password123"
 
-    command = CreateUserCommand(id=uuid, username=username, email=email, name=name)
+    command = CreateUserCommand(
+        id=uuid, username=username, email=email, name=name, password=password
+    )
 
     use_case.execute(command)
     with pytest.raises(UserAlreadyExistsError) as _:
