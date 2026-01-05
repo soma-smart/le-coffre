@@ -7,7 +7,6 @@ from identity_access_management_context.application.responses import (
 from identity_access_management_context.application.gateways import (
     TokenGateway,
     UserRepository,
-    SessionRepository,
 )
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
@@ -21,12 +20,10 @@ class RefreshAccessTokenUseCase:
         self,
         token_gateway: TokenGateway,
         user_repository: UserRepository,
-        session_repository: SessionRepository,
         time_provider: TimeProvider,
     ):
         self.token_gateway = token_gateway
         self.user_repository = user_repository
-        self.session_repository = session_repository
         self.time_provider = time_provider
 
     async def execute(
@@ -48,14 +45,6 @@ class RefreshAccessTokenUseCase:
             email=token_data.email,
             roles=token_data.roles,
         )
-
-        # Create a new session for the new access token
-        session = AuthenticationSession(
-            user_id=token_data.user_id,
-            jwt_token=new_access_token.value,
-            time_provider=self.time_provider,
-        )
-        self.session_repository.save(session)
 
         return RefreshAccessTokenResponse(
             access_token=new_access_token.value,

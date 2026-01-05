@@ -16,9 +16,6 @@ from tests.identity_access_management_context.unit.fakes.fake_password_hashing_g
 from tests.identity_access_management_context.unit.fakes.fake_token_gateway import (
     FakeTokenGateway,
 )
-from tests.identity_access_management_context.unit.fakes.fake_session_repository import (
-    FakeSessionRepository,
-)
 from tests.identity_access_management_context.unit.fakes.fake_user_management_gateway import (
     FakeUserManagementGateway,
 )
@@ -48,11 +45,6 @@ def password_hashing_gateway():
 @pytest.fixture
 def token_gateway():
     return FakeTokenGateway()
-
-
-@pytest.fixture
-def session_repository():
-    return FakeSessionRepository()
 
 
 @pytest.fixture

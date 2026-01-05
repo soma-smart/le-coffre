@@ -15,7 +15,6 @@ class ValidatedUser:
     email: str
     display_name: str
     roles: List[str]
-    session_id: UUID
 
     def to_authenticated_user(self) -> AuthenticatedUser:
         return AuthenticatedUser(
