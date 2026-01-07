@@ -14,11 +14,10 @@ from identity_access_management_context.domain.entities import User
 
 
 @pytest.fixture
-def use_case(token_gateway, user_repository, session_repository, time_provider):
+def use_case(token_gateway, user_repository, time_provider):
     return RefreshAccessTokenUseCase(
         token_gateway=token_gateway,
         user_repository=user_repository,
-        session_repository=session_repository,
         time_provider=time_provider,
     )
 
@@ -28,7 +27,6 @@ async def test_given_valid_refresh_token_when_execute_then_returns_new_access_to
     use_case: RefreshAccessTokenUseCase,
     token_gateway,
     user_repository,
-    session_repository,
 ):
     # Arrange
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -52,12 +50,6 @@ async def test_given_valid_refresh_token_when_execute_then_returns_new_access_to
     # Assert
     assert result.access_token == f"jwt_token_for_{user_id}_new_access_token"
     assert result.user_id == user_id
-
-    # Verify that a session was created for the new access token
-    session = session_repository.get_by_token(result.access_token)
-    assert session is not None
-    assert session.user_id == user_id
-    assert session.jwt_token == result.access_token
 
 
 @pytest.mark.asyncio

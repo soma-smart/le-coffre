@@ -1,7 +1,6 @@
 from .in_memory_user_repository import InMemoryUserRepository
 from .bcrypt_hashing_gateway import BcryptHashingGateway
 from .in_memory_user_password_repository import InMemoryUserPasswordRepository
-from .in_memory_session_repository import InMemorySessionRepository
 from .jwt_token_gateway import JwtTokenGateway
 from .user_management_gateway_adapter import UserManagementGatewayAdapter
 from .oauth2_sso_gateway import OAuth2SsoGateway
@@ -14,7 +13,6 @@ __all__ = [
     "InMemoryUserRepository",
     "BcryptHashingGateway",
     "InMemoryUserPasswordRepository",
-    "InMemorySessionRepository",
     "JwtTokenGateway",
     "UserManagementGatewayAdapter",
     "OAuth2SsoGateway",

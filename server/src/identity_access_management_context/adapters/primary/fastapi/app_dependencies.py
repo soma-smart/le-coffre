@@ -20,7 +20,6 @@ from identity_access_management_context.application.gateways import (
     UserPasswordRepository,
     PasswordHashingGateway,
     TokenGateway,
-    SessionRepository,
     UserManagementGateway,
     SsoGateway,
     SsoUserRepository,
@@ -42,10 +41,6 @@ def get_password_hashing_gateway(request: Request) -> PasswordHashingGateway:
 
 def get_token_gateway(request: Request) -> TokenGateway:
     return request.app.state.token_gateway
-
-
-def get_session_repository(request: Request) -> SessionRepository:
-    return request.app.state.session_repository
 
 
 def get_user_management_gateway(request: Request) -> UserManagementGateway:
@@ -113,14 +108,12 @@ def get_admin_login_usecase(
         get_password_hashing_gateway
     ),
     token_gateway: TokenGateway = Depends(get_token_gateway),
-    session_repository: SessionRepository = Depends(get_session_repository),
     time_provider: TimeProvider = Depends(get_time_provider),
 ):
     return AdminLoginUseCase(
         user_password_repository,
         password_hashing_gateway,
         token_gateway,
-        session_repository,
         time_provider,
     )
 
@@ -170,7 +163,6 @@ def get_sso_login_usecase(
         get_user_management_gateway
     ),
     token_gateway: TokenGateway = Depends(get_token_gateway),
-    session_repository: SessionRepository = Depends(get_session_repository),
     time_provider: TimeProvider = Depends(get_time_provider),
 ):
     return SsoLoginUseCase(
@@ -178,7 +170,6 @@ def get_sso_login_usecase(
         sso_user_repository,
         user_management_gateway,
         token_gateway,
-        session_repository,
         time_provider,
     )
 
@@ -186,12 +177,10 @@ def get_sso_login_usecase(
 def get_refresh_access_token_usecase(
     token_gateway: TokenGateway = Depends(get_token_gateway),
     user_repository: UserRepository = Depends(get_user_repository),
-    session_repository: SessionRepository = Depends(get_session_repository),
     time_provider: TimeProvider = Depends(get_time_provider),
 ):
     return RefreshAccessTokenUseCase(
         token_gateway,
         user_repository,
-        session_repository,
         time_provider,
     )

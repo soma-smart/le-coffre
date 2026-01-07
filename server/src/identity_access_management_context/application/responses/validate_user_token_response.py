@@ -9,5 +9,4 @@ class ValidateUserTokenResponse:
     user_id: UUID
     email: str
     display_name: str
-    session_id: UUID
     roles: List[str]

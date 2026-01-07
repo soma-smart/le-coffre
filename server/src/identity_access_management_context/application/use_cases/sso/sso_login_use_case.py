@@ -12,7 +12,6 @@ from identity_access_management_context.application.gateways import (
     SsoUserRepository,
     UserManagementGateway,
     TokenGateway,
-    SessionRepository,
 )
 from identity_access_management_context.domain.entities.sso_user import SsoUser
 from identity_access_management_context.domain.entities.authentication_session import (
@@ -38,14 +37,12 @@ class SsoLoginUseCase:
         sso_user_repository: SsoUserRepository,
         user_management_gateway: UserManagementGateway,
         token_gateway: TokenGateway,
-        session_repository: SessionRepository,
         time_provider: TimeProvider,
     ):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
         self._user_management_gateway = user_management_gateway
         self._token_gateway = token_gateway
-        self._session_repository = session_repository
         self._time_provider = time_provider
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
@@ -104,14 +101,6 @@ class SsoLoginUseCase:
             email=email,
             roles=["user"],
         )
-
-        # Step 5: Create session
-        session = AuthenticationSession(
-            user_id=user_id,
-            jwt_token=token.value,
-            time_provider=self._time_provider,
-        )
-        self._session_repository.save(session)
 
         return SsoLoginResponse(
             jwt_token=token.value,
