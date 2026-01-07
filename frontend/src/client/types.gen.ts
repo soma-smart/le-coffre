@@ -175,10 +175,6 @@ export type GetPasswordListResponse = {
      */
     name: string;
     /**
-     * Password
-     */
-    password: string;
-    /**
      * Folder
      */
     folder?: string | null;
