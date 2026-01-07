@@ -26,7 +26,7 @@ class GetPasswordListResponse(BaseModel):
 
 
 @router.get(
-    "/list/{folder}",
+    "/list",
     status_code=200,
     response_model=list[GetPasswordListResponse],
     summary="List all passwords, optionally filtered by folder",

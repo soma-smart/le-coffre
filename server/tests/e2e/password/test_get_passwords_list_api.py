@@ -13,7 +13,7 @@ def test_can_list_passwords(authenticated_admin_client, setup):
         assert response.status_code == 201
 
     list_response = authenticated_admin_client.get(
-        f"/api/passwords/list/{folder}",
+        f"/api/passwords/list?folder={folder}",
     )
     assert list_response.status_code == 200
     passwords = list_response.json()
@@ -26,6 +26,6 @@ def test_list_passwords_folder_not_found(authenticated_admin_client, setup):
     non_existent_folder = "NonExistentFolder"
 
     response = authenticated_admin_client.get(
-        f"/api/passwords/list/{non_existent_folder}",
+        f"/api/passwords/list?folder={non_existent_folder}",
     )
     assert response.status_code == 404
