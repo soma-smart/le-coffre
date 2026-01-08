@@ -21,7 +21,7 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 class GetPasswordListResponse(BaseModel):
     id: UUID
     name: str
-    folder: str | None = None
+    folder: str
 
 
 @router.get(
