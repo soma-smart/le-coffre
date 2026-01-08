@@ -6,7 +6,7 @@
           <i class="pi pi-folder text-2xl text-blue-500"></i>
           <div>
             <h3 class="text-xl font-semibold">
-              {{ folder.name === 'default' ? 'Default Folder' : folder.name }}
+              {{ folder.name }}
             </h3>
             <p class="text-sm text-gray-500 dark:text-gray-400">
               {{ folder.count }} {{ folder.count === 1 ? 'password' : 'passwords' }}

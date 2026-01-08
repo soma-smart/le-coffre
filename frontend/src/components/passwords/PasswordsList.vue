@@ -56,7 +56,7 @@ const folders = computed(() => {
   const folderMap = new Map<string, GetPasswordListResponse[]>();
   
   props.passwords.forEach(password => {
-    const folderName = password.folder || 'default';
+    const folderName = password.folder;
     if (!folderMap.has(folderName)) {
       folderMap.set(folderName, []);
     }

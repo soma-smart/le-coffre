@@ -80,14 +80,6 @@ export type CreatePasswordResponse = {
      * Id
      */
     id: string;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Folder
-     */
-    folder?: string | null;
 };
 
 /**
@@ -199,7 +191,7 @@ export type GetPasswordResponse = {
     /**
      * Folder
      */
-    folder?: string | null;
+    folder: string;
 };
 
 /**

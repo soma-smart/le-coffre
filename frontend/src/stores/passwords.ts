@@ -16,7 +16,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     const folderMap = new Map<string, GetPasswordListResponse[]>();
     
     passwords.value.forEach(password => {
-      const folderName = password.folder || 'default';
+      const folderName = password.folder;
       if (!folderMap.has(folderName)) {
         folderMap.set(folderName, []);
       }
