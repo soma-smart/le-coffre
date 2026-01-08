@@ -49,8 +49,8 @@ def user_database_engine():
         os.unlink(db_path)
 
 @pytest.fixture(scope="function")
-def session(database_engine):
-    session = Session(database_engine)
+def session(user_database_engine):
+    session = Session(user_database_engine)
     yield session
     session.close()
 
