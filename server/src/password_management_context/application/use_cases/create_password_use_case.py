@@ -25,8 +25,8 @@ class CreatePasswordUseCase:
         PasswordComplexityService.validate(command.decrypted_password)
 
         encrypted_value = self.encryption_service.encrypt(command.decrypted_password)
-
-        password = Password(
+    
+        password = Password.create(
             id=command.id,
             name=command.name,
             encrypted_value=encrypted_value,

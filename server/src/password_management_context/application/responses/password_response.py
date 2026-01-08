@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 from uuid import UUID
 
 
@@ -8,4 +7,4 @@ class PasswordResponse:
     id: UUID
     name: str
     password: str
-    folder: Optional[str] = None
+    folder: str

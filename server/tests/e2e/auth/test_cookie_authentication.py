@@ -56,8 +56,6 @@ def test_authenticated_request_with_cookie(authenticated_admin_client, setup):
     )
 
     assert create_response.status_code == 201
-    created_password = create_response.json()
-    assert created_password["name"] == "Cookie Test Entry"
 
 
 def test_authenticated_request_without_auth_fails(unauthenticated_client, setup):

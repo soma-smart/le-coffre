@@ -53,7 +53,6 @@ def test_should_create_password_with_uuid_and_store_encrypted(
     assert saved_password.id == uuid
     assert saved_password.name == name
     assert saved_password.encrypted_value == expected_encrypted
-    assert saved_password.folder is None
 
 
 def test_should_create_password_in_folder_with_encrypted_value(
@@ -82,6 +81,29 @@ def test_should_create_password_in_folder_with_encrypted_value(
     assert saved_password.folder == folder
     assert saved_password.encrypted_value == expected_encrypted
 
+
+def test_should_create_password_in_default_folder_when_not_given(
+    use_case: CreatePasswordUseCase, password_repository: PasswordRepository
+):
+    uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    name = "Slack"
+    decrypted_password = STRONG_PASSWORD
+
+    command = CreatePasswordCommand(
+        user_id=user_id,
+        id=uuid,
+        name=name,
+        decrypted_password=decrypted_password,
+    )
+
+    password_id = use_case.execute(command)
+
+    assert password_id == uuid
+    saved_password = password_repository.get_by_id(password_id)
+    assert saved_password.folder == "default"
+
+    
 
 def test_should_grant_access_to_user_when_creating_password(
     use_case: CreatePasswordUseCase, access_controller: FakeAccessController

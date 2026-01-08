@@ -23,8 +23,6 @@ class CreatePasswordRequest(BaseModel):
 
 class CreatePasswordResponse(BaseModel):
     id: UUID
-    name: str
-    folder: str | None = None
 
 
 @router.post(
@@ -59,9 +57,7 @@ def create_password(
         created_password_id = usecase.execute(command)
 
         return CreatePasswordResponse(
-            id=created_password_id,
-            name=request.name,
-            folder=request.folder,
+            id=created_password_id
         )
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
