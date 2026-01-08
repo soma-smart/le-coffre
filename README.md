@@ -113,13 +113,30 @@ bun install
 
 ## Development Server
 
-Open with VSCode or any other IDE compatible with devcontainer.
-Automatically both front and back will be started with hot reload.
-Front : http://127.0.0.1:5173
-Back : http://127.0.0.1:8000
-Swagger: http://127.0.0.1:8000/openapi.json
+### Using Devcontainer (Recommended)
 
-Within each front/ or back/ folder you will find a README.md with more details.
+Open with VSCode and reopen in the devcontainer when prompted. The unified devcontainer includes both frontend and backend development environments with nginx as a reverse proxy.
+
+**Quick Start:**
+1. Open project in VS Code
+2. Click "Reopen in Container" when prompted
+3. Use VS Code tasks to start services:
+   - Press `Ctrl+Shift+P` → "Run Task" → "Start All Services"
+
+See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions.
+
+**Access Points:**
+- **Main App:** http://127.0.0.1:8123 (via nginx - use this for development)
+- Frontend (direct): http://127.0.0.1:5173
+- Backend API (direct): http://127.0.0.1:8000
+- API Docs: http://127.0.0.1:8000/docs
+- OpenAPI Spec: http://127.0.0.1:8000/openapi.json
+
+> **Why nginx?** The frontend makes API calls to `/api/*` which are proxied to the backend. Always use port 8123 for development.
+
+### Manual Setup
+
+Within each `frontend/` or `server/` folder you will find a README.md with more details.
 
 ## Production
 

@@ -1,0 +1,52 @@
+# Multi-stage unified development container for both frontend and backend
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm
+
+# Install Node.js, Bun, nginx and other dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    bash \
+    sudo \
+    curl \
+    unzip \
+    nginx \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user first
+ARG USER_UID=1000
+ARG USER_GID=1000
+ARG USERNAME=devuser
+
+RUN groupadd -g $USER_GID $USERNAME \
+    && useradd -u $USER_UID -g $USER_GID -m -s /bin/bash $USERNAME \
+    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Install Bun globally for all users
+RUN curl -fsSL https://bun.sh/install | bash -s "bun-v1.1.38"
+RUN mv /root/.bun/bin/bun /usr/local/bin/bun \
+    && chmod +x /usr/local/bin/bun
+
+# Set up workspace
+WORKDIR /app
+
+# Copy backend dependencies and install
+COPY --chown=$USERNAME:$USERNAME server/pyproject.toml server/uv.lock /app/server/
+RUN cd /app/server && uv sync --no-cache
+
+# Copy frontend dependencies and install
+COPY --chown=$USERNAME:$USERNAME frontend/package.json frontend/bun.lock /app/frontend/
+WORKDIR /app/frontend
+USER $USERNAME
+RUN bun install
+USER root
+WORKDIR /app
+
+# Copy the rest of the application
+COPY --chown=$USERNAME:$USERNAME . .
+
+# Change ownership of the entire app directory
+RUN chown -R $USERNAME:$USERNAME /app
+
+USER $USERNAME
+
+CMD [ "tail", "-f", "/dev/null" ]

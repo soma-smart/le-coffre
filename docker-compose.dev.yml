@@ -1,46 +1,21 @@
 services:
-  reverse-proxy:
-    image: nginx:alpine
-    volumes:
-      - ./.devcontainer/proxy/nginx.conf:/etc/nginx/nginx.conf
-    ports:
-      - "8123:8123"
-    depends_on:
-      - backend
-      - frontend
-  backend:
+  devcontainer:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile.dev
       args:
         USER_UID: ${USER_UID:-1000}
         USER_GID: ${USER_GID:-1000}
         USERNAME: devuser
-    command: uv run fastapi dev src/main.py --host 0.0.0.0
     volumes:
-      - ./:/app
-    expose:
-      - "8000"
-    user: "${USER_UID:-1000}:${USER_GID:-1000}"
-    develop:
-      watch:
-        - action: sync
-          path: ./server/app
-          target: /app/app
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.dev
-    command: bun dev --host 0.0.0.0
-    volumes:
-      - ./:/app/
+      - .:/app
       - /app/frontend/node_modules
-    expose:
-      - "5173"
-    develop:
-      watch:
-        - action: sync
-          path: ./frontend
-          target: /app/frontend
-          ignore:
-            - node_modules/
+      - /app/server/.venv
+    ports:
+      - "8000:8000"  # Backend API (direct access for debugging)
+      - "5173:5173"  # Frontend dev server (direct access for debugging)
+      - "8123:8123"  # Nginx reverse proxy (main access point)
+    user: "${USER_UID:-1000}:${USER_GID:-1000}"
+    environment:
+      - PYTHONPATH=/app/server/src
+    command: tail -f /dev/null
