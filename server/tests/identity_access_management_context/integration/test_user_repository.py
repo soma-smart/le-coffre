@@ -58,5 +58,3 @@ def test_update_nonexistant_user(sql_user_repository):
   non_existent_user.name = "Updated non existent user"
   with pytest.raises(UserNotFoundError):
     sql_user_repository.update(non_existent_user)
-  
-

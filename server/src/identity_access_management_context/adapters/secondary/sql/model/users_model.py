@@ -1,6 +1,7 @@
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 from sqlmodel import CheckConstraint, SQLModel, Field
+import json
 
 class UserTable(SQLModel, table=True):
   __tablename__="UserTable"
@@ -9,4 +10,12 @@ class UserTable(SQLModel, table=True):
   username: str = Field(nullable=False)
   email: str = Field(nullable=False)
   name: str = Field(nullable=False)
-  roles: List[str] = Field(default_factory=list)
+  roles: str = Field(default="[]", description="Roles as JSON string")
+
+  @property
+  def roles_list(self):
+      return json.loads(self.roles)
+
+  @roles_list.setter
+  def roles_list(self, value):
+      self.roles = json.dumps(value)
