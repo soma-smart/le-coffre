@@ -11,7 +11,8 @@ class UserTable(SQLModel, table=True):
   email: str = Field(nullable=False)
   name: str = Field(nullable=False)
   roles: str = Field(default="[]", description="Roles as JSON string")
-
+  password_hash: Optional[str] = Field(nullable = True)
+  
   @property
   def roles_list(self):
       return json.loads(self.roles)

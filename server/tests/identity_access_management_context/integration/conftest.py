@@ -13,6 +13,9 @@ from identity_access_management_context.adapters.secondary.sql.sql_sso_user_repo
 from identity_access_management_context.adapters.secondary.sql.model.sso_users_model import (
     SsoUsersTable,
 )
+from identity_access_management_context.adapters.secondary.sql.sql_user_repository import (
+    SqlUserRepository,
+)
 from identity_access_management_context.adapters.secondary.sql.model.users_model import (
     UserTable,
 )
