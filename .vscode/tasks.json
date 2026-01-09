@@ -1,0 +1,57 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Nginx",
+      "type": "shell",
+      "command": "nginx -c /app/.vscode/nginx-dev.conf",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "silent",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false
+      },
+    },
+    {
+      "label": "Start Backend",
+      "type": "shell",
+      "command": "cd /app/server && uv run fastapi dev src/main.py --host 0.0.0.0",
+      "dependsOn": ["Start Nginx"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    },
+    {
+      "label": "Start Frontend",
+      "type": "shell",
+      "command": "cd /app/frontend && bun dev --host 0.0.0.0",
+      "dependsOn": ["Start Nginx"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    },
+    {
+      "label": "Start All Services",
+      "dependsOn": ["Start Nginx", "Start Backend", "Start Frontend"],
+      "problemMatcher": [],
+    }
+  ]
+}

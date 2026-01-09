@@ -1,7 +1,0 @@
-{
-  "name": "Reverse Proxy - Le Coffre",
-  "dockerComposeFile": "../../docker-compose.dev.yml",
-  "service": "reverse-proxy",
-  "workspaceFolder": "/app",
-  "forwardPorts": [8123]
-}

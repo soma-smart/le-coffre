@@ -1,9 +1,0 @@
-FROM oven/bun:latest
-
-RUN apt update && apt install -y git
-
-WORKDIR /app/frontend
-
-COPY package.json bun.lock ./
-
-RUN bun install
