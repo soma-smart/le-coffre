@@ -59,7 +59,6 @@ def session(database_engine):
     yield session
     session.close()
 
-
 @pytest.fixture(scope="function")
 def sql_sso_user_repository(session):
     return SqlSsoUserRepository(session)
@@ -74,57 +73,6 @@ def api_client(database):
     """Test client for API testing"""
     with TestClient(app) as client:
         yield client
-        
-
-@pytest.fixture(scope="function")
-def user_database_engine():
-    db_fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(db_fd)
-    try:
-        engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-        SsoUsersTable.metadata.create_all(engine)
-        yield engine
-    finally:
-        os.unlink(db_path)
-
-@pytest.fixture(scope="function")
-def session(user_database_engine):
-    session = Session(user_database_engine)
-    yield session
-    session.close()
-
-@pytest.fixture
-def sql_sso_user_repository(session):
-    return SqlSsoUserRepository(session)
-
-@pytest.fixture
-def sql_user_repository(session):
-    return SqlUserRepository(session)
-
-@pytest.fixture(scope="function")
-def user_database_engine():
-    db_fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(db_fd)
-    try:
-        engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
-        SsoUsersTable.metadata.create_all(engine)
-        yield engine
-    finally:
-        os.unlink(db_path)
-
-@pytest.fixture(scope="function")
-def session(user_database_engine):
-    session = Session(user_database_engine)
-    yield session
-    session.close()
-
-@pytest.fixture
-def sql_sso_user_repository(session):
-    return SqlSsoUserRepository(session)
-
-@pytest.fixture
-def sql_user_repository(session):
-    return SqlUserRepository(session)
 
 @pytest.fixture
 def sso_test_data():

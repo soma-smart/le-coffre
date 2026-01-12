@@ -20,7 +20,7 @@ class SqlUserRepository(UserRepository):
         statement = select(UserTable).where(UserTable.id == user_id)
         result = self._session.exec(statement).first()
         if result is None:
-            raise UserNotFoundError(user_id)
+            return None
         return User(
             id=result.id,
             username=result.username,
@@ -33,7 +33,7 @@ class SqlUserRepository(UserRepository):
         statement = select(UserTable).where(UserTable.email == email)
         results = self._session.exec(statement).all()
         if not results:
-            raise UserNotFoundError(email)
+            return []
         return [
             User(
                 id=row.id,
@@ -48,6 +48,8 @@ class SqlUserRepository(UserRepository):
     def list_all(self) -> List[User]:
         statement = select(UserTable)
         results = self._session.exec(statement).all()
+        if not results:
+            return []
         return [
             User(
                 id=row.id,
@@ -96,7 +98,7 @@ class SqlUserRepository(UserRepository):
         statement = select(UserTable).where(UserTable.roles.like(f'%"{ADMIN_ROLE}"%'))
         result = self._session.exec(statement).first()
         if result is None:
-            raise UserNotFoundError(ADMIN_ROLE)
+            return None
         return User(
             id=result.id,
             username=result.username,

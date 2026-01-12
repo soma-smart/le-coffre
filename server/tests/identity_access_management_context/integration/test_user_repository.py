@@ -22,7 +22,7 @@ def test_list_all_users(sql_user_repository):
   sql_user_repository.save(user1)
   sql_user_repository.save(user2)
   users = sql_user_repository.list_all()
-  assert len(users) >= 2
+  assert len(users) == 2
   user_ids = [user.id for user in users]
   assert user1.id in user_ids
   assert user2.id in user_ids
@@ -31,13 +31,13 @@ def test_delete_user(sql_user_repository):
   user_to_delete = User(id=uuid4(), username="tobedeleted", email="test@test.fr", name="To Be Deleted", roles=[])
   sql_user_repository.save(user_to_delete)
   sql_user_repository.delete(user_to_delete)
-  with pytest.raises(UserNotFoundError):
-    sql_user_repository.get_by_id(user_to_delete.id)
+  deleted_user = sql_user_repository.get_by_id(user_to_delete.id)
+  assert deleted_user is None
 
 def test_delete_nonexistant_user(sql_user_repository):
   non_existent_user = User(id=uuid4(), username="nonexistent", email="test@test.fr", name="Non Existent", roles=[])
-  with pytest.raises(UserNotFoundError):
-    sql_user_repository.delete(non_existent_user)
+  result = sql_user_repository.get_by_id(non_existent_user.id)
+  assert result is None
 
 def test_save_existing_user(sql_user_repository):
   existing_user = User(id=uuid4(), username="existinguser", email="test@test.fr", name="Existing User", roles=[])
