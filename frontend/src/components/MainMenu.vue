@@ -7,10 +7,14 @@
         <span class="ml-2 font-semibold">Passwords</span>
         <Badge class="ml-auto" :value="passwordsCount" />
       </div>
-  <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToProfile()">
+      <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToProfile()">
         <span class="pi pi-user text-primary group-hover:text-inherit" />
         <span class="ml-2">Profile</span>
         <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">⌘+W</span>
+      </div>
+      <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToAdmin()">
+        <span class="pi pi-shield text-primary group-hover:text-inherit" />
+        <span class="ml-2">Admin</span>
       </div>
     </div>
     <!-- Logout Button at bottom -->
@@ -40,6 +44,10 @@ const goToAllPasswords = () => {
 
 const goToProfile = () => {
   router.push('/profile');
+};
+
+const goToAdmin = () => {
+  router.push('/admin');
 };
 
 const handleLogout = () => {
