@@ -22,7 +22,7 @@ class GetPasswordResponse(BaseModel):
     id: UUID
     name: str
     password: str
-    folder: str | None = None
+    folder: str
 
 
 @router.get(

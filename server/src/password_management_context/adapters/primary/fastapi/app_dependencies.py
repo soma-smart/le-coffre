@@ -67,11 +67,10 @@ def get_update_password_usecase(
 
 def get_list_passwords_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
-    encryption_service: EncryptionService = Depends(get_encryption_service),
     access_controller: AccessController = Depends(get_access_controller),
 ):
     return ListPasswordsUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, access_controller
     )
 
 

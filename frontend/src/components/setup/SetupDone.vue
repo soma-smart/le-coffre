@@ -3,8 +3,8 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const handleLogin = () => {
-    router.push('/login')
+const handleLogin = async () => {
+    await router.push('/login');
 }
 </script>
 

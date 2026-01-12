@@ -4,8 +4,10 @@ import { useToast } from "primevue";
 import { z } from 'zod';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { registerAdminAuthRegisterAdminPost } from "@/client";
+import { useSetupStore } from "@/stores/setup";
 
 const emit = defineEmits(['account-created']);
+const setupStore = useSetupStore();
 
 const toast = useToast();
 
@@ -48,6 +50,10 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             return;
         }
         toast.add({ severity: 'success', summary: 'Success', detail: 'Admin account created successfully.', life: 5000 });
+        
+        // Invalidate the setup cache so the router guard knows setup is complete
+        setupStore.invalidateCache();
+        
         emit('account-created');
     } catch (error) {
         toast.add({ severity: 'error', summary: 'API Error', detail: error, life: 5000 });

@@ -24,7 +24,6 @@ const resolver = ref(zodResolver(
 
 const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof formValues }) => {
   if (valid) {
-    console.log('Logging in with', values);
     const response = await adminLoginAuthLoginPost({
       body: {
         email: values.email,

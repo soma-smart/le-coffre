@@ -3,8 +3,7 @@ from uuid import UUID
 
 
 @dataclass(frozen=True)
-class PasswordResponse:
+class PasswordMetadataResponse:
     id: UUID
     name: str
-    password: str
     folder: str

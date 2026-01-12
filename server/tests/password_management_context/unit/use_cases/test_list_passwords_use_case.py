@@ -11,9 +11,9 @@ from shared_kernel.access_control import AccessController
 
 
 @pytest.fixture
-def use_case(password_repository, encryption_service, access_controller):
+def use_case(password_repository, access_controller):
     return ListPasswordsUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, access_controller
     )
 
 
@@ -26,19 +26,18 @@ def test_should_return_empty_list_on_default_folder_when_no_passwords(
     assert result == []
 
 
-def test_should_return_all_passwords_on_default_folder_when_passwords_exist(
+def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
     access_controller: AccessController,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    password = "gmail_secret"
 
     password1 = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
         name="Gmail",
         encrypted_value="encrypted(gmail_secret)",
-        folder=None,
+        folder="default",
     )
     password2 = Password(
         id=UUID("55050a52-7dc7-47dd-9cc9-33b232f27018"),
@@ -54,12 +53,13 @@ def test_should_return_all_passwords_on_default_folder_when_passwords_exist(
 
     result = use_case.execute(requester_id=requester_id)
 
-    assert len(result) == 1
+    assert len(result) == 2
 
-    assert result[0].id == password1.id
-    assert result[0].name == password1.name
-    assert result[0].password == password
-    assert result[0].folder is None
+    for i in result:
+        assert any(
+            p.id == i.id and p.name == i.name and p.folder == i.folder
+            for p in [password1, password2]
+        )
 
 
 def test_should_return_passwords_from_specific_folder_when_folder_provided(
@@ -69,7 +69,6 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     folder_name = "Personal"
-    password = "gmail_secret"
 
     password1 = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
@@ -93,7 +92,6 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
     assert len(result) == 1
     assert result[0].id == password1.id
     assert result[0].name == password1.name
-    assert result[0].password == password
     assert result[0].folder == password1.folder
 
 
@@ -118,13 +116,13 @@ def test_should_return_only_passwords_user_has_access_to(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
         name="Gmail",
         encrypted_value="encrypted(gmail_secret)",
-        folder=None,
+        folder="default",
     )
     password2 = Password(
         id=UUID("55050a52-7dc7-47dd-9cc9-33b232f27018"),
         name="Slack",
         encrypted_value="encrypted(slack_secret)",
-        folder=None,
+        folder="default",
     )
 
     password_repository.save(password1)
@@ -137,8 +135,7 @@ def test_should_return_only_passwords_user_has_access_to(
     assert len(result) == 1
     assert result[0].id == password1.id
     assert result[0].name == password1.name
-    assert result[0].password == "gmail_secret"
-    assert result[0].folder is None
+    assert result[0].folder == "default"
 
 
 def test_should_return_empty_list_when_no_passwords_user_has_access_to(
@@ -150,13 +147,13 @@ def test_should_return_empty_list_when_no_passwords_user_has_access_to(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
         name="Gmail",
         encrypted_value="encrypted(gmail_secret)",
-        folder=None,
+        folder="default",
     )
     password2 = Password(
         id=UUID("55050a52-7dc7-47dd-9cc9-33b232f27018"),
         name="Slack",
         encrypted_value="encrypted(slack_secret)",
-        folder=None,
+        folder="default",
     )
 
     password_repository.save(password1)

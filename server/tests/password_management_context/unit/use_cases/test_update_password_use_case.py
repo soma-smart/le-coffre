@@ -93,3 +93,32 @@ def test_update_password_without_access(
 
     with pytest.raises(PasswordNotFoundError):
         use_case.execute(new_password=updated_password)
+
+def test_when_updating_without_any_element_changed_should_not_change_anything(
+    use_case: UpdatePasswordUseCase,
+    password_repository: InMemoryPasswordRepository,
+    access_controller: AccessController
+):
+    requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    original_password = Password(
+        id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"),
+        name="original",
+        encrypted_value="encrypted(original)",
+        folder="folder",
+    )
+    password_repository.save(original_password)
+    access_controller.grant_update_access(requester_id, original_password.id)
+
+    updated_password = UpdatePasswordCommand(
+        requester_id=requester_id,
+        id=original_password.id,
+    )
+
+    use_case.execute(new_password=updated_password)
+
+
+    stored_password = password_repository.get_by_id(original_password.id)
+
+    assert stored_password.name == "original"
+    assert stored_password.encrypted_value == "encrypted(original)"
+    assert stored_password.folder == "folder"

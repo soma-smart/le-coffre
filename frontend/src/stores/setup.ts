@@ -52,6 +52,11 @@ export const useSetupStore = defineStore('setup', {
         async isSetup(): Promise<boolean> {
             const status = await this.checkSetupStatus();
             return status !== NOT_SETUP;
+        },
+
+        invalidateCache() {
+            this.vaultStatus = null;
+            this._pending = null;
         }
     },
 });

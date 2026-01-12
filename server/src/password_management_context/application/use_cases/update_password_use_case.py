@@ -28,13 +28,15 @@ class UpdatePasswordUseCase:
         if check_permission.granted == Granted.NOT_FOUND:
             raise PasswordNotFoundError(new_password.id)
 
-        encrypted_value = self.encryption_service.encrypt(new_password.password)
+        existing_password = self.password_repository.get_by_id(new_password.id)
 
-        updated_password = Password(
-            id=new_password.id,
-            name=new_password.name,
-            encrypted_value=encrypted_value,
-            folder=new_password.folder,
-        )
+        if new_password.password:
+            existing_password.encrypted_value = self.encryption_service.encrypt(new_password.password)
 
-        self.password_repository.update(updated_password)
+        if new_password.name:
+            existing_password.name = new_password.name
+
+        if new_password.folder:
+            existing_password.folder = new_password.folder
+
+        self.password_repository.update(existing_password)

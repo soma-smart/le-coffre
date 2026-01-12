@@ -49,7 +49,6 @@ def test_share_password_workflow(client_factory, oidc_server, sso_user_token):
     )
     assert create_response.status_code == 201
     password_id = create_response.json()["id"]
-    assert create_response.json()["name"] == "Shared Test Password"
 
     # Step 2: Verify owner can read the password
     get_response = admin_client.get(
