@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI):
         # IAM dependencies
         app.state.time_provider = UtcTimeProvider()
 
-        user_repository = SqlUserRepository(session)
+        user_repository = InMemoryUserRepository()
         user_password_repository = InMemoryUserPasswordRepository()
         password_hashing_gateway = BcryptHashingGateway()
 
