@@ -38,11 +38,15 @@ class ListAccessUseCase:
             password_id
         )
 
-        return ListAccessResponse(
-            accesses=[
+        ret = ListAccessResponse([])
+        for user_id in permissions.keys():
+            is_owner, user_permissions = permissions.get(user_id, (False, set()))
+            ret.accesses.append(
                 AccessResponse(
-                    user_id=user_id, permissions=permissions.get(user_id, set())
+                    user_id=user_id,
+                    is_owner=is_owner,
+                    permissions=user_permissions,
                 )
-                for user_id in permissions.keys()
-            ]
-        )
+            )
+
+        return ret

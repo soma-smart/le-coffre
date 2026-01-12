@@ -4,7 +4,7 @@ from uuid import uuid4
 from password_management_context.adapters.secondary.sql import (
     SqlPasswordPermissionsRepository,
 )
-from password_management_context.domain.value_objects.password_permission import (
+from password_management_context.domain.value_objects import (
     PasswordPermission,
 )
 
@@ -217,6 +217,6 @@ def test_list_all_permissions_for_multiple_users(sql_password_permissions_reposi
     assert owner_id in result
     assert user1_id in result
     assert user2_id in result
-    assert result[owner_id] == set()
-    assert PasswordPermission.READ in result[user1_id]
-    assert PasswordPermission.READ in result[user2_id]
+    assert result[owner_id][0] is True
+    assert PasswordPermission.READ in result[user1_id][1]
+    assert PasswordPermission.READ in result[user2_id][1]

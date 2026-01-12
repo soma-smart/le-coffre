@@ -33,6 +33,6 @@ class PasswordPermissionsRepository(Protocol):
 
     def list_all_permissions_for(
         self, password_id: UUID
-    ) -> dict[UUID, set[PasswordPermission]]:
+    ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
         """Get all users who have access to a password with their permissions"""
         ...

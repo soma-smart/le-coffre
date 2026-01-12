@@ -41,21 +41,19 @@ class FakePasswordPermissionsRepository:
 
     def list_all_permissions_for(
         self, password_id: UUID
-    ) -> dict[UUID, set[PasswordPermission]]:
-        result: dict[UUID, set[PasswordPermission]] = {}
-
-        all_perms = [perm for perm in PasswordPermission]
+    ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
+        result: dict[UUID, tuple[bool, set[PasswordPermission]]] = {}
 
         # Add users with explicit permissions
         for (user_id, pwd_id), permissions in self._permissions.items():
             if pwd_id == password_id:
-                result[user_id] = permissions.copy()
+                result[user_id] = (False, permissions.copy())
 
         # Add owners (with empty permission set to distinguish them)
         for user_id, pwd_id in self._ownerships:
             if pwd_id == password_id:
                 if user_id not in result:
-                    result[user_id] = set(all_perms)
+                    result[user_id] = (True, set())
 
         return result
 

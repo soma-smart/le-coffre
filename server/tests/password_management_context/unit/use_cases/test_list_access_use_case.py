@@ -44,7 +44,7 @@ def test_given_owner_and_password_when_listing_access_should_succeed(
 
     assert len(response.accesses) == 1
     assert response.accesses[0].user_id == requester_id
-    assert PasswordPermission.READ in response.accesses[0].permissions
+    assert response.accesses[0].is_owner is True
 
 
 def test_given_user_and_password_when_listing_access_should_succeed(
@@ -63,6 +63,7 @@ def test_given_user_and_password_when_listing_access_should_succeed(
 
     assert len(response.accesses) == 1
     assert response.accesses[0].user_id == requester_id
+    assert response.accesses[0].is_owner is False
     assert PasswordPermission.READ in response.accesses[0].permissions
 
 
@@ -98,5 +99,8 @@ def test_given_multiple_user_having_access_when_listing_access_should_have_them_
 
     assert len(response.accesses) == 3
     for user in response.accesses:
-        assert PasswordPermission.READ in user.permissions
+        if user.user_id == requester_id:
+            assert user.is_owner is True
+        else:
+            assert PasswordPermission.READ in user.permissions
         assert user.user_id in {requester_id, user1_id, user2_id}

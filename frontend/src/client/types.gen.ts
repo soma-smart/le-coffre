@@ -253,6 +253,20 @@ export type HttpValidationError = {
 };
 
 /**
+ * ListPasswordAccessResponse
+ */
+export type ListPasswordAccessResponse = {
+    /**
+     * Resource Id
+     */
+    resource_id: string;
+    /**
+     * Access List
+     */
+    access_list: Array<UserAccessItem>;
+};
+
+/**
  * ListUserResponse
  */
 export type ListUserResponse = {
@@ -283,6 +297,11 @@ export type LockVaultPostResponse = {
      */
     message: string;
 };
+
+/**
+ * PermissionEnum
+ */
+export type PermissionEnum = 'read';
 
 /**
  * RefreshAccessTokenResponse
@@ -452,6 +471,24 @@ export type UpdateUserRequest = {
      * Name
      */
     name: string;
+};
+
+/**
+ * UserAccessItem
+ */
+export type UserAccessItem = {
+    /**
+     * User Id
+     */
+    user_id: string;
+    /**
+     * Permissions
+     */
+    permissions: Array<PermissionEnum>;
+    /**
+     * Is Owner
+     */
+    is_owner: boolean;
 };
 
 /**
@@ -818,6 +855,36 @@ export type UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponses = {
 };
 
 export type UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponse = UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponses[keyof UnsharePasswordPasswordsPasswordIdShareUserIdDeleteResponses];
+
+export type ListPasswordAccessPasswordsPasswordIdAccessGetData = {
+    body?: never;
+    path: {
+        /**
+         * Password Id
+         */
+        password_id: string;
+    };
+    query?: never;
+    url: '/passwords/{password_id}/access';
+};
+
+export type ListPasswordAccessPasswordsPasswordIdAccessGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListPasswordAccessPasswordsPasswordIdAccessGetError = ListPasswordAccessPasswordsPasswordIdAccessGetErrors[keyof ListPasswordAccessPasswordsPasswordIdAccessGetErrors];
+
+export type ListPasswordAccessPasswordsPasswordIdAccessGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListPasswordAccessResponse;
+};
+
+export type ListPasswordAccessPasswordsPasswordIdAccessGetResponse = ListPasswordAccessPasswordsPasswordIdAccessGetResponses[keyof ListPasswordAccessPasswordsPasswordIdAccessGetResponses];
 
 export type GetUserMeUsersMeGetData = {
     body?: never;

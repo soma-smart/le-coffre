@@ -1,21 +1,21 @@
 from fastapi import Depends
 from starlette.requests import Request
-
+from identity_access_management_context.application.gateways import UserRepository
+from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.use_cases import (
-    CreatePasswordUseCase,
     GetPasswordUseCase,
     UpdatePasswordUseCase,
-    ListPasswordsUseCase,
+    CreatePasswordUseCase,
     DeletePasswordUseCase,
     ShareAccessUseCase,
     UnshareAccessUseCase,
+    ListPasswordsUseCase,
+    ListAccessUseCase,
 )
-from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
 )
 from shared_kernel.encryption import EncryptionService
-from identity_access_management_context.application.gateways import UserRepository
 
 
 def get_password_repository(request: Request) -> PasswordRepository:
@@ -106,3 +106,12 @@ def get_unshare_access_usecase(
     ),
 ):
     return UnshareAccessUseCase(password_repository, password_permissions_repository)
+
+
+def get_list_resource_access_usecase(
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
+):
+    return ListAccessUseCase(password_repository, password_permissions_repository)

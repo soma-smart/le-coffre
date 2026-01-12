@@ -8,6 +8,7 @@ from password_management_context.domain.value_objects import PasswordPermission
 class AccessResponse:
     user_id: UUID
     permissions: set[PasswordPermission]
+    is_owner: bool
 
 
 @dataclass
