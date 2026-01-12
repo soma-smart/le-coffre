@@ -93,11 +93,13 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         if permission_entries:
             self._session.commit()
 
-    def get_all_users_with_access(
+    def list_all_permissions_for(
         self, password_id: UUID
     ) -> dict[UUID, set[PasswordPermission]]:
         """Get all users who have access to a password with their permissions"""
         result: dict[UUID, set[PasswordPermission]] = {}
+
+        all_perms = [perm for perm in PasswordPermission]
 
         # Get all owners
         ownership_statement = select(OwnershipTable).where(
@@ -115,7 +117,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         permissions = self._session.exec(permission_statement).all()
         for permission_entry in permissions:
             if permission_entry.user_id not in result:
-                result[permission_entry.user_id] = set()
+                result[permission_entry.user_id] = set(all_perms)
             try:
                 result[permission_entry.user_id].add(
                     PasswordPermission(permission_entry.permission)

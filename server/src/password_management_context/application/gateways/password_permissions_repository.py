@@ -31,7 +31,7 @@ class PasswordPermissionsRepository(Protocol):
         """Revoke a user's access to a password"""
         ...
 
-    def get_all_users_with_access(
+    def list_all_permissions_for(
         self, password_id: UUID
     ) -> dict[UUID, set[PasswordPermission]]:
         """Get all users who have access to a password with their permissions"""

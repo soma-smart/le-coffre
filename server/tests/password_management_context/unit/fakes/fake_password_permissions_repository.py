@@ -39,10 +39,12 @@ class FakePasswordPermissionsRepository:
         if key in self._permissions:
             del self._permissions[key]
 
-    def get_all_users_with_access(
+    def list_all_permissions_for(
         self, password_id: UUID
     ) -> dict[UUID, set[PasswordPermission]]:
         result: dict[UUID, set[PasswordPermission]] = {}
+
+        all_perms = [perm for perm in PasswordPermission]
 
         # Add users with explicit permissions
         for (user_id, pwd_id), permissions in self._permissions.items():
@@ -53,7 +55,7 @@ class FakePasswordPermissionsRepository:
         for user_id, pwd_id in self._ownerships:
             if pwd_id == password_id:
                 if user_id not in result:
-                    result[user_id] = set()
+                    result[user_id] = set(all_perms)
 
         return result
 
