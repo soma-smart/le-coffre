@@ -4,17 +4,23 @@ import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import MainLayout from "../layouts/MainLayout.vue";
 import CreatePasswordModal from "@/components/CreatePasswordModal.vue";
+import UnlockVaultModal from "@/components/modals/UnlockVaultModal.vue";
 import PasswordsList from "@/components/passwords/PasswordsList.vue";
 import type { GetPasswordListResponse } from '@/client/types.gen';
 import { usePasswordsStore } from '@/stores/passwords';
+import { getVaultStatusVaultStatusGet } from '@/client/sdk.gen';
+import { useToast } from 'primevue/usetoast';
 
 const route = useRoute();
 const passwordsStore = usePasswordsStore();
 const { passwords, loading, error } = storeToRefs(passwordsStore);
+const toast = useToast();
 
 const selectedFolder = ref<string | null>(null);
 const showCreateModal = ref(false);
+const showUnlockModal = ref(false);
 const editingPassword = ref<GetPasswordListResponse | null>(null);
+const isCheckingVaultStatus = ref(false);
 
 const folderFilter = computed(() => route.query.folder as string | undefined);
 
@@ -50,14 +56,56 @@ watch(() => route.query.folder, (folderQuery) => {
   selectedFolder.value = folderQuery as string | null;
 });
 
-onMounted(() => {
+const checkVaultStatus = async () => {
+  isCheckingVaultStatus.value = true;
+  try {
+    const response = await getVaultStatusVaultStatusGet();
+    
+    if (response.error) {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to check vault status',
+        life: 3000
+      });
+      return;
+    }
+
+    if (response.data?.status === 'LOCKED') {
+      showUnlockModal.value = true;
+    }
+  } catch (err) {
+    console.error('Failed to check vault status:', err);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to check vault status',
+      life: 3000
+    });
+  } finally {
+    isCheckingVaultStatus.value = false;
+  }
+};
+
+const handleVaultUnlocked = async () => {
+  // Reload passwords after vault is unlocked
+  await passwordsStore.fetchPasswords();
+};
+
+onMounted(async () => {
   // Auto-expand folder if filtered
   const folderQuery = route.query.folder as string | undefined;
   if (folderQuery) {
     selectedFolder.value = folderQuery;
   }
   
-  passwordsStore.fetchPasswords();
+  // Check vault status first
+  await checkVaultStatus();
+  
+  // Only fetch passwords if vault is not locked
+  if (!showUnlockModal.value) {
+    passwordsStore.fetchPasswords();
+  }
 });
 </script>
 
@@ -86,6 +134,12 @@ onMounted(() => {
       :editPassword="editingPassword"
       @created="handlePasswordCreated"
       @updated="handlePasswordUpdated"
+    />
+
+    <!-- Unlock Vault Modal (unskippable) -->
+    <UnlockVaultModal 
+      v-model:visible="showUnlockModal"
+      @unlocked="handleVaultUnlocked"
     />
   </MainLayout>
 </template>
