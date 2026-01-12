@@ -3,7 +3,7 @@ import { ref } from "vue";
 import BlankLayout from "../layouts/BlankLayout.vue";
 import type { Share } from "@/client";
 
-import SharesModal from "@/components/SharesModal.vue";
+import SharesModal from "@/components/setup/shamir/SharesModal.vue";
 import StepWelcome from "@/components/setup/StepWelcome.vue";
 import StepGenerateMasterKey from "@/components/setup/StepGenerateMasterKey.vue";
 import StepAdminAccountForm from "@/components/setup/StepAdminAccountForm.vue";
@@ -11,9 +11,11 @@ import SetupDone from "@/components/setup/SetupDone.vue";
 
 const showModal = ref(false);
 const shares = ref<Share[]>([]);
+const setupId = ref<string>('');
 
-const handleSharesGenerated = (generatedShares: Share[]) => {
-    shares.value = generatedShares;
+const handleSharesGenerated = (data: { shares: Share[], setupId: string }) => {
+    shares.value = data.shares;
+    setupId.value = data.setupId;
     showModal.value = true;
 };
 
@@ -47,7 +49,7 @@ const handleModalConfirmed = () => {
                     </StepPanel>
 
                     <StepPanel v-slot="{ activateCallback }" value="3">
-                        <StepAdminAccountForm @account-created="activateCallback('4')" />
+                        <StepAdminAccountForm :setup-id="setupId" @account-created="activateCallback('4')" />
                     </StepPanel>
 
                     <StepPanel value="4">
