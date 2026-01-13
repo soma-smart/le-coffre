@@ -10,8 +10,6 @@ from vault_management_context.application.use_cases.unlock_vault_use_case import
 )
 from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import VaultManagementDomainError
-from shared_kernel.authentication import ValidatedUser, NotAdminError
-from shared_kernel.authentication.dependencies import get_current_user
 
 router = APIRouter(prefix="/vault", tags=["Vault"])
 
@@ -54,26 +52,23 @@ class UnlockVaultPostResponse(BaseModel):
 )
 def unlock_vault(
     request: UnlockVaultPostRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
     usecase: UnlockVaultUseCase = Depends(get_unlock_vault_usecase),
 ):
     """
     Unlock the vault using Shamir's Secret Sharing reconstruction.
 
-    Only administrators can unlock the vault.
+    This endpoint does not require authentication as it's needed to unlock the vault
+    before any user can authenticate.
 
     - **shares**: List of shares (index + secret) needed to reconstruct the master secret
-    - **Authorization**: Bearer token (admin role required)
     """
     try:
         shares = [
             Share(share_req.index, share_req.secret) for share_req in request.shares
         ]
-        usecase.execute(shares, current_user.to_authenticated_user())
+        usecase.execute(shares)
         return {"message": "Vault unlocked successfully"}
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except NotAdminError as e:
-        raise HTTPException(status_code=403, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")
