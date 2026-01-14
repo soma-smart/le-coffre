@@ -19,13 +19,17 @@ class SqlSsoUserRepository:
             k: v for k, v in vars(sso_user).items() if v is not None
         }  # Creating a dictionary without None values
         db_obj = SsoUsersTable(**data)
-        self._session.add(db_obj)
-        try:
+        exist = self.get_by_sso_user_id(
+            sso_user.sso_user_id, sso_user.sso_provider
+        )
+        if exist is None:
+            self._session.add(db_obj)
             self._session.commit()
             self._session.refresh(db_obj)
-        except IntegrityError:
-            self._session.rollback()
-            raise SsoUserAlreadyExistsException("SSO User already exists")
+        else:
+            pass  # or update logic if needed
+            
+
 
     def get_by_sso_user_id(
         self, sso_user_id: str, sso_provider: str = "default"
