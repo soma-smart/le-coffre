@@ -139,7 +139,7 @@ async def lifespan(app: FastAPI):
             scope="openid email profile",
             provider="oauth2",
         )
-        sso_user_repository = InMemorySsoUserRepository(session)
+        sso_user_repository = InMemorySsoUserRepository()
 
         app.state.user_password_repository = user_password_repository
         app.state.password_hashing_gateway = password_hashing_gateway
