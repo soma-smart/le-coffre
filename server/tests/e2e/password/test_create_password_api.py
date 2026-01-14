@@ -92,7 +92,6 @@ def test_can_read_a_shared_password_of_another_user(
     assert other_user_retrieved.json()["name"] == "Test Password"
     assert other_user_retrieved.json()["password"] == STRONG_PASSWORD
 
-
 def test_cannot_create_weak_password(authenticated_admin_client, setup):
     weak_password = "weakpass"
     response = authenticated_admin_client.post(

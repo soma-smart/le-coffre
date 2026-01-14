@@ -8,7 +8,7 @@ from .in_memory_sso_user_repository import InMemorySsoUserRepository
 from .in_memory_user_management_gateway import InMemoryUserManagementGateway
 from .in_memory_sso_gateway import InMemorySSOGateway
 from .sql.sql_sso_user_repository import SqlSsoUserRepository
-
+from .sql.sql_user_repository import SqlUserRepository
 __all__ = [
     "InMemoryUserRepository",
     "BcryptHashingGateway",
@@ -20,4 +20,5 @@ __all__ = [
     "InMemoryUserManagementGateway",
     "InMemorySSOGateway",
     "SqlSsoUserRepository",
+    "SqlUserRepository",
 ]

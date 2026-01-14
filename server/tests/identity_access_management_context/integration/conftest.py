@@ -5,6 +5,7 @@ import httpx
 from urllib.parse import quote
 from fastapi.testclient import TestClient
 from main import app
+from sqlmodel import create_engine, Session
 from identity_access_management_context.adapters.secondary import InMemorySSOGateway
 from identity_access_management_context.adapters.secondary.sql.sql_sso_user_repository import (
     SqlSsoUserRepository,
@@ -12,7 +13,12 @@ from identity_access_management_context.adapters.secondary.sql.sql_sso_user_repo
 from identity_access_management_context.adapters.secondary.sql.model.sso_users_model import (
     SsoUsersTable,
 )
-from sqlmodel import Session, create_engine
+from identity_access_management_context.adapters.secondary.sql.sql_user_repository import (
+    SqlUserRepository,
+)
+from identity_access_management_context.adapters.secondary.sql.model.users_model import (
+    UserTable,
+)
 import oidc_provider_mock
 
 
@@ -33,29 +39,33 @@ def database():
 
 
 @pytest.fixture(scope="function")
-def database_engine_SsoUsers():
+def database_engine():
     db_fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(db_fd)
     try:
         engine = create_engine(
             f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
         )
-        SsoUsersTable.metadata.create_all(engine)  # Creating Tables
+        SsoUsersTable.metadata.create_all(engine)
+        UserTable.metadata.create_all(engine)# Creating Tables
         yield engine
     finally:
         os.unlink(db_path)
 
 
 @pytest.fixture(scope="function")
-def session(database_engine_SsoUsers):
-    session = Session(database_engine_SsoUsers)
+def session(database_engine):
+    session = Session(database_engine)
     yield session
     session.close()
-
 
 @pytest.fixture(scope="function")
 def sql_sso_user_repository(session):
     return SqlSsoUserRepository(session)
+
+@pytest.fixture(scope="function")
+def sql_user_repository(session):
+    return SqlUserRepository(session)
 
 
 @pytest.fixture
@@ -63,7 +73,6 @@ def api_client(database):
     """Test client for API testing"""
     with TestClient(app) as client:
         yield client
-
 
 @pytest.fixture
 def sso_test_data():
