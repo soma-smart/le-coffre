@@ -97,7 +97,8 @@ const handleSsoLogin = async () => {
         </div>
         <div class="flex flex-col gap-1 mb-4">
           <label for="password">Password</label>
-          <Password inputId="password" name="password" toggleMask :placeholder="formValues.password" fluid />
+          <Password inputId="password" name="password" toggleMask :placeholder="formValues.password" fluid
+            :feedback="false" />
           <Message v-if="$form.password?.invalid" severity="error" size="small" variant="simple">
             {{ $form.password.error?.message }}
           </Message>
