@@ -24,12 +24,9 @@ The app is divided into the following bounded contexts, each with its own respon
    - CRUD operations for passwords.
    - Enforce password policies (e.g., complexity, expiration).
    - Maintain password history.
+   - Store password and permissions
 
-3. **Rights Access Context**:
-   - Manage access to passwords and folders.
-   - Handle sharing, invitations, revocations, and group access.
-
-4. **Identity & Access Management Context**:
+3. **Identity & Access Management Context**:
    - User authentication (login, SSO, password recovery).
    - User management (profiles, permissions, groups, admin tools).
    - Session management and token handling.
