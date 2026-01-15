@@ -85,3 +85,23 @@ class PasswordMultipleComplexityError(PasswordComplexityError):
         super().__init__(
             f"Password has multiple complexity violations: {'; '.join(messages)}"
         )
+
+
+class PasswordAccessDeniedError(PasswordManagementDomainError):
+    """Raised when user doesn't have permission to access a password"""
+
+    def __init__(self, user_id: UUID, password_id: UUID):
+        self.user_id = user_id
+        self.password_id = password_id
+        super().__init__(
+            f"User {user_id} does not have permission to access password {password_id}"
+        )
+
+
+class NotPasswordOwnerError(PasswordManagementDomainError):
+    """Raised when a non-owner tries to perform owner-only operations"""
+
+    def __init__(self, user_id: UUID, password_id: UUID):
+        self.user_id = user_id
+        self.password_id = password_id
+        super().__init__(f"User {user_id} is not the owner of password {password_id}")

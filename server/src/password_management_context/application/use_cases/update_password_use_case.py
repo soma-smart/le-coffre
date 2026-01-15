@@ -1,8 +1,12 @@
-from password_management_context.application.gateways import PasswordRepository
-from password_management_context.domain.entities import Password
+from password_management_context.application.gateways import (
+    PasswordRepository,
+    PasswordPermissionsRepository,
+)
 from password_management_context.application.commands import UpdatePasswordCommand
-from password_management_context.domain.exceptions import PasswordNotFoundError
-from shared_kernel.access_control import Granted, AccessController, AccessDeniedError
+from password_management_context.domain.exceptions import (
+    PasswordNotFoundError,
+    NotPasswordOwnerError,
+)
 from shared_kernel.encryption import EncryptionService
 
 
@@ -11,27 +15,26 @@ class UpdatePasswordUseCase:
         self,
         password_repository: PasswordRepository,
         encryption_service: EncryptionService,
-        access_controller: AccessController,
+        password_permissions_repository: PasswordPermissionsRepository,
     ):
         self.password_repository = password_repository
         self.encryption_service = encryption_service
-        self.access_controller = access_controller
+        self.password_permissions_repository = password_permissions_repository
 
     def execute(self, new_password: UpdatePasswordCommand) -> None:
-        if not self.password_repository.get_by_id(new_password.id):
-            raise PasswordNotFoundError(new_password.id)
-        check_permission = self.access_controller.check_update_access(
-            new_password.requester_id, new_password.id
-        )
-        if check_permission.granted == Granted.VIEW_ONLY:
-            raise AccessDeniedError(new_password.requester_id, new_password.id)
-        if check_permission.granted == Granted.NOT_FOUND:
+        existing_password = self.password_repository.get_by_id(new_password.id)
+        if not existing_password:
             raise PasswordNotFoundError(new_password.id)
 
-        existing_password = self.password_repository.get_by_id(new_password.id)
+        if not self.password_permissions_repository.is_owner(
+            new_password.requester_id, new_password.id
+        ):
+            raise NotPasswordOwnerError(new_password.requester_id, new_password.id)
 
         if new_password.password:
-            existing_password.encrypted_value = self.encryption_service.encrypt(new_password.password)
+            existing_password.encrypted_value = self.encryption_service.encrypt(
+                new_password.password
+            )
 
         if new_password.name:
             existing_password.name = new_password.name

@@ -4,7 +4,10 @@ from password_management_context.adapters.secondary.gateways import (
     InMemoryPasswordRepository,
 )
 from .fakes import FakeEncryptionService
-from tests.fakes import FakeAccessController, FakeDomainEventPublisher
+from .fakes.fake_password_permissions_repository import (
+    FakePasswordPermissionsRepository,
+)
+from tests.fakes import FakeDomainEventPublisher
 
 
 @pytest.fixture
@@ -18,8 +21,8 @@ def encryption_service():
 
 
 @pytest.fixture
-def access_controller():
-    return FakeAccessController()
+def password_permissions_repository():
+    return FakePasswordPermissionsRepository()
 
 
 @pytest.fixture

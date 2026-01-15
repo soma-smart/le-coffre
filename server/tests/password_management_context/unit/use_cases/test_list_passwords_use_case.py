@@ -7,14 +7,14 @@ from password_management_context.adapters.secondary.gateways import (
 )
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
-from shared_kernel.access_control import AccessController
+from password_management_context.application.gateways.password_permissions_repository import (
+    PasswordPermissionsRepository,
+)
 
 
 @pytest.fixture
-def use_case(password_repository, access_controller):
-    return ListPasswordsUseCase(
-        password_repository, access_controller
-    )
+def use_case(password_repository, password_permissions_repository):
+    return ListPasswordsUseCase(password_repository, password_permissions_repository)
 
 
 def test_should_return_empty_list_on_default_folder_when_no_passwords(
@@ -29,7 +29,7 @@ def test_should_return_empty_list_on_default_folder_when_no_passwords(
 def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: AccessController,
+    password_permissions_repository: PasswordPermissionsRepository,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
@@ -47,9 +47,9 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     )
 
     password_repository.save(password1)
-    access_controller.add_access_permission(requester_id, password1.id)
+    password_permissions_repository.set_owner(requester_id, password1.id)
     password_repository.save(password2)
-    access_controller.add_access_permission(requester_id, password2.id)
+    password_permissions_repository.set_owner(requester_id, password2.id)
 
     result = use_case.execute(requester_id=requester_id)
 
@@ -65,7 +65,7 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
 def test_should_return_passwords_from_specific_folder_when_folder_provided(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: AccessController,
+    password_permissions_repository: PasswordPermissionsRepository,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     folder_name = "Personal"
@@ -83,9 +83,9 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
         folder="Work",
     )
     password_repository.save(password1)
-    access_controller.add_access_permission(requester_id, password1.id)
+    password_permissions_repository.set_owner(requester_id, password1.id)
     password_repository.save(password2)
-    access_controller.add_access_permission(requester_id, password2.id)
+    password_permissions_repository.set_owner(requester_id, password2.id)
 
     result = use_case.execute(requester_id=requester_id, folder=folder_name)
 
@@ -109,7 +109,7 @@ def test_should_raise_exception_when_folder_does_not_exist(
 def test_should_return_only_passwords_user_has_access_to(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: AccessController,
+    password_permissions_repository: PasswordPermissionsRepository,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     password1 = Password(
@@ -126,7 +126,7 @@ def test_should_return_only_passwords_user_has_access_to(
     )
 
     password_repository.save(password1)
-    access_controller.add_access_permission(requester_id, password1.id)
+    password_permissions_repository.set_owner(requester_id, password1.id)
     password_repository.save(password2)
     # Not granting access to password2
 

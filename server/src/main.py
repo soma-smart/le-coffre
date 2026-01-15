@@ -33,6 +33,7 @@ from password_management_context.adapters.primary.fastapi.routes import (
 )
 from password_management_context.adapters.secondary.gateways import (
     SqlPasswordRepository,
+    SqlPasswordPermissionsRepository,
 )
 
 from rights_access_context.adapters.primary import AccessControllerAdapter
@@ -46,13 +47,11 @@ from rights_access_context.application.use_cases import (
 from identity_access_management_context.adapters.secondary import (
     SqlUserRepository,
     BcryptHashingGateway,
-    InMemoryUserPasswordRepository,
     JwtTokenGateway,
     UserManagementGatewayAdapter,
     OAuth2SsoGateway,
-    InMemorySsoUserRepository,
     SqlUserPasswordRepository,
-    SqlSsoUserRepository
+    SqlSsoUserRepository,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_user_management_router,
@@ -85,6 +84,7 @@ async def lifespan(app: FastAPI):
 
         # Password management dependencies
         password_repository = SqlPasswordRepository(session)
+        password_permissions_repository = SqlPasswordPermissionsRepository(session)
         encrypt_use_case = EncryptUseCase(encryption_gateway, vault_session_gateway)
         decrypt_use_case = DecryptUseCase(encryption_gateway, vault_session_gateway)
         encryption_service = EncryptionApi(
@@ -92,6 +92,7 @@ async def lifespan(app: FastAPI):
         )  # Expose encryption service via API
 
         app.state.password_repository = password_repository
+        app.state.password_permissions_repository = password_permissions_repository
         app.state.encryption_service = encryption_service
 
         # Rights access dependencies

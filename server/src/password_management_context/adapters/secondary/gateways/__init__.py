@@ -2,8 +2,14 @@ from .in_memory_password_repository import InMemoryPasswordRepository
 
 from .sql.model.password import create_password_table
 from .sql.sql_password_repository import SqlPasswordRepository
+from .sql.sql_password_permissions_repository import SqlPasswordPermissionsRepository
 
-__all__ = ["InMemoryPasswordRepository"]
+__all__ = [
+    "InMemoryPasswordRepository",
+    "SqlPasswordRepository",
+    "SqlPasswordPermissionsRepository",
+]
+
 
 def create_tables(engine):
     create_password_table(engine)

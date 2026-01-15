@@ -7,23 +7,30 @@ from password_management_context.adapters.secondary.gateways import (
 from password_management_context.application.use_cases import UpdatePasswordUseCase
 from password_management_context.domain.entities import Password
 from password_management_context.application.commands import UpdatePasswordCommand
-from password_management_context.domain.exceptions import PasswordNotFoundError
-from shared_kernel.access_control.access_controller import AccessController
+from password_management_context.domain.exceptions import (
+    PasswordNotFoundError,
+    NotPasswordOwnerError,
+)
+from password_management_context.application.gateways.password_permissions_repository import (
+    PasswordPermissionsRepository,
+)
 
 
 @pytest.fixture
 def use_case(
-    password_repository, encryption_service, access_controller: AccessController
+    password_repository,
+    encryption_service,
+    password_permissions_repository: PasswordPermissionsRepository,
 ):
     return UpdatePasswordUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, encryption_service, password_permissions_repository
     )
 
 
 def test_should_update_password(
     use_case: UpdatePasswordUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: AccessController,
+    password_permissions_repository: PasswordPermissionsRepository,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
     original_password = Password(
@@ -33,7 +40,7 @@ def test_should_update_password(
         folder="folder",
     )
     password_repository.save(original_password)
-    access_controller.grant_update_access(requester_id, original_password.id)
+    password_permissions_repository.set_owner(requester_id, original_password.id)
 
     updated_password = UpdatePasswordCommand(
         requester_id=requester_id,
@@ -91,13 +98,14 @@ def test_update_password_without_access(
         folder="folder",
     )
 
-    with pytest.raises(PasswordNotFoundError):
+    with pytest.raises(NotPasswordOwnerError):
         use_case.execute(new_password=updated_password)
+
 
 def test_when_updating_without_any_element_changed_should_not_change_anything(
     use_case: UpdatePasswordUseCase,
     password_repository: InMemoryPasswordRepository,
-    access_controller: AccessController
+    password_permissions_repository: PasswordPermissionsRepository,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
     original_password = Password(
@@ -107,7 +115,7 @@ def test_when_updating_without_any_element_changed_should_not_change_anything(
         folder="folder",
     )
     password_repository.save(original_password)
-    access_controller.grant_update_access(requester_id, original_password.id)
+    password_permissions_repository.set_owner(requester_id, original_password.id)
 
     updated_password = UpdatePasswordCommand(
         requester_id=requester_id,
@@ -115,7 +123,6 @@ def test_when_updating_without_any_element_changed_should_not_change_anything(
     )
 
     use_case.execute(new_password=updated_password)
-
 
     stored_password = password_repository.get_by_id(original_password.id)
 

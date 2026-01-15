@@ -1,20 +1,22 @@
 from typing import List, Optional
 from uuid import UUID
 
-from password_management_context.application.gateways import PasswordRepository
+from password_management_context.application.gateways import (
+    PasswordRepository,
+    PasswordPermissionsRepository,
+)
 from password_management_context.application.responses import PasswordMetadataResponse
 from password_management_context.domain.exceptions import FolderNotFoundError
-from shared_kernel.access_control import Granted, AccessController
 
 
 class ListPasswordsUseCase:
     def __init__(
         self,
         password_repository: PasswordRepository,
-        access_controller: AccessController,
+        password_permissions_repository: PasswordPermissionsRepository,
     ):
         self.password_repository = password_repository
-        self.access_controller = access_controller
+        self.password_permissions_repository = password_permissions_repository
 
     def execute(
         self, requester_id: UUID, folder: Optional[str] = None
@@ -26,10 +28,9 @@ class ListPasswordsUseCase:
 
         password_responses = []
         for password_entity in password_entities:
-            check_permission = self.access_controller.check_access(
+            if self.password_permissions_repository.has_access(
                 requester_id, password_entity.id
-            )
-            if check_permission.granted in (Granted.ACCESS, Granted.VIEW_ONLY):
+            ):
                 password_response = PasswordMetadataResponse(
                     id=password_entity.id,
                     name=password_entity.name,

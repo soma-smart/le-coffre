@@ -9,8 +9,10 @@ from password_management_context.application.use_cases import (
     DeletePasswordUseCase,
 )
 from password_management_context.application.gateways import PasswordRepository
+from password_management_context.application.gateways.password_permissions_repository import (
+    PasswordPermissionsRepository,
+)
 from shared_kernel.encryption import EncryptionService
-from shared_kernel.access_control import AccessController
 from rights_access_context.application.use_cases import (
     ShareAccessUseCase,
     UnshareAccessUseCase,
@@ -31,54 +33,64 @@ def get_encryption_service(request: Request) -> EncryptionService:
     return request.app.state.encryption_service
 
 
-def get_access_controller(request: Request) -> AccessController:
-    return request.app.state.access_controller
+def get_password_permissions_repository(
+    request: Request,
+) -> PasswordPermissionsRepository:
+    return request.app.state.password_permissions_repository
 
 
 def get_create_password_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
     encryption_service: EncryptionService = Depends(get_encryption_service),
-    access_controller: AccessController = Depends(get_access_controller),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
 ):
     return CreatePasswordUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, encryption_service, password_permissions_repository
     )
 
 
 def get_get_password_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
     encryption_service: EncryptionService = Depends(get_encryption_service),
-    access_controller: AccessController = Depends(get_access_controller),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
 ):
     return GetPasswordUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, encryption_service, password_permissions_repository
     )
 
 
 def get_update_password_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
     encryption_service: EncryptionService = Depends(get_encryption_service),
-    access_controller: AccessController = Depends(get_access_controller),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
 ):
     return UpdatePasswordUseCase(
-        password_repository, encryption_service, access_controller
+        password_repository, encryption_service, password_permissions_repository
     )
 
 
 def get_list_passwords_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
-    access_controller: AccessController = Depends(get_access_controller),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
 ):
-    return ListPasswordsUseCase(
-        password_repository, access_controller
-    )
+    return ListPasswordsUseCase(password_repository, password_permissions_repository)
 
 
 def get_delete_password_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
-    access_controller: AccessController = Depends(get_access_controller),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
 ):
-    return DeletePasswordUseCase(password_repository, access_controller)
+    return DeletePasswordUseCase(password_repository, password_permissions_repository)
 
 
 def get_rights_repository(request: Request) -> RightsRepository:
