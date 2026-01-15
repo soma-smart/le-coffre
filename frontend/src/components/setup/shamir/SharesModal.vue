@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useToast } from "primevue/usetoast";
-import type { Share } from "@/client";
+import type { ShareResponse } from "@/client";
 
 defineProps<{
-    shares: Share[];
+    shares: ShareResponse[];
 }>();
 const emit = defineEmits<{
     (e: 'confirmed'): void;

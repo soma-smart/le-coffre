@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { createVaultVaultSetupPost, type Share } from "@/client";
+import { createVaultVaultSetupPost, type ShareResponse } from "@/client";
 import { useToast } from "primevue/usetoast";
 
 const emit = defineEmits<{
-    (e: 'shares-generated', shares: Share[]): void;
+    (e: 'shares-generated', data: { shares: ShareResponse[], setupId: string }): void;
 }>();
 
 const toast = useToast();
@@ -26,7 +26,10 @@ async function generateMasterKey() {
             toast.add({ severity: 'error', summary: 'Error', detail: response.error.detail, life: 5000 });
             return;
         }
-        emit('shares-generated', response.data.shares);
+        emit('shares-generated', {
+            shares: response.data.shares,
+            setupId: response.data.setup_id
+        });
     } catch (error) {
         toast.add({ severity: 'error', summary: 'API Error', detail: 'An unexpected error occurred.', life: 5000 });
         console.error(error);

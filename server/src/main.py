@@ -36,12 +36,12 @@ from password_management_context.adapters.secondary.gateways import (
 )
 
 from rights_access_context.adapters.primary import AccessControllerAdapter
+from rights_access_context.adapters.secondary.sql import SqlRightsRepository
 from rights_access_context.application.use_cases import (
     CheckAccessUseCase,
     GetOwnerAccessUseCase,
     SetOwnerAccessUseCase,
 )
-from rights_access_context.adapters.secondary import InMemoryRightsRepository
 
 from identity_access_management_context.adapters.secondary import (
     SqlUserRepository,
@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
         app.state.encryption_service = encryption_service
 
         # Rights access dependencies
-        rights_repository = InMemoryRightsRepository()
+        rights_repository = SqlRightsRepository(session)
         check_use_case = CheckAccessUseCase(rights_repository)
         set_owner_use_case = SetOwnerAccessUseCase(rights_repository)
         get_owner_use_case = GetOwnerAccessUseCase(rights_repository)

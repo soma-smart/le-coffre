@@ -3,8 +3,12 @@ import { reactive, ref } from "vue";
 import { useToast } from "primevue";
 import { z } from 'zod';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
-import { registerAdminAuthRegisterAdminPost } from "@/client";
+import { registerAdminAuthRegisterAdminPost, validateVaultSetupVaultValidateSetupPost } from "@/client";
 import { useSetupStore } from "@/stores/setup";
+
+const props = defineProps<{
+    setupId: string;
+}>();
 
 const emit = defineEmits(['account-created']);
 const setupStore = useSetupStore();
@@ -50,6 +54,20 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             return;
         }
         toast.add({ severity: 'success', summary: 'Success', detail: 'Admin account created successfully.', life: 5000 });
+        
+        // Validate vault setup
+        const validateResponse = await validateVaultSetupVaultValidateSetupPost({
+            body: {
+                setup_id: props.setupId
+            }
+        });
+        
+        if (validateResponse.error) {
+            toast.add({ severity: 'error', summary: 'Vault Validation Error', detail: validateResponse.error.detail, life: 5000 });
+            return;
+        }
+        
+        toast.add({ severity: 'success', summary: 'Success', detail: 'Vault setup validated successfully.', life: 5000 });
         
         // Invalidate the setup cache so the router guard knows setup is complete
         setupStore.invalidateCache();

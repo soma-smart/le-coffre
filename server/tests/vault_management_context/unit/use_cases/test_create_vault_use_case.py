@@ -32,11 +32,11 @@ def test_should_create_shares_and_store_encrypted_key(
     vault_session_gateway,
 ):
     expected_shares = [
-        Share(0, "1"),
-        Share(1, "2"),
-        Share(2, "3"),
-        Share(3, "4"),
-        Share(4, "5"),
+        Share("1"),
+        Share("2"),
+        Share("3"),
+        Share("4"),
+        Share("5"),
     ]
     master_key = "master_secret_from_shamir"
     encrypted_key = "encrypted_vault_key_123"
@@ -47,14 +47,16 @@ def test_should_create_shares_and_store_encrypted_key(
 
     encryption_gateway.set_encrypted_data(encrypted_key)
     encryption_gateway.set_master_key(master_key)
-    encryption_gateway.set_decrypted_data("decrypted_vault_key")  # For decrypt_and_store_key
+    encryption_gateway.set_decrypted_data(
+        "decrypted_vault_key"
+    )  # For decrypt_and_store_key
 
     result = use_case.execute(5, 3, setup_id)
 
     # Check that result is VaultSetupResponse with setup_id and shares
     assert result.shares == expected_shares
     assert result.setup_id == str(setup_id)
-    
+
     stored_vault = vault_repository.get()
     assert stored_vault.nb_shares == 5
     assert stored_vault.threshold == 3
@@ -65,7 +67,15 @@ def test_should_create_shares_and_store_encrypted_key(
 
 def test_should_fail_when_vault_is_already_created(use_case, vault_repository):
     # Create a vault that is already validated (not in PENDING state)
-    vault_repository.save(Vault(nb_shares=5, threshold=3, encrypted_key="test", setup_id=str(uuid4()), status=VaultStatus.SETUPED.value))
+    vault_repository.save(
+        Vault(
+            nb_shares=5,
+            threshold=3,
+            encrypted_key="test",
+            setup_id=str(uuid4()),
+            status=VaultStatus.SETUPED.value,
+        )
+    )
 
     with pytest.raises(VaultAlreadyExistsError) as exc_info:
         use_case.execute(5, 3, uuid4())
@@ -75,11 +85,21 @@ def test_should_fail_when_vault_is_already_created(use_case, vault_repository):
     )
 
 
-def test_should_allow_re_setup_when_vault_is_pending(use_case, vault_repository, shamir_gateway, encryption_gateway):
+def test_should_allow_re_setup_when_vault_is_pending(
+    use_case, vault_repository, shamir_gateway, encryption_gateway
+):
     # Create a vault in PENDING state
-    vault_repository.save(Vault(nb_shares=3, threshold=2, encrypted_key="test", status=VaultStatus.PENDING.value, setup_id=str(uuid4())))
+    vault_repository.save(
+        Vault(
+            nb_shares=3,
+            threshold=2,
+            encrypted_key="test",
+            status=VaultStatus.PENDING.value,
+            setup_id=str(uuid4()),
+        )
+    )
 
-    expected_shares = [Share(0, "1"), Share(1, "2")]
+    expected_shares = [Share("1"), Share("2")]
     master_key = "master_secret_from_shamir"
     encrypted_key = "encrypted_vault_key_123"
     new_setup_id = uuid4()
@@ -88,7 +108,9 @@ def test_should_allow_re_setup_when_vault_is_pending(use_case, vault_repository,
     shamir_gateway.set_shamir_result(shamir_result)
     encryption_gateway.set_encrypted_data(encrypted_key)
     encryption_gateway.set_master_key(master_key)
-    encryption_gateway.set_decrypted_data("decrypted_vault_key")  # For decrypt_and_store_key
+    encryption_gateway.set_decrypted_data(
+        "decrypted_vault_key"
+    )  # For decrypt_and_store_key
 
     # Should be able to re-setup
     result = use_case.execute(2, 2, new_setup_id)

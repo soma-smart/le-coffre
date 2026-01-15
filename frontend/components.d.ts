@@ -17,7 +17,7 @@ declare module 'vue' {
     Card: typeof import('primevue/card')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
-    CreatePasswordModal: typeof import('./src/components/CreatePasswordModal.vue')['default']
+    CreatePasswordModal: typeof import('./src/components/modals/CreatePasswordModal.vue')['default']
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
     Drawer: typeof import('primevue/drawer')['default']
@@ -35,10 +35,11 @@ declare module 'vue' {
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
     SetupDone: typeof import('./src/components/setup/SetupDone.vue')['default']
-    ShamirInputs: typeof import('./src/components/ShamirInputs.vue')['default']
-    SharesModal: typeof import('./src/components/SharesModal.vue')['default']
+    ShamirInputs: typeof import('./src/components/setup/shamir/ShamirInputs.vue')['default']
+    SharesModal: typeof import('./src/components/setup/shamir/SharesModal.vue')['default']
     Step: typeof import('primevue/step')['default']
     StepAdminAccountForm: typeof import('./src/components/setup/StepAdminAccountForm.vue')['default']
     StepGenerateMasterKey: typeof import('./src/components/setup/StepGenerateMasterKey.vue')['default']
@@ -50,9 +51,11 @@ declare module 'vue' {
     ThemeSwitcher: typeof import('./src/components/ThemeSwitcher.vue')['default']
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
+    UnlockVaultModal: typeof import('./src/components/modals/UnlockVaultModal.vue')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
   export interface GlobalDirectives {
+    Tooltip: typeof import('primevue/tooltip')['default']
     Ripple: typeof import('primevue/ripple')['default']
   }
 }
