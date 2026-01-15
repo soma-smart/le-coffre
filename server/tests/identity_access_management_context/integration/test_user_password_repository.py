@@ -1,11 +1,6 @@
 import pytest
 from uuid import uuid4
 from identity_access_management_context.domain.entities import UserPassword
-from identity_access_management_context.adapters.secondary.sql.sql_user_password_repository import SqlUserPasswordRepository
-from identity_access_management_context.domain.exceptions import (
-    UserNotFoundError,
-    UserAlreadyExistsError
-)
 
 @pytest.fixture
 def test_save_user_password_and_get_by_id(sql_user_password_repository):

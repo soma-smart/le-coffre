@@ -6,7 +6,7 @@ from identity_access_management_context.domain.entities import UserPassword
 
 
 class SqlUserPasswordRepository:
-    def __init__(self):
+    def __init__(self, Session):
         self._session = Session
         
     def save(self, user_password: UserPassword) -> None:
