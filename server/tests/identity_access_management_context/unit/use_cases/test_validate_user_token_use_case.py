@@ -19,9 +19,7 @@ from identity_access_management_context.domain.exceptions import (
 
 
 @pytest.fixture
-def use_case(
-    user_password_repository, token_gateway, sso_user_repository
-):
+def use_case(user_password_repository, token_gateway, sso_user_repository):
     return ValidateUserTokenUseCase(
         user_password_repository, token_gateway, sso_user_repository
     )
@@ -71,7 +69,6 @@ async def test_should_raise_exception_for_invalid_jwt_token(
 
     with pytest.raises(InvalidTokenException):
         await use_case.execute(command)
-
 
 
 @pytest.mark.asyncio
@@ -180,7 +177,7 @@ async def test_should_validate_token_for_sso_user(
         sso_user_id="sso_123456",
         sso_provider="default",
     )
-    sso_user_repository.save(sso_user)
+    sso_user_repository.create(sso_user)
 
     # Setup JWT token validation
     token_gateway.set_valid_token(

@@ -16,6 +16,16 @@ onMounted(() => {
       life: 5000
     });
   }
+  
+  if (route.query.error === 'sso_failed') {
+    const message = route.query.message as string || 'SSO authentication failed';
+    toast.add({
+      severity: 'error',
+      summary: 'SSO Authentication Failed',
+      detail: message,
+      life: 5000
+    });
+  }
 });
 </script>
 
