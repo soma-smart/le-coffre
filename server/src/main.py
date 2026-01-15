@@ -52,7 +52,8 @@ from identity_access_management_context.adapters.secondary import (
     UserManagementGatewayAdapter,
     OAuth2SsoGateway,
     InMemorySsoUserRepository,
-    SqlSsoUserRepository
+    SqlSsoUserRepository,
+    SqlUserPasswordRepository
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_user_management_router,
@@ -110,7 +111,7 @@ async def lifespan(app: FastAPI):
         app.state.time_provider = UtcTimeProvider()
 
         user_repository = SqlUserRepository(session)
-        user_password_repository = InMemoryUserPasswordRepository()
+        user_password_repository = SqlUserPasswordRepository(session)
         password_hashing_gateway = BcryptHashingGateway()
 
         create_user_usecase = CreateUserUseCase(
