@@ -7,6 +7,7 @@ from password_management_context.application.gateways import (
 )
 from password_management_context.application.responses import PasswordMetadataResponse
 from password_management_context.domain.exceptions import FolderNotFoundError
+from password_management_context.domain.value_objects import PasswordPermission
 
 
 class ListPasswordsUseCase:
@@ -29,7 +30,7 @@ class ListPasswordsUseCase:
         password_responses = []
         for password_entity in password_entities:
             if self.password_permissions_repository.has_access(
-                requester_id, password_entity.id
+                requester_id, password_entity.id, PasswordPermission.READ
             ):
                 password_response = PasswordMetadataResponse(
                     id=password_entity.id,

@@ -15,12 +15,16 @@ class FakePasswordPermissionsRepository:
     def is_owner(self, user_id: UUID, password_id: UUID) -> bool:
         return self._ownerships.get((user_id, password_id), False)
 
-    def has_access(self, user_id: UUID, password_id: UUID) -> bool:
+    def has_access(
+        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+    ) -> bool:
         # Owner always has access
         if self.is_owner(user_id, password_id):
             return True
+
         # Check if user has explicit permissions
-        return (user_id, password_id) in self._permissions
+        key = (user_id, password_id)
+        return key in self._permissions and permission in self._permissions[key]
 
     def grant_access(
         self, user_id: UUID, password_id: UUID, permission: PasswordPermission

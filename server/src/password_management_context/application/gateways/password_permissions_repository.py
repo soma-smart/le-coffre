@@ -15,7 +15,9 @@ class PasswordPermissionsRepository(Protocol):
         """Check if a user is the owner of a password"""
         ...
 
-    def has_access(self, user_id: UUID, password_id: UUID) -> bool:
+    def has_access(
+        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+    ) -> bool:
         """Check if a user has any access to a password (owner or shared)"""
         ...
 

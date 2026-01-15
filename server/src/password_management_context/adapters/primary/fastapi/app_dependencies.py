@@ -7,21 +7,14 @@ from password_management_context.application.use_cases import (
     UpdatePasswordUseCase,
     ListPasswordsUseCase,
     DeletePasswordUseCase,
+    ShareAccessUseCase,
+    UnshareAccessUseCase,
 )
 from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
 )
 from shared_kernel.encryption import EncryptionService
-from rights_access_context.application.use_cases import (
-    ShareAccessUseCase,
-    UnshareAccessUseCase,
-)
-from rights_access_context.application.gateways import (
-    RightsRepository,
-    UserManagementGateway,
-)
-from rights_access_context.adapters.secondary import UserRepositoryAdapter
 from identity_access_management_context.application.gateways import UserRepository
 
 
@@ -93,30 +86,23 @@ def get_delete_password_usecase(
     return DeletePasswordUseCase(password_repository, password_permissions_repository)
 
 
-def get_rights_repository(request: Request) -> RightsRepository:
-    return request.app.state.rights_repository
-
-
 def get_user_repository(request: Request) -> UserRepository:
     return request.app.state.user_repository
 
 
-def get_user_management_gateway(
-    user_repository: UserRepository = Depends(get_user_repository),
-) -> UserManagementGateway:
-    return UserRepositoryAdapter(user_repository)
-
-
 def get_share_access_usecase(
-    rights_repository: RightsRepository = Depends(get_rights_repository),
-    user_management_gateway: UserManagementGateway = Depends(
-        get_user_management_gateway
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
     ),
 ):
-    return ShareAccessUseCase(rights_repository, user_management_gateway)
+    return ShareAccessUseCase(password_repository, password_permissions_repository)
 
 
 def get_unshare_access_usecase(
-    rights_repository: RightsRepository = Depends(get_rights_repository),
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
 ):
-    return UnshareAccessUseCase(rights_repository)
+    return UnshareAccessUseCase(password_repository, password_permissions_repository)

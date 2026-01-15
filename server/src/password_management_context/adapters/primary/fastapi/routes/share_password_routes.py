@@ -6,13 +6,9 @@ import logging
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_share_access_usecase,
 )
-from rights_access_context.application.use_cases import ShareAccessUseCase
-from rights_access_context.application.commands import ShareResourceCommand
-from rights_access_context.domain.exceptions import (
-    PermissionDeniedError,
-    RightAccessDomainError,
-    UserNotFoundError,
-)
+from password_management_context.application.use_cases import ShareAccessUseCase
+from password_management_context.application.commands import ShareResourceCommand
+from password_management_context.domain.exceptions import PasswordAccessDeniedError
 from shared_kernel.authentication import ValidatedUser
 from shared_kernel.authentication.dependencies import get_current_user
 
@@ -52,19 +48,15 @@ def share_password(
         command = ShareResourceCommand(
             owner_id=current_user.user_id,
             user_id=request.user_id,
-            resource_id=password_id,
+            password_id=password_id,
         )
         usecase.execute(command)
 
         return SharePasswordResponse(
             message=f"Password {password_id} successfully shared with user {request.user_id}"
         )
-    except UserNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except PermissionDeniedError as e:
+    except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
-    except RightAccessDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logging.error(e)
         raise HTTPException(status_code=500, detail="Internal server error")

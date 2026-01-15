@@ -5,7 +5,7 @@ from password_management_context.application.use_cases import GetPasswordUseCase
 from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
 )
-from password_management_context.adapters.secondary.gateways import (
+from password_management_context.adapters.secondary import (
     InMemoryPasswordRepository,
 )
 from password_management_context.domain.exceptions import (
@@ -13,6 +13,9 @@ from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
 )
 from password_management_context.domain.entities import Password
+from password_management_context.domain.value_objects import (
+    PasswordPermission,
+)
 
 
 @pytest.fixture
@@ -24,7 +27,7 @@ def use_case(password_repository, encryption_service, password_permissions_repos
 
 def test_should_return_password_when_user_has_access(
     use_case: GetPasswordUseCase,
-    password_repository,
+    password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -35,7 +38,9 @@ def test_should_return_password_when_user_has_access(
         folder="default",
     )
     password_repository.save(password_entity)
-    password_permissions_repository.set_owner(user_id, password_entity.id)
+    password_permissions_repository.grant_access(
+        user_id, password_entity.id, PasswordPermission.READ
+    )
 
     result = use_case.execute(user_id, password_entity.id)
 

@@ -9,6 +9,7 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     PasswordAccessDeniedError,
 )
+from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.encryption import EncryptionService
 
 
@@ -29,7 +30,7 @@ class GetPasswordUseCase:
             raise PasswordNotFoundError(password_id)
 
         if not self.password_permissions_repository.has_access(
-            requester_id, password_id
+            requester_id, password_id, PasswordPermission.READ
         ):
             raise PasswordAccessDeniedError(requester_id, password_id)
 

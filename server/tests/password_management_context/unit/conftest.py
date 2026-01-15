@@ -1,6 +1,6 @@
 import pytest
 
-from password_management_context.adapters.secondary.gateways import (
+from password_management_context.adapters.secondary import (
     InMemoryPasswordRepository,
 )
 from .fakes import FakeEncryptionService

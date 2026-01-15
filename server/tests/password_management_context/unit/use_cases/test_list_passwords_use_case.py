@@ -2,14 +2,15 @@ import pytest
 from uuid import UUID
 
 from password_management_context.application.use_cases import ListPasswordsUseCase
-from password_management_context.adapters.secondary.gateways import (
+from password_management_context.adapters.secondary import (
     InMemoryPasswordRepository,
 )
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
-from password_management_context.application.gateways.password_permissions_repository import (
+from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
 )
+from password_management_context.domain.value_objects import PasswordPermission
 
 
 @pytest.fixture
@@ -49,7 +50,9 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     password_repository.save(password1)
     password_permissions_repository.set_owner(requester_id, password1.id)
     password_repository.save(password2)
-    password_permissions_repository.set_owner(requester_id, password2.id)
+    password_permissions_repository.grant_access(
+        requester_id, password2.id, PasswordPermission.READ
+    )
 
     result = use_case.execute(requester_id=requester_id)
 

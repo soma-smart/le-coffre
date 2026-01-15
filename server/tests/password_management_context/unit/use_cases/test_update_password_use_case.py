@@ -1,7 +1,7 @@
 import pytest
 from uuid import UUID
 
-from password_management_context.adapters.secondary.gateways import (
+from password_management_context.adapters.secondary import (
     InMemoryPasswordRepository,
 )
 from password_management_context.application.use_cases import UpdatePasswordUseCase

@@ -31,17 +31,9 @@ from vault_management_context.application.use_cases import (
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
-from password_management_context.adapters.secondary.gateways import (
+from password_management_context.adapters.secondary.sql import (
     SqlPasswordRepository,
     SqlPasswordPermissionsRepository,
-)
-
-from rights_access_context.adapters.primary import AccessControllerAdapter
-from rights_access_context.adapters.secondary.sql import SqlRightsRepository
-from rights_access_context.application.use_cases import (
-    CheckAccessUseCase,
-    GetOwnerAccessUseCase,
-    SetOwnerAccessUseCase,
 )
 
 from identity_access_management_context.adapters.secondary import (
@@ -95,17 +87,11 @@ async def lifespan(app: FastAPI):
         app.state.password_permissions_repository = password_permissions_repository
         app.state.encryption_service = encryption_service
 
-        # Rights access dependencies
-        rights_repository = SqlRightsRepository(session)
-        check_use_case = CheckAccessUseCase(rights_repository)
-        set_owner_use_case = SetOwnerAccessUseCase(rights_repository)
-        get_owner_use_case = GetOwnerAccessUseCase(rights_repository)
-        access_controller = AccessControllerAdapter(
-            check_use_case, set_owner_use_case, get_owner_use_case
-        )
+        password_permissions_repository = SqlPasswordPermissionsRepository(session)
+        password_repository = SqlPasswordRepository(session)
 
-        app.state.rights_repository = rights_repository
-        app.state.access_controller = access_controller
+        app.state.password_permissions_repository = password_permissions_repository
+        app.state.password_repository = password_repository
 
         # IAM dependencies
         app.state.time_provider = UtcTimeProvider()

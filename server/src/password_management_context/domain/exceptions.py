@@ -105,3 +105,14 @@ class NotPasswordOwnerError(PasswordManagementDomainError):
         self.user_id = user_id
         self.password_id = password_id
         super().__init__(f"User {user_id} is not the owner of password {password_id}")
+
+
+class CannotUnshareWithOwnerError(PasswordManagementDomainError):
+    """Raised when trying to unshare a password to an owner"""
+
+    def __init__(self, owner_id: UUID, password_id: UUID):
+        self.owner_id = owner_id
+        self.password_id = password_id
+        super().__init__(
+            f"Owner {owner_id} cannot have access revoked from password {password_id}"
+        )

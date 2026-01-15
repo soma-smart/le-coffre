@@ -5,7 +5,7 @@ from password_management_context.application.use_cases import DeletePasswordUseC
 from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
 )
-from password_management_context.adapters.secondary.gateways import (
+from password_management_context.adapters.secondary import (
     InMemoryPasswordRepository,
 )
 from password_management_context.domain.exceptions import (

@@ -5,12 +5,11 @@ import logging
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_unshare_access_usecase,
 )
-from rights_access_context.application.use_cases import UnshareAccessUseCase
-from rights_access_context.application.commands import UnshareResourceCommand
-from rights_access_context.domain.exceptions import (
-    PermissionDeniedError,
+from password_management_context.application.use_cases import UnshareAccessUseCase
+from password_management_context.application.commands import UnshareResourceCommand
+from password_management_context.domain.exceptions import (
+    PasswordAccessDeniedError,
     CannotUnshareWithOwnerError,
-    RightAccessDomainError,
 )
 from shared_kernel.authentication import ValidatedUser
 from shared_kernel.authentication.dependencies import get_current_user
@@ -49,11 +48,9 @@ def unshare_password(
         usecase.execute(command)
 
         return
-    except PermissionDeniedError as e:
+    except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except CannotUnshareWithOwnerError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except RightAccessDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logging.error(e)

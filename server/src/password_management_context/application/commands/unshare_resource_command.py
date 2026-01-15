@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class ShareResourceCommand:
+class UnshareResourceCommand:
     owner_id: UUID
     user_id: UUID
-    resource_id: UUID
+    password_id: UUID
