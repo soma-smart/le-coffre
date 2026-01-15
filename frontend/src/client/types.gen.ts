@@ -151,7 +151,7 @@ export type CreateVaultPostResponse = {
     /**
      * Shares
      */
-    shares: Array<Share>;
+    shares: Array<ShareResponse>;
 };
 
 /**
@@ -335,20 +335,6 @@ export type RegisterAdminResponse = {
 };
 
 /**
- * Share
- */
-export type Share = {
-    /**
-     * Index
-     */
-    index: number;
-    /**
-     * Secret
-     */
-    secret: string;
-};
-
-/**
  * SharePasswordRequest
  */
 export type SharePasswordRequest = {
@@ -369,13 +355,9 @@ export type SharePasswordResponse = {
 };
 
 /**
- * ShareRequest
+ * ShareResponse
  */
-export type ShareRequest = {
-    /**
-     * Index
-     */
-    index: number;
+export type ShareResponse = {
     /**
      * Secret
      */
@@ -421,9 +403,9 @@ export type SsoUserInfo = {
 export type UnlockVaultPostRequest = {
     /**
      * Shares
-     * List of shares to unlock the vault
+     * List of share secrets (hex strings with embedded index)
      */
-    shares: Array<ShareRequest>;
+    shares: Array<string>;
 };
 
 /**

@@ -23,15 +23,20 @@ class CryptoShamirGateway(ShamirGateway):
             False,
         )
 
+        # Embed index in the share secret: format is "index:hexsecret"
         return ShamirResult(
-            [Share(share[0], share[1].hex()) for share in shares], secret.hex()
+            [Share(f"{share[0]}:{share[1].hex()}") for share in shares], secret.hex()
         )
 
     def reconstruct_secret(self, shares: List[Share]) -> str:
         try:
-            crypto_shares = [
-                (share.index, bytes.fromhex(share.secret)) for share in shares
-            ]
+            # Extract index from the embedded format "index:hexsecret"
+            crypto_shares = []
+            for share in shares:
+                index_str, hex_secret = share.secret.split(":", 1)
+                index = int(index_str)
+                crypto_shares.append((index, bytes.fromhex(hex_secret)))
+
             secret_bytes = Shamir.combine(crypto_shares, False)
             return secret_bytes.hex()
         except Exception as e:

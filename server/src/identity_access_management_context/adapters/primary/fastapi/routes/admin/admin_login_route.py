@@ -1,21 +1,22 @@
-from fastapi import APIRouter, HTTPException, Depends, Response
 import logging
-from pydantic import BaseModel
 from uuid import UUID
 
-from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
-    get_admin_login_usecase,
-)
-from identity_access_management_context.application.use_cases import AdminLoginUseCase
-from identity_access_management_context.application.commands import AdminLoginCommand
-from identity_access_management_context.domain.exceptions import (
-    InvalidCredentialsException,
-    AdminNotFoundException,
-)
 from config import (
     get_cookie_secure_setting,
     get_jwt_access_token_expiration_minutes,
     get_jwt_refresh_token_expiration_days,
+)
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel
+
+from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
+    get_admin_login_usecase,
+)
+from identity_access_management_context.application.commands import AdminLoginCommand
+from identity_access_management_context.application.use_cases import AdminLoginUseCase
+from identity_access_management_context.domain.exceptions import (
+    AdminNotFoundException,
+    InvalidCredentialsException,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -80,6 +81,16 @@ async def admin_login(
             samesite="lax",
             max_age=get_jwt_refresh_token_expiration_days()
             * 86400,  # Convert days to seconds
+        )
+
+        # Set a non-httpOnly cookie that frontend can read to check auth status
+        response.set_cookie(
+            key="logged_in",
+            value="true",
+            httponly=False,  # JavaScript can read this
+            secure=is_secure,
+            samesite="lax",
+            max_age=get_jwt_access_token_expiration_minutes() * 60,
         )
 
         return AdminLoginResponse(

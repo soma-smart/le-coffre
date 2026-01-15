@@ -36,15 +36,14 @@ from password_management_context.adapters.secondary.gateways import (
 )
 
 from rights_access_context.adapters.primary import AccessControllerAdapter
+from rights_access_context.adapters.secondary.sql import SqlRightsRepository
 from rights_access_context.application.use_cases import (
     CheckAccessUseCase,
     GetOwnerAccessUseCase,
     SetOwnerAccessUseCase,
 )
-from rights_access_context.adapters.secondary import InMemoryRightsRepository
 
 from identity_access_management_context.adapters.secondary import (
-    InMemoryUserRepository,
     SqlUserRepository,
     BcryptHashingGateway,
     InMemoryUserPasswordRepository,
@@ -52,8 +51,8 @@ from identity_access_management_context.adapters.secondary import (
     UserManagementGatewayAdapter,
     OAuth2SsoGateway,
     InMemorySsoUserRepository,
-    SqlSsoUserRepository,
     SqlUserPasswordRepository
+    SqlSsoUserRepository,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_user_management_router,
@@ -96,7 +95,7 @@ async def lifespan(app: FastAPI):
         app.state.encryption_service = encryption_service
 
         # Rights access dependencies
-        rights_repository = InMemoryRightsRepository()
+        rights_repository = SqlRightsRepository(session)
         check_use_case = CheckAccessUseCase(rights_repository)
         set_owner_use_case = SetOwnerAccessUseCase(rights_repository)
         get_owner_use_case = GetOwnerAccessUseCase(rights_repository)
@@ -133,14 +132,15 @@ async def lifespan(app: FastAPI):
 
         # SSO Gateway with OAuth2/OIDC support
         # Base URL should be the public URL of your application
-        base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+        # Redirect URI points to the frontend callback page (not API endpoint)
+        base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")
         sso_gateway = OAuth2SsoGateway(
             base_url=base_url,
-            redirect_uri=f"{base_url}/api/auth/sso/callback",
+            redirect_uri=f"{base_url}/sso/callback",
             scope="openid email profile",
             provider="oauth2",
         )
-        sso_user_repository = InMemorySsoUserRepository()
+        sso_user_repository = SqlSsoUserRepository(session)
 
         app.state.user_password_repository = user_password_repository
         app.state.password_hashing_gateway = password_hashing_gateway

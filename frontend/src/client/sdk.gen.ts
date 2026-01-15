@@ -59,20 +59,13 @@ export const validateVaultSetupVaultValidateSetupPost = <ThrowOnError extends bo
  * Unlock the vault
  * Unlock the vault using Shamir's Secret Sharing reconstruction.
  *
- * Only administrators can unlock the vault.
+ * This endpoint does not require authentication as it's needed to unlock the vault
+ * before any user can authenticate.
  *
- * - **shares**: List of shares (index + secret) needed to reconstruct the master secret
- * - **Authorization**: Bearer token (admin role required)
+ * - **shares**: List of share secrets (hex strings with embedded index in format "index:hexsecret")
  */
 export const unlockVaultVaultUnlockPost = <ThrowOnError extends boolean = false>(options: Options<UnlockVaultVaultUnlockPostData, ThrowOnError>) => {
     return (options.client ?? client).post<UnlockVaultVaultUnlockPostResponses, UnlockVaultVaultUnlockPostErrors, ThrowOnError>({
-        security: [
-            {
-                in: 'cookie',
-                name: 'access_token',
-                type: 'apiKey'
-            }
-        ],
         url: '/vault/unlock',
         ...options,
         headers: {

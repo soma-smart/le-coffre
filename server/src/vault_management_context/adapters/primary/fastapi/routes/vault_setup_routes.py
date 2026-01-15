@@ -7,7 +7,6 @@ from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_vault_usecase,
 )
 from vault_management_context.application.use_cases import CreateVaultUseCase
-from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
 router = APIRouter(prefix="/vault", tags=["Vault"])
@@ -18,9 +17,13 @@ class CreateVaultPostRequest(BaseModel):
     threshold: int
 
 
+class ShareResponse(BaseModel):
+    secret: str
+
+
 class CreateVaultPostResponse(BaseModel):
     setup_id: UUID
-    shares: list[Share]
+    shares: list[ShareResponse]
 
 
 @router.post(
@@ -38,7 +41,7 @@ def create_vault(
 
     - **nb_shares**: Total number of shares to generate
     - **threshold**: Minimum number of shares needed to unlock the vault
-    
+
     Returns shares and a setup_id for validation.
     """
     try:
@@ -50,4 +53,5 @@ def create_vault(
         logging.error(e)
         raise HTTPException(status_code=500, detail="Internal server error")
 
-    return {"setup_id": setup_id, "shares": result.shares}
+    shares_response = [{"secret": share.secret} for share in result.shares]
+    return {"setup_id": setup_id, "shares": shares_response}

@@ -55,7 +55,7 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     )
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.save(existing_sso_user)
+    sso_user_repository.create(existing_sso_user)
     token_gateway.set_unique_jwt_part("unique_token_part")
 
     command = SsoLoginCommand(code=sso_code)
@@ -150,7 +150,7 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
         email, display_name, sso_user_id, sso_provider
     )
 
-    sso_user_repository.save(existing_sso_user)
+    sso_user_repository.create(existing_sso_user)
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     token_gateway.set_unique_jwt_part("existing_user_token")
 
@@ -193,7 +193,7 @@ async def test_should_return_refresh_token_on_successful_sso_login(
     )
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.save(existing_sso_user)
+    sso_user_repository.create(existing_sso_user)
     token_gateway.set_unique_jwt_part("unique_token_part")
 
     command = SsoLoginCommand(code=sso_code)

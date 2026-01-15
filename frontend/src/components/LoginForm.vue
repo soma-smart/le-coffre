@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { adminLoginAuthLoginPost } from '@/client';
+import { adminLoginAuthLoginPost, getSsoUrlAuthSsoUrlGet } from '@/client';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { useToast } from 'primevue';
 import { useRouter, useRoute } from 'vue-router'
@@ -37,13 +37,46 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       return;
     }
     toast.add({ severity: 'success', summary: 'Login Successful', detail: 'You have logged in successfully.', life: 5000 });
-    // Add login: true to localStorage
-    localStorage.setItem('login', 'true');
 
     // Redirect to the page specified in query or to home page
     const redirectPath = route.query.redirect as string || '/';
     router.push(redirectPath);
 
+  }
+};
+
+const ssoLoading = ref(false);
+
+const handleSsoLogin = async () => {
+  ssoLoading.value = true;
+  try {
+    const response = await getSsoUrlAuthSsoUrlGet();
+
+    if (response.error) {
+      console.error('SSO URL error:', response.error);
+      toast.add({
+        severity: 'error',
+        summary: 'SSO Error',
+        detail: 'Failed to get SSO login URL. SSO may not be configured.',
+        life: 5000
+      });
+      return;
+    }
+
+    if (response.data) {
+      // Redirect to SSO provider
+      window.location.href = response.data as string;
+    }
+  } catch (error) {
+    console.error('Unexpected error during SSO login:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'An unexpected error occurred',
+      life: 5000
+    });
+  } finally {
+    ssoLoading.value = false;
   }
 };
 </script>
@@ -72,6 +105,15 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
         <Button fluid block type="submit" label="Login" class="flex flex-col justify-center mt-4"
           :disabled="!$form.valid" />
       </Form>
+
+      <div class="flex items-center gap-2 my-4">
+        <Divider class="flex-1" />
+        <span class="text-sm text-gray-500">OR</span>
+        <Divider class="flex-1" />
+      </div>
+
+      <Button fluid block severity="secondary" outlined label="Login with SSO" icon="pi pi-sign-in"
+        @click="handleSsoLogin" :loading="ssoLoading" :disabled="ssoLoading" />
     </template>
   </Card>
 </template>

@@ -3,7 +3,7 @@ import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import MainLayout from "../layouts/MainLayout.vue";
-import CreatePasswordModal from "@/components/CreatePasswordModal.vue";
+import CreatePasswordModal from "@/components/modals/CreatePasswordModal.vue";
 import PasswordsList from "@/components/passwords/PasswordsList.vue";
 import type { GetPasswordListResponse } from '@/client/types.gen';
 import { usePasswordsStore } from '@/stores/passwords';
@@ -50,13 +50,14 @@ watch(() => route.query.folder, (folderQuery) => {
   selectedFolder.value = folderQuery as string | null;
 });
 
-onMounted(() => {
+onMounted(async () => {
   // Auto-expand folder if filtered
   const folderQuery = route.query.folder as string | undefined;
   if (folderQuery) {
     selectedFolder.value = folderQuery;
   }
   
+  // Fetch passwords
   passwordsStore.fetchPasswords();
 });
 </script>

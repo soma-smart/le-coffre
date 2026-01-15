@@ -1,5 +1,7 @@
-from typing import Protocol, Optional
+from datetime import datetime
+from typing import Optional, Protocol
 from uuid import UUID
+
 from identity_access_management_context.domain.entities import SsoUser
 
 
@@ -10,7 +12,11 @@ class SsoUserRepository(Protocol):
     Handles the persistence and retrieval of SSO user mappings.
     """
 
-    def save(self, sso_user: SsoUser) -> None: ...
+    def create(self, sso_user: SsoUser) -> None: ...
+
+    def update_last_login(
+        self, sso_user_id: str, sso_provider: str, last_login: datetime
+    ) -> None: ...
 
     def get_by_sso_user_id(
         self, sso_user_id: str, sso_provider: str = "default"

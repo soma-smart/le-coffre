@@ -14,9 +14,6 @@ from identity_access_management_context.application.gateways import (
     TokenGateway,
 )
 from identity_access_management_context.domain.entities.sso_user import SsoUser
-from identity_access_management_context.domain.entities.authentication_session import (
-    AuthenticationSession,
-)
 from shared_kernel.time import TimeProvider
 
 
@@ -62,8 +59,11 @@ class SsoLoginUseCase:
             is_new_user = False
 
             # Update last login time
-            existing_sso_user.last_login = datetime.now()
-            self._sso_user_repository.save(existing_sso_user)
+            self._sso_user_repository.update_last_login(
+                sso_user_from_provider.sso_user_id,
+                sso_user_from_provider.sso_provider,
+                datetime.now(),
+            )
         else:
             # Step 3: Create new user
             user_id = uuid4()
@@ -86,7 +86,7 @@ class SsoLoginUseCase:
                 created_at=datetime.now(),
                 last_login=datetime.now(),
             )
-            self._sso_user_repository.save(sso_user)
+            self._sso_user_repository.create(sso_user)
 
         # Step 4: Generate JWT token
         token = await self._token_gateway.generate_token(

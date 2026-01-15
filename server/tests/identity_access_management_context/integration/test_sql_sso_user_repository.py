@@ -15,7 +15,7 @@ def test_save_sso_user_and_get_by_internal_user_id(sql_sso_user_repository):
         sso_user_id="sso123",
         sso_provider="google",
     )
-    sql_sso_user_repository.save(sso_user)
+    sql_sso_user_repository.create(sso_user)
     retrieved_user = sql_sso_user_repository.get_by_user_id(sso_user.internal_user_id)
     assert retrieved_user is not None
     assert retrieved_user.email == sso_user.email
@@ -32,9 +32,9 @@ def test_sso_user_already_exists(sql_sso_user_repository):
         sso_user_id="sso123",
         sso_provider="google",
     )
-    sql_sso_user_repository.save(sso_user)
+    sql_sso_user_repository.create(sso_user)
     with pytest.raises(SsoUserAlreadyExistsException):
-        sql_sso_user_repository.save(sso_user)
+        sql_sso_user_repository.create(sso_user)
 
 
 def test_get_nonexistent_sso_user(sql_sso_user_repository):
@@ -51,7 +51,7 @@ def test_get_user_by_sso_user_id(sql_sso_user_repository):
         sso_user_id="sso123",
         sso_provider="google",
     )
-    sql_sso_user_repository.save(sso_user)
+    sql_sso_user_repository.create(sso_user)
     retrieved_user = sql_sso_user_repository.get_by_sso_user_id("sso123", "google")
     assert retrieved_user is not None
     assert retrieved_user.email == sso_user.email
@@ -69,7 +69,7 @@ def test_get_user_by_internal_user_id(sql_sso_user_repository):
         sso_user_id="sso123",
         sso_provider="google",
     )
-    sql_sso_user_repository.save(sso_user)
+    sql_sso_user_repository.create(sso_user)
     retrieved_user = sql_sso_user_repository.get_by_user_id(iud)
     assert retrieved_user is not None
     assert retrieved_user.email == sso_user.email
