@@ -44,15 +44,13 @@ from rights_access_context.application.use_cases import (
 )
 
 from identity_access_management_context.adapters.secondary import (
-    InMemoryUserRepository,
     SqlUserRepository,
     BcryptHashingGateway,
     InMemoryUserPasswordRepository,
     JwtTokenGateway,
     UserManagementGatewayAdapter,
     OAuth2SsoGateway,
-    InMemorySsoUserRepository,
-    SqlSsoUserRepository
+    SqlSsoUserRepository,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_user_management_router,
@@ -132,14 +130,15 @@ async def lifespan(app: FastAPI):
 
         # SSO Gateway with OAuth2/OIDC support
         # Base URL should be the public URL of your application
-        base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
+        # Redirect URI points to the frontend callback page (not API endpoint)
+        base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")
         sso_gateway = OAuth2SsoGateway(
             base_url=base_url,
-            redirect_uri=f"{base_url}/api/auth/sso/callback",
+            redirect_uri=f"{base_url}/sso/callback",
             scope="openid email profile",
             provider="oauth2",
         )
-        sso_user_repository = InMemorySsoUserRepository()
+        sso_user_repository = SqlSsoUserRepository(session)
 
         app.state.user_password_repository = user_password_repository
         app.state.password_hashing_gateway = password_hashing_gateway

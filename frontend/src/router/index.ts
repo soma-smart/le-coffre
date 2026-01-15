@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../pages/HomePage.vue'
 import SetupView from '../pages/SetupPage.vue'
 import { useSetupStore } from '@/stores/setup'
+import { isAuthenticated } from '@/utils/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,9 +29,20 @@ const router = createRouter({
       component: () => import('../pages/LoginPage.vue'),
     },
     {
+      path: '/sso/callback',
+      name: 'SsoCallback',
+      component: () => import('../pages/SsoCallbackPage.vue'),
+      meta: { skipSetupCheck: true }
+    },
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('../pages/ProfilePage.vue'),
+    },
+    {
+      path: '/admin',
+      name: 'Admin',
+      component: () => import('../pages/AdminPage.vue'),
     }
   ],
 })
@@ -59,7 +71,8 @@ router.beforeEach(async (to) => {
   }
 
   // If we are not logged in, redirect to login
-  const isLoggedIn = localStorage.getItem('login') === 'true';
+  // Check for both JWT cookies (SSO login)
+  const isLoggedIn = isAuthenticated();
   if (!isLoggedIn && to.name !== 'Login') {
     return { name: 'Login' };
   }

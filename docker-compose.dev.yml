@@ -20,4 +20,5 @@ services:
       - PYTHONPATH=/app/server/src
       - USER_UID=${USER_UID:-1000}
       - USER_GID=${USER_GID:-1000}
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8123}
     command: tail -f /dev/null

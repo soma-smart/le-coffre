@@ -28,9 +28,11 @@ declare module 'vue' {
     LoginForm: typeof import('./src/components/LoginForm.vue')['default']
     MainMenu: typeof import('./src/components/MainMenu.vue')['default']
     Message: typeof import('primevue/message')['default']
+    PanelMenu: typeof import('primevue/panelmenu')['default']
     Password: typeof import('primevue/password')['default']
     PasswordCard: typeof import('./src/components/passwords/PasswordCard.vue')['default']
     PasswordsList: typeof import('./src/components/passwords/PasswordsList.vue')['default']
+    ProgressSpinner: typeof import('primevue/progressspinner')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
@@ -54,5 +56,6 @@ declare module 'vue' {
   }
   export interface GlobalDirectives {
     Tooltip: typeof import('primevue/tooltip')['default']
+    Ripple: typeof import('primevue/ripple')['default']
   }
 }
