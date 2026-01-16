@@ -19,6 +19,12 @@ from identity_access_management_context.adapters.secondary.sql.sql_user_reposito
 from identity_access_management_context.adapters.secondary.sql.model.users_model import (
     UserTable,
 )
+from identity_access_management_context.adapters.secondary.sql.sql_user_password_repository import (
+    SqlUserPasswordRepository,
+)
+from identity_access_management_context.adapters.secondary.sql.model.user_password_model import (
+    UserPasswordTable,
+)
 import oidc_provider_mock
 
 
@@ -48,6 +54,7 @@ def database_engine():
         )
         SsoUsersTable.metadata.create_all(engine)
         UserTable.metadata.create_all(engine)# Creating Tables
+        UserPasswordTable.metadata.create_all(engine)
         yield engine
     finally:
         os.unlink(db_path)
@@ -62,6 +69,10 @@ def session(database_engine):
 @pytest.fixture(scope="function")
 def sql_sso_user_repository(session):
     return SqlSsoUserRepository(session)
+
+@pytest.fixture(scope="function")
+def sql_user_password_repository(session):
+    return SqlUserPasswordRepository(session)
 
 @pytest.fixture(scope="function")
 def sql_user_repository(session):
