@@ -73,9 +73,11 @@ def test_authenticated_request_without_auth_fails(unauthenticated_client, setup)
     assert create_response.status_code == 401
 
 
-def test_cookie_authentication_works(e2e_client, setup):
+def test_cookie_authentication_works(e2e_client):
     """
     Test that cookie authentication works correctly.
+    This test only verifies cookies work for authentication,
+    without involving the vault setup.
     """
     # Register and login to get cookies
     admin_data = {
@@ -83,7 +85,8 @@ def test_cookie_authentication_works(e2e_client, setup):
         "password": "password123",
         "display_name": "Cookie Auth Admin",
     }
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
+    register_response = e2e_client.post("/api/auth/register-admin", json=admin_data)
+    assert register_response.status_code == 201
 
     login_response = e2e_client.post(
         "/api/auth/login",
@@ -95,18 +98,15 @@ def test_cookie_authentication_works(e2e_client, setup):
 
     assert login_response.status_code == 200
 
-    # Now the client has valid cookies
-    password_data = {
-        "name": "Cookie Auth Test Entry",
-        "password": "MyS3cur3P@ss!",
-        "folder": "Tests",
-    }
-    create_response = e2e_client.post(
-        "/api/passwords/",
-        json=password_data,
-    )
+    # Verify that cookies are set by checking a protected endpoint
+    # Use the /users/me endpoint which requires authentication
+    me_response = e2e_client.get("/api/users/me")
+    assert me_response.status_code == 200
 
-    assert create_response.status_code == 201
+    user_data = me_response.json()
+    assert user_data["email"] == "cookie_auth@example.com"
+    assert user_data["name"] == "Cookie Auth Admin"
+    assert "admin" in user_data["roles"]
 
 
 def test_request_without_cookie_fails(unauthenticated_client, setup):

@@ -5,6 +5,7 @@ from datetime import datetime
 from identity_access_management_context.application.use_cases.sso.sso_login_use_case import (
     SsoLoginUseCase,
 )
+from identity_access_management_context.application.use_cases import CreateUserUseCase
 from identity_access_management_context.application.commands.sso_login_command import (
     SsoLoginCommand,
 )
@@ -16,17 +17,22 @@ from tests.identity_access_management_context.unit.conftest import (
 
 
 @pytest.fixture
+def create_user_usecase(user_repository, password_hashing_gateway):
+    return CreateUserUseCase(user_repository, password_hashing_gateway)
+
+
+@pytest.fixture
 def use_case(
     sso_gateway,
     sso_user_repository,
-    user_management_gateway,
+    create_user_usecase,
     token_gateway,
     time_provider,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
         sso_user_repository=sso_user_repository,
-        user_management_gateway=user_management_gateway,
+        create_user_usecase=create_user_usecase,
         token_gateway=token_gateway,
         time_provider=time_provider,
     )
@@ -89,7 +95,7 @@ async def test_should_create_new_user_for_first_time_sso_login(
     use_case: SsoLoginUseCase,
     sso_gateway,
     sso_user_repository,
-    user_management_gateway,
+    user_repository,
     token_gateway,
 ):
     # Arrange
@@ -113,12 +119,12 @@ async def test_should_create_new_user_for_first_time_sso_login(
     response = await use_case.execute(command)
 
     # Assert
-    # Check that user was created in User Management context
-    assert user_management_gateway._created_users
-    created_user = user_management_gateway._created_users[0]
-    assert created_user["email"] == email
-    assert created_user["display_name"] == display_name
-    assert created_user["user_id"] == response.user_id
+    # Check that user was created in User repository
+    created_user = user_repository.get_by_id(response.user_id)
+    assert created_user is not None
+    assert created_user.email == email
+    assert created_user.name == display_name
+    assert created_user.id == response.user_id
 
 
 @pytest.mark.asyncio
@@ -126,7 +132,7 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     use_case: SsoLoginUseCase,
     sso_gateway,
     sso_user_repository,
-    user_management_gateway,
+    user_repository,
     token_gateway,
 ):
     # Arrange
@@ -154,8 +160,9 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     token_gateway.set_unique_jwt_part("existing_user_token")
 
-    # Count initial users in User Management context
-    initial_user_count = len(user_management_gateway._created_users)
+    # Count initial users
+    initial_users = user_repository.list_all()
+    initial_user_count = len(initial_users)
 
     command = SsoLoginCommand(code=sso_code)
 
@@ -163,8 +170,9 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     await use_case.execute(command)
 
     # Assert
-    # Check that NO new user was created in User Management context
-    assert len(user_management_gateway._created_users) == initial_user_count
+    # Check that NO new user was created
+    current_users = user_repository.list_all()
+    assert len(current_users) == initial_user_count
 
     # Check that last_login was updated
     updated_sso_user = sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider)

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../pages/HomePage.vue'
 import SetupView from '../pages/SetupPage.vue'
 import { useSetupStore } from '@/stores/setup'
+import { useUserStore } from '@/stores/user'
 import { isAuthenticated } from '@/utils/auth'
 
 const router = createRouter({
@@ -43,12 +44,14 @@ const router = createRouter({
       path: '/admin',
       name: 'Admin',
       component: () => import('../pages/AdminPage.vue'),
+      meta: { requiresAdmin: true }
     }
   ],
 })
 
 router.beforeEach(async (to) => {
   const setupStore = useSetupStore();
+  const userStore = useUserStore();
 
   // If the route is marked to skip the check, allow navigation
   if (to.meta.skipSetupCheck) {
@@ -75,6 +78,17 @@ router.beforeEach(async (to) => {
   const isLoggedIn = isAuthenticated();
   if (!isLoggedIn && to.name !== 'Login') {
     return { name: 'Login' };
+  }
+
+  // Check if route requires admin privileges
+  if (to.meta.requiresAdmin && isLoggedIn) {
+    // Fetch user data to check admin status
+    await userStore.fetchCurrentUser();
+    
+    if (!userStore.isAdmin) {
+      // User is not an admin, redirect to home
+      return { name: 'Home' };
+    }
   }
 
   // Otherwise, the app is set up and logged in, allow the navigation

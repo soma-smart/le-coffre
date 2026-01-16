@@ -4,15 +4,16 @@ from datetime import datetime
 from identity_access_management_context.application.commands.sso_login_command import (
     SsoLoginCommand,
 )
+from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.responses.sso_login_response import (
     SsoLoginResponse,
 )
 from identity_access_management_context.application.gateways import (
     SsoGateway,
     SsoUserRepository,
-    UserManagementGateway,
     TokenGateway,
 )
+from identity_access_management_context.application.use_cases import CreateUserUseCase
 from identity_access_management_context.domain.entities.sso_user import SsoUser
 from shared_kernel.time import TimeProvider
 
@@ -32,13 +33,13 @@ class SsoLoginUseCase:
         self,
         sso_gateway: SsoGateway,
         sso_user_repository: SsoUserRepository,
-        user_management_gateway: UserManagementGateway,
+        create_user_usecase: CreateUserUseCase,
         token_gateway: TokenGateway,
         time_provider: TimeProvider,
     ):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
-        self._user_management_gateway = user_management_gateway
+        self._create_user_usecase = create_user_usecase
         self._token_gateway = token_gateway
         self._time_provider = time_provider
 
@@ -72,9 +73,13 @@ class SsoLoginUseCase:
             is_new_user = True
 
             # Create user in User Management context
-            await self._user_management_gateway.create_user(
-                user_id=user_id, email=email, display_name=display_name
+            create_user_command = CreateUserCommand(
+                id=user_id,
+                email=email,
+                username=email.split("@")[0],
+                name=display_name,
             )
+            self._create_user_usecase.execute(create_user_command)
 
             # Save SSO user mapping in Auth context
             sso_user = SsoUser(

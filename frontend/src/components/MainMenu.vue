@@ -12,7 +12,7 @@
         <span class="ml-2">Profile</span>
         <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">⌘+W</span>
       </div>
-      <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToAdmin()">
+      <div v-if="isAdmin" class="flex items-center px-4 py-2 cursor-pointer group" @click="goToAdmin()">
         <span class="pi pi-shield text-primary group-hover:text-inherit" />
         <span class="ml-2">Admin</span>
       </div>
@@ -25,11 +25,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from "vue";
+import { onMounted, watch, computed } from "vue";
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'primevue';
 import { storeToRefs } from 'pinia';
 import { usePasswordsStore } from '@/stores/passwords';
+import { useUserStore } from '@/stores/user';
 
 const router = useRouter();
 const route = useRoute();
@@ -37,6 +38,9 @@ const toast = useToast();
 
 const passwordsStore = usePasswordsStore();
 const { passwordsCount } = storeToRefs(passwordsStore);
+
+const userStore = useUserStore();
+const isAdmin = computed(() => userStore.isAdmin);
 
 const goToAllPasswords = () => {
   router.push({ name: 'Home' });
@@ -66,5 +70,7 @@ watch(() => route.path, (newPath) => {
 
 onMounted(() => {
   passwordsStore.fetchPasswords();
+  // Fetch user data to determine admin status
+  userStore.fetchCurrentUser();
 });
 </script>

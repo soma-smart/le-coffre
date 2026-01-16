@@ -1,19 +1,41 @@
 import pytest
-from uuid import UUID
-
+from uuid import UUID, uuid4
+from identity_access_management_context.domain.entities import User
 from identity_access_management_context.application.use_cases import (
     RegisterAdminWithPasswordUseCase,
+    CreateAdminUseCase,
+    CanCreateAdminUseCase,
 )
-from identity_access_management_context.application.commands import RegisterAdminWithPasswordCommand
-from identity_access_management_context.domain.exceptions import AdminAlreadyExistsException
+from identity_access_management_context.application.commands import (
+    RegisterAdminWithPasswordCommand,
+)
+from identity_access_management_context.domain.exceptions import (
+    AdminAlreadyExistsException,
+)
+
+
+@pytest.fixture
+def create_admin_usecase(user_repository):
+    return CreateAdminUseCase(user_repository)
+
+
+@pytest.fixture
+def can_create_admin_usecase(user_repository):
+    return CanCreateAdminUseCase(user_repository)
 
 
 @pytest.fixture
 def use_case(
-    user_password_repository, password_hashing_gateway, user_management_gateway
+    user_password_repository,
+    password_hashing_gateway,
+    create_admin_usecase,
+    can_create_admin_usecase,
 ):
     return RegisterAdminWithPasswordUseCase(
-        user_password_repository, password_hashing_gateway, user_management_gateway
+        user_password_repository,
+        password_hashing_gateway,
+        create_admin_usecase,
+        can_create_admin_usecase,
     )
 
 
@@ -21,7 +43,7 @@ def use_case(
 async def test_should_register_first_admin_with_password_and_return_user_id(
     use_case: RegisterAdminWithPasswordUseCase,
     user_password_repository,
-    user_management_gateway,
+    user_repository,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -42,12 +64,26 @@ async def test_should_register_first_admin_with_password_and_return_user_id(
     assert saved_user_password.display_name == display_name
     assert saved_user_password.password_hash == "hashed(secure123!)"
 
+    # Verify admin was created in user repository with admin role
+    saved_user = user_repository.get_by_id(user_id)
+    assert saved_user is not None
+    assert "admin" in saved_user.roles
+
 
 @pytest.mark.asyncio
 async def test_should_raise_exception_when_admin_already_exists(
-    use_case: RegisterAdminWithPasswordUseCase, user_management_gateway
+    use_case: RegisterAdminWithPasswordUseCase, user_repository, create_admin_usecase
 ):
-    user_management_gateway.set_admin_exists(True)
+    # First create an admin
+    existing_admin_id = uuid4()
+    existing_admin = User(
+        id=existing_admin_id,
+        username="existingadmin",
+        email="existing@lecoffre.com",
+        name="Existing Admin",
+        roles=["admin"],
+    )
+    user_repository.save(existing_admin)
 
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     command = RegisterAdminWithPasswordCommand(
@@ -83,7 +119,7 @@ async def test_should_hash_password_before_storing_credentials(
 
 @pytest.mark.asyncio
 async def test_should_delegate_admin_creation_to_user_management_context(
-    use_case: RegisterAdminWithPasswordUseCase, user_management_gateway
+    use_case: RegisterAdminWithPasswordUseCase, user_repository
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -95,8 +131,10 @@ async def test_should_delegate_admin_creation_to_user_management_context(
 
     await use_case.execute(command)
 
-    created_admins = user_management_gateway.get_created_admins()
-    assert len(created_admins) == 1
-    assert created_admins[0]["user_id"] == user_id
-    assert created_admins[0]["email"] == email
-    assert created_admins[0]["display_name"] == display_name
+    # Verify user was created in user repository
+    created_user = user_repository.get_by_id(user_id)
+    assert created_user is not None
+    assert created_user.id == user_id
+    assert created_user.email == email
+    assert created_user.name == display_name
+    assert "admin" in created_user.roles

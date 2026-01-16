@@ -46,21 +46,14 @@ from rights_access_context.application.use_cases import (
 from identity_access_management_context.adapters.secondary import (
     SqlUserRepository,
     BcryptHashingGateway,
-    InMemoryUserPasswordRepository,
     JwtTokenGateway,
-    UserManagementGatewayAdapter,
     OAuth2SsoGateway,
-    InMemorySsoUserRepository,
     SqlUserPasswordRepository,
-    SqlSsoUserRepository
+    SqlSsoUserRepository,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_user_management_router,
     get_authentication_router,
-)
-from identity_access_management_context.application.use_cases import (
-    CreateUserUseCase,
-    CanCreateAdminUseCase,
 )
 
 from shared_kernel.pubsub import InMemoryDomainEventPublisher
@@ -113,11 +106,6 @@ async def lifespan(app: FastAPI):
         user_password_repository = SqlUserPasswordRepository(session)
         password_hashing_gateway = BcryptHashingGateway()
 
-        create_user_usecase = CreateUserUseCase(
-            user_repository, password_hashing_gateway
-        )
-        can_create_admin_usecase = CanCreateAdminUseCase(user_repository)
-
         app.state.user_repository = user_repository
 
         token_gateway = JwtTokenGateway(
@@ -125,9 +113,6 @@ async def lifespan(app: FastAPI):
             algorithm=get_jwt_algorithm(),
             access_token_expiration_minutes=get_jwt_access_token_expiration_minutes(),
             refresh_token_expiration_days=get_jwt_refresh_token_expiration_days(),
-        )
-        user_management_gateway = UserManagementGatewayAdapter(
-            create_user_usecase, can_create_admin_usecase
         )
 
         # SSO Gateway with OAuth2/OIDC support
@@ -145,7 +130,6 @@ async def lifespan(app: FastAPI):
         app.state.user_password_repository = user_password_repository
         app.state.password_hashing_gateway = password_hashing_gateway
         app.state.token_gateway = token_gateway
-        app.state.user_management_gateway = user_management_gateway
         app.state.sso_gateway = sso_gateway
         app.state.sso_user_repository = sso_user_repository
 
