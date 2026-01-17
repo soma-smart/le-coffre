@@ -16,22 +16,26 @@ class FakePasswordPermissionsRepository:
         return self._ownerships.get((owner_id, password_id), False)
 
     def has_access(
-        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
     ) -> bool:
-        # Check if user has explicit permissions
-        key = (user_id, password_id)
+        # Check if group is the owner
+        if self.is_owner(group_id, password_id):
+            return True
+
+        # Check if group has explicit permissions
+        key = (group_id, password_id)
         return key in self._permissions and permission in self._permissions[key]
 
     def grant_access(
-        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
     ) -> None:
-        key = (user_id, password_id)
+        key = (group_id, password_id)
         if key not in self._permissions:
             self._permissions[key] = set()
         self._permissions[key].add(permission)
 
-    def revoke_access(self, user_id: UUID, password_id: UUID) -> None:
-        key = (user_id, password_id)
+    def revoke_access(self, group_id: UUID, password_id: UUID) -> None:
+        key = (group_id, password_id)
         if key in self._permissions:
             del self._permissions[key]
 
@@ -40,12 +44,12 @@ class FakePasswordPermissionsRepository:
     ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
         result: dict[UUID, tuple[bool, set[PasswordPermission]]] = {}
 
-        # Add users with explicit permissions
-        for (user_id, pwd_id), permissions in self._permissions.items():
+        # Add groups with explicit permissions
+        for (group_id, pwd_id), permissions in self._permissions.items():
             if pwd_id == password_id:
-                result[user_id] = (False, permissions.copy())
+                result[group_id] = (False, permissions.copy())
 
-        # Add owners (with empty permission set to distinguish them)
+        # Add owner groups (with empty permission set to distinguish them)
         for owner_id, pwd_id in self._ownerships:
             if pwd_id == password_id:
                 if owner_id not in result:

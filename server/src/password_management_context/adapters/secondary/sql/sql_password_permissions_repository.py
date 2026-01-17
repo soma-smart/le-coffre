@@ -43,12 +43,16 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         return result is not None
 
     def has_access(
-        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
     ) -> bool:
-        """Check if a user has any access to a password"""
-        # Check if user has explicit permissions
+        """Check if a group has access to a password"""
+        # Check if group is the owner
+        if self.is_owner(group_id, password_id):
+            return True
+
+        # Check if group has explicit permissions
         statement = select(PermissionsTable).where(
-            PermissionsTable.user_id == user_id,
+            PermissionsTable.user_id == group_id,
             PermissionsTable.resource_id == password_id,
             PermissionsTable.permission == permission.value,
         )
@@ -56,12 +60,12 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         return result is not None
 
     def grant_access(
-        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
     ) -> None:
-        """Grant a specific permission to a user for a password"""
+        """Grant a specific permission to a group for a password"""
         # Check if permission already exists
         statement = select(PermissionsTable).where(
-            PermissionsTable.user_id == user_id,
+            PermissionsTable.user_id == group_id,
             PermissionsTable.resource_id == password_id,
             PermissionsTable.permission == permission.value,
         )
@@ -69,17 +73,17 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
 
         if not existing:
             permission_entry = PermissionsTable(
-                user_id=user_id,
+                user_id=group_id,
                 resource_id=password_id,
                 permission=permission.value,
             )
             self._session.add(permission_entry)
             self._session.commit()
 
-    def revoke_access(self, user_id: UUID, password_id: UUID) -> None:
-        """Revoke all permissions from a user for a password"""
+    def revoke_access(self, group_id: UUID, password_id: UUID) -> None:
+        """Revoke all permissions from a group for a password"""
         statement = select(PermissionsTable).where(
-            PermissionsTable.user_id == user_id,
+            PermissionsTable.user_id == group_id,
             PermissionsTable.resource_id == password_id,
         )
         permission_entries = self._session.exec(statement).all()
@@ -93,10 +97,10 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
     def list_all_permissions_for(
         self, password_id: UUID
     ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
-        """Get all users who have access to a password with their permissions"""
+        """Get all groups who have access to a password with their permissions"""
         result: dict[UUID, tuple[bool, set[PasswordPermission]]] = {}
 
-        # Get all owners
+        # Get all owner groups
         ownership_statement = select(OwnershipTable).where(
             OwnershipTable.resource_id == password_id
         )
@@ -105,7 +109,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
             if ownership.user_id not in result:
                 result[ownership.user_id] = (True, set())
 
-        # Get all users with permissions
+        # Get all groups with permissions
         permission_statement = select(PermissionsTable).where(
             PermissionsTable.resource_id == password_id
         )

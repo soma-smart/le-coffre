@@ -255,7 +255,7 @@ def test_should_set_user_as_owner_when_creating_password(
         group_id=group_id,
         id=uuid,
         name=name,
-        decrypted_password=decrypted_password
+        decrypted_password=decrypted_password,
     )
 
     use_case.execute(command)
@@ -279,7 +279,7 @@ def test_should_reject_password_with_multiple_complexity_violations(
         group_id=group_id,
         id=uuid,
         name="name",
-        decrypted_password=weak_password
+        decrypted_password=weak_password,
     )
 
     with pytest.raises(PasswordMultipleComplexityError) as exc_info:
@@ -334,7 +334,7 @@ def test_should_validate_password_complexity_before_creation(
         group_id=group_id,
         id=uuid,
         name="name",
-        decrypted_password=strong_password
+        decrypted_password=strong_password,
     )
 
     password_id = use_case.execute(command)
@@ -385,7 +385,7 @@ def test_should_reject_password_too_short(
         group_id=group_id,
         id=uuid,
         name="name",
-        decrypted_password=short_password
+        decrypted_password=short_password,
     )
 
     with pytest.raises(PasswordTooShortError) as exc_info:
@@ -415,7 +415,7 @@ def test_should_call_password_complexity_service_validate(
         group_id=group_id,
         id=uuid,
         name="name",
-        decrypted_password=password
+        decrypted_password=password,
     )
 
     use_case.execute(command)

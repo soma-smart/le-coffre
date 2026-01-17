@@ -17,7 +17,7 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
 class SharePasswordRequest(BaseModel):
-    user_id: UUID
+    group_id: UUID  # Changed from user_id to group_id
 
 
 class SharePasswordResponse(BaseModel):
@@ -28,7 +28,7 @@ class SharePasswordResponse(BaseModel):
     "/{password_id}/share",
     response_model=SharePasswordResponse,
     status_code=201,
-    summary="Share a password with another user",
+    summary="Share a password with a group",
 )
 def share_password(
     password_id: UUID,
@@ -37,10 +37,10 @@ def share_password(
     usecase: ShareAccessUseCase = Depends(get_share_access_usecase),
 ):
     """
-    Share a password with another user.
+    Share a password with a group.
 
     - **password_id**: UUID of the password to share
-    - **user_id**: UUID of the user to grant access to
+    - **group_id**: UUID of the group to grant access to
     - **Authentication**: Requires authentication via access_token cookie (owner only)
 
     Returns status code 201 on successful sharing.
@@ -48,13 +48,13 @@ def share_password(
     try:
         command = ShareResourceCommand(
             owner_id=current_user.user_id,
-            user_id=request.user_id,
+            group_id=request.group_id,
             password_id=password_id,
         )
         usecase.execute(command)
 
         return SharePasswordResponse(
-            message=f"Password {password_id} successfully shared with user {request.user_id}"
+            message=f"Password {password_id} successfully shared with group {request.group_id}"
         )
     except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))

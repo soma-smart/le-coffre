@@ -16,8 +16,11 @@ from password_management_context.domain.exceptions import PasswordNotFoundError
 def use_case(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ) -> ListAccessUseCase:
-    return ListAccessUseCase(password_repository, password_permissions_repository)
+    return ListAccessUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 @pytest.fixture
@@ -31,38 +34,52 @@ def password():
 
 
 def test_given_owner_and_password_when_listing_access_should_succeed(
-    use_case, password_repository, password_permissions_repository, password
+    use_case,
+    password_repository,
+    password_permissions_repository,
+    password,
+    group_access_gateway,
 ):
     requester_id = UUID("87654321-4321-8765-4321-876543218765")
+    group_id = UUID("97654321-4321-8765-4321-876543218765")
 
     password_repository.save(password)
-    password_permissions_repository.set_owner(requester_id, password.id)
+    # Set group as owner and user as owner of group
+    password_permissions_repository.set_owner(group_id, password.id)
+    group_access_gateway.set_group_owner(group_id, requester_id)
 
     response: ListAccessResponse = use_case.execute(
         requester_id=requester_id, password_id=password.id
     )
 
     assert len(response.accesses) == 1
-    assert response.accesses[0].user_id == requester_id
+    assert response.accesses[0].user_id == group_id  # Returns group_id
     assert response.accesses[0].is_owner is True
 
 
 def test_given_user_and_password_when_listing_access_should_succeed(
-    use_case, password_repository, password_permissions_repository, password
+    use_case,
+    password_repository,
+    password_permissions_repository,
+    password,
+    group_access_gateway,
 ):
     requester_id = UUID("87654321-4321-8765-4321-876543218765")
+    group_id = UUID("97654321-4321-8765-4321-876543218765")
 
     password_repository.save(password)
+    # Grant READ permission to group and set user as owner of group
     password_permissions_repository.grant_access(
-        requester_id, password.id, PasswordPermission.READ
+        group_id, password.id, PasswordPermission.READ
     )
+    group_access_gateway.set_group_owner(group_id, requester_id)
 
     response: ListAccessResponse = use_case.execute(
         requester_id=requester_id, password_id=password.id
     )
 
     assert len(response.accesses) == 1
-    assert response.accesses[0].user_id == requester_id
+    assert response.accesses[0].user_id == group_id  # Returns group_id
     assert response.accesses[0].is_owner is False
     assert PasswordPermission.READ in response.accesses[0].permissions
 
@@ -78,19 +95,27 @@ def test_given_no_password_when_listing_access_should_fail(use_case):
 
 
 def test_given_multiple_user_having_access_when_listing_access_should_have_them_all(
-    use_case, password_repository, password_permissions_repository, password
+    use_case,
+    password_repository,
+    password_permissions_repository,
+    password,
+    group_access_gateway,
 ):
     requester_id = UUID("87654321-4321-8765-4321-876543218765")
-    user1_id = UUID("22345678-1234-5678-1234-567812345678")
-    user2_id = UUID("32345678-1234-5678-1234-567812345678")
+    owner_group_id = UUID("97654321-4321-8765-4321-876543218765")
+    group1_id = UUID("22345678-1234-5678-1234-567812345678")
+    group2_id = UUID("32345678-1234-5678-1234-567812345678")
 
     password_repository.save(password)
-    password_permissions_repository.set_owner(requester_id, password.id)
+    # Set owner group and user as owner of it
+    password_permissions_repository.set_owner(owner_group_id, password.id)
+    group_access_gateway.set_group_owner(owner_group_id, requester_id)
+    # Grant access to other groups
     password_permissions_repository.grant_access(
-        user1_id, password.id, PasswordPermission.READ
+        group1_id, password.id, PasswordPermission.READ
     )
     password_permissions_repository.grant_access(
-        user2_id, password.id, PasswordPermission.READ
+        group2_id, password.id, PasswordPermission.READ
     )
 
     response: ListAccessResponse = use_case.execute(
@@ -98,9 +123,9 @@ def test_given_multiple_user_having_access_when_listing_access_should_have_them_
     )
 
     assert len(response.accesses) == 3
-    for user in response.accesses:
-        if user.user_id == requester_id:
-            assert user.is_owner is True
+    for access in response.accesses:
+        if access.user_id == owner_group_id:
+            assert access.is_owner is True
         else:
-            assert PasswordPermission.READ in user.permissions
-        assert user.user_id in {requester_id, user1_id, user2_id}
+            assert PasswordPermission.READ in access.permissions
+        assert access.user_id in {owner_group_id, group1_id, group2_id}

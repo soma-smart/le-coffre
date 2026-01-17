@@ -19,9 +19,17 @@ from password_management_context.domain.value_objects import (
 
 
 @pytest.fixture
-def use_case(password_repository, encryption_service, password_permissions_repository):
+def use_case(
+    password_repository,
+    encryption_service,
+    password_permissions_repository,
+    group_access_gateway,
+):
     return GetPasswordUseCase(
-        password_repository, encryption_service, password_permissions_repository
+        password_repository,
+        encryption_service,
+        password_permissions_repository,
+        group_access_gateway,
     )
 
 
@@ -29,8 +37,10 @@ def test_should_return_password_when_user_has_access(
     use_case: GetPasswordUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
     password_entity = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
         name="Gmail",
@@ -38,9 +48,11 @@ def test_should_return_password_when_user_has_access(
         folder="default",
     )
     password_repository.save(password_entity)
+    # Grant READ permission to group and set user as owner of group
     password_permissions_repository.grant_access(
-        user_id, password_entity.id, PasswordPermission.READ
+        group_id, password_entity.id, PasswordPermission.READ
     )
+    group_access_gateway.set_group_owner(group_id, user_id)
 
     result = use_case.execute(user_id, password_entity.id)
 
@@ -85,8 +97,10 @@ def test_should_return_password_when_owner(
     use_case: GetPasswordUseCase,
     password_repository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
     password_entity = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
         name="Gmail",
@@ -94,7 +108,9 @@ def test_should_return_password_when_owner(
         folder="default",
     )
     password_repository.save(password_entity)
-    password_permissions_repository.set_owner(user_id, password_entity.id)
+    # Set group as owner and user as owner of group
+    password_permissions_repository.set_owner(group_id, password_entity.id)
+    group_access_gateway.set_group_owner(group_id, user_id)
 
     result = use_case.execute(user_id, password_entity.id)
 

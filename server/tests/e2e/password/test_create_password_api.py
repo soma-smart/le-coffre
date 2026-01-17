@@ -53,8 +53,10 @@ def test_cannot_read_a_password_of_another_user(
 def test_can_read_a_shared_password_of_another_user(
     authenticated_admin_client, authenticated_sso_user_client, setup, sso_user_token
 ):
-    # Get SSO user info
-    other_user_id = sso_user_token["user_id"]
+    # Get SSO user's personal group
+    sso_user_response = authenticated_sso_user_client.get("/api/users/me")
+    assert sso_user_response.status_code == 200
+    sso_user_personal_group_id = sso_user_response.json()["personal_group_id"]
 
     # Create password as admin
     response = authenticated_admin_client.post(
@@ -67,10 +69,10 @@ def test_can_read_a_shared_password_of_another_user(
 
     password_id = response.json()["id"]
 
-    # Share the password with the SSO user
+    # Share the password with the SSO user's personal group
     share_response = authenticated_admin_client.post(
         f"/api/passwords/{password_id}/share",
-        json={"user_id": other_user_id},
+        json={"group_id": sso_user_personal_group_id},
     )
     assert share_response.status_code == 201
 
@@ -91,6 +93,7 @@ def test_can_read_a_shared_password_of_another_user(
     assert other_user_retrieved.status_code == 200
     assert other_user_retrieved.json()["name"] == "Test Password"
     assert other_user_retrieved.json()["password"] == STRONG_PASSWORD
+
 
 def test_cannot_create_weak_password(authenticated_admin_client, setup):
     weak_password = "weakpass"

@@ -5,7 +5,7 @@ from identity_access_management_context.application.gateways import GroupReposit
 
 class GroupAccessGatewayAdapter:
     """Adapter implementing the GroupAccessGateway interface from Password Management context.
-    
+
     This adapter allows the Password Management context to verify group ownership
     without creating a direct dependency on the IAM context.
     """
@@ -15,11 +15,11 @@ class GroupAccessGatewayAdapter:
 
     def is_user_owner_of_group(self, user_id: UUID, group_id: UUID) -> bool:
         """Check if a user is the owner of a group.
-        
+
         Args:
             user_id: The ID of the user to check
             group_id: The ID of the group to check
-            
+
         Returns:
             True if the user owns the group, False otherwise
         """
@@ -30,10 +30,10 @@ class GroupAccessGatewayAdapter:
 
     def group_exists(self, group_id: UUID) -> bool:
         """Check if a group exists.
-        
+
         Args:
             group_id: The ID of the group to check
-            
+
         Returns:
             True if the group exists, False otherwise
         """

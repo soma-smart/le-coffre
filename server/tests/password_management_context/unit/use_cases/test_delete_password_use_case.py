@@ -10,22 +10,28 @@ from password_management_context.adapters.secondary import (
 )
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
-    NotPasswordOwnerError,
+    UserNotOwnerOfGroupError,
 )
 from password_management_context.domain.entities import Password
 
 
 @pytest.fixture
-def use_case(password_repository, password_permissions_repository):
-    return DeletePasswordUseCase(password_repository, password_permissions_repository)
+def use_case(
+    password_repository, password_permissions_repository, group_access_gateway
+):
+    return DeletePasswordUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 def test_given_owner_when_deleting_should_success(
     use_case: DeletePasswordUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     requester_user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")  # Group owned by user
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     name = "name"
     folder = "folder"
@@ -38,7 +44,10 @@ def test_given_owner_when_deleting_should_success(
         folder=folder,
     )
     password_repository.save(password)
-    password_permissions_repository.set_owner(requester_user_id, password.id)
+    # Set group as owner of password
+    password_permissions_repository.set_owner(group_id, password.id)
+    # Set user as owner of the group
+    group_access_gateway.set_group_owner(group_id, requester_user_id)
 
     use_case.execute(requester_user_id, uuid)
 
@@ -59,9 +68,11 @@ def test_given_non_owner_when_deleting_should_fail(
     use_case: DeletePasswordUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     requester_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
     owner_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e7")
+    owner_group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e8")
     resource = Password(
         id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"),
         name="MyPassword",
@@ -69,7 +80,10 @@ def test_given_non_owner_when_deleting_should_fail(
         folder="folder",
     )
     password_repository.save(resource)
-    password_permissions_repository.set_owner(owner_id, resource.id)
+    # Set group as owner of password
+    password_permissions_repository.set_owner(owner_group_id, resource.id)
+    # Set owner_id (not requester) as owner of the group
+    group_access_gateway.set_group_owner(owner_group_id, owner_id)
 
-    with pytest.raises(NotPasswordOwnerError):
+    with pytest.raises(UserNotOwnerOfGroupError):
         use_case.execute(requester_id, resource.id)

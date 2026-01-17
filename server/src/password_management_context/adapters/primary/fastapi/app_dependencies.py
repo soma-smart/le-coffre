@@ -1,7 +1,10 @@
 from fastapi import Depends
 from starlette.requests import Request
 from identity_access_management_context.application.gateways import UserRepository
-from password_management_context.application.gateways import PasswordRepository
+from password_management_context.application.gateways import (
+    PasswordRepository,
+    GroupAccessGateway,
+)
 from password_management_context.application.use_cases import (
     GetPasswordUseCase,
     UpdatePasswordUseCase,
@@ -32,15 +35,23 @@ def get_password_permissions_repository(
     return request.app.state.password_permissions_repository
 
 
+def get_group_access_gateway(request: Request) -> GroupAccessGateway:
+    return request.app.state.group_access_gateway
+
+
 def get_create_password_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
     encryption_service: EncryptionService = Depends(get_encryption_service),
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
     return CreatePasswordUseCase(
-        password_repository, encryption_service, password_permissions_repository
+        password_repository,
+        encryption_service,
+        password_permissions_repository,
+        group_access_gateway,
     )
 
 
@@ -50,9 +61,13 @@ def get_get_password_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
     return GetPasswordUseCase(
-        password_repository, encryption_service, password_permissions_repository
+        password_repository,
+        encryption_service,
+        password_permissions_repository,
+        group_access_gateway,
     )
 
 
@@ -62,9 +77,13 @@ def get_update_password_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
     return UpdatePasswordUseCase(
-        password_repository, encryption_service, password_permissions_repository
+        password_repository,
+        encryption_service,
+        password_permissions_repository,
+        group_access_gateway,
     )
 
 
@@ -73,8 +92,11 @@ def get_list_passwords_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
-    return ListPasswordsUseCase(password_repository, password_permissions_repository)
+    return ListPasswordsUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 def get_delete_password_usecase(
@@ -82,8 +104,11 @@ def get_delete_password_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
-    return DeletePasswordUseCase(password_repository, password_permissions_repository)
+    return DeletePasswordUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 def get_user_repository(request: Request) -> UserRepository:
@@ -95,8 +120,11 @@ def get_share_access_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
-    return ShareAccessUseCase(password_repository, password_permissions_repository)
+    return ShareAccessUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 def get_unshare_access_usecase(
@@ -104,8 +132,11 @@ def get_unshare_access_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
-    return UnshareAccessUseCase(password_repository, password_permissions_repository)
+    return UnshareAccessUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 def get_list_resource_access_usecase(
@@ -113,5 +144,8 @@ def get_list_resource_access_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(
         get_password_permissions_repository
     ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
 ):
-    return ListAccessUseCase(password_repository, password_permissions_repository)
+    return ListAccessUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )

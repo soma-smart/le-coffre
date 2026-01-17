@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from uuid import UUID, uuid4
 import logging
@@ -32,7 +32,8 @@ class CreatePasswordResponse(BaseModel):
     summary="Create a new password",
 )
 def create_password(
-    request: CreatePasswordRequest,
+    request_body: CreatePasswordRequest,
+    request: Request,
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: CreatePasswordUseCase = Depends(get_create_password_usecase),
 ):
@@ -45,20 +46,29 @@ def create_password(
     - **Authentication**: Requires authentication via access_token cookie
     """
     try:
+        # Get the user's personal group
+        group_repository = request.app.state.group_repository
+        personal_group = group_repository.get_by_user_id(current_user.user_id)
+
+        if not personal_group:
+            raise HTTPException(
+                status_code=500,
+                detail="User personal group not found. Please contact support.",
+            )
+
         password_id = uuid4()
         command = CreatePasswordCommand(
             id=password_id,
             user_id=current_user.user_id,
-            name=request.name,
-            decrypted_password=request.password,
-            folder=request.folder,
+            group_id=personal_group.id,
+            name=request_body.name,
+            decrypted_password=request_body.password,
+            folder=request_body.folder,
         )
 
         created_password_id = usecase.execute(command)
 
-        return CreatePasswordResponse(
-            id=created_password_id
-        )
+        return CreatePasswordResponse(id=created_password_id)
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except AccessDeniedError as e:

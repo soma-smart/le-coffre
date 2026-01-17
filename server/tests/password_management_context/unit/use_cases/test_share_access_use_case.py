@@ -11,8 +11,8 @@ from password_management_context.application.gateways import (
 from password_management_context.domain.value_objects import PasswordPermission
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import (
-    PasswordAccessDeniedError,
     PasswordNotFoundError,
+    UserNotOwnerOfGroupError,
 )
 
 
@@ -20,8 +20,11 @@ from password_management_context.domain.exceptions import (
 def use_case(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
-    return ShareAccessUseCase(password_repository, password_permissions_repository)
+    return ShareAccessUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 @pytest.fixture()
@@ -34,20 +37,28 @@ def test_given_owner_when_sharing_should_grant_read_access(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
     password,
+    group_access_gateway,
 ):
     # Arrange: Given an owner of a resource
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    owner_group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    target_group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
     password_repository.save(password)
-    password_permissions_repository.set_owner(owner_id, password.id)
+    # Set owner group and user as owner of it
+    password_permissions_repository.set_owner(owner_group_id, password.id)
+    group_access_gateway.set_group_owner(owner_group_id, owner_id)
+    # Register target group
+    group_access_gateway.set_group_owner(
+        target_group_id, UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e7")
+    )
 
-    # Act: When owner shares the resource
-    use_case.execute(ShareResourceCommand(owner_id, user_id, password.id))
+    # Act: When owner shares the resource with a group
+    use_case.execute(ShareResourceCommand(owner_id, target_group_id, password.id))
 
-    # Assert: Then the recipient should have READ access only
+    # Assert: Then the target group should have READ access only
     assert password_permissions_repository.has_access(
-        user_id, password.id, PasswordPermission.READ
+        target_group_id, password.id, PasswordPermission.READ
     )
 
 
@@ -56,25 +67,38 @@ def test_given_non_owner_with_permissions_when_sharing_should_fail(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
     password,
+    group_access_gateway,
 ):
-    # Arrange: Given a user with UPDATE permission but not owner
+    # Arrange: Given a user with READ permission but not owner
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    owner_group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
     non_owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    third_user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e8")
+    non_owner_group_id = UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e7")
+    third_group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e8")
 
     password_repository.save(password)
-    password_permissions_repository.set_owner(owner_id, password.id)
+    # Set owner group
+    password_permissions_repository.set_owner(owner_group_id, password.id)
+    group_access_gateway.set_group_owner(owner_group_id, owner_id)
+    # Grant READ to non-owner group
     password_permissions_repository.grant_access(
-        non_owner_id, password.id, PasswordPermission.READ
+        non_owner_group_id, password.id, PasswordPermission.READ
+    )
+    group_access_gateway.set_group_owner(non_owner_group_id, non_owner_id)
+    # Register third group
+    group_access_gateway.set_group_owner(
+        third_group_id, UUID("ad742e0e-bb76-4728-83ef-8d546d7c62e8")
     )
 
     # Act & Assert: When non-owner tries to share, then should fail
-    with pytest.raises(PasswordAccessDeniedError):
-        use_case.execute(ShareResourceCommand(non_owner_id, third_user_id, password.id))
+    with pytest.raises(UserNotOwnerOfGroupError):
+        use_case.execute(
+            ShareResourceCommand(non_owner_id, third_group_id, password.id)
+        )
 
-    # Assert: Third user should not have access
+    # Assert: Third group should not have access
     assert not password_permissions_repository.has_access(
-        third_user_id, password.id, PasswordPermission.READ
+        third_group_id, password.id, PasswordPermission.READ
     )
 
 
@@ -83,23 +107,31 @@ def test_given_owner_when_sharing_already_shared_resource_should_succeed(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
     password,
+    group_access_gateway,
 ):
     # Arrange
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    owner_group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    target_group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
     password_repository.save(password)
-    password_permissions_repository.set_owner(owner_id, password.id)
+    # Set owner group
+    password_permissions_repository.set_owner(owner_group_id, password.id)
+    group_access_gateway.set_group_owner(owner_group_id, owner_id)
+    # Already grant access to target group
     password_permissions_repository.grant_access(
-        user_id, password.id, PasswordPermission.READ
+        target_group_id, password.id, PasswordPermission.READ
+    )
+    group_access_gateway.set_group_owner(
+        target_group_id, UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e7")
     )
 
-    # Act
-    use_case.execute(ShareResourceCommand(owner_id, user_id, password.id))
+    # Act: Share again
+    use_case.execute(ShareResourceCommand(owner_id, target_group_id, password.id))
 
-    # Assert
+    # Assert: Still has access
     assert password_permissions_repository.has_access(
-        user_id, password.id, PasswordPermission.READ
+        target_group_id, password.id, PasswordPermission.READ
     )
 
 

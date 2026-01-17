@@ -14,8 +14,12 @@ from password_management_context.domain.value_objects import PasswordPermission
 
 
 @pytest.fixture
-def use_case(password_repository, password_permissions_repository):
-    return ListPasswordsUseCase(password_repository, password_permissions_repository)
+def use_case(
+    password_repository, password_permissions_repository, group_access_gateway
+):
+    return ListPasswordsUseCase(
+        password_repository, password_permissions_repository, group_access_gateway
+    )
 
 
 def test_should_return_empty_list_on_default_folder_when_no_passwords(
@@ -31,8 +35,11 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group1_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group2_id = UUID("3d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
     password1 = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
@@ -48,11 +55,13 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     )
 
     password_repository.save(password1)
-    password_permissions_repository.set_owner(requester_id, password1.id)
+    password_permissions_repository.set_owner(group1_id, password1.id)
+    group_access_gateway.set_group_owner(group1_id, requester_id)
     password_repository.save(password2)
     password_permissions_repository.grant_access(
-        requester_id, password2.id, PasswordPermission.READ
+        group2_id, password2.id, PasswordPermission.READ
     )
+    group_access_gateway.set_group_owner(group2_id, requester_id)
 
     result = use_case.execute(requester_id=requester_id)
 
@@ -69,8 +78,11 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group1_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group2_id = UUID("3d742e0e-bb76-4728-83ef-8d546d7c62e6")
     folder_name = "Personal"
 
     password1 = Password(
@@ -86,9 +98,11 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
         folder="Work",
     )
     password_repository.save(password1)
-    password_permissions_repository.set_owner(requester_id, password1.id)
+    password_permissions_repository.set_owner(group1_id, password1.id)
+    group_access_gateway.set_group_owner(group1_id, requester_id)
     password_repository.save(password2)
-    password_permissions_repository.set_owner(requester_id, password2.id)
+    password_permissions_repository.set_owner(group2_id, password2.id)
+    group_access_gateway.set_group_owner(group2_id, requester_id)
 
     result = use_case.execute(requester_id=requester_id, folder=folder_name)
 
@@ -113,8 +127,10 @@ def test_should_return_only_passwords_user_has_access_to(
     use_case: ListPasswordsUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
     password1 = Password(
         id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
         name="Gmail",
@@ -129,7 +145,8 @@ def test_should_return_only_passwords_user_has_access_to(
     )
 
     password_repository.save(password1)
-    password_permissions_repository.set_owner(requester_id, password1.id)
+    password_permissions_repository.set_owner(group_id, password1.id)
+    group_access_gateway.set_group_owner(group_id, requester_id)
     password_repository.save(password2)
     # Not granting access to password2
 

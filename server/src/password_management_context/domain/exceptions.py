@@ -33,9 +33,7 @@ class UserNotOwnerOfGroupError(PasswordManagementDomainError):
     """Raised when a user attempts to create a password for a group they don't own"""
 
     def __init__(self, user_id: UUID, group_id: UUID):
-        super().__init__(
-            f"User {user_id} is not the owner of group {group_id}"
-        )
+        super().__init__(f"User {user_id} is not the owner of group {group_id}")
 
 
 class PasswordComplexityError(PasswordManagementDomainError):

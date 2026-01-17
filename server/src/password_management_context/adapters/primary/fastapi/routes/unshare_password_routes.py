@@ -18,31 +18,31 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
 @router.delete(
-    "/{password_id}/share/{user_id}",
+    "/{password_id}/share/{group_id}",
     status_code=204,
-    summary="Revoke password access from a user",
+    summary="Revoke password access from a group",
 )
 def unshare_password(
     password_id: UUID,
-    user_id: UUID,
+    group_id: UUID,
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: UnshareAccessUseCase = Depends(get_unshare_access_usecase),
 ):
     """
-    Remove sharing of a password from a specific user.
+    Remove sharing of a password from a specific group.
 
     - **password_id**: UUID of the password to unshare
-    - **user_id**: UUID of the user to revoke access from
+    - **group_id**: UUID of the group to revoke access from
     - **Authentication**: Requires authentication via access_token cookie (owner only)
 
     Returns status code 204 (No Content) on successful unsharing.
 
-    Note: Cannot unshare with the owner of the password.
+    Note: Cannot unshare with the owner group of the password.
     """
     try:
         command = UnshareResourceCommand(
             owner_id=current_user.user_id,
-            user_id=user_id,
+            group_id=group_id,
             password_id=password_id,
         )
         usecase.execute(command)

@@ -21,9 +21,13 @@ def use_case(
     password_repository,
     encryption_service,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     return UpdatePasswordUseCase(
-        password_repository, encryption_service, password_permissions_repository
+        password_repository,
+        encryption_service,
+        password_permissions_repository,
+        group_access_gateway,
     )
 
 
@@ -31,8 +35,10 @@ def test_should_update_password(
     use_case: UpdatePasswordUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
     original_password = Password(
         id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"),
         name="original",
@@ -40,7 +46,9 @@ def test_should_update_password(
         folder="folder",
     )
     password_repository.save(original_password)
-    password_permissions_repository.set_owner(requester_id, original_password.id)
+    # Set group as owner and user as owner of group
+    password_permissions_repository.set_owner(group_id, original_password.id)
+    group_access_gateway.set_group_owner(group_id, requester_id)
 
     updated_password = UpdatePasswordCommand(
         requester_id=requester_id,
@@ -106,8 +114,10 @@ def test_when_updating_without_any_element_changed_should_not_change_anything(
     use_case: UpdatePasswordUseCase,
     password_repository: InMemoryPasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
     original_password = Password(
         id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"),
         name="original",
@@ -115,7 +125,9 @@ def test_when_updating_without_any_element_changed_should_not_change_anything(
         folder="folder",
     )
     password_repository.save(original_password)
-    password_permissions_repository.set_owner(requester_id, original_password.id)
+    # Set group as owner and user as owner of group
+    password_permissions_repository.set_owner(group_id, original_password.id)
+    group_access_gateway.set_group_owner(group_id, requester_id)
 
     updated_password = UpdatePasswordCommand(
         requester_id=requester_id,
