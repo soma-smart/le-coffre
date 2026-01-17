@@ -33,13 +33,13 @@ class GroupAccessGatewayAdapter:
         """
         group = self._group_repository.get_by_id(group_id)
         if group is None:
-            # Fallback to check personal groups
-            personal_group = self._group_repository.get_by_user_id(user_id)
-            if personal_group and personal_group.id == group_id:
-                return True
             return False
 
-        # For new Group entities, check membership
+        # For personal groups, check if the user_id matches
+        if group.is_personal and group.user_id == user_id:
+            return True
+
+        # For shared groups, check membership
         return self._group_member_repository.is_owner(group_id, user_id)
 
     def group_exists(self, group_id: UUID) -> bool:
@@ -51,10 +51,4 @@ class GroupAccessGatewayAdapter:
         Returns:
             True if the group exists, False otherwise
         """
-        group = self._group_repository.get_by_id(group_id)
-        if group is not None:
-            return True
-
-        # Fallback: check if it's a personal group
-        all_personal_groups = self._group_repository.get_all_personals()
-        return any(g.id == group_id for g in all_personal_groups)
+        return self._group_repository.get_by_id(group_id) is not None

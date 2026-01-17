@@ -108,7 +108,7 @@ def test_given_multiple_groups_when_getting_all_then_all_groups_are_retrieved(
     sql_group_repository.save_personal_group(group2)
 
     # When
-    all_groups = sql_group_repository.get_all_personals()
+    all_groups = sql_group_repository.get_all()
 
     # Then
     assert len(all_groups) == 2
@@ -118,7 +118,7 @@ def test_given_multiple_groups_when_getting_all_then_all_groups_are_retrieved(
 
 def test_given_no_groups_when_getting_all_then_returns_empty_list(sql_group_repository):
     # Given / When
-    all_groups = sql_group_repository.get_all_personals()
+    all_groups = sql_group_repository.get_all()
 
     # Then
     assert all_groups == []

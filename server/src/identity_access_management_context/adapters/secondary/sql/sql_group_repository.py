@@ -4,7 +4,6 @@ from sqlmodel import Session, select
 
 from identity_access_management_context.application.gateways import GroupRepository
 from identity_access_management_context.domain.entities import PersonalGroup, Group
-from .model.personal_group_model import PersonalGroupTable
 from .model.group_model import GroupTable
 
 
@@ -14,26 +13,14 @@ class SqlGroupRepository(GroupRepository):
 
     def save_personal_group(self, group: PersonalGroup) -> None:
         """Save a personal group to the repository."""
-        personal_group_table = PersonalGroupTable(
+        group_table = GroupTable(
             id=group.id,
             name=group.name,
+            is_personal=True,
             user_id=group.user_id,
         )
-        self._session.add(personal_group_table)
+        self._session.add(group_table)
         self._session.commit()
-
-    def get_all_personals(self) -> list[PersonalGroup]:
-        """Get all personal groups."""
-        statement = select(PersonalGroupTable)
-        results = self._session.exec(statement).all()
-        return [
-            PersonalGroup(
-                id=result.id,
-                name=result.name,
-                user_id=result.user_id,
-            )
-            for result in results
-        ]
 
     def get_all(self) -> list[Group]:
         """Get all groups."""
@@ -44,14 +31,15 @@ class SqlGroupRepository(GroupRepository):
                 id=result.id,
                 name=result.name,
                 is_personal=result.is_personal,
+                user_id=result.user_id,
             )
             for result in results
         ]
 
     def get_by_user_id(self, user_id: UUID) -> Optional[PersonalGroup]:
         """Get a personal group by user ID."""
-        statement = select(PersonalGroupTable).where(
-            PersonalGroupTable.user_id == user_id
+        statement = select(GroupTable).where(
+            GroupTable.user_id == user_id, GroupTable.is_personal
         )
         result = self._session.exec(statement).first()
         if result is None:
@@ -59,7 +47,7 @@ class SqlGroupRepository(GroupRepository):
         return PersonalGroup(
             id=result.id,
             name=result.name,
-            user_id=result.user_id,
+            user_id=result.user_id,  # type: ignore
         )
 
     def save_group(self, group: Group) -> None:
@@ -68,6 +56,7 @@ class SqlGroupRepository(GroupRepository):
             id=group.id,
             name=group.name,
             is_personal=group.is_personal,
+            user_id=group.user_id,
         )
         self._session.add(group_table)
         self._session.commit()
@@ -82,4 +71,5 @@ class SqlGroupRepository(GroupRepository):
             id=result.id,
             name=result.name,
             is_personal=result.is_personal,
+            user_id=result.user_id,
         )

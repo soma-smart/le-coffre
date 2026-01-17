@@ -1,4 +1,3 @@
-from .model.personal_group_model import PersonalGroupTable, create_personal_group_table
 from .model.group_model import GroupTable, create_group_table
 from .model.group_member_model import GroupMemberTable, create_group_member_table
 from .sql_group_repository import SqlGroupRepository
@@ -9,7 +8,6 @@ from .sql_sso_user_repository import SqlSsoUserRepository
 
 
 def create_tables(engine):
-    create_personal_group_table(engine)
     create_group_table(engine)
     create_group_member_table(engine)
 
@@ -20,7 +18,6 @@ __all__ = [
     "SqlUserRepository",
     "SqlUserPasswordRepository",
     "SqlSsoUserRepository",
-    "PersonalGroupTable",
     "GroupTable",
     "GroupMemberTable",
     "create_tables",
