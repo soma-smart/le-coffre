@@ -47,6 +47,7 @@ from identity_access_management_context.adapters.secondary import (
 )
 from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
+    SqlGroupMemberRepository,
     create_tables as create_iam_tables,
 )
 from identity_access_management_context.adapters.secondary.group_access_gateway_adapter import (
@@ -101,7 +102,10 @@ async def lifespan(app: FastAPI):
         user_repository = SqlUserRepository(session)
         user_password_repository = SqlUserPasswordRepository(session)
         group_repository = SqlGroupRepository(session)
-        group_access_gateway = GroupAccessGatewayAdapter(group_repository)
+        group_member_repository = SqlGroupMemberRepository(session)
+        group_access_gateway = GroupAccessGatewayAdapter(
+            group_repository, group_member_repository
+        )
         password_hashing_gateway = BcryptHashingGateway()
 
         create_user_usecase = CreateUserUseCase(
@@ -111,6 +115,7 @@ async def lifespan(app: FastAPI):
 
         app.state.user_repository = user_repository
         app.state.group_repository = group_repository
+        app.state.group_member_repository = group_member_repository
         app.state.group_access_gateway = group_access_gateway
 
         token_gateway = JwtTokenGateway(
