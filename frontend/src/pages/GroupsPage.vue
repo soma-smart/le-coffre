@@ -2,49 +2,24 @@
 import { ref, onMounted } from 'vue';
 import { useToast } from 'primevue';
 import MainLayout from '../layouts/MainLayout.vue';
-import { 
-  listGroupsGroupsGet, 
-  createGroupGroupsPost, 
-  addMemberToGroupGroupsGroupIdMembersPost,
-  listUsersUsersGet
-} from '@/client/sdk.gen';
+import { storeToRefs } from 'pinia';
+import { useGroupsStore } from '@/stores/groups';
+import { listUsersUsersGet } from '@/client/sdk.gen';
 import type { GroupItem, ListUserResponse } from '@/client/types.gen';
 
 const toast = useToast();
+const groupsStore = useGroupsStore();
+const { sharedGroups, loading } = storeToRefs(groupsStore);
 
 // State
-const groups = ref<GroupItem[]>([]);
 const users = ref<ListUserResponse[]>([]);
-const loading = ref(false);
 const showCreateDialog = ref(false);
 const showAddMemberDialog = ref(false);
 const newGroupName = ref('');
 const selectedGroup = ref<GroupItem | null>(null);
 const selectedUserId = ref<string>('');
 
-// Load groups and users
-const loadGroups = async () => {
-  try {
-    loading.value = true;
-    const response = await listGroupsGroupsGet({
-      query: { include_personal: false } // Only show shared groups
-    });
-    if (response.data) {
-      groups.value = response.data.groups;
-    }
-  } catch (error) {
-    console.error('Failed to load groups:', error);
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load groups',
-      life: 5000
-    });
-  } finally {
-    loading.value = false;
-  }
-};
-
+// Load users
 const loadUsers = async () => {
   try {
     const response = await listUsersUsersGet();
@@ -69,9 +44,7 @@ const createGroup = async () => {
   }
 
   try {
-    await createGroupGroupsPost({
-      body: { name: newGroupName.value }
-    });
+    await groupsStore.createGroup(newGroupName.value);
 
     toast.add({
       severity: 'success',
@@ -82,7 +55,6 @@ const createGroup = async () => {
 
     newGroupName.value = '';
     showCreateDialog.value = false;
-    loadGroups();
   } catch (error) {
     console.error('Failed to create group:', error);
     toast.add({
@@ -114,10 +86,7 @@ const addMember = async () => {
   }
 
   try {
-    await addMemberToGroupGroupsGroupIdMembersPost({
-      path: { group_id: selectedGroup.value.id },
-      body: { user_id: selectedUserId.value }
-    });
+    await groupsStore.addMemberToGroup(selectedGroup.value.id, selectedUserId.value);
 
     toast.add({
       severity: 'success',
@@ -140,7 +109,7 @@ const addMember = async () => {
 };
 
 onMounted(() => {
-  loadGroups();
+  groupsStore.fetchSharedGroupsOnly();
   loadUsers();
 });
 </script>
@@ -162,12 +131,12 @@ onMounted(() => {
         <ProgressSpinner />
       </div>
 
-      <div v-else-if="groups.length === 0" class="text-center py-8">
+      <div v-else-if="sharedGroups.length === 0" class="text-center py-8">
         <p class="text-muted-color">No groups found. Create your first group!</p>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card v-for="group in groups" :key="group.id" class="hover:shadow-lg transition-shadow">
+        <Card v-for="group in sharedGroups" :key="group.id" class="hover:shadow-lg transition-shadow">
           <template #title>
             <div class="flex items-center gap-2">
               <i class="pi pi-users text-primary"></i>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useToast } from 'primevue/usetoast';
+import { storeToRefs } from 'pinia';
 import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen';
 import type { GetPasswordListResponse } from '@/client/types.gen';
+import { useGroupsStore } from '@/stores/groups';
 
 const visible = defineModel<boolean>('visible', { required: true });
 
@@ -16,13 +18,27 @@ const emit = defineEmits<{
 }>();
 
 const toast = useToast();
+const groupsStore = useGroupsStore();
+const { groupsForPasswordCreation } = storeToRefs(groupsStore);
 
 const name = ref('');
 const password = ref('');
 const folder = ref('');
+const selectedGroupId = ref<string>('');
 const loading = ref(false);
 
 const isEditMode = ref(false);
+
+// Initialize groups on mount
+onMounted(async () => {
+  await groupsStore.fetchAllGroups();
+  // Set default group to personal group if available
+  if (groupsStore.currentUserPersonalGroupId) {
+    selectedGroupId.value = groupsStore.currentUserPersonalGroupId;
+  } else if (groupsForPasswordCreation.value.length > 0) {
+    selectedGroupId.value = groupsForPasswordCreation.value[0].id;
+  }
+});
 
 // Watch for edit password prop changes
 watch(() => props.editPassword, (newValue) => {
@@ -36,6 +52,12 @@ watch(() => props.editPassword, (newValue) => {
     name.value = '';
     password.value = '';
     folder.value = '';
+    // Set default group to personal group
+    if (groupsStore.currentUserPersonalGroupId) {
+      selectedGroupId.value = groupsStore.currentUserPersonalGroupId;
+    } else if (groupsForPasswordCreation.value.length > 0) {
+      selectedGroupId.value = groupsForPasswordCreation.value[0].id;
+    }
   }
 }, { immediate: true });
 
@@ -56,6 +78,17 @@ const handleSubmit = async () => {
       severity: 'error',
       summary: 'Validation Error',
       detail: 'Password is required',
+      life: 5000
+    });
+    return;
+  }
+
+  // Group is required for create mode
+  if (!isEditMode.value && !selectedGroupId.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: 'Please select a group',
       life: 5000
     });
     return;
@@ -139,6 +172,7 @@ const handleSubmit = async () => {
     name.value = '';
     password.value = '';
     folder.value = '';
+    selectedGroupId.value = '';
   } catch (err: unknown) {
     const error = err as { detail?: string; message?: string };
     const errorMessage = error?.detail || error?.message || `Failed to ${isEditMode.value ? 'update' : 'create'} password`;
@@ -158,6 +192,7 @@ const handleCancel = () => {
   name.value = '';
   password.value = '';
   folder.value = '';
+  selectedGroupId.value = '';
   visible.value = false;
 };
 </script>
@@ -168,6 +203,39 @@ const handleCancel = () => {
       <div class="flex flex-col gap-2">
         <label for="password-name" class="font-semibold">Name</label>
         <InputText id="password-name" v-model="name" placeholder="e.g., Gmail Account" :disabled="loading" autofocus />
+      </div>
+
+      <!-- Group Selection (only for create mode) -->
+      <div v-if="!isEditMode" class="flex flex-col gap-2">
+        <label for="password-group" class="font-semibold">Group</label>
+        <Select 
+          id="password-group"
+          v-model="selectedGroupId" 
+          :options="groupsForPasswordCreation"
+          optionLabel="name"
+          optionValue="id"
+          placeholder="Select a group"
+          :disabled="loading"
+          class="w-full"
+        >
+          <template #option="slotProps">
+            <div class="flex items-center gap-2">
+              <i :class="slotProps.option.is_personal ? 'pi pi-user' : 'pi pi-users'" class="text-sm"></i>
+              <span>{{ slotProps.option.name }}</span>
+              <span v-if="slotProps.option.is_personal" class="text-xs text-muted-color">(Personal)</span>
+            </div>
+          </template>
+          <template #value="slotProps">
+            <div v-if="slotProps.value" class="flex items-center gap-2">
+              <i :class="groupsForPasswordCreation.find(g => g.id === slotProps.value)?.is_personal ? 'pi pi-user' : 'pi pi-users'" class="text-sm"></i>
+              <span>{{ groupsForPasswordCreation.find(g => g.id === slotProps.value)?.name }}</span>
+            </div>
+            <span v-else>{{ slotProps.placeholder }}</span>
+          </template>
+        </Select>
+        <small class="text-muted-color">
+          Select which group will own this password. You can only select groups you own.
+        </small>
       </div>
 
       <div class="flex flex-col gap-2">
