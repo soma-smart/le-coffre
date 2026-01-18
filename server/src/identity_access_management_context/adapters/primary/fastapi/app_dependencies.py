@@ -17,6 +17,8 @@ from identity_access_management_context.application.use_cases import (
     CreateGroupUseCase,
     AddUserToGroupUseCase,
     RemoveUserFromGroupUseCase,
+    GetGroupUseCase,
+    ListGroupsUseCase,
 )
 from identity_access_management_context.application.gateways import (
     UserRepository,
@@ -245,3 +247,15 @@ def get_remove_user_from_group_usecase(
         group_repository,
         group_member_repository,
     )
+
+
+def get_get_group_usecase(
+    group_repository: GroupRepository = Depends(get_group_repository),
+):
+    return GetGroupUseCase(group_repository)
+
+
+def get_list_groups_usecase(
+    group_repository: GroupRepository = Depends(get_group_repository),
+):
+    return ListGroupsUseCase(group_repository)
