@@ -8,7 +8,7 @@ class PermissionsTable(SQLModel, table=True):
     id: UUID = Field(
         default_factory=uuid4, nullable=False, primary_key=True, index=True
     )
-    user_id: UUID = Field(nullable=False)
+    group_id: UUID = Field(nullable=False)
     resource_id: UUID = Field(nullable=False)
     permission: str = Field(default="Password")
 
@@ -19,7 +19,7 @@ class OwnershipTable(SQLModel, table=True):
     id: UUID = Field(
         default_factory=uuid4, nullable=False, primary_key=True, index=True
     )
-    user_id: UUID = Field(nullable=False)
+    group_id: UUID = Field(nullable=False)
     resource_id: UUID = Field(nullable=False)
     resource_type: str = Field(default="Password")
 

@@ -23,20 +23,20 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         """Set a group as the owner of a password"""
         # Check if ownership already exists
         statement = select(OwnershipTable).where(
-            OwnershipTable.user_id == owner_id,
+            OwnershipTable.group_id == owner_id,
             OwnershipTable.resource_id == password_id,
         )
         existing = self._session.exec(statement).first()
 
         if not existing:
-            ownership = OwnershipTable(user_id=owner_id, resource_id=password_id)
+            ownership = OwnershipTable(group_id=owner_id, resource_id=password_id)
             self._session.add(ownership)
             self._session.commit()
 
     def is_owner(self, owner_id: UUID, password_id: UUID) -> bool:
         """Check if a group is the owner of a password"""
         statement = select(OwnershipTable).where(
-            OwnershipTable.user_id == owner_id,
+            OwnershipTable.group_id == owner_id,
             OwnershipTable.resource_id == password_id,
         )
         result = self._session.exec(statement).first()
@@ -52,7 +52,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
 
         # Check if group has explicit permissions
         statement = select(PermissionsTable).where(
-            PermissionsTable.user_id == group_id,
+            PermissionsTable.group_id == group_id,
             PermissionsTable.resource_id == password_id,
             PermissionsTable.permission == permission.value,
         )
@@ -65,7 +65,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         """Grant a specific permission to a group for a password"""
         # Check if permission already exists
         statement = select(PermissionsTable).where(
-            PermissionsTable.user_id == group_id,
+            PermissionsTable.group_id == group_id,
             PermissionsTable.resource_id == password_id,
             PermissionsTable.permission == permission.value,
         )
@@ -73,7 +73,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
 
         if not existing:
             permission_entry = PermissionsTable(
-                user_id=group_id,
+                group_id=group_id,
                 resource_id=password_id,
                 permission=permission.value,
             )
@@ -83,7 +83,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
     def revoke_access(self, group_id: UUID, password_id: UUID) -> None:
         """Revoke all permissions from a group for a password"""
         statement = select(PermissionsTable).where(
-            PermissionsTable.user_id == group_id,
+            PermissionsTable.group_id == group_id,
             PermissionsTable.resource_id == password_id,
         )
         permission_entries = self._session.exec(statement).all()
@@ -106,8 +106,8 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         )
         ownerships = self._session.exec(ownership_statement).all()
         for ownership in ownerships:
-            if ownership.user_id not in result:
-                result[ownership.user_id] = (True, set())
+            if ownership.group_id not in result:
+                result[ownership.group_id] = (True, set())
 
         # Get all groups with permissions
         permission_statement = select(PermissionsTable).where(
@@ -115,10 +115,10 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         )
         permissions = self._session.exec(permission_statement).all()
         for permission_entry in permissions:
-            if permission_entry.user_id not in result:
-                result[permission_entry.user_id] = (False, set())
+            if permission_entry.group_id not in result:
+                result[permission_entry.group_id] = (False, set())
             try:
-                result[permission_entry.user_id][1].add(
+                result[permission_entry.group_id][1].add(
                     PasswordPermission(permission_entry.permission)
                 )
             except ValueError:
