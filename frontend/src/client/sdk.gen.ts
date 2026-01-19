@@ -147,7 +147,7 @@ export const createPasswordPasswordsPost = <ThrowOnError extends boolean = false
  * - **folder**: Optional folder name to filter passwords
  * - **Authentication**: Requires authentication via access_token cookie
  *
- * Returns a list of passwords accessible by the user, including the owner group_id.
+ * Returns a list of passwords accessible by the user.
  */
 export const listPasswordsPasswordsListGet = <ThrowOnError extends boolean = false>(options?: Options<ListPasswordsPasswordsListGetData, ThrowOnError>) => {
     return (options?.client ?? client).get<ListPasswordsPasswordsListGetResponses, ListPasswordsPasswordsListGetErrors, ThrowOnError>({
@@ -693,7 +693,7 @@ export const removeMemberFromGroupGroupsGroupIdMembersUserIdDelete = <ThrowOnErr
  * - is_personal: Whether this is a personal group
  * - user_id: The owner user ID (for personal groups) or null (for shared groups)
  * - owners: List of user IDs who are owners of the group
- * - members: List of user IDs who are members (not owners) of the group
+ * - members: List of user IDs who are members of the group
  */
 export const getGroupGroupsGroupIdGet = <ThrowOnError extends boolean = false>(options: Options<GetGroupGroupsGroupIdGetData, ThrowOnError>) => {
     return (options.client ?? client).get<GetGroupGroupsGroupIdGetResponses, GetGroupGroupsGroupIdGetErrors, ThrowOnError>({

@@ -52,3 +52,24 @@ class GroupAccessGatewayAdapter:
             True if the group exists, False otherwise
         """
         return self._group_repository.get_by_id(group_id) is not None
+
+    def get_group_owner_users(self, group_id: UUID) -> list[UUID]:
+        """Get all users who own this group.
+
+        Args:
+            group_id: The ID of the group
+
+        Returns:
+            List of user IDs who own this group
+        """
+        group = self._group_repository.get_by_id(group_id)
+        if group is None:
+            return []
+
+        # For personal groups, return the user_id
+        if group.is_personal and group.user_id:
+            return [group.user_id]
+
+        # For shared groups, get all owner members
+        members = self._group_member_repository.get_members(group_id)
+        return [member.user_id for member in members if member.is_owner]

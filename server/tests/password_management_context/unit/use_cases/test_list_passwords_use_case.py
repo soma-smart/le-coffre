@@ -58,6 +58,7 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     password_permissions_repository.set_owner(group1_id, password1.id)
     group_access_gateway.set_group_owner(group1_id, requester_id)
     password_repository.save(password2)
+    password_permissions_repository.set_owner(group2_id, password2.id)
     password_permissions_repository.grant_access(
         group2_id, password2.id, PasswordPermission.READ
     )
@@ -72,6 +73,13 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
             p.id == i.id and p.name == i.name and p.folder == i.folder
             for p in [password1, password2]
         )
+
+    # Verify group_id is set correctly
+    password1_result = next(r for r in result if r.id == password1.id)
+    assert password1_result.group_id == group1_id
+
+    password2_result = next(r for r in result if r.id == password2.id)
+    assert password2_result.group_id == group2_id
 
 
 def test_should_return_passwords_from_specific_folder_when_folder_provided(
@@ -110,6 +118,7 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
     assert result[0].id == password1.id
     assert result[0].name == password1.name
     assert result[0].folder == password1.folder
+    assert result[0].group_id == group1_id
 
 
 def test_should_raise_exception_when_folder_does_not_exist(
@@ -156,6 +165,7 @@ def test_should_return_only_passwords_user_has_access_to(
     assert result[0].id == password1.id
     assert result[0].name == password1.name
     assert result[0].folder == "default"
+    assert result[0].group_id == group_id
 
 
 def test_should_return_empty_list_when_no_passwords_user_has_access_to(

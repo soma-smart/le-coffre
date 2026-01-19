@@ -129,7 +129,7 @@ export type CreatePasswordRequest = {
     /**
      * Group Id
      */
-    group_id?: string | null;
+    group_id: string;
 };
 
 /**

@@ -40,15 +40,34 @@ class ListAccessUseCase:
             password_id
         )
 
-        # Return group-based access list
+        # Expand groups to users for the access list
         ret = ListAccessResponse([])
-        for group_id in permissions.keys():
-            is_owner, group_permissions = permissions.get(group_id, (False, set()))
+        user_access_map = {}  # user_id -> (is_owner, permissions)
+
+        for group_id, (is_group_owner, group_permissions) in permissions.items():
+            # Get all users who own this group
+            owner_users = self.group_access_gateway.get_group_owner_users(group_id)
+
+            for user_id in owner_users:
+                if user_id not in user_access_map:
+                    # First time seeing this user, set their ownership status
+                    user_access_map[user_id] = (is_group_owner, group_permissions)
+                else:
+                    # User already in map, merge permissions and maintain owner status
+                    existing_is_owner, existing_perms = user_access_map[user_id]
+                    # User is owner if they're owner through ANY group
+                    merged_is_owner = existing_is_owner or is_group_owner
+                    # Merge permissions
+                    merged_perms = existing_perms | group_permissions
+                    user_access_map[user_id] = (merged_is_owner, merged_perms)
+
+        # Convert map to list of AccessResponse
+        for user_id, (is_owner, perms) in user_access_map.items():
             ret.accesses.append(
                 AccessResponse(
-                    user_id=group_id,  # This is actually a group_id now
+                    user_id=user_id,
                     is_owner=is_owner,
-                    permissions=group_permissions,
+                    permissions=perms,
                 )
             )
 

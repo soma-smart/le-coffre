@@ -110,7 +110,10 @@ async def lifespan(app: FastAPI):
         password_hashing_gateway = BcryptHashingGateway()
 
         create_user_usecase = CreateUserUseCase(
-            user_repository, group_repository, password_hashing_gateway
+            user_repository,
+            group_repository,
+            group_member_repository,
+            password_hashing_gateway,
         )
         can_create_admin_usecase = CanCreateAdminUseCase(user_repository)
 

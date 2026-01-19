@@ -44,16 +44,15 @@ class FakePasswordPermissionsRepository:
     ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
         result: dict[UUID, tuple[bool, set[PasswordPermission]]] = {}
 
-        # Add groups with explicit permissions
-        for (group_id, pwd_id), permissions in self._permissions.items():
-            if pwd_id == password_id:
-                result[group_id] = (False, permissions.copy())
-
-        # Add owner groups (with empty permission set to distinguish them)
+        # First, add owner groups (owners take precedence)
         for owner_id, pwd_id in self._ownerships:
             if pwd_id == password_id:
-                if owner_id not in result:
-                    result[owner_id] = (True, set())
+                result[owner_id] = (True, set())
+
+        # Then add groups with explicit permissions (only if not already owners)
+        for (group_id, pwd_id), permissions in self._permissions.items():
+            if pwd_id == password_id and group_id not in result:
+                result[group_id] = (False, permissions.copy())
 
         return result
 

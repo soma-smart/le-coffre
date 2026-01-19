@@ -15,13 +15,11 @@ from identity_access_management_context.domain.exceptions import (
 @pytest.fixture
 def use_case(
     user_password_repository,
-    group_repository,
     password_hashing_gateway,
     user_management_gateway,
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
-        group_repository,
         password_hashing_gateway,
         user_management_gateway,
     )

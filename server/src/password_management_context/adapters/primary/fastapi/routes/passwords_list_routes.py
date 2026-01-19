@@ -22,6 +22,7 @@ class GetPasswordListResponse(BaseModel):
     id: UUID
     name: str
     folder: str
+    group_id: UUID
 
 
 @router.get(
@@ -50,6 +51,7 @@ def list_passwords(
                 id=password.id,
                 name=password.name,
                 folder=password.folder,
+                group_id=password.group_id,
             )
             for password in passwords
         ]

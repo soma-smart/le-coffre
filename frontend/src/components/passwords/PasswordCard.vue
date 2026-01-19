@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { storeToRefs } from 'pinia';
@@ -91,7 +91,7 @@ const emit = defineEmits<{
 const toast = useToast();
 const confirm = useConfirm();
 const groupsStore = useGroupsStore();
-const { currentUserId, allGroups } = storeToRefs(groupsStore);
+const { currentUserId, groups } = storeToRefs(groupsStore);
 
 const passwordValue = ref<string | null>(null);
 const isVisible = ref(false);
@@ -103,7 +103,7 @@ const ownerGroupNames = ref<string[]>([]);
 // Check if current user is owner by checking if they own the group that owns this password
 const checkOwnership = () => {
   // Find the group that owns this password
-  const ownerGroup = allGroups.value.find(g => g.id === props.password.group_id);
+  const ownerGroup = groups.value.find(g => g.id === props.password.group_id);
   
   if (ownerGroup) {
     // Check if current user owns this group
@@ -125,6 +125,11 @@ onMounted(async () => {
   await groupsStore.fetchAllGroups();
   checkOwnership();
 });
+
+// Watch for changes in groups and re-check ownership
+watch(() => groupsStore.groups, () => {
+  checkOwnership();
+}, { deep: true });
 
 const fetchPassword = async () => {
   if (passwordValue.value !== null) return; // Already fetched

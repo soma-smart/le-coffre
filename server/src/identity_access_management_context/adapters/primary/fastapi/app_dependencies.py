@@ -96,12 +96,18 @@ def get_update_user_usecase(
 def get_create_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
     group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
     password_hashing_gateway: PasswordHashingGateway = Depends(
         get_password_hashing_gateway
     ),
 ):
     return CreateUserUseCase(
-        user_repository, group_repository, password_hashing_gateway
+        user_repository,
+        group_repository,
+        group_member_repository,
+        password_hashing_gateway,
     )
 
 
@@ -150,7 +156,6 @@ def get_register_admin_with_password_usecase(
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
-        group_repository,
         password_hashing_gateway,
         user_management_gateway,
     )

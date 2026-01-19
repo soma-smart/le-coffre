@@ -12,14 +12,19 @@ from identity_access_management_context.domain.exceptions import (
 )
 from tests.identity_access_management_context.unit.fakes import (
     FakePasswordHashingGateway,
+    FakeGroupMemberRepository,
 )
 
 
 @pytest.fixture
 def use_case(user_repository: UserRepository, group_repository: GroupRepository):
     password_hashing_gateway = FakePasswordHashingGateway()
+    group_member_repository = FakeGroupMemberRepository()
     return CreateUserUseCase(
-        user_repository, group_repository, password_hashing_gateway
+        user_repository,
+        group_repository,
+        group_member_repository,
+        password_hashing_gateway,
     )
 
 

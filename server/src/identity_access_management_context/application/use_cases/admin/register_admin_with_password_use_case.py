@@ -7,9 +7,7 @@ from identity_access_management_context.application.gateways import (
     UserPasswordRepository,
     PasswordHashingGateway,
     UserManagementGateway,
-    GroupRepository,
 )
-from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import UserPassword
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
@@ -20,12 +18,10 @@ class RegisterAdminWithPasswordUseCase:
     def __init__(
         self,
         user_password_repository: UserPasswordRepository,
-        group_repository: GroupRepository,
         password_hashing_gateway: PasswordHashingGateway,
         user_management_gateway: UserManagementGateway,
     ):
         self._user_password_repository = user_password_repository
-        self._group_repository = group_repository
         self._password_hashing_gateway = password_hashing_gateway
         self._user_management_gateway = user_management_gateway
 
@@ -48,12 +44,6 @@ class RegisterAdminWithPasswordUseCase:
             user_id=command.id,
             email=command.email,
             display_name=command.display_name,
-        )
-
-        UserCreationService.create_personal_group_and_set_ownership(
-            user_id=command.id,
-            username=command.display_name,
-            group_repository=self._group_repository,
         )
 
         return user_password.id

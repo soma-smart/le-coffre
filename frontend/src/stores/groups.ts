@@ -11,7 +11,9 @@ import type { GroupItem } from '@/client/types.gen';
 
 export const useGroupsStore = defineStore('groups', () => {
   const groups = ref<GroupItem[]>([]);
-  const allGroups = ref<GroupItem[]>([]);
+  const sharedGroups = ref<GroupItem[]>([]);
+  const personalGroups = ref<GroupItem[]>([]);
+  const userPersonalGroup = ref<GroupItem | null>(null);
   const loading = ref(false);
   const error = ref<string | null>(null);
   const lastFetch = ref<number | null>(null);
@@ -20,20 +22,20 @@ export const useGroupsStore = defineStore('groups', () => {
 
   // Computed
   const groupsCount = computed(() => groups.value.length);
-  
-  const sharedGroups = computed(() => 
-    groups.value.filter(group => !group.is_personal)
+
+  // Shared groups where the current user is an owner
+  const ownedSharedGroups = computed(() => 
+    sharedGroups.value.filter(group => group.owners && group.owners.includes(currentUserId.value!))
   );
 
-  // Groups where the current user is the owner
-  // Checks if user_id matches (personal groups) OR user is in owners list (shared groups)
-  const ownedGroups = computed(() => 
-    allGroups.value.filter(group => group.owners && group.owners.includes(currentUserId.value!))
-  );
-
-  // All groups including personal and owned shared groups for password creation
+  // Groups available for password creation: user's personal group + owned shared groups
   const groupsForPasswordCreation = computed(() => {
-    return ownedGroups.value;
+    const result: GroupItem[] = [];
+    if (userPersonalGroup.value) {
+      result.push(userPersonalGroup.value);
+    }
+    result.push(...ownedSharedGroups.value);
+    return result;
   });
 
   // Actions
@@ -70,10 +72,19 @@ export const useGroupsStore = defineStore('groups', () => {
       });
       
       if (response.data) {
-        if (includePersonal) {
-          allGroups.value = response.data.groups;
-        }
         groups.value = response.data.groups;
+        
+        // Separate shared and personal groups
+        sharedGroups.value = response.data.groups.filter(g => !g.is_personal);
+        personalGroups.value = response.data.groups.filter(g => g.is_personal);
+        
+        // Set user's personal group (the one with matching personal_group_id)
+        if (currentUserPersonalGroupId.value) {
+          userPersonalGroup.value = response.data.groups.find(
+            g => g.id === currentUserPersonalGroupId.value
+          ) || null;
+        }
+        
         lastFetch.value = now;
       }
     } catch (e) {
@@ -146,7 +157,9 @@ export const useGroupsStore = defineStore('groups', () => {
   return {
     // State
     groups,
-    allGroups,
+    sharedGroups,
+    personalGroups,
+    userPersonalGroup,
     loading,
     error,
     currentUserId,
@@ -154,8 +167,7 @@ export const useGroupsStore = defineStore('groups', () => {
     
     // Computed
     groupsCount,
-    sharedGroups,
-    ownedGroups,
+    ownedSharedGroups,
     groupsForPasswordCreation,
     
     // Actions
