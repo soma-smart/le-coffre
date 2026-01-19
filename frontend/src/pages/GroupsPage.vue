@@ -4,31 +4,23 @@ import { useToast } from 'primevue';
 import MainLayout from '../layouts/MainLayout.vue';
 import { storeToRefs } from 'pinia';
 import { useGroupsStore } from '@/stores/groups';
-import { listUsersUsersGet } from '@/client/sdk.gen';
-import type { GroupItem, ListUserResponse } from '@/client/types.gen';
+import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue';
+import type { GroupItem } from '@/client/types.gen';
 
 const toast = useToast();
 const groupsStore = useGroupsStore();
 const { sharedGroups, loading } = storeToRefs(groupsStore);
 
 // State
-const users = ref<ListUserResponse[]>([]);
 const showCreateDialog = ref(false);
-const showAddMemberDialog = ref(false);
+const showGroupDetailsModal = ref(false);
 const newGroupName = ref('');
 const selectedGroup = ref<GroupItem | null>(null);
-const selectedUserId = ref<string>('');
 
-// Load users
-const loadUsers = async () => {
-  try {
-    const response = await listUsersUsersGet();
-    if (response.data) {
-      users.value = response.data;
-    }
-  } catch (error) {
-    console.error('Failed to load users:', error);
-  }
+// Open group details modal
+const openGroupDetails = (group: GroupItem) => {
+  selectedGroup.value = group;
+  showGroupDetailsModal.value = true;
 };
 
 // Create a new group
@@ -66,51 +58,13 @@ const createGroup = async () => {
   }
 };
 
-// Open add member dialog
-const openAddMemberDialog = (group: GroupItem) => {
-  selectedGroup.value = group;
-  selectedUserId.value = '';
-  showAddMemberDialog.value = true;
-};
-
-// Add member to group
-const addMember = async () => {
-  if (!selectedGroup.value || !selectedUserId.value) {
-    toast.add({
-      severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please select a user',
-      life: 5000
-    });
-    return;
-  }
-
-  try {
-    await groupsStore.addMemberToGroup(selectedGroup.value.id, selectedUserId.value);
-
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Member added successfully',
-      life: 5000
-    });
-
-    showAddMemberDialog.value = false;
-    selectedUserId.value = '';
-  } catch (error) {
-    console.error('Failed to add member:', error);
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to add member to group',
-      life: 5000
-    });
-  }
+// Handle member added/removed
+const handleMemberChanged = async () => {
+  await groupsStore.refresh();
 };
 
 onMounted(() => {
   groupsStore.fetchSharedGroupsOnly();
-  loadUsers();
 });
 </script>
 
@@ -150,13 +104,13 @@ onMounted(() => {
                 <span v-if="group.is_personal">Personal Group</span>
                 <span v-else>Shared Group</span>
               </div>
-              <div v-if="!group.is_personal" class="flex gap-2 mt-4">
+              <div class="flex gap-2 mt-4">
                 <Button 
-                  label="Add Member" 
-                  icon="pi pi-user-plus" 
+                  label="View Members" 
+                  icon="pi pi-users" 
                   size="small"
                   outlined
-                  @click="openAddMemberDialog(group)"
+                  @click="openGroupDetails(group)"
                 />
               </div>
             </div>
@@ -197,51 +151,13 @@ onMounted(() => {
         </template>
       </Dialog>
 
-      <!-- Add Member Dialog -->
-      <Dialog 
-        v-model:visible="showAddMemberDialog" 
-        header="Add Member to Group" 
-        :modal="true"
-        :style="{ width: '30rem' }"
-      >
-        <div class="flex flex-col gap-4 py-4">
-          <div class="flex flex-col gap-2">
-            <label for="user-select" class="font-semibold">Select User</label>
-            <Select 
-              id="user-select"
-              v-model="selectedUserId" 
-              :options="users"
-              optionLabel="name"
-              optionValue="id"
-              placeholder="Select a user"
-              class="w-full"
-            >
-              <template #option="slotProps">
-                <div class="flex flex-col">
-                  <span class="font-semibold">{{ slotProps.option.name }}</span>
-                  <span class="text-sm text-muted-color">{{ slotProps.option.email }}</span>
-                </div>
-              </template>
-            </Select>
-          </div>
-          <div v-if="selectedGroup" class="text-sm text-muted-color">
-            Adding member to: <strong>{{ selectedGroup.name }}</strong>
-          </div>
-        </div>
-        <template #footer>
-          <Button 
-            label="Cancel" 
-            icon="pi pi-times" 
-            text 
-            @click="showAddMemberDialog = false" 
-          />
-          <Button 
-            label="Add Member" 
-            icon="pi pi-check" 
-            @click="addMember" 
-          />
-        </template>
-      </Dialog>
+      <!-- Group Details Modal -->
+      <GroupDetailsModal 
+        v-model:visible="showGroupDetailsModal" 
+        :group="selectedGroup"
+        @member-added="handleMemberChanged"
+        @member-removed="handleMemberChanged"
+      />
     </div>
   </MainLayout>
 </template>

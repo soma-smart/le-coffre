@@ -40,6 +40,22 @@ onMounted(async () => {
   }
 });
 
+// Refresh groups when modal becomes visible
+watch(visible, async (isVisible) => {
+  if (isVisible) {
+    // Force refresh groups to get latest data
+    await groupsStore.fetchAllGroups(true);
+    // Set default group if none selected
+    if (!selectedGroupId.value) {
+      if (groupsStore.currentUserPersonalGroupId) {
+        selectedGroupId.value = groupsStore.currentUserPersonalGroupId;
+      } else if (groupsForPasswordCreation.value.length > 0) {
+        selectedGroupId.value = groupsForPasswordCreation.value[0].id;
+      }
+    }
+  }
+});
+
 // Watch for edit password prop changes
 watch(() => props.editPassword, (newValue) => {
   if (newValue) {
@@ -141,7 +157,8 @@ const handleSubmit = async () => {
         body: {
           name: name.value,
           password: password.value,
-          folder: folder.value || null
+          folder: folder.value || null,
+          group_id: selectedGroupId.value || null
         }
       });
 
@@ -172,7 +189,14 @@ const handleSubmit = async () => {
     name.value = '';
     password.value = '';
     folder.value = '';
-    selectedGroupId.value = '';
+    // Reset to personal group instead of empty
+    if (groupsStore.currentUserPersonalGroupId) {
+      selectedGroupId.value = groupsStore.currentUserPersonalGroupId;
+    } else if (groupsForPasswordCreation.value.length > 0) {
+      selectedGroupId.value = groupsForPasswordCreation.value[0].id;
+    } else {
+      selectedGroupId.value = '';
+    }
   } catch (err: unknown) {
     const error = err as { detail?: string; message?: string };
     const errorMessage = error?.detail || error?.message || `Failed to ${isEditMode.value ? 'update' : 'create'} password`;
@@ -192,7 +216,14 @@ const handleCancel = () => {
   name.value = '';
   password.value = '';
   folder.value = '';
-  selectedGroupId.value = '';
+  // Reset to personal group instead of empty
+  if (groupsStore.currentUserPersonalGroupId) {
+    selectedGroupId.value = groupsStore.currentUserPersonalGroupId;
+  } else if (groupsForPasswordCreation.value.length > 0) {
+    selectedGroupId.value = groupsForPasswordCreation.value[0].id;
+  } else {
+    selectedGroupId.value = '';
+  }
   visible.value = false;
 };
 </script>
@@ -207,14 +238,14 @@ const handleCancel = () => {
 
       <!-- Group Selection (only for create mode) -->
       <div v-if="!isEditMode" class="flex flex-col gap-2">
-        <label for="password-group" class="font-semibold">Group</label>
+        <label for="password-group" class="font-semibold">Owner</label>
         <Select 
           id="password-group"
           v-model="selectedGroupId" 
           :options="groupsForPasswordCreation"
           optionLabel="name"
           optionValue="id"
-          placeholder="Select a group"
+          placeholder="Select owner group"
           :disabled="loading"
           class="w-full"
         >
@@ -234,7 +265,7 @@ const handleCancel = () => {
           </template>
         </Select>
         <small class="text-muted-color">
-          Select which group will own this password. You can only select groups you own.
+          Select the owner group for this password. Only groups you own are shown.
         </small>
       </div>
 

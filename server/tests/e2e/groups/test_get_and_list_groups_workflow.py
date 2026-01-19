@@ -47,6 +47,13 @@ def test_get_and_list_groups_complete_workflow(e2e_client, sso_user_token):
     assert retrieved_group["name"] == "Engineering Team"
     assert retrieved_group["is_personal"] is False
     assert retrieved_group["user_id"] is None
+    # Verify new fields are present
+    assert "owners" in retrieved_group
+    assert "members" in retrieved_group
+    assert isinstance(retrieved_group["owners"], list)
+    assert isinstance(retrieved_group["members"], list)
+    # The creator should be an owner
+    assert sso_user_token["user_id"] in retrieved_group["owners"]
 
     # Step 4: List only shared groups (exclude personal)
     list_shared_response = e2e_client.get(
@@ -169,3 +176,39 @@ def test_get_personal_group(e2e_client, sso_user_token):
     assert retrieved["id"] == personal_group["id"]
     assert retrieved["is_personal"] is True
     assert retrieved["user_id"] is not None
+
+
+def test_get_group_with_owners_and_members(e2e_client, sso_user_token):
+    """
+    Test that getting a group returns separate lists of owners and members
+    """
+    # Step 1: Create a shared group (creator is automatically added as owner)
+    create_response = e2e_client.post(
+        "/api/groups/",
+        json={"name": "Test Team"},
+        cookies={"access_token": sso_user_token["token"]},
+    )
+    assert create_response.status_code == 201
+    group_id = create_response.json()["id"]
+
+    # Step 2: Get the group and verify the response structure includes owners/members
+    get_response = e2e_client.get(
+        f"/api/groups/{group_id}",
+        cookies={"access_token": sso_user_token["token"]},
+    )
+    assert get_response.status_code == 200
+    group = get_response.json()
+
+    # Verify new fields are present in the response
+    assert "owners" in group
+    assert "members" in group
+    assert isinstance(group["owners"], list)
+    assert isinstance(group["members"], list)
+
+    # Verify the creator is in owners list
+    assert sso_user_token["user_id"] in group["owners"]
+
+    # Verify basic group info
+    assert group["id"] == group_id
+    assert group["name"] == "Test Team"
+    assert group["is_personal"] is False

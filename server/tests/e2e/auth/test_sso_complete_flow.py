@@ -127,12 +127,19 @@ async def test_complete_sso_authentication_flow(
 
     # Step 6: Validate token by creating a password (this proves the JWT token works)
     print("\n🔑 Step 6: Validating JWT token by creating a password...")
+
+    # Get the user's personal group ID
+    me_response = e2e_client.get("/api/users/me")
+    assert me_response.status_code == 200
+    personal_group_id = me_response.json()["personal_group_id"]
+
     create_password_response = e2e_client.post(
         "/api/passwords/",
         json={
             "name": "My SSO Test Password",
             "password": "SuperSecure123!@#",
             "folder": "SSO Tests",
+            "group_id": personal_group_id,
         },
     )
     assert create_password_response.status_code == 201, (
@@ -140,7 +147,7 @@ async def test_complete_sso_authentication_flow(
     )
 
     password_data = create_password_response.json()
-    assert password_data['id'] is not None
+    assert password_data["id"] is not None
     print(
         f"✅ JWT token validated successfully! Password created with ID: {password_data['id']}"
     )

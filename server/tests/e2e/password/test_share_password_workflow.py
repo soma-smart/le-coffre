@@ -40,6 +40,11 @@ def test_share_password_workflow(client_factory, oidc_server, sso_user_token):
     assert sso_user_response.status_code == 200
     sso_user_group_id = sso_user_response.json()["personal_group_id"]
 
+    # Get admin's personal group ID
+    admin_response = admin_client.get("/api/users/me")
+    assert admin_response.status_code == 200
+    admin_group_id = admin_response.json()["personal_group_id"]
+
     # Step 1: Create a password as owner (admin)
     create_response = admin_client.post(
         "/api/passwords",
@@ -47,6 +52,7 @@ def test_share_password_workflow(client_factory, oidc_server, sso_user_token):
             "name": "Shared Test Password",
             "password": STRONG_PASSWORD,
             "folder": "Shared",
+            "group_id": admin_group_id,
         },
     )
     assert create_response.status_code == 201
@@ -142,12 +148,18 @@ def test_share_password_with_multiple_users(
     assert user2_response.status_code == 200
     user2_group_id = user2_response.json()["personal_group_id"]
 
+    # Get admin's personal group ID
+    admin_response = admin_client.get("/api/users/me")
+    assert admin_response.status_code == 200
+    admin_group_id = admin_response.json()["personal_group_id"]
+
     # Create password
     create_response = admin_client.post(
         "/api/passwords",
         json={
             "name": "Multi-Share Password",
             "password": STRONG_PASSWORD,
+            "group_id": admin_group_id,
         },
     )
     assert create_response.status_code == 201
@@ -206,20 +218,19 @@ def test_share_password_with_multiple_users(
     assert owner_access.status_code == 200
 
 
-def test_cannot_unshare_with_owner(authenticated_admin_client, setup):
+def test_cannot_unshare_with_owner(
+    authenticated_admin_client, setup, admin_personal_group_id
+):
     """
     Test that owner group cannot be unshared from password
     """
-    # Get current user's personal group ID
-    me_response = authenticated_admin_client.get("/api/users/me")
-    owner_group_id = me_response.json()["personal_group_id"]
-
     # Create password
     create_response = authenticated_admin_client.post(
         "/api/passwords",
         json={
             "name": "Owner Password",
             "password": STRONG_PASSWORD,
+            "group_id": admin_personal_group_id,
         },
     )
     assert create_response.status_code == 201
@@ -227,7 +238,7 @@ def test_cannot_unshare_with_owner(authenticated_admin_client, setup):
 
     # Try to unshare owner group from their own password
     unshare_response = authenticated_admin_client.delete(
-        f"/api/passwords/{password_id}/share/{owner_group_id}",
+        f"/api/passwords/{password_id}/share/{admin_personal_group_id}",
     )
     assert unshare_response.status_code == 400
     assert "owner" in unshare_response.json()["detail"].lower()

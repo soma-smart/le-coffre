@@ -32,6 +32,11 @@ def test_list_password_access_workflow(client_factory, oidc_server, sso_user_tok
     # Login SSO user
     sso_client.cookies.set("access_token", sso_user_token["token"])
 
+    # Get admin's personal group ID
+    admin_response = admin_client.get("/api/users/me")
+    assert admin_response.status_code == 200
+    admin_group_id = admin_response.json()["personal_group_id"]
+
     # Step 1: Create a password as owner
     create_response = admin_client.post(
         "/api/passwords",
@@ -39,6 +44,7 @@ def test_list_password_access_workflow(client_factory, oidc_server, sso_user_tok
             "name": "Access List Test Password",
             "password": STRONG_PASSWORD,
             "folder": "Test",
+            "group_id": admin_group_id,
         },
     )
     assert create_response.status_code == 201

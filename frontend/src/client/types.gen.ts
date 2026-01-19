@@ -126,6 +126,10 @@ export type CreatePasswordRequest = {
      * Folder
      */
     folder?: string | null;
+    /**
+     * Group Id
+     */
+    group_id?: string | null;
 };
 
 /**
@@ -230,6 +234,14 @@ export type GetGroupResponse = {
      * User Id
      */
     user_id: string | null;
+    /**
+     * Owners
+     */
+    owners: Array<string>;
+    /**
+     * Members
+     */
+    members: Array<string>;
 };
 
 /**
@@ -248,6 +260,10 @@ export type GetPasswordListResponse = {
      * Folder
      */
     folder: string;
+    /**
+     * Group Id
+     */
+    group_id: string;
 };
 
 /**
@@ -344,6 +360,10 @@ export type GroupItem = {
      * User Id
      */
     user_id: string | null;
+    /**
+     * Owners
+     */
+    owners: Array<string>;
 };
 
 /**

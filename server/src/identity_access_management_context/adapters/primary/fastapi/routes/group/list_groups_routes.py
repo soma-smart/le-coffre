@@ -18,6 +18,7 @@ class GroupItem(BaseModel):
     name: str
     is_personal: bool
     user_id: UUID | None
+    owners: list[UUID]
 
 
 class ListGroupsResponse(BaseModel):
@@ -51,9 +52,10 @@ def list_groups(
     - name: The group's name
     - is_personal: Whether this is a personal group
     - user_id: The owner user ID (for personal groups) or null (for shared groups)
+    - owners: List of user IDs who are owners of this group
     """
     try:
-        groups = usecase.execute(include_personal=include_personal)
+        groups_with_owners = usecase.execute(include_personal=include_personal)
 
         group_items = [
             GroupItem(
@@ -61,8 +63,9 @@ def list_groups(
                 name=group.name,
                 is_personal=group.is_personal,
                 user_id=group.user_id,
+                owners=group.owners,
             )
-            for group in groups
+            for group in groups_with_owners.groups
         ]
 
         return ListGroupsResponse(

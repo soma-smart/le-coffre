@@ -23,6 +23,7 @@ declare module 'vue' {
     Drawer: typeof import('primevue/drawer')['default']
     FolderCard: typeof import('./src/components/passwords/FolderCard.vue')['default']
     Form: typeof import('@primevue/forms/form')['default']
+    GroupDetailsModal: typeof import('./src/components/modals/GroupDetailsModal.vue')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
     InputText: typeof import('primevue/inputtext')['default']
     LoginForm: typeof import('./src/components/LoginForm.vue')['default']

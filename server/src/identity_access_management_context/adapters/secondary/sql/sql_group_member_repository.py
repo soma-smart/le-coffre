@@ -24,6 +24,8 @@ class SqlGroupMemberRepository(GroupMemberRepository):
         if existing:
             # Update existing member
             existing.is_owner = is_owner
+            self._session.add(existing)  # Explicitly add to session
+            self._session.flush()  # Flush before commit
         else:
             # Add new member
             member = GroupMemberTable(
@@ -34,6 +36,8 @@ class SqlGroupMemberRepository(GroupMemberRepository):
             self._session.add(member)
 
         self._session.commit()
+        if existing:
+            self._session.refresh(existing)  # Refresh to ensure changes are persisted
 
     def remove_member(self, group_id: UUID, user_id: UUID) -> None:
         """Remove a member from a group."""

@@ -19,6 +19,7 @@ class CreatePasswordRequest(BaseModel):
     name: str
     password: str
     folder: str | None = None
+    group_id: str
 
 
 class CreatePasswordResponse(BaseModel):
@@ -43,24 +44,15 @@ def create_password(
     - **name**: Name/title for the password entry
     - **password**: The actual password to store (will be encrypted)
     - **folder**: Optional folder to organize the password
+    - **group_id**: Optional group ID. If not provided, uses the user's personal group
     - **Authentication**: Requires authentication via access_token cookie
     """
     try:
-        # Get the user's personal group
-        group_repository = request.app.state.group_repository
-        personal_group = group_repository.get_by_user_id(current_user.user_id)
-
-        if not personal_group:
-            raise HTTPException(
-                status_code=500,
-                detail="User personal group not found. Please contact support.",
-            )
-
         password_id = uuid4()
         command = CreatePasswordCommand(
             id=password_id,
             user_id=current_user.user_id,
-            group_id=personal_group.id,
+            group_id=UUID(request_body.group_id),
             name=request_body.name,
             decrypted_password=request_body.password,
             folder=request_body.folder,

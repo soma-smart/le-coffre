@@ -450,3 +450,23 @@ def authenticated_sso_user_client(e2e_client, oidc_server, e2e_test_user):
 
     # The TestClient now has the cookies set
     return e2e_client
+
+
+@pytest.fixture
+def admin_personal_group_id(authenticated_admin_client):
+    """
+    Returns the personal group ID of the authenticated admin user.
+    """
+    response = authenticated_admin_client.get("/api/users/me")
+    assert response.status_code == 200
+    return response.json()["personal_group_id"]
+
+
+@pytest.fixture
+def sso_user_personal_group_id(authenticated_sso_user_client):
+    """
+    Returns the personal group ID of the authenticated SSO user.
+    """
+    response = authenticated_sso_user_client.get("/api/users/me")
+    assert response.status_code == 200
+    return response.json()["personal_group_id"]

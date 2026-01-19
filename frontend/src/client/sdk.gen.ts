@@ -119,6 +119,7 @@ export const getVaultStatusVaultStatusGet = <ThrowOnError extends boolean = fals
  * - **name**: Name/title for the password entry
  * - **password**: The actual password to store (will be encrypted)
  * - **folder**: Optional folder to organize the password
+ * - **group_id**: Optional group ID. If not provided, uses the user's personal group
  * - **Authentication**: Requires authentication via access_token cookie
  */
 export const createPasswordPasswordsPost = <ThrowOnError extends boolean = false>(options: Options<CreatePasswordPasswordsPostData, ThrowOnError>) => {
@@ -146,7 +147,7 @@ export const createPasswordPasswordsPost = <ThrowOnError extends boolean = false
  * - **folder**: Optional folder name to filter passwords
  * - **Authentication**: Requires authentication via access_token cookie
  *
- * Returns a list of passwords accessible by the user.
+ * Returns a list of passwords accessible by the user, including the owner group_id.
  */
 export const listPasswordsPasswordsListGet = <ThrowOnError extends boolean = false>(options?: Options<ListPasswordsPasswordsListGetData, ThrowOnError>) => {
     return (options?.client ?? client).get<ListPasswordsPasswordsListGetResponses, ListPasswordsPasswordsListGetErrors, ThrowOnError>({
@@ -691,6 +692,8 @@ export const removeMemberFromGroupGroupsGroupIdMembersUserIdDelete = <ThrowOnErr
  * - name: The group's name
  * - is_personal: Whether this is a personal group
  * - user_id: The owner user ID (for personal groups) or null (for shared groups)
+ * - owners: List of user IDs who are owners of the group
+ * - members: List of user IDs who are members (not owners) of the group
  */
 export const getGroupGroupsGroupIdGet = <ThrowOnError extends boolean = false>(options: Options<GetGroupGroupsGroupIdGetData, ThrowOnError>) => {
     return (options.client ?? client).get<GetGroupGroupsGroupIdGetResponses, GetGroupGroupsGroupIdGetErrors, ThrowOnError>({
@@ -719,6 +722,7 @@ export const getGroupGroupsGroupIdGet = <ThrowOnError extends boolean = false>(o
  * - name: The group's name
  * - is_personal: Whether this is a personal group
  * - user_id: The owner user ID (for personal groups) or null (for shared groups)
+ * - owners: List of user IDs who are owners of this group
  */
 export const listGroupsGroupsGet = <ThrowOnError extends boolean = false>(options?: Options<ListGroupsGroupsGetData, ThrowOnError>) => {
     return (options?.client ?? client).get<ListGroupsGroupsGetResponses, ListGroupsGroupsGetErrors, ThrowOnError>({

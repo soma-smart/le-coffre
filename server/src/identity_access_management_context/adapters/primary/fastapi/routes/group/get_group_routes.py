@@ -16,11 +16,18 @@ from shared_kernel.authentication import ValidatedUser, get_current_user
 router = APIRouter(prefix="/groups", tags=["Group Management"])
 
 
+class GroupMemberResponse(BaseModel):
+    user_id: UUID
+    is_owner: bool
+
+
 class GetGroupResponse(BaseModel):
     id: UUID
     name: str
     is_personal: bool
     user_id: UUID | None
+    owners: list[UUID]
+    members: list[UUID]
 
 
 @router.get(
@@ -45,15 +52,23 @@ def get_group(
     - name: The group's name
     - is_personal: Whether this is a personal group
     - user_id: The owner user ID (for personal groups) or null (for shared groups)
+    - owners: List of user IDs who are owners of the group
+    - members: List of user IDs who are members of the group
     """
     try:
-        group = usecase.execute(group_id)
+        response = usecase.execute(group_id)
+
+        # Separate owners and regular members
+        owners = [m.user_id for m in response.members if m.is_owner]
+        members = [m.user_id for m in response.members if not m.is_owner]
 
         return GetGroupResponse(
-            id=group.id,
-            name=group.name,
-            is_personal=group.is_personal,
-            user_id=group.user_id,
+            id=response.group.id,
+            name=response.group.name,
+            is_personal=response.group.is_personal,
+            user_id=response.group.user_id,
+            owners=owners,
+            members=members,
         )
 
     except GroupNotFoundException as e:

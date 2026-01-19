@@ -2,13 +2,16 @@ import pytest
 from uuid import UUID
 
 from identity_access_management_context.application.use_cases import GetGroupUseCase
+from identity_access_management_context.application.use_cases.get_group_use_case import (
+    GetGroupResponse,
+)
 from identity_access_management_context.domain.entities import Group
 from identity_access_management_context.domain.exceptions import GroupNotFoundException
 
 
 @pytest.fixture
-def use_case(group_repository):
-    return GetGroupUseCase(group_repository)
+def use_case(group_repository, group_member_repository):
+    return GetGroupUseCase(group_repository, group_member_repository)
 
 
 def test_given_group_when_executed_then_should_return_group(use_case):
@@ -18,7 +21,9 @@ def test_given_group_when_executed_then_should_return_group(use_case):
 
     result = use_case.execute(group_id)
 
-    assert result == group
+    assert isinstance(result, GetGroupResponse)
+    assert result.group == group
+    assert result.members == []
 
 
 def test_given_no_group_when_executed_then_should_raise_group_not_found_exception(

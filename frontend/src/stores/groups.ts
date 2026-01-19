@@ -25,35 +25,15 @@ export const useGroupsStore = defineStore('groups', () => {
     groups.value.filter(group => !group.is_personal)
   );
 
-  const personalGroups = computed(() => 
-    groups.value.filter(group => group.is_personal)
-  );
-
-  // Groups where the current user is the owner (non-personal groups created by the user)
+  // Groups where the current user is the owner
+  // Checks if user_id matches (personal groups) OR user is in owners list (shared groups)
   const ownedGroups = computed(() => 
-    allGroups.value.filter(group => 
-      !group.is_personal && group.user_id === currentUserId.value
-    )
+    allGroups.value.filter(group => group.owners && group.owners.includes(currentUserId.value!))
   );
 
-  // All groups including personal group for password creation
+  // All groups including personal and owned shared groups for password creation
   const groupsForPasswordCreation = computed(() => {
-    const groups: GroupItem[] = [];
-    
-    // Add personal group if available
-    if (currentUserPersonalGroupId.value) {
-      const personalGroup = allGroups.value.find(
-        g => g.id === currentUserPersonalGroupId.value
-      );
-      if (personalGroup) {
-        groups.push(personalGroup);
-      }
-    }
-    
-    // Add owned groups (non-personal groups where user is owner)
-    groups.push(...ownedGroups.value);
-    
-    return groups;
+    return ownedGroups.value;
   });
 
   // Actions
@@ -175,7 +155,6 @@ export const useGroupsStore = defineStore('groups', () => {
     // Computed
     groupsCount,
     sharedGroups,
-    personalGroups,
     ownedGroups,
     groupsForPasswordCreation,
     

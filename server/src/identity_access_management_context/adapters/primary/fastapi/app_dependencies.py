@@ -251,11 +251,17 @@ def get_remove_user_from_group_usecase(
 
 def get_get_group_usecase(
     group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
 ):
-    return GetGroupUseCase(group_repository)
+    return GetGroupUseCase(group_repository, group_member_repository)
 
 
 def get_list_groups_usecase(
     group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
 ):
-    return ListGroupsUseCase(group_repository)
+    return ListGroupsUseCase(group_repository, group_member_repository)

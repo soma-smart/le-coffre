@@ -1,23 +1,53 @@
-from identity_access_management_context.application.gateways import GroupRepository
-from identity_access_management_context.domain.entities import Group
+from identity_access_management_context.application.gateways import (
+    GroupRepository,
+    GroupMemberRepository,
+)
+from identity_access_management_context.application.responses import (
+    ListGroupResponse,
+    GroupResponse,
+)
 
 
 class ListGroupsUseCase:
-    def __init__(self, group_repository: GroupRepository):
+    def __init__(
+        self,
+        group_repository: GroupRepository,
+        group_member_repository: GroupMemberRepository,
+    ):
         self.group_repository = group_repository
+        self.group_member_repository = group_member_repository
 
-    def execute(self, include_personal: bool = True) -> list[Group]:
-        """List all groups, optionally filtering out personal groups.
+    def execute(self, include_personal: bool = True) -> ListGroupResponse:
+        """List all groups with their owners, optionally filtering out personal groups.
 
         Args:
             include_personal: If True, include personal groups in results. If False, only shared groups.
 
         Returns:
-            List of groups based on filter criteria.
+            List of groups with owners based on filter criteria.
         """
         all_groups = self.group_repository.get_all()
 
-        if include_personal:
-            return all_groups
+        if not include_personal:
+            all_groups = [group for group in all_groups if not group.is_personal]
 
-        return [group for group in all_groups if not group.is_personal]
+        result = ListGroupResponse([])
+        for group in all_groups:
+            members = self.group_member_repository.get_members(group.id)
+            owner_ids = [m.user_id for m in members if m.is_owner]
+
+            # For personal groups, the user_id is the owner if no members in table
+            if group.is_personal and group.user_id and not owner_ids:
+                owner_ids = [group.user_id]
+
+            result.groups.append(
+                GroupResponse(
+                    id=group.id,
+                    name=group.name,
+                    is_personal=group.is_personal,
+                    user_id=group.user_id,
+                    owners=owner_ids,
+                )
+            )
+
+        return result

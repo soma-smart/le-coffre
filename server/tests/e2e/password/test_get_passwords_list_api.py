@@ -1,4 +1,4 @@
-def test_can_list_passwords(authenticated_admin_client, setup):
+def test_can_list_passwords(authenticated_admin_client, setup, admin_personal_group_id):
     folder = "Test Folder"
 
     for i in range(3):
@@ -8,6 +8,7 @@ def test_can_list_passwords(authenticated_admin_client, setup):
                 "name": f"Test Password {i}",
                 "password": f"StrongP@ssw0rd{i}!",
                 "folder": folder,
+                "group_id": admin_personal_group_id,
             },
         )
         assert response.status_code == 201
