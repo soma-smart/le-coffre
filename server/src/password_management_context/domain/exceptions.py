@@ -1,5 +1,4 @@
 from uuid import UUID
-from typing import List
 
 
 class PasswordManagementDomainError(Exception):
@@ -20,6 +19,20 @@ class FolderNotFoundError(PasswordManagementDomainError):
 
     def __init__(self, folder_name: str):
         super().__init__(f"The requested folder '{folder_name}' was not found")
+
+
+class GroupNotFoundError(PasswordManagementDomainError):
+    """Raised when attempting to create a password for a non-existing group"""
+
+    def __init__(self, group_id: UUID):
+        super().__init__(f"The group with ID {group_id} was not found")
+
+
+class UserNotOwnerOfGroupError(PasswordManagementDomainError):
+    """Raised when a user attempts to create a password for a group they don't own"""
+
+    def __init__(self, user_id: UUID, group_id: UUID):
+        super().__init__(f"User {user_id} is not the owner of group {group_id}")
 
 
 class PasswordComplexityError(PasswordManagementDomainError):
@@ -76,12 +89,32 @@ class PasswordContainsForbiddenPatternError(PasswordComplexityError):
         super().__init__(f"Password contains forbidden pattern: {forbidden_pattern}")
 
 
-class PasswordMultipleComplexityError(PasswordComplexityError):
-    """Raised when password has multiple complexity violations"""
+class PasswordAccessDeniedError(PasswordManagementDomainError):
+    """Raised when user doesn't have permission to access a password"""
 
-    def __init__(self, violations: List[PasswordComplexityError]):
-        self.violations = violations
-        messages = [str(violation) for violation in violations]
+    def __init__(self, user_id: UUID, password_id: UUID):
+        self.user_id = user_id
+        self.password_id = password_id
         super().__init__(
-            f"Password has multiple complexity violations: {'; '.join(messages)}"
+            f"User {user_id} does not have permission to access password {password_id}"
+        )
+
+
+class NotPasswordOwnerError(PasswordManagementDomainError):
+    """Raised when a non-owner tries to perform owner-only operations"""
+
+    def __init__(self, user_id: UUID, password_id: UUID):
+        self.user_id = user_id
+        self.password_id = password_id
+        super().__init__(f"User {user_id} is not the owner of password {password_id}")
+
+
+class CannotUnshareWithOwnerError(PasswordManagementDomainError):
+    """Raised when trying to unshare a password to an owner"""
+
+    def __init__(self, owner_id: UUID, password_id: UUID):
+        self.owner_id = owner_id
+        self.password_id = password_id
+        super().__init__(
+            f"Owner {owner_id} cannot have access revoked from password {password_id}"
         )

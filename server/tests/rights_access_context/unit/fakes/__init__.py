@@ -1,2 +1,0 @@
-from .fake_rights_repository import FakeRightsRepository
-from .fake_user_management_gateway import FakeUserManagementGateway

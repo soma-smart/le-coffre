@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 class Granted(Enum):
     NOT_FOUND = "NotFound"
-    VIEW_ONLY = "ViewOnly"
     ACCESS = "Access"
 
 

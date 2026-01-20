@@ -10,6 +10,7 @@ from password_management_context.application.use_cases import GetPasswordUseCase
 from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     PasswordNotFoundError,
+    PasswordAccessDeniedError,
 )
 from shared_kernel.access_control.exceptions import AccessDeniedError
 from shared_kernel.authentication import ValidatedUser
@@ -51,7 +52,8 @@ def get_password(
             password=password_response.password,
             folder=password_response.folder,
         )
-    except PasswordNotFoundError as e:
+    except (PasswordNotFoundError, PasswordAccessDeniedError) as e:
+        # For security, treat both not found and access denied as 404
         raise HTTPException(status_code=404, detail=str(e))
     except AccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))

@@ -59,47 +59,12 @@ def oidc_server():
 
 
 @pytest.fixture
-def e2e_test_user(oidc_server):
+def configured_sso(e2e_client, oidc_server):
     """
-    Create a test user in the OIDC provider mock for e2e tests.
+    Configure SSO with the OIDC server for the test client.
+    This fixture should be used as a dependency for any test that needs SSO.
+    It configures SSO once per test function.
     """
-    user_data = {
-        "sub": "e2euser@example.com",
-        "email": "e2euser@example.com",
-        "name": "E2E Test User",
-        "given_name": "E2E",
-        "family_name": "User",
-    }
-
-    # Register the user with the OIDC provider
-    response = httpx.put(
-        f"{oidc_server['issuer_url']}/users/{quote(user_data['sub'])}",
-        json=user_data,
-    )
-    assert response.status_code == 204, (
-        f"Failed to create e2e test user: {response.text}"
-    )
-
-    return {
-        "sub": user_data["sub"],
-        "email": user_data["email"],
-        "name": user_data["name"],
-        "oidc_server": oidc_server,
-    }
-
-
-@pytest.fixture
-def sso_user_token(e2e_client, oidc_server, e2e_test_user):
-    """
-    Create and authenticate a SSO user, returning their JWT token and user info.
-    This fixture handles the complete SSO flow:
-    1. Configure SSO with OIDC provider
-    2. Get authorization URL
-    3. Simulate user authorization
-    4. Exchange code for token
-    5. Create user in database (needed for sharing/rights features)
-    """
-    # Step 1: Configure SSO with the mock OIDC provider
     configure_response = e2e_client.post(
         "/api/auth/sso/configure",
         json={
@@ -111,73 +76,83 @@ def sso_user_token(e2e_client, oidc_server, e2e_test_user):
     assert configure_response.status_code == 200, (
         f"SSO configuration failed: {configure_response.text}"
     )
-
-    # Step 2: Get SSO authorization URL
-    url_response = e2e_client.get("/api/auth/sso/url")
-    assert url_response.status_code == 200, (
-        f"Failed to get SSO URL: {url_response.text}"
-    )
-
-    sso_url_data = url_response.json()
-    if isinstance(sso_url_data, str):
-        sso_url = sso_url_data
-    elif isinstance(sso_url_data, dict) and "url" in sso_url_data:
-        sso_url = sso_url_data["url"]
-    else:
-        sso_url = str(sso_url_data)
-
-    # Step 3: Simulate user authorization to get valid code
-    auth_response = httpx.post(
-        sso_url,
-        data={"sub": e2e_test_user["sub"]},
-        follow_redirects=False,
-    )
-    assert auth_response.status_code in [
-        302,
-        303,
-    ], f"Expected redirect, got {auth_response.status_code}"
-
-    callback_url = auth_response.headers.get("location")
-    parsed = urlparse(callback_url)
-    query_params = parse_qs(parsed.query)
-    valid_code = query_params.get("code", [None])[0]
-    assert valid_code, f"Authorization code not found in callback URL: {callback_url}"
-
-    # Step 4: Exchange code for token
-    valid_callback_response = e2e_client.get(
-        f"/api/auth/sso/callback?code={valid_code}"
-    )
-    assert valid_callback_response.status_code == 200, (
-        f"Valid callback failed: {valid_callback_response.text}"
-    )
-
-    callback_data = valid_callback_response.json()
-    assert "message" in callback_data, "Response should contain message"
-    assert "user" in callback_data, "Response should contain user info"
-
-    # Extract token from cookie
-    token = valid_callback_response.cookies.get("access_token")
-    assert token is not None, "access_token cookie should be set"
-
-    return {
-        "token": token,
-        "user_id": callback_data["user"]["user_id"],
-        "email": callback_data["user"]["email"],
-        "display_name": callback_data["user"]["display_name"],
-    }
+    return oidc_server
 
 
 @pytest.fixture
-def second_sso_user(oidc_server):
+def e2e_test_user(oidc_server):
     """
-    Create a second test user in the OIDC provider mock for multi-user tests.
+    Create a test user in the OIDC provider mock for e2e tests.
+    """
+    return create_sso_user_in_provider(
+        oidc_server, "e2euser@example.com", "E2E Test User"
+    )
+
+
+@pytest.fixture
+def sso_user_token(e2e_client, configured_sso, e2e_test_user):
+    """
+    Create and authenticate a SSO user, returning their JWT token and user info.
+    This fixture handles the complete SSO flow:
+    1. Configure SSO with OIDC provider (via configured_sso fixture)
+    2. Get authorization URL
+    3. Simulate user authorization
+    4. Exchange code for token
+    5. Create user in database (needed for sharing/rights features)
+    """
+    return authenticate_sso_user(e2e_client, configured_sso, e2e_test_user)
+
+
+@pytest.fixture
+def sso_user_factory(client_factory, configured_sso):
+    """
+    Factory fixture to create and authenticate multiple SSO users easily.
+    Each user is authenticated in their own client, so this doesn't interfere
+    with other authenticated clients (like authenticated_admin_client).
+
+    Usage in tests:
+        def test_example(sso_user_factory):
+            user1 = sso_user_factory("alice@example.com", "Alice Smith")
+            user2 = sso_user_factory("bob@example.com", "Bob Johnson")
+
+            # user1 and user2 are dicts with: token, user_id, email, display_name
+            # They also include an 'client' key with their authenticated TestClient
+    """
+
+    def _create_sso_user(email: str, name: str):
+        """Create a user in OIDC provider and authenticate them with a dedicated client."""
+        # Create a fresh client for this user (doesn't interfere with other clients)
+        user_client = client_factory()
+        
+        sso_user = create_sso_user_in_provider(configured_sso, email, name)
+        user_data = authenticate_sso_user(user_client, configured_sso, sso_user)
+        
+        # Add the client to the returned data for convenience
+        user_data["client"] = user_client
+        
+        return user_data
+
+    return _create_sso_user
+
+
+def create_sso_user_in_provider(oidc_server, email, name):
+    """
+    Helper function to create a user in the OIDC provider mock.
+
+    Args:
+        oidc_server: The OIDC server fixture
+        email: Email address for the user (will also be used as 'sub')
+        name: Full name for the user
+
+    Returns:
+        Dictionary with user data including sub, email, and name
     """
     user_data = {
-        "sub": "seconduser@example.com",
-        "email": "seconduser@example.com",
-        "name": "Second Test User",
-        "given_name": "Second",
-        "family_name": "User",
+        "sub": email,
+        "email": email,
+        "name": name,
+        "given_name": name.split()[0] if " " in name else name,
+        "family_name": name.split()[-1] if " " in name else "",
     }
 
     # Register the user with the OIDC provider
@@ -186,7 +161,7 @@ def second_sso_user(oidc_server):
         json=user_data,
     )
     assert response.status_code == 204, (
-        f"Failed to create second test user: {response.text}"
+        f"Failed to create user {email} in OIDC provider: {response.text}"
     )
 
     return {
@@ -197,31 +172,23 @@ def second_sso_user(oidc_server):
     }
 
 
-@pytest.fixture
-def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
+def authenticate_sso_user(e2e_client, oidc_server, sso_user):
     """
-    Create and authenticate a second SSO user, returning their JWT token and user info.
+    Helper function to authenticate an SSO user and get their token.
+    Assumes SSO is already configured (use configured_sso fixture).
+
+    Args:
+        e2e_client: The test client
+        oidc_server: The OIDC server fixture
+        sso_user: User data dict with 'sub', 'email', 'name' keys
+
+    Returns:
+        Dictionary with token, user_id, email, and display_name
     """
-    # Get SSO authorization URL (SSO should already be configured by sso_user_token fixture)
+    # Get SSO authorization URL
     url_response = e2e_client.get("/api/auth/sso/url")
-
-    # If SSO is not configured yet, configure it
-    if url_response.status_code != 200:
-        configure_response = e2e_client.post(
-            "/api/auth/sso/configure",
-            json={
-                "client_id": oidc_server["client_id"],
-                "client_secret": oidc_server["client_secret"],
-                "discovery_url": oidc_server["discovery_url"],
-            },
-        )
-        assert configure_response.status_code == 200, (
-            f"SSO configuration failed: {configure_response.text}"
-        )
-        url_response = e2e_client.get("/api/auth/sso/url")
-
     assert url_response.status_code == 200, (
-        f"Failed to get SSO URL: {url_response.text}"
+        f"Failed to get SSO URL (is SSO configured?): {url_response.text}"
     )
 
     sso_url_data = url_response.json()
@@ -235,7 +202,7 @@ def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
     # Simulate user authorization to get valid code
     auth_response = httpx.post(
         sso_url,
-        data={"sub": second_sso_user["sub"]},
+        data={"sub": sso_user["sub"]},
         follow_redirects=False,
     )
     assert auth_response.status_code in [
@@ -271,6 +238,24 @@ def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
         "email": callback_data["user"]["email"],
         "display_name": callback_data["user"]["display_name"],
     }
+
+
+@pytest.fixture
+def second_sso_user(oidc_server):
+    """
+    Create a second test user in the OIDC provider mock for multi-user tests.
+    """
+    return create_sso_user_in_provider(
+        oidc_server, "seconduser@example.com", "Second Test User"
+    )
+
+
+@pytest.fixture
+def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
+    """
+    Create and authenticate a second SSO user, returning their JWT token and user info.
+    """
+    return authenticate_sso_user(e2e_client, oidc_server, second_sso_user)
 
 
 @pytest.fixture
@@ -450,3 +435,23 @@ def authenticated_sso_user_client(e2e_client, oidc_server, e2e_test_user):
 
     # The TestClient now has the cookies set
     return e2e_client
+
+
+@pytest.fixture
+def admin_personal_group_id(authenticated_admin_client):
+    """
+    Returns the personal group ID of the authenticated admin user.
+    """
+    response = authenticated_admin_client.get("/api/users/me")
+    assert response.status_code == 200
+    return response.json()["personal_group_id"]
+
+
+@pytest.fixture
+def sso_user_personal_group_id(authenticated_sso_user_client):
+    """
+    Returns the personal group ID of the authenticated SSO user.
+    """
+    response = authenticated_sso_user_client.get("/api/users/me")
+    assert response.status_code == 200
+    return response.json()["personal_group_id"]

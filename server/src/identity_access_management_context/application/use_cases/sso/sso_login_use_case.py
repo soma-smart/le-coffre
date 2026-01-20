@@ -13,9 +13,12 @@ from identity_access_management_context.application.gateways import (
     TokenGateway,
     UserRepository,
     PasswordHashingGateway,
+    GroupRepository,
+    GroupMemberRepository,
 )
 from identity_access_management_context.application.services import (
     UserManagementService,
+    UserCreationService,
 )
 from identity_access_management_context.domain.entities.sso_user import SsoUser
 from shared_kernel.time import TimeProvider
@@ -40,6 +43,8 @@ class SsoLoginUseCase:
         password_hashing_gateway: PasswordHashingGateway,
         token_gateway: TokenGateway,
         time_provider: TimeProvider,
+        group_repository: GroupRepository,
+        group_member_repository: GroupMemberRepository,
     ):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
@@ -47,6 +52,8 @@ class SsoLoginUseCase:
         self._password_hashing_gateway = password_hashing_gateway
         self._token_gateway = token_gateway
         self._time_provider = time_provider
+        self._group_repository = group_repository
+        self._group_member_repository = group_member_repository
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
         # Step 1: Validate SSO code and get user info from provider
@@ -81,11 +88,19 @@ class SsoLoginUseCase:
             user_management_service = UserManagementService(
                 self._user_repository, self._password_hashing_gateway
             )
-            user_management_service.create_user(
+            user = user_management_service.create_user(
                 user_id=user_id,
                 email=email,
                 username=email.split("@")[0],
                 name=display_name,
+            )
+
+            # Create personal group for the new user
+            UserCreationService.create_personal_group_and_set_ownership(
+                user_id=user.id,
+                username=user.username,
+                group_repository=self._group_repository,
+                group_member_repository=self._group_member_repository,
             )
 
             # Save SSO user mapping in Auth context

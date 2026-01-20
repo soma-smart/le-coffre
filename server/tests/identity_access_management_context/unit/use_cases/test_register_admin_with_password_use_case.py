@@ -17,11 +17,15 @@ def use_case(
     user_password_repository,
     password_hashing_gateway,
     user_repository,
+    group_repository,
+    group_member_repository,
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
         user_repository,
+        group_repository,
+        group_member_repository,
     )
 
 

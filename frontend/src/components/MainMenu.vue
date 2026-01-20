@@ -7,6 +7,10 @@
         <span class="ml-2 font-semibold">Passwords</span>
         <Badge class="ml-auto" :value="passwordsCount" />
       </div>
+      <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToGroups()">
+        <span class="pi pi-users text-primary group-hover:text-inherit" />
+        <span class="ml-2">Groups</span>
+      </div>
       <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToProfile()">
         <span class="pi pi-user text-primary group-hover:text-inherit" />
         <span class="ml-2">Profile</span>
@@ -44,6 +48,10 @@ const isAdmin = computed(() => userStore.isAdmin);
 
 const goToAllPasswords = () => {
   router.push({ name: 'Home' });
+};
+
+const goToGroups = () => {
+  router.push({ name: 'Groups' });
 };
 
 const goToProfile = () => {

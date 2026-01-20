@@ -14,6 +14,12 @@ from identity_access_management_context.application.use_cases import (
     ConfigureSsoProviderUseCase,
     SsoLoginUseCase,
     RefreshAccessTokenUseCase,
+    CreateGroupUseCase,
+    AddUserToGroupUseCase,
+    AddOwnerToGroupUseCase,
+    RemoveUserFromGroupUseCase,
+    GetGroupUseCase,
+    ListGroupsUseCase,
 )
 from identity_access_management_context.application.gateways import (
     UserRepository,
@@ -22,8 +28,18 @@ from identity_access_management_context.application.gateways import (
     TokenGateway,
     SsoGateway,
     SsoUserRepository,
+    GroupRepository,
+    GroupMemberRepository,
 )
 from shared_kernel.time import TimeProvider
+
+
+def get_group_repository(request: Request) -> GroupRepository:
+    return request.app.state.group_repository
+
+
+def get_group_member_repository(request: Request) -> GroupMemberRepository:
+    return request.app.state.group_member_repository
 
 
 def get_user_repository(request: Request) -> UserRepository:
@@ -75,11 +91,20 @@ def get_update_user_usecase(
 
 def get_create_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
     password_hashing_gateway: PasswordHashingGateway = Depends(
         get_password_hashing_gateway
     ),
 ):
-    return CreateUserUseCase(user_repository, password_hashing_gateway)
+    return CreateUserUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+        password_hashing_gateway,
+    )
 
 
 def get_list_user_usecase(
@@ -117,6 +142,10 @@ def get_register_admin_with_password_usecase(
     user_password_repository: UserPasswordRepository = Depends(
         get_user_password_repository
     ),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
     password_hashing_gateway: PasswordHashingGateway = Depends(
         get_password_hashing_gateway
     ),
@@ -126,6 +155,8 @@ def get_register_admin_with_password_usecase(
         user_password_repository,
         password_hashing_gateway,
         user_repository,
+        group_repository,
+        group_member_repository,
     )
 
 
@@ -158,6 +189,10 @@ def get_sso_login_usecase(
     ),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeProvider = Depends(get_time_provider),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
 ):
     return SsoLoginUseCase(
         sso_gateway,
@@ -166,6 +201,8 @@ def get_sso_login_usecase(
         password_hashing_gateway,
         token_gateway,
         time_provider,
+        group_repository,
+        group_member_repository,
     )
 
 
@@ -179,3 +216,78 @@ def get_refresh_access_token_usecase(
         user_repository,
         time_provider,
     )
+
+
+# Group Management Use Cases
+def get_create_group_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+):
+    return CreateGroupUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+    )
+
+
+def get_add_user_to_group_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+):
+    return AddUserToGroupUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+    )
+
+
+def get_add_owner_to_group_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+):
+    return AddOwnerToGroupUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+    )
+
+
+def get_remove_user_from_group_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+):
+    return RemoveUserFromGroupUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+    )
+
+
+def get_get_group_usecase(
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+):
+    return GetGroupUseCase(group_repository, group_member_repository)
+
+
+def get_list_groups_usecase(
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+):
+    return ListGroupsUseCase(group_repository, group_member_repository)

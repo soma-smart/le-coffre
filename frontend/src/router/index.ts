@@ -36,6 +36,11 @@ const router = createRouter({
       meta: { skipSetupCheck: true }
     },
     {
+      path: '/groups',
+      name: 'Groups',
+      component: () => import('../pages/GroupsPage.vue'),
+    },
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('../pages/ProfilePage.vue'),

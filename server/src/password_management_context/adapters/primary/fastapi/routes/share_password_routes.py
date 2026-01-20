@@ -6,13 +6,10 @@ import logging
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_share_access_usecase,
 )
-from rights_access_context.application.use_cases import ShareAccessUseCase
-from rights_access_context.application.commands import ShareResourceCommand
-from rights_access_context.domain.exceptions import (
-    PermissionDeniedError,
-    RightAccessDomainError,
-    UserNotFoundError,
-)
+from password_management_context.application.use_cases import ShareAccessUseCase
+from password_management_context.application.commands import ShareResourceCommand
+from password_management_context.domain.exceptions import PasswordAccessDeniedError
+from identity_access_management_context.domain.exceptions import UserNotFoundException
 from shared_kernel.authentication import ValidatedUser
 from shared_kernel.authentication.dependencies import get_current_user
 
@@ -20,7 +17,7 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
 class SharePasswordRequest(BaseModel):
-    user_id: UUID
+    group_id: UUID  # Changed from user_id to group_id
 
 
 class SharePasswordResponse(BaseModel):
@@ -31,7 +28,7 @@ class SharePasswordResponse(BaseModel):
     "/{password_id}/share",
     response_model=SharePasswordResponse,
     status_code=201,
-    summary="Share a password with another user",
+    summary="Share a password with a group",
 )
 def share_password(
     password_id: UUID,
@@ -40,10 +37,10 @@ def share_password(
     usecase: ShareAccessUseCase = Depends(get_share_access_usecase),
 ):
     """
-    Share a password with another user.
+    Share a password with a group.
 
     - **password_id**: UUID of the password to share
-    - **user_id**: UUID of the user to grant access to
+    - **group_id**: UUID of the group to grant access to
     - **Authentication**: Requires authentication via access_token cookie (owner only)
 
     Returns status code 201 on successful sharing.
@@ -51,20 +48,18 @@ def share_password(
     try:
         command = ShareResourceCommand(
             owner_id=current_user.user_id,
-            user_id=request.user_id,
-            resource_id=password_id,
+            group_id=request.group_id,
+            password_id=password_id,
         )
         usecase.execute(command)
 
         return SharePasswordResponse(
-            message=f"Password {password_id} successfully shared with user {request.user_id}"
+            message=f"Password {password_id} successfully shared with group {request.group_id}"
         )
-    except UserNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except PermissionDeniedError as e:
+    except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
-    except RightAccessDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    except UserNotFoundException:
+        raise HTTPException(status_code=404, detail="User does not exist")
     except Exception as e:
         logging.error(e)
         raise HTTPException(status_code=500, detail="Internal server error")

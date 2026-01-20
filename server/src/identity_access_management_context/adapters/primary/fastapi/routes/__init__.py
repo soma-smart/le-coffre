@@ -2,7 +2,6 @@ from fastapi import APIRouter
 from .user import (
     user_get_routes,
     user_delete_routes,
-    user_create_routes,
     user_update_routes,
     user_list_routes,
     user_me_routes,
@@ -19,6 +18,15 @@ from .sso import (
     sso_callback_route,
 )
 
+from .group import (
+    group_create_router,
+    group_add_member_router,
+    group_add_owner_router,
+    group_remove_member_router,
+    get_group_router,
+    list_groups_router,
+)
+
 from . import refresh_access_token_routes
 
 
@@ -28,7 +36,6 @@ def get_user_management_router():
     user_management_router.include_router(user_me_routes.router)
     user_management_router.include_router(user_get_routes.router)
     user_management_router.include_router(user_delete_routes.router)
-    user_management_router.include_router(user_create_routes.router)
     user_management_router.include_router(user_update_routes.router)
     user_management_router.include_router(user_list_routes.router)
 
@@ -46,3 +53,16 @@ def get_authentication_router():
     authentication_router.include_router(refresh_access_token_routes.router)
 
     return authentication_router
+
+
+def get_group_management_router():
+    group_management_router = APIRouter()
+
+    group_management_router.include_router(group_create_router)
+    group_management_router.include_router(group_add_member_router)
+    group_management_router.include_router(group_add_owner_router)
+    group_management_router.include_router(group_remove_member_router)
+    group_management_router.include_router(get_group_router)
+    group_management_router.include_router(list_groups_router)
+
+    return group_management_router

@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 import MainLayout from "../layouts/MainLayout.vue";
 import CreatePasswordModal from "@/components/modals/CreatePasswordModal.vue";
+import SharePasswordModal from "@/components/modals/SharePasswordModal.vue";
 import PasswordsList from "@/components/passwords/PasswordsList.vue";
 import type { GetPasswordListResponse } from '@/client/types.gen';
 import { usePasswordsStore } from '@/stores/passwords';
@@ -14,7 +15,9 @@ const { passwords, loading, error } = storeToRefs(passwordsStore);
 
 const selectedFolder = ref<string | null>(null);
 const showCreateModal = ref(false);
+const showShareModal = ref(false);
 const editingPassword = ref<GetPasswordListResponse | null>(null);
+const sharingPassword = ref<GetPasswordListResponse | null>(null);
 
 const folderFilter = computed(() => route.query.folder as string | undefined);
 
@@ -33,8 +36,23 @@ const handleEdit = (password: GetPasswordListResponse) => {
   showCreateModal.value = true;
 };
 
+const handleShare = (password: GetPasswordListResponse) => {
+  sharingPassword.value = password;
+  showShareModal.value = true;
+};
+
 const handleDeleted = async () => {
   // Reload the passwords list
+  await passwordsStore.refresh();
+};
+
+const handleShared = async () => {
+  // Optionally reload the passwords list
+  await passwordsStore.refresh();
+};
+
+const handleUnshared = async () => {
+  // Optionally reload the passwords list
   await passwordsStore.refresh();
 };
 
@@ -42,6 +60,13 @@ const handleDeleted = async () => {
 watch(showCreateModal, (isVisible) => {
   if (!isVisible) {
     editingPassword.value = null;
+  }
+});
+
+// Watch for share modal visibility changes to reset sharing state
+watch(showShareModal, (isVisible) => {
+  if (!isVisible) {
+    sharingPassword.value = null;
   }
 });
 
@@ -77,6 +102,7 @@ onMounted(async () => {
         :selectedFolder="selectedFolder"
         :folderFilter="folderFilter"
         @edit="handleEdit"
+        @share="handleShare"
         @deleted="handleDeleted"
       />
     </div>
@@ -87,6 +113,14 @@ onMounted(async () => {
       :editPassword="editingPassword"
       @created="handlePasswordCreated"
       @updated="handlePasswordUpdated"
+    />
+
+    <!-- Share Password Modal -->
+    <SharePasswordModal 
+      v-model:visible="showShareModal" 
+      :password="sharingPassword"
+      @shared="handleShared"
+      @unshared="handleUnshared"
     />
   </MainLayout>
 </template>

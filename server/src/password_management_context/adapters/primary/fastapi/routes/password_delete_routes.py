@@ -9,6 +9,7 @@ from password_management_context.application.use_cases import DeletePasswordUseC
 from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     PasswordNotFoundError,
+    NotPasswordOwnerError,
 )
 from shared_kernel.access_control.exceptions import AccessDeniedError
 from shared_kernel.authentication import ValidatedUser
@@ -38,7 +39,8 @@ def delete_password(
     try:
         usecase.execute(current_user.user_id, password_id)
         return
-    except PasswordNotFoundError as e:
+    except (PasswordNotFoundError, NotPasswordOwnerError) as e:
+        # For security, treat both not found and not owner as 404
         raise HTTPException(status_code=404, detail=str(e))
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))

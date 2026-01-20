@@ -3,8 +3,11 @@ from uuid import UUID
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.gateways import (
     UserRepository,
+    GroupRepository,
+    GroupMemberRepository,
     PasswordHashingGateway,
 )
+from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import User
 
 
@@ -12,9 +15,13 @@ class CreateUserUseCase:
     def __init__(
         self,
         user_repository: UserRepository,
+        group_repository: GroupRepository,
+        group_member_repository: GroupMemberRepository,
         password_hashing_gateway: PasswordHashingGateway,
     ):
         self.user_repository = user_repository
+        self.group_repository = group_repository
+        self.group_member_repository = group_member_repository
         self.password_hashing_gateway = password_hashing_gateway
 
     def execute(self, command: CreateUserCommand) -> UUID:
@@ -31,5 +38,12 @@ class CreateUserUseCase:
         )
 
         self.user_repository.save(user)
+
+        UserCreationService.create_personal_group_and_set_ownership(
+            user_id=user.id,
+            username=user.username,
+            group_repository=self.group_repository,
+            group_member_repository=self.group_member_repository,
+        )
 
         return user.id

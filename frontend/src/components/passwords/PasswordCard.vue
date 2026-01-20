@@ -32,6 +32,17 @@
       </div>
       <div class="flex gap-1">
         <Button 
+          icon="pi pi-share-alt" 
+          text 
+          rounded 
+          size="small"
+          severity="secondary"
+          aria-label="Share"
+          :disabled="!isOwner"
+          @click="handleShare"
+          v-tooltip.top="isOwner ? 'Share password' : `Only owners can share. Owners: ${ownerGroupNames.join(', ')}`"
+        />
+        <Button 
           icon="pi pi-pencil" 
           text 
           rounded 
@@ -56,11 +67,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
+import { storeToRefs } from 'pinia';
 import type { GetPasswordListResponse } from '@/client/types.gen';
-import { getPasswordPasswordsPasswordIdGet, deletePasswordPasswordsPasswordIdDelete } from '@/client';
+import { 
+  getPasswordPasswordsPasswordIdGet, 
+  deletePasswordPasswordsPasswordIdDelete
+} from '@/client';
+import { useGroupsStore } from '@/stores/groups';
 
 const props = defineProps<{
   password: GetPasswordListResponse;
@@ -68,15 +84,52 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'edit', password: GetPasswordListResponse): void;
+  (e: 'share', password: GetPasswordListResponse): void;
   (e: 'deleted'): void;
 }>();
 
 const toast = useToast();
 const confirm = useConfirm();
+const groupsStore = useGroupsStore();
+const { currentUserId, groups } = storeToRefs(groupsStore);
+
 const passwordValue = ref<string | null>(null);
 const isVisible = ref(false);
 const isLoading = ref(false);
 const isDeleting = ref(false);
+const isOwner = ref(false);
+const ownerGroupNames = ref<string[]>([]);
+
+// Check if current user is owner by checking if they own the group that owns this password
+const checkOwnership = () => {
+  // Find the group that owns this password
+  const ownerGroup = groups.value.find(g => g.id === props.password.group_id);
+  
+  if (ownerGroup) {
+    // Check if current user owns this group
+    // Personal groups: user_id matches current user
+    const isPersonalOwner = ownerGroup.user_id === currentUserId.value;
+    // Shared groups: current user is in the owners list
+    const isSharedOwner = ownerGroup.owners && ownerGroup.owners.includes(currentUserId.value!);
+    
+    isOwner.value = isPersonalOwner || isSharedOwner;
+    ownerGroupNames.value = [ownerGroup.name];
+  } else {
+    isOwner.value = false;
+    ownerGroupNames.value = [];
+  }
+};
+
+onMounted(async () => {
+  // Ensure groups are loaded
+  await groupsStore.fetchAllGroups();
+  checkOwnership();
+});
+
+// Watch for changes in groups and re-check ownership
+watch(() => groupsStore.groups, () => {
+  checkOwnership();
+}, { deep: true });
 
 const fetchPassword = async () => {
   if (passwordValue.value !== null) return; // Already fetched
@@ -132,6 +185,10 @@ const copyToClipboard = async () => {
 
 const handleEdit = () => {
   emit('edit', props.password);
+};
+
+const handleShare = () => {
+  emit('share', props.password);
 };
 
 const handleDelete = () => {

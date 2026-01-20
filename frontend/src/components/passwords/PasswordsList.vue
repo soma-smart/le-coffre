@@ -19,6 +19,7 @@
         :folder="folder"
         :initialOpen="selectedFolder === folder.name"
         @edit="handleEdit"
+        @share="handleShare"
         @deleted="handleDeleted"
       />
     </div>
@@ -40,11 +41,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'edit', password: GetPasswordListResponse): void;
+  (e: 'share', password: GetPasswordListResponse): void;
   (e: 'deleted'): void;
 }>();
 
 const handleEdit = (password: GetPasswordListResponse) => {
   emit('edit', password);
+};
+
+const handleShare = (password: GetPasswordListResponse) => {
+  emit('share', password);
 };
 
 const handleDeleted = () => {

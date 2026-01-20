@@ -1,9 +1,9 @@
-def test_complete_admin_authentication_flow(e2e_client, unauthenticated_client):
+def test_complete_admin_authentication_flow(e2e_client, unauthenticated_client, oidc_server, sso_user_factory):
     """
     End-to-end test that:
     1. Registers an admin
     2. Logs in with the admin credentials
-    3. Creates a random user
+    3. Creates a random SSO user
     4. Tries to delete the user without cookie (should fail)
     5. Tries to delete the user with invalid cookie (should fail)
     6. Deletes the user with valid admin cookie (should succeed)
@@ -45,18 +45,9 @@ def test_complete_admin_authentication_flow(e2e_client, unauthenticated_client):
     jwt_token = login_response.cookies.get("access_token")
     assert jwt_token is not None
 
-    # Step 4: Create a random user to delete later
-    user_data = {
-        "username": "testuser_1234",
-        "email": "test_1234@example.com",
-        "name": "Test User",
-        "password": "user_password123",
-    }
-
-    create_user_response = e2e_client.post("/api/users/", json=user_data)
-    assert create_user_response.status_code == 201
-    created_user = create_user_response.json()
-    user_id = created_user["id"]
+    # Step 4: Create a random SSO user to delete later
+    user = sso_user_factory("testuser_1234@example.com", "Test User")
+    user_id = user["user_id"]
 
     # Step 5: Check that the user exists
     assert e2e_client.get(f"/api/users/{user_id}").status_code == 200

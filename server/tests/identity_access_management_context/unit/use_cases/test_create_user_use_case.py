@@ -1,7 +1,10 @@
 import pytest
 from uuid import UUID
 
-from identity_access_management_context.application.gateways import UserRepository
+from identity_access_management_context.application.gateways import (
+    UserRepository,
+    GroupRepository,
+)
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.use_cases import CreateUserUseCase
 from identity_access_management_context.domain.exceptions import (
@@ -9,13 +12,20 @@ from identity_access_management_context.domain.exceptions import (
 )
 from tests.identity_access_management_context.unit.fakes import (
     FakePasswordHashingGateway,
+    FakeGroupMemberRepository,
 )
 
 
 @pytest.fixture
-def use_case(user_repository: UserRepository):
+def use_case(user_repository: UserRepository, group_repository: GroupRepository):
     password_hashing_gateway = FakePasswordHashingGateway()
-    return CreateUserUseCase(user_repository, password_hashing_gateway)
+    group_member_repository = FakeGroupMemberRepository()
+    return CreateUserUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+        password_hashing_gateway,
+    )
 
 
 def test_should_create_user(
@@ -59,3 +69,25 @@ def test_should_raise_when_user_already_exists(
     use_case.execute(command)
     with pytest.raises(UserAlreadyExistsError) as _:
         use_case.execute(command)
+
+
+def test_should_create_personal_group_when_creating_user(
+    use_case: CreateUserUseCase,
+    group_repository: GroupRepository,
+):
+    uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    username = "testuser"
+    email = "testuser@example.com"
+    name = "Test User"
+    password = "secure_password123"
+
+    command = CreateUserCommand(
+        id=uuid, username=username, email=email, name=name, password=password
+    )
+
+    user_id = use_case.execute(command)
+
+    personal_group = group_repository.get_by_user_id(user_id)
+    assert personal_group is not None
+    assert personal_group.user_id == user_id
+    assert personal_group.name == f"{username}'s Personal Group"

@@ -5,10 +5,12 @@ import { useToast } from 'primevue';
 import { useRouter, useRoute } from 'vue-router'
 import { ref } from 'vue';
 import z from 'zod';
+import { usePasswordsStore } from '@/stores/passwords';
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast();
+const passwordsStore = usePasswordsStore();
 
 const formValues = {
   email: '',
@@ -37,6 +39,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       return;
     }
     toast.add({ severity: 'success', summary: 'Login Successful', detail: 'You have logged in successfully.', life: 5000 });
+
+    // Invalidate passwords cache to force refetch after login
+    passwordsStore.invalidateCache();
 
     // Redirect to the page specified in query or to home page
     const redirectPath = route.query.redirect as string || '/';

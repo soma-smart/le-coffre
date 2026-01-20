@@ -1,10 +1,13 @@
-def test_owner_has_full_access_to_password(authenticated_admin_client, setup):
+def test_owner_has_full_access_to_password(
+    authenticated_admin_client, setup, admin_personal_group_id
+):
     # Create a password as the owner
     create_response = authenticated_admin_client.post(
         "/api/passwords",
         json={
             "name": "Owner's Password",
             "password": "OwnerP@ssw0rd!",
+            "group_id": admin_personal_group_id,
         },
     )
     create_data = create_response.json()

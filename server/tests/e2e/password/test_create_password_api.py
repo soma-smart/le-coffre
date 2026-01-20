@@ -1,12 +1,15 @@
 from utils import STRONG_PASSWORD
 
 
-def test_can_read_a_created_password(authenticated_admin_client, setup):
+def test_can_read_a_created_password(
+    authenticated_admin_client, setup, admin_personal_group_id
+):
     response = authenticated_admin_client.post(
         "/api/passwords",
         json={
             "name": "Test Password",
             "password": STRONG_PASSWORD,
+            "group_id": admin_personal_group_id,
         },
     )
 
@@ -22,7 +25,10 @@ def test_can_read_a_created_password(authenticated_admin_client, setup):
 
 
 def test_cannot_read_a_password_of_another_user(
-    authenticated_admin_client, unauthenticated_client, setup
+    authenticated_admin_client,
+    unauthenticated_client,
+    setup,
+    admin_personal_group_id,
 ):
     # Create password as admin
     response = authenticated_admin_client.post(
@@ -30,6 +36,7 @@ def test_cannot_read_a_password_of_another_user(
         json={
             "name": "Test Password",
             "password": STRONG_PASSWORD,
+            "group_id": admin_personal_group_id,
         },
     )
     assert response.status_code == 201
@@ -51,26 +58,29 @@ def test_cannot_read_a_password_of_another_user(
 
 
 def test_can_read_a_shared_password_of_another_user(
-    authenticated_admin_client, authenticated_sso_user_client, setup, sso_user_token
+    authenticated_admin_client,
+    authenticated_sso_user_client,
+    setup,
+    sso_user_token,
+    admin_personal_group_id,
+    sso_user_personal_group_id,
 ):
-    # Get SSO user info
-    other_user_id = sso_user_token["user_id"]
-
     # Create password as admin
     response = authenticated_admin_client.post(
         "/api/passwords",
         json={
             "name": "Test Password",
             "password": STRONG_PASSWORD,
+            "group_id": admin_personal_group_id,
         },
     )
 
     password_id = response.json()["id"]
 
-    # Share the password with the SSO user
+    # Share the password with the SSO user's personal group
     share_response = authenticated_admin_client.post(
         f"/api/passwords/{password_id}/share",
-        json={"user_id": other_user_id},
+        json={"group_id": sso_user_personal_group_id},
     )
     assert share_response.status_code == 201
 
@@ -93,7 +103,9 @@ def test_can_read_a_shared_password_of_another_user(
     assert other_user_retrieved.json()["password"] == STRONG_PASSWORD
 
 
-def test_can_create_any_password(authenticated_admin_client, setup):
+def test_can_create_any_password(
+    authenticated_admin_client, setup, admin_personal_group_id
+):
     """Test that users can create passwords without complexity requirements"""
     simple_password = "a"
     response = authenticated_admin_client.post(
@@ -101,6 +113,7 @@ def test_can_create_any_password(authenticated_admin_client, setup):
         json={
             "name": "Simple Password",
             "password": simple_password,
+            "group_id": admin_personal_group_id,
         },
     )
 

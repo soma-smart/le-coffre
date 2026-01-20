@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from uuid import UUID, uuid4
 import logging
@@ -19,6 +19,7 @@ class CreatePasswordRequest(BaseModel):
     name: str
     password: str
     folder: str | None = None
+    group_id: str
 
 
 class CreatePasswordResponse(BaseModel):
@@ -32,7 +33,8 @@ class CreatePasswordResponse(BaseModel):
     summary="Create a new password",
 )
 def create_password(
-    request: CreatePasswordRequest,
+    request_body: CreatePasswordRequest,
+    request: Request,
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: CreatePasswordUseCase = Depends(get_create_password_usecase),
 ):
@@ -42,6 +44,7 @@ def create_password(
     - **name**: Name/title for the password entry
     - **password**: The actual password to store (will be encrypted)
     - **folder**: Optional folder to organize the password
+    - **group_id**: Optional group ID. If not provided, uses the user's personal group
     - **Authentication**: Requires authentication via access_token cookie
     """
     try:
@@ -49,16 +52,15 @@ def create_password(
         command = CreatePasswordCommand(
             id=password_id,
             user_id=current_user.user_id,
-            name=request.name,
-            decrypted_password=request.password,
-            folder=request.folder,
+            group_id=UUID(request_body.group_id),
+            name=request_body.name,
+            decrypted_password=request_body.password,
+            folder=request_body.folder,
         )
 
         created_password_id = usecase.execute(command)
 
-        return CreatePasswordResponse(
-            id=created_password_id
-        )
+        return CreatePasswordResponse(id=created_password_id)
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except AccessDeniedError as e:

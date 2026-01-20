@@ -23,6 +23,8 @@ def use_case(
     password_hashing_gateway,
     token_gateway,
     time_provider,
+    group_repository,
+    group_member_repository,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
@@ -31,6 +33,8 @@ def use_case(
         password_hashing_gateway=password_hashing_gateway,
         token_gateway=token_gateway,
         time_provider=time_provider,
+        group_repository=group_repository,
+        group_member_repository=group_member_repository,
     )
 
 

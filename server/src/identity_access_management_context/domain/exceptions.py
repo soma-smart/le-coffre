@@ -65,6 +65,42 @@ class SsoUserAlreadyExistsException(IdentityAccessManagementDomainError):
     pass
 
 
+# Group-related exceptions
+class GroupNotFoundException(IdentityAccessManagementDomainError):
+    """Raised when attempting to access a group that doesn't exist"""
+
+    def __init__(self, group_id: UUID):
+        super().__init__(f"The group with ID '{group_id}' was not found")
+
+
+class UserNotOwnerOfGroupException(IdentityAccessManagementDomainError):
+    """Raised when a user attempts an owner-only action on a group they don't own"""
+
+    def __init__(self, user_id: UUID, group_id: UUID):
+        super().__init__(f"User '{user_id}' is not an owner of group '{group_id}'")
+
+
+class CannotModifyPersonalGroupException(IdentityAccessManagementDomainError):
+    """Raised when attempting to add/remove members from a personal group"""
+
+    def __init__(self, group_id: UUID):
+        super().__init__(f"Cannot modify members of personal group '{group_id}'")
+
+
+class UserNotMemberOfGroupException(IdentityAccessManagementDomainError):
+    """Raised when attempting to remove a user who is not a member"""
+
+    def __init__(self, user_id: UUID, group_id: UUID):
+        super().__init__(f"User '{user_id}' is not a member of group '{group_id}'")
+
+
+class CannotRemoveOwnerException(IdentityAccessManagementDomainError):
+    """Raised when attempting to remove an owner from a group"""
+
+    def __init__(self, user_id: UUID, group_id: UUID):
+        super().__init__(f"Cannot remove owner '{user_id}' from group '{group_id}'")
+
+
 # Admin-related exceptions
 class AdminNotFoundException(IdentityAccessManagementDomainError):
     pass

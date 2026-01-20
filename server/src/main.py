@@ -31,16 +31,9 @@ from vault_management_context.application.use_cases import (
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
-from password_management_context.adapters.secondary.gateways import (
+from password_management_context.adapters.secondary import (
     SqlPasswordRepository,
-)
-
-from rights_access_context.adapters.primary import AccessControllerAdapter
-from rights_access_context.adapters.secondary.sql import SqlRightsRepository
-from rights_access_context.application.use_cases import (
-    CheckAccessUseCase,
-    GetOwnerAccessUseCase,
-    SetOwnerAccessUseCase,
+    SqlPasswordPermissionsRepository,
 )
 
 from identity_access_management_context.adapters.secondary import (
@@ -51,9 +44,18 @@ from identity_access_management_context.adapters.secondary import (
     SqlUserPasswordRepository,
     SqlSsoUserRepository,
 )
+from identity_access_management_context.adapters.secondary.sql import (
+    SqlGroupRepository,
+    SqlGroupMemberRepository,
+    create_tables as create_iam_tables,
+)
+from identity_access_management_context.adapters.secondary.group_access_gateway_adapter import (
+    GroupAccessGatewayAdapter,
+)
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_user_management_router,
     get_authentication_router,
+    get_group_management_router,
 )
 
 from shared_kernel.pubsub import InMemoryDomainEventPublisher
@@ -63,6 +65,7 @@ from shared_kernel.pubsub import InMemoryDomainEventPublisher
 async def lifespan(app: FastAPI):
     engine = create_engine(get_database_url())
     create_tables(engine)
+    create_iam_tables(engine)
 
     with Session(engine) as session:
         # Vault management dependencies
@@ -78,6 +81,7 @@ async def lifespan(app: FastAPI):
 
         # Password management dependencies
         password_repository = SqlPasswordRepository(session)
+        password_permissions_repository = SqlPasswordPermissionsRepository(session)
         encrypt_use_case = EncryptUseCase(encryption_gateway, vault_session_gateway)
         decrypt_use_case = DecryptUseCase(encryption_gateway, vault_session_gateway)
         encryption_service = EncryptionApi(
@@ -85,28 +89,25 @@ async def lifespan(app: FastAPI):
         )  # Expose encryption service via API
 
         app.state.password_repository = password_repository
+        app.state.password_permissions_repository = password_permissions_repository
         app.state.encryption_service = encryption_service
-
-        # Rights access dependencies
-        rights_repository = SqlRightsRepository(session)
-        check_use_case = CheckAccessUseCase(rights_repository)
-        set_owner_use_case = SetOwnerAccessUseCase(rights_repository)
-        get_owner_use_case = GetOwnerAccessUseCase(rights_repository)
-        access_controller = AccessControllerAdapter(
-            check_use_case, set_owner_use_case, get_owner_use_case
-        )
-
-        app.state.rights_repository = rights_repository
-        app.state.access_controller = access_controller
 
         # IAM dependencies
         app.state.time_provider = UtcTimeProvider()
 
         user_repository = SqlUserRepository(session)
         user_password_repository = SqlUserPasswordRepository(session)
+        group_repository = SqlGroupRepository(session)
+        group_member_repository = SqlGroupMemberRepository(session)
+        group_access_gateway = GroupAccessGatewayAdapter(
+            group_repository, group_member_repository
+        )
         password_hashing_gateway = BcryptHashingGateway()
 
         app.state.user_repository = user_repository
+        app.state.group_repository = group_repository
+        app.state.group_member_repository = group_member_repository
+        app.state.group_access_gateway = group_access_gateway
 
         token_gateway = JwtTokenGateway(
             secret_key=get_jwt_secret_key(),
@@ -145,3 +146,4 @@ app.include_router(get_vault_management_router())
 app.include_router(get_password_management_router())
 app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
+app.include_router(get_group_management_router())

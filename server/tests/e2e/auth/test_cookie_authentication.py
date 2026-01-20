@@ -40,7 +40,9 @@ def test_login_sets_cookie_and_returns_user_info(e2e_client):
     assert len(cookies.get("refresh_token")) > 0
 
 
-def test_authenticated_request_with_cookie(authenticated_admin_client, setup):
+def test_authenticated_request_with_cookie(
+    authenticated_admin_client, setup, admin_personal_group_id
+):
     """
     Test that authenticated requests work with cookies.
     The authenticated_admin_client fixture already has cookies set.
@@ -50,6 +52,7 @@ def test_authenticated_request_with_cookie(authenticated_admin_client, setup):
         "name": "Cookie Test Entry",
         "password": "MyS3cur3P@ss!",
         "folder": "Cookie Tests",
+        "group_id": admin_personal_group_id,
     }
     create_response = authenticated_admin_client.post(
         "/api/passwords/", json=password_data

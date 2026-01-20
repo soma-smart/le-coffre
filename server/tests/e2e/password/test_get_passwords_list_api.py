@@ -1,4 +1,4 @@
-def test_can_list_passwords(authenticated_admin_client, setup):
+def test_can_list_passwords(authenticated_admin_client, setup, admin_personal_group_id):
     folder = "Test Folder"
 
     for i in range(3):
@@ -8,6 +8,7 @@ def test_can_list_passwords(authenticated_admin_client, setup):
                 "name": f"Test Password {i}",
                 "password": f"StrongP@ssw0rd{i}!",
                 "folder": folder,
+                "group_id": admin_personal_group_id,
             },
         )
         assert response.status_code == 201
@@ -19,7 +20,11 @@ def test_can_list_passwords(authenticated_admin_client, setup):
     passwords = list_response.json()
     assert len(passwords) >= 3
     for i in range(3):
-        assert any(p["name"] == f"Test Password {i}" for p in passwords)
+        password = next(
+            (p for p in passwords if p["name"] == f"Test Password {i}"), None
+        )
+        assert password is not None
+        assert password["group_id"] == admin_personal_group_id
 
 
 def test_list_passwords_folder_not_found(authenticated_admin_client, setup):

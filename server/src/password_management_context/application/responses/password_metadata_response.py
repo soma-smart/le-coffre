@@ -7,3 +7,4 @@ class PasswordMetadataResponse:
     id: UUID
     name: str
     folder: str
+    group_id: UUID  # The owning group ID

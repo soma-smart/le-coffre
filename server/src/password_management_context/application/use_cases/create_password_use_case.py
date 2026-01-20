@@ -1,10 +1,17 @@
 from uuid import UUID
 
 from password_management_context.application.commands import CreatePasswordCommand
-from password_management_context.application.gateways import PasswordRepository
+from password_management_context.application.gateways import (
+    PasswordRepository,
+    PasswordPermissionsRepository,
+    GroupAccessGateway,
+)
 from password_management_context.domain.entities import Password
+from password_management_context.domain.exceptions import (
+    GroupNotFoundError,
+    UserNotOwnerOfGroupError,
+)
 from shared_kernel.encryption import EncryptionService
-from shared_kernel.access_control import AccessController
 
 
 class CreatePasswordUseCase:
@@ -12,13 +19,23 @@ class CreatePasswordUseCase:
         self,
         password_repository: PasswordRepository,
         encryption_service: EncryptionService,
-        access_controller: AccessController,
+        password_permissions_repository: PasswordPermissionsRepository,
+        group_access_gateway: GroupAccessGateway,
     ):
         self.password_repository = password_repository
         self.encryption_service = encryption_service
-        self.access_controller = access_controller
+        self.password_permissions_repository = password_permissions_repository
+        self.group_access_gateway = group_access_gateway
 
     def execute(self, command: CreatePasswordCommand) -> UUID:
+        if not self.group_access_gateway.group_exists(command.group_id):
+            raise GroupNotFoundError(command.group_id)
+
+        if not self.group_access_gateway.is_user_owner_of_group(
+            command.user_id, command.group_id
+        ):
+            raise UserNotOwnerOfGroupError(command.user_id, command.group_id)
+
         encrypted_value = self.encryption_service.encrypt(command.decrypted_password)
 
         password = Password.create(
@@ -29,6 +46,6 @@ class CreatePasswordUseCase:
         )
 
         self.password_repository.save(password)
-        self.access_controller.set_owner(command.user_id, password.id)
+        self.password_permissions_repository.set_owner(command.group_id, password.id)
 
         return password.id

@@ -1,7 +1,9 @@
 from uuid import UUID
 
 
-def test_can_delete_password(authenticated_admin_client, setup):
+def test_can_delete_password(
+    authenticated_admin_client, setup, admin_personal_group_id
+):
     folder = "Delete Test Folder"
 
     # Create a password to delete
@@ -11,6 +13,7 @@ def test_can_delete_password(authenticated_admin_client, setup):
             "name": "Password To Delete",
             "password": "StrongP@ssw0rd!",
             "folder": folder,
+            "group_id": admin_personal_group_id,
         },
     )
     assert create_response.status_code == 201
@@ -34,7 +37,10 @@ def test_delete_nonexistent_password(authenticated_admin_client, setup):
 
 
 def test_delete_password_requires_authentication(
-    authenticated_admin_client, unauthenticated_client, setup
+    authenticated_admin_client,
+    unauthenticated_client,
+    setup,
+    admin_personal_group_id,
 ):
     folder = "Auth Test Folder"
 
@@ -45,6 +51,7 @@ def test_delete_password_requires_authentication(
             "name": "Password For Auth Test",
             "password": "StrongP@ssw0rd!",
             "folder": folder,
+            "group_id": admin_personal_group_id,
         },
     )
     assert create_response.status_code == 201

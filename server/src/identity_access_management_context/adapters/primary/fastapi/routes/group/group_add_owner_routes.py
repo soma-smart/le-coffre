@@ -1,0 +1,89 @@
+from fastapi import APIRouter, HTTPException, Depends
+from uuid import UUID
+import logging
+from pydantic import BaseModel
+
+from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
+    get_add_owner_to_group_usecase,
+)
+from identity_access_management_context.application.use_cases import (
+    AddOwnerToGroupUseCase,
+)
+from identity_access_management_context.application.commands import (
+    AddOwnerToGroupCommand,
+)
+from identity_access_management_context.domain.exceptions import (
+    UserNotFoundException,
+    GroupNotFoundException,
+    UserNotOwnerOfGroupException,
+    CannotModifyPersonalGroupException,
+    UserNotMemberOfGroupException,
+)
+from shared_kernel.authentication import ValidatedUser, get_current_user
+
+
+router = APIRouter(prefix="/groups", tags=["Group Management"])
+
+
+class AddOwnerToGroupRequest(BaseModel):
+    user_id: UUID
+
+
+class AddOwnerToGroupResponse(BaseModel):
+    group_id: UUID
+    user_id: UUID
+    message: str
+
+
+@router.post(
+    "/{group_id}/owners",
+    status_code=201,
+    response_model=AddOwnerToGroupResponse,
+    summary="Add an owner to a group",
+)
+def add_owner_to_group(
+    group_id: UUID,
+    request: AddOwnerToGroupRequest,
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: AddOwnerToGroupUseCase = Depends(get_add_owner_to_group_usecase),
+):
+    """
+    Promote an existing member to owner of a group.
+
+    - **group_id**: ID of the group (path parameter)
+    - **user_id**: ID of the user to promote to owner
+    - **Authorization**: Bearer token required (access_token cookie)
+    - **Permission**: Only group owners can add new owners
+
+    The user must already be a member of the group before being promoted to owner.
+    Cannot add owners to personal groups.
+    Operation is idempotent - promoting an existing owner has no effect.
+    """
+    try:
+        command = AddOwnerToGroupCommand(
+            requester_id=current_user.user_id,
+            group_id=group_id,
+            user_id=request.user_id,
+        )
+
+        usecase.execute(command)
+
+        return AddOwnerToGroupResponse(
+            group_id=group_id,
+            user_id=request.user_id,
+            message="Owner added successfully",
+        )
+
+    except UserNotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except GroupNotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except UserNotOwnerOfGroupException as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except CannotModifyPersonalGroupException as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except UserNotMemberOfGroupException as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logging.error(f"Error adding owner to group: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
