@@ -1,7 +1,7 @@
 <template>
   <div>
     <div v-if="loading" class="text-center py-8">
-      <p>Loading passwords...</p>
+      <ProgressSpinner />
     </div>
 
     <div v-else-if="error" class="surface-ground border border-red-500 text-red-700 px-4 py-3 rounded mb-4">

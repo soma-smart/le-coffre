@@ -36,7 +36,7 @@ onMounted(() => {
 
       <!-- Loading state -->
       <div v-if="loading" class="rounded-lg p-6 text-center">
-        <p>Chargement...</p>
+        <ProgressSpinner />
       </div>
 
       <!-- Error state -->
