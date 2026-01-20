@@ -14,6 +14,7 @@ const emit = defineEmits(['account-created']);
 const setupStore = useSetupStore();
 
 const toast = useToast();
+const loading = ref(false);
 
 const formValues = reactive({
     email: 'admin@company.com',
@@ -42,6 +43,7 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     }
 
     try {
+        loading.value = true;
         const response = await registerAdminAuthRegisterAdminPost({
             body: {
                 email: values.email,
@@ -51,29 +53,33 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
         });
         if (response.error) {
             toast.add({ severity: 'error', summary: 'Error', detail: response.error.detail, life: 5000 });
+            loading.value = false;
             return;
         }
         toast.add({ severity: 'success', summary: 'Success', detail: 'Admin account created successfully.', life: 5000 });
-        
+
         // Validate vault setup
         const validateResponse = await validateVaultSetupVaultValidateSetupPost({
             body: {
                 setup_id: props.setupId
             }
         });
-        
+
         if (validateResponse.error) {
             toast.add({ severity: 'error', summary: 'Vault Validation Error', detail: validateResponse.error.detail, life: 5000 });
+            loading.value = false;
             return;
         }
-        
+
         toast.add({ severity: 'success', summary: 'Success', detail: 'Vault setup validated successfully.', life: 5000 });
-        
+
         // Invalidate the setup cache so the router guard knows setup is complete
         setupStore.invalidateCache();
-        
+
         emit('account-created');
+        loading.value = false;
     } catch (error) {
+        loading.value = false;
         toast.add({ severity: 'error', summary: 'API Error', detail: error, life: 5000 });
     }
 };
@@ -124,8 +130,8 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
                             {{ $form.display_name.error?.message }}
                         </Message>
                     </div>
-                    <Button fluid block type="submit" label="Create admin account"
-                        class="flex flex-col justify-center mt-4" :disabled="!$form.valid" />
+                    <Button fluid block type="submit" label="Create admin account" class="flex justify-center mt-4"
+                        :disabled="!$form.valid || loading" :loading="loading" icon="pi pi-user-plus" />
                 </Form>
             </template>
         </Card>
