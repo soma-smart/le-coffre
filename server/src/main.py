@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
-import os
 
 from config import (
     get_database_url,
@@ -40,13 +39,13 @@ from identity_access_management_context.adapters.secondary import (
     SqlUserRepository,
     BcryptHashingGateway,
     JwtTokenGateway,
-    OAuth2SsoGateway,
     SqlUserPasswordRepository,
     SqlSsoUserRepository,
 )
 from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
     SqlGroupMemberRepository,
+    SqlSsoGateway,
     create_tables as create_iam_tables,
 )
 from identity_access_management_context.adapters.secondary.group_access_gateway_adapter import (
@@ -116,16 +115,8 @@ async def lifespan(app: FastAPI):
             refresh_token_expiration_days=get_jwt_refresh_token_expiration_days(),
         )
 
-        # SSO Gateway with OAuth2/OIDC support
-        # Base URL should be the public URL of your application
-        # Redirect URI points to the frontend callback page (not API endpoint)
-        base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")
-        sso_gateway = OAuth2SsoGateway(
-            base_url=base_url,
-            redirect_uri=f"{base_url}/sso/callback",
-            scope="openid email profile",
-            provider="oauth2",
-        )
+        # SSO Gateway - SQL-based with stored configuration
+        sso_gateway = SqlSsoGateway(session)
         sso_user_repository = SqlSsoUserRepository(session)
 
         app.state.user_password_repository = user_password_repository
