@@ -28,9 +28,16 @@ class UserAccessItem(BaseModel):
     is_owner: bool
 
 
+class GroupAccessItem(BaseModel):
+    user_id: UUID
+    permissions: list[PermissionEnum]
+    is_owner: bool
+
+
 class ListPasswordAccessResponse(BaseModel):
     resource_id: UUID
-    access_list: list[UserAccessItem]
+    user_access_list: list[UserAccessItem]
+    group_access_list: list[GroupAccessItem]
 
 
 @router.get(
@@ -59,14 +66,26 @@ def list_password_access(
             password_id=password_id,
         )
 
-        ret = ListPasswordAccessResponse(resource_id=password_id, access_list=[])
-        for user_access in result.accesses:
-            ret.access_list.append(
+        ret = ListPasswordAccessResponse(
+            resource_id=password_id, user_access_list=[], group_access_list=[]
+        )
+        for user_access in result.user_accesses:
+            ret.user_access_list.append(
                 UserAccessItem(
                     user_id=user_access.user_id,
                     is_owner=user_access.is_owner,
                     permissions=[
                         PermissionEnum(perm.value) for perm in user_access.permissions
+                    ],
+                )
+            )
+        for group_access in result.group_accesses:
+            ret.group_access_list.append(
+                GroupAccessItem(
+                    user_id=group_access.group_id,
+                    is_owner=group_access.is_owner,
+                    permissions=[
+                        PermissionEnum(perm.value) for perm in group_access.permissions
                     ],
                 )
             )

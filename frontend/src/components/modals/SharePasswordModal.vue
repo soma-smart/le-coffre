@@ -8,7 +8,7 @@ import {
   unsharePasswordPasswordsPasswordIdShareGroupIdDelete,
   getUserUsersUserIdGet
 } from '@/client/sdk.gen';
-import type { GetPasswordListResponse, UserAccessItem } from '@/client/types.gen';
+import type { GetPasswordListResponse, UserAccessItem, GroupAccessItem } from '@/client/types.gen';
 import { useGroupsStore } from '@/stores/groups';
 
 const visible = defineModel<boolean>('visible', { required: true });
@@ -27,6 +27,11 @@ interface UserAccessWithName extends UserAccessItem {
   loadingName?: boolean;
 }
 
+interface GroupAccessWithName extends GroupAccessItem {
+  groupName?: string;
+  loadingName?: boolean;
+}
+
 const toast = useToast();
 const groupsStore = useGroupsStore();
 const { sharedGroups } = storeToRefs(groupsStore);
@@ -34,7 +39,8 @@ const { sharedGroups } = storeToRefs(groupsStore);
 const selectedGroupId = ref<string>('');
 const loading = ref(false);
 const loadingAccess = ref(false);
-const accessList = ref<UserAccessWithName[]>([]);
+const userAccessList = ref<UserAccessWithName[]>([]);
+const groupAccessList = ref<GroupAccessWithName[]>([]);
 const isOwner = ref(false);
 
 // Get current user ID from store
@@ -43,68 +49,12 @@ const currentUserId = computed(() => groupsStore.currentUserId);
 // Get groups that can be shared with (excluding groups that already have access)
 const availableGroupsForSharing = computed(() => {
   // Filter out groups that already have access
-  const sharedGroupIds = new Set(sharedGroupsList.value.map(g => g.id));
-  return sharedGroups.value.filter(g => !sharedGroupIds.has(g.id));
+  const groupsWithAccessIds = new Set(groupAccessList.value.map(g => g.user_id)); // user_id contains group_id
+  return sharedGroups.value.filter(g => !groupsWithAccessIds.has(g.id));
 });
-
-// Track which groups have been shared with (for unshare functionality)
-const sharedGroupsList = ref<{ id: string; name: string; is_owner: boolean }[]>([]);
 
 // Track which groups give the current user access
 const currentUserAccessGroups = ref<{ id: string; name: string }[]>([]);
-
-// Load shared groups for this password
-const loadSharedGroups = async () => {
-  if (!props.password) return;
-  // Get all groups (shared + personal) to check access
-  const allGroups = [...sharedGroups.value];
-  if (groupsStore.userPersonalGroup) {
-    allGroups.push(groupsStore.userPersonalGroup);
-  }
-  // Map to store groups with access
-  const groupsWithAccess = new Map<string, { name: string; is_owner: boolean }>();
-
-  // Track which groups give the current user access
-  const userAccessGroupsSet = new Set<string>();
-
-  for (const accessItem of accessList.value) {
-    // Find which groups this user belongs to (either as owner or member)
-    for (const group of allGroups) {
-      // Check if user is owner of this group
-      if (group.owners?.includes(accessItem.user_id)) {
-        // This user is in this group
-        if (!groupsWithAccess.has(group.id)) {
-          // Check if this is the password's owner group
-          const isOwnerGroup = group.id === props.password!.group_id;
-
-          groupsWithAccess.set(group.id, {
-            name: group.name,
-            is_owner: isOwnerGroup
-          });
-        }
-
-        // If this is the current user, track which groups they have access through
-        if (accessItem.user_id === currentUserId.value) {
-          userAccessGroupsSet.add(group.id);
-        }
-      }
-    }
-  }
-
-  sharedGroupsList.value = Array.from(groupsWithAccess.entries()).map(([id, info]) => ({
-    id,
-    name: info.name,
-    is_owner: info.is_owner
-  }));
-
-  // Build the list of groups that give the current user access
-  currentUserAccessGroups.value = Array.from(userAccessGroupsSet)
-    .map(groupId => {
-      const group = allGroups.find(g => g.id === groupId);
-      return group ? { id: groupId, name: group.name } : null;
-    })
-    .filter((g): g is { id: string; name: string } => g !== null);
-};
 
 // Fetch user display name by user ID
 const fetchUserDisplayName = async (userId: string): Promise<string> => {
@@ -119,6 +69,18 @@ const fetchUserDisplayName = async (userId: string): Promise<string> => {
   }
 };
 
+// Fetch group name by group ID
+const fetchGroupName = async (groupId: string): Promise<string> => {
+  // First check in loaded groups
+  const allGroups = [...sharedGroups.value];
+  if (groupsStore.userPersonalGroup) {
+    allGroups.push(groupsStore.userPersonalGroup);
+  }
+
+  const group = allGroups.find(g => g.id === groupId);
+  return group?.name || groupId;
+};
+
 // Load password access list to determine if user is owner
 const loadAccessList = async () => {
   if (!props.password) return;
@@ -130,26 +92,55 @@ const loadAccessList = async () => {
     });
 
     if (response.data) {
-      accessList.value = response.data.access_list.map(item => ({
+      // Process user access list
+      userAccessList.value = response.data.user_access_list.map(item => ({
+        ...item,
+        loadingName: true
+      }));
+
+      // Process group access list (note: user_id field contains group_id)
+      groupAccessList.value = response.data.group_access_list.map(item => ({
         ...item,
         loadingName: true
       }));
 
       // Check if current user is the owner
-      const currentUserAccess = accessList.value.find(
+      const currentUserAccess = userAccessList.value.find(
         item => item.user_id === currentUserId.value
       );
       isOwner.value = currentUserAccess?.is_owner ?? false;
 
       // Fetch display names for all users
-      for (const item of accessList.value) {
+      for (const item of userAccessList.value) {
         const displayName = await fetchUserDisplayName(item.user_id);
         item.displayName = displayName;
         item.loadingName = false;
       }
 
-      // Load shared groups for unshare functionality
-      await loadSharedGroups();
+      // Fetch group names for all groups
+      for (const item of groupAccessList.value) {
+        const groupName = await fetchGroupName(item.user_id); // user_id contains group_id
+        item.groupName = groupName;
+        item.loadingName = false;
+      }
+
+      // Determine which groups give the current user access
+      const userAccessGroupIds = new Set<string>();
+      for (const groupItem of groupAccessList.value) {
+        const groupId = groupItem.user_id; // user_id contains group_id
+        const group = [...sharedGroups.value, groupsStore.userPersonalGroup].find(g => g?.id === groupId);
+
+        if (group && group.owners?.includes(currentUserId.value || '')) {
+          userAccessGroupIds.add(groupId);
+        }
+      }
+
+      currentUserAccessGroups.value = Array.from(userAccessGroupIds)
+        .map(groupId => {
+          const item = groupAccessList.value.find(g => g.user_id === groupId);
+          return item ? { id: groupId, name: item.groupName || groupId } : null;
+        })
+        .filter((g): g is { id: string; name: string } => g !== null);
     }
   } catch (error) {
     console.log(error);
@@ -340,12 +331,12 @@ onMounted(async () => {
       <div class="flex flex-col gap-3">
         <h3 class="font-semibold text-lg">Who has access</h3>
 
-        <div v-if="accessList.length === 0" class="text-center py-4 text-muted-color">
+        <div v-if="userAccessList.length === 0" class="text-center py-4 text-muted-color">
           <p>No users have access yet</p>
         </div>
 
         <div v-else class="space-y-2">
-          <Card v-for="accessItem in accessList" :key="accessItem.user_id"
+          <Card v-for="accessItem in userAccessList" :key="accessItem.user_id"
             class="hover:bg-surface-50 transition-colors">
             <template #content>
               <div class="flex justify-between items-center">
@@ -375,17 +366,20 @@ onMounted(async () => {
       </div>
 
       <!-- Shared groups management -->
-      <div v-if="sharedGroupsList.length > 0" class="flex flex-col gap-3 pt-4 border-t">
+      <div v-if="groupAccessList.length > 0" class="flex flex-col gap-3 pt-4 border-t">
         <h3 class="font-semibold text-lg">{{ isOwner ? 'Shared with Groups' : 'Groups with Access' }}</h3>
 
         <div class="space-y-2">
-          <Card v-for="group in sharedGroupsList" :key="group.id" class="hover:bg-surface-50 transition-colors">
+          <Card v-for="group in groupAccessList" :key="group.user_id" class="hover:bg-surface-50 transition-colors">
             <template #content>
               <div class="flex justify-between items-center">
                 <div class="flex items-center gap-3">
                   <i class="pi pi-users text-xl text-primary"></i>
                   <div>
-                    <p class="font-semibold">{{ group.name }}</p>
+                    <p class="font-semibold">
+                      <Skeleton v-if="group.loadingName" width="10rem" height="1rem" />
+                      <span v-else>{{ group.groupName }}</span>
+                    </p>
                     <div class="flex gap-2 items-center text-sm text-muted-color">
                       <span v-if="group.is_owner" class="flex items-center gap-1">
                         <i class="pi pi-crown text-yellow-500"></i>
@@ -402,7 +396,7 @@ onMounted(async () => {
                 <!-- Unshare button (only for owners and non-owner groups) -->
                 <div v-if="isOwner && !group.is_owner">
                   <Button icon="pi pi-times" text rounded severity="danger" size="small" aria-label="Revoke access"
-                    :loading="loading" @click="unshareFromGroup(group.id)" v-tooltip="'Remove group access'" />
+                    :loading="loading" @click="unshareFromGroup(group.user_id)" v-tooltip="'Remove group access'" />
                 </div>
               </div>
             </template>

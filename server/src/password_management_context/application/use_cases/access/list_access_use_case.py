@@ -7,7 +7,8 @@ from password_management_context.application.gateways import (
 )
 from password_management_context.application.responses import (
     ListAccessResponse,
-    AccessResponse,
+    GroupAccessResponse,
+    UserAccessResponse,
 )
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
@@ -41,10 +42,18 @@ class ListAccessUseCase:
         )
 
         # Expand groups to users for the access list
-        ret = ListAccessResponse([])
+        ret = ListAccessResponse([], [])
         user_access_map = {}  # user_id -> (is_owner, permissions)
 
         for group_id, (is_group_owner, group_permissions) in permissions.items():
+            ret.group_accesses.append(
+                GroupAccessResponse(
+                    group_id=group_id,
+                    permissions=group_permissions,
+                    is_owner=is_group_owner,
+                )
+            )
+
             # Get all users who own this group
             owner_users = self.group_access_gateway.get_group_owner_users(group_id)
 
@@ -61,13 +70,13 @@ class ListAccessUseCase:
                     merged_perms = existing_perms | group_permissions
                     user_access_map[user_id] = (merged_is_owner, merged_perms)
 
-        # Convert map to list of AccessResponse
+        # Convert map to list of UserAccessResponse
         for user_id, (is_owner, perms) in user_access_map.items():
-            ret.accesses.append(
-                AccessResponse(
+            ret.user_accesses.append(
+                UserAccessResponse(
                     user_id=user_id,
                     is_owner=is_owner,
-                    permissions=perms,
+                    permissions=set() if is_owner else perms,
                 )
             )
 

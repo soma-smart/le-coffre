@@ -58,10 +58,11 @@ def test_list_password_access_workflow(client_factory, oidc_server, sso_user_tok
 
     assert access_data["resource_id"] == password_id
     # After expansion, we see the admin user
-    assert len(access_data["access_list"]) == 1
+    assert len(access_data["user_access_list"]) == 1
+    assert len(access_data["group_access_list"]) == 1
 
     # The owner should be the admin user
-    user_access = access_data["access_list"][0]
+    user_access = access_data["user_access_list"][0]
     assert user_access["user_id"] == admin_user_id
     assert user_access["is_owner"] is True
     # Owner has no explicit permissions (ownership is enough)
@@ -91,11 +92,12 @@ def test_list_password_access_workflow(client_factory, oidc_server, sso_user_tok
 
     assert access_data_shared["resource_id"] == password_id
     # Now we have 2: owner user and shared user
-    assert len(access_data_shared["access_list"]) == 2
+    assert len(access_data_shared["user_access_list"]) == 2
+    assert len(access_data_shared["group_access_list"]) == 2
 
     # Verify owner user is in the list
     owner_user_in_list = next(
-        (u for u in access_data_shared["access_list"] if u["is_owner"] is True),
+        (u for u in access_data_shared["user_access_list"] if u["is_owner"] is True),
         None,
     )
     assert owner_user_in_list is not None
@@ -103,7 +105,11 @@ def test_list_password_access_workflow(client_factory, oidc_server, sso_user_tok
 
     # Verify shared user is in the list
     shared_user_in_list = next(
-        (u for u in access_data_shared["access_list"] if u["user_id"] == sso_user_id),
+        (
+            u
+            for u in access_data_shared["user_access_list"]
+            if u["user_id"] == sso_user_id
+        ),
         None,
     )
     assert shared_user_in_list is not None
@@ -124,9 +130,10 @@ def test_list_password_access_workflow(client_factory, oidc_server, sso_user_tok
 
     assert access_data_final["resource_id"] == password_id
     # Back to 1: only owner user
-    assert len(access_data_final["access_list"]) == 1
+    assert len(access_data_final["user_access_list"]) == 1
+    assert len(access_data_final["group_access_list"]) == 1
 
     # Verify the owner user is still there
-    owner_user = access_data_final["access_list"][0]
+    owner_user = access_data_final["user_access_list"][0]
     assert owner_user["user_id"] == admin_user_id
     assert owner_user["is_owner"] is True

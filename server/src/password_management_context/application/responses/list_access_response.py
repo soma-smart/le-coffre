@@ -5,12 +5,20 @@ from password_management_context.domain.value_objects import PasswordPermission
 
 
 @dataclass
-class AccessResponse:
+class UserAccessResponse:
     user_id: UUID
     permissions: set[PasswordPermission]
     is_owner: bool
 
 
 @dataclass
+class GroupAccessResponse:
+    group_id: UUID
+    permissions: set[PasswordPermission]
+    is_owner: bool
+
+
+@dataclass
 class ListAccessResponse:
-    accesses: list[AccessResponse]
+    user_accesses: list[UserAccessResponse]
+    group_accesses: list[GroupAccessResponse]
