@@ -81,7 +81,7 @@ const copyToClipboard = async () => {
   await fetchPassword();
 
   try {
-    await navigator.clipboard.writeText(passwordValue.value);
+    await navigator.clipboard.writeText(passwordValue.value || '');
     toast.add({
       severity: 'success',
       summary: 'Copied',
