@@ -58,24 +58,24 @@ router.beforeEach(async (to) => {
   const setupStore = useSetupStore();
   const userStore = useUserStore();
 
+  // Determine the vault setup status
+  // It will use the cached value or call the API once
+  const isSetup = await setupStore.isSetup();
+
+  // If trying to access /setup but vault is already setup, redirect to home
+  if (isSetup && to.name === 'Setup') {
+    return { name: 'Home' };
+  }
+
   // If the route is marked to skip the check, allow navigation
   if (to.meta.skipSetupCheck) {
     return true;
   }
 
-  // Determine the vault setup status
-  // It will use the cached value or call the API once
-  const isSetup = await setupStore.isSetup();
-
   // Check for redirection
   if (!isSetup) {
     // If NOT_SETUP and trying to access any page other than /setup, redirect
     return '/setup';
-  }
-
-  // If isSetup and page is /setup, redirect to home
-  if (isSetup && to.name === 'Setup') {
-    return { name: 'Home' };
   }
 
   // If we are not logged in, redirect to login
