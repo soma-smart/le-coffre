@@ -8,24 +8,22 @@
             <h3 class="text-xl font-semibold">
               {{ folder.name }}
             </h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-surface-500">
               {{ folder.count }} {{ folder.count === 1 ? 'password' : 'passwords' }}
             </p>
           </div>
         </div>
-        <i 
-          :class="[
-            'pi',
-            isOpen ? 'pi-chevron-up' : 'pi-chevron-down',
-            'text-gray-400'
-          ]"
-        ></i>
+        <i :class="[
+          'pi',
+          isOpen ? 'pi-chevron-up' : 'pi-chevron-down',
+          'text-gray-400'
+        ]"></i>
       </div>
-      
+
       <!-- Expanded folder content -->
       <div 
         v-if="isOpen"
-        class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3"
+        class="mt-4 pt-4 border-t border-surface space-y-"
       >
         <PasswordCard
           v-for="password in folder.passwords"

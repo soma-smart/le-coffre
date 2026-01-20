@@ -3,8 +3,10 @@
 </script>
 
 <template>
-  <main class="container my-24 px-6 mx-auto">
-    <slot />
-  </main>
-  <ThemeSwitcher />
+  <div class="relative min-h-screen">
+    <ThemeSwitcher />
+    <main class="container px-6 py-24 mx-auto">
+      <slot />
+    </main>
+  </div>
 </template>

@@ -1,6 +1,7 @@
 <template>
-  <div class="card flex justify-end p-2 mb-4">
-    <button type="button" class="inline-flex w-8 h-8 p-0 items-center justify-center border rounded"
+  <div class="fixed bottom-2 right-2 z-10">
+    <button type="button"
+      class="inline-flex w-8 h-8 p-0 items-center justify-center border rounded cursor-pointer transition-all hover:bg-emphasis active:scale-95"
       @click="drawerVisible = true" aria-label="Open Theme Customizer">
       <i class="pi pi-palette" />
     </button>
@@ -10,7 +11,8 @@
       <div class="flex flex-col gap-6">
         <div class="flex items-center">
           <span class="font-medium flex-1">Dark Theme</span>
-          <button type="button" class="inline-flex w-8 h-8 p-0 items-center justify-center border rounded"
+          <button type="button"
+            class="inline-flex w-8 h-8 p-0 items-center justify-center border rounded cursor-pointer transition-all hover:bg-emphasis active:scale-95"
             @click="onThemeToggler" aria-label="Toggle Dark Theme">
             <i :class="`pi ${iconClass}`" />
           </button>
@@ -154,10 +156,13 @@ const loadSettings = () => {
     }
     $primevue.config.ripple = settings.ripple;
 
-    // Apply dark mode if it was enabled
+    // Apply or remove dark mode based on saved setting
     if (settings.dark) {
       document.documentElement.classList.add('p-dark');
       iconClass.value = 'pi-sun';
+    } else {
+      document.documentElement.classList.remove('p-dark');
+      iconClass.value = 'pi-moon';
     }
 
     // Re-apply the entire theme based on the loaded settings

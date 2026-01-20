@@ -1,17 +1,17 @@
 <template>
   <div>
     <div v-if="loading" class="text-center py-8">
-      <p>Loading passwords...</p>
+      <ProgressSpinner />
     </div>
-    
-    <div v-else-if="error" class="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-4">
+
+    <div v-else-if="error" class="surface-ground border border-red-500 text-red-700 px-4 py-3 rounded mb-4">
       {{ error }}
     </div>
-    
-    <div v-else-if="passwords.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+
+    <div v-else-if="passwords.length === 0" class="text-center py-8 text-surface-500">
       <p>No passwords found. Create your first password!</p>
     </div>
-    
+
     <div v-else class="space-y-2">
       <FolderCard
         v-for="folder in folders"
@@ -60,7 +60,7 @@ const handleDeleted = () => {
 // Group passwords by folder
 const folders = computed(() => {
   const folderMap = new Map<string, GetPasswordListResponse[]>();
-  
+
   props.passwords.forEach(password => {
     const folderName = password.folder;
     if (!folderMap.has(folderName)) {
@@ -68,7 +68,7 @@ const folders = computed(() => {
     }
     folderMap.get(folderName)!.push(password);
   });
-  
+
   // Filter by folder query param if present
   if (props.folderFilter) {
     const filtered = folderMap.get(props.folderFilter);
@@ -76,7 +76,7 @@ const folders = computed(() => {
       return [{ name: props.folderFilter, count: filtered.length, passwords: filtered }];
     }
   }
-  
+
   return Array.from(folderMap.entries()).map(([name, items]) => ({
     name,
     count: items.length,

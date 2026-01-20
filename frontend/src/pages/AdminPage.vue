@@ -131,12 +131,12 @@ const handleLockVault = () => {
             Manage the vault state and security settings.
           </p>
 
-          <div class="p-4 border rounded-lg border-red-500 bg-red-50 dark:bg-red-500 mb-4">
+          <Message severity="error" :closable="false" class="mb-4">
             <div class="flex items-start gap-3">
-              <i class="pi pi-exclamation-triangle text-red-600 dark:text-white text-xl"></i>
+              <i class="pi pi-exclamation-triangle text-xl"></i>
               <div class="flex-1">
-                <h3 class="font-semibold text-red-800 dark:text-white mb-2">Warning: Locking the Vault</h3>
-                <p class="text-red-700 dark:text-white text-sm">
+                <h3 class="font-semibold mb-2">Warning: Locking the Vault</h3>
+                <p class="text-sm">
                   Locking le coffre will clear the decrypted encryption key from memory. All users will lose access to
                   their
                   passwords until the vault is unlocked again with the proper keys. This action should only be performed
@@ -144,7 +144,7 @@ const handleLockVault = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </Message>
 
           <Button label="Lock Vault" icon="pi pi-lock" severity="danger" @click="handleLockVault"
             :loading="lockingVault" :disabled="lockingVault" />

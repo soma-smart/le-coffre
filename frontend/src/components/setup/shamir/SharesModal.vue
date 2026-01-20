@@ -41,7 +41,7 @@ const handleConfirm = () => {
 <template>
     <Dialog modal :closable="false" :closeOnEscape="false" header="Shares of the master key"
         :style="{ width: '36rem' }">
-        <span class="text-surface-500 dark:text-surface-400 block mb-8">Please store the following shares
+        <span class="text-surface-500 block mb-8">Please store the following shares
             securely (index and secret):</span>
 
         <div v-for="(share, idx) in shares" :key="idx" class="flex items-center gap-2 mb-2">

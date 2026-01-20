@@ -2,27 +2,35 @@
   <div class="flex flex-col w-full h-full">
     <!-- Menu -->
     <div class="flex-1">
-      <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToAllPasswords">
-        <span class="pi pi-key text-primary group-hover:text-inherit" />
-        <span class="ml-2 font-semibold">Passwords</span>
+      <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isPasswordsActive ? 'bg-primary/10' : ''" @click="goToAllPasswords">
+        <span class="pi pi-key transition-colors"
+          :class="isPasswordsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }">Passwords</span>
         <Badge class="ml-auto" :value="passwordsCount" />
       </div>
-      <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToGroups()">
-        <span class="pi pi-users text-primary group-hover:text-inherit" />
-        <span class="ml-2">Groups</span>
+      <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isGroupsActive ? 'bg-primary/10' : ''" @click="goToGroups()">
+        <span class="pi pi-users transition-colors"
+          :class="isGroupsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }">Groups</span>
       </div>
-      <div class="flex items-center px-4 py-2 cursor-pointer group" @click="goToProfile()">
-        <span class="pi pi-user text-primary group-hover:text-inherit" />
-        <span class="ml-2">Profile</span>
+      <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isProfileActive ? 'bg-primary/10' : ''" @click="goToProfile()">
+        <span class="pi pi-user transition-colors"
+          :class="isProfileActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }">Profile</span>
         <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">⌘+W</span>
       </div>
-      <div v-if="isAdmin" class="flex items-center px-4 py-2 cursor-pointer group" @click="goToAdmin()">
-        <span class="pi pi-shield text-primary group-hover:text-inherit" />
-        <span class="ml-2">Admin</span>
+      <div v-if="isAdmin" class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isAdminActive ? 'bg-primary/10' : ''" @click="goToAdmin()">
+        <span class="pi pi-shield transition-colors"
+          :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }">Admin</span>
       </div>
     </div>
     <!-- Logout Button at bottom -->
-    <div class="p-4 border-t">
+    <div class="p-4 border-t border-surface">
       <Button label="Logout" icon="pi pi-sign-out" @click="handleLogout" severity="secondary" outlined class="w-full" />
     </div>
   </div>
@@ -45,6 +53,12 @@ const { passwordsCount } = storeToRefs(passwordsStore);
 
 const userStore = useUserStore();
 const isAdmin = computed(() => userStore.isAdmin);
+
+// Active state detection
+const isPasswordsActive = computed(() => route.path === '/' || route.path === '/home');
+const isGroupsActive = computed(() => route.path === '/groups');
+const isProfileActive = computed(() => route.path === '/profile');
+const isAdminActive = computed(() => route.path === '/admin');
 
 const goToAllPasswords = () => {
   router.push({ name: 'Home' });

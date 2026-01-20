@@ -91,19 +91,19 @@ const handleSubmit = async () => {
   <Dialog v-model:visible="visible" modal header="Unlock Vault" :closable="false" :closeOnEscape="false"
     :style="{ width: '40rem' }">
     <div class="flex flex-col gap-4">
-      <div class="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+      <Message severity="warn" :closable="false">
         <div class="flex gap-2">
-          <i class="pi pi-lock text-yellow-600 dark:text-yellow-500 mt-0.5"></i>
+          <i class="pi pi-lock mt-0.5"></i>
           <div>
-            <p class="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
+            <p class="text-sm font-semibold mb-1">
               Vault is Locked
             </p>
-            <p class="text-sm text-yellow-800 dark:text-yellow-300">
+            <p class="text-sm">
               Please enter your Shamir shares to unlock the vault and access your passwords.
             </p>
           </div>
         </div>
-      </div>
+      </Message>
 
       <div class="flex flex-col gap-3">
         <div v-for="(share, index) in shares" :key="index" class="flex gap-2 items-start">

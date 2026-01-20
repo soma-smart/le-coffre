@@ -36,13 +36,12 @@ onMounted(() => {
 
       <!-- Loading state -->
       <div v-if="loading" class="rounded-lg p-6 text-center">
-        <p>Chargement...</p>
+        <ProgressSpinner />
       </div>
 
       <!-- Error state -->
-      <div v-else-if="error"
-        class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <p class="text-red-600 dark:text-red-400">{{ error }}</p>
+      <div v-else-if="error" class="surface-ground border border-red-500 rounded-lg p-6">
+        <p class="text-red-600">{{ error }}</p>
       </div>
 
       <!-- User info -->
@@ -81,7 +80,7 @@ onMounted(() => {
             </label>
             <div class="flex flex-wrap gap-2">
               <span v-for="role in user.roles" :key="role"
-                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300">
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
                 {{ role }}
               </span>
             </div>

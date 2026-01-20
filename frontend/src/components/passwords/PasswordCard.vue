@@ -1,33 +1,17 @@
 <template>
-  <div
-    class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-  >
+  <div class="surface-ground rounded-lg p-4 hover:surface-hover transition-colors">
     <div class="flex justify-between items-start">
       <div class="flex-1">
         <h4 class="font-semibold mb-2">{{ password.name }}</h4>
         <div class="flex items-center gap-2">
-          <code class="text-sm bg-white dark:bg-gray-900 px-3 py-1 rounded border border-gray-200 dark:border-gray-600 font-mono">
+          <code class="text-sm surface-card px-3 py-1 rounded border surface-border font-mono">
             {{ isVisible && passwordValue ? passwordValue : '••••••••' }}
           </code>
-          <Button 
-            :icon="isVisible ? 'pi pi-eye-slash' : 'pi pi-eye'" 
-            text 
-            rounded 
-            size="small"
-            severity="secondary"
-            :aria-label="isVisible ? 'Hide password' : 'Show password'"
-            :loading="isLoading"
-            @click="toggleVisibility"
-          />
-          <Button 
-            icon="pi pi-copy" 
-            text 
-            rounded 
-            size="small"
-            severity="secondary"
-            aria-label="Copy password"
-            @click="copyToClipboard"
-          />
+          <Button :icon="isVisible ? 'pi pi-eye-slash' : 'pi pi-eye'" text rounded size="small" severity="secondary"
+            :aria-label="isVisible ? 'Hide password' : 'Show password'" :loading="isLoading"
+            @click="toggleVisibility" />
+          <Button icon="pi pi-copy" text rounded size="small" severity="secondary" aria-label="Copy password"
+            @click="copyToClipboard" />
         </div>
       </div>
       <div class="flex gap-1">
@@ -133,13 +117,13 @@ watch(() => groupsStore.groups, () => {
 
 const fetchPassword = async () => {
   if (passwordValue.value !== null) return; // Already fetched
-  
+
   isLoading.value = true;
   try {
     const response = await getPasswordPasswordsPasswordIdGet({
       path: { password_id: props.password.id }
     });
-    
+
     if (response.data) {
       passwordValue.value = response.data.password;
     }
@@ -165,20 +149,20 @@ const copyToClipboard = async () => {
   await fetchPassword();
 
   try {
-    await navigator.clipboard.writeText(passwordValue.value);
+    await navigator.clipboard.writeText(passwordValue.value || '');
     toast.add({
-    severity: 'success',
-    summary: 'Copied',
-    detail: 'Password copied to clipboard',
-    life: 3000
+      severity: 'success',
+      summary: 'Copied',
+      detail: 'Password copied to clipboard',
+      life: 3000
     });
   } catch (error) {
     console.error('Error copying to clipboard:', error);
     toast.add({
-    severity: 'error',
-    summary: 'Error',
-    detail: 'Failed to copy password',
-    life: 3000
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to copy password',
+      life: 3000
     });
   }
 };

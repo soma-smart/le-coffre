@@ -24,19 +24,31 @@ const resolver = ref(zodResolver(
   })
 ));
 
+const loading = ref(false);
+
 const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof formValues }) => {
   if (valid) {
-    const response = await adminLoginAuthLoginPost({
-      body: {
-        email: values.email,
-        password: values.password
-      }
-    });
+    loading.value = true;
+    try {
+      const response = await adminLoginAuthLoginPost({
+        body: {
+          email: values.email,
+          password: values.password
+        }
+      });
 
-    if (response.error) {
-      console.error('Login error:', response.error);
-      toast.add({ severity: 'error', summary: 'Login Failed', detail: response.error.detail, life: 5000 });
-      return;
+      if (response.error) {
+        console.error('Login error:', response.error);
+        toast.add({ severity: 'error', summary: 'Login Failed', detail: response.error.detail, life: 5000 });
+        return;
+      }
+      toast.add({ severity: 'success', summary: 'Login Successful', detail: 'You have logged in successfully.', life: 5000 });
+
+      // Redirect to the page specified in query or to home page
+      const redirectPath = route.query.redirect as string || '/';
+      router.push(redirectPath);
+    } finally {
+      loading.value = false;
     }
     toast.add({ severity: 'success', summary: 'Login Successful', detail: 'You have logged in successfully.', life: 5000 });
 
@@ -95,7 +107,8 @@ const handleSsoLogin = async () => {
       <Form v-slot="$form" :formValues :resolver @submit="onFormSubmit">
         <div class="flex flex-col gap-1 mb-4">
           <label for="email">Email</label>
-          <InputText autocomplete="email" id="email" name="email" type="email" :placeholder="formValues.email" fluid />
+          <InputText autocomplete="email" id="email" name="email" type="email" :placeholder="formValues.email" fluid
+            :disabled="loading" />
           <Message v-if="$form.email?.invalid" severity="error" size="small" variant="simple">
             {{ $form.email.error?.message }}
           </Message>
@@ -103,13 +116,13 @@ const handleSsoLogin = async () => {
         <div class="flex flex-col gap-1 mb-4">
           <label for="password">Password</label>
           <Password inputId="password" name="password" toggleMask :placeholder="formValues.password" fluid
-            :feedback="false" />
+            :feedback="false" :disabled="loading" />
           <Message v-if="$form.password?.invalid" severity="error" size="small" variant="simple">
             {{ $form.password.error?.message }}
           </Message>
         </div>
-        <Button fluid block type="submit" label="Login" class="flex flex-col justify-center mt-4"
-          :disabled="!$form.valid" />
+        <Button fluid block type="submit" label="Login" class="mt-4" :disabled="!$form.valid || loading"
+          :loading="loading" />
       </Form>
 
       <div class="flex items-center gap-2 my-4">

@@ -5,7 +5,7 @@ const currentYear = computed(() => new Date().getFullYear());
 </script>
 
 <template>
-  <footer class="border-t p-4 flex items-center justify-between">
+  <footer class="border-t border-surface p-4 flex items-center justify-between">
     <span>Le Coffre - {{ currentYear }}</span>
     <ThemeSwitcher />
   </footer>
