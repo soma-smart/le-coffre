@@ -2,6 +2,8 @@ import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
+from alembic.config import Config
+from alembic import command
 
 from config import (
     get_database_url,
@@ -21,7 +23,6 @@ from vault_management_context.adapters.secondary.gateways import (
     AesEncryptionGateway,
     SqlVaultRepository,
     InMemoryVaultSessionGateway,
-    create_tables,
 )
 from vault_management_context.application.use_cases import (
     EncryptUseCase,
@@ -48,7 +49,6 @@ from identity_access_management_context.adapters.secondary import (
 from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
     SqlGroupMemberRepository,
-    create_tables as create_iam_tables,
 )
 from identity_access_management_context.adapters.secondary.group_access_gateway_adapter import (
     GroupAccessGatewayAdapter,
@@ -62,11 +62,19 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
 from shared_kernel.pubsub import InMemoryDomainEventPublisher
 
 
+def run_migrations():
+    """Run database migrations using Alembic."""
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", get_database_url())
+    command.upgrade(alembic_cfg, "head")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Run migrations instead of create_tables
+    run_migrations()
+    
     engine = create_engine(get_database_url())
-    create_tables(engine)
-    create_iam_tables(engine)
 
     with Session(engine) as session:
         # Vault management dependencies

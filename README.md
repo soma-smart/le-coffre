@@ -51,8 +51,8 @@ Le Coffre uses the following security measures to ensure the safety of your pass
 
 ## TODO
 
+- [x] Setup an ORM for database - Using SQLModel with Alembic migrations
 - [ ] Generate encryption key when master key is created
-- [ ] Setup an ORM for database (kysely) and extends better-auth model
 - [ ] Add a password generator
 - [ ] Permission system
 - [ ] Organize passwords in folders
@@ -137,6 +137,29 @@ See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions
 ### Manual Setup
 
 Within each `frontend/` or `server/` folder you will find a README.md with more details.
+
+## Database Migrations
+
+The backend uses Alembic for database schema management. Migrations are automatically applied on application startup.
+
+**Manual migration commands:**
+```bash
+cd server
+
+# Check current database version
+alembic current
+
+# Apply all pending migrations
+alembic upgrade head
+
+# Create a new migration after model changes
+alembic revision --autogenerate -m "Description of changes"
+
+# Rollback the last migration
+alembic downgrade -1
+```
+
+See [server/alembic/README.md](server/alembic/README.md) for detailed migration documentation.
 
 ## Production
 
