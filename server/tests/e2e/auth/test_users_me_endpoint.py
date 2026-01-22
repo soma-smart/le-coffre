@@ -4,7 +4,7 @@ This test verifies the complete workflow of getting authenticated user informati
 """
 
 
-def test_get_user_me_returns_current_user_info(authenticated_admin_client):
+def test_get_user_me_returns_current_user_info(authenticated_admin_client, setup):
     """
     Test that authenticated user can get their own information via /users/me.
 
