@@ -29,8 +29,9 @@ def main():
         print("  revision --autogenerate -m 'msg' - Create new migration")
         return 1
 
-    # Configure Alembic
-    alembic_cfg = Config("alembic.ini")
+    # Configure Alembic with absolute path to alembic.ini
+    alembic_ini_path = Path(__file__).parent / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini_path))
     alembic_cfg.set_main_option("sqlalchemy.url", get_database_url())
 
     # Map commands

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
@@ -64,7 +65,10 @@ from shared_kernel.pubsub import InMemoryDomainEventPublisher
 
 def run_migrations():
     """Run database migrations using Alembic."""
-    alembic_cfg = Config("alembic.ini")
+    # Get the path to alembic.ini relative to this file
+    # main.py is in server/src/, alembic.ini is in server/
+    alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
+    alembic_cfg = Config(str(alembic_ini_path))
     alembic_cfg.set_main_option("sqlalchemy.url", get_database_url())
     command.upgrade(alembic_cfg, "head")
 
