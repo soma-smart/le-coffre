@@ -22,35 +22,43 @@ alembic/
 
 ## Common Commands
 
-### Check current migration version
+### Using the helper script (recommended)
 ```bash
 cd server
+
+# Check current migration version
+python migrate.py current
+
+# Apply all pending migrations
+python migrate.py upgrade head
+
+# Rollback one migration
+python migrate.py downgrade -1
+
+# View migration history
+python migrate.py history
+
+# Create a new migration
+python migrate.py revision --autogenerate -m "Description of changes"
+```
+
+### Using Alembic directly
+```bash
+cd server
+
+# Check current migration version
 alembic current
-```
 
-### Apply all pending migrations
-```bash
-cd server
+# Apply all pending migrations
 alembic upgrade head
-```
 
-### Rollback one migration
-```bash
-cd server
+# Rollback one migration
 alembic downgrade -1
-```
 
-### View migration history
-```bash
-cd server
+# View migration history
 alembic history --verbose
-```
 
-### Create a new migration
-When you modify SQLModel models, create a new migration to capture those changes:
-
-```bash
-cd server
+# Create a new migration
 alembic revision --autogenerate -m "Description of changes"
 ```
 
@@ -72,14 +80,16 @@ When you add or modify a SQLModel table:
 2. Create a migration:
    ```bash
    cd server
-   alembic revision --autogenerate -m "Add new_column to UserTable"
+   python migrate.py revision --autogenerate -m "Add new_column to UserTable"
+   # or use alembic directly:
+   # alembic revision --autogenerate -m "Add new_column to UserTable"
    ```
 3. Review the generated file in `alembic/versions/`
 4. Test the migration:
    ```bash
-   alembic upgrade head  # Apply
-   alembic downgrade -1  # Rollback
-   alembic upgrade head  # Re-apply
+   python migrate.py upgrade head  # Apply
+   python migrate.py downgrade -1  # Rollback
+   python migrate.py upgrade head  # Re-apply
    ```
 5. Commit the migration file to version control
 
