@@ -1,5 +1,6 @@
-from typing import List, Dict, Any, Protocol
+from typing import List, Protocol
+from audit_logging_context.domain.log import Log
 
 
 class AuditLoggerGateway(Protocol):
-    def get_logs(self) -> List[Dict[str, Any]]: ...
+    def get_logs(self) -> List[Log]: ...

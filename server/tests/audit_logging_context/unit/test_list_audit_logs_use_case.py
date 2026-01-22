@@ -51,9 +51,11 @@ def test_list_audit_logs_use_case_returns_logged_events():
 
     # Then
     assert len(logs) == 2
-    assert logs[0]["event_type"] == "UserCreatedEvent"
-    assert logs[0]["payload"]["user_id"] == "123"
-    assert logs[0]["payload"]["username"] == "alice"
-    assert logs[1]["event_type"] == "PasswordCreatedEvent"
-    assert logs[1]["payload"]["password_id"] == "456"
-    assert logs[1]["payload"]["owner_id"] == "123"
+    assert logs[0].event_type == "UserCreatedEvent"
+    assert isinstance(logs[0].event, UserCreatedEvent)
+    assert logs[0].event.user_id == "123"
+    assert logs[0].event.username == "alice"
+    assert logs[1].event_type == "PasswordCreatedEvent"
+    assert isinstance(logs[1].event, PasswordCreatedEvent)
+    assert logs[1].event.password_id == "456"
+    assert logs[1].event.owner_id == "123"
