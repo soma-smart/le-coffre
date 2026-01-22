@@ -1,4 +1,6 @@
-def test_add_owner_to_group_workflow(authenticated_admin_client, sso_user_factory):
+def test_add_owner_to_group_workflow(
+    authenticated_admin_client, sso_user_factory, setup
+):
     """
     End-to-end test that:
     1. Creates a group with admin as owner

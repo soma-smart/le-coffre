@@ -15,13 +15,18 @@ from identity_access_management_context.application.gateways import (
     PasswordHashingGateway,
     GroupRepository,
     GroupMemberRepository,
+    SsoConfigurationRepository,
 )
 from identity_access_management_context.application.services import (
     UserManagementService,
     UserCreationService,
 )
+from identity_access_management_context.application.services import (
+    SsoConfigurationDecryptingService,
+)
 from identity_access_management_context.domain.entities.sso_user import SsoUser
 from shared_kernel.time import TimeProvider
+from shared_kernel.encryption import EncryptionService
 
 
 class SsoLoginUseCase:
@@ -45,6 +50,8 @@ class SsoLoginUseCase:
         time_provider: TimeProvider,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
+        sso_configuration_repository: SsoConfigurationRepository,
+        encryption_service: EncryptionService,
     ):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
@@ -54,10 +61,19 @@ class SsoLoginUseCase:
         self._time_provider = time_provider
         self._group_repository = group_repository
         self._group_member_repository = group_member_repository
+        self._sso_configuration_repository = sso_configuration_repository
+        self._encryption_service = encryption_service
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
+        # Step 0: Retrieve SSO and decrypt secret key
+        sso_config = SsoConfigurationDecryptingService(
+            self._sso_configuration_repository, self._encryption_service
+        ).decrypt()
+
         # Step 1: Validate SSO code and get user info from provider
-        sso_user_from_provider = await self._sso_gateway.validate_callback(command.code)
+        sso_user_from_provider = await self._sso_gateway.validate_callback(
+            sso_config, command.code
+        )
 
         # Step 2: Check if user already exists in our system
         existing_sso_user = self._sso_user_repository.get_by_sso_user_id(

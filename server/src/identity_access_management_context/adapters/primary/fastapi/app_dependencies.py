@@ -28,10 +28,12 @@ from identity_access_management_context.application.gateways import (
     TokenGateway,
     SsoGateway,
     SsoUserRepository,
+    SsoConfigurationRepository,
     GroupRepository,
     GroupMemberRepository,
 )
 from shared_kernel.time import TimeProvider
+from shared_kernel.encryption import EncryptionService
 
 
 def get_group_repository(request: Request) -> GroupRepository:
@@ -66,8 +68,16 @@ def get_sso_user_repository(request: Request) -> SsoUserRepository:
     return request.app.state.sso_user_repository
 
 
+def get_sso_configuration_repository(request: Request) -> SsoConfigurationRepository:
+    return request.app.state.sso_configuration_repository
+
+
 def get_time_provider(request: Request) -> TimeProvider:
     return request.app.state.time_provider
+
+
+def get_encryption_service(request: Request) -> EncryptionService:
+    return request.app.state.encryption_service
 
 
 # User Management Use Cases
@@ -166,8 +176,14 @@ get_register_admin_usecase = get_register_admin_with_password_usecase
 
 def get_sso_authorize_url_usecase(
     sso_gateway: SsoGateway = Depends(get_sso_gateway),
+    sso_configuration_repository: SsoConfigurationRepository = Depends(
+        get_sso_configuration_repository
+    ),
+    encryption_service: EncryptionService = Depends(get_encryption_service),
 ):
-    return GetSsoAuthorizeUrlUseCase(sso_gateway)
+    return GetSsoAuthorizeUrlUseCase(
+        sso_gateway, sso_configuration_repository, encryption_service
+    )
 
 
 # Alias for backward compatibility
@@ -176,8 +192,14 @@ get_sso_url_usecase = get_sso_authorize_url_usecase
 
 def get_configure_sso_provider_usecase(
     sso_gateway: SsoGateway = Depends(get_sso_gateway),
+    sso_configuration_repository: SsoConfigurationRepository = Depends(
+        get_sso_configuration_repository
+    ),
+    encryption_service: EncryptionService = Depends(get_encryption_service),
 ):
-    return ConfigureSsoProviderUseCase(sso_gateway)
+    return ConfigureSsoProviderUseCase(
+        sso_gateway, sso_configuration_repository, encryption_service
+    )
 
 
 def get_sso_login_usecase(
@@ -193,6 +215,10 @@ def get_sso_login_usecase(
     group_member_repository: GroupMemberRepository = Depends(
         get_group_member_repository
     ),
+    sso_configuration_repository: SsoConfigurationRepository = Depends(
+        get_sso_configuration_repository
+    ),
+    encryption_service: EncryptionService = Depends(get_encryption_service),
 ):
     return SsoLoginUseCase(
         sso_gateway,
@@ -203,6 +229,8 @@ def get_sso_login_usecase(
         time_provider,
         group_repository,
         group_member_repository,
+        sso_configuration_repository,
+        encryption_service,
     )
 
 

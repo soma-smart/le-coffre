@@ -8,6 +8,7 @@ from .in_memory_sso_gateway import InMemorySSOGateway
 from .sql.sql_sso_user_repository import SqlSsoUserRepository
 from .sql.sql_user_repository import SqlUserRepository
 from .sql.sql_user_password_repository import SqlUserPasswordRepository
+from .sql.sql_sso_configuration_repository import SqlSsoConfigurationRepository
 
 __all__ = [
     "InMemoryUserRepository",
@@ -20,4 +21,5 @@ __all__ = [
     "SqlSsoUserRepository",
     "SqlUserRepository",
     "SqlUserPasswordRepository",
+    "SqlSsoConfigurationRepository",
 ]

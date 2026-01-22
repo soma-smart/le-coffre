@@ -1,7 +1,7 @@
 from utils import STRONG_PASSWORD
 
 
-def test_share_password_workflow(client_factory, oidc_server, sso_user_token):
+def test_share_password_workflow(client_factory, setup, configured_sso, sso_user_token):
     """
     Complete workflow: Create password → Share → Verify access → Unshare → Verify no access
     Uses a second user from SSO to test sharing functionality.
@@ -23,14 +23,6 @@ def test_share_password_workflow(client_factory, oidc_server, sso_user_token):
         "/api/auth/login",
         json={"email": "admin@example.com", "password": "admin"},
     )
-
-    # Setup vault
-    response = admin_client.post(
-        "/api/vault/setup",
-        json={"nb_shares": 5, "threshold": 3},
-    )
-    setup_id = response.json()["setup_id"]
-    admin_client.post("/api/vault/validate-setup", json={"setup_id": setup_id})
 
     # Login SSO user to set cookies on sso_client
     sso_client.cookies.set("access_token", sso_user_token["token"])

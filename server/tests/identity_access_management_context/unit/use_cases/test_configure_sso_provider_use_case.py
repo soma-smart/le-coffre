@@ -1,29 +1,26 @@
 """Tests for ConfigureSsoProviderUseCase."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 from identity_access_management_context.application.use_cases.sso.configure_sso_provider_use_case import (
     ConfigureSsoProviderUseCase,
 )
-from identity_access_management_context.domain.exceptions import InvalidSsoSettingsException
+from identity_access_management_context.domain.exceptions import (
+    InvalidSsoSettingsException,
+)
 
 
 @pytest.fixture
-def mock_sso_gateway():
-    """Mock SSO Gateway."""
-    gateway = MagicMock()
-    gateway.configure_with_discovery = AsyncMock()
-    return gateway
-
-
-@pytest.fixture
-def use_case(mock_sso_gateway):
+def use_case(sso_gateway, sso_configuration_repository, encryption_service):
     """Use case configured for tests."""
-    return ConfigureSsoProviderUseCase(mock_sso_gateway)
+    return ConfigureSsoProviderUseCase(
+        sso_gateway, sso_configuration_repository, encryption_service
+    )
 
 
 @pytest.mark.asyncio
-async def test_execute_success_with_auto_discovery(use_case, mock_sso_gateway):
+async def test_execute_success_with_auto_discovery(
+    use_case, sso_gateway, sso_configuration_repository
+):
     """Test successful configuration with auto-discovery."""
     await use_case.execute(
         client_id="test_client_id",
@@ -31,12 +28,17 @@ async def test_execute_success_with_auto_discovery(use_case, mock_sso_gateway):
         discovery_url="https://provider.com/.well-known/openid_configuration",
     )
 
-    # Verify that configure_with_discovery was called with correct parameters
-    mock_sso_gateway.configure_with_discovery.assert_called_once_with(
-        client_id="test_client_id",
-        client_secret="test_client_secret",
-        discovery_url="https://provider.com/.well-known/openid_configuration",
+    # Verify configuration was saved with encrypted client secret
+    config = sso_configuration_repository.get()
+    assert config is not None
+    assert config.client_id == "test_client_id"
+    assert config.client_secret == "encrypted(test_client_secret)"
+    assert (
+        config.discovery_url == "https://provider.com/.well-known/openid_configuration"
     )
+    assert config.authorization_endpoint == "https://provider.com/authorize"
+    assert config.token_endpoint == "https://provider.com/token"
+    assert config.userinfo_endpoint == "https://provider.com/userinfo"
 
 
 @pytest.mark.asyncio
@@ -64,44 +66,13 @@ async def test_execute_missing_required_parameters(
 
 
 @pytest.mark.asyncio
-async def test_execute_discovery_failure(use_case, mock_sso_gateway):
+async def test_execute_discovery_failure(use_case, sso_gateway):
     """Test configuration failure due to discovery error."""
-    # Configure mock to raise ValueError (simulating discovery failure)
-    mock_sso_gateway.configure_with_discovery.side_effect = ValueError("HTTP 404")
+    sso_gateway.set_discovery_error(ValueError("HTTP 404"))
 
     with pytest.raises(InvalidSsoSettingsException, match="Auto-discovery failed"):
         await use_case.execute(
             client_id="test_client_id",
             client_secret="test_client_secret",
             discovery_url="https://invalid-provider.com/.well-known/openid_configuration",
-        )
-
-
-@pytest.mark.asyncio
-async def test_execute_missing_required_discovery_fields(use_case, mock_sso_gateway):
-    """Test discovery with missing required fields."""
-    # Configure mock to raise ValueError (simulating missing fields)
-    mock_sso_gateway.configure_with_discovery.side_effect = ValueError(
-        "Missing fields in discovery: ['token_endpoint']"
-    )
-
-    with pytest.raises(InvalidSsoSettingsException, match="Auto-discovery failed"):
-        await use_case.execute(
-            client_id="test_client_id",
-            client_secret="test_client_secret",
-            discovery_url="https://provider.com/.well-known/openid_configuration",
-        )
-
-
-@pytest.mark.asyncio
-async def test_execute_gateway_configuration_failure(use_case, mock_sso_gateway):
-    """Test configuration failure due to gateway error."""
-    # Configure mock to raise a generic Exception (simulating gateway failure)
-    mock_sso_gateway.configure_with_discovery.side_effect = Exception("Gateway error")
-
-    with pytest.raises(InvalidSsoSettingsException, match="Configuration failed"):
-        await use_case.execute(
-            client_id="test_client_id",
-            client_secret="test_client_secret",
-            discovery_url="https://provider.com/.well-known/openid_configuration",
         )

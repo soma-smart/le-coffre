@@ -1,6 +1,8 @@
 from typing import Protocol
 from dataclasses import dataclass
 
+from identity_access_management_context.domain.entities import SsoConfiguration
+
 
 @dataclass(frozen=True)
 class SsoUserInfo:
@@ -15,14 +17,31 @@ class SsoUserInfo:
     sso_provider: str
 
 
+@dataclass(frozen=True)
+class SsoDiscoveryResult:
+    """Result from SSO discovery validation."""
+
+    authorization_endpoint: str
+    token_endpoint: str
+    userinfo_endpoint: str
+    jwks_uri: str | None = None
+
+
 class SsoGateway(Protocol):
-    async def get_authorize_url(self) -> str: ...
+    async def get_authorize_url(self, config: SsoConfiguration) -> str: ...
 
-    async def validate_callback(self, code: str) -> SsoUserInfo: ...
+    async def validate_callback(
+        self, config: SsoConfiguration, code: str
+    ) -> SsoUserInfo: ...
 
-    async def configure_with_discovery(
+    async def validate_discovery(
         self,
         client_id: str,
         client_secret: str,
         discovery_url: str,
-    ) -> None: ...
+    ) -> SsoDiscoveryResult:
+        """
+        Validate SSO configuration by checking discovery URL.
+        Returns discovery results if valid, raises ValueError if invalid.
+        """
+        ...

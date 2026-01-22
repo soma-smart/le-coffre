@@ -1,7 +1,7 @@
+import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
-import os
 
 from config import (
     get_database_url,
@@ -40,9 +40,10 @@ from identity_access_management_context.adapters.secondary import (
     SqlUserRepository,
     BcryptHashingGateway,
     JwtTokenGateway,
-    OAuth2SsoGateway,
     SqlUserPasswordRepository,
     SqlSsoUserRepository,
+    SqlSsoConfigurationRepository,
+    OAuth2SsoGateway,
 )
 from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
@@ -84,9 +85,7 @@ async def lifespan(app: FastAPI):
         password_permissions_repository = SqlPasswordPermissionsRepository(session)
         encrypt_use_case = EncryptUseCase(encryption_gateway, vault_session_gateway)
         decrypt_use_case = DecryptUseCase(encryption_gateway, vault_session_gateway)
-        encryption_service = EncryptionApi(
-            encrypt_use_case, decrypt_use_case
-        )  # Expose encryption service via API
+        encryption_service = EncryptionApi(encrypt_use_case, decrypt_use_case)
 
         app.state.password_repository = password_repository
         app.state.password_permissions_repository = password_permissions_repository
@@ -116,9 +115,8 @@ async def lifespan(app: FastAPI):
             refresh_token_expiration_days=get_jwt_refresh_token_expiration_days(),
         )
 
-        # SSO Gateway with OAuth2/OIDC support
-        # Base URL should be the public URL of your application
-        # Redirect URI points to the frontend callback page (not API endpoint)
+        # SSO
+        sso_configuration_repository = SqlSsoConfigurationRepository(session)
         base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")
         sso_gateway = OAuth2SsoGateway(
             base_url=base_url,
@@ -133,6 +131,7 @@ async def lifespan(app: FastAPI):
         app.state.token_gateway = token_gateway
         app.state.sso_gateway = sso_gateway
         app.state.sso_user_repository = sso_user_repository
+        app.state.sso_configuration_repository = sso_configuration_repository
 
         # Domain event publisher
         domain_event_publisher = InMemoryDomainEventPublisher()

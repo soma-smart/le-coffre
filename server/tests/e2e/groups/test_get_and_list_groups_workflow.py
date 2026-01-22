@@ -5,7 +5,7 @@ E2E tests for Group Management workflows - Get and List Groups
 from uuid import uuid4
 
 
-def test_get_and_list_groups_complete_workflow(e2e_client, sso_user_token):
+def test_get_and_list_groups_complete_workflow(e2e_client, sso_user_token, setup):
     """
     Complete workflow: Create groups → List all → Get specific → Filter list
     """

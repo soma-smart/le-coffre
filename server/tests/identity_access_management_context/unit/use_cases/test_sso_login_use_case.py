@@ -2,10 +2,11 @@ import pytest
 from uuid import UUID
 from datetime import datetime
 
-from identity_access_management_context.application.use_cases.sso.sso_login_use_case import (
+from identity_access_management_context.application.use_cases import (
     SsoLoginUseCase,
 )
-from identity_access_management_context.application.commands.sso_login_command import (
+from identity_access_management_context.domain.entities import SsoConfiguration
+from identity_access_management_context.application.commands import (
     SsoLoginCommand,
 )
 from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
@@ -25,6 +26,8 @@ def use_case(
     time_provider,
     group_repository,
     group_member_repository,
+    sso_configuration_repository,
+    encryption_service,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
@@ -35,6 +38,8 @@ def use_case(
         time_provider=time_provider,
         group_repository=group_repository,
         group_member_repository=group_member_repository,
+        sso_configuration_repository=sso_configuration_repository,
+        encryption_service=encryption_service,
     )
 
 
@@ -43,6 +48,8 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     use_case: SsoLoginUseCase,
     sso_gateway,
     sso_user_repository,
+    sso_configuration_repository,
+    encryption_service,
     token_gateway,
 ):
     # Arrange
@@ -60,6 +67,17 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
         user_id, email, display_name, sso_user_id, sso_provider
     )
 
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
+        )
+    )
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     sso_user_repository.create(existing_sso_user)
     token_gateway.set_unique_jwt_part("unique_token_part")
@@ -78,9 +96,23 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
 
 
 @pytest.mark.asyncio
-async def test_should_raise_exception_for_invalid_sso_code(use_case: SsoLoginUseCase):
+async def test_should_raise_exception_for_invalid_sso_code(
+    use_case: SsoLoginUseCase, sso_configuration_repository
+):
     # Arrange
     invalid_code = "invalid_sso_code_999"
+
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
+        )
+    )
     command = SsoLoginCommand(code=invalid_code)
 
     # Act & Assert
@@ -97,6 +129,7 @@ async def test_should_create_new_user_for_first_time_sso_login(
     sso_user_repository,
     user_repository,
     token_gateway,
+    sso_configuration_repository,
 ):
     # Arrange
     sso_code = "valid_new_user_code_456"
@@ -104,6 +137,18 @@ async def test_should_create_new_user_for_first_time_sso_login(
     display_name = "Jane Smith"
     sso_provider = "azure"
     sso_user_id = "azure_789012"
+
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
+        )
+    )
 
     sso_user_from_provider = create_sso_user_from_provider(
         email, display_name, sso_user_id, sso_provider
@@ -133,6 +178,7 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     sso_gateway,
     sso_user_repository,
     user_repository,
+    sso_configuration_repository,
     token_gateway,
 ):
     # Arrange
@@ -143,6 +189,18 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     sso_provider = "okta"
     sso_user_id = "okta_345678"
     old_login_time = datetime(2024, 1, 1, 12, 0, 0)
+
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
+        )
+    )
 
     existing_sso_user = create_existing_sso_user(
         user_id,
@@ -184,6 +242,7 @@ async def test_should_return_refresh_token_on_successful_sso_login(
     use_case: SsoLoginUseCase,
     sso_gateway,
     sso_user_repository,
+    sso_configuration_repository,
     token_gateway,
 ):
     sso_code = "valid_sso_code_123"
@@ -192,6 +251,18 @@ async def test_should_return_refresh_token_on_successful_sso_login(
     display_name = "John Doe"
     sso_provider = "google"
     sso_user_id = "google_123456"
+
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
+        )
+    )
 
     sso_user_from_provider = create_sso_user_from_provider(
         email, display_name, sso_user_id, sso_provider
@@ -210,3 +281,9 @@ async def test_should_return_refresh_token_on_successful_sso_login(
 
     assert response.refresh_token == f"refresh_token_for_{user_id}_unique_token_part"
     assert response.refresh_token != response.jwt_token
+
+
+@pytest.mark.asyncio
+async def test_when_no_sso_config_when_login_should_fail(use_case: SsoLoginUseCase):
+    with pytest.raises(ValueError):
+        await use_case.execute(SsoLoginCommand(code="invalid_code"))

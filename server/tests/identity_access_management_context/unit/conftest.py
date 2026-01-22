@@ -19,8 +19,14 @@ from tests.identity_access_management_context.unit.fakes.fake_token_gateway impo
 from tests.identity_access_management_context.unit.fakes.fake_sso_gateway import (
     FakeSsoGateway,
 )
+from tests.identity_access_management_context.unit.fakes.fake_sso_configuration_repository import (
+    FakeSsoConfigurationRepository,
+)
 from tests.identity_access_management_context.unit.fakes.fake_time_provider import (
     FakeTimeProvider,
+)
+from tests.identity_access_management_context.unit.fakes.fake_encryption_service import (
+    FakeEncryptionService,
 )
 
 from tests.identity_access_management_context.unit.fakes.fake_group_repository import (
@@ -57,8 +63,18 @@ def time_provider():
 
 
 @pytest.fixture
+def encryption_service():
+    return FakeEncryptionService()
+
+
+@pytest.fixture
 def sso_gateway():
     return FakeSsoGateway()
+
+
+@pytest.fixture
+def sso_configuration_repository():
+    return FakeSsoConfigurationRepository()
 
 
 @pytest.fixture
@@ -74,11 +90,6 @@ def group_repository():
 @pytest.fixture
 def group_member_repository():
     return FakeGroupMemberRepository()
-
-
-# @pytest.fixture
-# def access_controller():
-#     return FakeAccessController()
 
 
 def create_sso_user_from_provider(
