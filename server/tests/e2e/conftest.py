@@ -40,10 +40,11 @@ def e2e_client(database, env_vars):
         yield client
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def oidc_server():
     """
     Start an OIDC provider mock server for e2e testing.
+    Session-scoped for better performance - server is reused across all tests.
     """
     with oidc_provider_mock.run_server_in_thread() as server:
         issuer_url = f"http://localhost:{server.server_port}"
