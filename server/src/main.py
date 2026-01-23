@@ -131,7 +131,6 @@ async def lifespan(app: FastAPI):
         sso_configuration_repository = SqlSsoConfigurationRepository(session)
         base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")
         sso_gateway = OAuth2SsoGateway(
-            base_url=base_url,
             redirect_uri=f"{base_url}/sso/callback",
             scope="openid email profile",
             provider="oauth2",

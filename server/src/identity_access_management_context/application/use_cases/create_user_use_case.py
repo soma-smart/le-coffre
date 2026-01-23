@@ -10,6 +10,7 @@ from identity_access_management_context.application.gateways import (
 )
 from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import User, UserPassword
+from shared_kernel.authentication import AdminPermissionChecker
 
 
 class CreateUserUseCase:
@@ -28,6 +29,8 @@ class CreateUserUseCase:
         self.password_hashing_gateway = password_hashing_gateway
 
     def execute(self, command: CreateUserCommand) -> UUID:
+        AdminPermissionChecker().ensure_admin(command.requesting_user, "Create User")
+
         user = User(
             id=command.id,
             username=command.username,

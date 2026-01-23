@@ -50,14 +50,12 @@ def test_given_owner_when_removing_member_then_member_is_removed(
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     member = User(
         id=member_id,
         username="member",
         email="member@example.com",
         name="Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(member)
@@ -94,21 +92,18 @@ def test_given_non_owner_when_removing_member_then_raise_user_not_owner_exceptio
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     non_owner = User(
         id=non_owner_id,
         username="nonowner",
         email="nonowner@example.com",
         name="Non Owner User",
-        password_hash=None,
     )
     member = User(
         id=member_id,
         username="member",
         email="member@example.com",
         name="Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(non_owner)
@@ -142,7 +137,6 @@ def test_given_group_not_found_when_removing_member_then_raise_group_not_found_e
         username="requester",
         email="requester@example.com",
         name="Requester User",
-        password_hash=None,
     )
     user_repository.save(requester)
 
@@ -171,14 +165,12 @@ def test_given_user_not_member_when_removing_then_raise_user_not_member_exceptio
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     non_member = User(
         id=non_member_id,
         username="nonmember",
         email="nonmember@example.com",
         name="Non Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(non_member)
@@ -212,14 +204,12 @@ def test_given_personal_group_when_removing_user_then_raise_cannot_modify_person
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     member = User(
         id=member_id,
         username="member",
         email="member@example.com",
         name="Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(member)
@@ -253,7 +243,6 @@ def test_given_owner_being_removed_when_removing_then_raise_cannot_remove_owner_
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     user_repository.save(owner)
 

@@ -6,7 +6,6 @@ from urllib.parse import quote
 from fastapi.testclient import TestClient
 from main import app
 from sqlmodel import create_engine, Session
-from identity_access_management_context.adapters.secondary import InMemorySSOGateway
 from identity_access_management_context.adapters.secondary.sql.sql_sso_user_repository import (
     SqlSsoUserRepository,
 )
@@ -53,7 +52,7 @@ def database_engine():
             f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
         )
         SsoUsersTable.metadata.create_all(engine)
-        UserTable.metadata.create_all(engine)# Creating Tables
+        UserTable.metadata.create_all(engine)  # Creating Tables
         UserPasswordTable.metadata.create_all(engine)
         yield engine
     finally:
@@ -66,13 +65,16 @@ def session(database_engine):
     yield session
     session.close()
 
+
 @pytest.fixture(scope="function")
 def sql_sso_user_repository(session):
     return SqlSsoUserRepository(session)
 
+
 @pytest.fixture(scope="function")
 def sql_user_password_repository(session):
     return SqlUserPasswordRepository(session)
+
 
 @pytest.fixture(scope="function")
 def sql_user_repository(session):
@@ -84,6 +86,7 @@ def api_client(database):
     """Test client for API testing"""
     with TestClient(app) as client:
         yield client
+
 
 @pytest.fixture
 def sso_test_data():
@@ -104,16 +107,7 @@ def sso_test_data():
     }
 
 
-@pytest.fixture
-def sso_gateway(sso_test_data):
-    gateway = InMemorySSOGateway(
-        authorize_url="https://test-sso.example.com/authorize",
-        valid_codes=sso_test_data,
-    )
-    return gateway
-
-
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="session")
 def oidc_server():
     """
     Start an OIDC provider mock server for testing.

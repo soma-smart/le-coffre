@@ -11,6 +11,9 @@ from identity_access_management_context.application.use_cases import CreateUserU
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyExistsError,
 )
+from shared_kernel.authentication.exceptions import NotAdminError
+from shared_kernel.authentication.constants import ADMIN_ROLE
+from shared_kernel.authentication.models import AuthenticatedUser
 from tests.identity_access_management_context.unit.fakes import (
     FakePasswordHashingGateway,
     FakeGroupMemberRepository,
@@ -45,7 +48,14 @@ def test_should_create_user(
     password = "secure_password123"
 
     command = CreateUserCommand(
-        id=uuid, username=username, email=email, name=name, password=password
+        requesting_user=AuthenticatedUser(
+            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
+        ),
+        id=uuid,
+        username=username,
+        email=email,
+        name=name,
+        password=password,
     )
 
     user_id = use_case.execute(command)
@@ -56,6 +66,28 @@ def test_should_create_user(
     assert created_user.username == username
     assert created_user.email == email
     assert created_user.name == name
+
+
+def test_should_raise_error_when_requester_not_owner(use_case: CreateUserUseCase):
+    uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    username = "testuser"
+    email = "testuser@example.com"
+    name = "Test User"
+    password = "secure_password123"
+
+    command = CreateUserCommand(
+        requesting_user=AuthenticatedUser(
+            UUID("423e4567-e89b-12d3-a456-426614174000"), []
+        ),
+        id=uuid,
+        username=username,
+        email=email,
+        name=name,
+        password=password,
+    )
+
+    with pytest.raises(NotAdminError):
+        use_case.execute(command)
 
 
 def test_should_create_user_password(
@@ -69,7 +101,14 @@ def test_should_create_user_password(
     password = "secure_password123"
 
     command = CreateUserCommand(
-        id=uuid, username=username, email=email, name=name, password=password
+        requesting_user=AuthenticatedUser(
+            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
+        ),
+        id=uuid,
+        username=username,
+        email=email,
+        name=name,
+        password=password,
     )
 
     user_id = use_case.execute(command)
@@ -92,7 +131,14 @@ def test_should_raise_when_user_already_exists(
     password = "secure_password123"
 
     command = CreateUserCommand(
-        id=uuid, username=username, email=email, name=name, password=password
+        requesting_user=AuthenticatedUser(
+            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
+        ),
+        id=uuid,
+        username=username,
+        email=email,
+        name=name,
+        password=password,
     )
 
     use_case.execute(command)
@@ -111,7 +157,14 @@ def test_should_create_personal_group_when_creating_user(
     password = "secure_password123"
 
     command = CreateUserCommand(
-        id=uuid, username=username, email=email, name=name, password=password
+        requesting_user=AuthenticatedUser(
+            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
+        ),
+        id=uuid,
+        username=username,
+        email=email,
+        name=name,
+        password=password,
     )
 
     user_id = use_case.execute(command)
