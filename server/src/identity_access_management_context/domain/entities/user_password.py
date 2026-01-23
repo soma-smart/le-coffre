@@ -6,5 +6,5 @@ from uuid import UUID
 class UserPassword:
     id: UUID
     email: str
-    password_hash: str
+    password_hash: bytes
     display_name: str

@@ -12,9 +12,10 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.authentication.constants import ADMIN_ROLE
 import json
 
+
 class SqlUserRepository(UserRepository):
-    def __init__(self, Session):
-        self._session = Session
+    def __init__(self, session: Session):
+        self._session = session
 
     def get_by_id(self, user_id: UUID) -> Optional[User]:
         statement = select(UserTable).where(UserTable.id == user_id)
@@ -26,7 +27,7 @@ class SqlUserRepository(UserRepository):
             username=result.username,
             email=result.email,
             name=result.name,
-            roles=json.loads(result.roles)
+            roles=json.loads(result.roles),
         )
 
     def get_by_email(self, email: str) -> List[User]:
@@ -40,7 +41,7 @@ class SqlUserRepository(UserRepository):
                 username=row.username,
                 email=row.email,
                 name=row.name,
-                roles=json.loads(row.roles)
+                roles=json.loads(row.roles),
             )
             for row in results
         ]
@@ -56,7 +57,7 @@ class SqlUserRepository(UserRepository):
                 username=row.username,
                 email=row.email,
                 name=row.name,
-                roles=json.loads(row.roles)
+                roles=json.loads(row.roles),
             )
             for row in results
         ]
@@ -104,5 +105,5 @@ class SqlUserRepository(UserRepository):
             username=result.username,
             email=result.email,
             name=result.name,
-            roles=json.loads(result.roles)
+            roles=json.loads(result.roles),
         )

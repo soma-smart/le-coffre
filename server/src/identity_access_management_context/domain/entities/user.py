@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from uuid import UUID
-from typing import List, Optional
+from typing import List
 
 
 @dataclass
@@ -10,4 +10,3 @@ class User:
     email: str
     name: str
     roles: List[str] = field(default_factory=list)
-    password_hash: Optional[str] = None

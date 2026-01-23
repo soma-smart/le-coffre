@@ -37,7 +37,6 @@ class UserManagementService:
         email: str,
         username: str,
         name: str,
-        password: str | None = None,
     ) -> User:
         """
         Create an admin user with the admin role.
@@ -61,19 +60,9 @@ class UserManagementService:
         if existing_admin is not None:
             raise AdminAlreadyExistsError()
 
-        # Hash password if provided
-        password_hash = None
-        if password:
-            password_hash = self._password_hashing_gateway.hash(password)
-
         # Create user with admin role
         admin = User(
-            id=user_id,
-            email=email,
-            username=username,
-            name=name,
-            roles=[ADMIN_ROLE],
-            password_hash=password_hash,
+            id=user_id, email=email, username=username, name=name, roles=[ADMIN_ROLE]
         )
 
         self._user_repository.save(admin)
@@ -85,7 +74,6 @@ class UserManagementService:
         email: str,
         username: str,
         name: str,
-        password: str | None = None,
         roles: List[str] | None = None,
     ) -> User:
         """
@@ -102,11 +90,6 @@ class UserManagementService:
         Returns:
             The created User entity
         """
-        # Hash password if provided
-        password_hash = None
-        if password:
-            password_hash = self._password_hashing_gateway.hash(password)
-
         # Create user with specified roles (or empty list)
         user = User(
             id=user_id,
@@ -114,7 +97,6 @@ class UserManagementService:
             username=username,
             name=name,
             roles=roles or [],
-            password_hash=password_hash,
         )
 
         self._user_repository.save(user)
