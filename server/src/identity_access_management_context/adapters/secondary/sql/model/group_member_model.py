@@ -8,7 +8,3 @@ class GroupMemberTable(SQLModel, table=True):
     group_id: UUID = Field(nullable=False, primary_key=True, index=True)
     user_id: UUID = Field(nullable=False, primary_key=True, index=True)
     is_owner: bool = Field(nullable=False, default=False)
-
-
-def create_group_member_table(engine):
-    SQLModel.metadata.create_all(engine)

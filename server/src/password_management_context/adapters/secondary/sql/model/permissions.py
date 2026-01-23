@@ -22,7 +22,3 @@ class OwnershipTable(SQLModel, table=True):
     group_id: UUID = Field(nullable=False)
     resource_id: UUID = Field(nullable=False)
     resource_type: str = Field(default="Password")
-
-
-def create_permissions_tables(engine):
-    SQLModel.metadata.create_all(engine)

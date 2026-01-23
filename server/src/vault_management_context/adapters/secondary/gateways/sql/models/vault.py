@@ -11,7 +11,3 @@ class VaultTable(SQLModel, table=True):
     encrypted_key: str = Field(description="Encrypted vault key")
     setup_id: str = Field(description="Unique setup identifier")
     status: str = Field(default="PENDING", description="Vault status")
-
-
-def create_vault_table(engine):
-    SQLModel.metadata.create_all(engine)

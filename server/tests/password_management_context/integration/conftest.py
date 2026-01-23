@@ -1,10 +1,12 @@
 import pytest
 import os
 import tempfile
+from pathlib import Path
 from sqlmodel import create_engine, Session
+from alembic.config import Config
+from alembic import command
 
 from password_management_context.adapters.secondary.sql import (
-    create_tables,
     SqlPasswordRepository,
 )
 
@@ -16,10 +18,17 @@ def database_engine():
     os.close(db_fd)  # Close the file descriptor, we just need the path
 
     try:
+        database_url = f"sqlite:///{db_path}"
         engine = create_engine(
-            f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
+            database_url, connect_args={"check_same_thread": False}
         )
-        create_tables(engine)
+        
+        # Run migrations instead of create_tables
+        alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
+        alembic_cfg = Config(str(alembic_ini_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+        command.upgrade(alembic_cfg, "head")
+        
         yield engine
     finally:
         try:

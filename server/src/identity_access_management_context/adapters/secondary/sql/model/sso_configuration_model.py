@@ -25,7 +25,3 @@ class SsoConfigurationTable(SQLModel, table=True):
         nullable=False,
         default_factory=lambda: datetime.now(timezone.utc),
     )
-
-
-def create_sso_configuration_table(engine):
-    SQLModel.metadata.create_all(engine)
