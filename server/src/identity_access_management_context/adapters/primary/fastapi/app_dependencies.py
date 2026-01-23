@@ -20,6 +20,7 @@ from identity_access_management_context.application.use_cases import (
     RemoveUserFromGroupUseCase,
     GetGroupUseCase,
     ListGroupsUseCase,
+    IsSsoConfigSetUseCase,
 )
 from identity_access_management_context.application.gateways import (
     UserRepository,
@@ -200,6 +201,14 @@ def get_configure_sso_provider_usecase(
     return ConfigureSsoProviderUseCase(
         sso_gateway, sso_configuration_repository, encryption_service
     )
+
+
+def get_is_sso_config_set_usecase(
+    sso_configuration_repository: SsoConfigurationRepository = Depends(
+        get_sso_configuration_repository
+    ),
+):
+    return IsSsoConfigSetUseCase(sso_configuration_repository)
 
 
 def get_sso_login_usecase(

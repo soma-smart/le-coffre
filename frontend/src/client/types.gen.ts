@@ -29,6 +29,34 @@ export type AddMemberToGroupResponse = {
 };
 
 /**
+ * AddOwnerToGroupRequest
+ */
+export type AddOwnerToGroupRequest = {
+    /**
+     * User Id
+     */
+    user_id: string;
+};
+
+/**
+ * AddOwnerToGroupResponse
+ */
+export type AddOwnerToGroupResponse = {
+    /**
+     * Group Id
+     */
+    group_id: string;
+    /**
+     * User Id
+     */
+    user_id: string;
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * AdminLoginRequest
  */
 export type AdminLoginRequest = {
@@ -348,6 +376,17 @@ export type HttpValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * IsSsoConfigSetResponse
+ * Response indicating if SSO is configured.
+ */
+export type IsSsoConfigSetResponse = {
+    /**
+     * Is Set
+     */
+    is_set: boolean;
 };
 
 /**
@@ -1256,6 +1295,22 @@ export type SsoCallbackAuthSsoCallbackGetResponses = {
 
 export type SsoCallbackAuthSsoCallbackGetResponse = SsoCallbackAuthSsoCallbackGetResponses[keyof SsoCallbackAuthSsoCallbackGetResponses];
 
+export type IsSsoConfigSetAuthSsoIsConfiguredGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/sso/is-configured';
+};
+
+export type IsSsoConfigSetAuthSsoIsConfiguredGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: IsSsoConfigSetResponse;
+};
+
+export type IsSsoConfigSetAuthSsoIsConfiguredGetResponse = IsSsoConfigSetAuthSsoIsConfiguredGetResponses[keyof IsSsoConfigSetAuthSsoIsConfiguredGetResponses];
+
 export type RefreshAccessTokenAuthRefreshTokenPostData = {
     body?: never;
     path?: never;
@@ -1335,6 +1390,36 @@ export type AddMemberToGroupGroupsGroupIdMembersPostResponses = {
 };
 
 export type AddMemberToGroupGroupsGroupIdMembersPostResponse = AddMemberToGroupGroupsGroupIdMembersPostResponses[keyof AddMemberToGroupGroupsGroupIdMembersPostResponses];
+
+export type AddOwnerToGroupGroupsGroupIdOwnersPostData = {
+    body: AddOwnerToGroupRequest;
+    path: {
+        /**
+         * Group Id
+         */
+        group_id: string;
+    };
+    query?: never;
+    url: '/groups/{group_id}/owners';
+};
+
+export type AddOwnerToGroupGroupsGroupIdOwnersPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AddOwnerToGroupGroupsGroupIdOwnersPostError = AddOwnerToGroupGroupsGroupIdOwnersPostErrors[keyof AddOwnerToGroupGroupsGroupIdOwnersPostErrors];
+
+export type AddOwnerToGroupGroupsGroupIdOwnersPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: AddOwnerToGroupResponse;
+};
+
+export type AddOwnerToGroupGroupsGroupIdOwnersPostResponse = AddOwnerToGroupGroupsGroupIdOwnersPostResponses[keyof AddOwnerToGroupGroupsGroupIdOwnersPostResponses];
 
 export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData = {
     body?: never;

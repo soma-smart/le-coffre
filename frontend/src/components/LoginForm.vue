@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { adminLoginAuthLoginPost, getSsoUrlAuthSsoUrlGet } from '@/client';
+import { adminLoginAuthLoginPost, getSsoUrlAuthSsoUrlGet, isSsoConfigSetAuthSsoIsConfiguredGet } from '@/client';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { useToast } from 'primevue';
 import { useRouter, useRoute } from 'vue-router'
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import z from 'zod';
 import { usePasswordsStore } from '@/stores/passwords';
 
@@ -11,6 +11,8 @@ const router = useRouter()
 const route = useRoute()
 const toast = useToast();
 const passwordsStore = usePasswordsStore();
+
+const isSsoConfigured = ref(false);
 
 const formValues = {
   email: '',
@@ -25,6 +27,19 @@ const resolver = ref(zodResolver(
 ));
 
 const loading = ref(false);
+
+// Check if SSO is configured on component mount
+onMounted(async () => {
+  try {
+    const response = await isSsoConfigSetAuthSsoIsConfiguredGet();
+    if (response.data) {
+      isSsoConfigured.value = response.data.is_set;
+    }
+  } catch (error) {
+    // SSO check failed, keep SSO button hidden
+    console.error('Failed to check SSO configuration:', error);
+  }
+});
 
 const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof formValues }) => {
   if (valid) {
@@ -125,14 +140,16 @@ const handleSsoLogin = async () => {
           :loading="loading" />
       </Form>
 
-      <div class="flex items-center gap-2 my-4">
-        <Divider class="flex-1" />
-        <span class="text-sm text-gray-500">OR</span>
-        <Divider class="flex-1" />
-      </div>
+      <template v-if="isSsoConfigured">
+        <div class="flex items-center gap-2 my-4">
+          <Divider class="flex-1" />
+          <span class="text-sm text-gray-500">OR</span>
+          <Divider class="flex-1" />
+        </div>
 
-      <Button fluid block severity="secondary" outlined label="Login with SSO" icon="pi pi-sign-in"
-        @click="handleSsoLogin" :loading="ssoLoading" :disabled="ssoLoading" />
+        <Button fluid block severity="secondary" outlined label="Login with SSO" icon="pi pi-sign-in"
+          @click="handleSsoLogin" :loading="ssoLoading" :disabled="ssoLoading" />
+      </template>
     </template>
   </Card>
 </template>

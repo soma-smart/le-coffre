@@ -28,6 +28,14 @@ async def test_complete_sso_authentication_flow(
     """
 
     print("\n� Starting complete SSO authentication flow...")
+    # Step 0: Check SSO status BEFORE configuration
+    status_before_response = e2e_client.get("/api/auth/sso/is-configured")
+    assert status_before_response.status_code == 200, (
+        f"Failed to check SSO status: {status_before_response.text}"
+    )
+    assert status_before_response.json()["is_set"] is False, (
+        "SSO should be configured after setup"
+    )
 
     # Step 1: Configure SSO with the mock OIDC provider
     print("\n📝 Step 1: Configuring SSO provider...")
@@ -62,6 +70,15 @@ async def test_complete_sso_authentication_flow(
     assert isinstance(sso_url, str), "SSO URL should be a string"
     assert "http" in sso_url.lower(), "SSO URL should be a valid URL"
     print(f"✅ Got SSO URL: {sso_url}")
+
+    # Step 2.5: Check new status
+    status_after_response = e2e_client.get("/api/auth/sso/is-configured")
+    assert status_after_response.status_code == 200, (
+        f"Failed to check SSO status: {status_after_response.text}"
+    )
+
+    status_after_data = status_after_response.json()
+    assert status_after_data["is_set"] is True, "SSO should be configured after setup"
 
     # Step 3: Test wrong callback with invalid authorization code
     print("\n🧪 Step 3: Testing callback with invalid authorization code...")

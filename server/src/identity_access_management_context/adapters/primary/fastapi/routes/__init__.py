@@ -16,6 +16,7 @@ from .sso import (
     configure_sso_provider_route,
     get_sso_url_route,
     sso_callback_route,
+    is_sso_config_set_route,
 )
 
 from .group import (
@@ -50,6 +51,7 @@ def get_authentication_router():
     authentication_router.include_router(configure_sso_provider_route.router)
     authentication_router.include_router(get_sso_url_route.router)
     authentication_router.include_router(sso_callback_route.router)
+    authentication_router.include_router(is_sso_config_set_route.router)
     authentication_router.include_router(refresh_access_token_routes.router)
 
     return authentication_router
