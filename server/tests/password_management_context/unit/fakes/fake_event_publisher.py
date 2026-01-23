@@ -8,5 +8,5 @@ class FakeEventPublisher:
     def publish(self, event: DomainEvent) -> None:
         self.published_events.append(event)
 
-    def clear(self):
-        self.published_events = []
+    def clear(self) -> None:
+        self.published_events.clear()
