@@ -8,11 +8,6 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
 from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
 )
-from identity_access_management_context.application.commands import (
-    IsSsoConfigSetCommand,
-)
-from shared_kernel.authentication import ValidatedUser, NotAdminError
-from shared_kernel.authentication.dependencies import get_current_user
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -31,7 +26,6 @@ class IsSsoConfigSetResponse(BaseModel):
     summary="Check if SSO is configured",
 )
 def is_sso_config_set(
-    current_user: ValidatedUser = Depends(get_current_user),
     usecase: IsSsoConfigSetUseCase = Depends(get_is_sso_config_set_usecase),
 ):
     """
@@ -45,13 +39,8 @@ def is_sso_config_set(
     **Note**: Only administrators can check SSO configuration status.
     """
     try:
-        command = IsSsoConfigSetCommand(
-            requesting_user=current_user.to_authenticated_user()
-        )
-        result = usecase.execute(command)
+        result = usecase.execute()
         return IsSsoConfigSetResponse(is_set=result.is_set)
-    except NotAdminError as e:
-        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logging.error(f"Error checking SSO configuration status: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -11,7 +11,6 @@ from .create_group_command import CreateGroupCommand
 from .add_user_to_group_command import AddUserToGroupCommand
 from .add_owner_to_group_command import AddOwnerToGroupCommand
 from .remove_user_from_group_command import RemoveUserFromGroupCommand
-from .is_sso_config_set_command import IsSsoConfigSetCommand
 
 __all__ = [
     "CreateUserCommand",
@@ -27,5 +26,4 @@ __all__ = [
     "AddUserToGroupCommand",
     "AddOwnerToGroupCommand",
     "RemoveUserFromGroupCommand",
-    "IsSsoConfigSetCommand",
 ]
