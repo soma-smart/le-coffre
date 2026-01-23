@@ -19,6 +19,7 @@ from password_management_context.application.gateways.password_permissions_repos
     PasswordPermissionsRepository,
 )
 from shared_kernel.encryption import EncryptionService
+from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
 
 
 def get_password_repository(request: Request) -> PasswordRepository:
@@ -39,6 +40,10 @@ def get_group_access_gateway(request: Request) -> GroupAccessGateway:
     return request.app.state.group_access_gateway
 
 
+def get_event_publisher(request: Request) -> DomainEventPublisher:
+    return request.app.state.domain_event_publisher
+
+
 def get_create_password_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
     encryption_service: EncryptionService = Depends(get_encryption_service),
@@ -46,12 +51,14 @@ def get_create_password_usecase(
         get_password_permissions_repository
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return CreatePasswordUseCase(
         password_repository,
         encryption_service,
         password_permissions_repository,
         group_access_gateway,
+        event_publisher,
     )
 
 
