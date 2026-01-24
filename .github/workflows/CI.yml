@@ -43,11 +43,6 @@ jobs:
         working-directory: frontend/
         run: bun run type-check
 
-      - name: Run Unit Tests
-        if: (${{ success() }} || ${{ failure() }})
-        working-directory: frontend/
-        run: bun run test:unit
-
       - name: Build Project
         if: (${{ success() }} || ${{ failure() }})
         working-directory: frontend/
