@@ -1,5 +1,4 @@
 from .user import User
-from .admin_account import AdminAccount
 from .authentication_session import AuthenticationSession
 from .sso_user import SsoUser
 from .sso_configuration import SsoConfiguration
@@ -10,7 +9,6 @@ from .group_member import GroupMember
 
 __all__ = [
     "User",
-    "AdminAccount",
     "AuthenticationSession",
     "SsoUser",
     "SsoConfiguration",

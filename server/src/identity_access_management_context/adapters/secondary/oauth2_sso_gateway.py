@@ -21,12 +21,10 @@ class OAuth2SsoGateway(SsoGateway):
 
     def __init__(
         self,
-        base_url: str,
         redirect_uri: str,
         scope: str = "openid email profile",
         provider: str = "default",
     ):
-        self.base_url = base_url
         self.redirect_uri = redirect_uri
         self.scope = scope
         self.provider = provider

@@ -159,7 +159,7 @@ const handleSubmit = async () => {
           name: name.value,
           password: password.value,
           folder: folder.value || null,
-          group_id: selectedGroupId.value || null
+          group_id: selectedGroupId.value!
         }
       });
 

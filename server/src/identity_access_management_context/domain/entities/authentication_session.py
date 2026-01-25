@@ -1,5 +1,5 @@
 from uuid import UUID, uuid4
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from shared_kernel.time import TimeProvider
 

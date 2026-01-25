@@ -52,7 +52,7 @@ async def test_should_register_first_admin_with_password_and_return_user_id(
     assert saved_user_password.id == user_id
     assert saved_user_password.email == email
     assert saved_user_password.display_name == display_name
-    assert saved_user_password.password_hash == "hashed(secure123!)"
+    assert saved_user_password.password_hash == b"hashed(secure123!)"
 
     # Verify admin was created in user repository with admin role
     saved_user = user_repository.get_by_id(user_id)
@@ -103,7 +103,7 @@ async def test_should_hash_password_before_storing_credentials(
     await use_case.execute(command)
 
     saved_user_password = user_password_repository.get_by_id(user_id)
-    assert saved_user_password.password_hash == "hashed(my_plain_password)"
+    assert saved_user_password.password_hash == b"hashed(my_plain_password)"
     assert saved_user_password.password_hash != plain_password
 
 

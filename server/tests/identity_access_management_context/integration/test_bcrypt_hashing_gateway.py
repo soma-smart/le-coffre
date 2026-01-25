@@ -3,7 +3,7 @@ import pytest
 from identity_access_management_context.adapters.secondary import BcryptHashingGateway
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def bcrypt_hashing_gateways():
     return BcryptHashingGateway()
 

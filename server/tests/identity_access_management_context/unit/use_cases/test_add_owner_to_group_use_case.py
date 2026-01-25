@@ -50,14 +50,12 @@ def test_given_owner_when_adding_existing_member_as_owner_then_member_becomes_ow
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     member = User(
         id=member_id,
         username="member",
         email="member@example.com",
         name="Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(member)
@@ -94,21 +92,18 @@ def test_given_non_owner_when_adding_owner_to_group_then_raise_user_not_owner_ex
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     non_owner = User(
         id=non_owner_id,
         username="nonowner",
         email="nonowner@example.com",
         name="Non Owner User",
-        password_hash=None,
     )
     member = User(
         id=member_id,
         username="member",
         email="member@example.com",
         name="Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(non_owner)
@@ -142,14 +137,12 @@ def test_given_group_not_found_when_adding_owner_then_raise_group_not_found_exce
         username="requester",
         email="requester@example.com",
         name="Requester User",
-        password_hash=None,
     )
     user = User(
         id=user_id,
         username="user",
         email="user@example.com",
         name="User",
-        password_hash=None,
     )
     user_repository.save(requester)
     user_repository.save(user)
@@ -179,14 +172,12 @@ def test_given_personal_group_when_adding_owner_then_raise_cannot_modify_persona
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     member = User(
         id=member_id,
         username="member",
         email="member@example.com",
         name="Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(member)
@@ -222,7 +213,6 @@ def test_given_user_not_found_when_adding_owner_then_raise_user_not_found_except
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     user_repository.save(owner)
 
@@ -255,14 +245,12 @@ def test_given_user_not_member_when_adding_as_owner_then_raise_user_not_member_e
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     non_member = User(
         id=non_member_id,
         username="nonmember",
         email="nonmember@example.com",
         name="Non Member User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(non_member)
@@ -296,14 +284,12 @@ def test_given_user_already_owner_when_adding_as_owner_then_operation_is_idempot
         username="owner",
         email="owner@example.com",
         name="Owner User",
-        password_hash=None,
     )
     existing_owner = User(
         id=existing_owner_id,
         username="existingowner",
         email="existingowner@example.com",
         name="Existing Owner User",
-        password_hash=None,
     )
     user_repository.save(owner)
     user_repository.save(existing_owner)

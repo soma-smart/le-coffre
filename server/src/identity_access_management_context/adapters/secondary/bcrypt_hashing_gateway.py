@@ -1,12 +1,17 @@
-from identity_access_management_context.application.gateways import PasswordHashingGateway
-from passlib.context import CryptContext
-
-context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from identity_access_management_context.application.gateways import (
+    PasswordHashingGateway,
+)
+import bcrypt
+import hashlib
 
 
 class BcryptHashingGateway(PasswordHashingGateway):
-    def hash(self, password: str) -> str:
-        return context.hash(password)
+    def hash(self, password: str) -> bytes:
+        return bcrypt.hashpw(
+            hashlib.sha256(password.encode()).digest(), bcrypt.gensalt()
+        )
 
-    def verify(self, password: str, hashed_password: str) -> bool:
-        return context.verify(password, hashed_password)
+    def verify(self, password: str, hashed_password: bytes) -> bool:
+        return bcrypt.checkpw(
+            hashlib.sha256(password.encode()).digest(), hashed_password
+        )

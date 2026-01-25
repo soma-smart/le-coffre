@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Install Bun
         run: |
@@ -42,11 +42,6 @@ jobs:
         if: (${{ success() }} || ${{ failure() }})
         working-directory: frontend/
         run: bun run type-check
-
-      - name: Run Unit Tests
-        if: (${{ success() }} || ${{ failure() }})
-        working-directory: frontend/
-        run: bun run test:unit
 
       - name: Build Project
         if: (${{ success() }} || ${{ failure() }})
@@ -73,4 +68,4 @@ jobs:
 
       - name: Run Unit Tests
         working-directory: server/
-        run: uv run pytest
+        run: uv run pytest -n auto

@@ -29,7 +29,6 @@ declare module 'vue' {
     LoginForm: typeof import('./src/components/LoginForm.vue')['default']
     MainMenu: typeof import('./src/components/MainMenu.vue')['default']
     Message: typeof import('primevue/message')['default']
-    PanelMenu: typeof import('primevue/panelmenu')['default']
     Password: typeof import('primevue/password')['default']
     PasswordCard: typeof import('./src/components/passwords/PasswordCard.vue')['default']
     PasswordGenerator: typeof import('./src/components/passwords/PasswordGenerator.vue')['default']
@@ -60,7 +59,6 @@ declare module 'vue' {
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
   export interface GlobalDirectives {
-    Ripple: typeof import('primevue/ripple')['default']
     Tooltip: typeof import('primevue/tooltip')['default']
   }
 }

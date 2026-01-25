@@ -41,7 +41,6 @@ def test_given_valid_data_when_creating_group_then_group_is_created(
         username="creator",
         email="creator@example.com",
         name="Creator User",
-        password_hash=None,
     )
     user_repository.save(user)
 
@@ -75,7 +74,6 @@ def test_given_valid_data_when_creating_group_then_creator_is_added_as_owner(
         username="creator",
         email="creator@example.com",
         name="Creator User",
-        password_hash=None,
     )
     user_repository.save(user)
 
