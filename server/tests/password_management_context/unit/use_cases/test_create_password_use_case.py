@@ -1,10 +1,11 @@
 import pytest
 from uuid import UUID
 
-from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
-    GroupAccessGateway,
+from ..fakes import (
+    FakePasswordRepository,
+    FakeEncryptionService,
+    FakeGroupAccessGateway,
+    FakePasswordPermissionsRepository,
 )
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.use_cases import CreatePasswordUseCase
@@ -20,10 +21,10 @@ ANY_PASSWORD = "any_password"
 
 @pytest.fixture
 def use_case(
-    password_repository,
-    encryption_service,
-    password_permissions_repository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    encryption_service: FakeEncryptionService,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     return CreatePasswordUseCase(
         password_repository,
@@ -35,8 +36,8 @@ def use_case(
 
 def test_should_create_password_when_user_owns_group(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -64,7 +65,7 @@ def test_should_create_password_when_user_owns_group(
 
 def test_should_raise_when_user_is_not_owner_of_group(
     use_case: CreatePasswordUseCase,
-    group_access_gateway: GroupAccessGateway,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -111,8 +112,8 @@ def test_should_raise_when_group_does_not_exist(
 
 def test_should_set_group_as_owner_of_password(
     use_case: CreatePasswordUseCase,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -135,8 +136,8 @@ def test_should_set_group_as_owner_of_password(
 
 def test_should_create_password_with_uuid_and_store_encrypted(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -167,8 +168,8 @@ def test_should_create_password_with_uuid_and_store_encrypted(
 
 def test_should_create_password_in_folder_with_encrypted_value(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -200,8 +201,8 @@ def test_should_create_password_in_folder_with_encrypted_value(
 
 def test_should_create_password_in_default_folder_when_not_given(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -228,8 +229,8 @@ def test_should_create_password_in_default_folder_when_not_given(
 
 def test_should_set_user_as_owner_when_creating_password(
     use_case: CreatePasswordUseCase,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")

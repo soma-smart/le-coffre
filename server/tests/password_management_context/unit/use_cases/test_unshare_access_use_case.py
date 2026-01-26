@@ -8,18 +8,19 @@ from password_management_context.domain.exceptions import (
     CannotUnshareWithOwnerError,
     PasswordNotFoundError,
 )
-from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
+from ..fakes import (
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+    FakeGroupAccessGateway,
 )
 from password_management_context.domain.value_objects import PasswordPermission
 
 
 @pytest.fixture()
 def use_case(
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     return UnshareAccessUseCase(
         password_repository, password_permissions_repository, group_access_gateway
@@ -33,10 +34,10 @@ def password():
 
 def test_given_owner_when_unsharing_from_user_with_read_access_should_revoke_access(
     use_case: UnshareAccessUseCase,
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
     password,
-    group_access_gateway,
 ):
     # Arrange: Given an owner and a group with READ access
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -66,10 +67,10 @@ def test_given_owner_when_unsharing_from_user_with_read_access_should_revoke_acc
 
 def test_given_non_owner_when_unsharing_should_fail(
     use_case: UnshareAccessUseCase,
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
     password,
-    group_access_gateway,
 ):
     # Arrange: Given a non-owner trying to unshare
     not_owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -93,10 +94,10 @@ def test_given_non_owner_when_unsharing_should_fail(
 
 def test_given_owner_when_unsharing_from_another_owner_should_fail(
     use_case: UnshareAccessUseCase,
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
     password,
-    group_access_gateway,
 ):
     # Arrange: Test that we cannot unshare from the owner group
     first_owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -117,8 +118,8 @@ def test_given_owner_when_unsharing_from_another_owner_should_fail(
 
 def test_given_no_password_when_unsharing_should_fail(
     use_case: UnshareAccessUseCase,
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
 ):
     # Arrange: Given an owner and a user with READ access
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")

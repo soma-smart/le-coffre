@@ -10,18 +10,20 @@ from password_management_context.application.use_cases import ListAccessUseCase
 from password_management_context.application.responses import ListAccessResponse
 from password_management_context.domain.entities import Password
 from password_management_context.domain.value_objects import PasswordPermission
-from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
+
+from ..fakes import (
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+    FakeGroupAccessGateway,
 )
 from password_management_context.domain.exceptions import PasswordNotFoundError
 
 
 @pytest.fixture
 def use_case(
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ) -> ListAccessUseCase:
     return ListAccessUseCase(
         password_repository, password_permissions_repository, group_access_gateway
@@ -39,11 +41,11 @@ def password():
 
 
 def test_given_owner_and_password_when_listing_access_should_succeed(
-    use_case,
-    password_repository,
-    password_permissions_repository,
-    password,
-    group_access_gateway,
+    use_case: ListAccessUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    password: Password,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("87654321-4321-8765-4321-876543218765")
     group_id = UUID("97654321-4321-8765-4321-876543218765")
@@ -66,11 +68,11 @@ def test_given_owner_and_password_when_listing_access_should_succeed(
 
 
 def test_given_user_and_password_when_listing_access_should_succeed(
-    use_case,
-    password_repository,
-    password_permissions_repository,
-    password,
-    group_access_gateway,
+    use_case: ListAccessUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    password: Password,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("87654321-4321-8765-4321-876543218765")
     group_id = UUID("97654321-4321-8765-4321-876543218765")
@@ -107,11 +109,11 @@ def test_given_no_password_when_listing_access_should_fail(use_case):
 
 
 def test_given_multiple_user_having_access_when_listing_access_should_have_them_all(
-    use_case,
-    password_repository,
-    password_permissions_repository,
-    password,
-    group_access_gateway,
+    use_case: ListAccessUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    password: Password,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("87654321-4321-8765-4321-876543218765")
     owner_group_id = UUID("97654321-4321-8765-4321-876543218765")
@@ -159,11 +161,11 @@ def test_given_multiple_user_having_access_when_listing_access_should_have_them_
 
 
 def test_given_owner_from_one_group_and_member_for_other_when_listing_access_should_have_them_all(
-    use_case,
-    password_repository,
-    password_permissions_repository,
-    password,
-    group_access_gateway,
+    use_case: ListAccessUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    password: Password,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     owner_id = UUID("11111111-1111-1111-1111-111111111111")
     member_id = UUID("22222222-2222-2222-2222-222222222222")

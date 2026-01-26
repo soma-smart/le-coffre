@@ -3,11 +3,10 @@ from uuid import UUID
 
 from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.use_cases import DeletePasswordUseCase
-from password_management_context.application.gateways import (
-    PasswordPermissionsRepository,
-)
-from password_management_context.adapters.secondary import (
-    InMemoryPasswordRepository,
+from ..fakes import (
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+    FakeGroupAccessGateway,
 )
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
@@ -18,7 +17,9 @@ from password_management_context.domain.entities import Password
 
 @pytest.fixture
 def use_case(
-    password_repository, password_permissions_repository, group_access_gateway
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     return DeletePasswordUseCase(
         password_repository, password_permissions_repository, group_access_gateway
@@ -27,9 +28,9 @@ def use_case(
 
 def test_given_owner_when_deleting_should_success(
     use_case: DeletePasswordUseCase,
-    password_repository: InMemoryPasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")  # Group owned by user
@@ -62,17 +63,19 @@ def test_should_raise_error_when_password_does_not_exist(
 ):
     requester_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
     fake_resource_uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    
-    command = DeletePasswordCommand(requester_id=requester_id, password_id=fake_resource_uuid)
+
+    command = DeletePasswordCommand(
+        requester_id=requester_id, password_id=fake_resource_uuid
+    )
     with pytest.raises(PasswordNotFoundError):
         use_case.execute(command)
 
 
 def test_given_non_owner_when_deleting_should_fail(
     use_case: DeletePasswordUseCase,
-    password_repository: InMemoryPasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
     owner_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e7")
