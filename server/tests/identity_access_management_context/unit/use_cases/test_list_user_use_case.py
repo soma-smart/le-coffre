@@ -2,18 +2,19 @@ from uuid import UUID
 import pytest
 from identity_access_management_context.application.commands import ListUserCommand
 from identity_access_management_context.application.use_cases import ListUserUseCase
-from identity_access_management_context.application.gateways import UserRepository
+
 from identity_access_management_context.domain.entities import User
+from ..fakes import FakeUserRepository
 from shared_kernel.authentication import AuthenticatedUser
 
 
 @pytest.fixture
-def use_case(user_repository: UserRepository):
+def use_case(user_repository: FakeUserRepository):
     return ListUserUseCase(user_repository)
 
 
 def test_should_list_users_when_admin(
-    use_case: ListUserUseCase, user_repository: UserRepository
+    use_case: ListUserUseCase, user_repository: FakeUserRepository
 ):
     admin_user = AuthenticatedUser(
         user_id=UUID("999e4567-e89b-12d3-a456-426614174999"), roles=["admin"]

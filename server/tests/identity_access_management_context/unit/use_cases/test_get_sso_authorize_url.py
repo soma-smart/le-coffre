@@ -6,10 +6,19 @@ from identity_access_management_context.application.use_cases import (
     GetSsoAuthorizeUrlUseCase,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
+from ..fakes import (
+    FakeSsoGateway,
+    FakeSsoConfigurationRepository,
+    FakeEncryptionService,
+)
 
 
 @pytest.fixture
-def use_case(sso_gateway, sso_configuration_repository, encryption_service):
+def use_case(
+    sso_gateway: FakeSsoGateway,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    encryption_service: FakeEncryptionService,
+):
     return GetSsoAuthorizeUrlUseCase(
         sso_gateway, sso_configuration_repository, encryption_service
     )
@@ -17,7 +26,9 @@ def use_case(sso_gateway, sso_configuration_repository, encryption_service):
 
 @pytest.mark.asyncio
 async def test_should_return_sso_authorize_url(
-    use_case, sso_gateway, sso_configuration_repository
+    use_case,
+    sso_gateway: FakeSsoGateway,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
 ):
     # Arrange
     expected_url = "https://sso.example.com/authorize"

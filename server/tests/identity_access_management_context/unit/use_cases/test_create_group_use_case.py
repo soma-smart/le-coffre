@@ -1,24 +1,25 @@
 import pytest
 from uuid import UUID
 
-from identity_access_management_context.application.gateways import (
-    UserRepository,
-    GroupRepository,
-    GroupMemberRepository,
-)
+
 from identity_access_management_context.application.commands import CreateGroupCommand
 from identity_access_management_context.application.use_cases import CreateGroupUseCase
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
 from identity_access_management_context.domain.entities import User
+from ..fakes import (
+    FakeUserRepository,
+    FakeGroupRepository,
+    FakeGroupMemberRepository,
+)
 
 
 @pytest.fixture
 def use_case(
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     return CreateGroupUseCase(
         user_repository=user_repository,
@@ -29,8 +30,8 @@ def use_case(
 
 def test_given_valid_data_when_creating_group_then_group_is_created(
     use_case: CreateGroupUseCase,
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
 ):
     group_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     creator_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -62,8 +63,8 @@ def test_given_valid_data_when_creating_group_then_group_is_created(
 
 def test_given_valid_data_when_creating_group_then_creator_is_added_as_owner(
     use_case: CreateGroupUseCase,
-    user_repository: UserRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     group_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     creator_id = UUID("223e4567-e89b-12d3-a456-426614174001")

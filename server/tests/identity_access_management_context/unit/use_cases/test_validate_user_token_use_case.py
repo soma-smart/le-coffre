@@ -16,10 +16,15 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
     InsufficientRoleException,
 )
+from ..fakes import FakeUserPasswordRepository, FakeTokenGateway, FakeSsoUserRepository
 
 
 @pytest.fixture
-def use_case(user_password_repository, token_gateway, sso_user_repository):
+def use_case(
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
+    sso_user_repository: FakeSsoUserRepository,
+):
     return ValidateUserTokenUseCase(
         user_password_repository, token_gateway, sso_user_repository
     )
@@ -28,9 +33,8 @@ def use_case(user_password_repository, token_gateway, sso_user_repository):
 @pytest.mark.asyncio
 async def test_should_validate_token_and_return_user_details(
     use_case: ValidateUserTokenUseCase,
-    user_password_repository,
-    token_gateway,
-    time_provider,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -41,7 +45,7 @@ async def test_should_validate_token_and_return_user_details(
     user_password = UserPassword(
         id=user_id,
         email=email,
-        password_hash="hashed_password",
+        password_hash=b"hashed_password",
         display_name=display_name,
     )
     user_password_repository.save(user_password)
@@ -74,8 +78,7 @@ async def test_should_raise_exception_for_invalid_jwt_token(
 @pytest.mark.asyncio
 async def test_should_raise_exception_when_user_no_longer_exists(
     use_case: ValidateUserTokenUseCase,
-    token_gateway,
-    time_provider,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     jwt_token = "jwt_token_for_deleted_user"
@@ -93,9 +96,8 @@ async def test_should_raise_exception_when_user_no_longer_exists(
 @pytest.mark.asyncio
 async def test_should_validate_token_with_admin_role(
     use_case: ValidateUserTokenUseCase,
-    user_password_repository,
-    token_gateway,
-    time_provider,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -106,7 +108,7 @@ async def test_should_validate_token_with_admin_role(
     user_password = UserPassword(
         id=user_id,
         email=email,
-        password_hash="hashed_password",
+        password_hash=b"hashed_password",
         display_name=display_name,
     )
     user_password_repository.save(user_password)
@@ -128,9 +130,8 @@ async def test_should_validate_token_with_admin_role(
 @pytest.mark.asyncio
 async def test_should_raise_exception_when_required_role_not_in_token(
     use_case: ValidateUserTokenUseCase,
-    user_password_repository,
-    token_gateway,
-    time_provider,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "user@lecoffre.com"
@@ -141,7 +142,7 @@ async def test_should_raise_exception_when_required_role_not_in_token(
     user_password = UserPassword(
         id=user_id,
         email=email,
-        password_hash="hashed_password",
+        password_hash=b"hashed_password",
         display_name=display_name,
     )
     user_password_repository.save(user_password)
@@ -160,9 +161,8 @@ async def test_should_raise_exception_when_required_role_not_in_token(
 @pytest.mark.asyncio
 async def test_should_validate_token_for_sso_user(
     use_case: ValidateUserTokenUseCase,
-    sso_user_repository,
-    token_gateway,
-    time_provider,
+    sso_user_repository: FakeSsoUserRepository,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
     email = "sso_user@example.com"
@@ -196,8 +196,7 @@ async def test_should_validate_token_for_sso_user(
 @pytest.mark.asyncio
 async def test_should_raise_exception_when_sso_user_not_found(
     use_case: ValidateUserTokenUseCase,
-    token_gateway,
-    time_provider,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
     email = "nonexistent_sso@example.com"
@@ -214,9 +213,8 @@ async def test_should_raise_exception_when_sso_user_not_found(
 @pytest.mark.asyncio
 async def test_should_return_admin_roles_for_admin_user_token(
     use_case: ValidateUserTokenUseCase,
-    user_password_repository,
-    token_gateway,
-    time_provider,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     # Given an admin user with password authentication and JWT containing ["admin"] role
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -227,7 +225,7 @@ async def test_should_return_admin_roles_for_admin_user_token(
     user_password = UserPassword(
         id=user_id,
         email=email,
-        password_hash="hashed_password",
+        password_hash=b"hashed_password",
         display_name=display_name,
     )
     user_password_repository.save(user_password)
@@ -247,9 +245,8 @@ async def test_should_return_admin_roles_for_admin_user_token(
 @pytest.mark.asyncio
 async def test_should_return_multiple_roles_when_token_has_multiple_roles(
     use_case: ValidateUserTokenUseCase,
-    user_password_repository,
-    token_gateway,
-    time_provider,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     # Given a user with JWT containing ["user", "editor", "viewer"] roles
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -261,7 +258,7 @@ async def test_should_return_multiple_roles_when_token_has_multiple_roles(
     user_password = UserPassword(
         id=user_id,
         email=email,
-        password_hash="hashed_password",
+        password_hash=b"hashed_password",
         display_name=display_name,
     )
     user_password_repository.save(user_password)
@@ -281,8 +278,8 @@ async def test_should_return_multiple_roles_when_token_has_multiple_roles(
 @pytest.mark.asyncio
 async def test_should_return_empty_roles_when_token_has_no_roles(
     use_case: ValidateUserTokenUseCase,
-    user_password_repository,
-    token_gateway,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     # Given a user with JWT containing empty roles list
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -293,7 +290,7 @@ async def test_should_return_empty_roles_when_token_has_no_roles(
     user_password = UserPassword(
         id=user_id,
         email=email,
-        password_hash="hashed_password",
+        password_hash=b"hashed_password",
         display_name=display_name,
     )
     user_password_repository.save(user_password)

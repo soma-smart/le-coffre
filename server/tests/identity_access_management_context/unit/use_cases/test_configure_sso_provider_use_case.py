@@ -2,6 +2,12 @@
 
 import pytest
 from uuid import UUID
+
+from ..fakes import (
+    FakeSsoGateway,
+    FakeSsoConfigurationRepository,
+    FakeEncryptionService,
+)
 from shared_kernel.authentication import AuthenticatedUser
 from identity_access_management_context.application.commands import (
     ConfigureSsoProviderCommand,
@@ -23,7 +29,11 @@ def admin_user():
 
 
 @pytest.fixture
-def use_case(sso_gateway, sso_configuration_repository, encryption_service):
+def use_case(
+    sso_gateway: FakeSsoGateway,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    encryption_service: FakeEncryptionService,
+):
     """Use case configured for tests."""
     return ConfigureSsoProviderUseCase(
         sso_gateway, sso_configuration_repository, encryption_service
@@ -50,7 +60,7 @@ async def test_given_not_admin_when_configuring_sso_should_fail(use_case):
 
 @pytest.mark.asyncio
 async def test_execute_success_with_auto_discovery(
-    use_case, sso_configuration_repository, admin_user
+    use_case, sso_configuration_repository: FakeSsoConfigurationRepository, admin_user
 ):
     """Test successful configuration with auto-discovery."""
     command = ConfigureSsoProviderCommand(
@@ -101,7 +111,9 @@ async def test_execute_missing_required_parameters(
 
 
 @pytest.mark.asyncio
-async def test_execute_discovery_failure(use_case, sso_gateway, admin_user):
+async def test_execute_discovery_failure(
+    use_case, sso_gateway: FakeSsoGateway, admin_user
+):
     """Test configuration failure due to discovery error."""
     sso_gateway.set_discovery_error(ValueError("HTTP 404"))
 

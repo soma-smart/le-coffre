@@ -10,14 +10,20 @@ from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     AdminNotFoundException,
 )
+from ..fakes import (
+    FakeUserPasswordRepository,
+    FakePasswordHashingGateway,
+    FakeTokenGateway,
+    FakeTimeProvider,
+)
 
 
 @pytest.fixture
 def use_case(
-    user_password_repository,
-    password_hashing_gateway,
-    token_gateway,
-    time_provider,
+    user_password_repository: FakeUserPasswordRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+    token_gateway: FakeTokenGateway,
+    time_provider: FakeTimeProvider,
 ):
     return AdminLoginUseCase(
         user_password_repository,
@@ -30,8 +36,8 @@ def use_case(
 @pytest.mark.asyncio
 async def test_should_authenticate_admin_and_return_jwt_token(
     use_case: AdminLoginUseCase,
-    user_password_repository,
-    token_gateway,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -55,7 +61,7 @@ async def test_should_authenticate_admin_and_return_jwt_token(
 
 @pytest.mark.asyncio
 async def test_should_raise_exception_for_wrong_password(
-    use_case: AdminLoginUseCase, user_password_repository
+    use_case: AdminLoginUseCase, user_password_repository: FakeUserPasswordRepository
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -87,8 +93,8 @@ async def test_should_raise_exception_for_non_existent_admin(
 @pytest.mark.asyncio
 async def test_should_return_refresh_token_on_successful_login(
     use_case: AdminLoginUseCase,
-    user_password_repository,
-    token_gateway,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"

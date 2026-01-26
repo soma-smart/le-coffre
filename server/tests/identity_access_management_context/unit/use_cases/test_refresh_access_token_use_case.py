@@ -11,10 +11,15 @@ from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
 from identity_access_management_context.domain.entities import User
+from ..fakes import FakeTokenGateway, FakeUserRepository, FakeTimeProvider
 
 
 @pytest.fixture
-def use_case(token_gateway, user_repository, time_provider):
+def use_case(
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    time_provider: FakeTimeProvider,
+):
     return RefreshAccessTokenUseCase(
         token_gateway=token_gateway,
         user_repository=user_repository,
@@ -25,8 +30,8 @@ def use_case(token_gateway, user_repository, time_provider):
 @pytest.mark.asyncio
 async def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     use_case: RefreshAccessTokenUseCase,
-    token_gateway,
-    user_repository,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
 ):
     # Arrange
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -81,8 +86,7 @@ async def test_given_expired_refresh_token_when_execute_then_raises_invalid_refr
 @pytest.mark.asyncio
 async def test_given_refresh_token_for_nonexistent_user_when_execute_then_raises_invalid_refresh_token_exception(
     use_case: RefreshAccessTokenUseCase,
-    token_gateway,
-    user_repository,
+    token_gateway: FakeTokenGateway,
 ):
     # Arrange
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")

@@ -14,20 +14,32 @@ from tests.identity_access_management_context.unit.conftest import (
     create_sso_user_from_provider,
     create_existing_sso_user,
 )
+from ..fakes import (
+    FakeSsoGateway,
+    FakeSsoUserRepository,
+    FakeUserRepository,
+    FakePasswordHashingGateway,
+    FakeTokenGateway,
+    FakeTimeProvider,
+    FakeGroupRepository,
+    FakeGroupMemberRepository,
+    FakeSsoConfigurationRepository,
+    FakeEncryptionService,
+)
 
 
 @pytest.fixture
 def use_case(
-    sso_gateway,
-    sso_user_repository,
-    user_repository,
-    password_hashing_gateway,
-    token_gateway,
-    time_provider,
-    group_repository,
-    group_member_repository,
-    sso_configuration_repository,
-    encryption_service,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+    token_gateway: FakeTokenGateway,
+    time_provider: FakeTimeProvider,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    encryption_service: FakeEncryptionService,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
@@ -46,11 +58,10 @@ def use_case(
 @pytest.mark.asyncio
 async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     use_case: SsoLoginUseCase,
-    sso_gateway,
-    sso_user_repository,
-    sso_configuration_repository,
-    encryption_service,
-    token_gateway,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    token_gateway: FakeTokenGateway,
 ):
     # Arrange
     sso_code = "valid_sso_code_123"
@@ -97,7 +108,8 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
 
 @pytest.mark.asyncio
 async def test_should_raise_exception_for_invalid_sso_code(
-    use_case: SsoLoginUseCase, sso_configuration_repository
+    use_case: SsoLoginUseCase,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
 ):
     # Arrange
     invalid_code = "invalid_sso_code_999"
@@ -125,11 +137,11 @@ async def test_should_raise_exception_for_invalid_sso_code(
 @pytest.mark.asyncio
 async def test_should_create_new_user_for_first_time_sso_login(
     use_case: SsoLoginUseCase,
-    sso_gateway,
-    sso_user_repository,
-    user_repository,
-    token_gateway,
-    sso_configuration_repository,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
 ):
     # Arrange
     sso_code = "valid_new_user_code_456"
@@ -175,11 +187,11 @@ async def test_should_create_new_user_for_first_time_sso_login(
 @pytest.mark.asyncio
 async def test_should_update_last_login_for_existing_user_without_recreation(
     use_case: SsoLoginUseCase,
-    sso_gateway,
-    sso_user_repository,
-    user_repository,
-    sso_configuration_repository,
-    token_gateway,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    token_gateway: FakeTokenGateway,
 ):
     # Arrange
     sso_code = "existing_user_code_789"
@@ -240,10 +252,10 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
 @pytest.mark.asyncio
 async def test_should_return_refresh_token_on_successful_sso_login(
     use_case: SsoLoginUseCase,
-    sso_gateway,
-    sso_user_repository,
-    sso_configuration_repository,
-    token_gateway,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    token_gateway: FakeTokenGateway,
 ):
     sso_code = "valid_sso_code_123"
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")

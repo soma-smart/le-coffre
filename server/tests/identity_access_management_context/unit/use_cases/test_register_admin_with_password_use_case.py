@@ -10,15 +10,22 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
+from ..fakes import (
+    FakeUserPasswordRepository,
+    FakePasswordHashingGateway,
+    FakeUserRepository,
+    FakeGroupRepository,
+    FakeGroupMemberRepository,
+)
 
 
 @pytest.fixture
 def use_case(
-    user_password_repository,
-    password_hashing_gateway,
-    user_repository,
-    group_repository,
-    group_member_repository,
+    user_password_repository: FakeUserPasswordRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
@@ -32,8 +39,8 @@ def use_case(
 @pytest.mark.asyncio
 async def test_should_register_first_admin_with_password_and_return_user_id(
     use_case: RegisterAdminWithPasswordUseCase,
-    user_password_repository,
-    user_repository,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -49,6 +56,8 @@ async def test_should_register_first_admin_with_password_and_return_user_id(
     assert result == user_id
 
     saved_user_password = user_password_repository.get_by_id(user_id)
+
+    assert saved_user_password
     assert saved_user_password.id == user_id
     assert saved_user_password.email == email
     assert saved_user_password.display_name == display_name
@@ -62,7 +71,7 @@ async def test_should_register_first_admin_with_password_and_return_user_id(
 
 @pytest.mark.asyncio
 async def test_should_raise_exception_when_admin_already_exists(
-    use_case: RegisterAdminWithPasswordUseCase, user_repository
+    use_case: RegisterAdminWithPasswordUseCase, user_repository: FakeUserRepository
 ):
     # First create an admin
     existing_admin_id = uuid4()
@@ -89,7 +98,8 @@ async def test_should_raise_exception_when_admin_already_exists(
 
 @pytest.mark.asyncio
 async def test_should_hash_password_before_storing_credentials(
-    use_case: RegisterAdminWithPasswordUseCase, user_password_repository
+    use_case: RegisterAdminWithPasswordUseCase,
+    user_password_repository: FakeUserPasswordRepository,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -103,13 +113,15 @@ async def test_should_hash_password_before_storing_credentials(
     await use_case.execute(command)
 
     saved_user_password = user_password_repository.get_by_id(user_id)
+
+    assert saved_user_password
     assert saved_user_password.password_hash == b"hashed(my_plain_password)"
     assert saved_user_password.password_hash != plain_password
 
 
 @pytest.mark.asyncio
 async def test_should_delegate_admin_creation_to_user_management_context(
-    use_case: RegisterAdminWithPasswordUseCase, user_repository
+    use_case: RegisterAdminWithPasswordUseCase, user_repository: FakeUserRepository
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"

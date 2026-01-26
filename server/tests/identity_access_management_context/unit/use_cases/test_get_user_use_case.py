@@ -3,17 +3,17 @@ import pytest
 
 from identity_access_management_context.application.commands import GetUserCommand
 from identity_access_management_context.application.use_cases import GetUserUseCase
-from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.entities import User
+from ..fakes import FakeGroupRepository
 
 
 @pytest.fixture
-def use_case(user_repository: UserRepository):
+def use_case(user_repository: FakeGroupRepository):
     return GetUserUseCase(user_repository)
 
 
 def test_should_get_user_by_id(
-    use_case: GetUserUseCase, user_repository: UserRepository
+    use_case: GetUserUseCase, user_repository: FakeGroupRepository
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"
@@ -34,7 +34,7 @@ def test_should_get_user_by_id(
 
 
 def test_should_get_user_by_email(
-    use_case: GetUserUseCase, user_repository: UserRepository
+    use_case: GetUserUseCase, user_repository: FakeGroupRepository
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"

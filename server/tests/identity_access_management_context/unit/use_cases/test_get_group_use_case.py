@@ -6,10 +6,14 @@ from identity_access_management_context.application.use_cases import GetGroupUse
 from identity_access_management_context.application.responses import GetGroupResponse
 from identity_access_management_context.domain.entities import Group
 from identity_access_management_context.domain.exceptions import GroupNotFoundException
+from ..fakes import FakeGroupRepository, FakeGroupMemberRepository
 
 
 @pytest.fixture
-def use_case(group_repository, group_member_repository):
+def use_case(
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
     return GetGroupUseCase(group_repository, group_member_repository)
 
 
