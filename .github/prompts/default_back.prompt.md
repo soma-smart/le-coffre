@@ -287,6 +287,7 @@ from shared_kernel.authentication import ValidatedUser
 - ❌ NEVER bypass dependency injection
 - ❌ NEVER write file summaries (only in conversation)
 - ❌ NEVER modify files without understanding the context
+- ❌ NEVER add import in functions. ALWAYS on the top of the file
 
 ### Naming Conventions
 
