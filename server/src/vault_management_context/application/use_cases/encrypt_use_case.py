@@ -1,3 +1,4 @@
+from vault_management_context.application.commands import EncryptCommand
 from vault_management_context.application.gateways import (
     EncryptionGateway,
     VaultSessionGateway,
@@ -13,6 +14,6 @@ class EncryptUseCase:
         self.encryption_gateway = encryption_gateway
         self.vault_session_gateway = vault_session_gateway
 
-    def execute(self, decrypted_data: str) -> str:
+    def execute(self, command: EncryptCommand) -> str:
         decryption_key = self.vault_session_gateway.get_decrypted_key()
-        return self.encryption_gateway.encrypt(decrypted_data, decryption_key)
+        return self.encryption_gateway.encrypt(command.decrypted_data, decryption_key)

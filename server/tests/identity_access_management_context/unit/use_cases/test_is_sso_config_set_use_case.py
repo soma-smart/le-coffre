@@ -1,5 +1,8 @@
 import pytest
 
+from identity_access_management_context.application.commands import (
+    IsSsoConfigSetCommand,
+)
 from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
 )
@@ -35,7 +38,8 @@ def test_given_sso_configured_when_checking_if_it_is_configured_then_should_retu
     sso_configuration_repository.save(sso_config)
 
     # Act
-    response = use_case.execute()
+    command = IsSsoConfigSetCommand()
+    response = use_case.execute(command)
 
     # Assert
     assert response.is_set is True
@@ -45,7 +49,8 @@ def test_given_sso_not_configured_when_checking_if_it_is_configured_then_should_
     use_case: IsSsoConfigSetUseCase,
 ):
     # Act
-    response = use_case.execute()
+    command = IsSsoConfigSetCommand()
+    response = use_case.execute(command)
 
     # Assert
     assert response.is_set is False

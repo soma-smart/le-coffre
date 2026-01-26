@@ -1,6 +1,7 @@
 from uuid import UUID
 import pytest
 
+from identity_access_management_context.application.commands import GetUserCommand
 from identity_access_management_context.application.use_cases import GetUserUseCase
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.entities import User
@@ -22,7 +23,8 @@ def test_should_get_user_by_id(
     user = User(id=uuid, username=username, email=email, name=name)
     user_repository.save(user)
 
-    retrieved_user = use_case.execute(user_id=uuid)
+    command = GetUserCommand(user_id=uuid)
+    retrieved_user = use_case.execute(command)
 
     assert retrieved_user is not None
     assert retrieved_user.id == uuid
@@ -42,7 +44,8 @@ def test_should_get_user_by_email(
     user = User(id=uuid, username=username, email=email, name=name)
     user_repository.save(user)
 
-    retrieved_user = use_case.execute(user_email=email)
+    command = GetUserCommand(user_email=email)
+    retrieved_user = use_case.execute(command)
     assert retrieved_user is not None
     assert retrieved_user.id == uuid
     assert retrieved_user.username == username
@@ -53,5 +56,6 @@ def test_should_get_user_by_email(
 def test_should_raise_not_args_to_get_user(
     use_case: GetUserUseCase,
 ):
+    command = GetUserCommand()
     with pytest.raises(ValueError) as _:
-        use_case.execute()
+        use_case.execute(command)

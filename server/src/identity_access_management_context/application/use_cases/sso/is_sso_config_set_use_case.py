@@ -1,3 +1,6 @@
+from identity_access_management_context.application.commands import (
+    IsSsoConfigSetCommand,
+)
 from identity_access_management_context.application.responses import (
     IsSsoConfigSetResponse,
 )
@@ -10,7 +13,7 @@ class IsSsoConfigSetUseCase:
     def __init__(self, sso_configuration_repository: SsoConfigurationRepository):
         self._sso_configuration_repository = sso_configuration_repository
 
-    def execute(self) -> IsSsoConfigSetResponse:
+    def execute(self, command: IsSsoConfigSetCommand) -> IsSsoConfigSetResponse:
         sso_config = self._sso_configuration_repository.get()
         is_set = sso_config is not None
 

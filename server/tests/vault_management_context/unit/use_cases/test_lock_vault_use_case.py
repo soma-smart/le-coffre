@@ -1,6 +1,7 @@
 import pytest
 from uuid import UUID
 
+from vault_management_context.application.commands import LockVaultCommand
 from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
     VaultLockedException,
@@ -25,7 +26,8 @@ def test_should_lock_vault(use_case, vault_repository, vault_session_gateway):
     )
     vault_session_gateway.store_decrypted_key("decrypted_vault_key")
 
-    use_case.execute(admin_user)
+    command = LockVaultCommand(requesting_user=admin_user)
+    use_case.execute(command)
 
     with pytest.raises(ValueError):
         vault_session_gateway.get_decrypted_key()
@@ -39,8 +41,9 @@ def test_should_not_lock_vault_if_not_unlocked(use_case, vault_repository):
         nb_shares=3, threshold=2, encrypted_key="encrypted_vault_key_hex"
     )
 
+    command = LockVaultCommand(requesting_user=admin_user)
     with pytest.raises(VaultLockedException):
-        use_case.execute(admin_user)
+        use_case.execute(command)
 
 
 def test_when_not_setup_should_lock_fail(use_case):
@@ -48,8 +51,9 @@ def test_when_not_setup_should_lock_fail(use_case):
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
 
+    command = LockVaultCommand(requesting_user=admin_user)
     with pytest.raises(VaultNotSetupException):
-        use_case.execute(admin_user)
+        use_case.execute(command)
 
 
 def test_should_raise_not_admin_error_when_requesting_user_is_not_admin(
@@ -63,5 +67,6 @@ def test_should_raise_not_admin_error_when_requesting_user_is_not_admin(
     )
     vault_session_gateway.store_decrypted_key("decrypted_vault_key")
 
+    command = LockVaultCommand(requesting_user=regular_user)
     with pytest.raises(NotAdminError):
-        use_case.execute(regular_user)
+        use_case.execute(command)

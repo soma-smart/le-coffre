@@ -1,5 +1,6 @@
 from typing import Optional
 
+from vault_management_context.application.commands import ValidateVaultSetupCommand
 from vault_management_context.application.gateways import (
     VaultRepository,
 )
@@ -19,11 +20,11 @@ class ValidateVaultSetupUseCase:
     ) -> None:
         self.vault_repo = vault_repo
 
-    def execute(self, setup_id: str) -> None:
+    def execute(self, command: ValidateVaultSetupCommand) -> None:
         """Validate and complete vault setup
 
         Args:
-            setup_id: The unique setup identifier from the initial setup
+            command: Contains the unique setup identifier from the initial setup
 
         Raises:
             NoVaultExisting: If no vault exists
@@ -38,7 +39,7 @@ class ValidateVaultSetupUseCase:
         if existing_vault.status != VaultStatus.PENDING.value:
             raise VaultAlreadySetuped()
 
-        if existing_vault.setup_id != setup_id:
+        if existing_vault.setup_id != command.setup_id:
             raise VaultSetupIdNotFound()
 
         # Vault is valid and in pending state, complete the setup

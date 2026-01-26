@@ -1,3 +1,4 @@
+from identity_access_management_context.application.commands import ListGroupsCommand
 from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
@@ -17,18 +18,18 @@ class ListGroupsUseCase:
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
 
-    def execute(self, include_personal: bool = True) -> ListGroupResponse:
+    def execute(self, command: ListGroupsCommand) -> ListGroupResponse:
         """List all groups with their owners, optionally filtering out personal groups.
 
         Args:
-            include_personal: If True, include personal groups in results. If False, only shared groups.
+            command: Contains requesting_user and include_personal flag
 
         Returns:
             List of groups with owners based on filter criteria.
         """
         all_groups = self.group_repository.get_all()
 
-        if not include_personal:
+        if not command.include_personal:
             all_groups = [group for group in all_groups if not group.is_personal]
 
         result = ListGroupResponse([])

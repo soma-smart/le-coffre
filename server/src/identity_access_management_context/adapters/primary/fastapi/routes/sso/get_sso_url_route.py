@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_sso_url_usecase,
 )
-
+from identity_access_management_context.application.commands import GetSsoAuthorizeUrlCommand
 from identity_access_management_context.application.use_cases import GetSsoAuthorizeUrlUseCase
 
 
@@ -18,4 +18,5 @@ async def get_sso_url(
 
     Returns the SSO authorization URL.
     """
-    return await usecase.execute()
+    command = GetSsoAuthorizeUrlCommand()
+    return await usecase.execute(command)

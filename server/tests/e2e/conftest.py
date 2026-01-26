@@ -60,14 +60,15 @@ def oidc_server():
 
 
 @pytest.fixture
-def configured_sso(e2e_client, oidc_server, setup):
+def configured_sso(authenticated_admin_client, oidc_server, setup):
     """
     Configure SSO with the OIDC server for the test client.
     This fixture should be used as a dependency for any test that needs SSO.
     It configures SSO once per test function.
     Depends on 'setup' to ensure vault is initialized for encryption.
+    Requires authenticated admin client to configure SSO.
     """
-    configure_response = e2e_client.post(
+    configure_response = authenticated_admin_client.post(
         "/api/auth/sso/configure",
         json={
             "client_id": oidc_server["client_id"],
@@ -389,22 +390,13 @@ def admin_cookies(e2e_client):
 
 
 @pytest.fixture
-def authenticated_sso_user_client(e2e_client, oidc_server, e2e_test_user, setup):
+def authenticated_sso_user_client(e2e_client, configured_sso, e2e_test_user):
     """
     Returns a TestClient with an authenticated SSO user session via cookies.
     The cookies are automatically handled by the TestClient for subsequent requests.
-    Depends on 'setup' to ensure vault is initialized for encryption.
+    Depends on 'configured_sso' which ensures SSO is configured and vault is initialized.
     """
-    # Configure SSO with the mock OIDC provider
-    configure_response = e2e_client.post(
-        "/api/auth/sso/configure",
-        json={
-            "client_id": oidc_server["client_id"],
-            "client_secret": oidc_server["client_secret"],
-            "discovery_url": oidc_server["discovery_url"],
-        },
-    )
-    assert configure_response.status_code == 200
+    oidc_server = configured_sso  # configured_sso returns the oidc_server
 
     # Get SSO authorization URL
     url_response = e2e_client.get("/api/auth/sso/url")

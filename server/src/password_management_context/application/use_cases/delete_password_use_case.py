@@ -1,4 +1,4 @@
-from uuid import UUID
+from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.gateways import (
     PasswordRepository,
     PasswordPermissionsRepository,
@@ -22,13 +22,13 @@ class DeletePasswordUseCase:
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
 
-    def execute(self, requester_id: UUID, password_id: UUID) -> None:
-        if not self.password_repository.get_by_id(password_id):
-            raise PasswordNotFoundError(password_id)
+    def execute(self, command: DeletePasswordCommand) -> None:
+        if not self.password_repository.get_by_id(command.password_id):
+            raise PasswordNotFoundError(command.password_id)
 
         # Get the owner group of the password
         all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            password_id
+            command.password_id
         )
 
         # Find the owner group (there should be exactly one)
@@ -39,12 +39,12 @@ class DeletePasswordUseCase:
                 break
 
         if not owner_group_id:
-            raise NotPasswordOwnerError(requester_id, password_id)
+            raise NotPasswordOwnerError(command.requester_id, command.password_id)
 
         # Check if the user owns the group that owns the password
         if not self.group_access_gateway.is_user_owner_of_group(
-            requester_id, owner_group_id
+            command.requester_id, owner_group_id
         ):
-            raise UserNotOwnerOfGroupError(requester_id, owner_group_id)
+            raise UserNotOwnerOfGroupError(command.requester_id, owner_group_id)
 
-        self.password_repository.delete(password_id)
+        self.password_repository.delete(command.password_id)

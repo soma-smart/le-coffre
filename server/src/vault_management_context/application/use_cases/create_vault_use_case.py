@@ -1,6 +1,6 @@
 from typing import Optional
-from uuid import UUID
 
+from vault_management_context.application.commands import CreateVaultCommand
 from vault_management_context.domain.entities import Vault
 from vault_management_context.domain.value_objects import VaultConfiguration
 from vault_management_context.domain.services import (
@@ -31,11 +31,9 @@ class CreateVaultUseCase:
         self.encryption_gateway = encryption_gateway
         self.vault_session_gateway = vault_session_gateway
 
-    def execute(
-        self, nb_shares: int, threshold: int, setup_id: UUID
-    ) -> VaultSetupResponse:
+    def execute(self, command: CreateVaultCommand) -> VaultSetupResponse:
         existing_vault: Optional[Vault] = self.vault_repo.get()
-        configuration = VaultConfiguration.create(nb_shares, threshold)
+        configuration = VaultConfiguration.create(command.nb_shares, command.threshold)
 
         VaultCreationService.ensure_creation_allowed(existing_vault)
 
@@ -46,7 +44,7 @@ class CreateVaultUseCase:
         )
 
         vault = VaultCreationService.create_vault_entity(
-            configuration, encrypted_key, str(setup_id)
+            configuration, encrypted_key, str(command.setup_id)
         )
 
         # Always store the session key when creating vault
@@ -63,4 +61,6 @@ class CreateVaultUseCase:
 
         self.vault_repo.save(vault)
 
-        return VaultSetupResponse(setup_id=str(setup_id), shares=shamir_result.shares)
+        return VaultSetupResponse(
+            setup_id=str(command.setup_id), shares=shamir_result.shares
+        )

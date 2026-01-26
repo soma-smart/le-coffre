@@ -2,6 +2,7 @@ from shared_kernel.pubsub import DomainEvent
 from shared_kernel.pubsub.adapters.in_memory_event_publisher import (
     InMemoryDomainEventPublisher,
 )
+from audit_logging_context.application.commands import ListAuditLogsCommand
 from audit_logging_context.adapters.secondary import (
     InMemoryAuditLogger,
 )
@@ -29,7 +30,8 @@ def test_list_audit_logs_use_case_returns_empty_list_when_no_events():
     use_case = ListAuditLogsUseCase(audit_logger)
 
     # When
-    logs = use_case.execute()
+    command = ListAuditLogsCommand()
+    logs = use_case.execute(command)
 
     # Then
     assert logs == []
@@ -47,7 +49,8 @@ def test_list_audit_logs_use_case_returns_logged_events():
     # When
     event_publisher.publish(UserCreatedEvent(user_id="123", username="alice"))
     event_publisher.publish(PasswordCreatedEvent(password_id="456", owner_id="123"))
-    logs = use_case.execute()
+    command = ListAuditLogsCommand()
+    logs = use_case.execute(command)
 
     # Then
     assert len(logs) == 2

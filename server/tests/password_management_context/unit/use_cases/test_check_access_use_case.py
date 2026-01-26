@@ -1,6 +1,7 @@
 import pytest
 from uuid import UUID
 
+from password_management_context.application.commands import CheckAccessCommand
 from password_management_context.application.use_cases import (
     CheckAccessUseCase,
 )
@@ -26,7 +27,8 @@ def test_given_owned_resource_when_reading_should_grant_access(
         USER_ID, RESOURCE_ID, PasswordPermission.READ
     )
 
-    result = use_case.execute(USER_ID, RESOURCE_ID, PasswordPermission.READ)
+    command = CheckAccessCommand(user_id=USER_ID, resource_id=RESOURCE_ID, permission=PasswordPermission.READ)
+    result = use_case.execute(command)
 
     assert result.granted is Granted.ACCESS
 
@@ -34,6 +36,7 @@ def test_given_owned_resource_when_reading_should_grant_access(
 def test_given_not_owned_resource_when_reading_should_deny_access(
     use_case: CheckAccessUseCase,
 ):
-    result = use_case.execute(USER_ID, RESOURCE_ID, PasswordPermission.READ)
+    command = CheckAccessCommand(user_id=USER_ID, resource_id=RESOURCE_ID, permission=PasswordPermission.READ)
+    result = use_case.execute(command)
 
     assert result.granted is Granted.NOT_FOUND

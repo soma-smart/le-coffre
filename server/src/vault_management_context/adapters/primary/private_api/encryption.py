@@ -4,6 +4,7 @@ from vault_management_context.application.use_cases import (
     EncryptUseCase,
     DecryptUseCase,
 )
+from vault_management_context.application.commands import EncryptCommand, DecryptCommand
 
 
 class EncryptionApi(EncryptionService):
@@ -14,7 +15,9 @@ class EncryptionApi(EncryptionService):
         self.decrypt_use_case = decrypt_use_case
 
     def encrypt(self, plaintext: str) -> str:
-        return self.encrypt_use_case.execute(plaintext)
+        command = EncryptCommand(decrypted_data=plaintext)
+        return self.encrypt_use_case.execute(command)
 
     def decrypt(self, ciphertext: str) -> str:
-        return self.decrypt_use_case.execute(ciphertext)
+        command = DecryptCommand(encrypted_data=ciphertext)
+        return self.decrypt_use_case.execute(command)

@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_groups_usecase,
 )
+from identity_access_management_context.application.commands import ListGroupsCommand
 from identity_access_management_context.application.use_cases import ListGroupsUseCase
 from shared_kernel.authentication import ValidatedUser, get_current_user
 
@@ -55,7 +56,8 @@ def list_groups(
     - owners: List of user IDs who are owners of this group
     """
     try:
-        groups_with_owners = usecase.execute(include_personal=include_personal)
+        command = ListGroupsCommand(include_personal=include_personal)
+        groups_with_owners = usecase.execute(command)
 
         group_items = [
             GroupItem(

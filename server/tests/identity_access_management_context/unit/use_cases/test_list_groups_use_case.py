@@ -1,6 +1,7 @@
 import pytest
 from uuid import uuid4
 
+from identity_access_management_context.application.commands import ListGroupsCommand
 from identity_access_management_context.application.use_cases import ListGroupsUseCase
 from identity_access_management_context.domain.entities import Group
 
@@ -11,7 +12,8 @@ def use_case(group_repository, group_member_repository):
 
 
 def test_given_no_groups_when_listings_groups_should_return_empty_list(use_case):
-    result = use_case.execute()
+    command = ListGroupsCommand()
+    result = use_case.execute(command)
     assert result.groups == []
 
 
@@ -34,7 +36,8 @@ def test_given_groups_when_listing_groups_should_return_list_of_groups(
     group_member_repository.add_member(group1, user1, is_owner=True)
     group_member_repository.add_member(group2, user2, is_owner=True)
 
-    result = use_case.execute()
+    command = ListGroupsCommand()
+    result = use_case.execute(command)
 
     assert len(result.groups) == 2
     assert result.groups[0].id == group1
@@ -73,7 +76,8 @@ def test_given_mixed_groups_when_listing_with_personal_should_return_all(
     # Add owner to shared group
     group_member_repository.add_member(shared_group_id, owner_id, is_owner=True)
 
-    result = use_case.execute(include_personal=True)
+    command = ListGroupsCommand(include_personal=True)
+    result = use_case.execute(command)
 
     assert len(result.groups) == 2
 
@@ -113,7 +117,8 @@ def test_given_mixed_groups_when_listing_without_personal_should_return_only_sha
     # Add owner to shared group
     group_member_repository.add_member(shared_group_id, owner_id, is_owner=True)
 
-    result = use_case.execute(include_personal=False)
+    command = ListGroupsCommand(include_personal=False)
+    result = use_case.execute(command)
 
     assert len(result.groups) == 1
     assert result.groups[0].id == shared_group_id

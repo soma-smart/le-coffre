@@ -4,8 +4,16 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
     get_configure_sso_provider_usecase,
 )
 
-from identity_access_management_context.application.use_cases import ConfigureSsoProviderUseCase
-from identity_access_management_context.domain.exceptions import InvalidSsoSettingsException
+from identity_access_management_context.application.use_cases import (
+    ConfigureSsoProviderUseCase,
+)
+from identity_access_management_context.application.commands import (
+    ConfigureSsoProviderCommand,
+)
+from identity_access_management_context.domain.exceptions import (
+    InvalidSsoSettingsException,
+)
+from shared_kernel.authentication import ValidatedUser, get_current_user
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -34,6 +42,7 @@ class ConfigureSsoProviderRequest(BaseModel):
 )
 async def configure_sso_provider(
     request: ConfigureSsoProviderRequest,
+    current_user: ValidatedUser = Depends(get_current_user),
     usecase: ConfigureSsoProviderUseCase = Depends(get_configure_sso_provider_usecase),
 ):
     """
@@ -61,11 +70,13 @@ async def configure_sso_provider(
     ensuring compatibility with the standard.
     """
     try:
-        await usecase.execute(
+        command = ConfigureSsoProviderCommand(
+            requesting_user=current_user.to_authenticated_user(),
             client_id=request.client_id,
             client_secret=request.client_secret,
             discovery_url=request.discovery_url,
         )
+        await usecase.execute(command)
 
     except InvalidSsoSettingsException as e:
         raise HTTPException(status_code=400, detail=str(e))

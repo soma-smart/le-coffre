@@ -6,6 +6,7 @@ import logging
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_user_usecase,
 )
+from identity_access_management_context.application.commands import ListUserCommand
 from identity_access_management_context.application.use_cases import ListUserUseCase
 from shared_kernel.authentication import ValidatedUser, get_current_user
 
@@ -37,7 +38,8 @@ def list_users(
     Returns a list of all users in the system.
     """
     try:
-        users = usecase.execute()
+        command = ListUserCommand(requesting_user=current_user.to_authenticated_user())
+        users = usecase.execute(command)
 
         return [
             ListUserResponse(

@@ -6,6 +6,7 @@ from uuid import UUID
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_validate_vault_setup_usecase,
 )
+from vault_management_context.application.commands import ValidateVaultSetupCommand
 from vault_management_context.application.use_cases import ValidateVaultSetupUseCase
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
@@ -36,7 +37,8 @@ def validate_vault_setup(
     - **setup_id**: The unique identifier returned from the initial setup
     """
     try:
-        usecase.execute(str(request.setup_id))
+        command = ValidateVaultSetupCommand(setup_id=str(request.setup_id))
+        usecase.execute(command)
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

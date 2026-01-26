@@ -5,6 +5,7 @@ import logging
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_is_sso_config_set_usecase,
 )
+from identity_access_management_context.application.commands import IsSsoConfigSetCommand
 from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
 )
@@ -39,7 +40,8 @@ def is_sso_config_set(
     **Note**: Only administrators can check SSO configuration status.
     """
     try:
-        result = usecase.execute()
+        command = IsSsoConfigSetCommand()
+        result = usecase.execute(command)
         return IsSsoConfigSetResponse(is_set=result.is_set)
     except Exception as e:
         logging.error(f"Error checking SSO configuration status: {e}")

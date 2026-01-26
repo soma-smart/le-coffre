@@ -5,6 +5,7 @@ from typing import List
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_unlock_vault_usecase,
 )
+from vault_management_context.application.commands import UnlockVaultCommand
 from vault_management_context.application.use_cases.unlock_vault_use_case import (
     UnlockVaultUseCase,
 )
@@ -58,7 +59,8 @@ def unlock_vault(
     try:
         # Create Share objects from secrets (index is embedded in secret)
         shares = [Share(share_secret) for share_secret in request.shares]
-        usecase.execute(shares)
+        command = UnlockVaultCommand(shares=shares)
+        usecase.execute(command)
         return {"message": "Vault unlocked successfully"}
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))

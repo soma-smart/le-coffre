@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_vault_status_usecase,
 )
+from vault_management_context.application.commands import GetVaultStatusCommand
 from vault_management_context.application.responses import VaultStatus
 
 router = APIRouter(prefix="/vault", tags=["Vault"])
@@ -26,7 +27,8 @@ def get_vault_status(usecase=Depends(get_vault_status_usecase)):
     NOT_SETUP, LOCKED or UNLOCKED.
     """
     try:
-        status: VaultStatus = usecase.execute()
+        command = GetVaultStatusCommand()
+        status: VaultStatus = usecase.execute(command)
         return {"status": status}
     except Exception:
         raise HTTPException(status_code=500, detail="Internal server error")

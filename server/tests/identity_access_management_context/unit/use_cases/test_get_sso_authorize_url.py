@@ -1,4 +1,7 @@
 import pytest
+from identity_access_management_context.application.commands import (
+    GetSsoAuthorizeUrlCommand,
+)
 from identity_access_management_context.application.use_cases import (
     GetSsoAuthorizeUrlUseCase,
 )
@@ -33,7 +36,8 @@ async def test_should_return_sso_authorize_url(
     )
 
     # Act
-    result = await use_case.execute()
+    command = GetSsoAuthorizeUrlCommand()
+    result = await use_case.execute(command)
 
     # Assert
     assert result == expected_url
@@ -44,5 +48,6 @@ async def test_should_raise_exception_when_no_sso_config(
     use_case: GetSsoAuthorizeUrlUseCase,
 ):
     # Act & Assert
+    command = GetSsoAuthorizeUrlCommand()
     with pytest.raises(ValueError):
-        await use_case.execute()
+        await use_case.execute(command)
