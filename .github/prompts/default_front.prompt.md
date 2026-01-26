@@ -13,7 +13,7 @@ frontend/
  src/
    ├── main.ts                    # Application entry point (PrimeVue, Pinia, Router setup)
    ├── App.vue                    # Root component with global modals
- customClient.ts            # API client error interceptors   ├─
+   ├─  customClient.ts            # API client error interceptors   
    │
    ├── client/                    # 🤖 AUTO-GENERATED - DO NOT EDIT
    │   ├── types.gen.ts           # TypeScript types from OpenAPI
