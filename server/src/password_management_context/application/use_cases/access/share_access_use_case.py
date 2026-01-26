@@ -11,6 +11,10 @@ from password_management_context.domain.exceptions import (
     GroupNotFoundError,
 )
 from password_management_context.domain.value_objects import PasswordPermission
+from password_management_context.domain.events import (
+    PasswordSharedEvent,
+)
+from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
 
 
 class ShareAccessUseCase:
@@ -19,14 +23,17 @@ class ShareAccessUseCase:
         password_repository: PasswordRepository,
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
+        event_publisher: DomainEventPublisher,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
+        self.event_publisher = event_publisher
 
     def execute(self, command: ShareResourceCommand):
         # Verify the password exists
-        if not self.password_repository.get_by_id(command.password_id):
+        password_entity = self.password_repository.get_by_id(command.password_id)
+        if not password_entity:
             raise PasswordNotFoundError(command.password_id)
 
         # Verify the target group exists
@@ -58,3 +65,14 @@ class ShareAccessUseCase:
         self.password_permissions_repository.grant_access(
             command.group_id, command.password_id, PasswordPermission.READ
         )
+
+        # Publish domain event
+        event = PasswordSharedEvent(
+            password_id=command.password_id,
+            password_name=password_entity.name,
+            shared_with_group_id=command.group_id,
+            shared_by_user_id=command.owner_id,
+            owner_group_id=owner_group_id,
+            can_write=False,  # Currently only READ access
+        )
+        self.event_publisher.publish(event)

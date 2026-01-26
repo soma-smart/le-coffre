@@ -9,6 +9,10 @@ from password_management_context.domain.exceptions import (
     NotPasswordOwnerError,
     UserNotOwnerOfGroupError,
 )
+from password_management_context.domain.events import (
+    PasswordDeletedEvent,
+)
+from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
 
 
 class DeletePasswordUseCase:
@@ -17,13 +21,16 @@ class DeletePasswordUseCase:
         password_repository: PasswordRepository,
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
+        event_publisher: DomainEventPublisher,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
+        self.event_publisher = event_publisher
 
     def execute(self, requester_id: UUID, password_id: UUID) -> None:
-        if not self.password_repository.get_by_id(password_id):
+        password_entity = self.password_repository.get_by_id(password_id)
+        if not password_entity:
             raise PasswordNotFoundError(password_id)
 
         # Get the owner group of the password
@@ -48,3 +55,12 @@ class DeletePasswordUseCase:
             raise UserNotOwnerOfGroupError(requester_id, owner_group_id)
 
         self.password_repository.delete(password_id)
+
+        # Publish domain event
+        event = PasswordDeletedEvent(
+            password_id=password_id,
+            password_name=password_entity.name,
+            deleted_by_user_id=requester_id,
+            owner_group_id=owner_group_id,
+        )
+        self.event_publisher.publish(event)

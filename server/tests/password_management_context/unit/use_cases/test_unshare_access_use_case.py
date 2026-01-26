@@ -13,6 +13,8 @@ from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
 )
 from password_management_context.domain.value_objects import PasswordPermission
+from password_management_context.domain.events import PasswordUnsharedEvent
+from tests.shared_kernel.fakes import FakeEventPublisher
 
 
 @pytest.fixture()
@@ -20,9 +22,13 @@ def use_case(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
     group_access_gateway,
+    event_publisher,
 ):
     return UnshareAccessUseCase(
-        password_repository, password_permissions_repository, group_access_gateway
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        event_publisher,
     )
 
 
@@ -133,3 +139,47 @@ def test_given_no_password_when_unsharing_should_fail(
     # Act: When owner unshares the resource
     with pytest.raises(PasswordNotFoundError):
         use_case.execute(UnshareResourceCommand(owner_id, user_id, password_id))
+
+
+def test_should_publish_password_unshared_event_when_password_is_unshared(
+    use_case: UnshareAccessUseCase,
+    password_repository: PasswordRepository,
+    password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
+    event_publisher: FakeEventPublisher,
+):
+    owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    owner_group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    target_group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e7")
+    password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e8")
+    password_name = "UnsharedPassword"
+
+    password = Password(
+        id=password_id,
+        name=password_name,
+        encrypted_value="encrypted(password)",
+        folder="folder",
+    )
+    password_repository.save(password)
+    password_permissions_repository.set_owner(owner_group_id, password.id)
+    password_permissions_repository.grant_access(
+        target_group_id, password.id, PasswordPermission.READ
+    )
+    group_access_gateway.set_group_owner(owner_group_id, owner_id)
+    # Ensure target group exists
+    group_access_gateway.set_group_owner(
+        target_group_id, UUID("00000000-0000-0000-0000-000000000000")
+    )
+
+    command = UnshareResourceCommand(owner_id, target_group_id, password_id)
+    use_case.execute(command)
+
+    # Assert event was published
+    assert len(event_publisher.published_events) == 1
+    published_event = event_publisher.published_events[0]
+    assert isinstance(published_event, PasswordUnsharedEvent)
+    assert published_event.password_id == password_id
+    assert published_event.password_name == password_name
+    assert published_event.unshared_from_group_id == target_group_id
+    assert published_event.unshared_by_user_id == owner_id
+    assert published_event.owner_group_id == owner_group_id

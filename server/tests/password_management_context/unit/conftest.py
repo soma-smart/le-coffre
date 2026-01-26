@@ -6,6 +6,7 @@ from password_management_context.adapters.secondary import (
 from identity_access_management_context.adapters.secondary import (
     InMemoryUserRepository,
 )
+from password_management_context.domain.services import PasswordAccessService
 from .fakes import FakeEncryptionService
 from .fakes.fake_password_permissions_repository import (
     FakePasswordPermissionsRepository,
@@ -40,5 +41,10 @@ def user_repository():
 
 
 @pytest.fixture
-def domain_event_publisher():
+def event_publisher():
     return FakeDomainEventPublisher()
+
+
+@pytest.fixture
+def password_access_service(password_permissions_repository, group_access_gateway):
+    return PasswordAccessService(password_permissions_repository, group_access_gateway)

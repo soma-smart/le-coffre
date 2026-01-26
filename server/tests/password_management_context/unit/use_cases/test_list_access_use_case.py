@@ -21,9 +21,13 @@ def use_case(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
     group_access_gateway,
+    password_access_service,
 ) -> ListAccessUseCase:
     return ListAccessUseCase(
-        password_repository, password_permissions_repository, group_access_gateway
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        password_access_service,
     )
 
 

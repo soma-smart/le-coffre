@@ -2,16 +2,18 @@ from uuid import UUID
 
 from password_management_context.application.gateways import (
     PasswordRepository,
-    PasswordPermissionsRepository,
-    GroupAccessGateway,
 )
 from password_management_context.application.responses import PasswordResponse
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     PasswordAccessDeniedError,
 )
-from password_management_context.domain.value_objects import PasswordPermission
+from password_management_context.domain.services import PasswordAccessService
+from password_management_context.domain.events import (
+    PasswordAccessedEvent,
+)
 from shared_kernel.encryption import EncryptionService
+from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
 
 
 class GetPasswordUseCase:
@@ -19,26 +21,38 @@ class GetPasswordUseCase:
         self,
         password_repository: PasswordRepository,
         encryption_service: EncryptionService,
-        password_permissions_repository: PasswordPermissionsRepository,
-        group_access_gateway: GroupAccessGateway,
+        password_access_service: PasswordAccessService,
+        event_publisher: DomainEventPublisher,
     ):
         self.password_repository = password_repository
         self.encryption_service = encryption_service
-        self.password_permissions_repository = password_permissions_repository
-        self.group_access_gateway = group_access_gateway
+        self.password_access_service = password_access_service
+        self.event_publisher = event_publisher
 
     def execute(self, requester_id: UUID, password_id: UUID) -> PasswordResponse:
         password_entity = self.password_repository.get_by_id(password_id)
         if not password_entity:
             raise PasswordNotFoundError(password_id)
 
-        # Check if user has access through their groups
-        if not self._user_has_access_through_groups(requester_id, password_id):
+        # Check if user has access through their groups and get the group ID
+        accessed_through_group_id = self.password_access_service.get_user_access_group(
+            requester_id, password_id
+        )
+        if not accessed_through_group_id:
             raise PasswordAccessDeniedError(requester_id, password_id)
 
         decrypted_password = self.encryption_service.decrypt(
             password_entity.encrypted_value
         )
+
+        # Publish domain event
+        event = PasswordAccessedEvent(
+            password_id=password_entity.id,
+            password_name=password_entity.name,
+            accessed_by_user_id=requester_id,
+            accessed_through_group_id=accessed_through_group_id,
+        )
+        self.event_publisher.publish(event)
 
         return PasswordResponse(
             id=password_entity.id,
@@ -46,25 +60,3 @@ class GetPasswordUseCase:
             password=decrypted_password,
             folder=password_entity.folder,
         )
-
-    def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
-        """Check if user has access to password through any of their groups"""
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            password_id
-        )
-
-        for group_id, (is_owner, permissions) in all_permissions.items():
-            # Check if user is owner or member of this group
-            is_user_owner = self.group_access_gateway.is_user_owner_of_group(
-                user_id, group_id
-            )
-            is_user_member = self.group_access_gateway.is_user_member_of_group(
-                user_id, group_id
-            )
-
-            if is_user_owner or is_user_member:
-                # If the group is the owner or has READ permission, user has access
-                if is_owner or PasswordPermission.READ in permissions:
-                    return True
-
-        return False

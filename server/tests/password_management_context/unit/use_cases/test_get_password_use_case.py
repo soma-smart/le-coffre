@@ -16,20 +16,21 @@ from password_management_context.domain.entities import Password
 from password_management_context.domain.value_objects import (
     PasswordPermission,
 )
+from password_management_context.domain.events import PasswordAccessedEvent
 
 
 @pytest.fixture
 def use_case(
     password_repository,
     encryption_service,
-    password_permissions_repository,
-    group_access_gateway,
+    password_access_service,
+    event_publisher,
 ):
     return GetPasswordUseCase(
         password_repository,
         encryption_service,
-        password_permissions_repository,
-        group_access_gateway,
+        password_access_service,
+        event_publisher,
     )
 
 
@@ -144,3 +145,37 @@ def test_should_return_password_when_member_of_group(
     assert result.id == password_entity.id
     assert result.name == password_entity.name
     assert result.password == "supersecret"
+
+
+def test_should_publish_password_accessed_event_when_password_is_accessed(
+    use_case: GetPasswordUseCase,
+    password_repository: InMemoryPasswordRepository,
+    password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
+    event_publisher,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    password_entity = Password(
+        id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        name="Gmail",
+        encrypted_value="encrypted(supersecret)",
+        folder="default",
+    )
+    password_repository.save(password_entity)
+    # Grant READ permission to group and set user as owner of group
+    password_permissions_repository.grant_access(
+        group_id, password_entity.id, PasswordPermission.READ
+    )
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    use_case.execute(user_id, password_entity.id)
+
+    published_events = event_publisher.published_events
+    assert len(published_events) == 1
+    event = published_events[0]
+    assert isinstance(event, PasswordAccessedEvent)
+    assert event.password_id == password_entity.id
+    assert event.accessed_by_user_id == user_id
+    assert event.accessed_through_group_id == group_id
+    assert event.priority == "HIGH"

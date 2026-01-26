@@ -4,12 +4,21 @@ from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
 )
 from password_management_context.domain.value_objects import PasswordPermission
+from password_management_context.domain.events import (
+    PasswordAccessCheckedEvent,
+)
 from shared_kernel.access_control import AccessResult, Granted
+from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
 
 
 class CheckAccessUseCase:
-    def __init__(self, permission_repository: PasswordPermissionsRepository):
+    def __init__(
+        self,
+        permission_repository: PasswordPermissionsRepository,
+        event_publisher: DomainEventPublisher,
+    ):
         self.permission_repository = permission_repository
+        self.event_publisher = event_publisher
 
     def execute(
         self,
@@ -18,13 +27,18 @@ class CheckAccessUseCase:
         permission: PasswordPermission = PasswordPermission.READ,
     ) -> AccessResult:
         if self.permission_repository.is_owner(user_id, resource_id):
-            return AccessResult(granted=Granted.ACCESS, is_owner=True)
+            result = AccessResult(granted=Granted.ACCESS, is_owner=True)
+        elif self.permission_repository.has_access(user_id, resource_id, permission):
+            result = AccessResult(granted=Granted.ACCESS)
+        else:
+            result = AccessResult(granted=Granted.NOT_FOUND)
 
-        has_permission = self.permission_repository.has_access(
-            user_id, resource_id, permission
+        # Publish domain event
+        event = PasswordAccessCheckedEvent(
+            password_id=resource_id,
+            checked_by_user_id=user_id,
+            has_access=result.granted == Granted.ACCESS,
         )
+        self.event_publisher.publish(event)
 
-        if not has_permission:
-            return AccessResult(granted=Granted.NOT_FOUND)
-
-        return AccessResult(granted=Granted.ACCESS)
+        return result

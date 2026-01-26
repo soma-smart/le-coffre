@@ -13,6 +13,9 @@ from password_management_context.domain.exceptions import (
     GroupNotFoundError,
     UserNotOwnerOfGroupError,
 )
+from password_management_context.domain.events import (
+    PasswordCreatedEvent,
+)
 from tests.shared_kernel.fakes import FakeEventPublisher
 
 
@@ -265,10 +268,6 @@ def test_should_publish_password_created_event_when_password_is_created(
     group_access_gateway: GroupAccessGateway,
     event_publisher: FakeEventPublisher,
 ):
-    from password_management_context.domain.events.password_created_event import (
-        PasswordCreatedEvent,
-    )
-
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")

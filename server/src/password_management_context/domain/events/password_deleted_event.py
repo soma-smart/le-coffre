@@ -3,14 +3,13 @@ from uuid import UUID, uuid4
 from shared_kernel.pubsub import DomainEvent
 
 
-class PasswordCreatedEvent(DomainEvent):
+class PasswordDeletedEvent(DomainEvent):
     def __init__(
         self,
         password_id: UUID,
         password_name: str,
+        deleted_by_user_id: UUID,
         owner_group_id: UUID,
-        created_by_user_id: UUID,
-        folder: str | None = None,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -20,7 +19,6 @@ class PasswordCreatedEvent(DomainEvent):
         )
         self.password_id = password_id
         self.password_name = password_name
+        self.deleted_by_user_id = deleted_by_user_id
         self.owner_group_id = owner_group_id
-        self.created_by_user_id = created_by_user_id
-        self.folder = folder
-        self.priority = "HIGH"  # CREATE - CRUD operation
+        self.priority = "HIGH"  # DELETE - CRUD operation

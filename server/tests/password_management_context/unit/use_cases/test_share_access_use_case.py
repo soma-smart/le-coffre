@@ -14,6 +14,8 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     UserNotOwnerOfGroupError,
 )
+from password_management_context.domain.events import PasswordSharedEvent
+from tests.shared_kernel.fakes import FakeEventPublisher
 
 
 @pytest.fixture()
@@ -21,9 +23,13 @@ def use_case(
     password_repository: PasswordRepository,
     password_permissions_repository: PasswordPermissionsRepository,
     group_access_gateway,
+    event_publisher,
 ):
     return ShareAccessUseCase(
-        password_repository, password_permissions_repository, group_access_gateway
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        event_publisher,
     )
 
 
@@ -144,3 +150,45 @@ def test_given_non_existing_password_when_sharing_should_fail(
 
     with pytest.raises(PasswordNotFoundError):
         use_case.execute(ShareResourceCommand(owner_id, user_id, password_id))
+
+
+def test_should_publish_password_shared_event_when_password_is_shared(
+    use_case: ShareAccessUseCase,
+    password_repository: PasswordRepository,
+    password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
+    event_publisher: FakeEventPublisher,
+):
+    owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    owner_group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    target_group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e7")
+    password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e8")
+    password_name = "SharedPassword"
+
+    password = Password(
+        id=password_id,
+        name=password_name,
+        encrypted_value="encrypted(password)",
+        folder="folder",
+    )
+    password_repository.save(password)
+    password_permissions_repository.set_owner(owner_group_id, password.id)
+    group_access_gateway.set_group_owner(owner_group_id, owner_id)
+    # Ensure target group exists
+    group_access_gateway.set_group_owner(
+        target_group_id, UUID("00000000-0000-0000-0000-000000000000")
+    )
+
+    command = ShareResourceCommand(owner_id, target_group_id, password_id)
+    use_case.execute(command)
+
+    # Assert event was published
+    assert len(event_publisher.published_events) == 1
+    published_event = event_publisher.published_events[0]
+    assert isinstance(published_event, PasswordSharedEvent)
+    assert published_event.password_id == password_id
+    assert published_event.password_name == password_name
+    assert published_event.shared_with_group_id == target_group_id
+    assert published_event.shared_by_user_id == owner_id
+    assert published_event.owner_group_id == owner_group_id
+    assert published_event.can_write == False

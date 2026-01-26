@@ -3,14 +3,14 @@ from uuid import UUID, uuid4
 from shared_kernel.pubsub import DomainEvent
 
 
-class PasswordCreatedEvent(DomainEvent):
+class PasswordAccessCheckedEvent(DomainEvent):
+    """Event emitted when access to a password is checked"""
+
     def __init__(
         self,
         password_id: UUID,
-        password_name: str,
-        owner_group_id: UUID,
-        created_by_user_id: UUID,
-        folder: str | None = None,
+        checked_by_user_id: UUID,
+        has_access: bool,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -19,8 +19,6 @@ class PasswordCreatedEvent(DomainEvent):
             occurred_on=occurred_on or datetime.now(),
         )
         self.password_id = password_id
-        self.password_name = password_name
-        self.owner_group_id = owner_group_id
-        self.created_by_user_id = created_by_user_id
-        self.folder = folder
-        self.priority = "HIGH"  # CREATE - CRUD operation
+        self.checked_by_user_id = checked_by_user_id
+        self.has_access = has_access
+        self.priority = "LOW"  # Technical check, not CRUD

@@ -14,6 +14,8 @@ from password_management_context.domain.exceptions import (
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
 )
+from password_management_context.domain.events import PasswordUpdatedEvent
+from tests.shared_kernel.fakes import FakeEventPublisher
 
 
 @pytest.fixture
@@ -22,12 +24,14 @@ def use_case(
     encryption_service,
     password_permissions_repository: PasswordPermissionsRepository,
     group_access_gateway,
+    event_publisher,
 ):
     return UpdatePasswordUseCase(
         password_repository,
         encryption_service,
         password_permissions_repository,
         group_access_gateway,
+        event_publisher,
     )
 
 
@@ -141,3 +145,47 @@ def test_when_updating_without_any_element_changed_should_not_change_anything(
     assert stored_password.name == "original"
     assert stored_password.encrypted_value == "encrypted(original)"
     assert stored_password.folder == "folder"
+
+
+def test_should_publish_password_updated_event_when_password_is_updated(
+    use_case: UpdatePasswordUseCase,
+    password_repository: InMemoryPasswordRepository,
+    password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
+    event_publisher: FakeEventPublisher,
+):
+    requester_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    owner_group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e8")
+    password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    new_name = "UpdatedPassword"
+    new_folder = "new-folder"
+
+    password = Password(
+        id=password_id,
+        name="OldName",
+        encrypted_value="encrypted(OldPassword)",
+        folder="old-folder",
+    )
+    password_repository.save(password)
+    password_permissions_repository.set_owner(owner_group_id, password.id)
+    group_access_gateway.set_group_owner(owner_group_id, requester_id)
+
+    command = UpdatePasswordCommand(
+        id=password.id,
+        requester_id=requester_id,
+        name=new_name,
+        password="NewPassword",
+        folder=new_folder,
+    )
+
+    use_case.execute(command)
+
+    # Assert event was published
+    assert len(event_publisher.published_events) == 1
+    published_event = event_publisher.published_events[0]
+    assert isinstance(published_event, PasswordUpdatedEvent)
+    assert published_event.password_id == password_id
+    assert published_event.password_name == new_name
+    assert published_event.updated_by_user_id == requester_id
+    assert published_event.owner_group_id == owner_group_id
+    assert published_event.folder == new_folder

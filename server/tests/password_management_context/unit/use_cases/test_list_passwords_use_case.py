@@ -11,14 +11,19 @@ from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
 )
 from password_management_context.domain.value_objects import PasswordPermission
+from password_management_context.domain.events import PasswordsListedEvent
 
 
 @pytest.fixture
 def use_case(
-    password_repository, password_permissions_repository, group_access_gateway
+    password_repository,
+    password_access_service,
+    event_publisher,
 ):
     return ListPasswordsUseCase(
-        password_repository, password_permissions_repository, group_access_gateway
+        password_repository,
+        password_access_service,
+        event_publisher,
     )
 
 
@@ -194,3 +199,46 @@ def test_should_return_empty_list_when_no_passwords_user_has_access_to(
     result = use_case.execute(requester_id=requester_id)
 
     assert result == []
+
+
+def test_should_publish_passwords_listed_event_when_passwords_are_listed(
+    use_case: ListPasswordsUseCase,
+    password_repository: InMemoryPasswordRepository,
+    password_permissions_repository: PasswordPermissionsRepository,
+    group_access_gateway,
+    event_publisher,
+):
+    requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group1_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group2_id = UUID("3d742e0e-bb76-4728-83ef-8d546d7c62e6")
+
+    password1 = Password(
+        id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        name="Gmail",
+        encrypted_value="encrypted(gmail_secret)",
+        folder="work",
+    )
+    password2 = Password(
+        id=UUID("f1f2eb69-5d6b-4500-947a-6636c8755b3f"),
+        name="Slack",
+        encrypted_value="encrypted(slack_secret)",
+        folder="work",
+    )
+
+    password_repository.save(password1)
+    password_repository.save(password2)
+    password_permissions_repository.set_owner(group1_id, password1.id)
+    password_permissions_repository.set_owner(group2_id, password2.id)
+    group_access_gateway.set_group_owner(group1_id, requester_id)
+    group_access_gateway.set_group_owner(group2_id, requester_id)
+
+    use_case.execute(requester_id=requester_id, folder="work")
+
+    published_events = event_publisher.published_events
+    assert len(published_events) == 1
+    event = published_events[0]
+    assert isinstance(event, PasswordsListedEvent)
+    assert event.listed_by_user_id == requester_id
+    assert event.folder == "work"
+    assert event.count == 2
+    assert event.priority == "LOW"
