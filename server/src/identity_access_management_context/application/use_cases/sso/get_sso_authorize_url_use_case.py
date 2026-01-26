@@ -1,3 +1,6 @@
+from identity_access_management_context.application.commands import (
+    GetSsoAuthorizeUrlCommand,
+)
 from identity_access_management_context.application.gateways import (
     SsoGateway,
     SsoConfigurationRepository,
@@ -19,7 +22,7 @@ class GetSsoAuthorizeUrlUseCase:
         self._sso_configuration_repository = sso_configuration_repository
         self._encryption_service = encryption_service
 
-    async def execute(self) -> str:
+    async def execute(self, command: GetSsoAuthorizeUrlCommand) -> str:
         sso_config = SsoConfigurationDecryptingService(
             self._sso_configuration_repository, self._encryption_service
         ).decrypt()

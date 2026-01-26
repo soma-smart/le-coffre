@@ -1,6 +1,7 @@
 import pytest
 from uuid import UUID
 
+from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.use_cases import DeletePasswordUseCase
 from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
@@ -49,7 +50,8 @@ def test_given_owner_when_deleting_should_success(
     # Set user as owner of the group
     group_access_gateway.set_group_owner(group_id, requester_user_id)
 
-    use_case.execute(requester_user_id, uuid)
+    command = DeletePasswordCommand(requester_id=requester_user_id, password_id=uuid)
+    use_case.execute(command)
 
     with pytest.raises(PasswordNotFoundError):
         password_repository.get_by_id(uuid)
@@ -60,8 +62,10 @@ def test_should_raise_error_when_password_does_not_exist(
 ):
     requester_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
     fake_resource_uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    
+    command = DeletePasswordCommand(requester_id=requester_id, password_id=fake_resource_uuid)
     with pytest.raises(PasswordNotFoundError):
-        use_case.execute(requester_id, fake_resource_uuid)
+        use_case.execute(command)
 
 
 def test_given_non_owner_when_deleting_should_fail(
@@ -85,5 +89,6 @@ def test_given_non_owner_when_deleting_should_fail(
     # Set owner_id (not requester) as owner of the group
     group_access_gateway.set_group_owner(owner_group_id, owner_id)
 
+    command = DeletePasswordCommand(requester_id=requester_id, password_id=resource.id)
     with pytest.raises(UserNotOwnerOfGroupError):
-        use_case.execute(requester_id, resource.id)
+        use_case.execute(command)

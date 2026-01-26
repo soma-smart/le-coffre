@@ -1,6 +1,7 @@
 import pytest
 from uuid import UUID
 
+from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.use_cases import GetPasswordUseCase
 from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
@@ -54,7 +55,8 @@ def test_should_return_password_when_user_has_access(
     )
     group_access_gateway.set_group_owner(group_id, user_id)
 
-    result = use_case.execute(user_id, password_entity.id)
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_entity.id)
+    result = use_case.execute(command)
 
     assert result.id == password_entity.id
     assert result.name == password_entity.name
@@ -76,8 +78,9 @@ def test_should_raise_access_denied_when_user_has_no_access(
     )
     password_repository.save(password)
 
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_id)
     with pytest.raises(PasswordAccessDeniedError):
-        use_case.execute(user_id, password_id)
+        use_case.execute(command)
 
 
 def test_should_raise_exception_when_password_not_found(
@@ -89,8 +92,9 @@ def test_should_raise_exception_when_password_not_found(
 
     password_permissions_repository.set_owner(user_id, non_existent_password_id)
 
+    command = GetPasswordCommand(requester_id=user_id, password_id=non_existent_password_id)
     with pytest.raises(PasswordNotFoundError):
-        use_case.execute(user_id, non_existent_password_id)
+        use_case.execute(command)
 
 
 def test_should_return_password_when_owner(
@@ -112,7 +116,8 @@ def test_should_return_password_when_owner(
     password_permissions_repository.set_owner(group_id, password_entity.id)
     group_access_gateway.set_group_owner(group_id, user_id)
 
-    result = use_case.execute(user_id, password_entity.id)
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_entity.id)
+    result = use_case.execute(command)
 
     assert result.id == password_entity.id
     assert result.name == password_entity.name
@@ -139,7 +144,8 @@ def test_should_return_password_when_member_of_group(
         group_id, password_entity.id, PasswordPermission.READ
     )
 
-    result = use_case.execute(user_id, password_entity.id)
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_entity.id)
+    result = use_case.execute(command)
 
     assert result.id == password_entity.id
     assert result.name == password_entity.name

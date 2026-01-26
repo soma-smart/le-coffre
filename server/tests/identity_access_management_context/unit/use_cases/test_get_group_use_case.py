@@ -1,10 +1,9 @@
 import pytest
 from uuid import UUID
 
+from identity_access_management_context.application.commands import GetGroupCommand
 from identity_access_management_context.application.use_cases import GetGroupUseCase
-from identity_access_management_context.application.use_cases.get_group_use_case import (
-    GetGroupResponse,
-)
+from identity_access_management_context.application.responses import GetGroupResponse
 from identity_access_management_context.domain.entities import Group
 from identity_access_management_context.domain.exceptions import GroupNotFoundException
 
@@ -19,7 +18,8 @@ def test_given_group_when_executed_then_should_return_group(use_case):
     group = Group(id=group_id, name="Test Group", is_personal=False)
     use_case.group_repository.get_by_id = lambda x: group if x == group_id else None
 
-    result = use_case.execute(group_id)
+    command = GetGroupCommand(group_id=group_id)
+    result = use_case.execute(command)
 
     assert isinstance(result, GetGroupResponse)
     assert result.group == group
@@ -32,5 +32,6 @@ def test_given_no_group_when_executed_then_should_raise_group_not_found_exceptio
     group_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     use_case.group_repository.get_by_id = lambda x: None
 
+    command = GetGroupCommand(group_id=group_id)
     with pytest.raises(GroupNotFoundException):
-        use_case.execute(group_id)
+        use_case.execute(command)

@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_vault_usecase,
 )
+from vault_management_context.application.commands import CreateVaultCommand
 from vault_management_context.application.use_cases import CreateVaultUseCase
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
@@ -46,7 +47,10 @@ def create_vault(
     """
     try:
         setup_id = uuid4()
-        result = usecase.execute(request.nb_shares, request.threshold, setup_id)
+        command = CreateVaultCommand(
+            nb_shares=request.nb_shares, threshold=request.threshold, setup_id=setup_id
+        )
+        result = usecase.execute(command)
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

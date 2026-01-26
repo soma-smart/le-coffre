@@ -7,6 +7,7 @@ from password_management_context.adapters.primary.fastapi.app_dependencies impor
     get_list_resource_access_usecase,
 )
 from pydantic import BaseModel
+from password_management_context.application.commands import ListAccessCommand
 from password_management_context.application.use_cases import ListAccessUseCase
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
@@ -61,10 +62,11 @@ def list_password_access(
     Only the owner of the password can list who has access to it.
     """
     try:
-        result = usecase.execute(
+        command = ListAccessCommand(
             requester_id=current_user.user_id,
             password_id=password_id,
         )
+        result = usecase.execute(command)
 
         ret = ListPasswordAccessResponse(
             resource_id=password_id, user_access_list=[], group_access_list=[]

@@ -1,6 +1,7 @@
 import pytest
 from uuid import uuid4
 
+from vault_management_context.application.commands import CreateVaultCommand
 from vault_management_context.domain.entities import Vault, Share
 from vault_management_context.application.responses.vault_status import VaultStatus
 from vault_management_context.domain.exceptions import (
@@ -29,7 +30,6 @@ def test_should_create_shares_and_store_encrypted_key(
     vault_repository,
     shamir_gateway,
     encryption_gateway,
-    vault_session_gateway,
 ):
     expected_shares = [
         Share("1"),
@@ -51,7 +51,8 @@ def test_should_create_shares_and_store_encrypted_key(
         "decrypted_vault_key"
     )  # For decrypt_and_store_key
 
-    result = use_case.execute(5, 3, setup_id)
+    command = CreateVaultCommand(nb_shares=5, threshold=3, setup_id=setup_id)
+    result = use_case.execute(command)
 
     # Check that result is VaultSetupResponse with setup_id and shares
     assert result.shares == expected_shares
@@ -77,8 +78,9 @@ def test_should_fail_when_vault_is_already_created(use_case, vault_repository):
         )
     )
 
+    command = CreateVaultCommand(nb_shares=5, threshold=3, setup_id=uuid4())
     with pytest.raises(VaultAlreadyExistsError) as exc_info:
-        use_case.execute(5, 3, uuid4())
+        use_case.execute(command)
 
     assert (
         str(exc_info.value) == "A vault has already been created for this organization"
@@ -113,14 +115,16 @@ def test_should_allow_re_setup_when_vault_is_pending(
     )  # For decrypt_and_store_key
 
     # Should be able to re-setup
-    result = use_case.execute(2, 2, new_setup_id)
+    command = CreateVaultCommand(nb_shares=2, threshold=2, setup_id=new_setup_id)
+    result = use_case.execute(command)
     assert result.shares == expected_shares
     assert result.setup_id == str(new_setup_id)
 
 
 def test_should_fail_when_nb_shares_is_less_than_2(use_case):
+    command = CreateVaultCommand(nb_shares=1, threshold=2, setup_id=uuid4())
     with pytest.raises(InvalidShareCountError) as exc_info:
-        use_case.execute(1, 2, uuid4())
+        use_case.execute(command)
 
     assert (
         str(exc_info.value)
@@ -129,8 +133,9 @@ def test_should_fail_when_nb_shares_is_less_than_2(use_case):
 
 
 def test_should_fail_when_threshold_is_less_than_2(use_case):
+    command = CreateVaultCommand(nb_shares=3, threshold=1, setup_id=uuid4())
     with pytest.raises(InvalidThresholdError) as exc_info:
-        use_case.execute(3, 1, uuid4())
+        use_case.execute(command)
 
     assert (
         str(exc_info.value) == "Threshold must be at least 2 to ensure security, got 1"
@@ -138,8 +143,9 @@ def test_should_fail_when_threshold_is_less_than_2(use_case):
 
 
 def test_should_fail_when_threshold_is_greater_than_nb_shares(use_case):
+    command = CreateVaultCommand(nb_shares=3, threshold=4, setup_id=uuid4())
     with pytest.raises(ThresholdExceedsShareCountError) as exc_info:
-        use_case.execute(3, 4, uuid4())
+        use_case.execute(command)
 
     expected_message = (
         "Threshold 4 cannot exceed share count 3 - impossible to unlock vault"

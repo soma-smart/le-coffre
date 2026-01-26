@@ -1,18 +1,10 @@
-from uuid import UUID
-from dataclasses import dataclass
-
+from identity_access_management_context.application.commands import GetGroupCommand
+from identity_access_management_context.application.responses import GetGroupResponse
 from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
 )
-from identity_access_management_context.domain.entities import Group, GroupMember
 from identity_access_management_context.domain.exceptions import GroupNotFoundException
-
-
-@dataclass
-class GetGroupResponse:
-    group: Group
-    members: list[GroupMember]
 
 
 class GetGroupUseCase:
@@ -24,11 +16,11 @@ class GetGroupUseCase:
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
 
-    def execute(self, group_id: UUID) -> GetGroupResponse:
-        group = self.group_repository.get_by_id(group_id)
+    def execute(self, command: GetGroupCommand) -> GetGroupResponse:
+        group = self.group_repository.get_by_id(command.group_id)
         if not group:
-            raise GroupNotFoundException(group_id)
+            raise GroupNotFoundException(command.group_id)
 
-        members = self.group_member_repository.get_members(group_id)
+        members = self.group_member_repository.get_members(command.group_id)
 
         return GetGroupResponse(group=group, members=members)

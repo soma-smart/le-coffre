@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from uuid import UUID
 import logging
 
+from password_management_context.application.commands import ListPasswordsCommand
 from password_management_context.application.use_cases import ListPasswordsUseCase
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_passwords_usecase,
@@ -45,7 +46,8 @@ def list_passwords(
     Returns a list of passwords accessible by the user.
     """
     try:
-        passwords = usecase.execute(current_user.user_id, folder)
+        command = ListPasswordsCommand(requester_id=current_user.user_id, folder=folder)
+        passwords = usecase.execute(command)
         return [
             GetPasswordListResponse(
                 id=password.id,

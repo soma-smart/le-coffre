@@ -1,6 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 
+from password_management_context.application.commands import ListPasswordsCommand
 from password_management_context.application.gateways import (
     PasswordRepository,
     PasswordPermissionsRepository,
@@ -22,18 +23,16 @@ class ListPasswordsUseCase:
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
 
-    def execute(
-        self, requester_id: UUID, folder: Optional[str] = None
-    ) -> List[PasswordMetadataResponse]:
-        password_entities = self.password_repository.list_all(folder)
+    def execute(self, command: ListPasswordsCommand) -> List[PasswordMetadataResponse]:
+        password_entities = self.password_repository.list_all(command.folder)
 
-        if folder and len(password_entities) == 0:
-            raise FolderNotFoundError(folder)
+        if command.folder and len(password_entities) == 0:
+            raise FolderNotFoundError(command.folder)
 
         password_responses = []
         for password_entity in password_entities:
             access_info = self._user_has_access_through_groups(
-                requester_id, password_entity.id
+                command.requester_id, password_entity.id
             )
             if access_info is not None:
                 user_group_id, owner_group_id = access_info

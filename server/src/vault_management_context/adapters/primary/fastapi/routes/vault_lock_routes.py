@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_lock_vault_usecase,
 )
+from vault_management_context.application.commands import LockVaultCommand
 from vault_management_context.application.use_cases.lock_vault_use_case import (
     LockVaultUseCase,
 )
@@ -37,7 +38,8 @@ def lock_vault(
     - **Authorization**: Requires authentication via access_token cookie
     """
     try:
-        usecase.execute(current_user.to_authenticated_user())
+        command = LockVaultCommand(requesting_user=current_user.to_authenticated_user())
+        usecase.execute(command)
         return {"message": "Vault locked successfully"}
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))

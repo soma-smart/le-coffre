@@ -1,5 +1,6 @@
 import pytest
 
+from vault_management_context.application.commands import GetVaultStatusCommand
 from vault_management_context.domain.entities import Vault
 from vault_management_context.application.use_cases import (
     GetVaultStatusUseCase,
@@ -13,7 +14,8 @@ def use_case(vault_repository, vault_session_gateway):
 
 
 def test_should_return_not_setup_when_no_vault(use_case):
-    status = use_case.execute()
+    command = GetVaultStatusCommand()
+    status = use_case.execute(command)
     assert status.name == "NOT_SETUP"
 
 
@@ -29,7 +31,8 @@ def test_should_return_locked_when_vault_is_locked(
     ))
     vault_session_gateway.clear_decrypted_key()
 
-    status = use_case.execute()
+    command = GetVaultStatusCommand()
+    status = use_case.execute(command)
 
     assert status.name == "LOCKED"
 
@@ -46,7 +49,8 @@ def test_should_return_unlocked_when_vault_is_unlocked(
     ))
     vault_session_gateway.store_decrypted_key("decrypted_vault_key")
 
-    status = use_case.execute()
+    command = GetVaultStatusCommand()
+    status = use_case.execute(command)
 
     assert status.name == "UNLOCKED"
 
@@ -63,6 +67,7 @@ def test_should_return_unlocked_when_vault_is_pending_with_session(
     ))
     vault_session_gateway.store_decrypted_key("decrypted_vault_key")
 
-    status = use_case.execute()
+    command = GetVaultStatusCommand()
+    status = use_case.execute(command)
 
     assert status.name == "UNLOCKED"

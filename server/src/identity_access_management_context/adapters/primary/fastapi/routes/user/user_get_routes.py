@@ -6,6 +6,7 @@ import logging
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_get_user_usecase,
 )
+from identity_access_management_context.application.commands import GetUserCommand
 from identity_access_management_context.application.use_cases import GetUserUseCase
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundError,
@@ -41,7 +42,8 @@ def get_user(
     - **Authentication**: Requires authentication via access_token cookie
     """
     try:
-        user_response = usecase.execute(user_id=user_id)
+        command = GetUserCommand(user_id=user_id)
+        user_response = usecase.execute(command)
 
         return GetUserResponse(
             id=user_response.id,

@@ -1,6 +1,7 @@
 import pytest
 from uuid import UUID
 
+from password_management_context.application.commands import ListPasswordsCommand
 from password_management_context.application.use_cases import ListPasswordsUseCase
 from password_management_context.adapters.secondary import (
     InMemoryPasswordRepository,
@@ -26,7 +27,9 @@ def test_should_return_empty_list_on_default_folder_when_no_passwords(
     use_case: ListPasswordsUseCase,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    result = use_case.execute(requester_id=requester_id)
+    
+    command = ListPasswordsCommand(requester_id=requester_id)
+    result = use_case.execute(command)
 
     assert result == []
 
@@ -64,7 +67,8 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     )
     group_access_gateway.set_group_owner(group2_id, requester_id)
 
-    result = use_case.execute(requester_id=requester_id)
+    command = ListPasswordsCommand(requester_id=requester_id)
+    result = use_case.execute(command)
 
     assert len(result) == 2
 
@@ -112,7 +116,8 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
     password_permissions_repository.set_owner(group2_id, password2.id)
     group_access_gateway.set_group_owner(group2_id, requester_id)
 
-    result = use_case.execute(requester_id=requester_id, folder=folder_name)
+    command = ListPasswordsCommand(requester_id=requester_id, folder=folder_name)
+    result = use_case.execute(command)
 
     assert len(result) == 1
     assert result[0].id == password1.id
@@ -126,8 +131,10 @@ def test_should_raise_exception_when_folder_does_not_exist(
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     folder_name = "NoneExistent"
+    
+    command = ListPasswordsCommand(requester_id=requester_id, folder=folder_name)
     with pytest.raises(FolderNotFoundError) as exc_info:
-        use_case.execute(requester_id=requester_id, folder=folder_name)
+        use_case.execute(command)
 
     assert folder_name in str(exc_info.value)
 
@@ -159,7 +166,8 @@ def test_should_return_only_passwords_user_has_access_to(
     password_repository.save(password2)
     # Not granting access to password2
 
-    result = use_case.execute(requester_id=requester_id)
+    command = ListPasswordsCommand(requester_id=requester_id)
+    result = use_case.execute(command)
 
     assert len(result) == 1
     assert result[0].id == password1.id
@@ -191,6 +199,7 @@ def test_should_return_empty_list_when_no_passwords_user_has_access_to(
     password_repository.save(password2)
     # Not granting access to password2
 
-    result = use_case.execute(requester_id=requester_id)
+    command = ListPasswordsCommand(requester_id=requester_id)
+    result = use_case.execute(command)
 
     assert result == []

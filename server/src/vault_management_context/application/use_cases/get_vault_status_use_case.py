@@ -1,4 +1,6 @@
 from typing import Optional
+
+from vault_management_context.application.commands import GetVaultStatusCommand
 from vault_management_context.application.gateways import (
     VaultSessionGateway,
     VaultRepository,
@@ -16,7 +18,7 @@ class GetVaultStatusUseCase:
         self.vault_repository = vault_repository
         self.vault_session_gateway = vault_session_gateway
 
-    def execute(self) -> VaultStatus:
+    def execute(self, command: GetVaultStatusCommand) -> VaultStatus:
         existing_vault: Optional[Vault] = self.vault_repository.get()
         if existing_vault is None:
             return VaultStatus.NOT_SETUP

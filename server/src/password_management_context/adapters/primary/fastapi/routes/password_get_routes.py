@@ -6,6 +6,7 @@ import logging
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_get_password_usecase,
 )
+from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.use_cases import GetPasswordUseCase
 from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
@@ -44,7 +45,8 @@ def get_password(
     - **Authentication**: Requires authentication via access_token cookie
     """
     try:
-        password_response = usecase.execute(current_user.user_id, password_id)
+        command = GetPasswordCommand(requester_id=current_user.user_id, password_id=password_id)
+        password_response = usecase.execute(command)
 
         return GetPasswordResponse(
             id=password_response.id,

@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.gateways import (
     PasswordRepository,
     PasswordPermissionsRepository,
@@ -27,14 +28,16 @@ class GetPasswordUseCase:
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
 
-    def execute(self, requester_id: UUID, password_id: UUID) -> PasswordResponse:
-        password_entity = self.password_repository.get_by_id(password_id)
+    def execute(self, command: GetPasswordCommand) -> PasswordResponse:
+        password_entity = self.password_repository.get_by_id(command.password_id)
         if not password_entity:
-            raise PasswordNotFoundError(password_id)
+            raise PasswordNotFoundError(command.password_id)
 
         # Check if user has access through their groups
-        if not self._user_has_access_through_groups(requester_id, password_id):
-            raise PasswordAccessDeniedError(requester_id, password_id)
+        if not self._user_has_access_through_groups(
+            command.requester_id, command.password_id
+        ):
+            raise PasswordAccessDeniedError(command.requester_id, command.password_id)
 
         decrypted_password = self.encryption_service.decrypt(
             password_entity.encrypted_value

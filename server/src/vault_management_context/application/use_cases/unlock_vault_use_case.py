@@ -1,6 +1,4 @@
-from typing import List
-
-from vault_management_context.domain.entities import Share
+from vault_management_context.application.commands import UnlockVaultCommand
 from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
     ShareReconstructionError,
@@ -27,13 +25,13 @@ class UnlockVaultUseCase:
         self._encryption_gateway = encryption_gateway
         self._vault_session_gateway = vault_session_gateway
 
-    def execute(self, shares: List[Share]) -> None:
+    def execute(self, command: UnlockVaultCommand) -> None:
         vault = self._vault_repository.get()
         if vault is None:
             raise VaultNotSetupException()
 
         try:
-            master_secret = self._shamir_gateway.reconstruct_secret(shares)
+            master_secret = self._shamir_gateway.reconstruct_secret(command.shares)
 
             KeySessionManager.decrypt_and_store_key(
                 self._encryption_gateway,

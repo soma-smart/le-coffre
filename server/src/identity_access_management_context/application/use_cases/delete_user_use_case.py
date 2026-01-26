@@ -8,7 +8,7 @@ class DeleteUserUseCase:
         self.user_repository = user_repository
 
     def execute(self, command: DeleteUserCommand) -> None:
-        AdminPermissionChecker.ensure_admin(command.requesting_user, "delete users")
+        AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
         user_id = command.user_id
 
         self.user_repository.delete(user_id)

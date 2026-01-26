@@ -1,5 +1,6 @@
 import pytest
 
+from vault_management_context.application.commands import DecryptCommand
 from vault_management_context.application.use_cases import (
     DecryptUseCase,
 )
@@ -20,6 +21,7 @@ def test_should_decrypt_data(use_case, encryption_gateway, vault_session_gateway
     encryption_gateway.set_master_key(master_key)
     vault_session_gateway.store_decrypted_key("master_key")
 
-    result = use_case.execute(encrypted)
+    command = DecryptCommand(encrypted_data=encrypted)
+    result = use_case.execute(command)
 
     assert result == decrypted

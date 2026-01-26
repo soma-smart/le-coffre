@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_get_group_usecase,
 )
+from identity_access_management_context.application.commands import GetGroupCommand
 from identity_access_management_context.application.use_cases import GetGroupUseCase
 from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
@@ -56,7 +57,8 @@ def get_group(
     - members: List of user IDs who are members of the group
     """
     try:
-        response = usecase.execute(group_id)
+        command = GetGroupCommand(group_id=group_id)
+        response = usecase.execute(command)
 
         # Separate owners and regular members
         owners = [m.user_id for m in response.members if m.is_owner]

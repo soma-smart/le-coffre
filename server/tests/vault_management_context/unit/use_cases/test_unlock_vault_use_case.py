@@ -1,5 +1,6 @@
 import pytest
 
+from vault_management_context.application.commands import UnlockVaultCommand
 from vault_management_context.application.responses.vault_status import VaultStatus
 from vault_management_context.domain.entities import Share, Vault
 from vault_management_context.domain.value_objects import ShamirResult
@@ -49,7 +50,8 @@ def test_should_unlock_vault_with_valid_shares_and_decrypt_key(
     encryption_gateway.set_encrypted_data(encrypted_key)
     encryption_gateway.set_master_key(master_key)
 
-    use_case.execute(shares)
+    command = UnlockVaultCommand(shares=shares)
+    use_case.execute(command)
 
     # Verify the decrypted key is now in session
     decrypted_key = vault_session_gateway.get_decrypted_key()
@@ -59,16 +61,18 @@ def test_should_unlock_vault_with_valid_shares_and_decrypt_key(
 def test_should_fail_when_vault_is_not_setup(use_case):
     shares = [Share("share0"), Share("share1")]
 
+    command = UnlockVaultCommand(shares=shares)
     with pytest.raises(VaultNotSetupException):
-        use_case.execute(shares)
+        use_case.execute(command)
 
 
 def test_should_fail_when_not_enough_shares_provided(use_case, vault_repository):
     vault_repository.save_vault_with_shares(nb_shares=3, threshold=2)
     shares = [Share("share0")]
 
+    command = UnlockVaultCommand(shares=shares)
     with pytest.raises(ShareReconstructionError):
-        use_case.execute(shares)
+        use_case.execute(command)
 
 
 def test_should_fail_when_shamir_reconstruction_fails(
@@ -91,8 +95,9 @@ def test_should_fail_when_shamir_reconstruction_fails(
 
     invalid_shares = [Share("invalid_share0"), Share("invalid_share1")]
 
+    command = UnlockVaultCommand(shares=invalid_shares)
     with pytest.raises(ShareReconstructionError):
-        use_case.execute(invalid_shares)
+        use_case.execute(command)
 
 
 def test_should_fail_when_vault_is_already_unlock(
@@ -118,7 +123,8 @@ def test_should_fail_when_vault_is_already_unlock(
     encryption_gateway.set_encrypted_data(encrypted_key)
     encryption_gateway.set_master_key(master_key)
 
-    use_case.execute(shares)
+    command = UnlockVaultCommand(shares=shares)
+    use_case.execute(command)
 
     with pytest.raises(VaultUnlockedError):
-        use_case.execute(shares)
+        use_case.execute(command)

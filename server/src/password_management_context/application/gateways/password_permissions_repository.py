@@ -16,23 +16,23 @@ class PasswordPermissionsRepository(Protocol):
         ...
 
     def has_access(
-        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
     ) -> bool:
         """Check if a user has any access to a password (owner or shared)"""
         ...
 
     def grant_access(
-        self, user_id: UUID, password_id: UUID, permission: PasswordPermission
+        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
     ) -> None:
         """Grant a user access to a password with specific permission"""
         ...
 
-    def revoke_access(self, user_id: UUID, password_id: UUID) -> None:
-        """Revoke a user's access to a password"""
+    def revoke_access(self, group_id: UUID, password_id: UUID) -> None:
+        """Revoke a group's access to a password"""
         ...
 
     def list_all_permissions_for(
         self, password_id: UUID
     ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
-        """Get all users who have access to a password with their permissions"""
+        """Get all groups who have access to a password with their permissions"""
         ...

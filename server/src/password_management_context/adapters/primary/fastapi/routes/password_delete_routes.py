@@ -5,6 +5,7 @@ import logging
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_delete_password_usecase,
 )
+from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.use_cases import DeletePasswordUseCase
 from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
@@ -37,7 +38,8 @@ def delete_password(
     Returns status code 204 (No Content) on successful deletion.
     """
     try:
-        usecase.execute(current_user.user_id, password_id)
+        command = DeletePasswordCommand(requester_id=current_user.user_id, password_id=password_id)
+        usecase.execute(command)
         return
     except (PasswordNotFoundError, NotPasswordOwnerError) as e:
         # For security, treat both not found and not owner as 404

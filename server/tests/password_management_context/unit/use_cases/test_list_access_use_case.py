@@ -1,6 +1,7 @@
 import pytest
 from uuid import UUID
 
+from password_management_context.application.commands import ListAccessCommand
 from password_management_context.application.responses.list_access_response import (
     UserAccessResponse,
     GroupAccessResponse,
@@ -52,9 +53,8 @@ def test_given_owner_and_password_when_listing_access_should_succeed(
     password_permissions_repository.set_owner(group_id, password.id)
     group_access_gateway.set_group_owner(group_id, requester_id)
 
-    response: ListAccessResponse = use_case.execute(
-        requester_id=requester_id, password_id=password.id
-    )
+    command = ListAccessCommand(requester_id=requester_id, password_id=password.id)
+    response: ListAccessResponse = use_case.execute(command)
 
     assert len(response.user_accesses) == 1
     assert response.user_accesses[0].user_id == requester_id
@@ -82,9 +82,8 @@ def test_given_user_and_password_when_listing_access_should_succeed(
     )
     group_access_gateway.set_group_owner(group_id, requester_id)
 
-    response: ListAccessResponse = use_case.execute(
-        requester_id=requester_id, password_id=password.id
-    )
+    command = ListAccessCommand(requester_id=requester_id, password_id=password.id)
+    response: ListAccessResponse = use_case.execute(command)
 
     assert len(response.user_accesses) == 1
     assert response.user_accesses[0].user_id == requester_id
@@ -99,11 +98,12 @@ def test_given_user_and_password_when_listing_access_should_succeed(
 def test_given_no_password_when_listing_access_should_fail(use_case):
     requester_id = UUID("87654321-4321-8765-4321-876543218765")
 
+    command = ListAccessCommand(
+        requester_id=requester_id,
+        password_id=UUID("12345678-1234-5678-1234-567812345678"),
+    )
     with pytest.raises(PasswordNotFoundError):
-        use_case.execute(
-            requester_id=requester_id,
-            password_id=UUID("12345678-1234-5678-1234-567812345678"),
-        )
+        use_case.execute(command)
 
 
 def test_given_multiple_user_having_access_when_listing_access_should_have_them_all(
@@ -134,9 +134,8 @@ def test_given_multiple_user_having_access_when_listing_access_should_have_them_
     )
     group_access_gateway.set_group_owner(group2_id, user2_id)
 
-    response: ListAccessResponse = use_case.execute(
-        requester_id=requester_id, password_id=password.id
-    )
+    command = ListAccessCommand(requester_id=requester_id, password_id=password.id)
+    response: ListAccessResponse = use_case.execute(command)
 
     assert len(response.user_accesses) == 3
     user_ids = {access.user_id for access in response.user_accesses}
@@ -182,9 +181,8 @@ def test_given_owner_from_one_group_and_member_for_other_when_listing_access_sho
     group_access_gateway.set_group_owner(member_group_id, owner_id)
     group_access_gateway.add_group_member(member_group_id, member_id)
 
-    response: ListAccessResponse = use_case.execute(
-        requester_id=owner_id, password_id=password.id
-    )
+    command = ListAccessCommand(requester_id=owner_id, password_id=password.id)
+    response: ListAccessResponse = use_case.execute(command)
 
     assert len(response.user_accesses) == 2
 
