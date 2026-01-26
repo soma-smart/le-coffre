@@ -39,9 +39,6 @@ def test_list_audit_logs_use_case_returns_logged_events():
     # Given
     event_publisher = InMemoryDomainEventPublisher()
     audit_logger = InMemoryAuditLogger(event_publisher)
-    # Subscribe to specific event types
-    event_publisher.subscribe(UserCreatedEvent, audit_logger._handle_event)
-    event_publisher.subscribe(PasswordCreatedEvent, audit_logger._handle_event)
     use_case = ListAuditLogsUseCase(audit_logger)
 
     # When

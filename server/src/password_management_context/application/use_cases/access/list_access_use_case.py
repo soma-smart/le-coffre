@@ -10,11 +10,11 @@ from password_management_context.application.responses import (
     GroupAccessResponse,
     UserAccessResponse,
 )
+from password_management_context.application.services import PasswordAccessService
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     PasswordAccessDeniedError,
 )
-from password_management_context.domain.services import PasswordAccessService
 
 
 class ListAccessUseCase:

@@ -4,11 +4,11 @@ from password_management_context.application.gateways import (
     PasswordRepository,
 )
 from password_management_context.application.responses import PasswordResponse
+from password_management_context.application.services import PasswordAccessService
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     PasswordAccessDeniedError,
 )
-from password_management_context.domain.services import PasswordAccessService
 from password_management_context.domain.events import (
     PasswordAccessedEvent,
 )

@@ -6,7 +6,7 @@ from password_management_context.adapters.secondary import (
 from identity_access_management_context.adapters.secondary import (
     InMemoryUserRepository,
 )
-from password_management_context.domain.services import PasswordAccessService
+from password_management_context.application.services import PasswordAccessService
 from .fakes import FakeEncryptionService
 from .fakes.fake_password_permissions_repository import (
     FakePasswordPermissionsRepository,

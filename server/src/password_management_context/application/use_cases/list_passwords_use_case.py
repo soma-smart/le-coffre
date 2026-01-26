@@ -5,8 +5,8 @@ from password_management_context.application.gateways import (
     PasswordRepository,
 )
 from password_management_context.application.responses import PasswordMetadataResponse
+from password_management_context.application.services import PasswordAccessService
 from password_management_context.domain.exceptions import FolderNotFoundError
-from password_management_context.domain.services import PasswordAccessService
 from password_management_context.domain.events import (
     PasswordsListedEvent,
 )

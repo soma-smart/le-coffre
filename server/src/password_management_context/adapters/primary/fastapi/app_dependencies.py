@@ -18,7 +18,7 @@ from password_management_context.application.use_cases import (
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
 )
-from password_management_context.domain.services import PasswordAccessService
+from password_management_context.application.services import PasswordAccessService
 from shared_kernel.encryption import EncryptionService
 from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
 
