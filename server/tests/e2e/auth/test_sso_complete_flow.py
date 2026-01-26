@@ -14,7 +14,7 @@ from urllib.parse import urlparse, parse_qs
 
 @pytest.mark.asyncio
 async def test_complete_sso_authentication_flow(
-    e2e_client, setup, oidc_server, e2e_test_user
+    e2e_client, setup, oidc_server, oidc_test_user
 ):
     """
     Complete SSO authentication flow: configure → get SSO URL → wrong callback → right callback → validate token.
@@ -100,7 +100,7 @@ async def test_complete_sso_authentication_flow(
     print("\n🔐 Step 4: Simulating user authorization to get valid code...")
     auth_response = httpx.post(
         sso_url,
-        data={"sub": e2e_test_user["sub"]},
+        data={"sub": oidc_test_user["sub"]},
         follow_redirects=False,
     )
     assert auth_response.status_code in [
@@ -136,8 +136,8 @@ async def test_complete_sso_authentication_flow(
 
     user_info = callback_data["user"]
 
-    assert user_info["email"] == e2e_test_user["email"], "Email should match test user"
-    assert user_info["display_name"] == e2e_test_user["name"], (
+    assert user_info["email"] == oidc_test_user["email"], "Email should match test user"
+    assert user_info["display_name"] == oidc_test_user["name"], (
         "Display name should match test user"
     )
     print(f"✅ SSO login successful for {user_info['email']}")
