@@ -8,6 +8,9 @@ class InMemoryAuditLogger:
         self._logs: List[Log] = []
 
     def _handle_event(self, event: DomainEvent):
+        self.save_log(event)
+
+    def save_log(self, event: DomainEvent) -> None:
         self._logs.append(Log(event_type=type(event).__name__, event=event))
 
     def get_logs(self) -> List[Log]:

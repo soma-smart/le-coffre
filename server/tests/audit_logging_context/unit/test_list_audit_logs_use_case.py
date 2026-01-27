@@ -3,6 +3,7 @@ from uuid import uuid4
 
 import pytest
 
+from audit_logging_context.application.commands import ListAuditLogsCommand
 from audit_logging_context.application.use_cases import ListAuditLogsUseCase
 from shared_kernel.pubsub import DomainEvent
 
@@ -22,8 +23,11 @@ def use_case(audit_logger):
 
 
 def test_list_audit_logs_use_case_returns_empty_list_when_no_events(use_case):
+    # Given
+    command = ListAuditLogsCommand()
+
     # When
-    logs = use_case.execute()
+    logs = use_case.execute(command)
 
     # Then
     assert logs == []
@@ -38,9 +42,10 @@ def test_list_audit_logs_use_case_returns_logged_events(audit_logger, use_case):
     audit_logger._handle_event(event2)
 
     use_case = ListAuditLogsUseCase(audit_logger)
+    command = ListAuditLogsCommand()
 
     # When
-    logs = use_case.execute()
+    logs = use_case.execute(command)
 
     # Then
     assert len(logs) == 2
