@@ -6,14 +6,9 @@ from shared_kernel.pubsub.domain.domain_event import DomainEvent
 from audit_logging_context.application.use_cases.store_event_use_case import (
     StoreEventUseCase,
 )
-
-
-class FakeEventRepository:
-    def __init__(self):
-        self.events: list = []
-
-    def append_event(self, event):
-        self.events.append(event)
+from .fakes.fake_event_repository import (
+    FakeEventRepository,
+)
 
 
 @pytest.fixture
