@@ -16,7 +16,7 @@ from identity_access_management_context.domain.exceptions import (
     CannotDeletePersonalGroupException,
     CannotDeleteGroupWithPasswordsException,
 )
-from identity_access_management_context.domain.entities import User, Group
+from identity_access_management_context.domain.entities import Group
 from tests.identity_access_management_context.unit.fakes.fake_password_ownership_gateway import (
     FakePasswordOwnershipGateway,
 )
