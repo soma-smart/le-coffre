@@ -51,5 +51,8 @@
         }
       }
     }
+  },
+  "containerEnv": {
+    "PYTHONDONTWRITEBYTECODE": "1"
   }
 }
