@@ -5,6 +5,7 @@ from password_management_context.application.gateways import (
     PasswordRepository,
     PasswordPermissionsRepository,
     GroupAccessGateway,
+    PasswordEncryptionGateway,
 )
 from password_management_context.application.responses import PasswordResponse
 from password_management_context.domain.exceptions import (
@@ -15,7 +16,6 @@ from password_management_context.domain.events import (
     PasswordAccessedEvent,
 )
 from password_management_context.domain.value_objects import PasswordPermission
-from shared_kernel.encryption import EncryptionService
 from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
 
 
@@ -23,13 +23,13 @@ class GetPasswordUseCase:
     def __init__(
         self,
         password_repository: PasswordRepository,
-        encryption_service: EncryptionService,
+        password_encryption_gateway: PasswordEncryptionGateway,
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
         event_publisher: DomainEventPublisher,
     ):
         self.password_repository = password_repository
-        self.encryption_service = encryption_service
+        self.password_encryption_gateway = password_encryption_gateway
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
         self.event_publisher = event_publisher
@@ -45,7 +45,7 @@ class GetPasswordUseCase:
         ):
             raise PasswordAccessDeniedError(command.requester_id, command.password_id)
 
-        decrypted_password = self.encryption_service.decrypt(
+        decrypted_password = self.password_encryption_gateway.decrypt(
             password_entity.encrypted_value
         )
 
