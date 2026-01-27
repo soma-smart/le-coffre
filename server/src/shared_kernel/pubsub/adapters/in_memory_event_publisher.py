@@ -9,6 +9,9 @@ class InMemoryDomainEventPublisher:
             Type[DomainEvent], List[Callable[[DomainEvent], None]]
         ] = {}
 
+    def subscribe_all(self, handler: Callable[[DomainEvent], None]) -> None:
+        self._subscribers.setdefault(DomainEvent, []).append(handler)
+
     def subscribe(
         self, event_type: Type[DomainEvent], handler: Callable[[DomainEvent], None]
     ) -> None:
@@ -18,4 +21,6 @@ class InMemoryDomainEventPublisher:
 
     def publish(self, event: DomainEvent) -> None:
         for handler in self._subscribers.get(type(event), []):
+            handler(event)
+        for handler in self._subscribers.get(DomainEvent, []):
             handler(event)
