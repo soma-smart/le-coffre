@@ -10,6 +10,7 @@ from identity_access_management_context.domain.exceptions import (
     CannotDeletePersonalGroupException,
     CannotDeleteGroupWithPasswordsException,
 )
+from shared_kernel.authentication import AdminPermissionChecker
 
 
 class DeleteGroupUseCase:
@@ -31,11 +32,15 @@ class DeleteGroupUseCase:
         if group.is_personal:
             raise CannotDeletePersonalGroupException(command.group_id)
 
-        if not self.group_member_repository.is_owner(
-            command.group_id, command.requester_id
-        ):
+        # Check if user is admin OR owner of the group
+        is_admin = AdminPermissionChecker.is_admin(command.requesting_user)
+        is_owner = self.group_member_repository.is_owner(
+            command.group_id, command.requesting_user.user_id
+        )
+
+        if not (is_admin or is_owner):
             raise UserNotOwnerOfGroupException(
-                command.requester_id, command.group_id
+                command.requesting_user.user_id, command.group_id
             )
 
         if self.password_ownership_gateway.group_owns_passwords(command.group_id):
