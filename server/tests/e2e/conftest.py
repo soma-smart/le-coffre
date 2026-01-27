@@ -42,10 +42,6 @@ def e2e_client(database, env_vars):
 
 @pytest.fixture(scope="session")
 def oidc_server():
-    """
-    Start an OIDC provider mock server for e2e testing.
-    Session-scoped for better performance - server is reused across all tests.
-    """
     with oidc_provider_mock.run_server_in_thread() as server:
         issuer_url = f"http://localhost:{server.server_port}"
         yield {
@@ -61,13 +57,6 @@ def oidc_server():
 
 @pytest.fixture
 def configured_sso(authenticated_admin_client, oidc_server, setup):
-    """
-    Configure SSO with the OIDC server for the test client.
-    This fixture should be used as a dependency for any test that needs SSO.
-    It configures SSO once per test function.
-    Depends on 'setup' to ensure vault is initialized for encryption.
-    Requires authenticated admin client to configure SSO.
-    """
     configure_response = authenticated_admin_client.post(
         "/api/auth/sso/configure",
         json={
@@ -83,47 +72,26 @@ def configured_sso(authenticated_admin_client, oidc_server, setup):
 
 
 @pytest.fixture
-def e2e_test_user(oidc_server):
-    """
-    Create a test user in the OIDC provider mock for e2e tests.
-    """
+def oidc_test_user(oidc_server):
     return create_sso_user_in_provider(
         oidc_server, "e2euser@example.com", "E2E Test User"
     )
 
 
 @pytest.fixture
-def sso_user_token(e2e_client, configured_sso, e2e_test_user):
-    """
-    Create and authenticate a SSO user, returning their JWT token and user info.
-    This fixture handles the complete SSO flow:
-    1. Configure SSO with OIDC provider (via configured_sso fixture)
-    2. Get authorization URL
-    3. Simulate user authorization
-    4. Exchange code for token
-    5. Create user in database (needed for sharing/rights features)
-    """
-    return authenticate_sso_user(e2e_client, configured_sso, e2e_test_user)
+def sso_user_token(e2e_client, configured_sso, oidc_test_user):
+    return authenticate_sso_user(e2e_client, configured_sso, oidc_test_user)
 
 
 @pytest.fixture
 def sso_user_factory(client_factory, configured_sso):
     """
-    Factory fixture to create and authenticate multiple SSO users easily.
-    Each user is authenticated in their own client, so this doesn't interfere
-    with other authenticated clients (like authenticated_admin_client).
+    user = sso_user_factory("alice@example.com", "Alice Smith")
 
-    Usage in tests:
-        def test_example(sso_user_factory):
-            user1 = sso_user_factory("alice@example.com", "Alice Smith")
-            user2 = sso_user_factory("bob@example.com", "Bob Johnson")
-
-            # user1 and user2 are dicts with: token, user_id, email, display_name
-            # They also include an 'client' key with their authenticated TestClient
+    # user1 and user2 are dicts with: token, user_id, email, display_name
     """
 
     def _create_sso_user(email: str, name: str):
-        """Create a user in OIDC provider and authenticate them with a dedicated client."""
         # Create a fresh client for this user (doesn't interfere with other clients)
         user_client = client_factory()
 
@@ -140,13 +108,6 @@ def sso_user_factory(client_factory, configured_sso):
 
 def create_sso_user_in_provider(oidc_server, email, name):
     """
-    Helper function to create a user in the OIDC provider mock.
-
-    Args:
-        oidc_server: The OIDC server fixture
-        email: Email address for the user (will also be used as 'sub')
-        name: Full name for the user
-
     Returns:
         Dictionary with user data including sub, email, and name
     """
@@ -177,14 +138,6 @@ def create_sso_user_in_provider(oidc_server, email, name):
 
 def authenticate_sso_user(e2e_client, oidc_server, sso_user):
     """
-    Helper function to authenticate an SSO user and get their token.
-    Assumes SSO is already configured (use configured_sso fixture).
-
-    Args:
-        e2e_client: The test client
-        oidc_server: The OIDC server fixture
-        sso_user: User data dict with 'sub', 'email', 'name' keys
-
     Returns:
         Dictionary with token, user_id, email, and display_name
     """
@@ -243,22 +196,24 @@ def authenticate_sso_user(e2e_client, oidc_server, sso_user):
     }
 
 
-@pytest.fixture
-def second_sso_user(oidc_server):
-    """
-    Create a second test user in the OIDC provider mock for multi-user tests.
-    """
-    return create_sso_user_in_provider(
-        oidc_server, "seconduser@example.com", "Second Test User"
+def register_and_login_admin(client):
+    admin_data = {
+        "email": "admin@example.com",
+        "password": "admin",
+        "display_name": "System Administrator",
+    }
+
+    client.post("/api/auth/register-admin", json=admin_data)
+
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "admin@example.com",
+            "password": "admin",
+        },
     )
-
-
-@pytest.fixture
-def second_sso_user_token(e2e_client, oidc_server, second_sso_user):
-    """
-    Create and authenticate a second SSO user, returning their JWT token and user info.
-    """
-    return authenticate_sso_user(e2e_client, oidc_server, second_sso_user)
+    assert login_response.status_code == 200
+    return login_response
 
 
 @pytest.fixture
@@ -282,27 +237,9 @@ def setup(authenticated_admin_client):
 
 @pytest.fixture
 def admin_token(e2e_client):
-    # First register an admin user
-    admin_data = {
-        "email": "admin@example.com",
-        "password": "admin",
-        "display_name": "System Administrator",
-    }
-
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
-
-    # Then login to get the token from cookies
-    login_response = e2e_client.post(
-        "/api/auth/login",
-        json={
-            "email": "admin@example.com",
-            "password": "admin",
-        },
-    )
-
-    # Extract token from cookie
-    cookies = login_response.cookies
-    return cookies.get("access_token")
+    """Returns the admin JWT token extracted from cookies."""
+    login_response = register_and_login_admin(e2e_client)
+    return login_response.cookies.get("access_token")
 
 
 @pytest.fixture
@@ -320,44 +257,12 @@ def client_factory(database, env_vars):
 
 @pytest.fixture
 def unauthenticated_client(client_factory):
-    """
-    Returns a fresh TestClient without authentication.
-    Uses client_factory to ensure it shares the same database and env_vars
-    as other clients in the test.
-    """
     return client_factory()
 
 
 @pytest.fixture
 def authenticated_admin_client(e2e_client):
-    """
-    Returns a TestClient with an authenticated admin session via cookies.
-    This fixture creates an admin, logs in, and the cookies are automatically
-    handled by the TestClient for subsequent requests.
-    """
-    # First register an admin user
-    admin_data = {
-        "email": "admin@example.com",
-        "password": "admin",
-        "display_name": "System Administrator",
-    }
-
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
-
-    # Then login - this will set the cookies on the client
-    login_response = e2e_client.post(
-        "/api/auth/login",
-        json={
-            "email": "admin@example.com",
-            "password": "admin",
-        },
-    )
-
-    # Verify login was successful
-    assert login_response.status_code == 200
-
-    # The TestClient automatically stores cookies, so subsequent requests
-    # will include the access_token cookie
+    register_and_login_admin(e2e_client)
     return e2e_client
 
 
@@ -365,71 +270,24 @@ def authenticated_admin_client(e2e_client):
 def admin_cookies(e2e_client):
     """
     Returns a dict of cookies after admin login.
-    Useful for manual cookie management in tests.
     """
-    # First register an admin user
-    admin_data = {
-        "email": "admin@example.com",
-        "password": "admin",
-        "display_name": "System Administrator",
-    }
-
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
-
-    # Then login to get the cookies
-    login_response = e2e_client.post(
-        "/api/auth/login",
-        json={
-            "email": "admin@example.com",
-            "password": "admin",
-        },
-    )
-
-    # Extract cookies from response
+    login_response = register_and_login_admin(e2e_client)
     return login_response.cookies
 
 
 @pytest.fixture
-def authenticated_sso_user_client(e2e_client, configured_sso, e2e_test_user):
-    """
-    Returns a TestClient with an authenticated SSO user session via cookies.
-    The cookies are automatically handled by the TestClient for subsequent requests.
-    Depends on 'configured_sso' which ensures SSO is configured and vault is initialized.
-    """
-    oidc_server = configured_sso  # configured_sso returns the oidc_server
-
-    # Get SSO authorization URL
-    url_response = e2e_client.get("/api/auth/sso/url")
-    assert url_response.status_code == 200
-
-    sso_url_data = url_response.json()
-    if isinstance(sso_url_data, str):
-        sso_url = sso_url_data
-    elif isinstance(sso_url_data, dict) and "url" in sso_url_data:
-        sso_url = sso_url_data["url"]
-    else:
-        sso_url = str(sso_url_data)
-
-    # Simulate user authorization
-    auth_response = httpx.post(
-        sso_url,
-        data={"sub": e2e_test_user["sub"]},
-        follow_redirects=False,
-    )
-    assert auth_response.status_code in [302, 303]
-
-    callback_url = auth_response.headers.get("location")
-    parsed = urlparse(callback_url)
-    query_params = parse_qs(parsed.query)
-    valid_code = query_params.get("code", [None])[0]
-    assert valid_code
-
-    # Exchange code for token - this will set cookies on the client
-    callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}")
-    assert callback_response.status_code == 200
-
-    # The TestClient now has the cookies set
+def authenticated_sso_user_client(e2e_client, configured_sso, oidc_test_user):
+    authenticate_sso_user(e2e_client, configured_sso, oidc_test_user)
     return e2e_client
+
+
+def get_personal_group_id(client):
+    """
+    Helper function to get the personal group ID of the authenticated user.
+    """
+    response = client.get("/api/users/me")
+    assert response.status_code == 200
+    return response.json()["personal_group_id"]
 
 
 @pytest.fixture
@@ -437,9 +295,7 @@ def admin_personal_group_id(authenticated_admin_client):
     """
     Returns the personal group ID of the authenticated admin user.
     """
-    response = authenticated_admin_client.get("/api/users/me")
-    assert response.status_code == 200
-    return response.json()["personal_group_id"]
+    return get_personal_group_id(authenticated_admin_client)
 
 
 @pytest.fixture
@@ -447,6 +303,4 @@ def sso_user_personal_group_id(authenticated_sso_user_client):
     """
     Returns the personal group ID of the authenticated SSO user.
     """
-    response = authenticated_sso_user_client.get("/api/users/me")
-    assert response.status_code == 200
-    return response.json()["personal_group_id"]
+    return get_personal_group_id(authenticated_sso_user_client)

@@ -6,7 +6,7 @@ from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import PasswordNotFoundError
 
 
-class InMemoryPasswordRepository(PasswordRepository):
+class FakePasswordRepository(PasswordRepository):
     def __init__(self):
         self.storage: Dict[UUID, Password] = {}
 

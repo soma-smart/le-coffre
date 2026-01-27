@@ -9,7 +9,7 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.authentication.constants import ADMIN_ROLE
 
 
-class InMemoryUserRepository(UserRepository):
+class FakeUserRepository(UserRepository):
     def __init__(self):
         self.storage: dict[UUID, User] = {}
 

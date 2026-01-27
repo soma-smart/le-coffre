@@ -1,9 +1,6 @@
 import pytest
 from uuid import UUID
 
-from password_management_context.adapters.secondary import (
-    InMemoryPasswordRepository,
-)
 from password_management_context.application.use_cases import UpdatePasswordUseCase
 from password_management_context.domain.entities import Password
 from password_management_context.application.commands import UpdatePasswordCommand
@@ -11,17 +8,20 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     NotPasswordOwnerError,
 )
-from password_management_context.application.gateways.password_permissions_repository import (
-    PasswordPermissionsRepository,
+from ..fakes import (
+    FakePasswordRepository,
+    FakeEncryptionService,
+    FakePasswordPermissionsRepository,
+    FakeGroupAccessGateway,
 )
 
 
 @pytest.fixture
 def use_case(
-    password_repository,
-    encryption_service,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    encryption_service: FakeEncryptionService,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     return UpdatePasswordUseCase(
         password_repository,
@@ -31,11 +31,11 @@ def use_case(
     )
 
 
-def test_should_update_password(
+def test_given_valid_update_data_when_updating_password_should_persist_changes(
     use_case: UpdatePasswordUseCase,
-    password_repository: InMemoryPasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -68,7 +68,7 @@ def test_should_update_password(
 
 
 # For security purpose, PasswordNotFound and AccessDenied are indistinguishable
-def test_when_requesting_a_non_existing_password_should_raise_password_not_found(
+def test_given_non_existing_password_when_updating_password_should_raise_password_not_found(
     use_case: UpdatePasswordUseCase,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -85,9 +85,9 @@ def test_when_requesting_a_non_existing_password_should_raise_password_not_found
         use_case.execute(password_data)
 
 
-def test_update_password_without_access(
+def test_given_no_access_when_updating_password_should_raise_not_password_owner_error(
     use_case: UpdatePasswordUseCase,
-    password_repository: InMemoryPasswordRepository,
+    password_repository: FakePasswordRepository,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
     original_password = Password(
@@ -110,11 +110,11 @@ def test_update_password_without_access(
         use_case.execute(new_password=updated_password)
 
 
-def test_when_updating_without_any_element_changed_should_not_change_anything(
+def test_given_no_changes_when_updating_password_should_keep_original_values(
     use_case: UpdatePasswordUseCase,
-    password_repository: InMemoryPasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")

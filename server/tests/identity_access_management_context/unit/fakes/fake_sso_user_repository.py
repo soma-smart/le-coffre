@@ -8,7 +8,7 @@ from identity_access_management_context.domain.exceptions import (
 )
 
 
-class InMemorySsoUserRepository:
+class FakeSsoUserRepository:
     def __init__(self):
         self._users: Dict[str, SsoUser] = {}
 

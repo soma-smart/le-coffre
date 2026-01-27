@@ -1,8 +1,11 @@
 import pytest
 import tempfile
 import os
+from pathlib import Path
 from uuid import uuid4
-from sqlmodel import create_engine, Session, SQLModel
+from sqlmodel import create_engine, Session
+from alembic.config import Config
+from alembic import command
 
 from identity_access_management_context.adapters.secondary.sql.sql_group_repository import (
     SqlGroupRepository,
@@ -16,15 +19,22 @@ def engine():
     db_fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(db_fd)
 
-    engine = create_engine(f"sqlite:///{db_path}")
-    SQLModel.metadata.create_all(engine)
-
-    yield engine
-
     try:
-        os.unlink(db_path)
-    except Exception:
-        pass
+        database_url = f"sqlite:///{db_path}"
+        engine = create_engine(database_url, connect_args={"check_same_thread": False})
+
+        # Run migrations instead of create_all()
+        alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
+        alembic_cfg = Config(str(alembic_ini_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+        command.upgrade(alembic_cfg, "head")
+
+        yield engine
+    finally:
+        try:
+            os.unlink(db_path)
+        except OSError:
+            pass
 
 
 @pytest.fixture(scope="function")

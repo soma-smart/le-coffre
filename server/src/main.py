@@ -19,7 +19,7 @@ from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
 )
 from vault_management_context.adapters.primary.private_api import EncryptionApi
-from vault_management_context.adapters.secondary.gateways import (
+from vault_management_context.adapters.secondary import (
     CryptoShamirGateway,
     AesEncryptionGateway,
     SqlVaultRepository,
@@ -77,7 +77,7 @@ def run_migrations():
 async def lifespan(app: FastAPI):
     # Run migrations instead of create_tables
     run_migrations()
-    
+
     engine = create_engine(get_database_url())
 
     with Session(engine) as session:

@@ -1,5 +1,5 @@
 from uuid import UUID
-from sqlmodel import select
+from sqlmodel import select, Session
 
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
@@ -16,8 +16,8 @@ from password_management_context.adapters.secondary.sql import (
 class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
     """SQL implementation of PasswordPermissionsRepository using shared tables"""
 
-    def __init__(self, Session):
-        self._session = Session
+    def __init__(self, session: Session):
+        self._session = session
 
     def set_owner(self, owner_id: UUID, password_id: UUID) -> None:
         """Set a group as the owner of a password"""

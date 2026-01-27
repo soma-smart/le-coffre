@@ -4,10 +4,14 @@ from uuid import uuid4
 from identity_access_management_context.application.commands import ListGroupsCommand
 from identity_access_management_context.application.use_cases import ListGroupsUseCase
 from identity_access_management_context.domain.entities import Group
+from ..fakes import FakeGroupRepository, FakeGroupMemberRepository
 
 
 @pytest.fixture
-def use_case(group_repository, group_member_repository):
+def use_case(
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
     return ListGroupsUseCase(group_repository, group_member_repository)
 
 
@@ -18,7 +22,9 @@ def test_given_no_groups_when_listings_groups_should_return_empty_list(use_case)
 
 
 def test_given_groups_when_listing_groups_should_return_list_of_groups(
-    use_case, group_repository, group_member_repository
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     group1 = uuid4()
     group2 = uuid4()
@@ -54,7 +60,9 @@ def test_given_groups_when_listing_groups_should_return_list_of_groups(
 
 
 def test_given_mixed_groups_when_listing_with_personal_should_return_all(
-    use_case, group_repository, group_member_repository
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     personal_group_id = uuid4()
     shared_group_id = uuid4()
@@ -95,7 +103,9 @@ def test_given_mixed_groups_when_listing_with_personal_should_return_all(
 
 
 def test_given_mixed_groups_when_listing_without_personal_should_return_only_shared(
-    use_case, group_repository, group_member_repository
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     personal_group_id = uuid4()
     shared_group_id = uuid4()

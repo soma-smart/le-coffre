@@ -3,7 +3,7 @@ import pytest
 from vault_management_context.domain.value_objects import (
     VaultConfiguration,
 )
-from vault_management_context.adapters.secondary.gateways import CryptoShamirGateway
+from vault_management_context.adapters.secondary import CryptoShamirGateway
 
 
 @pytest.fixture
@@ -11,7 +11,9 @@ def crypto_shamir():
     return CryptoShamirGateway()
 
 
-def test_crypto_shamir_split_and_reconstruct(crypto_shamir: CryptoShamirGateway):
+def test_should_split_and_reconstruct_secret_when_using_shamir(
+    crypto_shamir: CryptoShamirGateway,
+):
     nb_shares = 10
     threshold = 3
     vault_config = VaultConfiguration.create(nb_shares, threshold)

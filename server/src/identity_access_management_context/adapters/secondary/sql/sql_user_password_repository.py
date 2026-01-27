@@ -1,6 +1,6 @@
 from typing import Optional
 from uuid import UUID
-from sqlmodel import select
+from sqlmodel import select, Session
 from identity_access_management_context.adapters.secondary.sql.model.user_password_model import (
     UserPasswordTable,
 )
@@ -8,8 +8,8 @@ from identity_access_management_context.domain.entities import UserPassword
 
 
 class SqlUserPasswordRepository:
-    def __init__(self, Session):
-        self._session = Session
+    def __init__(self, session: Session):
+        self._session = session
 
     def save(self, user_password: UserPassword) -> None:
         user_password_table = UserPasswordTable(

@@ -13,7 +13,7 @@ from urllib.parse import urlparse, parse_qs
 
 @pytest.mark.asyncio
 async def test_refresh_access_token_workflow(
-    e2e_client, setup, oidc_server, e2e_test_user
+    e2e_client, setup, oidc_server, oidc_test_user
 ):
     """
     Complete refresh token workflow: SSO login → use refresh_token → validate new access_token.
@@ -57,7 +57,7 @@ async def test_refresh_access_token_workflow(
 
     auth_response = httpx.post(
         sso_url,
-        data={"sub": e2e_test_user["sub"]},
+        data={"sub": oidc_test_user["sub"]},
         follow_redirects=False,
     )
     assert auth_response.status_code in [302, 303]

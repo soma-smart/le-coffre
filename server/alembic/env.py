@@ -7,16 +7,37 @@ from alembic import context
 from sqlmodel import SQLModel
 
 # Import all models so they are registered with SQLModel.metadata
-from identity_access_management_context.adapters.secondary.sql.model.users_model import UserTable
-from identity_access_management_context.adapters.secondary.sql.model.group_model import GroupTable
-from identity_access_management_context.adapters.secondary.sql.model.group_member_model import GroupMemberTable
-from identity_access_management_context.adapters.secondary.sql.model.sso_configuration_model import SsoConfigurationTable
-from identity_access_management_context.adapters.secondary.sql.model.sso_users_model import SsoUsersTable
-from identity_access_management_context.adapters.secondary.sql.model.user_password_model import UserPasswordTable
-from password_management_context.adapters.secondary.sql.model.permissions import PermissionsTable, OwnershipTable
-from password_management_context.adapters.secondary.sql.model.password import PasswordTable
-from vault_management_context.adapters.secondary.gateways.sql.models.vault import VaultTable
+from identity_access_management_context.adapters.secondary.sql import (
+    UserTable,
+    GroupTable,
+    GroupMemberTable,
+    SsoConfigurationTable,
+    SsoUsersTable,
+    UserPasswordTable,
+)
+from password_management_context.adapters.secondary.sql import (
+    PermissionsTable,
+    OwnershipTable,
+    PasswordTable,
+)
+from vault_management_context.adapters.secondary.sql import VaultTable
+
+
 from config import get_database_url
+
+# Silence ruff unused-import warnings for model registration
+_ = (
+    UserTable,
+    GroupTable,
+    GroupMemberTable,
+    SsoConfigurationTable,
+    SsoUsersTable,
+    UserPasswordTable,
+    PermissionsTable,
+    OwnershipTable,
+    PasswordTable,
+    VaultTable,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -81,9 +102,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

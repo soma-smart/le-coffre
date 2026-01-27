@@ -1,11 +1,6 @@
 import pytest
 from uuid import UUID
 
-from identity_access_management_context.application.gateways import (
-    UserRepository,
-    GroupRepository,
-    GroupMemberRepository,
-)
 from identity_access_management_context.application.commands import (
     AddOwnerToGroupCommand,
 )
@@ -20,13 +15,14 @@ from identity_access_management_context.domain.exceptions import (
     UserNotMemberOfGroupException,
 )
 from identity_access_management_context.domain.entities import User, Group
+from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
 
 
 @pytest.fixture
 def use_case(
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     return AddOwnerToGroupUseCase(
         user_repository=user_repository,
@@ -37,9 +33,9 @@ def use_case(
 
 def test_given_owner_when_adding_existing_member_as_owner_then_member_becomes_owner(
     use_case: AddOwnerToGroupUseCase,
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -78,9 +74,9 @@ def test_given_owner_when_adding_existing_member_as_owner_then_member_becomes_ow
 
 def test_given_non_owner_when_adding_owner_to_group_then_raise_user_not_owner_exception(
     use_case: AddOwnerToGroupUseCase,
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     non_owner_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -126,7 +122,7 @@ def test_given_non_owner_when_adding_owner_to_group_then_raise_user_not_owner_ex
 
 def test_given_group_not_found_when_adding_owner_then_raise_group_not_found_exception(
     use_case: AddOwnerToGroupUseCase,
-    user_repository: UserRepository,
+    user_repository: FakeUserRepository,
 ):
     requester_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     nonexistent_group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -159,9 +155,9 @@ def test_given_group_not_found_when_adding_owner_then_raise_group_not_found_exce
 
 def test_given_personal_group_when_adding_owner_then_raise_cannot_modify_personal_group_exception(
     use_case: AddOwnerToGroupUseCase,
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -200,9 +196,9 @@ def test_given_personal_group_when_adding_owner_then_raise_cannot_modify_persona
 
 def test_given_user_not_found_when_adding_owner_then_raise_user_not_found_exception(
     use_case: AddOwnerToGroupUseCase,
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -232,9 +228,9 @@ def test_given_user_not_found_when_adding_owner_then_raise_user_not_found_except
 
 def test_given_user_not_member_when_adding_as_owner_then_raise_user_not_member_exception(
     use_case: AddOwnerToGroupUseCase,
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -271,9 +267,9 @@ def test_given_user_not_member_when_adding_as_owner_then_raise_user_not_member_e
 
 def test_given_user_already_owner_when_adding_as_owner_then_operation_is_idempotent(
     use_case: AddOwnerToGroupUseCase,
-    user_repository: UserRepository,
-    group_repository: GroupRepository,
-    group_member_repository: GroupMemberRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")

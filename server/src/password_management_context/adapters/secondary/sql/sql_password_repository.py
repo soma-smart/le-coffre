@@ -1,7 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 from .model.password import PasswordTable
-from sqlmodel import select
+from sqlmodel import select, Session
 from password_management_context.domain.exceptions import PasswordNotFoundError
 
 from password_management_context.domain.entities import Password
@@ -9,8 +9,8 @@ from password_management_context.application.gateways import PasswordRepository
 
 
 class SqlPasswordRepository(PasswordRepository):
-    def __init__(self, Session):
-        self._session = Session
+    def __init__(self, session: Session):
+        self._session = session
 
     def save(self, password: Password) -> None:
         """Save a password entity"""

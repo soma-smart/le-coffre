@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 from identity_access_management_context.domain.entities.sso_user import SsoUser
-from sqlmodel import select
+from sqlmodel import select, Session
 from .model.sso_users_model import SsoUsersTable
 
 from identity_access_management_context.domain.exceptions import (
@@ -11,8 +11,8 @@ from identity_access_management_context.domain.exceptions import (
 
 
 class SqlSsoUserRepository:
-    def __init__(self, Session):
-        self._session = Session
+    def __init__(self, session: Session):
+        self._session = session
 
     def create(self, sso_user: SsoUser) -> None:
         exist = self.get_by_sso_user_id(sso_user.sso_user_id, sso_user.sso_provider)

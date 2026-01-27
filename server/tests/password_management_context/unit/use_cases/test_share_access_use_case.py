@@ -4,9 +4,11 @@ from password_management_context.application.use_cases import (
     ShareAccessUseCase,
 )
 from password_management_context.application.commands import ShareResourceCommand
-from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
+
+from ..fakes import (
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+    FakeGroupAccessGateway,
 )
 from password_management_context.domain.value_objects import PasswordPermission
 from password_management_context.domain.entities import Password
@@ -18,9 +20,9 @@ from password_management_context.domain.exceptions import (
 
 @pytest.fixture()
 def use_case(
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     return ShareAccessUseCase(
         password_repository, password_permissions_repository, group_access_gateway
@@ -32,12 +34,12 @@ def password():
     return Password(uuid4(), "toto", "encrypted_value", "default")
 
 
-def test_given_owner_when_sharing_should_grant_read_access(
+def test_given_owner_and_target_group_when_sharing_access_should_grant_read_permission(
     use_case: ShareAccessUseCase,
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
     password,
-    group_access_gateway,
 ):
     # Arrange: Given an owner of a resource
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -62,12 +64,12 @@ def test_given_owner_when_sharing_should_grant_read_access(
     )
 
 
-def test_given_non_owner_with_permissions_when_sharing_should_fail(
+def test_given_non_owner_user_when_sharing_access_should_raise_user_not_owner_error(
     use_case: ShareAccessUseCase,
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
     password,
-    group_access_gateway,
 ):
     # Arrange: Given a user with READ permission but not owner
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -102,12 +104,12 @@ def test_given_non_owner_with_permissions_when_sharing_should_fail(
     )
 
 
-def test_given_owner_when_sharing_already_shared_resource_should_succeed(
+def test_given_already_shared_password_when_sharing_again_should_maintain_access(
     use_case: ShareAccessUseCase,
-    password_repository: PasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
     password,
-    group_access_gateway,
 ):
     # Arrange
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -135,7 +137,7 @@ def test_given_owner_when_sharing_already_shared_resource_should_succeed(
     )
 
 
-def test_given_non_existing_password_when_sharing_should_fail(
+def test_given_non_existing_password_when_sharing_access_should_raise_password_not_found_error(
     use_case: ShareAccessUseCase,
 ):
     owner_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")

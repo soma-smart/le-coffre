@@ -1,7 +1,7 @@
 import pytest
 
 from vault_management_context.application.commands import UnlockVaultCommand
-from vault_management_context.application.responses.vault_status import VaultStatus
+from vault_management_context.application.responses import VaultStatus
 from vault_management_context.domain.entities import Share, Vault
 from vault_management_context.domain.value_objects import ShamirResult
 from vault_management_context.domain.exceptions import (
@@ -9,26 +9,35 @@ from vault_management_context.domain.exceptions import (
     ShareReconstructionError,
     VaultUnlockedError,
 )
-from vault_management_context.application.use_cases.unlock_vault_use_case import (
+from vault_management_context.application.use_cases import (
     UnlockVaultUseCase,
+)
+from ..fakes import (
+    FakeVaultRepository,
+    FakeShamirGateway,
+    FakeEncryptionGateway,
+    FakeVaultSessionGateway,
 )
 
 
 @pytest.fixture()
 def use_case(
-    vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway
+    vault_repository: FakeVaultRepository,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
+    vault_session_gateway: FakeVaultSessionGateway,
 ):
     return UnlockVaultUseCase(
         vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway
     )
 
 
-def test_should_unlock_vault_with_valid_shares_and_decrypt_key(
+def test_given_valid_shares_when_unlocking_vault_should_decrypt_and_store_key(
     use_case,
-    vault_repository,
-    shamir_gateway,
-    encryption_gateway,
-    vault_session_gateway,
+    vault_repository: FakeVaultRepository,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
+    vault_session_gateway: FakeVaultSessionGateway,
 ):
     vault_key = "test_vault_key_12345678"
     master_key = "master_key"
@@ -58,7 +67,9 @@ def test_should_unlock_vault_with_valid_shares_and_decrypt_key(
     assert decrypted_key == vault_key
 
 
-def test_should_fail_when_vault_is_not_setup(use_case):
+def test_given_vault_not_setup_when_unlocking_vault_should_raise_vault_not_setup_exception(
+    use_case,
+):
     shares = [Share("share0"), Share("share1")]
 
     command = UnlockVaultCommand(shares=shares)
@@ -66,7 +77,9 @@ def test_should_fail_when_vault_is_not_setup(use_case):
         use_case.execute(command)
 
 
-def test_should_fail_when_not_enough_shares_provided(use_case, vault_repository):
+def test_given_insufficient_shares_when_unlocking_vault_should_raise_share_reconstruction_error(
+    use_case, vault_repository
+):
     vault_repository.save_vault_with_shares(nb_shares=3, threshold=2)
     shares = [Share("share0")]
 
@@ -75,8 +88,8 @@ def test_should_fail_when_not_enough_shares_provided(use_case, vault_repository)
         use_case.execute(command)
 
 
-def test_should_fail_when_shamir_reconstruction_fails(
-    use_case, vault_repository, shamir_gateway
+def test_given_invalid_shares_when_unlocking_vault_should_raise_share_reconstruction_error(
+    use_case, vault_repository: FakeVaultRepository, shamir_gateway: FakeShamirGateway
 ):
     encrypted_key = "encrypted_vault_key_hex"
     vault_repository.save(
@@ -100,8 +113,11 @@ def test_should_fail_when_shamir_reconstruction_fails(
         use_case.execute(command)
 
 
-def test_should_fail_when_vault_is_already_unlock(
-    use_case, vault_repository, shamir_gateway, encryption_gateway
+def test_given_already_unlocked_vault_when_unlocking_vault_should_raise_vault_unlocked_error(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
 ):
     encrypted_key = "encrypted_vault_key_hex"
     vault_repository.save(

@@ -1,21 +1,22 @@
 from uuid import UUID
 import pytest
 from identity_access_management_context.application.use_cases import UpdateUserUseCase
-from identity_access_management_context.application.gateways import UserRepository
+
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.application.commands import UpdateUserCommand
+from ..fakes import FakeUserRepository
 
 
 @pytest.fixture
 def use_case(
-    user_repository: UserRepository,
+    user_repository: FakeUserRepository,
 ):
     return UpdateUserUseCase(user_repository)
 
 
-def test_should_update_user(
+def test_given_valid_update_data_when_updating_user_should_persist_changes(
     use_case: UpdateUserUseCase,
-    user_repository: UserRepository,
+    user_repository: FakeUserRepository,
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"

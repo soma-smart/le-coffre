@@ -6,18 +6,26 @@ from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
     VaultLockedException,
 )
-from vault_management_context.application.use_cases.lock_vault_use_case import (
+from vault_management_context.application.use_cases import (
     LockVaultUseCase,
 )
 from shared_kernel.authentication import AuthenticatedUser, NotAdminError
+from ..fakes import FakeVaultRepository, FakeVaultSessionGateway
 
 
 @pytest.fixture()
-def use_case(vault_repository, vault_session_gateway):
+def use_case(
+    vault_repository: FakeVaultRepository,
+    vault_session_gateway: FakeVaultSessionGateway,
+):
     return LockVaultUseCase(vault_repository, vault_session_gateway)
 
 
-def test_should_lock_vault(use_case, vault_repository, vault_session_gateway):
+def test_given_unlocked_vault_when_locking_vault_should_clear_session_key(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    vault_session_gateway: FakeVaultSessionGateway,
+):
     admin_user = AuthenticatedUser(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
@@ -33,7 +41,9 @@ def test_should_lock_vault(use_case, vault_repository, vault_session_gateway):
         vault_session_gateway.get_decrypted_key()
 
 
-def test_should_not_lock_vault_if_not_unlocked(use_case, vault_repository):
+def test_given_locked_vault_when_locking_vault_should_raise_vault_locked_exception(
+    use_case, vault_repository: FakeVaultRepository
+):
     admin_user = AuthenticatedUser(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
@@ -46,7 +56,9 @@ def test_should_not_lock_vault_if_not_unlocked(use_case, vault_repository):
         use_case.execute(command)
 
 
-def test_when_not_setup_should_lock_fail(use_case):
+def test_given_vault_not_setup_when_locking_vault_should_raise_vault_not_setup_exception(
+    use_case,
+):
     admin_user = AuthenticatedUser(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
     )
@@ -56,8 +68,10 @@ def test_when_not_setup_should_lock_fail(use_case):
         use_case.execute(command)
 
 
-def test_should_raise_not_admin_error_when_requesting_user_is_not_admin(
-    use_case, vault_repository, vault_session_gateway
+def test_given_non_admin_user_when_locking_vault_should_raise_not_admin_error(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    vault_session_gateway: FakeVaultSessionGateway,
 ):
     regular_user = AuthenticatedUser(
         user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6"), roles=[]

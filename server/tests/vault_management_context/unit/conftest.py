@@ -1,12 +1,10 @@
 import pytest
 
-from vault_management_context.adapters.secondary.gateways import (
-    InMemoryVaultSessionGateway,
-)
 from .fakes import (
     FakeVaultRepository,
     FakeShamirGateway,
     FakeEncryptionGateway,
+    FakeVaultSessionGateway,
 )
 
 
@@ -27,4 +25,4 @@ def encryption_gateway():
 
 @pytest.fixture()
 def vault_session_gateway():
-    return InMemoryVaultSessionGateway()
+    return FakeVaultSessionGateway()

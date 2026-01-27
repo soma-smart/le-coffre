@@ -1,10 +1,11 @@
 import pytest
 from uuid import UUID
 
-from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
-    GroupAccessGateway,
+from ..fakes import (
+    FakePasswordRepository,
+    FakeEncryptionService,
+    FakeGroupAccessGateway,
+    FakePasswordPermissionsRepository,
 )
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.use_cases import CreatePasswordUseCase
@@ -13,6 +14,7 @@ from password_management_context.domain.exceptions import (
     GroupNotFoundError,
     UserNotOwnerOfGroupError,
 )
+from password_management_context.domain.events import PasswordCreatedEvent
 from tests.shared_kernel.fakes import FakeEventPublisher
 
 
@@ -20,31 +22,26 @@ ANY_PASSWORD = "any_password"
 
 
 @pytest.fixture
-def event_publisher():
-    return FakeEventPublisher()
-
-
-@pytest.fixture
 def use_case(
-    password_repository,
-    encryption_service,
-    password_permissions_repository,
-    group_access_gateway,
-    event_publisher,
+    password_repository: FakePasswordRepository,
+    encryption_service: FakeEncryptionService,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    domain_event_publisher: FakeEventPublisher,
 ):
     return CreatePasswordUseCase(
         password_repository,
         encryption_service,
         password_permissions_repository,
         group_access_gateway,
-        event_publisher,
+        domain_event_publisher,
     )
 
 
-def test_should_create_password_when_user_owns_group(
+def test_given_user_owns_group_when_creating_password_should_return_password_id(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -70,9 +67,9 @@ def test_should_create_password_when_user_owns_group(
     assert saved_password.name == name
 
 
-def test_should_raise_when_user_is_not_owner_of_group(
+def test_given_user_not_owner_when_creating_password_should_raise_user_not_owner_error(
     use_case: CreatePasswordUseCase,
-    group_access_gateway: GroupAccessGateway,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -96,7 +93,7 @@ def test_should_raise_when_user_is_not_owner_of_group(
     assert str(group_id) in str(exc_info.value)
 
 
-def test_should_raise_when_group_does_not_exist(
+def test_given_group_not_exists_when_creating_password_should_raise_group_not_found_error(
     use_case: CreatePasswordUseCase,
 ):
     password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -117,10 +114,10 @@ def test_should_raise_when_group_does_not_exist(
     assert str(group_id) in str(exc_info.value)
 
 
-def test_should_set_group_as_owner_of_password(
+def test_given_valid_password_when_creating_password_should_set_group_as_owner(
     use_case: CreatePasswordUseCase,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -141,10 +138,10 @@ def test_should_set_group_as_owner_of_password(
     assert password_permissions_repository.is_owner(group_id, password_id)
 
 
-def test_should_create_password_with_uuid_and_store_encrypted(
+def test_given_password_with_uuid_when_creating_password_should_store_encrypted_value(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -173,10 +170,10 @@ def test_should_create_password_with_uuid_and_store_encrypted(
     assert saved_password.encrypted_value == expected_encrypted
 
 
-def test_should_create_password_in_folder_with_encrypted_value(
+def test_given_password_with_folder_when_creating_password_should_store_in_folder_encrypted(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -206,10 +203,10 @@ def test_should_create_password_in_folder_with_encrypted_value(
     assert saved_password.encrypted_value == expected_encrypted
 
 
-def test_should_create_password_in_default_folder_when_not_given(
+def test_given_no_folder_specified_when_creating_password_should_use_default_folder(
     use_case: CreatePasswordUseCase,
-    password_repository: PasswordRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -234,10 +231,10 @@ def test_should_create_password_in_default_folder_when_not_given(
     assert saved_password.folder == "default"
 
 
-def test_should_set_user_as_owner_when_creating_password(
+def test_given_valid_user_when_creating_password_should_set_permissions_for_user(
     use_case: CreatePasswordUseCase,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway: GroupAccessGateway,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -260,15 +257,11 @@ def test_should_set_user_as_owner_when_creating_password(
     assert password_permissions_repository.is_owner(group_id, uuid)
 
 
-def test_should_publish_password_created_event_when_password_is_created(
+def test_given_valid_password_when_creating_password_should_publish_password_created_event(
     use_case: CreatePasswordUseCase,
-    group_access_gateway: GroupAccessGateway,
-    event_publisher: FakeEventPublisher,
+    group_access_gateway: FakeGroupAccessGateway,
+    domain_event_publisher: FakeEventPublisher,
 ):
-    from password_management_context.domain.events.password_created_event import (
-        PasswordCreatedEvent,
-    )
-
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
@@ -290,8 +283,8 @@ def test_should_publish_password_created_event_when_password_is_created(
     use_case.execute(command)
 
     # Assert event was published
-    assert len(event_publisher.published_events) == 1
-    published_event = event_publisher.published_events[0]
+    assert len(domain_event_publisher.published_events) == 1
+    published_event = domain_event_publisher.published_events[0]
     assert isinstance(published_event, PasswordCreatedEvent)
     assert published_event.password_id == uuid
     assert published_event.password_name == name

@@ -1,11 +1,6 @@
 import pytest
 from uuid import UUID
 
-from identity_access_management_context.application.gateways import (
-    UserRepository,
-    UserPasswordRepository,
-    GroupRepository,
-)
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.use_cases import CreateUserUseCase
 from identity_access_management_context.domain.exceptions import (
@@ -14,7 +9,10 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.authentication.exceptions import NotAdminError
 from shared_kernel.authentication.constants import ADMIN_ROLE
 from shared_kernel.authentication.models import AuthenticatedUser
-from tests.identity_access_management_context.unit.fakes import (
+from ..fakes import (
+    FakeUserRepository,
+    FakeUserPasswordRepository,
+    FakeGroupRepository,
     FakePasswordHashingGateway,
     FakeGroupMemberRepository,
 )
@@ -22,12 +20,12 @@ from tests.identity_access_management_context.unit.fakes import (
 
 @pytest.fixture
 def use_case(
-    user_repository: UserRepository,
-    user_password_repository: UserPasswordRepository,
-    group_repository: GroupRepository,
+    user_repository: FakeUserRepository,
+    user_password_repository: FakeUserPasswordRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
 ):
-    password_hashing_gateway = FakePasswordHashingGateway()
-    group_member_repository = FakeGroupMemberRepository()
     return CreateUserUseCase(
         user_repository,
         user_password_repository,
@@ -37,9 +35,9 @@ def use_case(
     )
 
 
-def test_should_create_user(
+def test_given_valid_user_data_when_creating_user_should_create_user(
     use_case: CreateUserUseCase,
-    user_repository: UserRepository,
+    user_repository: FakeUserRepository,
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"
@@ -68,7 +66,9 @@ def test_should_create_user(
     assert created_user.name == name
 
 
-def test_should_raise_error_when_requester_not_owner(use_case: CreateUserUseCase):
+def test_given_non_admin_user_when_creating_user_should_raise_not_admin_error(
+    use_case: CreateUserUseCase,
+):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"
     email = "testuser@example.com"
@@ -90,9 +90,9 @@ def test_should_raise_error_when_requester_not_owner(use_case: CreateUserUseCase
         use_case.execute(command)
 
 
-def test_should_create_user_password(
+def test_given_user_with_password_when_creating_user_should_store_hashed_password(
     use_case: CreateUserUseCase,
-    user_password_repository: UserPasswordRepository,
+    user_password_repository: FakeUserPasswordRepository,
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"
@@ -121,7 +121,7 @@ def test_should_create_user_password(
     assert created_user_password.display_name == name
 
 
-def test_should_raise_when_user_already_exists(
+def test_given_existing_user_when_creating_user_should_raise_user_already_exists_error(
     use_case: CreateUserUseCase,
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
@@ -146,9 +146,9 @@ def test_should_raise_when_user_already_exists(
         use_case.execute(command)
 
 
-def test_should_create_personal_group_when_creating_user(
+def test_given_new_user_when_creating_user_should_create_personal_group(
     use_case: CreateUserUseCase,
-    group_repository: GroupRepository,
+    group_repository: FakeGroupRepository,
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"

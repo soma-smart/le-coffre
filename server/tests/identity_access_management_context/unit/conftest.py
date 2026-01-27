@@ -1,45 +1,26 @@
 import pytest
 from uuid import UUID
 
-from identity_access_management_context.adapters.secondary import (
-    InMemoryUserRepository,
-    InMemorySsoUserRepository,
-)
 from identity_access_management_context.domain.entities import SsoUser
 from identity_access_management_context.application.gateways import SsoUserInfo
-from tests.identity_access_management_context.unit.fakes.fake_user_password_repository import (
+from .fakes import (
     FakeUserPasswordRepository,
-)
-from tests.identity_access_management_context.unit.fakes.fake_password_hashing_gateway import (
     FakePasswordHashingGateway,
-)
-from tests.identity_access_management_context.unit.fakes.fake_token_gateway import (
     FakeTokenGateway,
-)
-from tests.identity_access_management_context.unit.fakes.fake_sso_gateway import (
     FakeSsoGateway,
-)
-from tests.identity_access_management_context.unit.fakes.fake_sso_configuration_repository import (
     FakeSsoConfigurationRepository,
-)
-from tests.identity_access_management_context.unit.fakes.fake_time_provider import (
     FakeTimeProvider,
-)
-from tests.identity_access_management_context.unit.fakes.fake_encryption_service import (
     FakeEncryptionService,
-)
-
-from tests.identity_access_management_context.unit.fakes.fake_group_repository import (
     FakeGroupRepository,
-)
-from tests.identity_access_management_context.unit.fakes.fake_group_member_repository import (
     FakeGroupMemberRepository,
+    FakeSsoUserRepository,
+    FakeUserRepository,
 )
 
 
 @pytest.fixture
 def user_repository():
-    return InMemoryUserRepository()
+    return FakeUserRepository()
 
 
 @pytest.fixture
@@ -79,7 +60,7 @@ def sso_configuration_repository():
 
 @pytest.fixture
 def sso_user_repository():
-    return InMemorySsoUserRepository()
+    return FakeSsoUserRepository()
 
 
 @pytest.fixture

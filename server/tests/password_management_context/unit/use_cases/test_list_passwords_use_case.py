@@ -3,42 +3,44 @@ from uuid import UUID
 
 from password_management_context.application.commands import ListPasswordsCommand
 from password_management_context.application.use_cases import ListPasswordsUseCase
-from password_management_context.adapters.secondary import (
-    InMemoryPasswordRepository,
-)
+
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
-from password_management_context.application.gateways import (
-    PasswordPermissionsRepository,
+from ..fakes import (
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+    FakeGroupAccessGateway,
 )
 from password_management_context.domain.value_objects import PasswordPermission
 
 
 @pytest.fixture
 def use_case(
-    password_repository, password_permissions_repository, group_access_gateway
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     return ListPasswordsUseCase(
         password_repository, password_permissions_repository, group_access_gateway
     )
 
 
-def test_should_return_empty_list_on_default_folder_when_no_passwords(
+def test_given_no_passwords_when_listing_default_folder_should_return_empty_list(
     use_case: ListPasswordsUseCase,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
-    
+
     command = ListPasswordsCommand(requester_id=requester_id)
     result = use_case.execute(command)
 
     assert result == []
 
 
-def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
+def test_given_passwords_exist_when_listing_all_folders_should_return_all_accessible_passwords(
     use_case: ListPasswordsUseCase,
-    password_repository: InMemoryPasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group1_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -86,11 +88,11 @@ def test_should_return_all_passwords_when_no_folder_when_passwords_exist(
     assert password2_result.group_id == group2_id
 
 
-def test_should_return_passwords_from_specific_folder_when_folder_provided(
+def test_given_specific_folder_when_listing_passwords_should_return_only_folder_passwords(
     use_case: ListPasswordsUseCase,
-    password_repository: InMemoryPasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group1_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -126,12 +128,12 @@ def test_should_return_passwords_from_specific_folder_when_folder_provided(
     assert result[0].group_id == group1_id
 
 
-def test_should_raise_exception_when_folder_does_not_exist(
+def test_given_non_existent_folder_when_listing_passwords_should_raise_folder_not_found_error(
     use_case: ListPasswordsUseCase,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     folder_name = "NoneExistent"
-    
+
     command = ListPasswordsCommand(requester_id=requester_id, folder=folder_name)
     with pytest.raises(FolderNotFoundError) as exc_info:
         use_case.execute(command)
@@ -139,11 +141,11 @@ def test_should_raise_exception_when_folder_does_not_exist(
     assert folder_name in str(exc_info.value)
 
 
-def test_should_return_only_passwords_user_has_access_to(
+def test_given_mixed_access_when_listing_passwords_should_return_only_accessible_passwords(
     use_case: ListPasswordsUseCase,
-    password_repository: InMemoryPasswordRepository,
-    password_permissions_repository: PasswordPermissionsRepository,
-    group_access_gateway,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -176,9 +178,9 @@ def test_should_return_only_passwords_user_has_access_to(
     assert result[0].group_id == group_id
 
 
-def test_should_return_empty_list_when_no_passwords_user_has_access_to(
+def test_given_no_access_to_passwords_when_listing_passwords_should_return_empty_list(
     use_case: ListPasswordsUseCase,
-    password_repository: InMemoryPasswordRepository,
+    password_repository: FakePasswordRepository,
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     password1 = Password(

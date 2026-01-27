@@ -6,7 +6,7 @@ from sqlmodel import create_engine, Session
 from alembic.config import Config
 from alembic import command
 
-from vault_management_context.adapters.secondary.gateways import (
+from vault_management_context.adapters.secondary import (
     SqlVaultRepository,
 )
 
@@ -19,16 +19,14 @@ def database_engine():
 
     try:
         database_url = f"sqlite:///{db_path}"
-        engine = create_engine(
-            database_url, connect_args={"check_same_thread": False}
-        )
-        
+        engine = create_engine(database_url, connect_args={"check_same_thread": False})
+
         # Run migrations instead of create_tables
         alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
         alembic_cfg = Config(str(alembic_ini_path))
         alembic_cfg.set_main_option("sqlalchemy.url", database_url)
         command.upgrade(alembic_cfg, "head")
-        
+
         yield engine
     finally:
         try:

@@ -6,23 +6,21 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
 )
-from identity_access_management_context.application.gateways import (
-    SsoConfigurationRepository,
-)
 from identity_access_management_context.domain.entities import SsoConfiguration
+from ..fakes import FakeSsoConfigurationRepository
 from datetime import datetime, timezone
 
 
 @pytest.fixture
 def use_case(
-    sso_configuration_repository: SsoConfigurationRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
 ) -> IsSsoConfigSetUseCase:
     return IsSsoConfigSetUseCase(sso_configuration_repository)
 
 
 def test_given_sso_configured_when_checking_if_it_is_configured_then_should_return_true(
     use_case: IsSsoConfigSetUseCase,
-    sso_configuration_repository: SsoConfigurationRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
 ):
     # Arrange
     sso_config = SsoConfiguration(

@@ -2,27 +2,21 @@ import pytest
 import tempfile
 import os
 import httpx
+from pathlib import Path
 from urllib.parse import quote
 from fastapi.testclient import TestClient
 from main import app
 from sqlmodel import create_engine, Session
+from alembic.config import Config
+from alembic import command
 from identity_access_management_context.adapters.secondary.sql.sql_sso_user_repository import (
     SqlSsoUserRepository,
-)
-from identity_access_management_context.adapters.secondary.sql.model.sso_users_model import (
-    SsoUsersTable,
 )
 from identity_access_management_context.adapters.secondary.sql.sql_user_repository import (
     SqlUserRepository,
 )
-from identity_access_management_context.adapters.secondary.sql.model.users_model import (
-    UserTable,
-)
 from identity_access_management_context.adapters.secondary.sql.sql_user_password_repository import (
     SqlUserPasswordRepository,
-)
-from identity_access_management_context.adapters.secondary.sql.model.user_password_model import (
-    UserPasswordTable,
 )
 import oidc_provider_mock
 
@@ -48,15 +42,21 @@ def database_engine():
     db_fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(db_fd)
     try:
-        engine = create_engine(
-            f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
-        )
-        SsoUsersTable.metadata.create_all(engine)
-        UserTable.metadata.create_all(engine)  # Creating Tables
-        UserPasswordTable.metadata.create_all(engine)
+        database_url = f"sqlite:///{db_path}"
+        engine = create_engine(database_url, connect_args={"check_same_thread": False})
+
+        # Run migrations instead of create_all()
+        alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
+        alembic_cfg = Config(str(alembic_ini_path))
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+        command.upgrade(alembic_cfg, "head")
+
         yield engine
     finally:
-        os.unlink(db_path)
+        try:
+            os.unlink(db_path)
+        except OSError:
+            pass
 
 
 @pytest.fixture(scope="function")
