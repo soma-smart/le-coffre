@@ -1,3 +1,3 @@
-from .audit_logger_gateway import AuditLoggerGateway
+from .audit_logger_repository import AuditLogRepository
 
-__all__ = ["AuditLoggerGateway"]
+__all__ = ["AuditLogRepository"]
