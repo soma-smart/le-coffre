@@ -5,23 +5,30 @@ import pytest
 from shared_kernel.pubsub.domain.domain_event import DomainEvent
 from audit_logging_context.application.use_cases.store_event_use_case import (
     StoreEventUseCase,
-    LogRepo,
 )
 
 
-@pytest.fixture
-def log_repo():
-    return LogRepo()
+class FakeEventRepository:
+    def __init__(self):
+        self.events: list = []
+
+    def append_event(self, event):
+        self.events.append(event)
 
 
 @pytest.fixture
-def use_case(log_repo):
-    return StoreEventUseCase(log_repo)
+def event_repository():
+    return FakeEventRepository()
 
 
-def test_given_event_when_store_should_succeed(use_case, log_repo):
+@pytest.fixture
+def use_case(event_repository):
+    return StoreEventUseCase(event_repository)
+
+
+def test_given_event_when_store_should_succeed(use_case, event_repository):
     event = DomainEvent(uuid4(), datetime.now())
 
     use_case.execute(event)
 
-    assert log_repo.logs == [event]
+    assert event_repository.events == [event]
