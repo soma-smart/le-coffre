@@ -16,6 +16,8 @@ const showCreateDialog = ref(false);
 const showGroupDetailsModal = ref(false);
 const newGroupName = ref('');
 const selectedGroup = ref<GroupItem | null>(null);
+const isEditMode = ref(false);
+const editingGroupId = ref<string | null>(null);
 
 // Open group details modal
 const openGroupDetails = (group: GroupItem) => {
@@ -23,8 +25,24 @@ const openGroupDetails = (group: GroupItem) => {
   showGroupDetailsModal.value = true;
 };
 
-// Create a new group
-const createGroup = async () => {
+// Open edit group dialog
+const openEditDialog = (group: GroupItem) => {
+  isEditMode.value = true;
+  editingGroupId.value = group.id;
+  newGroupName.value = group.name;
+  showCreateDialog.value = true;
+};
+
+// Open create group dialog
+const openCreateDialog = () => {
+  isEditMode.value = false;
+  editingGroupId.value = null;
+  newGroupName.value = '';
+  showCreateDialog.value = true;
+};
+
+// Create or update a group
+const handleSubmit = async () => {
   if (!newGroupName.value.trim()) {
     toast.add({
       severity: 'error',
@@ -36,23 +54,38 @@ const createGroup = async () => {
   }
 
   try {
-    await groupsStore.createGroup(newGroupName.value);
+    if (isEditMode.value && editingGroupId.value) {
+      // Update existing group
+      await groupsStore.updateGroup(editingGroupId.value, newGroupName.value);
 
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Group created successfully',
-      life: 5000
-    });
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Group updated successfully',
+        life: 5000
+      });
+    } else {
+      // Create new group
+      await groupsStore.createGroup(newGroupName.value);
+
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Group created successfully',
+        life: 5000
+      });
+    }
 
     newGroupName.value = '';
+    isEditMode.value = false;
+    editingGroupId.value = null;
     showCreateDialog.value = false;
   } catch (error) {
-    console.error('Failed to create group:', error);
+    console.error('Failed to save group:', error);
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Failed to create group',
+      detail: `Failed to ${isEditMode.value ? 'update' : 'create'} group`,
       life: 5000
     });
   }
@@ -73,11 +106,7 @@ onMounted(() => {
     <div class="container mx-auto p-6">
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Groups</h1>
-        <Button 
-          label="New Group" 
-          icon="pi pi-plus" 
-          @click="showCreateDialog = true" 
-        />
+        <Button label="New Group" icon="pi pi-plus" @click="openCreateDialog" />
       </div>
 
       <!-- Groups List -->
@@ -92,9 +121,19 @@ onMounted(() => {
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card v-for="group in sharedGroups" :key="group.id" class="hover:shadow-lg transition-shadow">
           <template #title>
-            <div class="flex items-center gap-2">
-              <i class="pi pi-users text-primary"></i>
-              <span>{{ group.name }}</span>
+            <div class="flex items-center gap-2 justify-between">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-users text-primary"></i>
+                <span>{{ group.name }}</span>
+              </div>
+              <Button 
+                icon="pi pi-pencil" 
+                text 
+                rounded 
+                severity="secondary"
+                size="small"
+                @click="openEditDialog(group)"
+              />
             </div>
           </template>
           <template #content>
@@ -105,59 +144,34 @@ onMounted(() => {
                 <span v-else>Shared Group</span>
               </div>
               <div class="flex gap-2 mt-4">
-                <Button 
-                  label="View Members" 
-                  icon="pi pi-users" 
-                  size="small"
-                  outlined
-                  @click="openGroupDetails(group)"
-                />
+                <Button label="View Members" icon="pi pi-users" size="small" outlined
+                  @click="openGroupDetails(group)" />
               </div>
             </div>
           </template>
         </Card>
       </div>
 
-      <!-- Create Group Dialog -->
-      <Dialog 
-        v-model:visible="showCreateDialog" 
-        header="Create New Group" 
-        :modal="true"
-        :style="{ width: '30rem' }"
-      >
+      <!-- Create/Edit Group Dialog -->
+      <Dialog v-model:visible="showCreateDialog" :header="isEditMode ? 'Edit Group' : 'Create New Group'" :modal="true"
+        :style="{ width: '30rem' }">
         <div class="flex flex-col gap-4 py-4">
           <div class="flex flex-col gap-2">
             <label for="group-name" class="font-semibold">Group Name</label>
-            <InputText 
-              id="group-name" 
-              v-model="newGroupName" 
-              placeholder="Enter group name"
-              @keyup.enter="createGroup"
-            />
+            <InputText id="group-name" v-model="newGroupName" placeholder="Enter group name"
+              @keyup.enter="handleSubmit" />
           </div>
         </div>
         <template #footer>
-          <Button 
-            label="Cancel" 
-            icon="pi pi-times" 
-            text 
-            @click="showCreateDialog = false" 
-          />
-          <Button 
-            label="Create" 
-            icon="pi pi-check" 
-            @click="createGroup" 
-          />
+          <Button label="Cancel" icon="pi pi-times" text @click="showCreateDialog = false" />
+          <Button :label="isEditMode ? 'Update' : 'Create'" :icon="isEditMode ? 'pi pi-check' : 'pi pi-plus'"
+            @click="handleSubmit" />
         </template>
       </Dialog>
 
       <!-- Group Details Modal -->
-      <GroupDetailsModal 
-        v-model:visible="showGroupDetailsModal" 
-        :group="selectedGroup"
-        @member-added="handleMemberChanged"
-        @member-removed="handleMemberChanged"
-      />
+      <GroupDetailsModal v-model:visible="showGroupDetailsModal" :group="selectedGroup"
+        @member-added="handleMemberChanged" @member-removed="handleMemberChanged" />
     </div>
   </MainLayout>
 </template>

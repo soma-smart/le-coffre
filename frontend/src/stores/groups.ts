@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 import { 
   listGroupsGroupsGet,
   createGroupGroupsPost,
+  updateGroupGroupsGroupIdPut,
   addMemberToGroupGroupsGroupIdMembersPost,
   removeMemberFromGroupGroupsGroupIdMembersUserIdDelete,
   getUserMeUsersMeGet
@@ -121,6 +122,25 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   };
 
+  const updateGroup = async (groupId: string, name: string) => {
+    try {
+      const response = await updateGroupGroupsGroupIdPut({
+        path: { group_id: groupId },
+        body: { name }
+      });
+      
+      if (response.data) {
+        // Invalidate cache to force refresh
+        invalidateCache();
+        await fetchAllGroups(true);
+        return response.data;
+      }
+    } catch (e) {
+      console.error('Error updating group:', e);
+      throw e;
+    }
+  };
+
   const addMemberToGroup = async (groupId: string, userId: string) => {
     try {
       const response = await addMemberToGroupGroupsGroupIdMembersPost({
@@ -176,6 +196,7 @@ export const useGroupsStore = defineStore('groups', () => {
     fetchSharedGroupsOnly,
     fetchCurrentUser,
     createGroup,
+    updateGroup,
     addMemberToGroup,
     removeMemberFromGroup,
     invalidateCache,

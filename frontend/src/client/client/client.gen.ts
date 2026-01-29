@@ -95,7 +95,40 @@ export const createClient = (config: Config = {}): Client => {
     // fetch must be assigned here, otherwise it would throw the error:
     // TypeError: Failed to execute 'fetch' on 'Window': Illegal invocation
     const _fetch = opts.fetch!;
-    let response = await _fetch(request);
+    let response: Response;
+
+    try {
+      response = await _fetch(request);
+    } catch (error) {
+      // Handle fetch exceptions (AbortError, network errors, etc.)
+      let finalError = error;
+
+      for (const fn of interceptors.error.fns) {
+        if (fn) {
+          finalError = (await fn(
+            error,
+            undefined as any,
+            request,
+            opts,
+          )) as unknown;
+        }
+      }
+
+      finalError = finalError || ({} as unknown);
+
+      if (opts.throwOnError) {
+        throw finalError;
+      }
+
+      // Return error response
+      return opts.responseStyle === 'data'
+        ? undefined
+        : {
+            error: finalError,
+            request,
+            response: undefined as any,
+          };
+    }
 
     for (const fn of interceptors.response.fns) {
       if (fn) {
@@ -149,10 +182,16 @@ export const createClient = (config: Config = {}): Client => {
         case 'arrayBuffer':
         case 'blob':
         case 'formData':
-        case 'json':
         case 'text':
           data = await response[parseAs]();
           break;
+        case 'json': {
+          // Some servers return 200 with no Content-Length and empty body.
+          // response.json() would throw; read as text and parse if non-empty.
+          const text = await response.text();
+          data = text ? JSON.parse(text) : {};
+          break;
+        }
         case 'stream':
           return opts.responseStyle === 'data'
             ? response.body
@@ -234,6 +273,10 @@ export const createClient = (config: Config = {}): Client => {
           }
           return request;
         },
+        serializedBody: getValidRequestBody(opts) as
+          | BodyInit
+          | null
+          | undefined,
         url,
       });
     };
