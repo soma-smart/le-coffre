@@ -18,7 +18,8 @@ from identity_access_management_context.domain.exceptions import (
     CannotModifyPersonalGroupException,
     IdentityAccessManagementDomainError,
 )
-from shared_kernel.authentication import ValidatedUser, get_current_user
+from shared_kernel.domain.entities.validated_user import ValidatedUser
+from shared_kernel.adapters.primary.dependencies import get_current_user
 
 
 router = APIRouter(prefix="/groups", tags=["Group Management"])
