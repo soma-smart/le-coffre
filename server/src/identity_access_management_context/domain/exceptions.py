@@ -108,13 +108,11 @@ class CannotDeletePersonalGroupException(IdentityAccessManagementDomainError):
         super().__init__(f"Cannot delete personal group '{group_id}'")
 
 
-class CannotDeleteGroupWithPasswordsException(IdentityAccessManagementDomainError):
-    """Raised when attempting to delete a group that owns passwords"""
+class CannotDeleteGroupStillUsedException(IdentityAccessManagementDomainError):
+    """Raised when attempting to delete a group that is still in use"""
 
     def __init__(self, group_id: UUID):
-        super().__init__(
-            f"Cannot delete group '{group_id}' because it owns passwords"
-        )
+        super().__init__(f"Cannot delete group '{group_id}' because it is still in use")
 
 
 # Admin-related exceptions

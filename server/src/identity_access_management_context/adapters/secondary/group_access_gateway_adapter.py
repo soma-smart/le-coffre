@@ -1,11 +1,9 @@
 from uuid import UUID
-from sqlmodel import select
 
 from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
 )
-from password_management_context.adapters.secondary.sql import OwnershipTable
 
 
 class GroupAccessGatewayAdapter:
@@ -19,11 +17,9 @@ class GroupAccessGatewayAdapter:
         self,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
-        Session,
     ):
         self._group_repository = group_repository
         self._group_member_repository = group_member_repository
-        self._session = Session
 
     def is_user_owner_of_group(self, user_id: UUID, group_id: UUID) -> bool:
         """Check if a user is the owner of a group.
@@ -89,18 +85,3 @@ class GroupAccessGatewayAdapter:
         # For shared groups, get all owner members
         members = self._group_member_repository.get_members(group_id)
         return [member.user_id for member in members if member.is_owner]
-
-    def group_owns_passwords(self, group_id: UUID) -> bool:
-        """Check if a group owns any passwords.
-
-        Args:
-            group_id: The ID of the group to check
-
-        Returns:
-            True if the group owns at least one password, False otherwise
-        """
-        statement = select(OwnershipTable).where(
-            OwnershipTable.group_id == group_id
-        ).limit(1)
-        result = self._session.exec(statement).first()
-        return result is not None

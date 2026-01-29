@@ -28,3 +28,7 @@ class GroupMemberRepository(Protocol):
     def count_owners(self, group_id: UUID) -> int:
         """Count the number of owners in a group."""
         ...
+
+    def delete_by_group_id(self, group_id: UUID) -> None:
+        """Delete all members of a group."""
+        ...

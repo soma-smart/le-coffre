@@ -4,43 +4,35 @@ from uuid import UUID
 from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
+    GroupUsageGateway,
 )
-from password_management_context.application.gateways import GroupAccessGateway
 from identity_access_management_context.application.commands import DeleteGroupCommand
 from identity_access_management_context.application.use_cases import DeleteGroupUseCase
 from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
     CannotDeletePersonalGroupException,
-    CannotDeleteGroupWithPasswordsException,
+    CannotDeleteGroupStillUsedException,
 )
 from identity_access_management_context.domain.entities import Group
-from tests.fakes.password_management_context.fake_group_access_gateway import (
-    FakeGroupAccessGateway,
-)
 from shared_kernel.authentication import AuthenticatedUser
 from shared_kernel.authentication.constants import ADMIN_ROLE
-
-
-@pytest.fixture
-def group_access_gateway():
-    return FakeGroupAccessGateway()
 
 
 @pytest.fixture
 def use_case(
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
-    group_access_gateway: GroupAccessGateway,
+    group_usage_gateway: GroupUsageGateway,
 ):
     return DeleteGroupUseCase(
         group_repository=group_repository,
         group_member_repository=group_member_repository,
-        group_access_gateway=group_access_gateway,
+        group_usage_gateway=group_usage_gateway,
     )
 
 
-def test_should_delete_group_when_requester_is_owner_and_group_has_no_passwords(
+def test_given_owner_and_group_without_passwords_when_deleting_group_then_group_is_deleted(
     use_case: DeleteGroupUseCase,
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
@@ -70,7 +62,7 @@ def test_should_delete_group_when_requester_is_owner_and_group_has_no_passwords(
     assert group_repository.get_by_id(group_id) is None
 
 
-def test_should_raise_error_when_requester_is_not_owner(
+def test_given_non_owner_user_when_deleting_group_then_raises_user_not_owner_exception(
     use_case: DeleteGroupUseCase,
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
@@ -100,7 +92,7 @@ def test_should_raise_error_when_requester_is_not_owner(
         use_case.execute(command)
 
 
-def test_should_raise_error_when_group_does_not_exist(
+def test_given_non_existent_group_when_deleting_group_then_raises_group_not_found_exception(
     use_case: DeleteGroupUseCase,
 ):
     # Arrange
@@ -118,7 +110,7 @@ def test_should_raise_error_when_group_does_not_exist(
         use_case.execute(command)
 
 
-def test_should_raise_error_when_attempting_to_delete_personal_group(
+def test_given_personal_group_when_deleting_group_then_raises_cannot_delete_personal_group_exception(
     use_case: DeleteGroupUseCase,
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
@@ -147,11 +139,11 @@ def test_should_raise_error_when_attempting_to_delete_personal_group(
         use_case.execute(command)
 
 
-def test_should_raise_error_when_group_owns_passwords(
+def test_given_group_with_passwords_when_deleting_group_then_raises_cannot_delete_group_with_passwords_exception(
     use_case: DeleteGroupUseCase,
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
-    group_access_gateway: FakeGroupAccessGateway,
+    group_usage_gateway: GroupUsageGateway,
 ):
     # Arrange
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
@@ -166,7 +158,7 @@ def test_should_raise_error_when_group_owns_passwords(
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
     # Simulate that this group owns passwords
-    group_access_gateway.add_group_with_passwords(group_id)
+    group_usage_gateway._set_usage_to_group(group_id)
 
     requesting_user = AuthenticatedUser(user_id=owner_id, roles=[])
     command = DeleteGroupCommand(
@@ -175,11 +167,11 @@ def test_should_raise_error_when_group_owns_passwords(
     )
 
     # Act & Assert
-    with pytest.raises(CannotDeleteGroupWithPasswordsException):
+    with pytest.raises(CannotDeleteGroupStillUsedException):
         use_case.execute(command)
 
 
-def test_should_delete_group_when_requester_is_admin_even_if_not_owner(
+def test_given_admin_user_not_owner_when_deleting_group_then_group_is_deleted(
     use_case: DeleteGroupUseCase,
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,

@@ -2,13 +2,13 @@ from identity_access_management_context.application.commands import DeleteGroupC
 from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
+    GroupUsageGateway,
 )
-from password_management_context.application.gateways import GroupAccessGateway
 from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
     CannotDeletePersonalGroupException,
-    CannotDeleteGroupWithPasswordsException,
+    CannotDeleteGroupStillUsedException,
 )
 from shared_kernel.authentication import AdminPermissionChecker
 
@@ -18,11 +18,11 @@ class DeleteGroupUseCase:
         self,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
-        group_access_gateway: GroupAccessGateway,
+        group_usage_gateway: GroupUsageGateway,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
-        self.group_access_gateway = group_access_gateway
+        self.group_usage_gateway = group_usage_gateway
 
     def execute(self, command: DeleteGroupCommand) -> None:
         group = self.group_repository.get_by_id(command.group_id)
@@ -43,8 +43,8 @@ class DeleteGroupUseCase:
                 command.requesting_user.user_id, command.group_id
             )
 
-        if self.group_access_gateway.group_owns_passwords(command.group_id):
-            raise CannotDeleteGroupWithPasswordsException(command.group_id)
+        if self.group_usage_gateway.is_group_used(command.group_id):
+            raise CannotDeleteGroupStillUsedException(command.group_id)
 
         self.group_member_repository.delete_by_group_id(command.group_id)
         self.group_repository.delete_group(command.group_id)

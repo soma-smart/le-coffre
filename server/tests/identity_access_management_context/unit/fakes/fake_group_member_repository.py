@@ -36,5 +36,12 @@ class FakeGroupMemberRepository:
             1 for m in self._members.values() if m.group_id == group_id and m.is_owner
         )
 
+    def delete_by_group_id(self, group_id: UUID):
+        self._members = {
+            key: member
+            for key, member in self._members.items()
+            if member.group_id != group_id
+        }
+
     def clear(self) -> None:
         self._members.clear()

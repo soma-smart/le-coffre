@@ -10,11 +10,12 @@ from .fakes import (
     FakeSsoGateway,
     FakeSsoConfigurationRepository,
     FakeTimeGateway,
-    FakeGroupRepository,
-    FakeGroupMemberRepository,
     FakeSsoUserRepository,
     FakeUserRepository,
     FakeSsoEncryptionGateway,
+    FakeGroupRepository,
+    FakeGroupMemberRepository,
+    FakeGroupUsageGateway,
 )
 
 
@@ -71,6 +72,11 @@ def group_repository():
 @pytest.fixture
 def group_member_repository():
     return FakeGroupMemberRepository()
+
+
+@pytest.fixture
+def group_usage_gateway():
+    return FakeGroupUsageGateway()
 
 
 def create_sso_user_from_provider(

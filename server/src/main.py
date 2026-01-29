@@ -130,7 +130,7 @@ async def lifespan(app: FastAPI):
         group_repository = SqlGroupRepository(session)
         group_member_repository = SqlGroupMemberRepository(session)
         group_access_gateway = GroupAccessGatewayAdapter(
-            group_repository, group_member_repository, session
+            group_repository, group_member_repository
         )
         password_hashing_gateway = BcryptHashingGateway()
 
