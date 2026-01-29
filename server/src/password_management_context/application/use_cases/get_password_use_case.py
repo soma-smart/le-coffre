@@ -16,7 +16,7 @@ from password_management_context.domain.events import (
     PasswordAccessedEvent,
 )
 from password_management_context.domain.value_objects import PasswordPermission
-from shared_kernel.pubsub.gateway.event_publisher_gateway import DomainEventPublisher
+from shared_kernel.application.gateways import DomainEventPublisher
 
 
 class GetPasswordUseCase:

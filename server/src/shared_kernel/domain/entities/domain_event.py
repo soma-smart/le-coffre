@@ -1,7 +1,7 @@
 from datetime import datetime
 from abc import ABC
 from uuid import UUID
-from shared_kernel.pubsub.domain.event_priority import EventPriority
+from shared_kernel.domain.value_objects import EventPriority
 
 
 class DomainEvent(ABC):
