@@ -27,8 +27,8 @@ WORKDIR /app/server
 # Copy backend dependency files
 COPY server/pyproject.toml server/uv.lock ./
 
-# Install dependencies
-RUN uv sync --frozen --no-cache --no-dev
+# Install dependencies including PostgreSQL drivers
+RUN uv sync --frozen --no-cache --no-dev --group postgres
 
 # ===================================
 # Stage 3: Final Production Image
