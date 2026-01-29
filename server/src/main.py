@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
 from alembic.config import Config
@@ -165,8 +167,41 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, root_path="/api")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Kubernetes liveness/readiness probes."""
+    return {"status": "healthy"}
+
+
 app.include_router(get_vault_management_router())
 app.include_router(get_password_management_router())
 app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
+
+# Serve frontend static files
+frontend_dist = Path("/app/frontend/dist")
+if frontend_dist.exists():
+    # Mount static assets with proper caching
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(frontend_dist / "assets")),
+        name="assets",
+    )
+
+    # Serve index.html for all non-API routes (SPA routing)
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Don't serve index.html for API routes
+        if full_path.startswith("api/"):
+            return None
+
+        # Check if the file exists
+        file_path = frontend_dist / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+
+        # For all other paths, serve index.html (SPA routing)
+        return FileResponse(frontend_dist / "index.html")

@@ -1,0 +1,133 @@
+# Example production values for Le Coffre
+# Copy this file and customize for your environment
+
+image:
+  repository: rg.fr-par.scw.cloud/soma-smart-cr/le-coffre
+  tag: "v1.0.0"
+  pullPolicy: IfNotPresent
+
+# Provide credentials to pull from private registry
+imagePullSecrets:
+  - name: regcred
+
+replicaCount: 2
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    # Max body size for uploads
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+  hosts:
+    - host: le-coffre.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: le-coffre-tls
+      hosts:
+        - le-coffre.yourdomain.com
+
+config:
+  environment: production
+
+  # Database - Use PostgreSQL in production
+  database:
+    # For Scaleway Managed PostgreSQL
+    url: "postgresql://lecoffre:CHANGE_PASSWORD@your-db.pg.svc.scw.cloud:5432/lecoffre"
+
+    # For in-cluster PostgreSQL
+    # url: "postgresql://lecoffre:CHANGE_PASSWORD@postgresql.le-coffre.svc.cluster.local:5432/lecoffre"
+
+  # JWT configuration - IMPORTANT: Generate a secure key!
+  # Generate with: openssl rand -base64 32
+  jwt:
+    secretKey: "CHANGE_ME_RUN_openssl_rand_base64_32"
+    algorithm: "HS256"
+    accessTokenExpirationMinutes: 15
+    refreshTokenExpirationDays: 7
+
+  # Application base URL - used for SSO callbacks
+  appBaseUrl: "https://le-coffre.yourdomain.com"
+
+# Resource allocation
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+# Auto-scaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# For SQLite (NOT recommended for production)
+# Only use for testing/development
+persistence:
+  enabled: false
+  storageClass: "scw-bssd"
+  accessMode: ReadWriteOnce
+  size: 1Gi
+
+# If you want to deploy PostgreSQL with the chart
+# Not recommended - use Scaleway Managed Database instead
+postgresql:
+  enabled: false
+  auth:
+    username: lecoffre
+    password: changeme
+    database: lecoffre
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: "scw-bssd"
+
+# Security contexts
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Node affinity - useful for Scaleway node pools
+# affinity:
+#   nodeAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#       nodeSelectorTerms:
+#       - matchExpressions:
+#         - key: node.kubernetes.io/instance-type
+#           operator: In
+#           values:
+#           - DEV1-M
+#           - GP1-S
+
+# Tolerations for taints
+# tolerations:
+#   - key: "workload"
+#     operator: "Equal"
+#     value: "production"
+#     effect: "NoSchedule"
+
+# Node selector
+# nodeSelector:
+#   workload: production

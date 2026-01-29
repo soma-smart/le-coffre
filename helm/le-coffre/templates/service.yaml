@@ -1,0 +1,20 @@
+{{- if .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "le-coffre.fullname" . }}
+  labels:
+    {{- include "le-coffre.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if .Values.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.service.sessionAffinity }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.service.ports.https.port }}
+      targetPort: {{ .Values.service.ports.https.targetPort }}
+      protocol: {{ .Values.service.ports.https.protocol }}
+      name: https
+  selector:
+    {{- include "le-coffre.selectorLabels" . | nindent 4 }}
+{{- end }}

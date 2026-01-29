@@ -1,0 +1,248 @@
+# Default values for le-coffre
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  registry: "rg.fr-par.scw.cloud/somait-cr"
+  repository: "le-coffre"
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+# Configuration values for the application
+config:
+  projectName: "le-coffre"
+  namespace: "le-coffre"
+  # Cloud provider (azure ou scaleway)
+  cloudProvider: "scaleway"
+
+  # Container Registry based on cloud provider
+  containerRegistry: "rg.fr-par.scw.cloud/somait-cr"
+
+  # Configuration Scaleway
+  scwRegion: "fr-par"
+  scwZone: "fr-par-1"
+  scwClusterName: "soma-smart-cluster"
+
+  # Application configuration
+  environment: production
+
+  # Database configuration
+  database:
+    # For PostgreSQL (recommended)
+    url: "postgresql://user:password@postgresql:5432/lecoffre"
+
+  # JWT configuration
+  jwt:
+    # Secret key for JWT tokens (will be stored in secret)
+    # Generate with: openssl rand -base64 32
+    secretKey: "CHANGE_ME_GENERATE_A_SECURE_KEY"
+    algorithm: "HS256"
+    accessTokenExpirationMinutes: 15
+    refreshTokenExpirationDays: 7
+
+  # Application base URL (for SSO callbacks)
+  appBaseUrl: "https://le-coffre.soma-smart.cloud"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: "le-coffre-sa"
+  automount: true
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 2000
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 2000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - NET_BIND_SERVICE
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  enabled: true
+  type: ClusterIP
+  ports:
+    https:
+      port: 443
+      targetPort: 8080
+      protocol: TCP
+  sessionAffinity: None
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-it
+    kubernetes.io/ingress.allow-http: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/enable-modsecurity: "true"
+    nginx.ingress.kubernetes.io/enable-owasp-core-rules: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.3 TLSv1.2"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/upstream-vhost: "le-coffre.soma-smart.cloud"
+    nginx.ingress.kubernetes.io/add-headers: |
+      {
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "X-XSS-Protection": "1; mode=block",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'",
+        "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
+      }
+  hosts:
+    - host: "le-coffre.soma-smart.cloud"
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: le-coffre-tls
+      hosts:
+        - "le-coffre.soma-smart.cloud"
+
+resources:
+  limits:
+    cpu: "0.5"
+    memory: 512Mi
+  requests:
+    cpu: "0.1"
+    memory: 256Mi
+
+networkPolicy:
+  enabled: true
+  ingressRules:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: nginx-ingress
+  egressRules:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.0.0/16
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - ports:
+        - port: 5432
+          protocol: TCP
+
+probes:
+  startupProbe:
+    httpGet:
+      path: /api/health
+      port: 8080
+      scheme: HTTP
+    failureThreshold: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 8080
+      scheme: HTTP
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 8080
+      scheme: HTTP
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Persistence for SQLite (if using SQLite instead of PostgreSQL)
+persistence:
+  enabled: false
+  storageClass: "scw-bssd"
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /data
+
+# PostgreSQL configuration (if using built-in PostgreSQL)
+postgresql:
+  enabled: false
+  auth:
+    username: lecoffre
+    password: changeme
+    database: lecoffre
+  primary:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: "scw-bssd"

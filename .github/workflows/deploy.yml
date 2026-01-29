@@ -1,0 +1,200 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_run:
+    workflows: ["Publish Docker Image"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      project_name: ${{ steps.set_env.outputs.project_name }}
+      namespace: ${{ steps.set_env.outputs.namespace }}
+      cloud_provider: ${{ steps.set_env.outputs.cloud_provider }}
+      container_registry: ${{ steps.set_env.outputs.container_registry }}
+      scw_region: ${{ steps.set_env.outputs.scw_region }}
+      scw_zone: ${{ steps.set_env.outputs.scw_zone }}
+      scw_cluster_name: ${{ steps.set_env.outputs.scw_cluster_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check values.yaml exists
+        run: |
+          if [ ! -f helm/le-coffre/values.yaml ]; then
+            echo "❌ The file helm/le-coffre/values.yaml does not exist"
+            exit 1
+          fi
+
+      - name: Install yq
+        run: |
+          wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Set environment variables from values.yaml
+        id: set_env
+        run: |
+          PROJECT_NAME=$(yq '.config.projectName' helm/le-coffre/values.yaml)
+          NAMESPACE=$(yq '.config.namespace' helm/le-coffre/values.yaml)
+          CLOUD_PROVIDER=$(yq '.config.cloudProvider' helm/le-coffre/values.yaml)
+          CONTAINER_REGISTRY=$(yq '.image.registry' helm/le-coffre/values.yaml)
+
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+          echo "cloud_provider=$CLOUD_PROVIDER" >> $GITHUB_OUTPUT
+          echo "container_registry=$CONTAINER_REGISTRY" >> $GITHUB_OUTPUT
+
+          echo "🔍 Detected cloud provider: $CLOUD_PROVIDER"
+
+          if [ "$CLOUD_PROVIDER" == "scaleway" ]; then
+            echo "☁️ Configuring for Scaleway Kapsule..."
+
+            SCW_REGION=$(yq '.config.scwRegion' helm/le-coffre/values.yaml)
+            SCW_ZONE=$(yq '.config.scwZone' helm/le-coffre/values.yaml)
+            SCW_CLUSTER_NAME=$(yq '.config.scwClusterName' helm/le-coffre/values.yaml)
+
+            echo "scw_region=$SCW_REGION" >> $GITHUB_OUTPUT
+            echo "scw_zone=$SCW_ZONE" >> $GITHUB_OUTPUT
+            echo "scw_cluster_name=$SCW_CLUSTER_NAME" >> $GITHUB_OUTPUT
+          fi
+
+          echo "✅ Configuration validated for $CLOUD_PROVIDER"
+
+  deploy:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    env:
+      PROJECT_NAME: ${{ needs.setup.outputs.project_name }}
+      NAMESPACE: ${{ needs.setup.outputs.namespace }}
+      CLOUD_PROVIDER: ${{ needs.setup.outputs.cloud_provider }}
+      SCW_REGION: ${{ needs.setup.outputs.scw_region }}
+      SCW_ZONE: ${{ needs.setup.outputs.scw_zone }}
+      SCW_CLUSTER_NAME: ${{ needs.setup.outputs.scw_cluster_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Display Workflow Information
+        run: |
+          echo "🔍 Deployment Information:"
+          echo "👤 Actor: ${{ github.actor }}"
+          echo "🔄 Event: ${{ github.event_name }}"
+          echo "🔀 Reference: ${{ github.ref }}"
+          echo "📝 SHA: ${{ github.sha }}"
+          echo "☁️ Cloud Provider: ${{ env.CLOUD_PROVIDER }}"
+          echo "📦 Project: ${{ env.PROJECT_NAME }}"
+          echo "🔧 Namespace: ${{ env.NAMESPACE }}"
+
+      - name: Install Scaleway CLI
+        if: env.CLOUD_PROVIDER == 'scaleway'
+        run: |
+          echo "📦 Installing Scaleway CLI..."
+          curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+          echo "$HOME/.config/scw" >> $GITHUB_PATH
+          echo "✅ Scaleway CLI installed"
+
+      - name: Configure Scaleway CLI
+        if: env.CLOUD_PROVIDER == 'scaleway'
+        run: |
+          echo "⚙️ Configuring Scaleway CLI..."
+          scw init --access-key=${{ secrets.SCW_ACCESS_KEY }} \
+                   --secret-key=${{ secrets.SCW_SECRET_KEY }} \
+                   --organization-id=${{ secrets.SCW_DEFAULT_ORGANIZATION_ID }} \
+                   --project-id=${{ secrets.SCW_DEFAULT_PROJECT_ID }} \
+                   --region=${{ env.SCW_REGION }} \
+                   --zone=${{ env.SCW_ZONE }} \
+                   --send-telemetry=false
+          echo "✅ Scaleway CLI configured"
+
+      - name: Kapsule Login
+        if: env.CLOUD_PROVIDER == 'scaleway'
+        run: |
+          echo "🔐 Connecting to Kapsule cluster..."
+          scw k8s kubeconfig install ${{ env.SCW_CLUSTER_NAME }} region=${{ env.SCW_REGION }}
+          echo "✅ Successfully connected to Kapsule"
+
+      - name: Create Namespace if not exists
+        run: |
+          echo "📦 Creating namespace ${{ env.NAMESPACE }} if not exists..."
+          kubectl create namespace ${{ env.NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+          echo "✅ Namespace ready"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Lint Helm Chart
+        run: |
+          echo "🔍 Linting Helm chart..."
+          helm lint ./helm/le-coffre
+          echo "✅ Helm lint passed"
+
+      - name: Deploy with Helm
+        run: |
+          echo "🚀 Deploying ${{ env.PROJECT_NAME }} with Helm..."
+          helm upgrade --install ${{ env.PROJECT_NAME }} ./helm/le-coffre \
+          --namespace ${{ env.NAMESPACE }} \
+          --set image.tag=${{ github.sha }} \
+          --atomic \
+          --timeout 10m \
+          --wait
+          echo "✅ Helm deployment completed"
+
+      - name: Verify Deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          kubectl rollout status deployment/${{ env.PROJECT_NAME }} -n ${{ env.NAMESPACE }} --timeout=5m
+
+          echo ""
+          echo "📊 Deployment Status:"
+          kubectl get deployment ${{ env.PROJECT_NAME }} -n ${{ env.NAMESPACE }}
+
+          echo ""
+          echo "🔧 Pods Status:"
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }}
+
+          echo ""
+          echo "🌐 Service Status:"
+          kubectl get svc -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }}
+
+          echo ""
+          echo "🔒 Ingress Status:"
+          kubectl get ingress -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }}
+
+          echo ""
+          echo "✅ Deployment successful on ${{ env.CLOUD_PROVIDER }}!"
+
+      - name: Run Health Check
+        run: |
+          echo "🏥 Running health check..."
+          INGRESS_HOST=$(kubectl get ingress -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }} -o jsonpath='{.items[0].spec.rules[0].host}')
+          if [ -n "$INGRESS_HOST" ]; then
+            echo "Testing health endpoint: https://$INGRESS_HOST/api/health"
+            for i in {1..30}; do
+              if curl -f -k https://$INGRESS_HOST/api/health; then
+                echo "✅ Health check passed"
+                exit 0
+              fi
+              echo "⏳ Waiting for service to be ready... ($i/30)"
+              sleep 10
+            done
+            echo "❌ Health check failed after 5 minutes"
+            exit 1
+          else
+            echo "⚠️ No ingress found, skipping health check"
+          fi
