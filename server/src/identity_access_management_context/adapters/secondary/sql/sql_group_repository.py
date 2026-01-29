@@ -58,7 +58,7 @@ class SqlGroupRepository(GroupRepository):
             is_personal=group.is_personal,
             user_id=group.user_id,
         )
-        self._session.add(group_table)
+        self._session.merge(group_table)
         self._session.commit()
 
     def get_by_id(self, group_id: UUID) -> Optional[Group]:

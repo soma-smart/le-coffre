@@ -20,6 +20,7 @@ from identity_access_management_context.application.use_cases import (
     RemoveUserFromGroupUseCase,
     GetGroupUseCase,
     ListGroupsUseCase,
+    UpdateGroupUseCase,
     IsSsoConfigSetUseCase,
 )
 from identity_access_management_context.application.gateways import (
@@ -332,3 +333,12 @@ def get_list_groups_usecase(
     ),
 ):
     return ListGroupsUseCase(group_repository, group_member_repository)
+
+
+def get_update_group_usecase(
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+):
+    return UpdateGroupUseCase(group_repository, group_member_repository)

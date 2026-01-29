@@ -24,6 +24,7 @@ from .group import (
     group_add_member_router,
     group_add_owner_router,
     group_remove_member_router,
+    group_update_router,
     get_group_router,
     list_groups_router,
 )
@@ -64,6 +65,7 @@ def get_group_management_router():
     group_management_router.include_router(group_add_member_router)
     group_management_router.include_router(group_add_owner_router)
     group_management_router.include_router(group_remove_member_router)
+    group_management_router.include_router(group_update_router)
     group_management_router.include_router(get_group_router)
     group_management_router.include_router(list_groups_router)
 
