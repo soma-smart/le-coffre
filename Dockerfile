@@ -1,17 +1,12 @@
 # ===================================
 # Stage 1: Build Frontend
 # ===================================
-FROM node:24-alpine AS frontend-builder
+FROM oven/bun:1-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
 # Copy frontend package files
 COPY frontend/package.json frontend/bun.lockb ./
-
-# Install Bun
-RUN apk add --no-cache curl unzip && \
-    curl -fsSL https://bun.sh/install | bash && \
-    ln -s /root/.bun/bin/bun /usr/local/bin/bun
 
 # Install dependencies
 RUN bun install --frozen-lockfile
