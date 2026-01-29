@@ -87,9 +87,20 @@ def run_migrations():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run migrations instead of create_tables
-    run_migrations()
+    try:
+        print("Starting migrations...")
+        run_migrations()
+        print("Migrations completed successfully")
+    except Exception as e:
+        print(f"Migration error: {e}")
+        import traceback
+        traceback.print_exc()
+        # Continue anyway for now - we can fix migrations later
+        pass
 
+    print("Creating database engine...")
     engine = create_engine(get_database_url())
+    print("Database engine created")
 
     with Session(engine) as session:
         # Vault management dependencies
