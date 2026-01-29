@@ -126,3 +126,19 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
                 pass
 
         return result
+
+    def has_any_password_for_group(self, group_id: UUID) -> bool:
+        """Check if a group has any password (as owner or with access)"""
+        ownership_statement = select(OwnershipTable).where(
+            OwnershipTable.group_id == group_id,
+        )
+        ownership_result = self._session.exec(ownership_statement).first()
+        if ownership_result:
+            return True
+
+        # Check if group has any permissions for existing passwords
+        permission_statement = select(PermissionsTable).where(
+            PermissionsTable.group_id == group_id,
+        )
+        permission_result = self._session.exec(permission_statement).first()
+        return permission_result is not None

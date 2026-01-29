@@ -66,10 +66,10 @@ class FakePasswordPermissionsRepository:
         for owner_id, _ in self._ownerships:
             if owner_id == group_id:
                 return True
-        
+
         # Check if group has any permissions
         for grp_id, _ in self._permissions:
             if grp_id == group_id:
                 return True
-        
+
         return False

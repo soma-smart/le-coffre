@@ -22,6 +22,7 @@ from identity_access_management_context.application.use_cases import (
     ListGroupsUseCase,
     UpdateGroupUseCase,
     IsSsoConfigSetUseCase,
+    DeleteGroupUseCase,
 )
 from identity_access_management_context.application.gateways import (
     UserRepository,
@@ -34,6 +35,7 @@ from identity_access_management_context.application.gateways import (
     SsoEncryptionGateway,
     GroupRepository,
     GroupMemberRepository,
+    GroupUsageGateway,
 )
 from shared_kernel.application.gateways import TimeGateway
 
@@ -44,6 +46,10 @@ def get_group_repository(request: Request) -> GroupRepository:
 
 def get_group_member_repository(request: Request) -> GroupMemberRepository:
     return request.app.state.group_member_repository
+
+
+def get_group_usage_gateway(request: Request) -> GroupUsageGateway:
+    return request.app.state.group_usage_gateway
 
 
 def get_user_repository(request: Request) -> UserRepository:
@@ -342,3 +348,15 @@ def get_update_group_usecase(
     ),
 ):
     return UpdateGroupUseCase(group_repository, group_member_repository)
+
+
+def get_delete_group_usecase(
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+    group_usage_gateway: GroupUsageGateway = Depends(get_group_usage_gateway),
+):
+    return DeleteGroupUseCase(
+        group_repository, group_member_repository, group_usage_gateway
+    )

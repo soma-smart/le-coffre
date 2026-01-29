@@ -46,11 +46,13 @@ from vault_management_context.application.use_cases import (
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
+from password_management_context.adapters.primary.private_api import GroupUsageApi
 from password_management_context.adapters.secondary import (
     SqlPasswordRepository,
     SqlPasswordPermissionsRepository,
     PrivateApiPasswordEncryptionGateway,
 )
+from password_management_context.application.use_cases import IsGroupUsedUseCase
 
 from identity_access_management_context.adapters.secondary import (
     SqlUserRepository,
@@ -61,6 +63,9 @@ from identity_access_management_context.adapters.secondary import (
     SqlSsoConfigurationRepository,
     OAuth2SsoGateway,
     PrivateApiSsoEncryptionGateway,
+)
+from identity_access_management_context.adapters.secondary.private_api import (
+    PrivateApiGroupUsageGateway,
 )
 from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
@@ -119,6 +124,11 @@ async def lifespan(app: FastAPI):
         app.state.password_permissions_repository = password_permissions_repository
         app.state.password_encryption_gateway = password_encryption_gateway
 
+        # Group usage gateway chain (password management -> IAM)
+        is_group_used_use_case = IsGroupUsedUseCase(password_permissions_repository)
+        group_usage_api = GroupUsageApi(is_group_used_use_case)
+        group_usage_gateway = PrivateApiGroupUsageGateway(group_usage_api)
+
         # IAM dependencies
         app.state.time_provider = UtcTimeGateway()
         # IAM uses SSO encryption gateway (same underlying API)
@@ -138,6 +148,7 @@ async def lifespan(app: FastAPI):
         app.state.group_repository = group_repository
         app.state.group_member_repository = group_member_repository
         app.state.group_access_gateway = group_access_gateway
+        app.state.group_usage_gateway = group_usage_gateway
 
         token_gateway = JwtTokenGateway(
             secret_key=get_jwt_secret_key(),

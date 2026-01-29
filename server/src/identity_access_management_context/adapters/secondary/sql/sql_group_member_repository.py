@@ -94,5 +94,7 @@ class SqlGroupMemberRepository(GroupMemberRepository):
         statement = select(GroupMemberTable).where(
             GroupMemberTable.group_id == group_id
         )
-        self._session.delete(statement)
+        members = self._session.exec(statement).all()
+        for member in members:
+            self._session.delete(member)
         self._session.commit()
