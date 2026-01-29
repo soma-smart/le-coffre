@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - 'feature/add-ci-cd'  # TEMPORARY: Remove after testing
   workflow_dispatch:
 
 jobs:
