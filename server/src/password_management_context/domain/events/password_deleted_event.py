@@ -1,6 +1,6 @@
 from datetime import datetime
 from uuid import UUID, uuid4
-from shared_kernel.pubsub import DomainEvent
+from shared_kernel.pubsub import DomainEvent, EventPriority
 
 
 class PasswordDeletedEvent(DomainEvent):
@@ -15,6 +15,7 @@ class PasswordDeletedEvent(DomainEvent):
         super().__init__(
             event_id=event_id or uuid4(),
             occurred_on=occurred_on or datetime.now(),
+            priority=EventPriority.HIGH,
         )
         self.password_id = password_id
         self.deleted_by_user_id = deleted_by_user_id

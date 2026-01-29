@@ -10,6 +10,7 @@ from ..fakes import (
     FakeGroupAccessGateway,
     FakeEncryptionService,
 )
+from tests.fakes import FakeDomainEventPublisher
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     PasswordAccessDeniedError,
@@ -26,12 +27,14 @@ def use_case(
     encryption_service: FakeEncryptionService,
     password_permissions_repository: FakePasswordPermissionsRepository,
     group_access_gateway: FakeGroupAccessGateway,
+    domain_event_publisher: FakeDomainEventPublisher,
 ):
     return GetPasswordUseCase(
         password_repository,
         encryption_service,
         password_permissions_repository,
         group_access_gateway,
+        domain_event_publisher,
     )
 
 

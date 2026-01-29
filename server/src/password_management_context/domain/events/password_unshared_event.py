@@ -1,6 +1,6 @@
 from datetime import datetime
 from uuid import UUID, uuid4
-from shared_kernel.pubsub import DomainEvent
+from shared_kernel.pubsub import DomainEvent, EventPriority
 
 
 class PasswordUnsharedEvent(DomainEvent):
@@ -16,6 +16,7 @@ class PasswordUnsharedEvent(DomainEvent):
         super().__init__(
             event_id=event_id or uuid4(),
             occurred_on=occurred_on or datetime.now(),
+            priority=EventPriority.HIGH,
         )
         self.password_id = password_id
         self.owner_group_id = owner_group_id

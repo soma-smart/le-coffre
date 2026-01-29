@@ -69,12 +69,14 @@ def get_get_password_usecase(
         get_password_permissions_repository
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return GetPasswordUseCase(
         password_repository,
         encryption_service,
         password_permissions_repository,
         group_access_gateway,
+        event_publisher,
     )
 
 
