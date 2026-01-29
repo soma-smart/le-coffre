@@ -35,7 +35,7 @@ spec:
               service:
                 name: {{ include "le-coffre.fullname" $ }}
                 port:
-                  number: {{ $.Values.service.port }}
+                  number: {{ $.Values.service.ports.https.port }}
           {{- end }}
     {{- end }}
 {{- end }}

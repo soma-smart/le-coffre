@@ -59,7 +59,7 @@ RUN chown -R app:app /app
 
 # Set Python path
 ENV PATH="/app/server/.venv/bin:$PATH" \
-    PYTHONPATH="/app/server/src:$PYTHONPATH" \
+    PYTHONPATH="/app/server:$PYTHONPATH" \
     PYTHONUNBUFFERED=1
 
 # Expose port
