@@ -71,7 +71,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:buildcache,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           no-cache: false
 
       - name: Set outputs
