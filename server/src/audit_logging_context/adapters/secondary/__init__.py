@@ -1,3 +1,3 @@
-from .in_memory_audit_logger import InMemoryAuditLogger
+from .in_memory_event_repository import InMemoryEventRepository
 
-__all__ = ["InMemoryAuditLogger"]
+__all__ = ["InMemoryEventRepository"]
