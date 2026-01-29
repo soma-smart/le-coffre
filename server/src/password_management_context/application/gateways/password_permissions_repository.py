@@ -36,3 +36,7 @@ class PasswordPermissionsRepository(Protocol):
     ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
         """Get all groups who have access to a password with their permissions"""
         ...
+
+    def has_any_password_for_group(self, group_id: UUID) -> bool:
+        """Check if a group has any password (as owner or with access)"""
+        ...

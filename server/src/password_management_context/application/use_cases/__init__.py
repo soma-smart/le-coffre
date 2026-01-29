@@ -7,6 +7,7 @@ from .access.check_access_use_case import CheckAccessUseCase
 from .access.share_access_use_case import ShareAccessUseCase
 from .access.unshare_access_use_case import UnshareAccessUseCase
 from .access.list_access_use_case import ListAccessUseCase
+from .is_group_used_use_case import IsGroupUsedUseCase
 
 __all__ = [
     "CreatePasswordUseCase",
@@ -18,4 +19,5 @@ __all__ = [
     "ShareAccessUseCase",
     "UnshareAccessUseCase",
     "ListAccessUseCase",
+    "IsGroupUsedUseCase",
 ]

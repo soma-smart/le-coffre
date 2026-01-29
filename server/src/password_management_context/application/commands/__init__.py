@@ -7,6 +7,7 @@ from .share_resource_command import ShareResourceCommand
 from .unshare_resource_command import UnshareResourceCommand
 from .check_access_command import CheckAccessCommand
 from .list_access_command import ListAccessCommand
+from .is_group_used_command import IsGroupUsedCommand
 
 __all__ = [
     "CreatePasswordCommand",
@@ -18,4 +19,5 @@ __all__ = [
     "UnshareResourceCommand",
     "CheckAccessCommand",
     "ListAccessCommand",
+    "IsGroupUsedCommand",
 ]
