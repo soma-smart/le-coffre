@@ -59,7 +59,7 @@ RUN chown -R app:app /app
 
 # Set Python path
 ENV PATH="/app/server/.venv/bin:$PATH" \
-    PYTHONPATH="/app/server:$PYTHONPATH" \
+    PYTHONPATH="/app/server/src:$PYTHONPATH" \
     PYTHONUNBUFFERED=1
 
 # Expose port
@@ -72,4 +72,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 USER app
 
 # Start uvicorn directly (serves both API and frontend static files)
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
