@@ -40,11 +40,30 @@ export DOCKER_REGISTRY="rg.fr-par.scw.cloud/soma-smart-cr"
 ./scripts/deploy.sh -f values-production.yaml
 ```
 
-### 4. Deploy Using GitHub Actions
+### 4. Deploy Using GitHub Actions (Automated CI/CD)
 
-The deployment is automated via GitHub Actions. Configure these secrets in your repository:
+The deployment is fully automated via GitHub Actions with a streamlined CI/CD pipeline.
 
-#### Required Secrets for Scaleway
+#### CI/CD Pipeline Overview
+
+The pipeline consists of two main workflows that run automatically:
+
+1. **docker-publish.yml**: Builds and publishes Docker images
+   - Triggers on: `main` branch, `feature/add-ci-cd` branch, and version tags (`v*.*.*`)
+   - Produces images with consistent tags: `<branch>-<sha>` or `v1.0.0` for releases
+   - Runs Trivy security scanning on all images
+   - Outputs: `image_tag`, `sha_short`, `branch_name`
+
+2. **deploy.yml**: Deploys to production on Kubernetes
+   - Automatically triggered after successful docker-publish
+   - Deploys to `le-coffre` namespace (production environment)
+   - Uses Helm with atomic rollback capability
+   - Runs health checks and verification
+   - Provides detailed deployment summaries
+
+#### Required GitHub Secrets
+
+Configure these secrets in your repository settings:
 
 | Secret | Description | Example |
 |--------|-------------|---------|
@@ -54,12 +73,53 @@ The deployment is automated via GitHub Actions. Configure these secrets in your 
 | `SCW_DEFAULT_PROJECT_ID` | Scaleway project ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 | `DOCKER_CONTAINER_REGISTRY` | Registry URL | `rg.fr-par.scw.cloud/somait-cr` |
 
-Then push a tag to trigger deployment:
+#### Required GitHub Environment
 
+Create a `production` environment in your GitHub repository settings for deployment protection and tracking.
+
+#### Deployment Triggers
+
+The pipeline deploys automatically in these scenarios:
+
+**1. Deploy from feature/add-ci-cd (Pipeline Testing)**
+```bash
+git checkout feature/add-ci-cd
+git commit -am "Your changes"
+git push origin feature/add-ci-cd
+# → Triggers: docker-publish → deploy → production
+```
+
+**2. Deploy from main (Standard Production)**
+```bash
+git checkout main
+git merge feature/add-ci-cd
+git push origin main
+# → Triggers: docker-publish → deploy → production
+```
+
+**3. Deploy from version tag (Release)**
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
+# → Triggers: docker-publish → deploy → production + GitHub Release
 ```
+
+**4. Manual Deployment (Specific Image)**
+- Go to Actions → Deploy to Kubernetes → Run workflow
+- Specify the image tag (e.g., `feature-add-ci-cd-abc1234`, `main-abc1234`, `v1.0.0`)
+- Click "Run workflow"
+
+#### Image Tagging Strategy
+
+The pipeline uses a consistent tagging strategy:
+
+- **feature/add-ci-cd branch**: `feature-add-ci-cd-<sha7>` + `feature-add-ci-cd-latest`
+- **main branch**: `main-<sha7>` + `latest`
+- **Version tags**: `v1.0.0` + `1.0` + `latest`
+
+Example: Pushing to `feature/add-ci-cd` with SHA `abc1234` creates:
+- `rg.fr-par.scw.cloud/somait-cr/le-coffre:feature-add-ci-cd-abc1234`
+- `rg.fr-par.scw.cloud/somait-cr/le-coffre:feature-add-ci-cd-latest`
 
 ## Architecture
 
@@ -135,11 +195,29 @@ le-coffre/
 ### Method 1: Automated via GitHub Actions (Recommended)
 
 1. Configure GitHub secrets (see above)
-2. Push a git tag: `git tag v1.0.0 && git push origin v1.0.0`
-3. GitHub Actions will:
-   - Build Docker image
+2. Create the `production` environment in GitHub repository settings
+3. Deploy using one of these methods:
+
+**For standard deployments:**
+```bash
+git push origin main
+```
+
+**For releases:**
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+4. GitHub Actions will automatically:
+   - Build Docker image with appropriate tags
+   - Run Trivy security scan
    - Push to Scaleway Container Registry
-   - Deploy to Kubernetes with Helm
+   - Deploy to Kubernetes with Helm (atomic with rollback on failure)
+   - Run health checks
+   - Provide deployment summary
+
+5. Monitor the deployment in the Actions tab on GitHub
 
 ### Method 2: Manual with Script
 
@@ -281,9 +359,216 @@ kubectl exec -it postgresql-0 -n le-coffre -- \
 
 ### Rollback
 
+The deployment uses Helm's `--atomic` flag, which automatically rolls back on failure. For manual rollback:
+
+**Quick Rollback (to previous version):**
 ```bash
 helm rollback le-coffre -n le-coffre
 ```
+
+**Rollback to Specific Revision:**
+```bash
+# View deployment history
+helm history le-coffre -n le-coffre
+
+# Rollback to specific revision
+helm rollback le-coffre <revision-number> -n le-coffre
+```
+
+**Rollback via GitHub Actions:**
+1. Go to Actions → Deploy to Kubernetes → Run workflow
+2. Enter the previous image tag (e.g., `main-abc1234`)
+3. Click "Run workflow"
+
+**View Current Deployment:**
+```bash
+# Check current image tag
+kubectl get deployment le-coffre -n le-coffre -o jsonpath='{.spec.template.spec.containers[0].image}'
+
+# Check deployment labels (shows source branch and SHA)
+kubectl get deployment le-coffre -n le-coffre -o jsonpath='{.spec.template.metadata.labels}'
+```
+
+## CI/CD Pipeline Details
+
+### Workflow Files
+
+**`.github/workflows/docker-publish.yml`**
+- Builds Docker images on push to `main`, `feature/add-ci-cd`, or version tags
+- Creates consistent image tags based on branch and SHA
+- Runs Trivy security scanning on all images
+- Uploads security results to GitHub Security tab
+- Outputs metadata for the deploy workflow
+
+**`.github/workflows/deploy.yml`**
+- Automatically triggered after successful docker-publish workflow
+- Can be manually triggered with custom image tag
+- Determines correct image tag from workflow_run context
+- Deploys to production environment on Kubernetes
+- Adds deployment labels for traceability (branch, SHA, timestamp)
+- Runs comprehensive health checks
+- Provides detailed deployment summaries and logs on failure
+- Uses Helm's atomic mode for automatic rollback on failure
+
+**`.github/workflows/CI.yml`**
+- Runs tests and linting on PRs and main branch
+- Validates code quality before deployment
+
+**`.github/workflows/generate-publish-release.yaml`**
+- Creates GitHub releases when version tags are pushed
+- Automatically generates release notes
+
+### Deployment Verification
+
+After deployment, the pipeline automatically verifies:
+
+1. **Rollout Status**: Waits for pods to be ready (5 min timeout)
+2. **Pod Status**: Checks all pods are running
+3. **Service Status**: Verifies service endpoints
+4. **Ingress Status**: Confirms ingress configuration
+5. **Health Check**: Tests application endpoint (30 retries, 10s interval)
+
+If any verification fails:
+- Detailed logs are displayed (last 50 lines)
+- Pod status and descriptions are shown
+- Deployment is rolled back automatically (via `--atomic`)
+
+### Deployment Traceability
+
+Every deployment includes metadata labels:
+
+```yaml
+podLabels:
+  deployed-from-branch: "feature/add-ci-cd"  # Source branch
+  deployed-sha: "abc1234"                     # Short commit SHA
+  deployed-at: "1706543210"                   # Unix timestamp
+```
+
+View deployment metadata:
+```bash
+kubectl get deployment le-coffre -n le-coffre -o jsonpath='{.spec.template.metadata.labels}' | jq
+```
+
+### Health Checks
+
+The application includes comprehensive health probes:
+
+**Startup Probe** (startup only):
+- Path: `/api/health`
+- Failure threshold: 30
+- Period: 10 seconds
+- Allows up to 5 minutes for startup
+
+**Liveness Probe** (running state):
+- Path: `/api/health`
+- Initial delay: 30 seconds
+- Period: 10 seconds
+- Failure threshold: 3
+
+**Readiness Probe** (traffic readiness):
+- Path: `/api/health`
+- Initial delay: 10 seconds
+- Period: 5 seconds
+- Failure threshold: 3
+
+### Deployment Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Push to main/feature/add-ci-cd or Create Tag v*.*.*           │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+         ┌───────────────────────────────┐
+         │  docker-publish.yml           │
+         │  - Build Docker image         │
+         │  - Tag: <branch>-<sha>        │
+         │  - Run Trivy scan             │
+         │  - Push to registry           │
+         │  - Output: image_tag          │
+         └───────────────┬───────────────┘
+                         │
+                         │ (workflow_run trigger)
+                         ▼
+         ┌───────────────────────────────┐
+         │  deploy.yml                   │
+         │  - Determine image tag        │
+         │  - Connect to K8s cluster     │
+         │  - Deploy with Helm           │
+         │  - Add traceability labels    │
+         │  - Verify deployment          │
+         │  - Run health checks          │
+         │  - Generate summary           │
+         └───────────────┬───────────────┘
+                         │
+                         ▼
+              ┌──────────────────┐
+              │  Production      │
+              │  (le-coffre)     │
+              │  namespace       │
+              └──────────────────┘
+```
+
+### Testing the Pipeline
+
+To test the CI/CD pipeline before merging to main:
+
+1. **Use feature/add-ci-cd branch:**
+   ```bash
+   git checkout feature/add-ci-cd
+   # Make changes to workflows
+   git commit -am "Update CI/CD pipeline"
+   git push origin feature/add-ci-cd
+   ```
+
+2. **Monitor the workflow:**
+   - Go to GitHub Actions tab
+   - Watch docker-publish workflow complete
+   - Watch deploy workflow auto-trigger
+   - Check deployment summary
+
+3. **Verify deployment:**
+   ```bash
+   # Check pod status
+   kubectl get pods -n le-coffre
+
+   # Check deployment labels
+   kubectl get deployment le-coffre -n le-coffre -o yaml | grep -A 5 "deployed-"
+
+   # Test application
+   curl https://le-coffre.soma-smart.cloud/api/health
+   ```
+
+4. **Once tested, merge to main:**
+   ```bash
+   git checkout main
+   git merge feature/add-ci-cd
+   git push origin main
+   ```
+
+### Troubleshooting CI/CD
+
+**Workflow not triggering:**
+- Ensure workflow files exist on the target branch
+- Check workflow permissions in repository settings
+- Verify `workflow_run` branches match in deploy.yml
+
+**Image tag mismatch:**
+- Check docker-publish outputs in workflow logs
+- Verify image exists in registry: `docker pull <registry>/<image>:<tag>`
+- Review deploy workflow "Determine Image Tag" step
+
+**Deployment fails:**
+- Check Helm upgrade output for errors
+- Review pod logs: `kubectl logs -n le-coffre -l app.kubernetes.io/name=le-coffre --tail=100`
+- Check resource constraints: `kubectl describe pod <pod-name> -n le-coffre`
+- Verify secrets and configmaps are correct
+
+**Health check fails:**
+- Check ingress configuration: `kubectl get ingress -n le-coffre`
+- Verify DNS points to load balancer
+- Check TLS certificate: `kubectl get certificate -n le-coffre`
+- Review application logs for errors
 
 ## Security Checklist
 

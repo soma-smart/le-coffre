@@ -5,7 +5,8 @@ on:
     tags:
       - 'v*.*.*'
     branches:
-      - 'feature/add-ci-cd'  # TEMPORARY: Remove after testing
+      - 'feature/add-ci-cd'
+      - 'main'
   workflow_dispatch:
 
 jobs:
@@ -22,6 +23,8 @@ jobs:
       DOCKER_CONTAINER_REGISTRY: ${{ secrets.DOCKER_CONTAINER_REGISTRY }}
     outputs:
       image_tag: ${{ steps.set_outputs.outputs.image_tag }}
+      sha_short: ${{ steps.set_outputs.outputs.sha_short }}
+      branch_name: ${{ steps.set_outputs.outputs.branch_name }}
 
     steps:
       - name: Checkout code
@@ -54,11 +57,10 @@ jobs:
         with:
           images: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix={{branch}}-
+            type=raw,value={{branch}}-latest,enable=${{ github.ref_type == 'branch' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push image
@@ -77,19 +79,35 @@ jobs:
       - name: Set outputs
         id: set_outputs
         run: |
-          echo "image_tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          echo "✅ Image built and pushed with tag: ${{ github.ref_name }}"
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          BRANCH_NAME="${{ github.ref_name }}"
+
+          # Normalize branch name for Docker tags (replace / with -)
+          NORMALIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/\//-/g')
+
+          # Determine the image tag based on ref type
+          if [ "${{ github.ref_type }}" == "tag" ]; then
+            IMAGE_TAG="${{ github.ref_name }}"
+          else
+            IMAGE_TAG="${NORMALIZED_BRANCH}-${SHA_SHORT}"
+          fi
+
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "sha_short=${SHA_SHORT}" >> $GITHUB_OUTPUT
+          echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
+
+          echo "✅ Image built and pushed with tag: ${IMAGE_TAG}"
+          echo "📝 Short SHA: ${SHA_SHORT}"
+          echo "🔀 Branch: ${BRANCH_NAME}"
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
-        if: github.ref == 'refs/heads/main'
         with:
-          image-ref: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ github.ref_name }}
+          image-ref: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ steps.set_outputs.outputs.image_tag }}
           format: 'sarif'
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: github.ref == 'refs/heads/main'
         with:
           sarif_file: 'trivy-results.sarif'

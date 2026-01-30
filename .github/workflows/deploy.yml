@@ -7,17 +7,13 @@ on:
       - completed
     branches:
       - main
-      - 'feature/add-ci-cd'  # TEMPORARY: Remove after testing
+      - 'feature/add-ci-cd'
   workflow_dispatch:
     inputs:
-      environment:
-        description: 'Environment to deploy to'
-        required: true
-        default: 'staging'  # TEMPORARY: Changed to staging for testing
-        type: choice
-        options:
-          - production
-          - staging
+      image_tag:
+        description: 'Docker image tag to deploy (e.g., feature-add-ci-cd-abc1234, main-abc1234, v1.0.0)'
+        required: false
+        type: string
 
 jobs:
   setup:
@@ -77,7 +73,7 @@ jobs:
   deploy:
     needs: [setup]
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'production' }}
+    environment: production
     env:
       PROJECT_NAME: ${{ needs.setup.outputs.project_name }}
       NAMESPACE: ${{ needs.setup.outputs.namespace }}
@@ -89,6 +85,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine Image Tag
+        id: image_tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            # Manual dispatch with specific tag
+            IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+            echo "Using manually specified image tag: $IMAGE_TAG"
+          elif [ "${{ github.event_name }}" == "workflow_run" ]; then
+            # Triggered by workflow_run - construct tag from workflow_run data
+            WORKFLOW_RUN_SHA="${{ github.event.workflow_run.head_sha }}"
+            WORKFLOW_RUN_BRANCH="${{ github.event.workflow_run.head_branch }}"
+            SHA_SHORT=$(echo "$WORKFLOW_RUN_SHA" | cut -c1-7)
+
+            # Normalize branch name for Docker tags (replace / with -)
+            NORMALIZED_BRANCH=$(echo "$WORKFLOW_RUN_BRANCH" | sed 's/\//-/g')
+
+            # Check if it's a tag ref
+            if [[ "${{ github.event.workflow_run.head_branch }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              IMAGE_TAG="${{ github.event.workflow_run.head_branch }}"
+            else
+              IMAGE_TAG="${NORMALIZED_BRANCH}-${SHA_SHORT}"
+            fi
+
+            echo "Constructed image tag from workflow_run: $IMAGE_TAG"
+            echo "Source branch: $WORKFLOW_RUN_BRANCH"
+            echo "Source SHA: $WORKFLOW_RUN_SHA (short: $SHA_SHORT)"
+          else
+            # Fallback
+            IMAGE_TAG="latest"
+            echo "⚠️ Using fallback tag: latest"
+          fi
+
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
       - name: Display Workflow Information
         run: |
           echo "🔍 Deployment Information:"
@@ -96,9 +127,16 @@ jobs:
           echo "🔄 Event: ${{ github.event_name }}"
           echo "🔀 Reference: ${{ github.ref }}"
           echo "📝 SHA: ${{ github.sha }}"
+          echo "🏷️ Image Tag: ${{ steps.image_tag.outputs.image_tag }}"
           echo "☁️ Cloud Provider: ${{ env.CLOUD_PROVIDER }}"
           echo "📦 Project: ${{ env.PROJECT_NAME }}"
           echo "🔧 Namespace: ${{ env.NAMESPACE }}"
+          echo "🌍 Environment: production"
+
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "📌 Triggered by: ${{ github.event.workflow_run.head_branch }}"
+            echo "📝 Workflow Run SHA: ${{ github.event.workflow_run.head_sha }}"
+          fi
 
       - name: Install Scaleway CLI
         if: env.CLOUD_PROVIDER == 'scaleway'
@@ -148,9 +186,19 @@ jobs:
       - name: Deploy with Helm
         run: |
           echo "🚀 Deploying ${{ env.PROJECT_NAME }} with Helm..."
+          echo "🏷️ Using image tag: ${{ steps.image_tag.outputs.image_tag }}"
+
+          DEPLOY_TIMESTAMP=$(date +%s)
+          SOURCE_BRANCH="${{ github.event.workflow_run.head_branch || github.ref_name }}"
+          SOURCE_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          SHA_SHORT=$(echo "$SOURCE_SHA" | cut -c1-7)
+
           helm upgrade --install ${{ env.PROJECT_NAME }} ./helm/le-coffre \
           --namespace ${{ env.NAMESPACE }} \
-          --set image.tag=${{ github.sha }} \
+          --set image.tag=${{ steps.image_tag.outputs.image_tag }} \
+          --set podLabels.deployed-from-branch="${SOURCE_BRANCH}" \
+          --set podLabels.deployed-sha="${SHA_SHORT}" \
+          --set podLabels.deployed-at="${DEPLOY_TIMESTAMP}" \
           --atomic \
           --timeout 10m \
           --wait
@@ -195,7 +243,45 @@ jobs:
               sleep 10
             done
             echo "❌ Health check failed after 5 minutes"
+            echo ""
+            echo "📋 Recent pod logs (last 50 lines):"
+            kubectl logs -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }} --tail=50 || true
+            echo ""
+            echo "📊 Pod status:"
+            kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }} || true
+            echo ""
+            echo "🔍 Pod describe:"
+            kubectl describe pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }} || true
             exit 1
           else
             echo "⚠️ No ingress found, skipping health check"
+          fi
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "## 🎉 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: production" >> $GITHUB_STEP_SUMMARY
+          echo "- **Namespace**: ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: \`${{ steps.image_tag.outputs.image_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project**: ${{ env.PROJECT_NAME }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "- **Source Branch**: ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Source SHA**: \`${{ github.event.workflow_run.head_sha }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          kubectl get all -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }} >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+          INGRESS_HOST=$(kubectl get ingress -n ${{ env.NAMESPACE }} -l app.kubernetes.io/name=${{ env.PROJECT_NAME }} -o jsonpath='{.items[0].spec.rules[0].host}')
+          if [ -n "$INGRESS_HOST" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Application URL" >> $GITHUB_STEP_SUMMARY
+            echo "🌐 https://$INGRESS_HOST" >> $GITHUB_STEP_SUMMARY
           fi
