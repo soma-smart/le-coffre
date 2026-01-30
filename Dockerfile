@@ -24,6 +24,12 @@ FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS backend-builder
 
 WORKDIR /app/server
 
+# Install PostgreSQL development headers for psycopg2 compilation
+RUN apt-get update && apt-get install -y \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy backend dependency files
 COPY server/pyproject.toml server/uv.lock ./
 
@@ -37,9 +43,10 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install curl for health checks
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
