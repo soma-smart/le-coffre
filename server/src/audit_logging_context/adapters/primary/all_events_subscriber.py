@@ -1,6 +1,7 @@
 from audit_logging_context.application.use_cases.store_event_use_case import (
     StoreEventUseCase,
 )
+from audit_logging_context.application.commands import StoreEventCommand
 
 
 class AllEventsSubscriber:
@@ -8,4 +9,5 @@ class AllEventsSubscriber:
         self.store_event_usecase = store_event_usecase
 
     def __call__(self, event) -> None:
-        self.store_event_usecase.execute(event)
+        command = StoreEventCommand(event=event)
+        self.store_event_usecase.execute(command)

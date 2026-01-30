@@ -8,6 +8,7 @@ from audit_logging_context.adapters.primary.fastapi.app_dependencies import (
     get_list_event_usecase,
 )
 from audit_logging_context.application.use_cases import ListEventUseCase
+from audit_logging_context.application.commands import ListEventCommand
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.adapters.primary.exceptions import NotAdminError
@@ -47,9 +48,10 @@ def list_events(
     Returns a list of all domain events that have been logged in the system.
     """
     try:
-        # Execute use case with authenticated user
+        # Execute use case with command
         authenticated_user = current_user.to_authenticated_user()
-        domain_events = usecase.execute(authenticated_user)
+        command = ListEventCommand(requesting_user=authenticated_user)
+        response = usecase.execute(command)
 
         # Convert domain events to response format
         events_data = [
@@ -59,7 +61,7 @@ def list_events(
                 occurred_on=event.occurred_on,
                 priority=event.priority.value,
             )
-            for event in domain_events
+            for event in response.events
         ]
 
         return ListEventsResponse(events=events_data)
