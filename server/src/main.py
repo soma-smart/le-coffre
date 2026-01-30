@@ -177,20 +177,20 @@ async def lifespan(app: FastAPI):
         yield
 
 
-app = FastAPI(lifespan=lifespan, root_path="/api")
+app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """Health check endpoint for Kubernetes liveness/readiness probes."""
     return {"status": "healthy"}
 
 
-app.include_router(get_vault_management_router())
-app.include_router(get_password_management_router())
-app.include_router(get_user_management_router())
-app.include_router(get_authentication_router())
-app.include_router(get_group_management_router())
+app.include_router(get_vault_management_router(), prefix="/api")
+app.include_router(get_password_management_router(), prefix="/api")
+app.include_router(get_user_management_router(), prefix="/api")
+app.include_router(get_authentication_router(), prefix="/api")
+app.include_router(get_group_management_router(), prefix="/api")
 
 # Serve frontend static files
 frontend_dist = Path("/app/frontend/dist")
