@@ -106,7 +106,7 @@ jobs:
         id: grype
         with:
           image: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ steps.set_outputs.outputs.image_tag }}
-          fail-build: false
+          fail-build: true
           severity-cutoff: critical
           output-format: sarif
 
