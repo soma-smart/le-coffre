@@ -81,8 +81,6 @@ def database(database_path):
 
     yield database_path
 
-    # No cleanup needed - next test will clean before running
-
 
 @pytest.fixture
 def e2e_client(database, env_vars):
@@ -191,6 +189,7 @@ def create_sso_user_in_provider(oidc_server, email, name):
         f"{oidc_server['issuer_url']}/users/{quote(user_data['sub'])}",
         json=user_data,
     )
+    # PUT is idempotent, so 204 means success (created or already exists)
     assert response.status_code == 204, (
         f"Failed to create user {email} in OIDC provider: {response.text}"
     )
@@ -285,14 +284,37 @@ def register_and_login_admin(client):
     return login_response
 
 
+@pytest.fixture(scope="session")
+def session_vault_setup_data(database_path, env_vars):
+    """
+    Session-scoped vault setup that runs once.
+    Returns the setup configuration (shares, threshold).
+    """
+    return {
+        "nb_shares": 5,
+        "threshold": 3,
+    }
+
+
 @pytest.fixture
-def setup(authenticated_admin_client):
+def setup(authenticated_admin_client, session_vault_setup_data):
+    """
+    Function-scoped fixture that ensures vault is set up for the test.
+    Performs setup only once per test (fast if already done).
+    """
+    # Check if vault is already setup
+    status_response = authenticated_admin_client.get("/api/vault/status")
+
+    if status_response.status_code == 200:
+        status = status_response.json()
+        # If vault is already setup and validated, we're done
+        if status.get("is_setup") and not status.get("needs_validation"):
+            return
+
+    # Otherwise, perform setup
     response = authenticated_admin_client.post(
         "/api/vault/setup",
-        json={
-            "nb_shares": 5,
-            "threshold": 3,
-        },
+        json=session_vault_setup_data,
     )
     setup_data = response.json()
     setup_id = setup_data["setup_id"]
