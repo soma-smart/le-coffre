@@ -36,13 +36,17 @@ ingress:
 config:
   environment: production
 
-  # Database - Use PostgreSQL in production
-  database:
-    # For Scaleway Managed PostgreSQL
-    url: "postgresql://lecoffre:CHANGE_PASSWORD@your-db.pg.svc.scw.cloud:5432/lecoffre"
-
-    # For in-cluster PostgreSQL
-    # url: "postgresql://lecoffre:CHANGE_PASSWORD@postgresql.le-coffre.svc.cluster.local:5432/lecoffre"
+  # Database configuration
+  # DATABASE_URL is managed via external Kubernetes secret for security
+  # Create the secret before deploying:
+  #
+  # For Scaleway Managed PostgreSQL:
+  # kubectl create secret generic le-coffre-db \
+  #   --from-literal=DATABASE_URL="postgresql://user:password@instance-id.rdb.fr-par.scw.cloud:port/database" \
+  #   -n le-coffre
+  #
+  # Note: URL-encode special characters in password using:
+  # python3 -c "import urllib.parse; print(urllib.parse.quote('your_password', safe=''))"
 
   # JWT configuration - IMPORTANT: Generate a secure key!
   # Generate with: openssl rand -base64 32

@@ -49,6 +49,8 @@ spec:
                 name: {{ include "le-coffre.fullname" . }}
             - secretRef:
                 name: {{ include "le-coffre.fullname" . }}
+            - secretRef:
+                name: le-coffre-db
           {{- if .Values.probes.startupProbe }}
           startupProbe:
             {{- toYaml .Values.probes.startupProbe | nindent 12 }}

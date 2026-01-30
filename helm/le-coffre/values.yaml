@@ -30,9 +30,8 @@ config:
   environment: production
 
   # Database configuration
-  database:
-    # For PostgreSQL (recommended)
-    url: "postgresql://user:password@postgresql:5432/lecoffre"
+  # DATABASE_URL is managed via external Kubernetes secret: le-coffre-db
+  # Create with: kubectl create secret generic le-coffre-db --from-literal=DATABASE_URL="..." -n le-coffre
 
   # JWT configuration
   jwt:
