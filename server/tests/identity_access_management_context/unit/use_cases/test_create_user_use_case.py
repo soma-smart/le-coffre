@@ -117,7 +117,7 @@ def test_given_user_with_password_when_creating_user_should_store_hashed_passwor
     assert created_user_password is not None
     assert created_user_password.id == user_id
     assert created_user_password.email == email
-    assert created_user_password.password_hash == b"hashed(secure_password123)"
+    assert created_user_password.password_hash == "hashed(secure_password123)"
     assert created_user_password.display_name == name
 
 
