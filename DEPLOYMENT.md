@@ -49,13 +49,13 @@ The deployment is fully automated via GitHub Actions with a streamlined CI/CD pi
 The pipeline consists of two main workflows that run automatically:
 
 1. **docker-publish.yml**: Builds and publishes Docker images
-   - Triggers on: `main` branch, `feature/add-ci-cd` branch, and version tags (`v*.*.*`)
-   - Produces images with consistent tags: `<branch>-<sha>` or `v1.0.0` for releases
+   - Triggers on: `main` branch and version tags (`v*.*.*`)
+   - Produces images with consistent tags: `main-<sha>` or `v1.0.0` for releases
    - Runs Trivy security scanning on all images
    - Outputs: `image_tag`, `sha_short`, `branch_name`
 
 2. **deploy.yml**: Deploys to production on Kubernetes
-   - Automatically triggered after successful docker-publish
+   - Automatically triggered after successful docker-publish on `main` branch
    - Deploys to `le-coffre` namespace (production environment)
    - Uses Helm with atomic rollback capability
    - Runs health checks and verification
@@ -81,45 +81,35 @@ Create a `production` environment in your GitHub repository settings for deploym
 
 The pipeline deploys automatically in these scenarios:
 
-**1. Deploy from feature/add-ci-cd (Pipeline Testing)**
-```bash
-git checkout feature/add-ci-cd
-git commit -am "Your changes"
-git push origin feature/add-ci-cd
-# → Triggers: docker-publish → deploy → production
-```
-
-**2. Deploy from main (Standard Production)**
+**1. Deploy from main (Standard Production)**
 ```bash
 git checkout main
-git merge feature/add-ci-cd
 git push origin main
 # → Triggers: docker-publish → deploy → production
 ```
 
-**3. Deploy from version tag (Release)**
+**2. Deploy from version tag (Release)**
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 # → Triggers: docker-publish → deploy → production + GitHub Release
 ```
 
-**4. Manual Deployment (Specific Image)**
+**3. Manual Deployment (Specific Image)**
 - Go to Actions → Deploy to Kubernetes → Run workflow
-- Specify the image tag (e.g., `feature-add-ci-cd-abc1234`, `main-abc1234`, `v1.0.0`)
+- Specify the image tag (e.g., `main-abc1234`, `v1.0.0`)
 - Click "Run workflow"
 
 #### Image Tagging Strategy
 
 The pipeline uses a consistent tagging strategy:
 
-- **feature/add-ci-cd branch**: `feature-add-ci-cd-<sha7>` + `feature-add-ci-cd-latest`
 - **main branch**: `main-<sha7>` + `latest`
 - **Version tags**: `v1.0.0` + `1.0` + `latest`
 
-Example: Pushing to `feature/add-ci-cd` with SHA `abc1234` creates:
-- `rg.fr-par.scw.cloud/somait-cr/le-coffre:feature-add-ci-cd-abc1234`
-- `rg.fr-par.scw.cloud/somait-cr/le-coffre:feature-add-ci-cd-latest`
+Example: Pushing to `main` with SHA `abc1234` creates:
+- `rg.fr-par.scw.cloud/somait-cr/le-coffre:main-abc1234`
+- `rg.fr-par.scw.cloud/somait-cr/le-coffre:latest`
 
 ## Architecture
 
@@ -511,14 +501,12 @@ The application includes comprehensive health probes:
 
 ### Testing the Pipeline
 
-To test the CI/CD pipeline before merging to main:
+The CI/CD pipeline runs automatically on the `main` branch:
 
-1. **Use feature/add-ci-cd branch:**
+1. **Push to main triggers the pipeline:**
    ```bash
-   git checkout feature/add-ci-cd
-   # Make changes to workflows
-   git commit -am "Update CI/CD pipeline"
-   git push origin feature/add-ci-cd
+   git checkout main
+   git push origin main
    ```
 
 2. **Monitor the workflow:**
@@ -537,13 +525,6 @@ To test the CI/CD pipeline before merging to main:
 
    # Test application
    curl https://le-coffre.soma-smart.cloud/api/health
-   ```
-
-4. **Once tested, merge to main:**
-   ```bash
-   git checkout main
-   git merge feature/add-ci-cd
-   git push origin main
    ```
 
 ### Troubleshooting CI/CD
