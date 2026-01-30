@@ -35,9 +35,13 @@ config:
 
   # JWT configuration
   jwt:
-    # Secret key for JWT tokens (will be stored in secret)
-    # Generate with: openssl rand -base64 32
-    secretKey: "CHANGE_ME_GENERATE_A_SECURE_KEY"
+    # JWT_SECRET_KEY is managed via external Kubernetes secret
+    # The secret 'le-coffre' must contain JWT_SECRET_KEY
+    # Generate and create with:
+    #   JWT_SECRET=$(openssl rand -base64 32)
+    #   kubectl create secret generic le-coffre --from-literal=JWT_SECRET_KEY="$JWT_SECRET" -n le-coffre
+    # Or use --set during deployment:
+    #   helm upgrade --set config.jwt.secretKey="$JWT_SECRET" ...
     algorithm: "HS256"
     accessTokenExpirationMinutes: 15
     refreshTokenExpirationDays: 7

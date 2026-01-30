@@ -48,10 +48,18 @@ config:
   # Note: URL-encode special characters in password using:
   # python3 -c "import urllib.parse; print(urllib.parse.quote('your_password', safe=''))"
 
-  # JWT configuration - IMPORTANT: Generate a secure key!
-  # Generate with: openssl rand -base64 32
+  # JWT configuration
+  # JWT_SECRET_KEY is managed via Kubernetes secret for security
+  # Create the secret before deploying:
+  #
+  # JWT_SECRET=$(openssl rand -base64 32)
+  # kubectl create secret generic le-coffre \
+  #   --from-literal=JWT_SECRET_KEY="$JWT_SECRET" \
+  #   -n le-coffre
+  #
+  # Or pass via --set during helm upgrade:
+  # helm upgrade --set config.jwt.secretKey="$JWT_SECRET" ...
   jwt:
-    secretKey: "CHANGE_ME_RUN_openssl_rand_base64_32"
     algorithm: "HS256"
     accessTokenExpirationMinutes: 15
     refreshTokenExpirationDays: 7
