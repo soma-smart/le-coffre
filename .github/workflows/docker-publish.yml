@@ -101,15 +101,25 @@ jobs:
           echo "📝 Short SHA: ${SHA_SHORT}"
           echo "🔀 Branch: ${BRANCH_NAME}"
 
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+      - name: Run Grype vulnerability scanner
+        uses: anchore/scan-action@v7.3.1
+        id: grype
         with:
-          image-ref: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ steps.set_outputs.outputs.image_tag }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          image: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ steps.set_outputs.outputs.image_tag }}
+          fail-build: false
+          severity-cutoff: critical
+          output-format: table
 
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        continue-on-error: true
+      - name: Display Grype scan results
+        if: always()
+        run: |
+          echo "📊 Vulnerability Scan Results:"
+          cat ${{ steps.grype.outputs.sarif }}
+
+      - name: Upload Grype scan results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: 'trivy-results.sarif'
+          name: grype-scan-results-${{ steps.set_outputs.outputs.image_tag }}
+          path: ${{ steps.grype.outputs.sarif }}
+          retention-days: 30

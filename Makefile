@@ -187,7 +187,7 @@ pre-commit: ## Run pre-commit hooks
 
 security-scan: ## Run security scan on Docker image
 	@echo "$(YELLOW)Running security scan...$(NC)"
-	trivy image $(REGISTRY)/$(IMAGE_NAME):$(VERSION) || true
+	grype $(REGISTRY)/$(IMAGE_NAME):$(VERSION) || true
 	@echo "$(GREEN)✓ Security scan completed$(NC)"
 
 install-tools: ## Install required tools (helm, kubectl, etc.)

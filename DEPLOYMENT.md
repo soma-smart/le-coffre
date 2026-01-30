@@ -51,7 +51,7 @@ The pipeline consists of two main workflows that run automatically:
 1. **docker-publish.yml**: Builds and publishes Docker images
    - Triggers on: `main` branch and version tags (`v*.*.*`)
    - Produces images with consistent tags: `main-<sha>` or `v1.0.0` for releases
-   - Runs Trivy security scanning on all images
+   - Runs Grype security scanning on all images
    - Outputs: `image_tag`, `sha_short`, `branch_name`
 
 2. **deploy.yml**: Deploys to production on Kubernetes
@@ -201,7 +201,7 @@ git push origin v1.0.0
 
 4. GitHub Actions will automatically:
    - Build Docker image with appropriate tags
-   - Run Trivy security scan
+   - Run Grype security scan
    - Push to Scaleway Container Registry
    - Deploy to Kubernetes with Helm (atomic with rollback on failure)
    - Run health checks
@@ -386,7 +386,7 @@ kubectl get deployment le-coffre -n le-coffre -o jsonpath='{.spec.template.metad
 **`.github/workflows/docker-publish.yml`**
 - Builds Docker images on push to `main`, `feature/add-ci-cd`, or version tags
 - Creates consistent image tags based on branch and SHA
-- Runs Trivy security scanning on all images
+- Runs Grype security scanning on all images
 - Uploads security results to GitHub Security tab
 - Outputs metadata for the deploy workflow
 
@@ -473,7 +473,7 @@ The application includes comprehensive health probes:
          │  docker-publish.yml           │
          │  - Build Docker image         │
          │  - Tag: <branch>-<sha>        │
-         │  - Run Trivy scan             │
+         │  - Run Grype scan             │
          │  - Push to registry           │
          │  - Output: image_tag          │
          └───────────────┬───────────────┘
@@ -602,7 +602,7 @@ make events                   # Show recent events
 make generate-jwt-secret      # Generate secure JWT key
 make namespace-create         # Create namespace
 make secrets-create           # Create secrets (interactive)
-make security-scan            # Run Trivy security scan
+make security-scan            # Run Grype security scan
 make pre-commit               # Run pre-commit hooks
 
 # Maintenance
