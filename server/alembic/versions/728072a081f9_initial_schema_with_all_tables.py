@@ -89,7 +89,7 @@ def upgrade() -> None:
     op.create_table('UserPasswordTable',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('password_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('password_hash', sa.LargeBinary(), nullable=False),
     sa.Column('display_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
@@ -100,7 +100,7 @@ def upgrade() -> None:
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('roles', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('password_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+    sa.Column('password_hash', sa.LargeBinary(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_UserTable_id'), 'UserTable', ['id'], unique=False)
