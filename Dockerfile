@@ -28,6 +28,7 @@ WORKDIR /app/server
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend dependency files
@@ -43,10 +44,11 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies and security updates
 RUN apt-get update && apt-get install -y \
     curl \
     libpq5 \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
