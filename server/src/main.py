@@ -80,7 +80,11 @@ def run_migrations():
     # main.py is in server/src/, alembic.ini is in server/
     alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
     alembic_cfg = Config(str(alembic_ini_path))
-    alembic_cfg.set_main_option("sqlalchemy.url", get_database_url())
+
+    # Escape % characters for ConfigParser (% is used for interpolation)
+    # Double them (%% ) so they are treated as literal % characters
+    database_url = get_database_url().replace("%", "%%")
+    alembic_cfg.set_main_option("sqlalchemy.url", database_url)
     command.upgrade(alembic_cfg, "head")
 
 
