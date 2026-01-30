@@ -54,6 +54,10 @@ class DeletePasswordUseCase:
             raise UserNotOwnerOfGroupError(command.requester_id, owner_group_id)
 
         self.password_repository.delete(command.password_id)
+        # Revoke all permissions and ownerships for this specific password
+        self.password_permissions_repository.revoke_all_access_for_password(
+            command.password_id
+        )
 
         # Publish domain event
         event = PasswordDeletedEvent(

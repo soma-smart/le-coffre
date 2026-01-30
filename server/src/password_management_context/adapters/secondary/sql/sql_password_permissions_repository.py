@@ -142,3 +142,21 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         )
         permission_result = self._session.exec(permission_statement).first()
         return permission_result is not None
+
+    def revoke_all_access_for_password(self, password_id: UUID):
+        """Revoke all access (permissions and ownerships) for a specific password"""
+        ownership_statement = select(OwnershipTable).where(
+            OwnershipTable.resource_id == password_id
+        )
+        ownership_entries = self._session.exec(ownership_statement).all()
+        for ownership_entry in ownership_entries:
+            self._session.delete(ownership_entry)
+
+        permission_statement = select(PermissionsTable).where(
+            PermissionsTable.resource_id == password_id,
+        )
+        permission_entries = self._session.exec(permission_statement).all()
+        for permission_entry in permission_entries:
+            self._session.delete(permission_entry)
+
+        self._session.commit()

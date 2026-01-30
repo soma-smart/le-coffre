@@ -14,6 +14,7 @@ from password_management_context.domain.exceptions import (
     UserNotOwnerOfGroupError,
 )
 from password_management_context.domain.entities import Password
+from password_management_context.domain.value_objects import PasswordPermission
 
 
 @pytest.fixture
@@ -100,3 +101,33 @@ def test_given_non_owner_when_deleting_should_fail(
     command = DeletePasswordCommand(requester_id=requester_id, password_id=resource.id)
     with pytest.raises(UserNotOwnerOfGroupError):
         use_case.execute(command)
+
+
+def test_given_password_when_deleting_should_remove_permissions(
+    use_case: DeletePasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+):
+    user_id = UUID("45742e0e-bb76-4728-83ef-8d546d7c62e4")
+    owner_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e7")
+    owner_group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e8")
+    resource = Password(
+        id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"),
+        name="MyPassword",
+        encrypted_value="encrypted(MyPassword)",
+        folder="folder",
+    )
+
+    password_repository.save(resource)
+    password_permissions_repository.set_owner(owner_group_id, resource.id)
+    password_permissions_repository.grant_access(
+        user_id, resource.id, PasswordPermission.READ
+    )
+    group_access_gateway.set_group_owner(owner_group_id, owner_id)
+
+    command = DeletePasswordCommand(requester_id=owner_id, password_id=resource.id)
+    use_case.execute(command)
+
+    assert password_permissions_repository._ownerships == {}
+    assert password_permissions_repository._permissions == {}

@@ -73,3 +73,14 @@ class FakePasswordPermissionsRepository:
                 return True
 
         return False
+
+    def revoke_all_access_for_password(self, password_id: UUID):
+        """Revoke all access (permissions and ownerships) for a specific password"""
+        # Revoke all permissions for the password
+        for grp_id, pwd_id in list(self._permissions.keys()):
+            if pwd_id == password_id:
+                del self._permissions[(grp_id, pwd_id)]
+
+        for grp_id, pwd_id in list(self._ownerships.keys()):
+            if pwd_id == password_id:
+                del self._ownerships[(grp_id, pwd_id)]

@@ -40,3 +40,7 @@ class PasswordPermissionsRepository(Protocol):
     def has_any_password_for_group(self, group_id: UUID) -> bool:
         """Check if a group has any password (as owner or with access)"""
         ...
+
+    def revoke_all_access_for_password(self, password_id: UUID):
+        """Revoke all access (permissions and ownerships) for a specific password"""
+        ...
