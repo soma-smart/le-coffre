@@ -108,13 +108,14 @@ jobs:
           image: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ steps.set_outputs.outputs.image_tag }}
           fail-build: false
           severity-cutoff: critical
-          output-format: table
+          output-format: sarif
 
-      - name: Display Grype scan results
+      - name: Display Grype scan summary
         if: always()
         run: |
-          echo "📊 Vulnerability Scan Results:"
-          cat ${{ steps.grype.outputs.sarif }}
+          echo "📊 Vulnerability Scan Summary:"
+          echo "Scan completed for image: ${{ env.DOCKER_CONTAINER_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ steps.set_outputs.outputs.image_tag }}"
+          echo "Detailed results available in artifacts"
 
       - name: Upload Grype scan results as artifact
         if: always()
