@@ -41,7 +41,7 @@ async def test_should_authenticate_admin_and_return_jwt_token(
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    password_hash = "hashed(secure123!)"
+    password_hash = b"hashed(secure123!)"
 
     user_password = UserPassword(
         id=user_id, email=email, password_hash=password_hash, display_name="Admin User"
@@ -65,7 +65,7 @@ async def test_should_raise_exception_for_wrong_password(
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    password_hash = "hashed(secure123!)"
+    password_hash = b"hashed(secure123!)"
 
     user_password = UserPassword(
         id=user_id, email=email, password_hash=password_hash, display_name="Admin User"
@@ -98,7 +98,7 @@ async def test_should_return_refresh_token_on_successful_login(
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    password_hash = "hashed(secure123!)"
+    password_hash = b"hashed(secure123!)"
 
     user_password = UserPassword(
         id=user_id, email=email, password_hash=password_hash, display_name="Admin User"
