@@ -69,3 +69,21 @@ jobs:
       - name: Run Unit Tests
         working-directory: server/
         run: uv run pytest -n auto
+
+  trigger-cd:
+    name: Trigger CD Pipeline
+    runs-on: ubuntu-latest
+    needs: [front-ci, back-ci]
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger deployment workflow
+        run: |
+          echo "🚀 Triggering CD pipeline for deployment..."
+          curl -L -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.CD_TRIGGER_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/soma-smart/le-coffre-deployment/dispatches \
+            -d '{"event_type":"ci-success","client_payload":{"source_ref":"${{ github.sha }}","branch":"${{ github.ref_name }}","commit_message":"${{ github.event.head_commit.message }}","author":"${{ github.event.head_commit.author.name }}"}}'
+          echo "✅ CD pipeline triggered successfully"
