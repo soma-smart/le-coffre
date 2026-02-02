@@ -13,7 +13,11 @@ const fetchEvents = async () => {
   loadingEvents.value = true;
   try {
     const response = await listEventsEventsGet();
-    events.value = response.data?.events ?? [];
+    // Add priority_order field for proper sorting
+    events.value = (response.data?.events ?? []).map(event => ({
+      ...event,
+      priority_order: getPriorityOrder(event.priority)
+    }));
   } catch (error) {
     console.error('Failed to fetch events:', error);
     toast.add({
@@ -48,6 +52,19 @@ const getPrioritySeverity = (priority: string) => {
       return 'info';
     default:
       return 'secondary';
+  }
+};
+
+const getPriorityOrder = (priority: string) => {
+  switch (priority) {
+    case 'HIGH':
+      return 3;
+    case 'MEDIUM':
+      return 2;
+    case 'LOW':
+      return 1;
+    default:
+      return 0;
   }
 };
 
@@ -96,7 +113,7 @@ onMounted(() => {
           </template>
         </Column>
 
-        <Column field="priority" header="Priority" sortable>
+        <Column field="priority_order" header="Priority" sortable>
           <template #body="slotProps">
             <Tag :value="slotProps.data.priority" :severity="getPrioritySeverity(slotProps.data.priority)" />
           </template>
