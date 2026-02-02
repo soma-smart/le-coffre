@@ -97,12 +97,21 @@ server {
 }
 EOF
 
-# Configure supervisor to run as non-root
+# Configure supervisor to run as non-root without HTTP server
 COPY <<'EOF' /etc/supervisor/conf.d/supervisord.conf
 [supervisord]
 nodaemon=true
 logfile=/dev/stdout
 logfile_maxbytes=0
+
+[unix_http_server]
+file=/tmp/supervisor.sock
+
+[supervisorctl]
+serverurl=unix:///tmp/supervisor.sock
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 
 [program:nginx]
 command=/usr/sbin/nginx -g "daemon off;"
