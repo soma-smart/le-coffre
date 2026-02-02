@@ -24,8 +24,8 @@ const selectedGroup = ref<GroupItem | null>(null);
 const isEditMode = ref(false);
 const editingGroupId = ref<string | null>(null);
 
-// Check if user can delete a group (admin or owner)
-const canDeleteGroup = (group: GroupItem) => {
+// Check if user can edit a group (admin or owner)
+const canEditGroup = (group: GroupItem) => {
   if (isAdmin.value) return true;
   if (!groupsStore.currentUserId) return false;
   return group.owners.includes(groupsStore.currentUserId);
@@ -207,9 +207,9 @@ onMounted(async () => {
                 <span>{{ group.name }}</span>
               </div>
               <div class="flex gap-1">
-                <Button icon="pi pi-pencil" text rounded severity="secondary" size="small"
-                  @click="openEditDialog(group)" />
-                <Button v-if="canDeleteGroup(group)" icon="pi pi-times" text rounded severity="danger" size="small"
+                <Button v-if="canEditGroup(group)" icon="pi pi-pencil" text rounded severity="secondary" size="small"
+                  @click="openEditDialog(group)" v-tooltip.top="'Edit group'" />
+                <Button v-if="canEditGroup(group)" icon="pi pi-times" text rounded severity="danger" size="small"
                   @click="openDeleteGroupDialog(group)" v-tooltip.top="'Delete group'" />
               </div>
             </div>
@@ -253,7 +253,7 @@ onMounted(async () => {
 
       <!-- Delete Group Modal -->
       <DeleteGroupModal v-model:visible="showDeleteGroupModal" :group="selectedGroup"
-        :can-delete="selectedGroup ? canDeleteGroup(selectedGroup) : false" :has-passwords="groupHasPasswords"
+        :can-delete="selectedGroup ? canEditGroup(selectedGroup) : false" :has-passwords="groupHasPasswords"
         @deleted="handleDeleteGroup" />
     </div>
   </MainLayout>
