@@ -384,6 +384,32 @@ export const listUsersUsersGet = <ThrowOnError extends boolean = false>(options?
 });
 
 /**
+ * Create a new user
+ *
+ * Create a new user with password authentication.
+ *
+ * - **username**: Unique username for the user
+ * - **email**: User's email address
+ * - **name**: User's display name
+ * - **password**: Password for the user account
+ * - **Authentication**: Requires authentication via access_token cookie
+ * - **Authorization**: Admin only
+ */
+export const createUserUsersPost = <ThrowOnError extends boolean = false>(options: Options<CreateUserUsersPostData, ThrowOnError>) => (options.client ?? client).post<CreateUserUsersPostResponses, CreateUserUsersPostErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/users/',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Login admin user
  *
  * Login an admin user.

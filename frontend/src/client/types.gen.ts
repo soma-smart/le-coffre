@@ -179,6 +179,38 @@ export type CreatePasswordResponse = {
 };
 
 /**
+ * CreateUserRequest
+ */
+export type CreateUserRequest = {
+    /**
+     * Username
+     */
+    username: string;
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Password
+     */
+    password: string;
+};
+
+/**
+ * CreateUserResponse
+ */
+export type CreateUserResponse = {
+    /**
+     * Id
+     */
+    id: string;
+};
+
+/**
  * CreateVaultPostRequest
  */
 export type CreateVaultPostRequest = {
@@ -1243,6 +1275,31 @@ export type ListUsersUsersGetResponses = {
 };
 
 export type ListUsersUsersGetResponse = ListUsersUsersGetResponses[keyof ListUsersUsersGetResponses];
+
+export type CreateUserUsersPostData = {
+    body: CreateUserRequest;
+    path?: never;
+    query?: never;
+    url: '/users/';
+};
+
+export type CreateUserUsersPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateUserUsersPostError = CreateUserUsersPostErrors[keyof CreateUserUsersPostErrors];
+
+export type CreateUserUsersPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: CreateUserResponse;
+};
+
+export type CreateUserUsersPostResponse = CreateUserUsersPostResponses[keyof CreateUserUsersPostResponses];
 
 export type AdminLoginAuthLoginPostData = {
     body: AdminLoginRequest;

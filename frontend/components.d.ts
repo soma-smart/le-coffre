@@ -20,6 +20,7 @@ declare module 'vue' {
     Column: typeof import('primevue/column')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
     CreatePasswordModal: typeof import('./src/components/modals/CreatePasswordModal.vue')['default']
+    CreateUserModal: typeof import('./src/components/modals/CreateUserModal.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
     DeleteGroupModal: typeof import('./src/components/modals/DeleteGroupModal.vue')['default']
     Dialog: typeof import('primevue/dialog')['default']
@@ -62,6 +63,7 @@ declare module 'vue' {
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     UnlockVaultModal: typeof import('./src/components/modals/UnlockVaultModal.vue')['default']
+    UsersManagementCard: typeof import('./src/components/UsersManagementCard.vue')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
   export interface GlobalDirectives {

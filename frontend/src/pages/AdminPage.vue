@@ -3,6 +3,7 @@ import { ref, reactive } from 'vue';
 import { useToast } from 'primevue';
 import { useConfirm } from 'primevue/useconfirm';
 import MainLayout from '../layouts/MainLayout.vue';
+import UsersManagementCard from '../components/UsersManagementCard.vue';
 import AuditLogsCard from '../components/AuditLogsCard.vue';
 import { configureSsoProviderAuthSsoConfigurePost, lockVaultVaultLockPost } from '@/client/sdk.gen';
 import { checkVaultStatus } from '@/plugins/vaultStatus';
@@ -118,6 +119,9 @@ const handleLockVault = () => {
   <MainLayout>
     <div class="max-w-4xl mx-auto">
       <h1 class="text-3xl font-bold mb-6">Admin Configuration</h1>
+
+      <!-- User Management Section -->
+      <UsersManagementCard class="mb-6" />
 
       <!-- Vault Management Section -->
       <Card class="mb-6">
