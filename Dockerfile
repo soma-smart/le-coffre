@@ -102,6 +102,7 @@ autorestart=true
 directory=/app/backend
 command=/app/backend/.venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8000
 user=app
+environment=PYTHONPATH="/app/backend/src"
 stdout_logfile=/dev/stdout
 stdout_logfile_maxbytes=0
 stderr_logfile=/dev/stderr
