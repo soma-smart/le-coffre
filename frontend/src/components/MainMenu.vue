@@ -22,11 +22,35 @@
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }">Profile</span>
         <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">⌘+W</span>
       </div>
-      <div v-if="isAdmin" class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
-        :class="isAdminActive ? 'bg-primary/10' : ''" @click="goToAdmin()">
-        <span class="pi pi-shield transition-colors"
-          :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }">Admin</span>
+      <div v-if="isAdmin">
+        <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+          :class="isAdminActive ? 'bg-primary/10' : ''" @click="toggleAdminMenu">
+          <span class="pi pi-shield transition-colors"
+            :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+          <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }">Admin</span>
+          <span class="ml-auto pi transition-transform"
+            :class="adminMenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'" />
+        </div>
+        <div v-if="adminMenuExpanded" class="pl-8">
+          <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminConfigActive ? 'bg-primary/10' : ''" @click="goToAdminConfig()">
+            <span class="pi pi-cog transition-colors text-sm"
+              :class="isAdminConfigActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+            <span class="ml-2 transition-colors text-sm" :class="{ 'font-semibold': isAdminConfigActive }">Config</span>
+          </div>
+          <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminUsersActive ? 'bg-primary/10' : ''" @click="goToAdminUsers()">
+            <span class="pi pi-users transition-colors text-sm"
+              :class="isAdminUsersActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+            <span class="ml-2 transition-colors text-sm" :class="{ 'font-semibold': isAdminUsersActive }">Users</span>
+          </div>
+          <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminLogsActive ? 'bg-primary/10' : ''" @click="goToAdminLogs()">
+            <span class="pi pi-book transition-colors text-sm"
+              :class="isAdminLogsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+            <span class="ml-2 transition-colors text-sm" :class="{ 'font-semibold': isAdminLogsActive }">Logs</span>
+          </div>
+        </div>
       </div>
     </div>
     <!-- Logout Button and Theme Switcher at bottom -->
@@ -38,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed } from "vue";
+import { onMounted, watch, computed, ref } from "vue";
 import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'primevue';
 import { storeToRefs } from 'pinia';
@@ -56,11 +80,17 @@ const { passwordsCount } = storeToRefs(passwordsStore);
 const userStore = useUserStore();
 const isAdmin = computed(() => userStore.isAdmin);
 
+// Admin menu state
+const adminMenuExpanded = ref(false);
+
 // Active state detection
 const isPasswordsActive = computed(() => route.path === '/' || route.path === '/home');
 const isGroupsActive = computed(() => route.path === '/groups');
 const isProfileActive = computed(() => route.path === '/profile');
-const isAdminActive = computed(() => route.path === '/admin');
+const isAdminActive = computed(() => route.path.startsWith('/admin'));
+const isAdminConfigActive = computed(() => route.path === '/admin/config');
+const isAdminUsersActive = computed(() => route.path === '/admin/users');
+const isAdminLogsActive = computed(() => route.path === '/admin/logs');
 
 const goToAllPasswords = () => {
   router.push({ name: 'Home' });
@@ -74,21 +104,37 @@ const goToProfile = () => {
   router.push('/profile');
 };
 
-const goToAdmin = () => {
-  router.push('/admin');
+const toggleAdminMenu = () => {
+  adminMenuExpanded.value = !adminMenuExpanded.value;
+  // If menu is being opened and we're not on an admin page, navigate to config
+  if (adminMenuExpanded.value && !route.path.startsWith('/admin')) {
+    router.push('/admin/config');
+  }
+};
+
+const goToAdminConfig = () => {
+  router.push('/admin/config');
+};
+
+const goToAdminUsers = () => {
+  router.push('/admin/users');
+};
+
+const goToAdminLogs = () => {
+  router.push('/admin/logs');
 };
 
 const handleLogout = () => {
   // Clear all authentication data (cookies, localStorage, store)
   logout();
-  
+
   // Navigate to login page
   router.push('/login').then(() => {
-    toast.add({ 
-      severity: 'success', 
-      summary: 'Logout Successful', 
-      detail: 'You have been logged out successfully.', 
-      life: 5000 
+    toast.add({
+      severity: 'success',
+      summary: 'Logout Successful',
+      detail: 'You have been logged out successfully.',
+      life: 5000
     });
   });
 };
@@ -98,11 +144,19 @@ watch(() => route.path, (newPath) => {
   if (newPath === '/' || newPath === '/home') {
     passwordsStore.fetchPasswords();
   }
+  // Auto-expand admin menu when on admin pages
+  if (newPath.startsWith('/admin')) {
+    adminMenuExpanded.value = true;
+  }
 });
 
 onMounted(() => {
   passwordsStore.fetchPasswords();
   // Fetch user data to determine admin status
   userStore.fetchCurrentUser();
+  // Auto-expand admin menu if on admin page
+  if (route.path.startsWith('/admin')) {
+    adminMenuExpanded.value = true;
+  }
 });
 </script>

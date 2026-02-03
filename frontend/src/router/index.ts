@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../pages/HomePage.vue'
-import SetupView from '../pages/SetupPage.vue'
+import HomeView from '@/pages/HomePage.vue'
+import SetupView from '@/pages/SetupPage.vue'
 import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
 import { isAuthenticated } from '@/utils/auth'
@@ -16,7 +16,7 @@ const router = createRouter({
     {
       path: '/about',
       name: 'About',
-      component: () => import('../pages/AboutPage.vue'),
+      component: () => import('@/pages/AboutPage.vue'),
     },
     {
       path: '/setup',
@@ -27,28 +27,44 @@ const router = createRouter({
     {
       path: '/login',
       name: 'Login',
-      component: () => import('../pages/LoginPage.vue'),
+      component: () => import('@/pages/LoginPage.vue'),
     },
     {
       path: '/sso/callback',
       name: 'SsoCallback',
-      component: () => import('../pages/SsoCallbackPage.vue'),
+      component: () => import('@/pages/SsoCallbackPage.vue'),
       meta: { skipSetupCheck: true }
     },
     {
       path: '/groups',
       name: 'Groups',
-      component: () => import('../pages/GroupsPage.vue'),
+      component: () => import('@/pages/GroupsPage.vue'),
     },
     {
       path: '/profile',
       name: 'Profile',
-      component: () => import('../pages/ProfilePage.vue'),
+      component: () => import('@/pages/ProfilePage.vue'),
     },
     {
       path: '/admin',
-      name: 'Admin',
-      component: () => import('../pages/AdminPage.vue'),
+      redirect: '/admin/config'
+    },
+    {
+      path: '/admin/config',
+      name: 'AdminConfig',
+      component: () => import('@/pages/admin/AdminConfigPage.vue'),
+      meta: { requiresAdmin: true }
+    },
+    {
+      path: '/admin/users',
+      name: 'AdminUsers',
+      component: () => import('@/pages/admin/AdminUsersPage.vue'),
+      meta: { requiresAdmin: true }
+    },
+    {
+      path: '/admin/logs',
+      name: 'AdminLogs',
+      component: () => import('@/pages/admin/AdminLogsPage.vue'),
       meta: { requiresAdmin: true }
     }
   ],
