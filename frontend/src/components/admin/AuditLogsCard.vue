@@ -10,8 +10,7 @@ const events = ref<EventData[]>([]);
 const allEvents = ref<EventData[]>([]);
 const loadingEvents = ref(false);
 const selectedEventTypes = ref<string[]>([]);
-const startDate = ref<Date>(new Date());
-const endDate = ref<Date>(new Date());
+const dateRange = ref<Date[]>([new Date(), new Date()]);
 
 const availableEventTypes = computed(() => {
   const uniqueTypes = new Set(allEvents.value.map(event => event.event_type));
@@ -21,16 +20,23 @@ const availableEventTypes = computed(() => {
 const fetchEvents = async () => {
   loadingEvents.value = true;
   try {
+    // Ensure we have a valid date range
+    if (!dateRange.value || dateRange.value.length < 2) {
+      return;
+    }
+
+    let [start, end] = dateRange.value;
+
     // Ensure start date is before end date, swap if needed
-    if (startDate.value > endDate.value) {
-      [startDate.value, endDate.value] = [endDate.value, startDate.value];
+    if (start > end) {
+      [start, end] = [end, start];
     }
 
     // Set date range for the selected dates
-    const startOfDay = new Date(startDate.value);
+    const startOfDay = new Date(start);
     startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date(endDate.value);
+    const endOfDay = new Date(end);
     endOfDay.setHours(23, 59, 59, 999);
 
     const response = await listEventsEventsGet({
@@ -125,14 +131,9 @@ onMounted(() => {
 
       <div class="mb-4 flex flex-col gap-4 md:flex-row md:items-end">
         <div class="flex-1">
-          <label for="start-date-filter" class="block mb-2 font-medium">Start Date</label>
-          <DatePicker id="start-date-filter" v-model="startDate" dateFormat="yy-mm-dd" showIcon iconDisplay="button"
-            class="w-full" @update:modelValue="fetchEvents" />
-        </div>
-        <div class="flex-1">
-          <label for="end-date-filter" class="block mb-2 font-medium">End Date</label>
-          <DatePicker id="end-date-filter" v-model="endDate" dateFormat="yy-mm-dd" showIcon iconDisplay="button"
-            class="w-full" @update:modelValue="fetchEvents" />
+          <label for="date-range-filter" class="block mb-2 font-medium">Date Range</label>
+          <DatePicker id="date-range-filter" v-model="dateRange" selectionMode="range" dateFormat="yy-mm-dd" showIcon
+            iconDisplay="button" :manualInput="false" showButtonBar showClear @update:modelValue="fetchEvents" />
         </div>
         <div class="flex-1">
           <label for="event-type-filter" class="block mb-2 font-medium">Filter by Event Type</label>
