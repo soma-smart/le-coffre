@@ -50,6 +50,7 @@ declare module 'vue' {
     SharesModal: typeof import('./src/components/setup/shamir/SharesModal.vue')['default']
     Skeleton: typeof import('primevue/skeleton')['default']
     Slider: typeof import('primevue/slider')['default']
+    SsoConfigurationCard: typeof import('./src/components/admin/SsoConfigurationCard.vue')['default']
     Step: typeof import('primevue/step')['default']
     StepAdminAccountForm: typeof import('./src/components/setup/StepAdminAccountForm.vue')['default']
     StepGenerateMasterKey: typeof import('./src/components/setup/StepGenerateMasterKey.vue')['default']
@@ -64,6 +65,7 @@ declare module 'vue' {
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     UnlockVaultModal: typeof import('./src/components/modals/UnlockVaultModal.vue')['default']
     UsersManagementCard: typeof import('./src/components/UsersManagementCard.vue')['default']
+    VaultManagementCard: typeof import('./src/components/admin/VaultManagementCard.vue')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
   export interface GlobalDirectives {
