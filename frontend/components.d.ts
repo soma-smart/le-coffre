@@ -22,6 +22,7 @@ declare module 'vue' {
     CreatePasswordModal: typeof import('./src/components/modals/CreatePasswordModal.vue')['default']
     CreateUserModal: typeof import('./src/components/modals/CreateUserModal.vue')['default']
     DataTable: typeof import('primevue/datatable')['default']
+    DatePicker: typeof import('primevue/datepicker')['default']
     DeleteGroupModal: typeof import('./src/components/modals/DeleteGroupModal.vue')['default']
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']

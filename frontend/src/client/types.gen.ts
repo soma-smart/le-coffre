@@ -1718,6 +1718,18 @@ export type ListEventsEventsGetData = {
          * Filter by event types
          */
         event_type?: Array<string> | null;
+        /**
+         * Start Date
+         *
+         * Filter events from this date (inclusive)
+         */
+        start_date?: string | null;
+        /**
+         * End Date
+         *
+         * Filter events until this date (inclusive)
+         */
+        end_date?: string | null;
     };
     url: '/events';
 };

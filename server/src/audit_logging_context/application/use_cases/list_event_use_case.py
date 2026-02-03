@@ -12,5 +12,9 @@ class ListEventUseCase:
         AdminPermissionChecker.ensure_admin(
             command.requesting_user, "view audit event logs"
         )
-        events = self.event_repository.list_events(event_types=command.event_types)
+        events = self.event_repository.list_events(
+            event_types=command.event_types,
+            start_date=command.start_date,
+            end_date=command.end_date,
+        )
         return ListEventResponse(events=events)

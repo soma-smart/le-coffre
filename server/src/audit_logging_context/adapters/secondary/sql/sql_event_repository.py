@@ -52,8 +52,13 @@ class SqlEventRepository(EventRepository):
         self._session.commit()
         self._session.refresh(db_event)
 
-    def list_events(self, event_types: list[str] | None = None) -> list[DomainEvent]:
-        """Retrieve all stored domain events, optionally filtered by event types"""
+    def list_events(
+        self,
+        event_types: list[str] | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[DomainEvent]:
+        """Retrieve all stored domain events, optionally filtered by event types and date range"""
         statement = select(DomainEventTable).order_by(col(DomainEventTable.occurred_on))
 
         # Apply event_type filter if provided
@@ -61,6 +66,12 @@ class SqlEventRepository(EventRepository):
             statement = statement.where(
                 col(DomainEventTable.event_type).in_(event_types)
             )
+
+        # Apply date range filters if provided
+        if start_date:
+            statement = statement.where(col(DomainEventTable.occurred_on) >= start_date)
+        if end_date:
+            statement = statement.where(col(DomainEventTable.occurred_on) <= end_date)
 
         results = self._session.exec(statement).all()
 

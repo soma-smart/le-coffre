@@ -111,3 +111,61 @@ def test_given_events_when_filtering_by_multiple_types_then_return_all_matching(
     assert len(response.events) == 2
     event_types = {event.event_type for event in response.events}
     assert event_types == {"PasswordCreatedEvent", "PasswordDeletedEvent"}
+
+
+def test_given_events_when_filtering_by_date_range_then_return_only_matching_events(
+    use_case, event_repository, admin_user
+):
+    # Create events with different dates
+    event1 = DomainEvent(uuid4(), datetime(2024, 1, 15, 10, 0, 0))
+    event1.event_type = "PasswordCreatedEvent"
+    event2 = DomainEvent(uuid4(), datetime(2024, 1, 16, 10, 0, 0))
+    event2.event_type = "PasswordDeletedEvent"
+    event3 = DomainEvent(uuid4(), datetime(2024, 1, 17, 10, 0, 0))
+    event3.event_type = "PasswordCreatedEvent"
+
+    event_repository.append_event(event1)
+    event_repository.append_event(event2)
+    event_repository.append_event(event3)
+
+    # Filter by date range (Jan 15-16)
+    command = ListEventCommand(
+        requesting_user=admin_user,
+        start_date=datetime(2024, 1, 15, 0, 0, 0),
+        end_date=datetime(2024, 1, 16, 23, 59, 59),
+    )
+
+    response = use_case.execute(command)
+
+    assert len(response.events) == 2
+    assert all(
+        datetime(2024, 1, 15) <= event.occurred_on <= datetime(2024, 1, 16, 23, 59, 59)
+        for event in response.events
+    )
+
+
+def test_given_events_when_filtering_by_start_date_only_then_return_events_after(
+    use_case, event_repository, admin_user
+):
+    # Create events with different dates
+    event1 = DomainEvent(uuid4(), datetime(2024, 1, 15, 10, 0, 0))
+    event1.event_type = "PasswordCreatedEvent"
+    event2 = DomainEvent(uuid4(), datetime(2024, 1, 16, 10, 0, 0))
+    event2.event_type = "PasswordDeletedEvent"
+    event3 = DomainEvent(uuid4(), datetime(2024, 1, 17, 10, 0, 0))
+    event3.event_type = "PasswordCreatedEvent"
+
+    event_repository.append_event(event1)
+    event_repository.append_event(event2)
+    event_repository.append_event(event3)
+
+    # Filter by start date only
+    command = ListEventCommand(
+        requesting_user=admin_user,
+        start_date=datetime(2024, 1, 16, 0, 0, 0),
+    )
+
+    response = use_case.execute(command)
+
+    assert len(response.events) == 2
+    assert all(event.occurred_on >= datetime(2024, 1, 16) for event in response.events)

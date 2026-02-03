@@ -37,6 +37,12 @@ class ListEventsResponse(BaseModel):
 )
 def list_events(
     event_type: list[str] | None = Query(None, description="Filter by event types"),
+    start_date: datetime | None = Query(
+        None, description="Filter events from this date (inclusive)"
+    ),
+    end_date: datetime | None = Query(
+        None, description="Filter events until this date (inclusive)"
+    ),
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: ListEventUseCase = Depends(get_list_event_usecase),
 ):
@@ -46,6 +52,8 @@ def list_events(
     - **Authentication**: Requires authentication via access_token cookie
     - **Authorization**: Only administrators can access audit logs
     - **event_type**: Optional list of event types to filter by (e.g., PasswordCreatedEvent, PasswordDeletedEvent)
+    - **start_date**: Optional start date to filter events (ISO 8601 format)
+    - **end_date**: Optional end date to filter events (ISO 8601 format)
 
     Returns a list of all domain events that have been logged in the system.
     """
@@ -53,7 +61,10 @@ def list_events(
         # Execute use case with command
         authenticated_user = current_user.to_authenticated_user()
         command = ListEventCommand(
-            requesting_user=authenticated_user, event_types=event_type
+            requesting_user=authenticated_user,
+            event_types=event_type,
+            start_date=start_date,
+            end_date=end_date,
         )
         response = usecase.execute(command)
 
