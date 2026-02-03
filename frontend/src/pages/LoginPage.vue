@@ -16,7 +16,7 @@ onMounted(() => {
       life: 5000
     });
   }
-  
+
   if (route.query.error === 'sso_failed') {
     const message = route.query.message as string || 'SSO authentication failed';
     toast.add({
@@ -31,7 +31,7 @@ onMounted(() => {
 
 <template>
   <BlankLayout>
-    <div class="flex justify-center items-center h-screen">
+    <div class="flex justify-center items-center min-h-[calc(100vh-12rem)]">
       <LoginForm />
     </div>
   </BlankLayout>
