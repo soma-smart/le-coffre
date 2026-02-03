@@ -1,0 +1,44 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Simple strategy for the project
+          release-type: simple
+
+          # Group commit types
+          changelog-types: |
+            [
+              {"type":"feat","section":"🚀 Features","hidden":false},
+              {"type":"fix","section":"🐛 Bug Fixes","hidden":false},
+              {"type":"chore","section":"🛠 Maintenance","hidden":false},
+              {"type":"docs","section":"📚 Documentation","hidden":false},
+              {"type":"style","section":"💄 Styles","hidden":false},
+              {"type":"refactor","section":"♻️ Refactoring","hidden":false},
+              {"type":"perf","section":"⚡ Performance","hidden":false},
+              {"type":"test","section":"✅ Tests","hidden":false},
+              {"type":"ci","section":"🔧 CI/CD","hidden":false},
+              {"type":"build","section":"📦 Build","hidden":false},
+              {"type":"revert","section":"⏪ Reverts","hidden":false}
+            ]
+
+      # Output release information
+      - name: Release info
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          echo "✅ Release created: ${{ steps.release.outputs.tag_name }}"
+          echo "📦 Version: ${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}"
+          echo "🚀 Deploy using the build-and-deploy workflow in le-coffre-deployment"
