@@ -133,12 +133,12 @@ onMounted(() => {
         <div class="flex-1">
           <label for="date-range-filter" class="block mb-2 font-medium">Date Range</label>
           <DatePicker id="date-range-filter" v-model="dateRange" selectionMode="range" dateFormat="yy-mm-dd" showIcon
-            iconDisplay="button" :manualInput="false" showButtonBar showClear @update:modelValue="fetchEvents" />
+            iconDisplay="button" :manualInput="false" showButtonBar fluid @update:modelValue="fetchEvents" />
         </div>
         <div class="flex-1">
           <label for="event-type-filter" class="block mb-2 font-medium">Filter by Event Type</label>
           <MultiSelect id="event-type-filter" v-model="selectedEventTypes" :options="availableEventTypes"
-            placeholder="All Event Types" :maxSelectedLabels="3" class="w-full" @change="fetchEvents" />
+            placeholder="All Event Types" :maxSelectedLabels="2" class="w-full" @change="fetchEvents" />
         </div>
       </div>
 
