@@ -63,7 +63,7 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
 
       // Invalidate caches to force refetch after login
       passwordsStore.invalidateCache();
-      userStore.clearUser(); // Clear cached user data to fetch fresh data on navigation
+      userStore.clearUser();
 
       // Redirect to the page specified in query or to home page
       const redirectPath = route.query.redirect as string || '/';
