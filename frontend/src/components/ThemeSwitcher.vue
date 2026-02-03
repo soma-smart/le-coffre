@@ -1,10 +1,14 @@
 <template>
-  <div class="fixed bottom-2 right-2 z-10">
-    <button type="button"
-      class="inline-flex w-8 h-8 p-0 items-center justify-center border rounded cursor-pointer transition-all hover:bg-emphasis active:scale-95"
-      @click="drawerVisible = true" aria-label="Open Theme Customizer">
-      <i class="pi pi-palette" />
-    </button>
+  <div>
+    <Button
+      label="Customize Theme"
+      icon="pi pi-palette"
+      @click="drawerVisible = true"
+      severity="secondary"
+      outlined
+      class="w-full"
+      aria-label="Open Theme Customizer"
+    />
 
     <Drawer v-model:visible="drawerVisible" position="right" header="Theme Customizer"
       class="!w-full md:!w-80 lg:!w-[34rem]">

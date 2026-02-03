@@ -29,9 +29,10 @@
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }">Admin</span>
       </div>
     </div>
-    <!-- Logout Button at bottom -->
-    <div class="p-4 border-t border-surface">
+    <!-- Logout Button and Theme Switcher at bottom -->
+    <div class="p-4 border-t border-surface flex flex-col gap-3">
       <Button label="Logout" icon="pi pi-sign-out" @click="handleLogout" severity="secondary" outlined class="w-full" />
+      <ThemeSwitcher />
     </div>
   </div>
 </template>

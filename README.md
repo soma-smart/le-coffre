@@ -1,5 +1,7 @@
 # Le Coffre
 
+<img src="frontend/public/img/le-coffre.png" alt="Le Coffre Logo" width="300">
+
 Le Coffre is an open-source password manager that allows you to securely store and manage passwords in a collaboration-friendly environment.
 
 ## Table of Contents
@@ -25,6 +27,7 @@ Le Coffre is an open-source password manager that allows you to securely store a
 This project is licensed under the MIT License. You are free to use, modify, and distribute this project under the terms of the license.
 
 ## Contributing
+
 We welcome contributions from the community! To contribute:
 
 1. Fork the repository.
@@ -118,6 +121,7 @@ bun install
 Open with VSCode and reopen in the devcontainer when prompted. The unified devcontainer includes both frontend and backend development environments with nginx as a reverse proxy.
 
 **Quick Start:**
+
 1. Open project in VS Code
 2. Click "Reopen in Container" when prompted (VS Code will automatically detect your user's UID/GID and configure the container accordingly)
 3. Use VS Code tasks to start services:
@@ -126,6 +130,7 @@ Open with VSCode and reopen in the devcontainer when prompted. The unified devco
 See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions.
 
 **Access Points:**
+
 - **Main App:** http://127.0.0.1:8123 (via nginx - use this for development)
 - Frontend (direct): http://127.0.0.1:5173
 - Backend API (direct): http://127.0.0.1:8000
@@ -143,6 +148,7 @@ Within each `frontend/` or `server/` folder you will find a README.md with more 
 The backend uses Alembic for database schema management. Migrations are automatically applied on application startup.
 
 **Manual migration commands:**
+
 ```bash
 cd server
 
@@ -176,7 +182,6 @@ docker run -p 3000:3000 le-coffre:latest --volume le-coffre-volume:/app
 # Pull docker image
 docker pull rg.fr-par.scw.cloud/soma-smart-cr/le-coffre:latest
 ```
-
 
 ## Security
 
