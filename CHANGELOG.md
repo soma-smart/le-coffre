@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.0](https://github.com/soma-smart/le-coffre/compare/v0.2.0...v0.3.0) (2026-02-04)
+
+
+### Features
+
+* add confirmation modal for promoting and deleting groups ([babecfd](https://github.com/soma-smart/le-coffre/commit/babecfdb67995c84915922831a93bcc5a55fe8a6))
+* add date filtering to event logs ([8368f48](https://github.com/soma-smart/le-coffre/commit/8368f483ae5168abdf2db51070f3da49a36f831f))
+* add promote admin command and use case ([9bf72eb](https://github.com/soma-smart/le-coffre/commit/9bf72eb5cdcae080ed9ff640b0c7e97bba2a2251))
+* add user creation modal and API integration ([d3682a1](https://github.com/soma-smart/le-coffre/commit/d3682a11a8dc82708e299081e1526f1d8b635b30))
+* enhance date range picker and event type filter ([da7ad29](https://github.com/soma-smart/le-coffre/commit/da7ad29f2ce46754d17bfd5fbb8be45c522585f8))
+* implement date range filtering for event logs ([d84ad43](https://github.com/soma-smart/le-coffre/commit/d84ad430274c5418204d4b53db2be7611f8c99cd))
+* implement promote admin functionality and tests ([4805745](https://github.com/soma-smart/le-coffre/commit/480574553c1cc9e1bf5018fee0b2639019652851))
+* implement user creation and associated tests ([63fe94d](https://github.com/soma-smart/le-coffre/commit/63fe94dc43642bb980c3088b4dbfd1deafa3dff2))
+
 ## [0.2.0](https://github.com/soma-smart/le-coffre/compare/v0.1.10...v0.2.0) (2026-02-03)
 
 
