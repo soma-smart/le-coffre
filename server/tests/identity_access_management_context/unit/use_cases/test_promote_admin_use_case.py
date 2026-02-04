@@ -8,9 +8,9 @@ from identity_access_management_context.domain.exceptions import (
     UserAlreadyAdminException,
     UserNotFoundException,
 )
-from shared_kernel.authentication import AuthenticatedUser
-from shared_kernel.authentication.constants import ADMIN_ROLE
-from shared_kernel.authentication.exceptions import NotAdminError
+from shared_kernel.domain.entities import AuthenticatedUser
+from shared_kernel.domain.value_objects import ADMIN_ROLE
+from shared_kernel.adapters.primary.exceptions import NotAdminError
 
 
 @pytest.fixture

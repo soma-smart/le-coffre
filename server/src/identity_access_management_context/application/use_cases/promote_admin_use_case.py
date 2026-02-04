@@ -1,7 +1,7 @@
 from identity_access_management_context.application.commands import PromoteAdminCommand
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.exceptions import UserNotFoundException
-from shared_kernel.authentication import AdminPermissionChecker
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class PromoteAdminUseCase:
