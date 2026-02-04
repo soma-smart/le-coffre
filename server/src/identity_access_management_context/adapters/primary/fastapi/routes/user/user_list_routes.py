@@ -19,6 +19,7 @@ class ListUserResponse(BaseModel):
     username: str
     email: str
     name: str
+    roles: list[str]
 
 
 @router.get(
@@ -48,6 +49,7 @@ def list_users(
                 username=user.username,
                 email=user.email,
                 name=user.name,
+                roles=user.roles,
             )
             for user in users
         ]

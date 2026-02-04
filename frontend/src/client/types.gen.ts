@@ -384,6 +384,10 @@ export type GetUserResponse = {
      * Name
      */
     name: string;
+    /**
+     * Roles
+     */
+    roles?: Array<string>;
 };
 
 /**
@@ -514,6 +518,10 @@ export type ListUserResponse = {
      * Name
      */
     name: string;
+    /**
+     * Roles
+     */
+    roles: Array<string>;
 };
 
 /**
@@ -1300,6 +1308,36 @@ export type CreateUserUsersPostResponses = {
 };
 
 export type CreateUserUsersPostResponse = CreateUserUsersPostResponses[keyof CreateUserUsersPostResponses];
+
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/users/{user_id}/promote-admin';
+};
+
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostError = PromoteUserToAdminUsersUserIdPromoteAdminPostErrors[keyof PromoteUserToAdminUsersUserIdPromoteAdminPostErrors];
+
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostResponse = PromoteUserToAdminUsersUserIdPromoteAdminPostResponses[keyof PromoteUserToAdminUsersUserIdPromoteAdminPostResponses];
 
 export type AdminLoginAuthLoginPostData = {
     body: AdminLoginRequest;
