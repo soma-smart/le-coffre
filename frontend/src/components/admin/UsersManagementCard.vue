@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue';
 import CreateUserModal from '@/components/modals/CreateUserModal.vue';
+import ConfirmationModal from '@/components/modals/ConfirmationModal.vue';
 import { listUsersUsersGet, promoteUserToAdminUsersUserIdPromoteAdminPost } from '@/client/sdk.gen';
 import type { ListUserResponse } from '@/client/types.gen';
 
@@ -11,7 +12,17 @@ const toast = useToast();
 const users = ref<ListUserResponse[]>([]);
 const loading = ref(false);
 const showCreateUserModal = ref(false);
+const showPromoteAdminModal = ref(false);
 const promotingUserId = ref<string | null>(null);
+const userToPromote = ref<ListUserResponse | null>(null);
+
+const promoteModalQuestion = computed(() => {
+  return `Are you sure you want to promote "${userToPromote.value?.username}" to ADMIN?`;
+});
+
+const promoteModalDescription = computed(() => {
+  return `This will grant them full administrative privileges.\nThey will be able to manage users, groups, and system settings.`;
+});
 
 // Fetch users
 const fetchUsers = async () => {
@@ -43,7 +54,17 @@ const fetchUsers = async () => {
 };
 
 // Promote user to admin
-const promoteToAdmin = async (userId: string, username: string) => {
+const showPromoteModal = (user: ListUserResponse) => {
+  userToPromote.value = user;
+  showPromoteAdminModal.value = true;
+};
+
+const handlePromoteConfirmed = async () => {
+  if (!userToPromote.value) return;
+
+  const userId = userToPromote.value.id;
+  const username = userToPromote.value.username;
+
   promotingUserId.value = userId;
   try {
     const response = await promoteUserToAdminUsersUserIdPromoteAdminPost({
@@ -82,12 +103,14 @@ const promoteToAdmin = async (userId: string, username: string) => {
     });
   } finally {
     promotingUserId.value = null;
+    userToPromote.value = null;
   }
 };
 
 // Check if user is already an admin
 const isAdmin = (user: ListUserResponse) => {
-  return user.roles?.includes('ADMIN') || false;
+  console.log(user.roles);
+  return user.roles?.includes('admin') || false;
 };
 
 // Handle user created
@@ -133,8 +156,10 @@ onMounted(() => {
         <Column field="username" header="Username" sortable>
           <template #body="slotProps">
             <div class="flex items-center gap-2">
-              <i class="pi pi-user text-muted-color"></i>
+              <i v-if="isAdmin(slotProps.data)" class="pi pi-shield text-red-500"></i>
+              <i v-else class="pi pi-user text-muted-color"></i>
               <span class="font-semibold">{{ slotProps.data.username }}</span>
+              <span v-if="isAdmin(slotProps.data)" class="text-red-500 text-xs font-semibold">(ADMIN)</span>
             </div>
           </template>
         </Column>
@@ -169,16 +194,21 @@ onMounted(() => {
 
         <Column header="Actions" :exportable="false">
           <template #body="slotProps">
-            <Button v-if="!isAdmin(slotProps.data)" icon="pi pi-shield" label="Promote to Admin" size="small"
-              severity="warning" outlined :loading="promotingUserId === slotProps.data.id"
-              @click="promoteToAdmin(slotProps.data.id, slotProps.data.username)" />
-            <span v-else class="text-muted-color text-sm">Already an admin</span>
+            <Button icon="pi pi-shield" label="Promote to Admin" size="small" severity="warning" outlined
+              :loading="promotingUserId === slotProps.data.id" :disabled="isAdmin(slotProps.data)"
+              @click="showPromoteModal(slotProps.data)" />
           </template>
         </Column>
       </DataTable>
 
       <!-- Create User Modal -->
       <CreateUserModal v-model:visible="showCreateUserModal" @created="handleUserCreated" />
+
+      <!-- Promote Admin Confirmation Modal -->
+      <ConfirmationModal v-model:visible="showPromoteAdminModal" title="Promote User to Admin"
+        :question="promoteModalQuestion" :description="promoteModalDescription" confirm-label="Promote to Admin"
+        cancel-label="Cancel" severity="warning" icon="pi pi-shield" :countdown-seconds="3"
+        @confirm="handlePromoteConfirmed" />
     </template>
   </Card>
 </template>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue';
 import MainLayout from '../layouts/MainLayout.vue';
 import { storeToRefs } from 'pinia';
 import { useGroupsStore } from '@/stores/groups';
 import { useUserStore } from '@/stores/user';
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue';
-import DeleteGroupModal from '@/components/modals/DeleteGroupModal.vue';
+import ConfirmationModal from '@/components/modals/ConfirmationModal.vue';
 import type { GroupItem } from '@/client/types.gen';
 
 const toast = useToast();
@@ -34,6 +34,29 @@ const canEditGroup = (group: GroupItem) => {
 // Check if group has passwords (for now we'll show an error when trying to delete)
 // In a future iteration, we could fetch this info from the API
 const groupHasPasswords = ref(false);
+
+// Computed properties for delete modal
+const deleteModalQuestion = computed(() => {
+  return `Are you sure you want to delete "${selectedGroup.value?.name}"?`;
+});
+
+const deleteModalDescription = computed(() => {
+  return `This action cannot be undone.\nAll group members will lose access.`;
+});
+
+const deleteWarningMessage = computed(() => {
+  if (!selectedGroup.value) return undefined;
+  if (!canEditGroup(selectedGroup.value) && groupHasPasswords.value) {
+    return 'This group contains passwords and cannot be deleted. Please remove or reassign all passwords before deleting this group.';
+  } else if (!canEditGroup(selectedGroup.value)) {
+    return "You don't have permission to delete this group. Only admins and group owners can delete groups.";
+  }
+  return undefined;
+});
+
+const canDeleteGroup = computed(() => {
+  return selectedGroup.value ? canEditGroup(selectedGroup.value) : false;
+});
 
 // Open group details modal
 const openGroupDetails = (group: GroupItem) => {
@@ -265,10 +288,11 @@ onMounted(async () => {
       <GroupDetailsModal v-model:visible="showGroupDetailsModal" :group="selectedGroup"
         @member-added="handleMemberChanged" @member-removed="handleMemberChanged" />
 
-      <!-- Delete Group Modal -->
-      <DeleteGroupModal v-model:visible="showDeleteGroupModal" :group="selectedGroup"
-        :can-delete="selectedGroup ? canEditGroup(selectedGroup) : false" :has-passwords="groupHasPasswords"
-        @deleted="handleDeleteGroup" />
+      <!-- Delete Group Confirmation Modal -->
+      <ConfirmationModal v-model:visible="showDeleteGroupModal" title="Delete Group" :question="deleteModalQuestion"
+        :description="deleteModalDescription" :warning-message="deleteWarningMessage" confirm-label="Delete Group"
+        cancel-label="Cancel" severity="danger" icon="pi pi-exclamation-triangle" :countdown-seconds="6"
+        :can-proceed="canDeleteGroup" @confirm="handleDeleteGroup" />
     </div>
   </MainLayout>
 </template>
