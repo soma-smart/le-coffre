@@ -8,6 +8,7 @@ from identity_access_management_context.application.use_cases import (
     UpdateUserUseCase,
     CreateUserUseCase,
     ListUserUseCase,
+    PromoteAdminUseCase,
     AdminLoginUseCase,
     RegisterAdminWithPasswordUseCase,
     GetSsoAuthorizeUrlUseCase,
@@ -99,6 +100,12 @@ def get_delete_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
 ):
     return DeleteUserUseCase(user_repository)
+
+
+def get_promote_admin_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+):
+    return PromoteAdminUseCase(user_repository)
 
 
 def get_update_user_usecase(

@@ -22,6 +22,7 @@ class GetUserResponse(BaseModel):
     username: str
     email: str
     name: str
+    roles: list[str] = []
 
 
 @router.get(
@@ -51,6 +52,7 @@ def get_user(
             username=user_response.username,
             email=user_response.email,
             name=user_response.name,
+            roles=user_response.roles,
         )
     except UserNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
