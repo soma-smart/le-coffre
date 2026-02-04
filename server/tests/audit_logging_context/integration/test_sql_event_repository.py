@@ -172,3 +172,45 @@ def test_should_filter_events_by_multiple_types(sql_event_repository):
     assert len(filtered_events) == 3
     event_types = {event.event_type for event in filtered_events}
     assert event_types == {"PasswordCreatedEvent", "PasswordDeletedEvent"}
+
+
+def test_should_filter_events_by_user_id(sql_event_repository):
+    # Arrange - create events with different user IDs
+    user_id_1 = uuid4()
+    user_id_2 = uuid4()
+    group_id = uuid4()
+
+    created_by_user_1 = PasswordCreatedEvent(
+        event_id=uuid4(),
+        password_id=uuid4(),
+        password_name="Password 1",
+        owner_group_id=group_id,
+        created_by_user_id=user_id_1,
+        occurred_on=datetime(2024, 1, 15, 10, 0, 0),
+    )
+    deleted_by_user_2 = PasswordDeletedEvent(
+        event_id=uuid4(),
+        password_id=uuid4(),
+        deleted_by_user_id=user_id_2,
+        owner_group_id=group_id,
+        occurred_on=datetime(2024, 1, 15, 11, 0, 0),
+    )
+    created_by_user_1_again = PasswordCreatedEvent(
+        event_id=uuid4(),
+        password_id=uuid4(),
+        password_name="Password 2",
+        owner_group_id=group_id,
+        created_by_user_id=user_id_1,
+        occurred_on=datetime(2024, 1, 15, 12, 0, 0),
+    )
+
+    sql_event_repository.append_event(created_by_user_1)
+    sql_event_repository.append_event(deleted_by_user_2)
+    sql_event_repository.append_event(created_by_user_1_again)
+
+    # Act - filter by user_id_1
+    filtered_events = sql_event_repository.list_events(user_id=user_id_1)
+
+    # Assert
+    assert len(filtered_events) == 2
+    assert all(event.event_type == "PasswordCreatedEvent" for event in filtered_events)

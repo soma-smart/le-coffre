@@ -258,6 +258,10 @@ export type EventData = {
      * Priority
      */
     priority: string;
+    /**
+     * User Id
+     */
+    user_id?: string | null;
 };
 
 /**
@@ -453,9 +457,9 @@ export type IsSsoConfigSetResponse = {
 };
 
 /**
- * ListEventsResponse
+ * ListEventResponse
  */
-export type ListEventsResponse = {
+export type ListEventResponse = {
     /**
      * Events
      */
@@ -1719,6 +1723,12 @@ export type ListEventsEventsGetData = {
          */
         event_type?: Array<string> | null;
         /**
+         * User Id
+         *
+         * Filter by user ID
+         */
+        user_id?: string | null;
+        /**
          * Start Date
          *
          * Filter events from this date (inclusive)
@@ -1747,7 +1757,7 @@ export type ListEventsEventsGetResponses = {
     /**
      * Successful Response
      */
-    200: ListEventsResponse;
+    200: ListEventResponse;
 };
 
 export type ListEventsEventsGetResponse = ListEventsEventsGetResponses[keyof ListEventsEventsGetResponses];

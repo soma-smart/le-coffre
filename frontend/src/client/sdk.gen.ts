@@ -758,6 +758,7 @@ export const listGroupsGroupsGet = <ThrowOnError extends boolean = false>(option
  * - **Authentication**: Requires authentication via access_token cookie
  * - **Authorization**: Only administrators can access audit logs
  * - **event_type**: Optional list of event types to filter by (e.g., PasswordCreatedEvent, PasswordDeletedEvent)
+ * - **user_id**: Optional user ID to filter events related to a specific user
  * - **start_date**: Optional start date to filter events (ISO 8601 format)
  * - **end_date**: Optional end date to filter events (ISO 8601 format)
  *

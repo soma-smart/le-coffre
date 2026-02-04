@@ -118,3 +118,52 @@ def test_event_logs_requires_authentication(e2e_client):
     """
     response = e2e_client.get("/api/events")
     assert response.status_code == 401
+
+
+def test_event_logs_filter_by_user_id(
+    authenticated_admin_client, setup, admin_personal_group_id, admin_user_id
+):
+    """
+    Test filtering event logs by user_id to see events related to a specific user.
+    """
+    # Step 1: Create a password as admin user
+    create_response = authenticated_admin_client.post(
+        "/api/passwords",
+        json={
+            "name": "User-specific Password",
+            "password": "SecureP@ss123",
+            "folder": "User Test",
+            "group_id": admin_personal_group_id,
+        },
+    )
+    assert create_response.status_code == 201
+    password_id = create_response.json()["id"]
+
+    # Step 2: Filter events by admin_user_id
+    filter_response = authenticated_admin_client.get(
+        f"/api/events?user_id={admin_user_id}"
+    )
+    assert filter_response.status_code == 200
+    filtered_events = filter_response.json()["events"]
+
+    # Step 3: Verify the filtered events contain the recent password creation
+    # The filtered list should include at least the password creation event
+    assert len(filtered_events) > 0
+
+    # Find the most recent event (should be PasswordCreatedEvent)
+    latest_event = filtered_events[-1]
+    assert latest_event["event_type"] == "PasswordCreatedEvent"
+
+    # Step 4: Clean up - delete the password
+    delete_response = authenticated_admin_client.delete(f"/api/passwords/{password_id}")
+    assert delete_response.status_code == 204
+
+    # Step 5: Verify filtering still works after deletion
+    filter_response_after = authenticated_admin_client.get(
+        f"/api/events?user_id={admin_user_id}"
+    )
+    assert filter_response_after.status_code == 200
+    filtered_events_after = filter_response_after.json()["events"]
+
+    # Should now include both create and delete events
+    assert len(filtered_events_after) > len(filtered_events)

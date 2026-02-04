@@ -15,3 +15,18 @@ class DomainEventTable(SQLModel, table=True):
     event_data: str = Field(
         sa_column=Column(Text), description="JSON serialized event data"
     )
+
+    # Filtering columns for efficient queries
+    bounded_context: str | None = Field(
+        default=None, description="Bounded context that produced the event"
+    )
+    actor_user_id: UUID | None = Field(
+        default=None, description="User who performed the action"
+    )
+    target_entity_id: UUID | None = Field(
+        default=None, description="Entity that was affected by the action"
+    )
+    target_entity_type: str | None = Field(
+        default=None,
+        description="Type of the target entity (password, group, user, etc.)",
+    )

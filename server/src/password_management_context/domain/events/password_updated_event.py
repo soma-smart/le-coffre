@@ -25,3 +25,19 @@ class PasswordUpdatedEvent(DomainEvent):
         self.has_name_changed = has_name_changed
         self.has_password_changed = has_password_changed
         self.has_folder_changed = has_folder_changed
+
+    @property
+    def bounded_context(self) -> str:
+        return "password_management"
+
+    @property
+    def actor_user_id(self) -> UUID:
+        return self.updated_by_user_id
+
+    @property
+    def target_entity_id(self) -> UUID:
+        return self.password_id
+
+    @property
+    def target_entity_type(self) -> str:
+        return "password"

@@ -23,3 +23,19 @@ class PasswordSharedEvent(DomainEvent):
         self.owner_group_id = owner_group_id
         self.shared_with_group_id = shared_with_group_id
         self.shared_by_user_id = shared_by_user_id
+
+    @property
+    def bounded_context(self) -> str:
+        return "password_management"
+
+    @property
+    def actor_user_id(self) -> UUID:
+        return self.shared_by_user_id
+
+    @property
+    def target_entity_id(self) -> UUID:
+        return self.password_id
+
+    @property
+    def target_entity_type(self) -> str:
+        return "password"

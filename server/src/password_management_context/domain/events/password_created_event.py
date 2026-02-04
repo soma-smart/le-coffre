@@ -25,3 +25,19 @@ class PasswordCreatedEvent(DomainEvent):
         self.owner_group_id = owner_group_id
         self.created_by_user_id = created_by_user_id
         self.folder = folder
+
+    @property
+    def bounded_context(self) -> str:
+        return "password_management"
+
+    @property
+    def actor_user_id(self) -> UUID:
+        return self.created_by_user_id
+
+    @property
+    def target_entity_id(self) -> UUID:
+        return self.password_id
+
+    @property
+    def target_entity_type(self) -> str:
+        return "password"

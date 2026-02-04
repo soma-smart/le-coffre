@@ -6,6 +6,11 @@ from audit_logging_context.application.use_cases.list_event_use_case import (
     ListEventUseCase,
 )
 from audit_logging_context.application.commands import ListEventCommand
+from password_management_context.domain.events import (
+    PasswordCreatedEvent,
+    PasswordDeletedEvent,
+    PasswordUpdatedEvent,
+)
 from shared_kernel.domain.entities import DomainEvent, AuthenticatedUser
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 
@@ -45,7 +50,10 @@ def test_given_non_empty_event_list_when_admin_lists_events_then_return_event_li
 
     response = use_case.execute(command)
 
-    assert response.events == [event1]
+    assert len(response.events) == 1
+    assert response.events[0].event_id == event1.event_id
+    assert response.events[0].event_type == event1.event_type
+    assert response.events[0].priority == event1.priority
 
 
 def test_given_non_admin_user_when_listing_events_then_raise_not_admin_error(
@@ -169,3 +177,53 @@ def test_given_events_when_filtering_by_start_date_only_then_return_events_after
 
     assert len(response.events) == 2
     assert all(event.occurred_on >= datetime(2024, 1, 16) for event in response.events)
+
+
+def test_given_events_when_filtering_by_user_id_then_return_only_matching_events(
+    use_case, event_repository, admin_user
+):
+    # Create events with different user IDs
+    user_id_1 = uuid4()
+    user_id_2 = uuid4()
+    group_id = uuid4()
+
+    event1 = PasswordCreatedEvent(
+        password_id=uuid4(),
+        password_name="Password 1",
+        owner_group_id=group_id,
+        created_by_user_id=user_id_1,
+        occurred_on=datetime.now(),
+    )
+
+    event2 = PasswordDeletedEvent(
+        password_id=uuid4(),
+        deleted_by_user_id=user_id_2,
+        owner_group_id=group_id,
+        occurred_on=datetime.now(),
+    )
+
+    event3 = PasswordUpdatedEvent(
+        password_id=uuid4(),
+        updated_by_user_id=user_id_1,
+        has_name_changed=True,
+        has_password_changed=False,
+        has_folder_changed=False,
+        occurred_on=datetime.now(),
+    )
+
+    event_repository.append_event(event1)
+    event_repository.append_event(event2)
+    event_repository.append_event(event3)
+
+    # Filter by user_id_1
+    command = ListEventCommand(
+        requesting_user=admin_user,
+        user_id=user_id_1,
+    )
+
+    response = use_case.execute(command)
+
+    assert len(response.events) == 2
+    # Verify both events have user_id_1 extracted into the DTO
+    for event_dto in response.events:
+        assert event_dto.user_id == user_id_1

@@ -1,21 +1,55 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useToast } from 'primevue';
-import { listEventsEventsGet } from '@/client/sdk.gen';
-import type { EventData } from '@/client/types.gen';
+import { listEventsEventsGet, listUsersUsersGet } from '@/client/sdk.gen';
+import type { EventData, ListUserResponse } from '@/client/types.gen';
 
 const toast = useToast();
 
 const events = ref<EventData[]>([]);
 const allEvents = ref<EventData[]>([]);
+const users = ref<ListUserResponse[]>([]);
 const loadingEvents = ref(false);
+const loadingUsers = ref(false);
 const selectedEventTypes = ref<string[]>([]);
+const selectedUserId = ref<string | undefined>(undefined);
 const dateRange = ref<Date[]>([new Date(), new Date()]);
 
 const availableEventTypes = computed(() => {
   const uniqueTypes = new Set(allEvents.value.map(event => event.event_type));
   return Array.from(uniqueTypes).sort();
 });
+
+const userOptions = computed(() => {
+  return users.value.map(user => ({
+    label: `${user.username} (${user.email})`,
+    value: user.id
+  }));
+});
+
+const getUserDisplay = (userId: string | null | undefined): string => {
+  if (!userId) return 'N/A';
+  const user = users.value.find(u => u.id === userId);
+  return user ? user.username : userId.substring(0, 8) + '...';
+};
+
+const fetchUsers = async () => {
+  loadingUsers.value = true;
+  try {
+    const response = await listUsersUsersGet();
+    users.value = response.data ?? [];
+  } catch (error) {
+    console.error('Failed to fetch users:', error);
+    toast.add({
+      severity: 'error',
+      summary: 'Load Failed',
+      detail: 'Failed to load users.',
+      life: 5000
+    });
+  } finally {
+    loadingUsers.value = false;
+  }
+};
 
 const fetchEvents = async () => {
   loadingEvents.value = true;
@@ -42,6 +76,7 @@ const fetchEvents = async () => {
     const response = await listEventsEventsGet({
       query: {
         event_type: selectedEventTypes.value.length > 0 ? selectedEventTypes.value : undefined,
+        user_id: selectedUserId.value,
         start_date: startOfDay.toISOString(),
         end_date: endOfDay.toISOString()
       }
@@ -109,6 +144,7 @@ const getPriorityOrder = (priority: string) => {
 };
 
 onMounted(() => {
+  fetchUsers();
   fetchEvents();
 });
 </script>
@@ -129,16 +165,24 @@ onMounted(() => {
         View all system events and audit trails.
       </p>
 
-      <div class="mb-4 flex flex-col gap-4 md:flex-row md:items-end">
-        <div class="flex-1">
-          <label for="date-range-filter" class="block mb-2 font-medium">Date Range</label>
-          <DatePicker id="date-range-filter" v-model="dateRange" selectionMode="range" dateFormat="yy-mm-dd" showIcon
-            iconDisplay="button" :manualInput="false" showButtonBar fluid @update:modelValue="fetchEvents" />
+      <div class="mb-4 flex flex-col gap-4">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end">
+          <div class="flex-1">
+            <label for="date-range-filter" class="block mb-2 font-medium">Date Range</label>
+            <DatePicker id="date-range-filter" v-model="dateRange" selectionMode="range" dateFormat="yy-mm-dd" showIcon
+              iconDisplay="button" :manualInput="false" showButtonBar fluid @update:modelValue="fetchEvents" />
+          </div>
+          <div class="flex-1">
+            <label for="event-type-filter" class="block mb-2 font-medium">Filter by Event Type</label>
+            <MultiSelect id="event-type-filter" v-model="selectedEventTypes" :options="availableEventTypes"
+              placeholder="All Event Types" :maxSelectedLabels="2" class="w-full" @change="fetchEvents" />
+          </div>
         </div>
-        <div class="flex-1">
-          <label for="event-type-filter" class="block mb-2 font-medium">Filter by Event Type</label>
-          <MultiSelect id="event-type-filter" v-model="selectedEventTypes" :options="availableEventTypes"
-            placeholder="All Event Types" :maxSelectedLabels="2" class="w-full" @change="fetchEvents" />
+        <div>
+          <label for="user-filter" class="block mb-2 font-medium">Filter by User</label>
+          <Select id="user-filter" v-model="selectedUserId" :options="userOptions" optionLabel="label"
+            optionValue="value" placeholder="All Users" :loading="loadingUsers" showClear class="w-full"
+            @change="fetchEvents" />
         </div>
       </div>
 
@@ -163,6 +207,12 @@ onMounted(() => {
         <Column field="event_type" header="Event Type" sortable>
           <template #body="slotProps">
             <span class="font-mono text-sm">{{ slotProps.data.event_type }}</span>
+          </template>
+        </Column>
+
+        <Column field="user_id" header="User" sortable>
+          <template #body="slotProps">
+            <span class="text-sm">{{ getUserDisplay(slotProps.data.user_id) }}</span>
           </template>
         </Column>
 

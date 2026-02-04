@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 import json
 
-from audit_logging_context.application.gateways import EventRepository
+from audit_logging_context.application.gateways import EventRepository, StoredEvent
 from audit_logging_context.adapters.secondary.sql.model.domain_event_model import (
     DomainEventTable,
 )
@@ -11,8 +11,8 @@ from shared_kernel.domain.entities import DomainEvent
 from shared_kernel.domain.value_objects import EventPriority
 
 
-class StoredDomainEvent(DomainEvent):
-    """Wrapper for domain events retrieved from storage"""
+class StoredDomainEvent:
+    """Implementation of StoredEvent for SQL-persisted domain events"""
 
     def __init__(
         self,
@@ -21,10 +21,20 @@ class StoredDomainEvent(DomainEvent):
         occurred_on: datetime,
         priority: EventPriority,
         event_data: dict,
+        bounded_context: str | None = None,
+        actor_user_id: UUID | None = None,
+        target_entity_id: UUID | None = None,
+        target_entity_type: str | None = None,
     ):
-        super().__init__(event_id=event_id, occurred_on=occurred_on, priority=priority)
+        self.event_id = event_id
         self.event_type = event_type
+        self.occurred_on = occurred_on
+        self.priority = priority
         self.event_data = event_data
+        self.bounded_context = bounded_context
+        self.actor_user_id = actor_user_id
+        self.target_entity_id = target_entity_id
+        self.target_entity_type = target_entity_type
 
 
 class SqlEventRepository(EventRepository):
@@ -41,12 +51,22 @@ class SqlEventRepository(EventRepository):
             for key, value in event.__dict__.items()
         }
 
+        # Extract audit metadata if event supports it
+        bounded_context = getattr(event, "bounded_context", None)
+        actor_user_id = getattr(event, "actor_user_id", None)
+        target_entity_id = getattr(event, "target_entity_id", None)
+        target_entity_type = getattr(event, "target_entity_type", None)
+
         db_event = DomainEventTable(
             event_id=event.event_id,
             event_type=event.event_type,
             occurred_on=event.occurred_on,
             priority=event.priority.value,
             event_data=json.dumps(event_dict),
+            bounded_context=bounded_context,
+            actor_user_id=actor_user_id,
+            target_entity_id=target_entity_id,
+            target_entity_type=target_entity_type,
         )
         self._session.add(db_event)
         self._session.commit()
@@ -55,10 +75,11 @@ class SqlEventRepository(EventRepository):
     def list_events(
         self,
         event_types: list[str] | None = None,
+        user_id: UUID | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
-    ) -> list[DomainEvent]:
-        """Retrieve all stored domain events, optionally filtered by event types and date range"""
+    ) -> list[StoredEvent]:
+        """Retrieve all stored domain events, optionally filtered by event types, user, and date range"""
         statement = select(DomainEventTable).order_by(col(DomainEventTable.occurred_on))
 
         # Apply event_type filter if provided
@@ -66,6 +87,10 @@ class SqlEventRepository(EventRepository):
             statement = statement.where(
                 col(DomainEventTable.event_type).in_(event_types)
             )
+
+        # Apply user_id filter if provided - use indexed column for performance
+        if user_id:
+            statement = statement.where(col(DomainEventTable.actor_user_id) == user_id)
 
         # Apply date range filters if provided
         if start_date:
@@ -84,6 +109,10 @@ class SqlEventRepository(EventRepository):
                 occurred_on=db_event.occurred_on,
                 priority=EventPriority(db_event.priority),
                 event_data=event_data,
+                bounded_context=db_event.bounded_context,
+                actor_user_id=db_event.actor_user_id,
+                target_entity_id=db_event.target_entity_id,
+                target_entity_type=db_event.target_entity_type,
             )
             events.append(stored_event)
 

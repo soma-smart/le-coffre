@@ -390,6 +390,16 @@ def admin_personal_group_id(authenticated_admin_client):
 
 
 @pytest.fixture
+def admin_user_id(authenticated_admin_client):
+    """
+    Returns the user ID of the authenticated admin user.
+    """
+    response = authenticated_admin_client.get("/api/users/me")
+    assert response.status_code == 200
+    return response.json()["id"]
+
+
+@pytest.fixture
 def sso_user_personal_group_id(authenticated_sso_user_client):
     """
     Returns the personal group ID of the authenticated SSO user.
