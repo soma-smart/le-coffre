@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { ref, watch, computed, nextTick } from 'vue';
 
-defineOptions({
-  inheritAttrs: false
-});
-
 const visible = defineModel<boolean>('visible', { required: true });
 
-const props = withDefaults(defineProps<{
+const props = defineProps<{
   title: string;
   question: string;
   description: string;
@@ -18,48 +14,22 @@ const props = withDefaults(defineProps<{
   countdownSeconds?: number;
   warningMessage?: string;
   canProceed?: boolean;
-}>(), {
-  canProceed: undefined
-});
+}>();
 
 const emit = defineEmits<{
   (e: 'confirm'): void;
   (e: 'cancel'): void;
 }>();
 
-const countdown = ref(0);
+const countdown = ref(props.countdownSeconds || 0);
 const isProcessing = ref(false);
 const countdownTimer = ref<number | null>(null);
 
-// Debug: Log initial canProceed value and create unique ID for this instance
-const instanceId = Math.random().toString(36).substring(7);
-console.log(`ConfirmationModal [${instanceId}] created with:`, {
-  title: props.title,
-  canProceed: props.canProceed,
-  type: typeof props.canProceed,
-  countdownSeconds: props.countdownSeconds
-});
-
 const canConfirm = computed(() => {
-  // Enable when countdown reaches 0
-  const countdownDone = countdown.value === 0;
-  
-  // Only block if canProceed is explicitly false AND we're not just doing a countdown
-  // If canProceed is undefined or true, rely on countdown
-  const canProceedCheck = props.canProceed === undefined || props.canProceed === true;
-  
-  const result = countdownDone && canProceedCheck;
-  
-  console.log('canConfirm computed:', {
-    canProceed: props.canProceed,
-    canProceedType: typeof props.canProceed,
-    canProceedIsUndefined: props.canProceed === undefined,
-    countdown: countdown.value,
-    countdownDone,
-    canProceedCheck,
-    result
-  });
-  return result;
+  if (props.canProceed === false) {
+    return false;
+  }
+  return countdown.value === 0;
 });
 
 // Compute button label based on countdown
@@ -105,18 +75,15 @@ const iconColor = computed(() => {
 
 // Start countdown when modal opens
 watch(visible, async (newVisible) => {
-  console.log('ConfirmationModal visible changed:', newVisible, 'countdownSeconds:', props.countdownSeconds);
   if (newVisible) {
     // Reset countdown when modal opens
     countdown.value = props.countdownSeconds || 0;
     isProcessing.value = false; // Reset processing state
-    console.log('Set countdown to:', countdown.value);
 
     // Use nextTick to ensure reactivity is complete
     await nextTick();
 
     if (countdown.value > 0) {
-      console.log('Starting countdown...');
       startCountdown();
     }
   } else {
@@ -128,11 +95,9 @@ watch(visible, async (newVisible) => {
 const startCountdown = () => {
   stopCountdown(); // Clear any existing timer
   countdownTimer.value = window.setInterval(() => {
-    console.log('Countdown tick:', countdown.value);
     if (countdown.value > 0) {
       countdown.value--;
     } else {
-      console.log('Countdown finished, stopping timer');
       stopCountdown();
     }
   }, 1000);

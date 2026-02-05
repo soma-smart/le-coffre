@@ -122,10 +122,8 @@ const handlePromoteConfirmed = async () => {
 
 // Delete user
 const showDeleteModal = (user: ListUserResponse) => {
-  console.log('showDeleteModal called for user:', user.username);
   userToDelete.value = user;
   showDeleteUserModal.value = true;
-  console.log('showDeleteUserModal set to:', showDeleteUserModal.value);
 };
 
 const handleDeleteConfirmed = async () => {
@@ -178,7 +176,6 @@ const handleDeleteConfirmed = async () => {
 
 // Check if user is already an admin
 const isAdmin = (user: ListUserResponse) => {
-  console.log(user.roles);
   return user.roles?.includes('admin') || false;
 };
 
