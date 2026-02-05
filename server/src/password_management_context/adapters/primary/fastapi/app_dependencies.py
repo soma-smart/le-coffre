@@ -14,6 +14,10 @@ from password_management_context.application.gateways import (
     PasswordRepository,
     GroupAccessGateway,
     PasswordEncryptionGateway,
+    PasswordEventRepository,
+)
+from password_management_context.application.services import (
+    PasswordEventStorageService,
 )
 from password_management_context.application.use_cases import (
     GetPasswordUseCase,
@@ -31,12 +35,15 @@ from password_management_context.application.gateways.password_permissions_repos
 from password_management_context.adapters.secondary import (
     SqlPasswordRepository,
     SqlPasswordPermissionsRepository,
+    SqlPasswordEventRepository,
 )
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.adapters.primary.dependencies import get_session
 
 
-def get_password_repository(session: Session = Depends(get_session)) -> PasswordRepository:
+def get_password_repository(
+    session: Session = Depends(get_session),
+) -> PasswordRepository:
     return SqlPasswordRepository(session)
 
 
@@ -50,7 +57,23 @@ def get_password_permissions_repository(
     return SqlPasswordPermissionsRepository(session)
 
 
-def get_group_access_gateway(session: Session = Depends(get_session)) -> GroupAccessGateway:
+def get_password_event_repository(
+    session: Session = Depends(get_session),
+) -> PasswordEventRepository:
+    return SqlPasswordEventRepository(session)
+
+
+def get_password_event_storage_service(
+    password_event_repository: PasswordEventRepository = Depends(
+        get_password_event_repository
+    ),
+) -> PasswordEventStorageService:
+    return PasswordEventStorageService(password_event_repository)
+
+
+def get_group_access_gateway(
+    session: Session = Depends(get_session),
+) -> GroupAccessGateway:
     group_repository = SqlGroupRepository(session)
     group_member_repository = SqlGroupMemberRepository(session)
     return GroupAccessGatewayAdapter(group_repository, group_member_repository)
@@ -70,6 +93,9 @@ def get_create_password_usecase(
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    event_storage_service: PasswordEventStorageService = Depends(
+        get_password_event_storage_service
+    ),
 ):
     return CreatePasswordUseCase(
         password_repository,
@@ -77,6 +103,7 @@ def get_create_password_usecase(
         password_permissions_repository,
         group_access_gateway,
         event_publisher,
+        event_storage_service,
     )
 
 

@@ -9,12 +9,6 @@ from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
 
-from audit_logging_context.adapters.primary.all_events_subscriber import (
-    AllEventsSubscriber,
-)
-from audit_logging_context.adapters.primary.fastapi.routes import (
-    get_audit_logging_router,
-)
 from config import (
     get_database_url,
     get_jwt_secret_key,
@@ -131,9 +125,6 @@ async def lifespan(app: FastAPI):
     domain_event_publisher = InMemoryDomainEventPublisher()
     app.state.domain_event_publisher = domain_event_publisher
 
-    # Subscribe to all events with AllEventsSubscriber that creates its own session
-    domain_event_publisher.subscribe_all(AllEventsSubscriber(SessionLocal))
-
     yield
 
 
@@ -141,11 +132,13 @@ async def lifespan(app: FastAPI):
 # root_path="/api" ensures OpenAPI docs are served at /api/openapi.json
 app = FastAPI(lifespan=lifespan, root_path="/api")
 
+
 # Health check endpoint for Kubernetes
 # Note: With root_path="/api", this will be accessible at /api/health
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
 
 # Include API routers without additional prefix
 # root_path="/api" already makes all routes accessible under /api
@@ -154,13 +147,14 @@ app.include_router(get_password_management_router())
 app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
-app.include_router(get_audit_logging_router())
 
 # Mount static files for frontend if they exist
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
     # Serve static files
-    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+    root_app.mount(
+        "/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets"
+    )
 
     # Catch-all route for SPA (must be last)
     @app.get("/{full_path:path}")

@@ -6,6 +6,7 @@ from ..fakes import (
     FakePasswordEncryptionGateway,
     FakeGroupAccessGateway,
     FakePasswordPermissionsRepository,
+    FakePasswordEventRepository,
 )
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.use_cases import CreatePasswordUseCase
@@ -14,7 +15,6 @@ from password_management_context.domain.exceptions import (
     GroupNotFoundError,
     UserNotOwnerOfGroupError,
 )
-from password_management_context.domain.events import PasswordCreatedEvent
 from tests.shared_kernel.fakes import FakeEventPublisher
 
 
@@ -28,6 +28,7 @@ def use_case(
     password_permissions_repository: FakePasswordPermissionsRepository,
     group_access_gateway: FakeGroupAccessGateway,
     domain_event_publisher: FakeEventPublisher,
+    password_event_storage_service,
 ):
     return CreatePasswordUseCase(
         password_repository,
@@ -35,6 +36,7 @@ def use_case(
         password_permissions_repository,
         group_access_gateway,
         domain_event_publisher,
+        password_event_storage_service,
     )
 
 
@@ -257,10 +259,10 @@ def test_given_valid_user_when_creating_password_should_set_permissions_for_user
     assert password_permissions_repository.is_owner(group_id, uuid)
 
 
-def test_given_valid_password_when_creating_password_should_publish_password_created_event(
+def test_given_valid_password_when_creating_password_should_store_password_created_event(
     use_case: CreatePasswordUseCase,
     group_access_gateway: FakeGroupAccessGateway,
-    domain_event_publisher: FakeEventPublisher,
+    password_event_repository: FakePasswordEventRepository,
 ):
     uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -282,12 +284,10 @@ def test_given_valid_password_when_creating_password_should_publish_password_cre
 
     use_case.execute(command)
 
-    # Assert event was published
-    assert len(domain_event_publisher.published_events) == 1
-    published_event = domain_event_publisher.published_events[0]
-    assert isinstance(published_event, PasswordCreatedEvent)
-    assert published_event.password_id == uuid
-    assert published_event.password_name == name
-    assert published_event.owner_group_id == group_id
-    assert published_event.created_by_user_id == user_id
-    assert published_event.folder == folder
+    # Assert event was stored
+    assert len(password_event_repository.events) == 1
+    stored_event = password_event_repository.events[0]
+    assert stored_event["event_type"] == "PasswordCreatedEvent"
+    assert stored_event["password_id"] == uuid
+    assert stored_event["actor_user_id"] == user_id
+    assert str(group_id) in str(stored_event["event_data"]["owner_group_id"])

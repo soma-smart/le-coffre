@@ -1,25 +1,25 @@
+from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
-from shared_kernel.domain.entities import DomainEvent
-from shared_kernel.domain.value_objects import EventPriority
 
 
-class PasswordUnsharedEvent(DomainEvent):
-    def __init__(
-        self,
-        password_id: UUID,
-        owner_group_id: UUID,
-        unshared_with_group_id: UUID,
-        unshared_by_user_id: UUID,
-        event_id: UUID | None = None,
-        occurred_on: datetime | None = None,
-    ):
-        super().__init__(
-            event_id=event_id or uuid4(),
-            occurred_on=occurred_on or datetime.now(),
-            priority=EventPriority.HIGH,
-        )
-        self.password_id = password_id
-        self.owner_group_id = owner_group_id
-        self.unshared_with_group_id = unshared_with_group_id
-        self.unshared_by_user_id = unshared_by_user_id
+@dataclass
+class PasswordUnsharedEvent:
+    """Local audit event for password unsharing"""
+
+    password_id: UUID
+    owner_group_id: UUID
+    unshared_with_group_id: UUID
+    unshared_by_user_id: UUID
+    event_id: UUID = field(default_factory=uuid4)
+    occurred_on: datetime = field(default_factory=datetime.now)
+
+    def get_actor_user_id(self) -> UUID:
+        return self.unshared_by_user_id
+
+    def to_event_data(self) -> dict:
+        return {
+            "password_id": str(self.password_id),
+            "owner_group_id": str(self.owner_group_id),
+            "unshared_with_group_id": str(self.unshared_with_group_id),
+        }

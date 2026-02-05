@@ -19,9 +19,9 @@ from password_management_context.adapters.secondary.sql import (
     PermissionsTable,
     OwnershipTable,
     PasswordTable,
+    PasswordEventTable,
 )
 from vault_management_context.adapters.secondary.sql import VaultTable
-from audit_logging_context.adapters.secondary.sql import DomainEventTable
 
 
 from config import get_database_url
@@ -37,8 +37,8 @@ _ = (
     PermissionsTable,
     OwnershipTable,
     PasswordTable,
+    PasswordEventTable,
     VaultTable,
-    DomainEventTable,
 )
 
 # this is the Alembic Config object, which provides

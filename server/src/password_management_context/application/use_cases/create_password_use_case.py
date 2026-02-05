@@ -7,6 +7,9 @@ from password_management_context.application.gateways import (
     GroupAccessGateway,
     PasswordEncryptionGateway,
 )
+from password_management_context.application.services import (
+    PasswordEventStorageService,
+)
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import (
     GroupNotFoundError,
@@ -26,12 +29,14 @@ class CreatePasswordUseCase:
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
         event_publisher: DomainEventPublisher,
+        event_storage_service: PasswordEventStorageService,
     ):
         self.password_repository = password_repository
         self.password_encryption_gateway = password_encryption_gateway
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
         self.event_publisher = event_publisher
+        self.event_storage_service = event_storage_service
 
     def execute(self, command: CreatePasswordCommand) -> UUID:
         if not self.group_access_gateway.group_exists(command.group_id):
@@ -56,7 +61,7 @@ class CreatePasswordUseCase:
         self.password_repository.save(password)
         self.password_permissions_repository.set_owner(command.group_id, password.id)
 
-        # Publish domain event
+        # Store event in password context (distributed architecture)
         event = PasswordCreatedEvent(
             password_id=password.id,
             password_name=password.name,
@@ -64,6 +69,6 @@ class CreatePasswordUseCase:
             created_by_user_id=command.user_id,
             folder=password.folder,
         )
-        self.event_publisher.publish(event)
+        self.event_storage_service.store_event(event)
 
         return password.id
