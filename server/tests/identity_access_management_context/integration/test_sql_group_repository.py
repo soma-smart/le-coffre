@@ -1,52 +1,5 @@
-import pytest
-import tempfile
-import os
-from pathlib import Path
 from uuid import uuid4
-from sqlmodel import create_engine, Session
-from alembic.config import Config
-from alembic import command
-
-from identity_access_management_context.adapters.secondary.sql.sql_group_repository import (
-    SqlGroupRepository,
-)
 from identity_access_management_context.domain.entities import PersonalGroup, Group
-
-
-@pytest.fixture(scope="function")
-def engine():
-    """Create a temporary database engine for testing"""
-    db_fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(db_fd)
-
-    try:
-        database_url = f"sqlite:///{db_path}"
-        engine = create_engine(database_url, connect_args={"check_same_thread": False})
-
-        # Run migrations instead of create_all()
-        alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
-        alembic_cfg = Config(str(alembic_ini_path))
-        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-        command.upgrade(alembic_cfg, "head")
-
-        yield engine
-    finally:
-        try:
-            os.unlink(db_path)
-        except OSError:
-            pass
-
-
-@pytest.fixture(scope="function")
-def session(engine):
-    """Create a new database session for a test"""
-    with Session(engine) as session:
-        yield session
-
-
-@pytest.fixture
-def sql_group_repository(session):
-    return SqlGroupRepository(session)
 
 
 def test_given_personal_group_when_saving_then_group_is_stored(sql_group_repository):

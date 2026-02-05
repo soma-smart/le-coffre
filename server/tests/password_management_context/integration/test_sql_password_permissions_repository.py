@@ -220,3 +220,85 @@ def test_list_all_permissions_for_multiple_users(sql_password_permissions_reposi
     assert result[owner_id][0] is True
     assert PasswordPermission.READ in result[user1_id][1]
     assert PasswordPermission.READ in result[user2_id][1]
+
+
+# Method: revoke_all_access_for_owner_group
+def test_should_revoke_all_access_when_revoking_for_owner_group(
+    sql_password_permissions_repository,
+):
+    # Given
+    owner_group_id = uuid4()
+    other_group_id = uuid4()
+    password1_id = uuid4()
+    password2_id = uuid4()
+    password3_id = uuid4()
+
+    # Set owner and grant permissions for multiple passwords
+    sql_password_permissions_repository.set_owner(owner_group_id, password1_id)
+    sql_password_permissions_repository.set_owner(owner_group_id, password2_id)
+    sql_password_permissions_repository.set_owner(owner_group_id, password3_id)
+
+    sql_password_permissions_repository.grant_access(
+        other_group_id, password1_id, PasswordPermission.READ
+    )
+    sql_password_permissions_repository.grant_access(
+        other_group_id, password2_id, PasswordPermission.READ
+    )
+
+    # When
+    sql_password_permissions_repository.revoke_all_access_for_owner_group(
+        owner_group_id
+    )
+
+    # Then - all ownerships and permissions for these passwords should be revoked
+    assert not sql_password_permissions_repository.is_owner(
+        owner_group_id, password1_id
+    )
+    assert not sql_password_permissions_repository.is_owner(
+        owner_group_id, password2_id
+    )
+    assert not sql_password_permissions_repository.is_owner(
+        owner_group_id, password3_id
+    )
+    assert not sql_password_permissions_repository.has_access(
+        other_group_id, password1_id, PasswordPermission.READ
+    )
+    assert not sql_password_permissions_repository.has_access(
+        other_group_id, password2_id, PasswordPermission.READ
+    )
+
+
+def test_should_not_affect_other_passwords_when_revoking_for_owner_group(
+    sql_password_permissions_repository,
+):
+    # Given
+    group1_id = uuid4()
+    group2_id = uuid4()
+    password1_id = uuid4()
+    password2_id = uuid4()
+
+    sql_password_permissions_repository.set_owner(group1_id, password1_id)
+    sql_password_permissions_repository.set_owner(group2_id, password2_id)
+    sql_password_permissions_repository.grant_access(
+        group2_id, password1_id, PasswordPermission.READ
+    )
+
+    # When
+    sql_password_permissions_repository.revoke_all_access_for_owner_group(group1_id)
+
+    # Then - password2 owned by group2 should remain intact
+    assert sql_password_permissions_repository.is_owner(group2_id, password2_id)
+    assert not sql_password_permissions_repository.is_owner(group1_id, password1_id)
+    assert not sql_password_permissions_repository.has_access(
+        group2_id, password1_id, PasswordPermission.READ
+    )
+
+
+def test_should_do_nothing_when_revoking_for_owner_group_with_no_passwords(
+    sql_password_permissions_repository,
+):
+    # Given
+    group_id = uuid4()
+
+    # When / Then - should not raise any exception
+    sql_password_permissions_repository.revoke_all_access_for_owner_group(group_id)

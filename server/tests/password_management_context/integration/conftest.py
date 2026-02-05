@@ -1,13 +1,11 @@
 import pytest
 import os
 import tempfile
-from pathlib import Path
-from sqlmodel import create_engine, Session
-from alembic.config import Config
-from alembic import command
+from sqlmodel import create_engine, Session, SQLModel
 
 from password_management_context.adapters.secondary.sql import (
     SqlPasswordRepository,
+    SqlPasswordPermissionsRepository,
 )
 
 
@@ -21,11 +19,8 @@ def database_engine():
         database_url = f"sqlite:///{db_path}"
         engine = create_engine(database_url, connect_args={"check_same_thread": False})
 
-        # Run migrations instead of create_tables
-        alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
-        alembic_cfg = Config(str(alembic_ini_path))
-        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-        command.upgrade(alembic_cfg, "head")
+        # Create all tables
+        SQLModel.metadata.create_all(engine)
 
         yield engine
     finally:
@@ -44,3 +39,8 @@ def session(database_engine):
 @pytest.fixture
 def sql_password_repository(session):
     return SqlPasswordRepository(session)
+
+
+@pytest.fixture
+def sql_password_permissions_repository(session):
+    return SqlPasswordPermissionsRepository(session)

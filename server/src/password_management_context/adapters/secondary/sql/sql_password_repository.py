@@ -45,6 +45,31 @@ class SqlPasswordRepository(SQLBaseRepository, PasswordRepository):
             self._session.delete(db_obj)
             self.commit()
 
+    def delete_by_owner_group(self, group_id: UUID) -> None:
+        """Delete all passwords owned by a specific group in one SQL operation"""
+        from password_management_context.adapters.secondary.sql import OwnershipTable
+
+        # First, get all password IDs owned by this group
+        ownership_statement = select(OwnershipTable.resource_id).where(
+            OwnershipTable.group_id == group_id
+        )
+        password_ids = list(self._session.exec(ownership_statement).all())
+
+        if not password_ids:
+            return
+
+        # Delete all passwords in one query
+        delete_statement = select(PasswordTable).where(
+            PasswordTable.id.in_(password_ids)
+        )
+        passwords_to_delete = self._session.exec(delete_statement).all()
+
+        for password in passwords_to_delete:
+            self._session.delete(password)
+
+        if passwords_to_delete:
+            self._session.commit()
+
     def update(self, password: Password) -> None:
         """Update password"""
         statement = select(PasswordTable).where(PasswordTable.id == password.id)

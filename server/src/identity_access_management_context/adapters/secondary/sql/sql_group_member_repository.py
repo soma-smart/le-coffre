@@ -99,3 +99,9 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         for member in members:
             self._session.delete(member)
         self.commit()
+
+    def remove_user_from_all_groups(self, user_id: UUID) -> None:
+        """Remove a user from all groups they are a member of."""
+        statement = delete(GroupMemberTable).where(GroupMemberTable.user_id == user_id)
+        self._session.exec(statement)
+        self.commit()

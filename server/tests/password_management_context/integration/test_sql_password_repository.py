@@ -124,3 +124,86 @@ def test_should_raise_error_when_getting_nonexistent_password(sql_password_repos
     non_existent_id = uuid4()
     with pytest.raises(PasswordNotFoundError):
         sql_password_repository.get_by_id(non_existent_id)
+
+
+# Method: delete_by_owner_group
+def test_should_delete_all_passwords_when_deleting_by_owner_group(
+    sql_password_repository, sql_password_permissions_repository
+):
+    # Given
+    group_id = uuid4()
+    password1_id = uuid4()
+    password2_id = uuid4()
+    password3_id = uuid4()
+
+    # Create passwords
+    password1 = Password(
+        id=password1_id, name="Pwd1", encrypted_value="enc1", folder="default"
+    )
+    password2 = Password(
+        id=password2_id, name="Pwd2", encrypted_value="enc2", folder="default"
+    )
+    password3 = Password(
+        id=password3_id, name="Pwd3", encrypted_value="enc3", folder="default"
+    )
+    sql_password_repository.save(password1)
+    sql_password_repository.save(password2)
+    sql_password_repository.save(password3)
+
+    # Set group as owner
+    sql_password_permissions_repository.set_owner(group_id, password1_id)
+    sql_password_permissions_repository.set_owner(group_id, password2_id)
+    sql_password_permissions_repository.set_owner(group_id, password3_id)
+
+    # When
+    sql_password_repository.delete_by_owner_group(group_id)
+
+    # Then
+    with pytest.raises(PasswordNotFoundError):
+        sql_password_repository.get_by_id(password1_id)
+    with pytest.raises(PasswordNotFoundError):
+        sql_password_repository.get_by_id(password2_id)
+    with pytest.raises(PasswordNotFoundError):
+        sql_password_repository.get_by_id(password3_id)
+
+
+def test_should_not_delete_passwords_owned_by_other_groups_when_deleting_by_owner_group(
+    sql_password_repository, sql_password_permissions_repository
+):
+    # Given
+    group1_id = uuid4()
+    group2_id = uuid4()
+    password1_id = uuid4()
+    password2_id = uuid4()
+
+    password1 = Password(
+        id=password1_id, name="Pwd1", encrypted_value="enc1", folder="default"
+    )
+    password2 = Password(
+        id=password2_id, name="Pwd2", encrypted_value="enc2", folder="default"
+    )
+    sql_password_repository.save(password1)
+    sql_password_repository.save(password2)
+
+    sql_password_permissions_repository.set_owner(group1_id, password1_id)
+    sql_password_permissions_repository.set_owner(group2_id, password2_id)
+
+    # When
+    sql_password_repository.delete_by_owner_group(group1_id)
+
+    # Then
+    with pytest.raises(PasswordNotFoundError):
+        sql_password_repository.get_by_id(password1_id)
+    # password2 should still exist
+    retrieved = sql_password_repository.get_by_id(password2_id)
+    assert retrieved.id == password2_id
+
+
+def test_should_do_nothing_when_deleting_by_owner_group_with_no_passwords(
+    sql_password_repository,
+):
+    # Given
+    group_id = uuid4()
+
+    # When / Then - should not raise any exception
+    sql_password_repository.delete_by_owner_group(group_id)
