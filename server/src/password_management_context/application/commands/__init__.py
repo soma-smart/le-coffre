@@ -2,6 +2,9 @@ from .create_password_command import CreatePasswordCommand
 from .update_password_command import UpdatePasswordCommand
 from .get_password_command import GetPasswordCommand
 from .delete_password_command import DeletePasswordCommand
+from .delete_passwords_for_deleted_user_command import (
+    DeletePasswordsForDeletedUserCommand,
+)
 from .list_passwords_command import ListPasswordsCommand
 from .list_password_events_command import ListPasswordEventsCommand
 from .share_resource_command import ShareResourceCommand
@@ -15,6 +18,7 @@ __all__ = [
     "UpdatePasswordCommand",
     "GetPasswordCommand",
     "DeletePasswordCommand",
+    "DeletePasswordsForDeletedUserCommand",
     "ListPasswordsCommand",
     "ListPasswordEventsCommand",
     "ShareResourceCommand",

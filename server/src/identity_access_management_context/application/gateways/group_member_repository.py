@@ -32,3 +32,7 @@ class GroupMemberRepository(Protocol):
     def delete_by_group_id(self, group_id: UUID) -> None:
         """Delete all members of a group."""
         ...
+
+    def remove_user_from_all_groups(self, user_id: UUID) -> None:
+        """Remove a user from all groups they belong to."""
+        ...

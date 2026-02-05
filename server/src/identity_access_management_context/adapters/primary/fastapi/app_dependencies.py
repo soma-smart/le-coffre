@@ -141,9 +141,18 @@ def get_get_user_usecase(
 
 def get_delete_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
-    return DeleteUserUseCase(user_repository, event_publisher)
+    return DeleteUserUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+        event_publisher,
+    )
 
 
 def get_promote_admin_usecase(

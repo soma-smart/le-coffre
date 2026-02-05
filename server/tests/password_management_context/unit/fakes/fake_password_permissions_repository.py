@@ -84,3 +84,16 @@ class FakePasswordPermissionsRepository:
         for grp_id, pwd_id in list(self._ownerships.keys()):
             if pwd_id == password_id:
                 del self._ownerships[(grp_id, pwd_id)]
+
+    def revoke_all_access_for_owner_group(self, group_id: UUID) -> None:
+        """Revoke all access (permissions and ownerships) for all passwords owned by a group"""
+        # Find all passwords owned by this group
+        password_ids_owned = [
+            pwd_id
+            for owner_id, pwd_id in self._ownerships.keys()
+            if owner_id == group_id
+        ]
+
+        # Revoke all access for each password owned by this group
+        for password_id in password_ids_owned:
+            self.revoke_all_access_for_password(password_id)

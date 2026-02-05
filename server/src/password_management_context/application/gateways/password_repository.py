@@ -21,6 +21,10 @@ class PasswordRepository(Protocol):
         """Delete password by UUID"""
         ...
 
+    def delete_by_owner_group(self, group_id: UUID) -> None:
+        """Delete all passwords owned by a specific group"""
+        ...
+
     def update(self, password: Password) -> None:
         """Update password"""
         ...

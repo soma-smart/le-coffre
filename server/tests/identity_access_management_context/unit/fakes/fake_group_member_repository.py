@@ -43,5 +43,13 @@ class FakeGroupMemberRepository:
             if member.group_id != group_id
         }
 
+    def remove_user_from_all_groups(self, user_id: UUID) -> None:
+        """Remove a user from all groups they belong to."""
+        self._members = {
+            key: member
+            for key, member in self._members.items()
+            if member.user_id != user_id
+        }
+
     def clear(self) -> None:
         self._members.clear()
