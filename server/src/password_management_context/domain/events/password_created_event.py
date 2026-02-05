@@ -1,11 +1,21 @@
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import TypedDict
 from uuid import UUID, uuid4
+
+
+class PasswordCreatedEventData(TypedDict):
+    """Typed structure for PasswordCreatedEvent storage data"""
+
+    password_id: str
+    password_name: str
+    owner_group_id: str
+    folder: str
 
 
 @dataclass
 class PasswordCreatedEvent:
-    """Local audit event for password creation"""
+    """Domain event for password creation"""
 
     password_id: UUID
     password_name: str
@@ -18,7 +28,7 @@ class PasswordCreatedEvent:
     def get_actor_user_id(self) -> UUID:
         return self.created_by_user_id
 
-    def to_event_data(self) -> dict:
+    def to_event_data(self) -> PasswordCreatedEventData:
         return {
             "password_id": str(self.password_id),
             "password_name": self.password_name,
