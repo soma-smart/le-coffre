@@ -1,5 +1,5 @@
 import pytest
-from uuid import uuid4
+from uuid import UUID, uuid4
 from identity_access_management_context.domain.entities import UserPassword
 
 
@@ -44,3 +44,26 @@ def test_get_nonexistent_user_password_by_id(sql_user_password_repository):
     non_existent_id = uuid4()
     result = sql_user_password_repository.get_by_id(non_existent_id)
     assert result is None
+
+
+def test_update_user(sql_user_password_repository):
+    user_password = UserPassword(
+        UUID("12345678-1234-5678-1234-567812345678"),
+        "toto@toto.com",
+        b"hashedpassword123",
+        "Toto",
+    )
+    sql_user_password_repository.save(user_password)
+
+    # Update the user password
+    user_password.email = "updated@toto.com"
+    user_password.password_hash = b"newhashedpassword123"
+    user_password.display_name = "Updated Toto"
+    sql_user_password_repository.update(user_password)
+
+    # Retrieve the updated user password
+    updated_user_password = sql_user_password_repository.get_by_id(user_password.id)
+    assert updated_user_password is not None
+    assert updated_user_password.email == "updated@toto.com"
+    assert updated_user_password.password_hash == b"newhashedpassword123"
+    assert updated_user_password.display_name == "Updated Toto"

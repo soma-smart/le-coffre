@@ -22,6 +22,17 @@ class SqlUserPasswordRepository(SQLBaseRepository):
         self._session.add(user_password_table)
         self.commit()
 
+    def update(self, user_password: UserPassword) -> None:
+        user_password_table = self._session.exec(
+            select(UserPasswordTable).where(UserPasswordTable.id == user_password.id)
+        ).first()
+        if user_password_table:
+            user_password_table.email = user_password.email
+            user_password_table.password_hash = user_password.password_hash
+            user_password_table.display_name = user_password.display_name
+            self._session.add(user_password_table)
+            self.commit()
+
     def get_by_id(self, id: UUID) -> Optional[UserPassword]:
         user_password_table = self._session.exec(
             select(UserPasswordTable).where(UserPasswordTable.id == id)

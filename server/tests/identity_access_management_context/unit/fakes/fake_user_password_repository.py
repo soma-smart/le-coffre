@@ -11,6 +11,9 @@ class FakeUserPasswordRepository:
     def save(self, user_password: UserPassword) -> None:
         self._user_passwords[user_password.id] = user_password
 
+    def update(self, user_password: UserPassword) -> None:
+        self._user_passwords[user_password.id] = user_password
+
     def get_by_id(self, id: UUID) -> Optional[UserPassword]:
         return self._user_passwords.get(id)
 
