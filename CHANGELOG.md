@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/soma-smart/le-coffre/compare/v0.3.0...v0.3.1) (2026-02-06)
+
+
+### Bug Fixes
+
+* bdd rollbacks issue ([#132](https://github.com/soma-smart/le-coffre/issues/132)) ([271661a](https://github.com/soma-smart/le-coffre/commit/271661af81e54492f9df7c41ea501ccd0c9dd912))
+
 ## [0.3.0](https://github.com/soma-smart/le-coffre/compare/v0.2.0...v0.3.0) (2026-02-04)
 
 
