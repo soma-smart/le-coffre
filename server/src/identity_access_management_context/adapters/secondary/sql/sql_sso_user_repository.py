@@ -4,15 +4,16 @@ from uuid import UUID
 from identity_access_management_context.domain.entities.sso_user import SsoUser
 from sqlmodel import select, Session
 from .model.sso_users_model import SsoUsersTable
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 from identity_access_management_context.domain.exceptions import (
     SsoUserAlreadyExistsException,
 )
 
 
-class SqlSsoUserRepository:
+class SqlSsoUserRepository(SQLBaseRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def create(self, sso_user: SsoUser) -> None:
         exist = self.get_by_sso_user_id(sso_user.sso_user_id, sso_user.sso_provider)
@@ -26,8 +27,7 @@ class SqlSsoUserRepository:
         }  # Creating a dictionary without None values
         db_obj = SsoUsersTable(**data)
         self._session.add(db_obj)
-        self._session.commit()
-        self._session.refresh(db_obj)
+        self.commit_and_refresh(db_obj)
 
     def update_last_login(
         self, sso_user_id: str, sso_provider: str, last_login: datetime
@@ -35,8 +35,7 @@ class SqlSsoUserRepository:
         db_obj = self.get_by_sso_user_id(sso_user_id, sso_provider)
         if db_obj is not None:
             db_obj.last_login = last_login
-            self._session.commit()
-            self._session.refresh(db_obj)
+            self.commit_and_refresh(db_obj)
 
     def get_by_sso_user_id(
         self, sso_user_id: str, sso_provider: str = "default"

@@ -4,12 +4,13 @@ from sqlmodel import Session, select
 
 from identity_access_management_context.application.gateways import GroupRepository
 from identity_access_management_context.domain.entities import PersonalGroup, Group
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from .model.group_model import GroupTable
 
 
-class SqlGroupRepository(GroupRepository):
+class SqlGroupRepository(SQLBaseRepository, GroupRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def save_personal_group(self, group: PersonalGroup) -> None:
         """Save a personal group to the repository."""
@@ -20,7 +21,7 @@ class SqlGroupRepository(GroupRepository):
             user_id=group.user_id,
         )
         self._session.add(group_table)
-        self._session.commit()
+        self.commit()
 
     def get_all(self) -> list[Group]:
         """Get all groups."""
@@ -59,7 +60,7 @@ class SqlGroupRepository(GroupRepository):
             user_id=group.user_id,
         )
         self._session.merge(group_table)
-        self._session.commit()
+        self.commit()
 
     def get_by_id(self, group_id: UUID) -> Optional[Group]:
         """Get a group by ID."""
@@ -80,4 +81,4 @@ class SqlGroupRepository(GroupRepository):
         result = self._session.exec(statement).first()
         if result is not None:
             self._session.delete(result)
-            self._session.commit()
+            self.commit()

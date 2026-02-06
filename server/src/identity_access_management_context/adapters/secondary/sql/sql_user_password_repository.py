@@ -5,11 +5,12 @@ from identity_access_management_context.adapters.secondary.sql.model.user_passwo
     UserPasswordTable,
 )
 from identity_access_management_context.domain.entities import UserPassword
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 
-class SqlUserPasswordRepository:
+class SqlUserPasswordRepository(SQLBaseRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def save(self, user_password: UserPassword) -> None:
         user_password_table = UserPasswordTable(
@@ -19,7 +20,7 @@ class SqlUserPasswordRepository:
             display_name=user_password.display_name,
         )
         self._session.add(user_password_table)
-        self._session.commit()
+        self.commit()
 
     def get_by_id(self, id: UUID) -> Optional[UserPassword]:
         user_password_table = self._session.exec(

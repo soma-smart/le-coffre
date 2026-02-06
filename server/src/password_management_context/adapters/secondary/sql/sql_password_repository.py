@@ -6,18 +6,18 @@ from password_management_context.domain.exceptions import PasswordNotFoundError
 
 from password_management_context.domain.entities import Password
 from password_management_context.application.gateways import PasswordRepository
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 
-class SqlPasswordRepository(PasswordRepository):
+class SqlPasswordRepository(SQLBaseRepository, PasswordRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def save(self, password: Password) -> None:
         """Save a password entity"""
         db_obj = PasswordTable.model_validate(password)
         self._session.add(db_obj)
-        self._session.commit()
-        self._session.refresh(db_obj)
+        self.commit_and_refresh(db_obj)
 
     def get_by_id(self, id: UUID) -> Password:
         """Get password by UUID"""
@@ -43,7 +43,7 @@ class SqlPasswordRepository(PasswordRepository):
             raise PasswordNotFoundError(id)
         if db_obj:
             self._session.delete(db_obj)
-            self._session.commit()
+            self.commit()
 
     def update(self, password: Password) -> None:
         """Update password"""
@@ -55,5 +55,4 @@ class SqlPasswordRepository(PasswordRepository):
             for field, value in vars(password).items():
                 setattr(db_obj, field, value)
             self._session.add(db_obj)
-            self._session.commit()
-            self._session.refresh(db_obj)
+            self.commit_and_refresh(db_obj)

@@ -5,12 +5,13 @@ from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
 )
 from identity_access_management_context.domain.entities import GroupMember
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from .model.group_member_model import GroupMemberTable
 
 
-class SqlGroupMemberRepository(GroupMemberRepository):
+class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def add_member(self, group_id: UUID, user_id: UUID, is_owner: bool) -> None:
         """Add a member to a group."""
@@ -35,7 +36,7 @@ class SqlGroupMemberRepository(GroupMemberRepository):
             )
             self._session.add(member)
 
-        self._session.commit()
+        self.commit()
         if existing:
             self._session.refresh(existing)  # Refresh to ensure changes are persisted
 
@@ -46,7 +47,7 @@ class SqlGroupMemberRepository(GroupMemberRepository):
             GroupMemberTable.user_id == user_id,
         )
         self._session.execute(statement)
-        self._session.commit()
+        self.commit()
 
     def is_member(self, group_id: UUID, user_id: UUID) -> bool:
         """Check if a user is a member of a group."""
@@ -97,4 +98,4 @@ class SqlGroupMemberRepository(GroupMemberRepository):
         members = self._session.exec(statement).all()
         for member in members:
             self._session.delete(member)
-        self._session.commit()
+        self.commit()

@@ -10,12 +10,13 @@ from identity_access_management_context.domain.exceptions import (
     UserAlreadyExistsError,
 )
 from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 import json
 
 
-class SqlUserRepository(UserRepository):
+class SqlUserRepository(SQLBaseRepository, UserRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def get_by_id(self, user_id: UUID) -> Optional[User]:
         statement = select(UserTable).where(UserTable.id == user_id)
@@ -68,10 +69,8 @@ class SqlUserRepository(UserRepository):
         db_obj = UserTable(**user_dict)
         self._session.add(db_obj)
         try:
-            self._session.commit()
-            self._session.refresh(db_obj)
+            self.commit_and_refresh(db_obj)
         except IntegrityError:
-            self._session.rollback()
             raise UserAlreadyExistsError(user.username)
 
     def delete(self, user_id: UUID) -> None:
@@ -80,7 +79,7 @@ class SqlUserRepository(UserRepository):
         if db_obj is None:
             raise UserNotFoundError(user_id)
         self._session.delete(db_obj)
-        self._session.commit()
+        self.commit()
 
     def update(self, user: User) -> None:
         statement = select(UserTable).where(UserTable.id == user.id)
@@ -92,8 +91,7 @@ class SqlUserRepository(UserRepository):
                 value = json.dumps(value)
             setattr(db_obj, key, value)
         self._session.add(db_obj)
-        self._session.commit()
-        self._session.refresh(db_obj)
+        self.commit_and_refresh(db_obj)
 
     def get_admin(self) -> Optional[User]:
         statement = select(UserTable).where(UserTable.roles.like(f'%"{ADMIN_ROLE}"%'))

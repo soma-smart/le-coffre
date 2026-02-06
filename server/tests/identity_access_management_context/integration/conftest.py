@@ -61,9 +61,8 @@ def database_engine():
 
 @pytest.fixture(scope="function")
 def session(database_engine):
-    session = Session(database_engine)
-    yield session
-    session.close()
+    with Session(database_engine) as session:
+        yield session
 
 
 @pytest.fixture(scope="function")

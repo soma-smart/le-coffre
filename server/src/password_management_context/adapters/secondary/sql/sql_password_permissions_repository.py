@@ -11,13 +11,16 @@ from password_management_context.adapters.secondary.sql import (
     PermissionsTable,
     OwnershipTable,
 )
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 
-class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
+class SqlPasswordPermissionsRepository(
+    SQLBaseRepository, PasswordPermissionsRepository
+):
     """SQL implementation of PasswordPermissionsRepository using shared tables"""
 
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def set_owner(self, owner_id: UUID, password_id: UUID) -> None:
         """Set a group as the owner of a password"""
@@ -31,7 +34,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         if not existing:
             ownership = OwnershipTable(group_id=owner_id, resource_id=password_id)
             self._session.add(ownership)
-            self._session.commit()
+            self.commit()
 
     def is_owner(self, owner_id: UUID, password_id: UUID) -> bool:
         """Check if a group is the owner of a password"""
@@ -78,7 +81,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
                 permission=permission.value,
             )
             self._session.add(permission_entry)
-            self._session.commit()
+            self.commit()
 
     def revoke_access(self, group_id: UUID, password_id: UUID) -> None:
         """Revoke all permissions from a group for a password"""
@@ -92,7 +95,7 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
             self._session.delete(permission_entry)
 
         if permission_entries:
-            self._session.commit()
+            self.commit()
 
     def list_all_permissions_for(
         self, password_id: UUID
@@ -159,4 +162,4 @@ class SqlPasswordPermissionsRepository(PasswordPermissionsRepository):
         for permission_entry in permission_entries:
             self._session.delete(permission_entry)
 
-        self._session.commit()
+        self.commit()

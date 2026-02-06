@@ -9,6 +9,7 @@ from audit_logging_context.adapters.secondary.sql.model.domain_event_model impor
 )
 from shared_kernel.domain.entities import DomainEvent
 from shared_kernel.domain.value_objects import EventPriority
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 
 class StoredDomainEvent(DomainEvent):
@@ -27,9 +28,9 @@ class StoredDomainEvent(DomainEvent):
         self.event_data = event_data
 
 
-class SqlEventRepository(EventRepository):
+class SqlEventRepository(SQLBaseRepository, EventRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def append_event(self, event: DomainEvent) -> None:
         """Save a domain event by serializing it to JSON"""
@@ -49,8 +50,7 @@ class SqlEventRepository(EventRepository):
             event_data=json.dumps(event_dict),
         )
         self._session.add(db_event)
-        self._session.commit()
-        self._session.refresh(db_event)
+        self.commit_and_refresh(db_event)
 
     def list_events(
         self,

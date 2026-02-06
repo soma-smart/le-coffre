@@ -6,11 +6,12 @@ from vault_management_context.domain.entities import Vault
 from vault_management_context.application.gateways.vault_repository import (
     VaultRepository,
 )
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 
-class SqlVaultRepository(VaultRepository):
+class SqlVaultRepository(SQLBaseRepository, VaultRepository):
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def get(self) -> Optional[Vault]:
         statement = select(VaultTable).where(VaultTable.id == 1)
@@ -36,7 +37,7 @@ class SqlVaultRepository(VaultRepository):
         else:
             self._create(vault)
 
-        self._session.commit()
+        self.commit()
 
     def _update(self, existing_vault: VaultTable, vault: Vault) -> None:
         existing_vault.nb_shares = vault.nb_shares

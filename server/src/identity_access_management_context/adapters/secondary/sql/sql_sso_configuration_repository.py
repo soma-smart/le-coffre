@@ -5,14 +5,15 @@ from identity_access_management_context.application.gateways import (
     SsoConfigurationRepository,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from .model.sso_configuration_model import SsoConfigurationTable
 
 
-class SqlSsoConfigurationRepository(SsoConfigurationRepository):
+class SqlSsoConfigurationRepository(SQLBaseRepository, SsoConfigurationRepository):
     """SQL-based repository for SSO configuration."""
 
     def __init__(self, session: Session):
-        self._session = session
+        super().__init__(session)
 
     def save(self, config: SsoConfiguration) -> None:
         """Save or update SSO configuration (always single row with id=1)."""
@@ -43,7 +44,7 @@ class SqlSsoConfigurationRepository(SsoConfigurationRepository):
             )
             self._session.add(table_config)
 
-        self._session.commit()
+        self.commit()
 
     def get(self) -> SsoConfiguration | None:
         """Get the stored SSO configuration."""
