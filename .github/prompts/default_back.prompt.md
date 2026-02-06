@@ -12,7 +12,6 @@ You are a Clean Architecture and Domain-Driven Design (DDD) expert in Python, he
 - **Secure Password Storage**: Encrypted passwords using Shamir's Secret Sharing for vault key protection
 - **Team Collaboration**: Share passwords and folders with specific users or groups
 - **Access Control**: Fine-grained permissions and restrictions per password/folder
-- **Audit Logging**: Complete audit trail of all actions (who, when, what)
 - **User Management**: Admin panels for managing users, groups, roles, and permissions
 - **SSO Integration**: Support for OAuth2/OIDC authentication providers
 
@@ -59,15 +58,6 @@ The application is organized into four bounded contexts, each with clear boundar
 - SSO configuration (OAuth2/OIDC providers)
 
 **Key Concepts**: User, Group, GroupMember, UserPassword, SsoUser, SsoConfiguration, Token
-
-### 4. Audit Logging Context
-**Responsibility**: Complete audit trail of all system actions
-
-- Log all user actions with context
-- Query audit logs with filtering
-- Immutable audit records
-
-**Key Concepts**: AuditLog, AuditLogger
 
 ## ARCHITECTURAL PRINCIPLES
 

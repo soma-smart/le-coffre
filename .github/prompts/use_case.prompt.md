@@ -13,7 +13,6 @@ This project follows DDD with these bounded contexts:
 - `identity_access_management_context/` - Users, groups, authentication, SSO
 - `password_management_context/` - Password CRUD, permissions, folders
 - `vault_management_context/` - Vault setup, unlock/lock, encryption keys
-- `audit_logging_context/` - Audit logs tracking
 - `shared_kernel/` - Shared utilities (authentication, encryption, time, access_control, pubsub)
 
 ### Use Case Structure (MANDATORY)
