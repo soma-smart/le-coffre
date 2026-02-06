@@ -8,6 +8,9 @@ from password_management_context.application.gateways import (
     PasswordEncryptionGateway,
 )
 from password_management_context.application.responses import PasswordResponse
+from password_management_context.application.services import (
+    PasswordEventStorageService,
+)
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     PasswordAccessDeniedError,
@@ -27,12 +30,14 @@ class GetPasswordUseCase:
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
         event_publisher: DomainEventPublisher,
+        event_storage_service: PasswordEventStorageService,
     ):
         self.password_repository = password_repository
         self.password_encryption_gateway = password_encryption_gateway
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
         self.event_publisher = event_publisher
+        self.event_storage_service = event_storage_service
 
     def execute(self, command: GetPasswordCommand) -> PasswordResponse:
         password_entity = self.password_repository.get_by_id(command.password_id)
@@ -49,13 +54,13 @@ class GetPasswordUseCase:
             password_entity.encrypted_value
         )
 
-        # Publish domain event
+        # Store domain event
         event = PasswordAccessedEvent(
             password_id=password_entity.id,
             password_name=password_entity.name,
             accessed_by_user_id=command.requester_id,
         )
-        self.event_publisher.publish(event)
+        self.event_storage_service.store_event(event)
 
         return PasswordResponse(
             id=password_entity.id,

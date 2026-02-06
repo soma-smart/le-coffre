@@ -28,6 +28,7 @@ from password_management_context.application.use_cases import (
     UnshareAccessUseCase,
     ListPasswordsUseCase,
     ListAccessUseCase,
+    ListPasswordEventsUseCase,
 )
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
@@ -117,6 +118,9 @@ def get_get_password_usecase(
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    event_storage_service: PasswordEventStorageService = Depends(
+        get_password_event_storage_service
+    ),
 ):
     return GetPasswordUseCase(
         password_repository,
@@ -124,6 +128,7 @@ def get_get_password_usecase(
         password_permissions_repository,
         group_access_gateway,
         event_publisher,
+        event_storage_service,
     )
 
 
@@ -137,6 +142,9 @@ def get_update_password_usecase(
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    event_storage_service: PasswordEventStorageService = Depends(
+        get_password_event_storage_service
+    ),
 ):
     return UpdatePasswordUseCase(
         password_repository,
@@ -144,6 +152,7 @@ def get_update_password_usecase(
         password_permissions_repository,
         group_access_gateway,
         event_publisher,
+        event_storage_service,
     )
 
 
@@ -166,12 +175,16 @@ def get_delete_password_usecase(
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    event_storage_service: PasswordEventStorageService = Depends(
+        get_password_event_storage_service
+    ),
 ):
     return DeletePasswordUseCase(
         password_repository,
         password_permissions_repository,
         group_access_gateway,
         event_publisher,
+        event_storage_service,
     )
 
 
@@ -186,12 +199,16 @@ def get_share_access_usecase(
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    event_storage_service: PasswordEventStorageService = Depends(
+        get_password_event_storage_service
+    ),
 ):
     return ShareAccessUseCase(
         password_repository,
         password_permissions_repository,
         group_access_gateway,
         event_publisher,
+        event_storage_service,
     )
 
 
@@ -202,12 +219,16 @@ def get_unshare_access_usecase(
     ),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    event_storage_service: PasswordEventStorageService = Depends(
+        get_password_event_storage_service
+    ),
 ):
     return UnshareAccessUseCase(
         password_repository,
         password_permissions_repository,
         group_access_gateway,
         event_publisher,
+        event_storage_service,
     )
 
 
@@ -220,4 +241,22 @@ def get_list_resource_access_usecase(
 ):
     return ListAccessUseCase(
         password_repository, password_permissions_repository, group_access_gateway
+    )
+
+
+def get_list_password_events_usecase(
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(
+        get_password_permissions_repository
+    ),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
+    password_event_repository: PasswordEventRepository = Depends(
+        get_password_event_repository
+    ),
+):
+    return ListPasswordEventsUseCase(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        password_event_repository,
     )

@@ -4,6 +4,9 @@ from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
     GroupAccessGateway,
 )
+from password_management_context.application.services import (
+    PasswordEventStorageService,
+)
 from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
     CannotUnshareWithOwnerError,
@@ -24,11 +27,13 @@ class UnshareAccessUseCase:
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
         event_publisher: DomainEventPublisher,
+        event_storage_service: PasswordEventStorageService,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
         self.event_publisher = event_publisher
+        self.event_storage_service = event_storage_service
 
     def execute(self, command: UnshareResourceCommand):
         # Verify the password exists
@@ -69,11 +74,11 @@ class UnshareAccessUseCase:
             command.group_id, command.password_id
         )
 
-        # Publish domain event
+        # Store domain event
         event = PasswordUnsharedEvent(
             password_id=command.password_id,
             owner_group_id=owner_group_id,
             unshared_with_group_id=command.group_id,
             unshared_by_user_id=command.owner_id,
         )
-        self.event_publisher.publish(event)
+        self.event_storage_service.store_event(event)

@@ -1,0 +1,100 @@
+from datetime import datetime
+from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel
+from uuid import UUID
+import logging
+
+from password_management_context.adapters.primary.fastapi.app_dependencies import (
+    get_list_password_events_usecase,
+)
+from password_management_context.application.commands import (
+    ListPasswordEventsCommand,
+)
+from password_management_context.application.use_cases import (
+    ListPasswordEventsUseCase,
+)
+from password_management_context.domain.exceptions import (
+    PasswordManagementDomainError,
+    PasswordNotFoundError,
+    PasswordAccessDeniedError,
+)
+from shared_kernel.domain.exceptions import AccessDeniedError
+from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.adapters.primary.dependencies import get_current_user
+
+router = APIRouter(prefix="/passwords", tags=["Password Management"])
+
+
+class PasswordEventResponse(BaseModel):
+    event_id: str
+    event_type: str
+    occurred_on: str
+    actor_user_id: str
+    event_data: dict
+
+
+class ListPasswordEventsResponse(BaseModel):
+    events: list[PasswordEventResponse]
+
+
+@router.get(
+    "/{password_id}/events",
+    response_model=ListPasswordEventsResponse,
+    status_code=200,
+    summary="List events for a password",
+)
+def list_password_events(
+    password_id: UUID,
+    event_type: list[str] | None = Query(None, description="Filter by event types"),
+    start_date: datetime | None = Query(
+        None, description="Filter events from this date (inclusive)"
+    ),
+    end_date: datetime | None = Query(
+        None, description="Filter events until this date (inclusive)"
+    ),
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ListPasswordEventsUseCase = Depends(get_list_password_events_usecase),
+):
+    """
+    Retrieve the event history for a specific password.
+
+    Requires READ permission on the password.
+
+    - **password_id**: The ID of the password
+    - **event_type**: Optional filter by event types
+    - **start_date**: Optional filter from this date
+    - **end_date**: Optional filter until this date
+    - **Authentication**: Requires authentication via access_token cookie
+    """
+    try:
+        command = ListPasswordEventsCommand(
+            password_id=password_id,
+            user_id=current_user.user_id,
+            event_types=event_type,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        response = usecase.execute(command)
+
+        return ListPasswordEventsResponse(
+            events=[
+                PasswordEventResponse(
+                    event_id=event.event_id,
+                    event_type=event.event_type,
+                    occurred_on=event.occurred_on,
+                    actor_user_id=event.actor_user_id,
+                    event_data=event.event_data,
+                )
+                for event in response.events
+            ]
+        )
+    except (PasswordNotFoundError, PasswordAccessDeniedError) as e:
+        # For security, treat both not found and access denied as 404
+        raise HTTPException(status_code=404, detail=str(e))
+    except AccessDeniedError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except PasswordManagementDomainError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logging.error(e)
+        raise HTTPException(status_code=500, detail="Internal server error")

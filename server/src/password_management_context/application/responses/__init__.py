@@ -5,6 +5,10 @@ from .list_access_response import (
     UserAccessResponse,
     GroupAccessResponse,
 )
+from .list_password_events_response import (
+    ListPasswordEventsResponse,
+    PasswordEventItem,
+)
 
 __all__ = [
     "PasswordResponse",
@@ -12,4 +16,6 @@ __all__ = [
     "ListAccessResponse",
     "UserAccessResponse",
     "GroupAccessResponse",
+    "ListPasswordEventsResponse",
+    "PasswordEventItem",
 ]

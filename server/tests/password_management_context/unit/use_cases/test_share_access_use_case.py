@@ -25,12 +25,14 @@ def use_case(
     password_permissions_repository: FakePasswordPermissionsRepository,
     group_access_gateway: FakeGroupAccessGateway,
     domain_event_publisher: FakeDomainEventPublisher,
+    password_event_storage_service,
 ):
     return ShareAccessUseCase(
         password_repository,
         password_permissions_repository,
         group_access_gateway,
         domain_event_publisher,
+        password_event_storage_service,
     )
 
 
