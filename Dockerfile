@@ -39,11 +39,8 @@ COPY server/ ./
 # =============================================================================
 FROM python:3.13-slim
 
-# Install runtime deps
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
-    nginx \
-    supervisor \
-    curl \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -58,78 +55,25 @@ COPY --from=backend-builder --chown=app:app /app/backend /app/backend
 # Copy frontend build
 COPY --from=frontend-builder --chown=app:app /frontend/dist /app/frontend/dist
 
-# -----------------------------------------------------------------------------
-# NGINX config
-# -----------------------------------------------------------------------------
-COPY <<'EOF' /etc/nginx/sites-available/default
-server {
-    listen 8080;
-    server_name _;
+# Switch to non-root user
+USER app
 
-    location / {
-        root /app/frontend/dist;
-        try_files $uri $uri/ /index.html;
-        add_header Cache-Control "public, max-age=31536000, immutable";
-    }
+# Set working directory to backend
+WORKDIR /app/backend
 
-    location /api/health {
-        access_log off;
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
+# Set environment variables for production
+ENV PYTHONPATH=/app/backend/src \
+    PYTHONUNBUFFERED=1
 
-    location /api {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /health {
-        access_log off;
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
-}
-EOF
-
-# -----------------------------------------------------------------------------
-# Supervisor config
-# -----------------------------------------------------------------------------
-COPY <<'EOF' /etc/supervisor/conf.d/supervisord.conf
-[supervisord]
-nodaemon=true
-logfile=/dev/stdout
-logfile_maxbytes=0
-
-[program:nginx]
-command=/usr/sbin/nginx -g "daemon off;"
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-autorestart=true
-
-[program:backend]
-directory=/app/backend
-command=/app/backend/.venv/bin/uvicorn src.main:app --host 127.0.0.1 --port 8000 --log-level info
-user=app
-environment=PYTHONPATH="/app/backend/src",PYTHONUNBUFFERED=1
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-autorestart=true
-EOF
-
-# Permissions
-RUN chown -R app:app /app && chmod -R 755 /app
-
+# Expose port
 EXPOSE 8080
 
-# Healthcheck container-level
+# Healthcheck using Python
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD ["/app/backend/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health').read()"]
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+# Run FastAPI with uvicorn
+CMD ["/app/backend/.venv/bin/uvicorn", "src.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8080", \
+     "--log-level", "info"]
