@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/soma-smart/le-coffre/compare/v0.3.1...v0.3.2) (2026-02-09)
+
+
+### Bug Fixes
+
+* enable skipping GitHub release in workflow ([09520fd](https://github.com/soma-smart/le-coffre/commit/09520fd5f5931bba32923472bbbf3ea73494ed90))
+* enhance backend logging and environment settings ([129fce5](https://github.com/soma-smart/le-coffre/commit/129fce556684612fb6a3dd72644871a7b8776118))
+
 ## [0.3.1](https://github.com/soma-smart/le-coffre/compare/v0.3.0...v0.3.1) (2026-02-06)
 
 
