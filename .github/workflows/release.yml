@@ -1,0 +1,84 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+
+          # Generate changelog from commits
+          if [ -z "$PREVIOUS_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"* %s (%h)" $CURRENT_TAG)
+          else
+            COMMITS=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..$CURRENT_TAG)
+          fi
+
+          # Group by type (feat, fix, etc.)
+          FEATURES=$(echo "$COMMITS" | grep -i "^* feat" || true)
+          FIXES=$(echo "$COMMITS" | grep -i "^* fix" || true)
+          REFACTOR=$(echo "$COMMITS" | grep -i "^* refactor" || true)
+          CHORES=$(echo "$COMMITS" | grep -i "^* chore" || true)
+          OTHER=$(echo "$COMMITS" | grep -iv "^* \(feat\|fix\|refactor\|chore\)" || true)
+
+          # Build changelog
+          CHANGELOG="# Release $CURRENT_TAG"
+          CHANGELOG="$CHANGELOG\n\n## Changes\n"
+
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG="$CHANGELOG\n### ✨ Features\n$FEATURES\n"
+          fi
+
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="$CHANGELOG\n### 🐛 Bug Fixes\n$FIXES\n"
+          fi
+
+          if [ -n "$REFACTOR" ]; then
+            CHANGELOG="$CHANGELOG\n### ♻️ Refactoring\n$REFACTOR\n"
+          fi
+
+          if [ -n "$CHORES" ]; then
+            CHANGELOG="$CHANGELOG\n### 🔧 Chores\n$CHORES\n"
+          fi
+
+          if [ -n "$OTHER" ]; then
+            CHANGELOG="$CHANGELOG\n### 📝 Other Changes\n$OTHER\n"
+          fi
+
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const changelog = `${{ steps.changelog.outputs.changelog }}`;
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Release ${tag}`,
+              body: changelog,
+              draft: false,
+              prerelease: false
+            });
