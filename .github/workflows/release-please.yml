@@ -15,7 +15,7 @@ jobs:
         id: release
         with:
           release-type: simple
-          skip-github-release: true
+          skip-github-release: false
 
       # Output release PR information
       - name: Release PR info
