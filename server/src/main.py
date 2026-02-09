@@ -1,4 +1,6 @@
 import os
+import sys
+import logging
 from pathlib import Path
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
@@ -6,6 +8,20 @@ from sqlmodel import Session, create_engine
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
+
+# Configure logging to stdout for Kubernetes
+# Force configuration even if handlers already exist (e.g., from uvicorn)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ],
+    force=True  # Override any existing configuration
+)
+
+# Ensure all loggers propagate to root logger
+logging.getLogger().setLevel(logging.INFO)
 
 from audit_logging_context.adapters.primary.all_events_subscriber import (
     AllEventsSubscriber,
