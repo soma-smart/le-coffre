@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from fastapi import FastAPI, FastAPI as RootApp
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
@@ -149,7 +149,7 @@ app.include_router(get_audit_logging_router())
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
     # Create a sub-app without root_path for serving frontend
-    root_app = RootApp()
+    root_app = FastAPI()
 
     # Health check endpoint for Kubernetes
     @root_app.get("/api/health")
