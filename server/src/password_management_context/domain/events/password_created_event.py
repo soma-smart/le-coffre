@@ -1,7 +1,8 @@
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from typing import TypedDict
-from uuid import UUID, uuid4
+from uuid import UUID
+
+from .base_password_event import BasePasswordEvent
 
 
 class PasswordCreatedEventData(TypedDict):
@@ -14,16 +15,13 @@ class PasswordCreatedEventData(TypedDict):
 
 
 @dataclass
-class PasswordCreatedEvent:
+class PasswordCreatedEvent(BasePasswordEvent):
     """Domain event for password creation"""
 
-    password_id: UUID
     password_name: str
     owner_group_id: UUID
     created_by_user_id: UUID
     folder: str
-    event_id: UUID = field(default_factory=uuid4)
-    occurred_on: datetime = field(default_factory=datetime.now)
 
     def get_actor_user_id(self) -> UUID:
         return self.created_by_user_id

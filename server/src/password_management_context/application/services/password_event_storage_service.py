@@ -5,14 +5,7 @@ from typing import Any, cast
 from password_management_context.application.gateways import (
     PasswordEventRepository,
 )
-from password_management_context.domain.events import (
-    PasswordCreatedEvent,
-    PasswordUpdatedEvent,
-    PasswordDeletedEvent,
-    PasswordAccessedEvent,
-    PasswordSharedEvent,
-    PasswordUnsharedEvent,
-)
+from password_management_context.domain.events import BasePasswordEvent
 
 
 class PasswordEventStorageService:
@@ -21,17 +14,7 @@ class PasswordEventStorageService:
     def __init__(self, repository: PasswordEventRepository):
         self.repository = repository
 
-    def store_event(
-        self,
-        event: (
-            PasswordCreatedEvent
-            | PasswordUpdatedEvent
-            | PasswordDeletedEvent
-            | PasswordAccessedEvent
-            | PasswordSharedEvent
-            | PasswordUnsharedEvent
-        ),
-    ) -> None:
+    def store_event(self, event: BasePasswordEvent) -> None:
         """Store a password domain event"""
         self.repository.append_event(
             event_id=event.event_id,

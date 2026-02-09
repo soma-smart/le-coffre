@@ -1,7 +1,8 @@
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from typing import TypedDict
-from uuid import UUID, uuid4
+from uuid import UUID
+
+from .base_password_event import BasePasswordEvent
 
 
 class PasswordDeletedEventData(TypedDict):
@@ -12,14 +13,11 @@ class PasswordDeletedEventData(TypedDict):
 
 
 @dataclass
-class PasswordDeletedEvent:
+class PasswordDeletedEvent(BasePasswordEvent):
     """Domain event for password deletion"""
 
-    password_id: UUID
     deleted_by_user_id: UUID
     owner_group_id: UUID
-    event_id: UUID = field(default_factory=uuid4)
-    occurred_on: datetime = field(default_factory=datetime.now)
 
     def get_actor_user_id(self) -> UUID:
         return self.deleted_by_user_id
