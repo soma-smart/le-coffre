@@ -149,8 +149,7 @@ app.include_router(get_audit_logging_router())
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
     # Create a sub-app without root_path for serving frontend
-    from fastapi import FastAPI as RootApp
-    root_app = RootApp()
+    root_app = FastAPI()
 
     # Health check endpoint for Kubernetes
     @root_app.get("/api/health")
