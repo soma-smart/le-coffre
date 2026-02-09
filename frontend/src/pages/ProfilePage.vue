@@ -183,8 +183,8 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Password Update Section -->
-        <div class="border-t pt-4 mt-6">
+        <!-- Password Update Section - Only for non-SSO users -->
+        <div v-if="!user.is_sso" class="border-t pt-4 mt-6">
           <h3 class="text-lg font-semibold mb-4">Sécurité</h3>
           <Button label="Change Password" icon="pi pi-key" @click="showPasswordDialog = true"
             class="p-button-outlined" />
