@@ -816,153 +816,153 @@ export type VaultStatusResponse = {
     status: VaultStatus;
 };
 
-export type HealthCheckApiHealthGetData = {
+export type HealthCheckHealthGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/health';
+    url: '/health';
 };
 
-export type HealthCheckApiHealthGetResponses = {
+export type HealthCheckHealthGetResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type CreateVaultApiVaultSetupPostData = {
+export type CreateVaultVaultSetupPostData = {
     body: CreateVaultPostRequest;
     path?: never;
     query?: never;
-    url: '/api/vault/setup';
+    url: '/vault/setup';
 };
 
-export type CreateVaultApiVaultSetupPostErrors = {
+export type CreateVaultVaultSetupPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type CreateVaultApiVaultSetupPostError = CreateVaultApiVaultSetupPostErrors[keyof CreateVaultApiVaultSetupPostErrors];
+export type CreateVaultVaultSetupPostError = CreateVaultVaultSetupPostErrors[keyof CreateVaultVaultSetupPostErrors];
 
-export type CreateVaultApiVaultSetupPostResponses = {
+export type CreateVaultVaultSetupPostResponses = {
     /**
      * Successful Response
      */
     201: CreateVaultPostResponse;
 };
 
-export type CreateVaultApiVaultSetupPostResponse = CreateVaultApiVaultSetupPostResponses[keyof CreateVaultApiVaultSetupPostResponses];
+export type CreateVaultVaultSetupPostResponse = CreateVaultVaultSetupPostResponses[keyof CreateVaultVaultSetupPostResponses];
 
-export type ValidateVaultSetupApiVaultValidateSetupPostData = {
+export type ValidateVaultSetupVaultValidateSetupPostData = {
     body: ValidateSetupRequest;
     path?: never;
     query?: never;
-    url: '/api/vault/validate-setup';
+    url: '/vault/validate-setup';
 };
 
-export type ValidateVaultSetupApiVaultValidateSetupPostErrors = {
+export type ValidateVaultSetupVaultValidateSetupPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ValidateVaultSetupApiVaultValidateSetupPostError = ValidateVaultSetupApiVaultValidateSetupPostErrors[keyof ValidateVaultSetupApiVaultValidateSetupPostErrors];
+export type ValidateVaultSetupVaultValidateSetupPostError = ValidateVaultSetupVaultValidateSetupPostErrors[keyof ValidateVaultSetupVaultValidateSetupPostErrors];
 
-export type ValidateVaultSetupApiVaultValidateSetupPostResponses = {
+export type ValidateVaultSetupVaultValidateSetupPostResponses = {
     /**
      * Successful Response
      */
     200: ValidateSetupResponse;
 };
 
-export type ValidateVaultSetupApiVaultValidateSetupPostResponse = ValidateVaultSetupApiVaultValidateSetupPostResponses[keyof ValidateVaultSetupApiVaultValidateSetupPostResponses];
+export type ValidateVaultSetupVaultValidateSetupPostResponse = ValidateVaultSetupVaultValidateSetupPostResponses[keyof ValidateVaultSetupVaultValidateSetupPostResponses];
 
-export type UnlockVaultApiVaultUnlockPostData = {
+export type UnlockVaultVaultUnlockPostData = {
     body: UnlockVaultPostRequest;
     path?: never;
     query?: never;
-    url: '/api/vault/unlock';
+    url: '/vault/unlock';
 };
 
-export type UnlockVaultApiVaultUnlockPostErrors = {
+export type UnlockVaultVaultUnlockPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type UnlockVaultApiVaultUnlockPostError = UnlockVaultApiVaultUnlockPostErrors[keyof UnlockVaultApiVaultUnlockPostErrors];
+export type UnlockVaultVaultUnlockPostError = UnlockVaultVaultUnlockPostErrors[keyof UnlockVaultVaultUnlockPostErrors];
 
-export type UnlockVaultApiVaultUnlockPostResponses = {
+export type UnlockVaultVaultUnlockPostResponses = {
     /**
      * Successful Response
      */
     200: UnlockVaultPostResponse;
 };
 
-export type UnlockVaultApiVaultUnlockPostResponse = UnlockVaultApiVaultUnlockPostResponses[keyof UnlockVaultApiVaultUnlockPostResponses];
+export type UnlockVaultVaultUnlockPostResponse = UnlockVaultVaultUnlockPostResponses[keyof UnlockVaultVaultUnlockPostResponses];
 
-export type LockVaultApiVaultLockPostData = {
+export type LockVaultVaultLockPostData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/vault/lock';
+    url: '/vault/lock';
 };
 
-export type LockVaultApiVaultLockPostResponses = {
+export type LockVaultVaultLockPostResponses = {
     /**
      * Successful Response
      */
     200: LockVaultPostResponse;
 };
 
-export type LockVaultApiVaultLockPostResponse = LockVaultApiVaultLockPostResponses[keyof LockVaultApiVaultLockPostResponses];
+export type LockVaultVaultLockPostResponse = LockVaultVaultLockPostResponses[keyof LockVaultVaultLockPostResponses];
 
-export type GetVaultStatusApiVaultStatusGetData = {
+export type GetVaultStatusVaultStatusGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/vault/status';
+    url: '/vault/status';
 };
 
-export type GetVaultStatusApiVaultStatusGetResponses = {
+export type GetVaultStatusVaultStatusGetResponses = {
     /**
      * Successful Response
      */
     200: VaultStatusResponse;
 };
 
-export type GetVaultStatusApiVaultStatusGetResponse = GetVaultStatusApiVaultStatusGetResponses[keyof GetVaultStatusApiVaultStatusGetResponses];
+export type GetVaultStatusVaultStatusGetResponse = GetVaultStatusVaultStatusGetResponses[keyof GetVaultStatusVaultStatusGetResponses];
 
-export type CreatePasswordApiPasswordsPostData = {
+export type CreatePasswordPasswordsPostData = {
     body: CreatePasswordRequest;
     path?: never;
     query?: never;
-    url: '/api/passwords/';
+    url: '/passwords/';
 };
 
-export type CreatePasswordApiPasswordsPostErrors = {
+export type CreatePasswordPasswordsPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type CreatePasswordApiPasswordsPostError = CreatePasswordApiPasswordsPostErrors[keyof CreatePasswordApiPasswordsPostErrors];
+export type CreatePasswordPasswordsPostError = CreatePasswordPasswordsPostErrors[keyof CreatePasswordPasswordsPostErrors];
 
-export type CreatePasswordApiPasswordsPostResponses = {
+export type CreatePasswordPasswordsPostResponses = {
     /**
      * Successful Response
      */
     201: CreatePasswordResponse;
 };
 
-export type CreatePasswordApiPasswordsPostResponse = CreatePasswordApiPasswordsPostResponses[keyof CreatePasswordApiPasswordsPostResponses];
+export type CreatePasswordPasswordsPostResponse = CreatePasswordPasswordsPostResponses[keyof CreatePasswordPasswordsPostResponses];
 
-export type ListPasswordsApiPasswordsListGetData = {
+export type ListPasswordsPasswordsListGetData = {
     body?: never;
     path?: never;
     query?: {
@@ -971,30 +971,30 @@ export type ListPasswordsApiPasswordsListGetData = {
          */
         folder?: string | null;
     };
-    url: '/api/passwords/list';
+    url: '/passwords/list';
 };
 
-export type ListPasswordsApiPasswordsListGetErrors = {
+export type ListPasswordsPasswordsListGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ListPasswordsApiPasswordsListGetError = ListPasswordsApiPasswordsListGetErrors[keyof ListPasswordsApiPasswordsListGetErrors];
+export type ListPasswordsPasswordsListGetError = ListPasswordsPasswordsListGetErrors[keyof ListPasswordsPasswordsListGetErrors];
 
-export type ListPasswordsApiPasswordsListGetResponses = {
+export type ListPasswordsPasswordsListGetResponses = {
     /**
-     * Response List Passwords Api Passwords List Get
+     * Response List Passwords Passwords List Get
      *
      * Successful Response
      */
     200: Array<GetPasswordListResponse>;
 };
 
-export type ListPasswordsApiPasswordsListGetResponse = ListPasswordsApiPasswordsListGetResponses[keyof ListPasswordsApiPasswordsListGetResponses];
+export type ListPasswordsPasswordsListGetResponse = ListPasswordsPasswordsListGetResponses[keyof ListPasswordsPasswordsListGetResponses];
 
-export type DeletePasswordApiPasswordsPasswordIdDeleteData = {
+export type DeletePasswordPasswordsPasswordIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -1003,28 +1003,28 @@ export type DeletePasswordApiPasswordsPasswordIdDeleteData = {
         password_id: string;
     };
     query?: never;
-    url: '/api/passwords/{password_id}';
+    url: '/passwords/{password_id}';
 };
 
-export type DeletePasswordApiPasswordsPasswordIdDeleteErrors = {
+export type DeletePasswordPasswordsPasswordIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type DeletePasswordApiPasswordsPasswordIdDeleteError = DeletePasswordApiPasswordsPasswordIdDeleteErrors[keyof DeletePasswordApiPasswordsPasswordIdDeleteErrors];
+export type DeletePasswordPasswordsPasswordIdDeleteError = DeletePasswordPasswordsPasswordIdDeleteErrors[keyof DeletePasswordPasswordsPasswordIdDeleteErrors];
 
-export type DeletePasswordApiPasswordsPasswordIdDeleteResponses = {
+export type DeletePasswordPasswordsPasswordIdDeleteResponses = {
     /**
      * Successful Response
      */
     204: void;
 };
 
-export type DeletePasswordApiPasswordsPasswordIdDeleteResponse = DeletePasswordApiPasswordsPasswordIdDeleteResponses[keyof DeletePasswordApiPasswordsPasswordIdDeleteResponses];
+export type DeletePasswordPasswordsPasswordIdDeleteResponse = DeletePasswordPasswordsPasswordIdDeleteResponses[keyof DeletePasswordPasswordsPasswordIdDeleteResponses];
 
-export type GetPasswordApiPasswordsPasswordIdGetData = {
+export type GetPasswordPasswordsPasswordIdGetData = {
     body?: never;
     path: {
         /**
@@ -1033,28 +1033,28 @@ export type GetPasswordApiPasswordsPasswordIdGetData = {
         password_id: string;
     };
     query?: never;
-    url: '/api/passwords/{password_id}';
+    url: '/passwords/{password_id}';
 };
 
-export type GetPasswordApiPasswordsPasswordIdGetErrors = {
+export type GetPasswordPasswordsPasswordIdGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetPasswordApiPasswordsPasswordIdGetError = GetPasswordApiPasswordsPasswordIdGetErrors[keyof GetPasswordApiPasswordsPasswordIdGetErrors];
+export type GetPasswordPasswordsPasswordIdGetError = GetPasswordPasswordsPasswordIdGetErrors[keyof GetPasswordPasswordsPasswordIdGetErrors];
 
-export type GetPasswordApiPasswordsPasswordIdGetResponses = {
+export type GetPasswordPasswordsPasswordIdGetResponses = {
     /**
      * Successful Response
      */
     200: GetPasswordResponse;
 };
 
-export type GetPasswordApiPasswordsPasswordIdGetResponse = GetPasswordApiPasswordsPasswordIdGetResponses[keyof GetPasswordApiPasswordsPasswordIdGetResponses];
+export type GetPasswordPasswordsPasswordIdGetResponse = GetPasswordPasswordsPasswordIdGetResponses[keyof GetPasswordPasswordsPasswordIdGetResponses];
 
-export type UpdatePasswordApiPasswordsPasswordIdPutData = {
+export type UpdatePasswordPasswordsPasswordIdPutData = {
     body: UpdatePasswordRequest;
     path: {
         /**
@@ -1063,26 +1063,26 @@ export type UpdatePasswordApiPasswordsPasswordIdPutData = {
         password_id: string;
     };
     query?: never;
-    url: '/api/passwords/{password_id}';
+    url: '/passwords/{password_id}';
 };
 
-export type UpdatePasswordApiPasswordsPasswordIdPutErrors = {
+export type UpdatePasswordPasswordsPasswordIdPutErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type UpdatePasswordApiPasswordsPasswordIdPutError = UpdatePasswordApiPasswordsPasswordIdPutErrors[keyof UpdatePasswordApiPasswordsPasswordIdPutErrors];
+export type UpdatePasswordPasswordsPasswordIdPutError = UpdatePasswordPasswordsPasswordIdPutErrors[keyof UpdatePasswordPasswordsPasswordIdPutErrors];
 
-export type UpdatePasswordApiPasswordsPasswordIdPutResponses = {
+export type UpdatePasswordPasswordsPasswordIdPutResponses = {
     /**
      * Successful Response
      */
     201: unknown;
 };
 
-export type SharePasswordApiPasswordsPasswordIdSharePostData = {
+export type SharePasswordPasswordsPasswordIdSharePostData = {
     body: SharePasswordRequest;
     path: {
         /**
@@ -1091,28 +1091,28 @@ export type SharePasswordApiPasswordsPasswordIdSharePostData = {
         password_id: string;
     };
     query?: never;
-    url: '/api/passwords/{password_id}/share';
+    url: '/passwords/{password_id}/share';
 };
 
-export type SharePasswordApiPasswordsPasswordIdSharePostErrors = {
+export type SharePasswordPasswordsPasswordIdSharePostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type SharePasswordApiPasswordsPasswordIdSharePostError = SharePasswordApiPasswordsPasswordIdSharePostErrors[keyof SharePasswordApiPasswordsPasswordIdSharePostErrors];
+export type SharePasswordPasswordsPasswordIdSharePostError = SharePasswordPasswordsPasswordIdSharePostErrors[keyof SharePasswordPasswordsPasswordIdSharePostErrors];
 
-export type SharePasswordApiPasswordsPasswordIdSharePostResponses = {
+export type SharePasswordPasswordsPasswordIdSharePostResponses = {
     /**
      * Successful Response
      */
     201: SharePasswordResponse;
 };
 
-export type SharePasswordApiPasswordsPasswordIdSharePostResponse = SharePasswordApiPasswordsPasswordIdSharePostResponses[keyof SharePasswordApiPasswordsPasswordIdSharePostResponses];
+export type SharePasswordPasswordsPasswordIdSharePostResponse = SharePasswordPasswordsPasswordIdSharePostResponses[keyof SharePasswordPasswordsPasswordIdSharePostResponses];
 
-export type UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteData = {
+export type UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -1125,28 +1125,28 @@ export type UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteData = {
         group_id: string;
     };
     query?: never;
-    url: '/api/passwords/{password_id}/share/{group_id}';
+    url: '/passwords/{password_id}/share/{group_id}';
 };
 
-export type UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteErrors = {
+export type UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteError = UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteErrors[keyof UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteErrors];
+export type UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteError = UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteErrors[keyof UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteErrors];
 
-export type UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteResponses = {
+export type UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses = {
     /**
      * Successful Response
      */
     204: void;
 };
 
-export type UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteResponse = UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteResponses[keyof UnsharePasswordApiPasswordsPasswordIdShareGroupIdDeleteResponses];
+export type UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponse = UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses[keyof UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses];
 
-export type ListPasswordAccessApiPasswordsPasswordIdAccessGetData = {
+export type ListPasswordAccessPasswordsPasswordIdAccessGetData = {
     body?: never;
     path: {
         /**
@@ -1155,44 +1155,44 @@ export type ListPasswordAccessApiPasswordsPasswordIdAccessGetData = {
         password_id: string;
     };
     query?: never;
-    url: '/api/passwords/{password_id}/access';
+    url: '/passwords/{password_id}/access';
 };
 
-export type ListPasswordAccessApiPasswordsPasswordIdAccessGetErrors = {
+export type ListPasswordAccessPasswordsPasswordIdAccessGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ListPasswordAccessApiPasswordsPasswordIdAccessGetError = ListPasswordAccessApiPasswordsPasswordIdAccessGetErrors[keyof ListPasswordAccessApiPasswordsPasswordIdAccessGetErrors];
+export type ListPasswordAccessPasswordsPasswordIdAccessGetError = ListPasswordAccessPasswordsPasswordIdAccessGetErrors[keyof ListPasswordAccessPasswordsPasswordIdAccessGetErrors];
 
-export type ListPasswordAccessApiPasswordsPasswordIdAccessGetResponses = {
+export type ListPasswordAccessPasswordsPasswordIdAccessGetResponses = {
     /**
      * Successful Response
      */
     200: ListPasswordAccessResponse;
 };
 
-export type ListPasswordAccessApiPasswordsPasswordIdAccessGetResponse = ListPasswordAccessApiPasswordsPasswordIdAccessGetResponses[keyof ListPasswordAccessApiPasswordsPasswordIdAccessGetResponses];
+export type ListPasswordAccessPasswordsPasswordIdAccessGetResponse = ListPasswordAccessPasswordsPasswordIdAccessGetResponses[keyof ListPasswordAccessPasswordsPasswordIdAccessGetResponses];
 
-export type GetUserMeApiUsersMeGetData = {
+export type GetUserMeUsersMeGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/users/me';
+    url: '/users/me';
 };
 
-export type GetUserMeApiUsersMeGetResponses = {
+export type GetUserMeUsersMeGetResponses = {
     /**
      * Successful Response
      */
     200: GetUserMeResponse;
 };
 
-export type GetUserMeApiUsersMeGetResponse = GetUserMeApiUsersMeGetResponses[keyof GetUserMeApiUsersMeGetResponses];
+export type GetUserMeUsersMeGetResponse = GetUserMeUsersMeGetResponses[keyof GetUserMeUsersMeGetResponses];
 
-export type DeleteUserApiUsersUserIdDeleteData = {
+export type DeleteUserUsersUserIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -1201,28 +1201,28 @@ export type DeleteUserApiUsersUserIdDeleteData = {
         user_id: string;
     };
     query?: never;
-    url: '/api/users/{user_id}';
+    url: '/users/{user_id}';
 };
 
-export type DeleteUserApiUsersUserIdDeleteErrors = {
+export type DeleteUserUsersUserIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type DeleteUserApiUsersUserIdDeleteError = DeleteUserApiUsersUserIdDeleteErrors[keyof DeleteUserApiUsersUserIdDeleteErrors];
+export type DeleteUserUsersUserIdDeleteError = DeleteUserUsersUserIdDeleteErrors[keyof DeleteUserUsersUserIdDeleteErrors];
 
-export type DeleteUserApiUsersUserIdDeleteResponses = {
+export type DeleteUserUsersUserIdDeleteResponses = {
     /**
      * Successful Response
      */
     204: void;
 };
 
-export type DeleteUserApiUsersUserIdDeleteResponse = DeleteUserApiUsersUserIdDeleteResponses[keyof DeleteUserApiUsersUserIdDeleteResponses];
+export type DeleteUserUsersUserIdDeleteResponse = DeleteUserUsersUserIdDeleteResponses[keyof DeleteUserUsersUserIdDeleteResponses];
 
-export type GetUserApiUsersUserIdGetData = {
+export type GetUserUsersUserIdGetData = {
     body?: never;
     path: {
         /**
@@ -1231,28 +1231,28 @@ export type GetUserApiUsersUserIdGetData = {
         user_id: string;
     };
     query?: never;
-    url: '/api/users/{user_id}';
+    url: '/users/{user_id}';
 };
 
-export type GetUserApiUsersUserIdGetErrors = {
+export type GetUserUsersUserIdGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetUserApiUsersUserIdGetError = GetUserApiUsersUserIdGetErrors[keyof GetUserApiUsersUserIdGetErrors];
+export type GetUserUsersUserIdGetError = GetUserUsersUserIdGetErrors[keyof GetUserUsersUserIdGetErrors];
 
-export type GetUserApiUsersUserIdGetResponses = {
+export type GetUserUsersUserIdGetResponses = {
     /**
      * Successful Response
      */
     200: GetUserResponse;
 };
 
-export type GetUserApiUsersUserIdGetResponse = GetUserApiUsersUserIdGetResponses[keyof GetUserApiUsersUserIdGetResponses];
+export type GetUserUsersUserIdGetResponse = GetUserUsersUserIdGetResponses[keyof GetUserUsersUserIdGetResponses];
 
-export type UpdateUserApiUsersUserIdPutData = {
+export type UpdateUserUsersUserIdPutData = {
     body: UpdateUserRequest;
     path: {
         /**
@@ -1261,69 +1261,69 @@ export type UpdateUserApiUsersUserIdPutData = {
         user_id: string;
     };
     query?: never;
-    url: '/api/users/{user_id}';
+    url: '/users/{user_id}';
 };
 
-export type UpdateUserApiUsersUserIdPutErrors = {
+export type UpdateUserUsersUserIdPutErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type UpdateUserApiUsersUserIdPutError = UpdateUserApiUsersUserIdPutErrors[keyof UpdateUserApiUsersUserIdPutErrors];
+export type UpdateUserUsersUserIdPutError = UpdateUserUsersUserIdPutErrors[keyof UpdateUserUsersUserIdPutErrors];
 
-export type UpdateUserApiUsersUserIdPutResponses = {
+export type UpdateUserUsersUserIdPutResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type ListUsersApiUsersGetData = {
+export type ListUsersUsersGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/users/';
+    url: '/users/';
 };
 
-export type ListUsersApiUsersGetResponses = {
+export type ListUsersUsersGetResponses = {
     /**
-     * Response List Users Api Users  Get
+     * Response List Users Users  Get
      *
      * Successful Response
      */
     200: Array<ListUserResponse>;
 };
 
-export type ListUsersApiUsersGetResponse = ListUsersApiUsersGetResponses[keyof ListUsersApiUsersGetResponses];
+export type ListUsersUsersGetResponse = ListUsersUsersGetResponses[keyof ListUsersUsersGetResponses];
 
-export type CreateUserApiUsersPostData = {
+export type CreateUserUsersPostData = {
     body: CreateUserRequest;
     path?: never;
     query?: never;
-    url: '/api/users/';
+    url: '/users/';
 };
 
-export type CreateUserApiUsersPostErrors = {
+export type CreateUserUsersPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type CreateUserApiUsersPostError = CreateUserApiUsersPostErrors[keyof CreateUserApiUsersPostErrors];
+export type CreateUserUsersPostError = CreateUserUsersPostErrors[keyof CreateUserUsersPostErrors];
 
-export type CreateUserApiUsersPostResponses = {
+export type CreateUserUsersPostResponses = {
     /**
      * Successful Response
      */
     201: CreateUserResponse;
 };
 
-export type CreateUserApiUsersPostResponse = CreateUserApiUsersPostResponses[keyof CreateUserApiUsersPostResponses];
+export type CreateUserUsersPostResponse = CreateUserUsersPostResponses[keyof CreateUserUsersPostResponses];
 
-export type PromoteUserToAdminApiUsersUserIdPromoteAdminPostData = {
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostData = {
     body?: never;
     path: {
         /**
@@ -1332,115 +1332,115 @@ export type PromoteUserToAdminApiUsersUserIdPromoteAdminPostData = {
         user_id: string;
     };
     query?: never;
-    url: '/api/users/{user_id}/promote-admin';
+    url: '/users/{user_id}/promote-admin';
 };
 
-export type PromoteUserToAdminApiUsersUserIdPromoteAdminPostErrors = {
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type PromoteUserToAdminApiUsersUserIdPromoteAdminPostError = PromoteUserToAdminApiUsersUserIdPromoteAdminPostErrors[keyof PromoteUserToAdminApiUsersUserIdPromoteAdminPostErrors];
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostError = PromoteUserToAdminUsersUserIdPromoteAdminPostErrors[keyof PromoteUserToAdminUsersUserIdPromoteAdminPostErrors];
 
-export type PromoteUserToAdminApiUsersUserIdPromoteAdminPostResponses = {
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostResponses = {
     /**
      * Successful Response
      */
     204: void;
 };
 
-export type PromoteUserToAdminApiUsersUserIdPromoteAdminPostResponse = PromoteUserToAdminApiUsersUserIdPromoteAdminPostResponses[keyof PromoteUserToAdminApiUsersUserIdPromoteAdminPostResponses];
+export type PromoteUserToAdminUsersUserIdPromoteAdminPostResponse = PromoteUserToAdminUsersUserIdPromoteAdminPostResponses[keyof PromoteUserToAdminUsersUserIdPromoteAdminPostResponses];
 
-export type AdminLoginApiAuthLoginPostData = {
+export type AdminLoginAuthLoginPostData = {
     body: AdminLoginRequest;
     path?: never;
     query?: never;
-    url: '/api/auth/login';
+    url: '/auth/login';
 };
 
-export type AdminLoginApiAuthLoginPostErrors = {
+export type AdminLoginAuthLoginPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type AdminLoginApiAuthLoginPostError = AdminLoginApiAuthLoginPostErrors[keyof AdminLoginApiAuthLoginPostErrors];
+export type AdminLoginAuthLoginPostError = AdminLoginAuthLoginPostErrors[keyof AdminLoginAuthLoginPostErrors];
 
-export type AdminLoginApiAuthLoginPostResponses = {
+export type AdminLoginAuthLoginPostResponses = {
     /**
      * Successful Response
      */
     200: AdminLoginResponse;
 };
 
-export type AdminLoginApiAuthLoginPostResponse = AdminLoginApiAuthLoginPostResponses[keyof AdminLoginApiAuthLoginPostResponses];
+export type AdminLoginAuthLoginPostResponse = AdminLoginAuthLoginPostResponses[keyof AdminLoginAuthLoginPostResponses];
 
-export type RegisterAdminApiAuthRegisterAdminPostData = {
+export type RegisterAdminAuthRegisterAdminPostData = {
     body: RegisterAdminRequest;
     path?: never;
     query?: never;
-    url: '/api/auth/register-admin';
+    url: '/auth/register-admin';
 };
 
-export type RegisterAdminApiAuthRegisterAdminPostErrors = {
+export type RegisterAdminAuthRegisterAdminPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type RegisterAdminApiAuthRegisterAdminPostError = RegisterAdminApiAuthRegisterAdminPostErrors[keyof RegisterAdminApiAuthRegisterAdminPostErrors];
+export type RegisterAdminAuthRegisterAdminPostError = RegisterAdminAuthRegisterAdminPostErrors[keyof RegisterAdminAuthRegisterAdminPostErrors];
 
-export type RegisterAdminApiAuthRegisterAdminPostResponses = {
+export type RegisterAdminAuthRegisterAdminPostResponses = {
     /**
      * Successful Response
      */
     201: RegisterAdminResponse;
 };
 
-export type RegisterAdminApiAuthRegisterAdminPostResponse = RegisterAdminApiAuthRegisterAdminPostResponses[keyof RegisterAdminApiAuthRegisterAdminPostResponses];
+export type RegisterAdminAuthRegisterAdminPostResponse = RegisterAdminAuthRegisterAdminPostResponses[keyof RegisterAdminAuthRegisterAdminPostResponses];
 
-export type ConfigureSsoProviderApiAuthSsoConfigurePostData = {
+export type ConfigureSsoProviderAuthSsoConfigurePostData = {
     body: ConfigureSsoProviderRequest;
     path?: never;
     query?: never;
-    url: '/api/auth/sso/configure';
+    url: '/auth/sso/configure';
 };
 
-export type ConfigureSsoProviderApiAuthSsoConfigurePostErrors = {
+export type ConfigureSsoProviderAuthSsoConfigurePostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ConfigureSsoProviderApiAuthSsoConfigurePostError = ConfigureSsoProviderApiAuthSsoConfigurePostErrors[keyof ConfigureSsoProviderApiAuthSsoConfigurePostErrors];
+export type ConfigureSsoProviderAuthSsoConfigurePostError = ConfigureSsoProviderAuthSsoConfigurePostErrors[keyof ConfigureSsoProviderAuthSsoConfigurePostErrors];
 
-export type ConfigureSsoProviderApiAuthSsoConfigurePostResponses = {
+export type ConfigureSsoProviderAuthSsoConfigurePostResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type GetSsoUrlApiAuthSsoUrlGetData = {
+export type GetSsoUrlAuthSsoUrlGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/auth/sso/url';
+    url: '/auth/sso/url';
 };
 
-export type GetSsoUrlApiAuthSsoUrlGetResponses = {
+export type GetSsoUrlAuthSsoUrlGetResponses = {
     /**
      * Successful Response
      */
     200: unknown;
 };
 
-export type SsoCallbackApiAuthSsoCallbackGetData = {
+export type SsoCallbackAuthSsoCallbackGetData = {
     body?: never;
     path?: never;
     query: {
@@ -1457,94 +1457,94 @@ export type SsoCallbackApiAuthSsoCallbackGetData = {
          */
         state?: string;
     };
-    url: '/api/auth/sso/callback';
+    url: '/auth/sso/callback';
 };
 
-export type SsoCallbackApiAuthSsoCallbackGetErrors = {
+export type SsoCallbackAuthSsoCallbackGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type SsoCallbackApiAuthSsoCallbackGetError = SsoCallbackApiAuthSsoCallbackGetErrors[keyof SsoCallbackApiAuthSsoCallbackGetErrors];
+export type SsoCallbackAuthSsoCallbackGetError = SsoCallbackAuthSsoCallbackGetErrors[keyof SsoCallbackAuthSsoCallbackGetErrors];
 
-export type SsoCallbackApiAuthSsoCallbackGetResponses = {
+export type SsoCallbackAuthSsoCallbackGetResponses = {
     /**
      * Successful Response
      */
     200: SsoCallbackResponse;
 };
 
-export type SsoCallbackApiAuthSsoCallbackGetResponse = SsoCallbackApiAuthSsoCallbackGetResponses[keyof SsoCallbackApiAuthSsoCallbackGetResponses];
+export type SsoCallbackAuthSsoCallbackGetResponse = SsoCallbackAuthSsoCallbackGetResponses[keyof SsoCallbackAuthSsoCallbackGetResponses];
 
-export type IsSsoConfigSetApiAuthSsoIsConfiguredGetData = {
+export type IsSsoConfigSetAuthSsoIsConfiguredGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/auth/sso/is-configured';
+    url: '/auth/sso/is-configured';
 };
 
-export type IsSsoConfigSetApiAuthSsoIsConfiguredGetResponses = {
+export type IsSsoConfigSetAuthSsoIsConfiguredGetResponses = {
     /**
      * Successful Response
      */
     200: IsSsoConfigSetResponse;
 };
 
-export type IsSsoConfigSetApiAuthSsoIsConfiguredGetResponse = IsSsoConfigSetApiAuthSsoIsConfiguredGetResponses[keyof IsSsoConfigSetApiAuthSsoIsConfiguredGetResponses];
+export type IsSsoConfigSetAuthSsoIsConfiguredGetResponse = IsSsoConfigSetAuthSsoIsConfiguredGetResponses[keyof IsSsoConfigSetAuthSsoIsConfiguredGetResponses];
 
-export type RefreshAccessTokenApiAuthRefreshTokenPostData = {
+export type RefreshAccessTokenAuthRefreshTokenPostData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/api/auth/refresh-token';
+    url: '/auth/refresh-token';
 };
 
-export type RefreshAccessTokenApiAuthRefreshTokenPostErrors = {
+export type RefreshAccessTokenAuthRefreshTokenPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type RefreshAccessTokenApiAuthRefreshTokenPostError = RefreshAccessTokenApiAuthRefreshTokenPostErrors[keyof RefreshAccessTokenApiAuthRefreshTokenPostErrors];
+export type RefreshAccessTokenAuthRefreshTokenPostError = RefreshAccessTokenAuthRefreshTokenPostErrors[keyof RefreshAccessTokenAuthRefreshTokenPostErrors];
 
-export type RefreshAccessTokenApiAuthRefreshTokenPostResponses = {
+export type RefreshAccessTokenAuthRefreshTokenPostResponses = {
     /**
      * Successful Response
      */
     200: RefreshAccessTokenResponse;
 };
 
-export type RefreshAccessTokenApiAuthRefreshTokenPostResponse = RefreshAccessTokenApiAuthRefreshTokenPostResponses[keyof RefreshAccessTokenApiAuthRefreshTokenPostResponses];
+export type RefreshAccessTokenAuthRefreshTokenPostResponse = RefreshAccessTokenAuthRefreshTokenPostResponses[keyof RefreshAccessTokenAuthRefreshTokenPostResponses];
 
-export type CreateGroupApiGroupsPostData = {
+export type CreateGroupGroupsPostData = {
     body: CreateGroupRequest;
     path?: never;
     query?: never;
-    url: '/api/groups/';
+    url: '/groups/';
 };
 
-export type CreateGroupApiGroupsPostErrors = {
+export type CreateGroupGroupsPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type CreateGroupApiGroupsPostError = CreateGroupApiGroupsPostErrors[keyof CreateGroupApiGroupsPostErrors];
+export type CreateGroupGroupsPostError = CreateGroupGroupsPostErrors[keyof CreateGroupGroupsPostErrors];
 
-export type CreateGroupApiGroupsPostResponses = {
+export type CreateGroupGroupsPostResponses = {
     /**
      * Successful Response
      */
     201: CreateGroupResponse;
 };
 
-export type CreateGroupApiGroupsPostResponse = CreateGroupApiGroupsPostResponses[keyof CreateGroupApiGroupsPostResponses];
+export type CreateGroupGroupsPostResponse = CreateGroupGroupsPostResponses[keyof CreateGroupGroupsPostResponses];
 
-export type AddMemberToGroupApiGroupsGroupIdMembersPostData = {
+export type AddMemberToGroupGroupsGroupIdMembersPostData = {
     body: AddMemberToGroupRequest;
     path: {
         /**
@@ -1553,28 +1553,28 @@ export type AddMemberToGroupApiGroupsGroupIdMembersPostData = {
         group_id: string;
     };
     query?: never;
-    url: '/api/groups/{group_id}/members';
+    url: '/groups/{group_id}/members';
 };
 
-export type AddMemberToGroupApiGroupsGroupIdMembersPostErrors = {
+export type AddMemberToGroupGroupsGroupIdMembersPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type AddMemberToGroupApiGroupsGroupIdMembersPostError = AddMemberToGroupApiGroupsGroupIdMembersPostErrors[keyof AddMemberToGroupApiGroupsGroupIdMembersPostErrors];
+export type AddMemberToGroupGroupsGroupIdMembersPostError = AddMemberToGroupGroupsGroupIdMembersPostErrors[keyof AddMemberToGroupGroupsGroupIdMembersPostErrors];
 
-export type AddMemberToGroupApiGroupsGroupIdMembersPostResponses = {
+export type AddMemberToGroupGroupsGroupIdMembersPostResponses = {
     /**
      * Successful Response
      */
     201: AddMemberToGroupResponse;
 };
 
-export type AddMemberToGroupApiGroupsGroupIdMembersPostResponse = AddMemberToGroupApiGroupsGroupIdMembersPostResponses[keyof AddMemberToGroupApiGroupsGroupIdMembersPostResponses];
+export type AddMemberToGroupGroupsGroupIdMembersPostResponse = AddMemberToGroupGroupsGroupIdMembersPostResponses[keyof AddMemberToGroupGroupsGroupIdMembersPostResponses];
 
-export type AddOwnerToGroupApiGroupsGroupIdOwnersPostData = {
+export type AddOwnerToGroupGroupsGroupIdOwnersPostData = {
     body: AddOwnerToGroupRequest;
     path: {
         /**
@@ -1583,28 +1583,28 @@ export type AddOwnerToGroupApiGroupsGroupIdOwnersPostData = {
         group_id: string;
     };
     query?: never;
-    url: '/api/groups/{group_id}/owners';
+    url: '/groups/{group_id}/owners';
 };
 
-export type AddOwnerToGroupApiGroupsGroupIdOwnersPostErrors = {
+export type AddOwnerToGroupGroupsGroupIdOwnersPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type AddOwnerToGroupApiGroupsGroupIdOwnersPostError = AddOwnerToGroupApiGroupsGroupIdOwnersPostErrors[keyof AddOwnerToGroupApiGroupsGroupIdOwnersPostErrors];
+export type AddOwnerToGroupGroupsGroupIdOwnersPostError = AddOwnerToGroupGroupsGroupIdOwnersPostErrors[keyof AddOwnerToGroupGroupsGroupIdOwnersPostErrors];
 
-export type AddOwnerToGroupApiGroupsGroupIdOwnersPostResponses = {
+export type AddOwnerToGroupGroupsGroupIdOwnersPostResponses = {
     /**
      * Successful Response
      */
     201: AddOwnerToGroupResponse;
 };
 
-export type AddOwnerToGroupApiGroupsGroupIdOwnersPostResponse = AddOwnerToGroupApiGroupsGroupIdOwnersPostResponses[keyof AddOwnerToGroupApiGroupsGroupIdOwnersPostResponses];
+export type AddOwnerToGroupGroupsGroupIdOwnersPostResponse = AddOwnerToGroupGroupsGroupIdOwnersPostResponses[keyof AddOwnerToGroupGroupsGroupIdOwnersPostResponses];
 
-export type RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteData = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -1617,28 +1617,28 @@ export type RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteData = {
         user_id: string;
     };
     query?: never;
-    url: '/api/groups/{group_id}/members/{user_id}';
+    url: '/groups/{group_id}/members/{user_id}';
 };
 
-export type RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteErrors = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteError = RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteErrors[keyof RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteErrors];
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteError = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors];
 
-export type RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteResponses = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses = {
     /**
      * Successful Response
      */
     200: RemoveMemberFromGroupResponse;
 };
 
-export type RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteResponse = RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteResponses[keyof RemoveMemberFromGroupApiGroupsGroupIdMembersUserIdDeleteResponses];
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponse = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses];
 
-export type DeleteGroupApiGroupsGroupIdDeleteData = {
+export type DeleteGroupGroupsGroupIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -1647,28 +1647,28 @@ export type DeleteGroupApiGroupsGroupIdDeleteData = {
         group_id: string;
     };
     query?: never;
-    url: '/api/groups/{group_id}';
+    url: '/groups/{group_id}';
 };
 
-export type DeleteGroupApiGroupsGroupIdDeleteErrors = {
+export type DeleteGroupGroupsGroupIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type DeleteGroupApiGroupsGroupIdDeleteError = DeleteGroupApiGroupsGroupIdDeleteErrors[keyof DeleteGroupApiGroupsGroupIdDeleteErrors];
+export type DeleteGroupGroupsGroupIdDeleteError = DeleteGroupGroupsGroupIdDeleteErrors[keyof DeleteGroupGroupsGroupIdDeleteErrors];
 
-export type DeleteGroupApiGroupsGroupIdDeleteResponses = {
+export type DeleteGroupGroupsGroupIdDeleteResponses = {
     /**
      * Successful Response
      */
     204: void;
 };
 
-export type DeleteGroupApiGroupsGroupIdDeleteResponse = DeleteGroupApiGroupsGroupIdDeleteResponses[keyof DeleteGroupApiGroupsGroupIdDeleteResponses];
+export type DeleteGroupGroupsGroupIdDeleteResponse = DeleteGroupGroupsGroupIdDeleteResponses[keyof DeleteGroupGroupsGroupIdDeleteResponses];
 
-export type GetGroupApiGroupsGroupIdGetData = {
+export type GetGroupGroupsGroupIdGetData = {
     body?: never;
     path: {
         /**
@@ -1677,28 +1677,28 @@ export type GetGroupApiGroupsGroupIdGetData = {
         group_id: string;
     };
     query?: never;
-    url: '/api/groups/{group_id}';
+    url: '/groups/{group_id}';
 };
 
-export type GetGroupApiGroupsGroupIdGetErrors = {
+export type GetGroupGroupsGroupIdGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetGroupApiGroupsGroupIdGetError = GetGroupApiGroupsGroupIdGetErrors[keyof GetGroupApiGroupsGroupIdGetErrors];
+export type GetGroupGroupsGroupIdGetError = GetGroupGroupsGroupIdGetErrors[keyof GetGroupGroupsGroupIdGetErrors];
 
-export type GetGroupApiGroupsGroupIdGetResponses = {
+export type GetGroupGroupsGroupIdGetResponses = {
     /**
      * Successful Response
      */
     200: GetGroupResponse;
 };
 
-export type GetGroupApiGroupsGroupIdGetResponse = GetGroupApiGroupsGroupIdGetResponses[keyof GetGroupApiGroupsGroupIdGetResponses];
+export type GetGroupGroupsGroupIdGetResponse = GetGroupGroupsGroupIdGetResponses[keyof GetGroupGroupsGroupIdGetResponses];
 
-export type UpdateGroupApiGroupsGroupIdPutData = {
+export type UpdateGroupGroupsGroupIdPutData = {
     body: UpdateGroupRequest;
     path: {
         /**
@@ -1707,28 +1707,28 @@ export type UpdateGroupApiGroupsGroupIdPutData = {
         group_id: string;
     };
     query?: never;
-    url: '/api/groups/{group_id}';
+    url: '/groups/{group_id}';
 };
 
-export type UpdateGroupApiGroupsGroupIdPutErrors = {
+export type UpdateGroupGroupsGroupIdPutErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type UpdateGroupApiGroupsGroupIdPutError = UpdateGroupApiGroupsGroupIdPutErrors[keyof UpdateGroupApiGroupsGroupIdPutErrors];
+export type UpdateGroupGroupsGroupIdPutError = UpdateGroupGroupsGroupIdPutErrors[keyof UpdateGroupGroupsGroupIdPutErrors];
 
-export type UpdateGroupApiGroupsGroupIdPutResponses = {
+export type UpdateGroupGroupsGroupIdPutResponses = {
     /**
      * Successful Response
      */
     200: UpdateGroupResponse;
 };
 
-export type UpdateGroupApiGroupsGroupIdPutResponse = UpdateGroupApiGroupsGroupIdPutResponses[keyof UpdateGroupApiGroupsGroupIdPutResponses];
+export type UpdateGroupGroupsGroupIdPutResponse = UpdateGroupGroupsGroupIdPutResponses[keyof UpdateGroupGroupsGroupIdPutResponses];
 
-export type ListGroupsApiGroupsGetData = {
+export type ListGroupsGroupsGetData = {
     body?: never;
     path?: never;
     query?: {
@@ -1739,28 +1739,28 @@ export type ListGroupsApiGroupsGetData = {
          */
         include_personal?: boolean;
     };
-    url: '/api/groups';
+    url: '/groups';
 };
 
-export type ListGroupsApiGroupsGetErrors = {
+export type ListGroupsGroupsGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ListGroupsApiGroupsGetError = ListGroupsApiGroupsGetErrors[keyof ListGroupsApiGroupsGetErrors];
+export type ListGroupsGroupsGetError = ListGroupsGroupsGetErrors[keyof ListGroupsGroupsGetErrors];
 
-export type ListGroupsApiGroupsGetResponses = {
+export type ListGroupsGroupsGetResponses = {
     /**
      * Successful Response
      */
     200: ListGroupsResponse;
 };
 
-export type ListGroupsApiGroupsGetResponse = ListGroupsApiGroupsGetResponses[keyof ListGroupsApiGroupsGetResponses];
+export type ListGroupsGroupsGetResponse = ListGroupsGroupsGetResponses[keyof ListGroupsGroupsGetResponses];
 
-export type ListEventsApiEventsGetData = {
+export type ListEventsEventsGetData = {
     body?: never;
     path?: never;
     query?: {
@@ -1783,23 +1783,23 @@ export type ListEventsApiEventsGetData = {
          */
         end_date?: string | null;
     };
-    url: '/api/events';
+    url: '/events';
 };
 
-export type ListEventsApiEventsGetErrors = {
+export type ListEventsEventsGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ListEventsApiEventsGetError = ListEventsApiEventsGetErrors[keyof ListEventsApiEventsGetErrors];
+export type ListEventsEventsGetError = ListEventsEventsGetErrors[keyof ListEventsEventsGetErrors];
 
-export type ListEventsApiEventsGetResponses = {
+export type ListEventsEventsGetResponses = {
     /**
      * Successful Response
      */
     200: ListEventsResponse;
 };
 
-export type ListEventsApiEventsGetResponse = ListEventsApiEventsGetResponses[keyof ListEventsApiEventsGetResponses];
+export type ListEventsEventsGetResponse = ListEventsEventsGetResponses[keyof ListEventsEventsGetResponses];
