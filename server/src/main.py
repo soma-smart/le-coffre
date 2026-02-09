@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
-from fastapi import FastAPI
-from fastapi import FastAPI as RootApp
+from fastapi import FastAPI, FastAPI as RootApp
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
