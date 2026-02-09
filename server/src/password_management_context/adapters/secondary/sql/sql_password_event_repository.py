@@ -5,13 +5,14 @@ from sqlmodel import Session, select
 from password_management_context.adapters.secondary.sql.model.password_event import (
     PasswordEventTable,
 )
+from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
 
 
-class SqlPasswordEventRepository:
+class SqlPasswordEventRepository(SQLBaseRepository):
     """SQL implementation of password event repository"""
 
     def __init__(self, session: Session):
-        self.session = session
+        super().__init__(session)
 
     def append_event(
         self,
@@ -31,8 +32,8 @@ class SqlPasswordEventRepository:
             actor_user_id=actor_user_id,
             event_data=event_data,
         )
-        self.session.add(event)
-        self.session.commit()
+        self._session.add(event)
+        self.commit()
 
     def list_events(
         self,
@@ -61,7 +62,7 @@ class SqlPasswordEventRepository:
 
         query = query.order_by(PasswordEventTable.occurred_on.desc())  # type: ignore[attr-defined]
 
-        results = self.session.exec(query).all()
+        results = self._session.exec(query).all()
 
         return [
             {
