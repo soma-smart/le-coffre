@@ -137,7 +137,18 @@ async def lifespan(app: FastAPI):
     yield
 
 
+# Create the main app with lifespan
+# root_path="/api" ensures OpenAPI docs are served at /api/openapi.json
 app = FastAPI(lifespan=lifespan, root_path="/api")
+
+# Health check endpoint for Kubernetes
+# Note: With root_path="/api", this will be accessible at /api/health
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+# Include API routers without additional prefix
+# root_path="/api" already makes all routes accessible under /api
 app.include_router(get_vault_management_router())
 app.include_router(get_password_management_router())
 app.include_router(get_user_management_router())
@@ -145,33 +156,14 @@ app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
 app.include_router(get_audit_logging_router())
 
-# Mount static files for frontend (served at root, not under /api)
+# Mount static files for frontend if they exist
 frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
 if frontend_dist.exists():
-    # Create a sub-app without root_path for serving frontend
-    root_app = FastAPI()
-
-    # Health check endpoint for Kubernetes
-    @root_app.get("/api/health")
-    async def health_check():
-        return {"status": "healthy"}
-
-    # Mount API under /api
-    root_app.mount("/api", app)
-
     # Serve static files
-    root_app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
 
     # Catch-all route for SPA (must be last)
-    @root_app.get("/{full_path:path}")
+    @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         # Serve index.html for all non-API routes (SPA)
         return FileResponse(frontend_dist / "index.html")
-
-    # Replace app with root_app for export
-    app = root_app
-else:
-    # If frontend doesn't exist, add health check to main app
-    @app.get("/health")
-    async def health_check():
-        return {"status": "healthy"}

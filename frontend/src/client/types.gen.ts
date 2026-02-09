@@ -816,6 +816,20 @@ export type VaultStatusResponse = {
     status: VaultStatus;
 };
 
+export type HealthCheckHealthGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/health';
+};
+
+export type HealthCheckHealthGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type CreateVaultVaultSetupPostData = {
     body: CreateVaultPostRequest;
     path?: never;
@@ -1789,17 +1803,3 @@ export type ListEventsEventsGetResponses = {
 };
 
 export type ListEventsEventsGetResponse = ListEventsEventsGetResponses[keyof ListEventsEventsGetResponses];
-
-export type HealthCheckHealthGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/health';
-};
-
-export type HealthCheckHealthGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};

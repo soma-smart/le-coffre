@@ -19,6 +19,11 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
+ * Health Check
+ */
+export const healthCheckHealthGet = <ThrowOnError extends boolean = false>(options?: Options<HealthCheckHealthGetData, ThrowOnError>) => (options?.client ?? client).get<HealthCheckHealthGetResponses, unknown, ThrowOnError>({ url: '/health', ...options });
+
+/**
  * Create a new vault in pending state
  *
  * Create a new vault with Shamir's Secret Sharing in pending state.
@@ -798,8 +803,3 @@ export const listEventsEventsGet = <ThrowOnError extends boolean = false>(option
     url: '/events',
     ...options
 });
-
-/**
- * Health Check
- */
-export const healthCheckHealthGet = <ThrowOnError extends boolean = false>(options?: Options<HealthCheckHealthGetData, ThrowOnError>) => (options?.client ?? client).get<HealthCheckHealthGetResponses, unknown, ThrowOnError>({ url: '/health', ...options });
