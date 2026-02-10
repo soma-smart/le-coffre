@@ -25,3 +25,13 @@ logs
 
 # Database
 *.sqlite
+
+# Kubernetes secrets
+k8s/secrets.yaml
+
+# Helm values (keep these in private repo)
+helm/**/values-prod.yaml
+helm/**/values-staging.yaml
+helm/**/values-*.yaml
+!helm/**/values.yaml
+!helm/examples/*.example
