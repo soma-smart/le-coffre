@@ -1,0 +1,293 @@
+# Example values for Le Coffre
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  # Image pull secrets for private registries (optional)
+  imagePullSecrets: []
+  # - name: my-registry-secret
+
+# Application configuration
+config:
+  # Environment: development, staging, production
+  environment: production
+  
+  # Base URL of your application (used for OAuth redirects, email links, etc.)
+  appBaseUrl: "https://passwords.example.com"
+  
+  # JWT Configuration
+  jwt:
+    algorithm: "HS256"
+    accessTokenExpirationMinutes: "30"
+    refreshTokenExpirationDays: "7"
+
+# Backend (FastAPI) configuration
+backend:
+  # Number of replicas (ignored if autoscaling is enabled)
+  replicaCount: 2
+  
+  image:
+    # Registry URL (leave empty for Docker Hub)
+    registry: ""
+    # Image repository (update with your registry path)
+    # Example: ghcr.io/your-org/le-coffre-backend or your-registry.scw.cloud/le-coffre-backend
+    repository: "ghcr.io/soma-smart/le-coffre-backend"
+    # Image tag (defaults to Chart appVersion if not specified)
+    tag: ""
+    pullPolicy: IfNotPresent
+  
+  # Backend service configuration
+  service:
+    type: ClusterIP
+    port: 8000
+  
+  # Backend secrets (REQUIRED - generate secure values!)
+  secrets:
+    # JWT secret key for token signing (CHANGE THIS!)
+    # Generate with: openssl rand -base64 32
+    jwtSecretKey: "CHANGE-ME-generate-with-openssl-rand-base64-32"
+  
+  # Database configuration
+  config:
+    # External database URL (used if postgresql.enabled = false)
+    # Format: postgresql://user:password@host:port/database
+    databaseUrl: "postgresql://lecoffre:securepassword@postgres.example.com:5432/lecoffre"
+  
+  # Additional environment variables
+  env: {}
+    # CUSTOM_VAR: "value"
+  
+  # Persistence for SQLite or local data (optional)
+  persistence:
+    enabled: false
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    # Storage class (leave empty for default)
+    storageClass: ""
+    mountPath: /app/data
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  # Liveness probe configuration
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  # Readiness probe configuration
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: false
+    allowPrivilegeEscalation: false
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity rules
+  affinity: {}
+  
+  # Autoscaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Frontend (Vue.js) configuration
+frontend:
+  # Number of replicas (ignored if autoscaling is enabled)
+  replicaCount: 2
+  
+  image:
+    # Registry URL (leave empty for Docker Hub)
+    registry: ""
+    # Image repository (update with your registry path)
+    # Example: ghcr.io/your-org/le-coffre-frontend or your-registry.scw.cloud/le-coffre-frontend
+    repository: "ghcr.io/soma-smart/le-coffre-frontend"
+    # Image tag (defaults to Chart appVersion if not specified)
+    tag: ""
+    pullPolicy: IfNotPresent
+  
+  # Frontend service configuration
+  service:
+    type: ClusterIP
+    port: 8080
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  # Liveness probe configuration
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  # Readiness probe configuration
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  # Security context
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+  
+  # Node selector
+  nodeSelector: {}
+  
+  # Tolerations
+  tolerations: []
+  
+  # Affinity rules
+  affinity: {}
+  
+  # Autoscaling configuration
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# Ingress configuration
+ingress:
+  enabled: true
+  # Ingress class name (e.g., nginx, traefik, etc.)
+  className: "nginx"
+  
+  # Ingress annotations
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # Increase body size for file uploads if needed
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+  
+  # Hosts configuration
+  hosts:
+    - host: passwords.example.com
+  
+  # TLS configuration
+  tls:
+    - secretName: le-coffre-tls
+      hosts:
+        - passwords.example.com
+
+# PostgreSQL configuration (embedded chart)
+# Set enabled: true to deploy PostgreSQL in the cluster
+# Set enabled: false to use an external database
+postgresql:
+  enabled: false
+  auth:
+    username: lecoffre
+    password: "CHANGE-ME-secure-postgres-password"
+    database: lecoffre
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Service Account configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use (if not set, a name is generated)
+  name: ""
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  backend:
+    # Minimum available pods during disruptions
+    minAvailable: 1
+    # OR maximum unavailable (use only one)
+    # maxUnavailable: 1
+  frontend:
+    minAvailable: 1
+
+# Network Policy
+networkPolicy:
+  enabled: false
+  # Enable this in production for enhanced security
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: false
+  # Set to true if you have Prometheus Operator installed
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+    # prometheus: kube-prometheus
+
+# Override chart name
+nameOverride: ""
+fullnameOverride: ""

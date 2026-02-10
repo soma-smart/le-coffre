@@ -31,7 +31,7 @@ spec:
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
         ports:
         - name: http
-          containerPort: {{ .Values.backend.service.targetPort }}
+          containerPort: 8000
           protocol: TCP
         env:
         {{- range $key, $value := .Values.backend.env }}
@@ -113,7 +113,7 @@ spec:
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         ports:
         - name: http
-          containerPort: {{ .Values.frontend.service.targetPort }}
+          containerPort: 8000
           protocol: TCP
         {{- if .Values.frontend.livenessProbe }}
         livenessProbe:
