@@ -72,7 +72,9 @@ def run_migrations(max_retries: int = 5, retry_delay: float = 5.0):
             return
         except Exception as e:
             if attempt < max_retries - 1:
-                print(f"Migration attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {retry_delay}s...")
+                print(
+                    f"Migration attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {retry_delay}s..."
+                )
                 time.sleep(retry_delay)
             else:
                 raise
@@ -169,7 +171,6 @@ async def health_check(request: Request):
         raise HTTPException(status_code=503, detail=f"Database unhealthy: {e}")
 
 
-
 # Include API routers without additional prefix
 # root_path="/api" already makes all routes accessible under /api
 app.include_router(get_vault_management_router())
@@ -177,17 +178,3 @@ app.include_router(get_password_management_router())
 app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
-
-# Mount static files for frontend if they exist
-frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
-if frontend_dist.exists():
-    # Serve static files
-    app.mount(
-        "/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets"
-    )
-
-    # Catch-all route for SPA (must be last)
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        # Serve index.html for all non-API routes (SPA)
-        return FileResponse(frontend_dist / "index.html")

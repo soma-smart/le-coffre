@@ -682,6 +682,12 @@ export type UnlockVaultPostRequest = {
      * List of share secrets (hex strings with embedded index)
      */
     shares: Array<string>;
+    /**
+     * Reset
+     *
+     * If true, clear existing shares before unlocking. If false, combine with existing shares.
+     */
+    reset?: boolean;
 };
 
 /**

@@ -67,6 +67,7 @@ export const validateVaultSetupVaultValidateSetupPost = <ThrowOnError extends bo
  * before any user can authenticate.
  *
  * - **shares**: List of share secrets (hex strings with embedded index in format "index:hexsecret")
+ * - **reset**: If true, clear existing shares before unlocking. If false, combine with existing shares.
  */
 export const unlockVaultVaultUnlockPost = <ThrowOnError extends boolean = false>(options: Options<UnlockVaultVaultUnlockPostData, ThrowOnError>) => (options.client ?? client).post<UnlockVaultVaultUnlockPostResponses, UnlockVaultVaultUnlockPostErrors, ThrowOnError>({
     url: '/vault/unlock',
