@@ -1,4 +1,4 @@
-name: Build, Push and Release
+name: Create Release
 
 on:
   push:
@@ -7,107 +7,59 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Images
-    runs-on: ubuntu-latest
-
-    env:
-      REGISTRY: rg.fr-par.scw.cloud/somait-cr
-
-    outputs:
-      image_tag: ${{ steps.version.outputs.tag }}
-      backend_digest: ${{ steps.backend_build.outputs.digest }}
-      frontend_digest: ${{ steps.frontend_build.outputs.digest }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get tag version
-        id: version
-        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: nologin
-          password: ${{ secrets.SCW_SECRET_KEY }}
-
-      - name: Build and push backend image
-        id: backend_build
-        uses: docker/build-push-action@v6
-        with:
-          context: ./server
-          file: ./server/Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.REGISTRY }}/le-coffre-backend:${{ steps.version.outputs.tag }}
-            ${{ env.REGISTRY }}/le-coffre-backend:latest
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/le-coffre-backend:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-backend:buildcache,mode=max
-
-      - name: Build and push frontend image
-        id: frontend_build
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.REGISTRY }}/le-coffre-frontend:${{ steps.version.outputs.tag }}
-            ${{ env.REGISTRY }}/le-coffre-frontend:latest
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache,mode=max
-
-  create-release:
-    name: Create GitHub Release
-    needs: build-and-push
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
       - name: Generate changelog
         id: changelog
         run: |
+          # Get previous tag
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           CURRENT_TAG=${GITHUB_REF#refs/tags/}
 
+          # Generate changelog from commits
           if [ -z "$PREVIOUS_TAG" ]; then
             COMMITS=$(git log --pretty=format:"* %s (%h)" $CURRENT_TAG)
           else
             COMMITS=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..$CURRENT_TAG)
           fi
 
+          # Group by type (feat, fix, etc.)
           FEATURES=$(echo "$COMMITS" | grep -i "^* feat" || true)
           FIXES=$(echo "$COMMITS" | grep -i "^* fix" || true)
           REFACTOR=$(echo "$COMMITS" | grep -i "^* refactor" || true)
           CHORES=$(echo "$COMMITS" | grep -i "^* chore" || true)
           OTHER=$(echo "$COMMITS" | grep -iv "^* \(feat\|fix\|refactor\|chore\)" || true)
 
-          CHANGELOG="# Release $CURRENT_TAG\n\n## Changes\n"
-          [ -n "$FEATURES" ] && CHANGELOG="$CHANGELOG\n### ✨ Features\n$FEATURES\n"
-          [ -n "$FIXES" ] && CHANGELOG="$CHANGELOG\n### 🐛 Bug Fixes\n$FIXES\n"
-          [ -n "$REFACTOR" ] && CHANGELOG="$CHANGELOG\n### ♻️ Refactoring\n$REFACTOR\n"
-          [ -n "$CHORES" ] && CHANGELOG="$CHANGELOG\n### 🔧 Chores\n$CHORES\n"
-          [ -n "$OTHER" ] && CHANGELOG="$CHANGELOG\n### 📝 Other Changes\n$OTHER\n"
+          # Build changelog
+          CHANGELOG="# Release $CURRENT_TAG"
+          CHANGELOG="$CHANGELOG\n\n## Changes\n"
 
-          REGISTRY="rg.fr-par.scw.cloud/somait-cr"
-          TAG="${{ needs.build-and-push.outputs.image_tag }}"
-          CHANGELOG="$CHANGELOG\n## 🐳 Docker Images\n"
-          CHANGELOG="$CHANGELOG\n**Backend** (\`$REGISTRY/le-coffre-backend:$TAG\`)\nDigest: \`${{ needs.build-and-push.outputs.backend_digest }}\`\n"
-          CHANGELOG="$CHANGELOG\n**Frontend** (\`$REGISTRY/le-coffre-frontend:$TAG\`)\nDigest: \`${{ needs.build-and-push.outputs.frontend_digest }}\`\n"
-          CHANGELOG="$CHANGELOG\n## 🚀 Deploy\n\`\`\`bash\nhelm upgrade --install le-coffre ./helm/le-coffre \\\\\n  --set backend.image.tag=$TAG \\\\\n  --set frontend.image.tag=$TAG\n\`\`\`\n"
+          if [ -n "$FEATURES" ]; then
+            CHANGELOG="$CHANGELOG\n### ✨ Features\n$FEATURES\n"
+          fi
+
+          if [ -n "$FIXES" ]; then
+            CHANGELOG="$CHANGELOG\n### 🐛 Bug Fixes\n$FIXES\n"
+          fi
+
+          if [ -n "$REFACTOR" ]; then
+            CHANGELOG="$CHANGELOG\n### ♻️ Refactoring\n$REFACTOR\n"
+          fi
+
+          if [ -n "$CHORES" ]; then
+            CHANGELOG="$CHANGELOG\n### 🔧 Chores\n$CHORES\n"
+          fi
+
+          if [ -n "$OTHER" ]; then
+            CHANGELOG="$CHANGELOG\n### 📝 Other Changes\n$OTHER\n"
+          fi
 
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
