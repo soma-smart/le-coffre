@@ -1,33 +1,51 @@
 # --- Stage 1: Build ---
-FROM python:3.13-slim as builder
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
 
+# Install dependencies in a virtual environment
+RUN uv sync --frozen --no-dev --no-cache
+
+# Copy application source code
 COPY . .
 
 # --- Stage 2: Final Image ---
-FROM python:3.13-slim
+FROM python:3.13-slim-bookworm
 
 WORKDIR /app
 
-# Créer un utilisateur non-root pour la sécurité
-RUN addgroup --system app && adduser --system --group app
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copier les dépendances installées et le code depuis le stage builder
-COPY --from=builder /root/.local /root/.local
-COPY --from=builder /app .
+# Create non-root user for security
+RUN groupadd --system --gid 1000 app && \
+    useradd --system --uid 1000 --gid app --home /app --shell /sbin/nologin app
 
-# Définir le chemin pour les exécutables Python
-ENV PATH=/root/.local/bin:$PATH
+# Copy virtual environment from builder stage
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
-# Changer le propriétaire des fichiers
-RUN chown -R app:app /app
+# Copy application code from builder stage
+COPY --from=builder --chown=app:app /app /app
 
-# Utiliser l'utilisateur non-root
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app/src" \
+    PYTHONUNBUFFERED=1
+
+# Switch to non-root user
 USER app
 
-# Lancer l'application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()" || exit 1
+
+# Run the application
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
