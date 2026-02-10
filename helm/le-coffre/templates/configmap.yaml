@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "le-coffre.fullname" . }}
+  labels:
+    {{- include "le-coffre.labels" . | nindent 4 }}
+data:
+  ENVIRONMENT: {{ .Values.config.environment | quote }}
+  JWT_ALGORITHM: {{ .Values.config.jwt.algorithm | quote }}
+  JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: {{ .Values.config.jwt.accessTokenExpirationMinutes | quote }}
+  JWT_REFRESH_TOKEN_EXPIRATION_DAYS: {{ .Values.config.jwt.refreshTokenExpirationDays | quote }}
+  APP_BASE_URL: {{ .Values.config.appBaseUrl | quote }}
