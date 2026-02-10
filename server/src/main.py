@@ -136,19 +136,14 @@ async def lifespan(app: FastAPI):
 
 
 # Create the main app with lifespan
-# root_path="/api" ensures OpenAPI docs are served at /api/openapi.json
 app = FastAPI(lifespan=lifespan, root_path="/api")
 
 
-# Health check endpoint for Kubernetes
-# Note: With root_path="/api", this will be accessible at /api/health
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
 
 
-# Include API routers without additional prefix
-# root_path="/api" already makes all routes accessible under /api
 app.include_router(get_vault_management_router())
 app.include_router(get_password_management_router())
 app.include_router(get_user_management_router())
