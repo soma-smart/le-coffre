@@ -10,6 +10,8 @@ from identity_access_management_context.application.gateways import (
 )
 from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import User, UserPassword
+from identity_access_management_context.domain.events import UserCreatedEvent
+from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.domain.services import AdminPermissionChecker
 
 
@@ -21,12 +23,14 @@ class CreateUserUseCase:
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
         password_hashing_gateway: PasswordHashingGateway,
+        event_publisher: DomainEventPublisher,
     ):
         self.user_repository = user_repository
         self.user_password_repository = user_password_repository
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.password_hashing_gateway = password_hashing_gateway
+        self._event_publisher = event_publisher
 
     def execute(self, command: CreateUserCommand) -> UUID:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "Create User")
@@ -57,5 +61,12 @@ class CreateUserUseCase:
             group_repository=self.group_repository,
             group_member_repository=self.group_member_repository,
         )
+
+        self._event_publisher.publish(UserCreatedEvent(
+            user_id=user.id,
+            username=user.username,
+            email=user.email,
+            created_by_user_id=command.requesting_user.user_id,
+        ))
 
         return user.id

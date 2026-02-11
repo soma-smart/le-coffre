@@ -10,6 +10,7 @@ from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
 )
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -44,5 +45,5 @@ def is_sso_config_set(
         result = usecase.execute(command)
         return IsSsoConfigSetResponse(is_set=result.is_set)
     except Exception as e:
-        logging.error(f"Error checking SSO configuration status: {e}")
+        logger.exception("Unexpected error in check SSO config")
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -12,6 +12,7 @@ from identity_access_management_context.application.use_cases import ListGroupsU
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/groups", tags=["Group Management"])
 
@@ -78,5 +79,5 @@ def list_groups(
         )
 
     except Exception as e:
-        logging.error(f"Error listing groups: {e}")
+        logger.exception("Unexpected error in list groups")
         raise HTTPException(status_code=500, detail="Internal server error")

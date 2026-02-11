@@ -10,8 +10,9 @@ from ..fakes import FakeUserRepository
 @pytest.fixture
 def use_case(
     user_repository: FakeUserRepository,
+    event_publisher,
 ):
-    return UpdateUserUseCase(user_repository)
+    return UpdateUserUseCase(user_repository, event_publisher)
 
 
 def test_given_valid_update_data_when_updating_user_should_persist_changes(

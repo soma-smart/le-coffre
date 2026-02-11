@@ -33,10 +33,11 @@ def use_case(
     sso_gateway: FakeSsoGateway,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     sso_encryption_gateway: FakeSsoEncryptionGateway,
+    event_publisher,
 ):
     """Use case configured for tests."""
     return ConfigureSsoProviderUseCase(
-        sso_gateway, sso_configuration_repository, sso_encryption_gateway
+        sso_gateway, sso_configuration_repository, sso_encryption_gateway, event_publisher
     )
 
 

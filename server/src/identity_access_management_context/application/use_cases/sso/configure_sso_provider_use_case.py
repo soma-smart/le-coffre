@@ -9,9 +9,11 @@ from identity_access_management_context.application.gateways import (
     SsoEncryptionGateway,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
+from identity_access_management_context.domain.events import SsoConfiguredEvent
 from identity_access_management_context.domain.exceptions import (
     InvalidSsoSettingsException,
 )
+from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.domain.services import AdminPermissionChecker
 
 
@@ -30,10 +32,12 @@ class ConfigureSsoProviderUseCase:
         sso_gateway: SsoGateway,
         sso_configuration_repository: SsoConfigurationRepository,
         sso_encryption_gateway: SsoEncryptionGateway,
+        event_publisher: DomainEventPublisher,
     ):
         self._sso_gateway = sso_gateway
         self._sso_configuration_repository = sso_configuration_repository
         self._sso_encryption_gateway = sso_encryption_gateway
+        self._event_publisher = event_publisher
 
     async def execute(self, command: ConfigureSsoProviderCommand) -> None:
         """
@@ -79,6 +83,11 @@ class ConfigureSsoProviderUseCase:
                 updated_at=datetime.now(timezone.utc),
             )
             self._sso_configuration_repository.save(config)
+
+            self._event_publisher.publish(SsoConfiguredEvent(
+                configured_by_user_id=command.requesting_user.user_id,
+                discovery_url=command.discovery_url,
+            ))
 
         except ValueError as e:
             raise InvalidSsoSettingsException(f"Auto-discovery failed: {str(e)}")

@@ -7,7 +7,9 @@ from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
 )
 from identity_access_management_context.domain.entities import Group
+from identity_access_management_context.domain.events import GroupCreatedEvent
 from identity_access_management_context.domain.exceptions import UserNotFoundException
+from shared_kernel.application.gateways import DomainEventPublisher
 
 
 class CreateGroupUseCase:
@@ -16,10 +18,12 @@ class CreateGroupUseCase:
         user_repository: UserRepository,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
+        event_publisher: DomainEventPublisher,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
+        self._event_publisher = event_publisher
 
     def execute(self, command: CreateGroupCommand) -> UUID:
         user = self.user_repository.get_by_id(command.creator_id)
@@ -36,5 +40,11 @@ class CreateGroupUseCase:
         self.group_member_repository.add_member(
             command.id, command.creator_id, is_owner=True
         )
+
+        self._event_publisher.publish(GroupCreatedEvent(
+            group_id=group.id,
+            group_name=group.name,
+            created_by_user_id=command.creator_id,
+        ))
 
         return group.id

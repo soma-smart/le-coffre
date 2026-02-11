@@ -13,6 +13,8 @@ from identity_access_management_context.domain.exceptions import UserNotFoundExc
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
@@ -61,5 +63,5 @@ def share_password(
     except UserNotFoundException:
         raise HTTPException(status_code=404, detail="User does not exist")
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in share password")
         raise HTTPException(status_code=500, detail="Internal server error")

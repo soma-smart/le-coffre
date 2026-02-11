@@ -63,6 +63,10 @@ from shared_kernel.application.gateways import TimeGateway, DomainEventPublisher
 from shared_kernel.adapters.primary.dependencies import get_session
 
 
+def get_event_publisher(request: Request) -> DomainEventPublisher:
+    return request.app.state.domain_event_publisher
+
+
 def get_group_repository(session: Session = Depends(get_session)) -> GroupRepository:
     return SqlGroupRepository(session)
 
@@ -128,10 +132,6 @@ def get_sso_encryption_gateway(request: Request) -> SsoEncryptionGateway:
     return request.app.state.sso_encryption_gateway
 
 
-def get_event_publisher(request: Request) -> DomainEventPublisher:
-    return request.app.state.domain_event_publisher
-
-
 # User Management Use Cases
 def get_get_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
@@ -157,14 +157,16 @@ def get_delete_user_usecase(
 
 def get_promote_admin_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
-    return PromoteAdminUseCase(user_repository)
+    return PromoteAdminUseCase(user_repository, event_publisher)
 
 
 def get_update_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
-    return UpdateUserUseCase(user_repository)
+    return UpdateUserUseCase(user_repository, event_publisher)
 
 
 def get_update_user_password_usecase(
@@ -193,6 +195,7 @@ def get_create_user_usecase(
     password_hashing_gateway: PasswordHashingGateway = Depends(
         get_password_hashing_gateway
     ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return CreateUserUseCase(
         user_repository,
@@ -200,6 +203,7 @@ def get_create_user_usecase(
         group_repository,
         group_member_repository,
         password_hashing_gateway,
+        event_publisher,
     )
 
 
@@ -226,12 +230,14 @@ def get_admin_login_usecase(
     ),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return AdminLoginUseCase(
         user_password_repository,
         password_hashing_gateway,
         token_gateway,
         time_provider,
+        event_publisher,
     )
 
 
@@ -247,6 +253,7 @@ def get_register_admin_with_password_usecase(
         get_password_hashing_gateway
     ),
     user_repository: UserRepository = Depends(get_user_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
@@ -254,6 +261,7 @@ def get_register_admin_with_password_usecase(
         user_repository,
         group_repository,
         group_member_repository,
+        event_publisher,
     )
 
 
@@ -283,9 +291,10 @@ def get_configure_sso_provider_usecase(
         get_sso_configuration_repository
     ),
     sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return ConfigureSsoProviderUseCase(
-        sso_gateway, sso_configuration_repository, sso_encryption_gateway
+        sso_gateway, sso_configuration_repository, sso_encryption_gateway, event_publisher
     )
 
 
@@ -314,6 +323,7 @@ def get_sso_login_usecase(
         get_sso_configuration_repository
     ),
     sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return SsoLoginUseCase(
         sso_gateway,
@@ -326,6 +336,7 @@ def get_sso_login_usecase(
         group_member_repository,
         sso_configuration_repository,
         sso_encryption_gateway,
+        event_publisher,
     )
 
 
@@ -348,11 +359,13 @@ def get_create_group_usecase(
     group_member_repository: GroupMemberRepository = Depends(
         get_group_member_repository
     ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return CreateGroupUseCase(
         user_repository,
         group_repository,
         group_member_repository,
+        event_publisher,
     )
 
 
@@ -362,11 +375,13 @@ def get_add_user_to_group_usecase(
     group_member_repository: GroupMemberRepository = Depends(
         get_group_member_repository
     ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return AddUserToGroupUseCase(
         user_repository,
         group_repository,
         group_member_repository,
+        event_publisher,
     )
 
 
@@ -376,11 +391,13 @@ def get_add_owner_to_group_usecase(
     group_member_repository: GroupMemberRepository = Depends(
         get_group_member_repository
     ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return AddOwnerToGroupUseCase(
         user_repository,
         group_repository,
         group_member_repository,
+        event_publisher,
     )
 
 
@@ -390,11 +407,13 @@ def get_remove_user_from_group_usecase(
     group_member_repository: GroupMemberRepository = Depends(
         get_group_member_repository
     ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return RemoveUserFromGroupUseCase(
         user_repository,
         group_repository,
         group_member_repository,
+        event_publisher,
     )
 
 
@@ -429,8 +448,9 @@ def get_update_group_usecase(
     group_member_repository: GroupMemberRepository = Depends(
         get_group_member_repository
     ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
-    return UpdateGroupUseCase(group_repository, group_member_repository)
+    return UpdateGroupUseCase(group_repository, group_member_repository, event_publisher)
 
 
 def get_delete_group_usecase(
@@ -439,7 +459,8 @@ def get_delete_group_usecase(
         get_group_member_repository
     ),
     group_usage_gateway: GroupUsageGateway = Depends(get_group_usage_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return DeleteGroupUseCase(
-        group_repository, group_member_repository, group_usage_gateway
+        group_repository, group_member_repository, group_usage_gateway, event_publisher
     )

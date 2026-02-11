@@ -22,11 +22,13 @@ def use_case(
     user_repository: FakeUserRepository,
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
+    event_publisher,
 ):
     return AddUserToGroupUseCase(
         user_repository=user_repository,
         group_repository=group_repository,
         group_member_repository=group_member_repository,
+        event_publisher=event_publisher,
     )
 
 

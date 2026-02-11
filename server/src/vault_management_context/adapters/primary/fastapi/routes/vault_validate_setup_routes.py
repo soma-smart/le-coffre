@@ -10,6 +10,8 @@ from vault_management_context.application.commands import ValidateVaultSetupComm
 from vault_management_context.application.use_cases import ValidateVaultSetupUseCase
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/vault", tags=["Vault"])
 
 
@@ -42,7 +44,7 @@ def validate_vault_setup(
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in validate vault setup")
         raise HTTPException(status_code=500, detail="Internal server error")
 
     return {"message": "Vault setup completed successfully"}

@@ -1,5 +1,6 @@
 import pytest
 
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from .fakes import (
     FakeVaultRepository,
     FakeShamirGateway,
@@ -32,3 +33,8 @@ def vault_session_gateway():
 @pytest.fixture()
 def share_repository():
     return FakeShareRepository()
+
+
+@pytest.fixture()
+def event_publisher():
+    return FakeDomainEventPublisher()

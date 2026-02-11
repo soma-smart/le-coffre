@@ -27,10 +27,12 @@ from shared_kernel.domain.value_objects import ADMIN_ROLE
 def use_case(
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
+    event_publisher,
 ):
     return UpdateGroupUseCase(
         group_repository=group_repository,
         group_member_repository=group_member_repository,
+        event_publisher=event_publisher,
     )
 
 

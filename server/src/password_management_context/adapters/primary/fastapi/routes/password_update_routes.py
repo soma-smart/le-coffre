@@ -17,6 +17,8 @@ from shared_kernel.domain.exceptions import AccessDeniedError
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
@@ -65,5 +67,5 @@ def update_password(
     except AccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in update password")
         raise HTTPException(status_code=500, detail="Internal server error")

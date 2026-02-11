@@ -40,6 +40,7 @@ def use_case(
     group_member_repository: FakeGroupMemberRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     sso_encryption_gateway: FakeSsoEncryptionGateway,
+    event_publisher,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
@@ -52,6 +53,7 @@ def use_case(
         group_member_repository=group_member_repository,
         sso_configuration_repository=sso_configuration_repository,
         sso_encryption_gateway=sso_encryption_gateway,
+        event_publisher=event_publisher,
     )
 
 

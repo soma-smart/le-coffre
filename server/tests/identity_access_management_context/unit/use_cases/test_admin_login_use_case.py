@@ -24,12 +24,14 @@ def use_case(
     password_hashing_gateway: FakePasswordHashingGateway,
     token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
+    event_publisher,
 ):
     return AdminLoginUseCase(
         user_password_repository,
         password_hashing_gateway,
         token_gateway,
         time_provider,
+        event_publisher,
     )
 
 

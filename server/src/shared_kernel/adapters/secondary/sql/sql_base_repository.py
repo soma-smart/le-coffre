@@ -43,7 +43,7 @@ class SQLBaseRepository:
         try:
             self._session.commit()
         except Exception as e:
-            logger.error(f"Transaction failed: {e}")
+            logger.exception("Transaction failed")
             self._session.rollback()
             raise
 
@@ -61,6 +61,6 @@ class SQLBaseRepository:
             self._session.commit()
             self._session.refresh(obj)
         except Exception as e:
-            logger.error(f"Transaction failed: {e}")
+            logger.exception("Transaction failed")
             self._session.rollback()
             raise

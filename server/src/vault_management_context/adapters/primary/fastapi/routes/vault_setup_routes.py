@@ -10,6 +10,8 @@ from vault_management_context.application.commands import CreateVaultCommand
 from vault_management_context.application.use_cases import CreateVaultUseCase
 from vault_management_context.domain.exceptions import VaultManagementDomainError
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/vault", tags=["Vault"])
 
 
@@ -54,7 +56,7 @@ def create_vault(
     except VaultManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in vault setup")
         raise HTTPException(status_code=500, detail="Internal server error")
 
     shares_response = [{"secret": share.secret} for share in result.shares]
