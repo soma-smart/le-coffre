@@ -7,3 +7,4 @@ class VaultStatus(Enum):
     NOT_SETUP = "NOT_SETUP"
     PENDING = "PENDING"
     SETUPED = "SETUPED"
+    PENDING_UNLOCK = "PENDING_UNLOCK"

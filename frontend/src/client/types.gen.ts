@@ -823,7 +823,7 @@ export type ValidationError = {
 /**
  * VaultStatus
  */
-export type VaultStatus = 'LOCKED' | 'UNLOCKED' | 'NOT_SETUP' | 'PENDING' | 'SETUPED';
+export type VaultStatus = 'LOCKED' | 'UNLOCKED' | 'NOT_SETUP' | 'PENDING' | 'SETUPED' | 'PENDING_UNLOCK';
 
 /**
  * VaultStatusResponse

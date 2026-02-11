@@ -79,8 +79,11 @@ def get_lock_vault_usecase(
 def get_vault_status_usecase(
     vault_repository: VaultRepository = Depends(get_vault_repository),
     vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
+    share_repository: ShareRepository = Depends(get_share_repository),
 ):
-    return GetVaultStatusUseCase(vault_repository, vault_session_gateway)
+    return GetVaultStatusUseCase(
+        vault_repository, vault_session_gateway, share_repository
+    )
 
 
 def get_validate_vault_setup_usecase(
