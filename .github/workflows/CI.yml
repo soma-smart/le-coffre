@@ -162,7 +162,7 @@ jobs:
           # Generate the OpenAPI client
           echo "Generating OpenAPI client..."
           bun run openapi-ts
-          
+
           # Check if any files changed
           if [ -n "$(git status --porcelain src/client)" ]; then
             echo "❌ ERROR: OpenAPI client is out of sync!"
