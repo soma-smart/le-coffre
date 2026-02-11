@@ -31,8 +31,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Create non-root user
-RUN addgroup --system app && adduser --system --group app
+# Create non-root user with explicit UID/GID for Kubernetes runAsNonRoot compatibility
+RUN addgroup --system --gid 1001 app && adduser --system --uid 1001 --gid 1001 app
 
 # Copy backend + venv
 COPY --from=builder --chown=app:app /app/backend /app/backend
