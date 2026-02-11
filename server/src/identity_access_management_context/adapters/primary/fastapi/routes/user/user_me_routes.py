@@ -26,6 +26,7 @@ class GetUserMeResponse(BaseModel):
     name: str
     roles: List[str]
     personal_group_id: Optional[UUID] = None  # Added for group-based permissions
+    is_sso: bool  # Indicates if the user was created via SSO
 
 
 @router.get(
@@ -44,25 +45,26 @@ def get_user_me(
 
     - **Authentication**: Requires authentication via access_token cookie
 
-    Returns the current user's profile including id, username, email, name, roles, and personal_group_id.
+    Returns the current user's profile including id, username, email, name, roles, personal_group_id, and is_sso.
     """
     try:
         command = GetUserMeCommand(
             requesting_user_id=current_user.user_id,
         )
-        user = usecase.execute(command)
+        user_response = usecase.execute(command)
 
         # Get personal group ID
-        personal_group = group_repository.get_by_user_id(user.id)
+        personal_group = group_repository.get_by_user_id(user_response.id)
         personal_group_id = personal_group.id if personal_group else None
 
         return GetUserMeResponse(
-            id=user.id,
-            username=user.username,
-            email=user.email,
-            name=user.name,
-            roles=user.roles,
+            id=user_response.id,
+            username=user_response.username,
+            email=user_response.email,
+            name=user_response.name,
+            roles=user_response.roles,
             personal_group_id=personal_group_id,
+            is_sso=user_response.is_sso,
         )
     except UserNotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))

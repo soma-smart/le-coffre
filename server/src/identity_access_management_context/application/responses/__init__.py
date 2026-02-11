@@ -5,6 +5,7 @@ from .refresh_access_token_response import RefreshAccessTokenResponse
 from .list_group_response import ListGroupResponse, GroupResponse
 from .get_group_response import GetGroupResponse
 from .is_sso_config_set_response import IsSsoConfigSetResponse
+from .get_user_me_response import GetUserMeResponse
 
 __all__ = [
     "AdminLoginResponse",
@@ -15,4 +16,5 @@ __all__ = [
     "GroupResponse",
     "GetGroupResponse",
     "IsSsoConfigSetResponse",
+    "GetUserMeResponse",
 ]

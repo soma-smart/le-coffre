@@ -9,6 +9,10 @@ class UserPasswordRepository(Protocol):
         """Save a user password entry"""
         ...
 
+    def update_password(self, user_id: UUID, new_hashed_password: bytes) -> None:
+        """Update an existing user password, password"""
+        ...
+
     def get_by_id(self, id: UUID) -> Optional[UserPassword]:
         """Get user password by ID"""
         ...

@@ -37,6 +37,13 @@ export const useUserStore = defineStore('user', {
         email: (state): string | null => {
             return state.currentUser?.email ?? null;
         },
+        
+        /**
+         * Check if the current user is an SSO user
+         */
+        isSsoUser: (state): boolean => {
+            return state.currentUser?.is_sso ?? false;
+        },
     },
     
     actions: {

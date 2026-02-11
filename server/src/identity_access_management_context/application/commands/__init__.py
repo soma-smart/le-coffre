@@ -1,5 +1,6 @@
 from .create_user_command import CreateUserCommand
 from .update_user_command import UpdateUserCommand
+from .update_user_password_command import UpdateUserPasswordCommand
 from .delete_user_command import DeleteUserCommand
 from .get_user_command import GetUserCommand
 from .list_user_command import ListUserCommand
@@ -25,6 +26,7 @@ from .promote_admin_command import PromoteAdminCommand
 __all__ = [
     "CreateUserCommand",
     "UpdateUserCommand",
+    "UpdateUserPasswordCommand",
     "DeleteUserCommand",
     "GetUserCommand",
     "ListUserCommand",

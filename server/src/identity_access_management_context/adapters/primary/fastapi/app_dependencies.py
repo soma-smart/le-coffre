@@ -7,6 +7,7 @@ from identity_access_management_context.application.use_cases import (
     GetUserMeUseCase,
     DeleteUserUseCase,
     UpdateUserUseCase,
+    UpdateUserPasswordUseCase,
     CreateUserUseCase,
     ListUserUseCase,
     PromoteAdminUseCase,
@@ -152,6 +153,20 @@ def get_update_user_usecase(
     return UpdateUserUseCase(user_repository)
 
 
+def get_update_user_password_usecase(
+    user_password_repository: UserPasswordRepository = Depends(
+        get_user_password_repository
+    ),
+    password_hashing_gateway: PasswordHashingGateway = Depends(
+        get_password_hashing_gateway
+    ),
+):
+    return UpdateUserPasswordUseCase(
+        user_password_repository,
+        password_hashing_gateway,
+    )
+
+
 def get_create_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
     user_password_repository: UserPasswordRepository = Depends(
@@ -182,8 +197,9 @@ def get_list_user_usecase(
 
 def get_get_user_me_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
 ):
-    return GetUserMeUseCase(user_repository)
+    return GetUserMeUseCase(user_repository, sso_user_repository)
 
 
 # Authentication Use Cases

@@ -6,10 +6,14 @@ from identity_access_management_context.domain.entities import UserPassword
 
 class FakeUserPasswordRepository:
     def __init__(self):
-        self._user_passwords = {}
+        self._user_passwords: dict[UUID, UserPassword] = {}
 
     def save(self, user_password: UserPassword) -> None:
         self._user_passwords[user_password.id] = user_password
+
+    def update_password(self, user_id: UUID, new_hashed_password: bytes) -> None:
+        if user_id in self._user_passwords:
+            self._user_passwords[user_id].password_hash = new_hashed_password
 
     def get_by_id(self, id: UUID) -> Optional[UserPassword]:
         return self._user_passwords.get(id)

@@ -26,10 +26,12 @@ def test_get_user_me_returns_current_user_info(authenticated_admin_client, setup
     assert "email" in user_data
     assert "name" in user_data
     assert "roles" in user_data
+    assert "is_sso" in user_data
 
     # Assert: Email matches the admin email
     assert user_data["email"] == "admin@example.com"
     assert user_data["name"] == "System Administrator"
+    assert user_data["is_sso"] is False  # Admin created with password, not SSO
 
 
 def test_get_user_me_without_authentication_fails(e2e_client):
@@ -70,3 +72,4 @@ def test_get_user_me_with_sso_user(e2e_client, sso_user_token):
     assert user_data["email"] == sso_user_token["email"]
     assert user_data["name"] == sso_user_token["display_name"]
     assert user_data["id"] == sso_user_token["user_id"]
+    assert user_data["is_sso"] is True  # This user was created via SSO
