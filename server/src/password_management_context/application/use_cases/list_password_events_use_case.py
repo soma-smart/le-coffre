@@ -55,21 +55,51 @@ class ListPasswordEventsUseCase:
         )
 
         # Convert to response DTOs
-        event_items = [
-            PasswordEventItem(
-                event_id=str(event["event_id"]),
-                event_type=event["event_type"],
-                occurred_on=event["occurred_on"].isoformat()
-                if hasattr(event["occurred_on"], "isoformat")
-                else event["occurred_on"],
-                actor_user_id=str(event["actor_user_id"]),
-                actor_email=self.user_info_gateway.get_user_email(
-                    UUID(str(event["actor_user_id"]))
-                ),
-                event_data=event["event_data"],
+        event_items = []
+        for event in events:
+            # Enrich event_data with group names
+            enriched_event_data = dict(event["event_data"])
+
+            # Add group name for PasswordSharedEvent
+            if (
+                event["event_type"] == "PasswordSharedEvent"
+                and "shared_with_group_id" in enriched_event_data
+            ):
+                group_id_str = enriched_event_data["shared_with_group_id"]
+                if group_id_str:
+                    group_name = self.user_info_gateway.get_group_name(
+                        UUID(group_id_str)
+                    )
+                    if group_name:
+                        enriched_event_data["shared_with_group_name"] = group_name
+
+            # Add group name for PasswordUnsharedEvent
+            if (
+                event["event_type"] == "PasswordUnsharedEvent"
+                and "unshared_with_group_id" in enriched_event_data
+            ):
+                group_id_str = enriched_event_data["unshared_with_group_id"]
+                if group_id_str:
+                    group_name = self.user_info_gateway.get_group_name(
+                        UUID(group_id_str)
+                    )
+                    if group_name:
+                        enriched_event_data["unshared_with_group_name"] = group_name
+
+            event_items.append(
+                PasswordEventItem(
+                    event_id=str(event["event_id"]),
+                    event_type=event["event_type"],
+                    occurred_on=event["occurred_on"].isoformat()
+                    if hasattr(event["occurred_on"], "isoformat")
+                    else event["occurred_on"],
+                    actor_user_id=str(event["actor_user_id"]),
+                    actor_email=self.user_info_gateway.get_user_email(
+                        UUID(str(event["actor_user_id"]))
+                    ),
+                    event_data=enriched_event_data,
+                )
             )
-            for event in events
-        ]
 
         return ListPasswordEventsResponse(events=event_items)
 

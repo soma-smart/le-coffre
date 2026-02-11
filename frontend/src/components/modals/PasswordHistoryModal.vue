@@ -67,12 +67,18 @@
                 <span v-if="slotProps.data.event_data.has_folder_changed"> folder</span>
               </span>
               <span v-else-if="slotProps.data.event_type === 'PasswordSharedEvent'">
-                Shared with group: <strong>{{ slotProps.data.event_data.shared_with_group_id?.substring(0, 8)
-                  }}...</strong>
+                Shared with group: <strong>{{
+                  slotProps.data.event_data.shared_with_group_name ||
+                  slotProps.data.event_data.shared_with_group_id?.substring(0, 8) + '...' ||
+                  'Unknown'
+                }}</strong>
               </span>
               <span v-else-if="slotProps.data.event_type === 'PasswordUnsharedEvent'">
-                Unshared from group: <strong>{{ slotProps.data.event_data.unshared_with_group_id?.substring(0, 8)
-                  }}...</strong>
+                Unshared from group: <strong>{{
+                  slotProps.data.event_data.unshared_with_group_name ||
+                  slotProps.data.event_data.unshared_with_group_id?.substring(0, 8) + '...' ||
+                  'Unknown'
+                }}</strong>
               </span>
               <span v-else-if="slotProps.data.event_type === 'PasswordAccessedEvent'">
                 Password accessed

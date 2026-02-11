@@ -25,3 +25,14 @@ class IamUserInfoGateway:
             The user's email address, or None if user not found
         """
         return self._user_info_api.get_user_email(user_id)
+
+    def get_group_name(self, group_id: UUID) -> str | None:
+        """Get name for a group.
+
+        Args:
+            group_id: The ID of the group
+
+        Returns:
+            The group's name, or None if group not found
+        """
+        return self._user_info_api.get_group_name(group_id)

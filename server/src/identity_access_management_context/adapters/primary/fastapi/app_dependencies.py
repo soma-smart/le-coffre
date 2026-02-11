@@ -134,13 +134,6 @@ def get_get_user_usecase(
     return GetUserUseCase(user_repository)
 
 
-def get_user_info_api(
-    get_user_usecase: GetUserUseCase = Depends(get_get_user_usecase),
-) -> UserInfoApi:
-    """Private API for other contexts to query user information"""
-    return UserInfoApi(get_user_usecase)
-
-
 def get_delete_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
 ):
@@ -382,6 +375,14 @@ def get_get_group_usecase(
     ),
 ):
     return GetGroupUseCase(group_repository, group_member_repository)
+
+
+def get_user_info_api(
+    get_user_usecase: GetUserUseCase = Depends(get_get_user_usecase),
+    get_group_usecase: GetGroupUseCase = Depends(get_get_group_usecase),
+) -> UserInfoApi:
+    """Private API for other contexts to query user information"""
+    return UserInfoApi(get_user_usecase, get_group_usecase)
 
 
 def get_list_groups_usecase(
