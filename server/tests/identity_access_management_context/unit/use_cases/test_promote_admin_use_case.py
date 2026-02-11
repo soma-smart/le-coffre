@@ -4,10 +4,12 @@ from identity_access_management_context.application.use_cases import PromoteAdmi
 from identity_access_management_context.application.commands import PromoteAdminCommand
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.entities import User
+from identity_access_management_context.domain.events import AdminPromotedEvent
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyAdminException,
     UserNotFoundException,
 )
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
 from shared_kernel.adapters.primary.exceptions import NotAdminError
@@ -146,3 +148,31 @@ def test_given_non_existent_user_when_promoting_should_raise_user_not_found_exce
     # Act & Assert
     with pytest.raises(UserNotFoundException):
         use_case.execute(command)
+
+
+def test_given_admin_user_and_non_admin_target_when_promoting_should_publish_admin_promoted_event(
+    use_case: PromoteAdminUseCase,
+    user_repository: UserRepository,
+    event_publisher: FakeDomainEventPublisher,
+):
+    admin_id = UUID("11111111-1111-1111-1111-111111111111")
+    target_user_id = UUID("22222222-2222-2222-2222-222222222222")
+
+    target_user = User(
+        id=target_user_id,
+        username="targetuser",
+        email="target@example.com",
+        name="Target User",
+        roles=[],
+    )
+    user_repository.save(target_user)
+
+    requesting_user = AuthenticatedUser(user_id=admin_id, roles=[ADMIN_ROLE])
+    command = PromoteAdminCommand(requesting_user=requesting_user, user_id=target_user_id)
+
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(AdminPromotedEvent)
+    assert len(events) == 1
+    assert events[0].user_id == target_user_id
+    assert events[0].promoted_by_user_id == admin_id

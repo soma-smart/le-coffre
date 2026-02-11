@@ -14,6 +14,8 @@ from identity_access_management_context.domain.exceptions import (
     CannotModifyPersonalGroupException,
 )
 from identity_access_management_context.domain.entities import User, Group
+from identity_access_management_context.domain.events import UserAddedToGroupEvent
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
 
 
@@ -264,3 +266,33 @@ def test_given_user_already_member_when_adding_then_do_nothing(
 
     assert group_member_repository.is_member(group_id, existing_member_id)
     assert not group_member_repository.is_owner(group_id, existing_member_id)
+
+
+def test_given_owner_when_adding_user_to_group_then_should_publish_user_added_to_group_event(
+    use_case: AddUserToGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    new_user_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+
+    owner = User(id=owner_id, username="owner", email="owner@example.com", name="Owner User")
+    new_user = User(id=new_user_id, username="newuser", email="newuser@example.com", name="New User")
+    user_repository.save(owner)
+    user_repository.save(new_user)
+
+    group = Group(id=group_id, name="Development Team", is_personal=False)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+
+    command = AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, user_id=new_user_id)
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(UserAddedToGroupEvent)
+    assert len(events) == 1
+    assert events[0].group_id == group_id
+    assert events[0].user_id == new_user_id
+    assert events[0].added_by_user_id == owner_id

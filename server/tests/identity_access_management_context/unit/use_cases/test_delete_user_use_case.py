@@ -10,6 +10,7 @@ from identity_access_management_context.domain.entities import (
 from identity_access_management_context.domain.events import UserDeletedEvent
 from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
 from shared_kernel.domain.entities import AuthenticatedUser
+from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from tests.fakes import FakeDomainEventPublisher
 

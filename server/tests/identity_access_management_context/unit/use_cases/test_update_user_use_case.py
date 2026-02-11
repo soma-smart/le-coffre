@@ -3,7 +3,9 @@ import pytest
 from identity_access_management_context.application.use_cases import UpdateUserUseCase
 
 from identity_access_management_context.domain.entities import User
+from identity_access_management_context.domain.events import UserUpdatedEvent
 from identity_access_management_context.application.commands import UpdateUserCommand
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import FakeUserRepository
 
 
@@ -45,3 +47,27 @@ def test_given_valid_update_data_when_updating_user_should_persist_changes(
     assert updated_user.username == new_username
     assert updated_user.email == new_email
     assert updated_user.name == new_name
+
+
+def test_given_valid_update_data_when_updating_user_should_publish_user_updated_event(
+    use_case: UpdateUserUseCase,
+    user_repository: FakeUserRepository,
+    event_publisher: FakeDomainEventPublisher,
+):
+    uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    user = User(id=uuid, username="testuser", email="testuser@example.com", name="User")
+    user_repository.save(user)
+
+    command = UpdateUserCommand(
+        id=uuid,
+        username="updateduser",
+        email="updateduser@example.com",
+        name="New User",
+    )
+
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(UserUpdatedEvent)
+    assert len(events) == 1
+    assert events[0].user_id == uuid
+    assert events[0].updated_by_user_id == uuid

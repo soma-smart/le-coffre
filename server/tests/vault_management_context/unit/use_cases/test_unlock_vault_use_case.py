@@ -12,6 +12,8 @@ from vault_management_context.domain.exceptions import (
 from vault_management_context.application.use_cases import (
     UnlockVaultUseCase,
 )
+from vault_management_context.domain.events import VaultUnlockedEvent
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import (
     FakeVaultRepository,
     FakeShamirGateway,
@@ -191,6 +193,37 @@ def test_given_existing_shares_when_unlocking_vault_should_combine_shares(
 
     decrypted_key = vault_session_gateway.get_decrypted_key()
     assert decrypted_key == vault_key
+
+
+def test_given_valid_shares_when_unlocking_vault_should_publish_vault_unlocked_event(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
+    event_publisher: FakeDomainEventPublisher,
+):
+    vault_key = "test_vault_key_12345678"
+    master_key = "master_key"
+    encrypted_key = "encrypted_vault_key_hex"
+    shares = [Share("share0"), Share("share1")]
+
+    vault_repository.save(
+        Vault(
+            nb_shares=3, threshold=2, encrypted_key=encrypted_key,
+            setup_id="test-setup-id", status=VaultStatus.SETUPED.value,
+        )
+    )
+
+    shamir_gateway.set_shamir_result(ShamirResult(shares, master_key))
+    encryption_gateway.set_decrypted_data(vault_key)
+    encryption_gateway.set_encrypted_data(encrypted_key)
+    encryption_gateway.set_master_key(master_key)
+
+    command = UnlockVaultCommand(shares=shares)
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(VaultUnlockedEvent)
+    assert len(events) == 1
 
 
 def test_given_insufficient_shares_when_unlocking_fails_should_add_shares_to_repository(
