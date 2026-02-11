@@ -1,10 +1,10 @@
 import os
+import time
 from pathlib import Path
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, Request, HTTPException
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
@@ -61,8 +61,8 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
 )
 
 
-def run_migrations():
-    """Run database migrations using Alembic."""
+def run_migrations(max_retries: int = 5, retry_delay: float = 5.0):
+    """Run database migrations using Alembic, with retry on connection failure."""
     # Get the path to alembic.ini relative to this file
     # main.py is in server/src/, alembic.ini is in server/
     alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
@@ -70,7 +70,27 @@ def run_migrations():
     # Escape % characters for ConfigParser interpolation
     database_url = get_database_url().replace("%", "%%")
     alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-    command.upgrade(alembic_cfg, "head")
+
+    for attempt in range(max_retries):
+        try:
+            command.upgrade(alembic_cfg, "head")
+            return
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"Migration attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {retry_delay}s...")
+                time.sleep(retry_delay)
+            else:
+                raise
+
+
+def _build_engine(database_url: str):
+    """Build SQLAlchemy engine with appropriate settings for the database type."""
+    kwargs: dict = {"pool_pre_ping": True}
+    if database_url.startswith("postgresql"):
+        kwargs["pool_size"] = 5
+        kwargs["max_overflow"] = 10
+        kwargs["connect_args"] = {"connect_timeout": 10}
+    return create_engine(database_url, **kwargs)
 
 
 @asynccontextmanager
@@ -78,7 +98,7 @@ async def lifespan(app: FastAPI):
     # Run migrations instead of create_tables
     run_migrations()
 
-    engine = create_engine(get_database_url())
+    engine = _build_engine(get_database_url())
 
     # Create session maker for creating sessions per request
     SessionLocal = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
@@ -144,8 +164,14 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Health check endpoint for Kubernetes
 # Note: With root_path="/api", this will be accessible at /api/health
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+async def health_check(request: Request):
+    try:
+        session_maker = request.app.state.session_maker
+        with session_maker() as session:
+            session.exec(text("SELECT 1"))
+        return {"status": "healthy"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Database unhealthy: {e}")
 
 # Include API routers without additional prefix
 # root_path="/api" already makes all routes accessible under /api
@@ -155,15 +181,3 @@ app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
 app.include_router(get_audit_logging_router())
-
-# Mount static files for frontend if they exist
-frontend_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
-if frontend_dist.exists():
-    # Serve static files
-    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
-
-    # Catch-all route for SPA (must be last)
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        # Serve index.html for all non-API routes (SPA)
-        return FileResponse(frontend_dist / "index.html")

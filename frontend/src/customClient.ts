@@ -4,6 +4,12 @@ import { client } from '@/client/client.gen';
 import type { HttpValidationError } from '@/client/types.gen';
 import router from '@/router';
 
+// Apply runtime configuration (injected via /config.js before app load)
+const runtimeConfig = (window as unknown as { __APP_CONFIG__?: { apiBaseUrl?: string } }).__APP_CONFIG__;
+if (runtimeConfig?.apiBaseUrl) {
+  client.setConfig({ baseUrl: runtimeConfig.apiBaseUrl });
+}
+
 // Configure the global error interceptor
 client.interceptors.error.use(async (error: unknown) => {
   console.error('Global API Error Interceptor caught an error:', error);

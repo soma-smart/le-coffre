@@ -1,33 +1,61 @@
-# --- Stage 1: Build ---
-FROM python:3.13-slim as builder
+# =============================================================================
+# Stage 1: Build Backend
+# =============================================================================
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 
-WORKDIR /app
+# Install build dependencies for psycopg2
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+WORKDIR /app/backend
 
-COPY . .
+# Force uv to create a local virtualenv
+ENV UV_PROJECT_ENVIRONMENT=/app/backend/.venv
 
-# --- Stage 2: Final Image ---
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-cache --group postgres
+
+COPY . ./
+
+# =============================================================================
+# Stage 2: Production Image
+# =============================================================================
 FROM python:3.13-slim
 
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Créer un utilisateur non-root pour la sécurité
+# Create non-root user
 RUN addgroup --system app && adduser --system --group app
 
-# Copier les dépendances installées et le code depuis le stage builder
-COPY --from=builder /root/.local /root/.local
-COPY --from=builder /app .
+# Copy backend + venv
+COPY --from=builder --chown=app:app /app/backend /app/backend
 
-# Définir le chemin pour les exécutables Python
-ENV PATH=/root/.local/bin:$PATH
-
-# Changer le propriétaire des fichiers
-RUN chown -R app:app /app
-
-# Utiliser l'utilisateur non-root
+# Switch to non-root user
 USER app
 
-# Lancer l'application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Set working directory to backend
+WORKDIR /app/backend
+
+# Set environment variables for production
+ENV PYTHONPATH=/app/backend/src \
+    PYTHONUNBUFFERED=1
+
+# Expose port
+EXPOSE 8080
+
+# Healthcheck using Python
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+    CMD ["/app/backend/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health').read()"]
+
+# Run FastAPI with uvicorn
+CMD ["/app/backend/.venv/bin/uvicorn", "src.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8080", \
+     "--log-level", "info"]
