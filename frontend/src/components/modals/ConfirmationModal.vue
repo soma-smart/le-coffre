@@ -13,7 +13,6 @@ const props = defineProps<{
   icon?: string;
   countdownSeconds?: number;
   warningMessage?: string;
-  canProceed?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -26,10 +25,8 @@ const isProcessing = ref(false);
 const countdownTimer = ref<number | null>(null);
 
 const canConfirm = computed(() => {
-  if (props.canProceed === false) {
-    return false;
-  }
-  return countdown.value === 0;
+  const countdownComplete = countdown.value === 0;
+  return countdownComplete;
 });
 
 // Compute button label based on countdown
