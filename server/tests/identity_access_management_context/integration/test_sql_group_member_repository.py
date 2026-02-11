@@ -1,54 +1,6 @@
-import pytest
-import tempfile
-import os
-from pathlib import Path
 from uuid import uuid4
-from sqlmodel import create_engine, Session
-from alembic.config import Config
-from alembic import command
-
-from identity_access_management_context.adapters.secondary.sql.sql_group_member_repository import (
-    SqlGroupMemberRepository,
-)
 
 
-@pytest.fixture(scope="function")
-def engine():
-    """Create a temporary database engine for testing"""
-    db_fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(db_fd)
-
-    try:
-        database_url = f"sqlite:///{db_path}"
-        engine = create_engine(database_url, connect_args={"check_same_thread": False})
-
-        # Run migrations instead of create_all()
-        alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
-        alembic_cfg = Config(str(alembic_ini_path))
-        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-        command.upgrade(alembic_cfg, "head")
-
-        yield engine
-    finally:
-        try:
-            os.unlink(db_path)
-        except OSError:
-            pass
-
-
-@pytest.fixture(scope="function")
-def session(engine):
-    """Create a new database session for a test"""
-    with Session(engine) as session:
-        yield session
-
-
-@pytest.fixture
-def sql_group_member_repository(session):
-    return SqlGroupMemberRepository(session)
-
-
-# Method: add_member
 def test_given_valid_data_when_adding_member_then_member_is_stored(
     sql_group_member_repository,
 ):
@@ -286,3 +238,55 @@ def test_given_mix_of_owners_and_members_when_counting_then_only_counts_owners(
 
     # Then
     assert count == 2
+
+
+# Method: remove_user_from_all_groups
+def test_given_user_in_multiple_groups_when_removing_from_all_then_all_memberships_deleted(
+    sql_group_member_repository,
+):
+    # Given
+    user_id = uuid4()
+    group1_id = uuid4()
+    group2_id = uuid4()
+    group3_id = uuid4()
+
+    sql_group_member_repository.add_member(group1_id, user_id, is_owner=True)
+    sql_group_member_repository.add_member(group2_id, user_id, is_owner=False)
+    sql_group_member_repository.add_member(group3_id, user_id, is_owner=False)
+
+    # When
+    sql_group_member_repository.remove_user_from_all_groups(user_id)
+
+    # Then
+    assert not sql_group_member_repository.is_member(group1_id, user_id)
+    assert not sql_group_member_repository.is_member(group2_id, user_id)
+    assert not sql_group_member_repository.is_member(group3_id, user_id)
+
+
+def test_given_user_not_in_any_group_when_removing_from_all_then_no_error(
+    sql_group_member_repository,
+):
+    # Given
+    user_id = uuid4()
+
+    # When / Then - should not raise any exception
+    sql_group_member_repository.remove_user_from_all_groups(user_id)
+
+
+def test_given_multiple_users_in_group_when_removing_one_user_from_all_then_only_that_user_removed(
+    sql_group_member_repository,
+):
+    # Given
+    user1_id = uuid4()
+    user2_id = uuid4()
+    group_id = uuid4()
+
+    sql_group_member_repository.add_member(group_id, user1_id, is_owner=True)
+    sql_group_member_repository.add_member(group_id, user2_id, is_owner=False)
+
+    # When
+    sql_group_member_repository.remove_user_from_all_groups(user1_id)
+
+    # Then
+    assert not sql_group_member_repository.is_member(group_id, user1_id)
+    assert sql_group_member_repository.is_member(group_id, user2_id)

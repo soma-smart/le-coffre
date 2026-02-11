@@ -3,6 +3,7 @@ from uuid import UUID
 
 from identity_access_management_context.domain.entities import SsoUser
 from identity_access_management_context.application.gateways import SsoUserInfo
+from tests.fakes import FakeDomainEventPublisher
 from .fakes import (
     FakeUserPasswordRepository,
     FakePasswordHashingGateway,
@@ -77,6 +78,11 @@ def group_member_repository():
 @pytest.fixture
 def group_usage_gateway():
     return FakeGroupUsageGateway()
+
+
+@pytest.fixture
+def domain_event_publisher():
+    return FakeDomainEventPublisher()
 
 
 def create_sso_user_from_provider(

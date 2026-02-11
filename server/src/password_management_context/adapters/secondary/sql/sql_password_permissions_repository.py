@@ -163,3 +163,33 @@ class SqlPasswordPermissionsRepository(
             self._session.delete(permission_entry)
 
         self.commit()
+
+    def revoke_all_access_for_owner_group(self, group_id: UUID) -> None:
+        """Revoke all access for all passwords owned by a group in one SQL operation"""
+        # First, get all password IDs owned by this group
+        ownership_select = select(OwnershipTable.resource_id).where(
+            OwnershipTable.group_id == group_id
+        )
+        password_ids = list(self._session.exec(ownership_select).all())
+
+        if not password_ids:
+            return
+
+        # Delete all ownerships for these passwords
+        ownership_statement = select(OwnershipTable).where(
+            OwnershipTable.resource_id.in_(password_ids)
+        )
+        ownership_entries = self._session.exec(ownership_statement).all()
+        for ownership_entry in ownership_entries:
+            self._session.delete(ownership_entry)
+
+        # Delete all permissions for these passwords
+        permission_statement = select(PermissionsTable).where(
+            PermissionsTable.resource_id.in_(password_ids)
+        )
+        permission_entries = self._session.exec(permission_statement).all()
+        for permission_entry in permission_entries:
+            self._session.delete(permission_entry)
+
+        if ownership_entries or permission_entries:
+            self.commit()

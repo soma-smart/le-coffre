@@ -12,6 +12,7 @@ from identity_access_management_context.domain.exceptions import (
 )
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.adapters.primary.exceptions import NotAdminError
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 

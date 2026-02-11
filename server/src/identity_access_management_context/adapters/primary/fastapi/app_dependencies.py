@@ -59,7 +59,7 @@ from password_management_context.adapters.secondary import (
 )
 from password_management_context.application.use_cases import IsGroupUsedUseCase
 from password_management_context.adapters.primary.private_api import GroupUsageApi
-from shared_kernel.application.gateways import TimeGateway
+from shared_kernel.application.gateways import TimeGateway, DomainEventPublisher
 from shared_kernel.adapters.primary.dependencies import get_session
 
 
@@ -128,6 +128,10 @@ def get_sso_encryption_gateway(request: Request) -> SsoEncryptionGateway:
     return request.app.state.sso_encryption_gateway
 
 
+def get_event_publisher(request: Request) -> DomainEventPublisher:
+    return request.app.state.domain_event_publisher
+
+
 # User Management Use Cases
 def get_get_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
@@ -137,8 +141,18 @@ def get_get_user_usecase(
 
 def get_delete_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(
+        get_group_member_repository
+    ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
-    return DeleteUserUseCase(user_repository)
+    return DeleteUserUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+        event_publisher,
+    )
 
 
 def get_promote_admin_usecase(

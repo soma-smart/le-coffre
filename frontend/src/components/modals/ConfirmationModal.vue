@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, nextTick } from 'vue';
 
 const visible = defineModel<boolean>('visible', { required: true });
 
@@ -74,14 +74,21 @@ const iconColor = computed(() => {
 });
 
 // Start countdown when modal opens
-watch(visible, (newVisible) => {
+watch(visible, async (newVisible) => {
   if (newVisible) {
+    // Reset countdown when modal opens
     countdown.value = props.countdownSeconds || 0;
+    isProcessing.value = false; // Reset processing state
+
+    // Use nextTick to ensure reactivity is complete
+    await nextTick();
+
     if (countdown.value > 0) {
       startCountdown();
     }
   } else {
     stopCountdown();
+    isProcessing.value = false; // Reset when modal closes
   }
 });
 

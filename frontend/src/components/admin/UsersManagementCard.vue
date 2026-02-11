@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useToast } from 'primevue';
 import CreateUserModal from '@/components/modals/CreateUserModal.vue';
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue';
-import { listUsersUsersGet, promoteUserToAdminUsersUserIdPromoteAdminPost } from '@/client/sdk.gen';
+import { listUsersUsersGet, promoteUserToAdminUsersUserIdPromoteAdminPost, deleteUserUsersUserIdDelete } from '@/client/sdk.gen';
 import type { ListUserResponse } from '@/client/types.gen';
 
 const toast = useToast();
@@ -16,12 +16,25 @@ const showPromoteAdminModal = ref(false);
 const promotingUserId = ref<string | null>(null);
 const userToPromote = ref<ListUserResponse | null>(null);
 
+// Delete user state
+const showDeleteUserModal = ref(false);
+const deletingUserId = ref<string | null>(null);
+const userToDelete = ref<ListUserResponse | null>(null);
+
 const promoteModalQuestion = computed(() => {
   return `Are you sure you want to promote "${userToPromote.value?.username}" to ADMIN?`;
 });
 
 const promoteModalDescription = computed(() => {
   return `This will grant them full administrative privileges.\nThey will be able to manage users, groups, and system settings.`;
+});
+
+const deleteModalQuestion = computed(() => {
+  return `Are you sure you want to delete user "${userToDelete.value?.username}"?`;
+});
+
+const deleteModalDescription = computed(() => {
+  return `This action cannot be undone.\nAll data associated with this user will be permanently removed.`;
 });
 
 // Fetch users
@@ -107,9 +120,62 @@ const handlePromoteConfirmed = async () => {
   }
 };
 
+// Delete user
+const showDeleteModal = (user: ListUserResponse) => {
+  userToDelete.value = user;
+  showDeleteUserModal.value = true;
+};
+
+const handleDeleteConfirmed = async () => {
+  if (!userToDelete.value) return;
+
+  const userId = userToDelete.value.id;
+  const username = userToDelete.value.username;
+
+  deletingUserId.value = userId;
+  try {
+    const response = await deleteUserUsersUserIdDelete({
+      path: { user_id: userId }
+    });
+
+    if (response.response.ok) {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: `User ${username} has been deleted`,
+        life: 5000
+      });
+      // Refresh the user list
+      await fetchUsers();
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Failed to delete user',
+        life: 5000
+      });
+    }
+  } catch (error: unknown) {
+    console.error('Failed to delete user:', error);
+    const errorDetail = error && typeof error === 'object' && 'response' in error &&
+      error.response && typeof error.response === 'object' && 'data' in error.response &&
+      error.response.data && typeof error.response.data === 'object' && 'detail' in error.response.data
+      ? String(error.response.data.detail)
+      : 'Failed to delete user';
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: errorDetail,
+      life: 5000
+    });
+  } finally {
+    deletingUserId.value = null;
+    userToDelete.value = null;
+  }
+};
+
 // Check if user is already an admin
 const isAdmin = (user: ListUserResponse) => {
-  console.log(user.roles);
   return user.roles?.includes('admin') || false;
 };
 
@@ -194,9 +260,14 @@ onMounted(() => {
 
         <Column header="Actions" :exportable="false">
           <template #body="slotProps">
-            <Button icon="pi pi-shield" label="Promote to Admin" size="small" severity="warning" outlined
-              :loading="promotingUserId === slotProps.data.id" :disabled="isAdmin(slotProps.data)"
-              @click="showPromoteModal(slotProps.data)" />
+            <div class="flex gap-2">
+              <Button icon="pi pi-shield" label="Promote to Admin" size="small" severity="warning" outlined
+                :loading="promotingUserId === slotProps.data.id" :disabled="isAdmin(slotProps.data)"
+                @click="showPromoteModal(slotProps.data)" />
+              <Button icon="pi pi-trash" label="Delete" size="small" severity="danger" outlined
+                :loading="deletingUserId === slotProps.data.id" :disabled="isAdmin(slotProps.data)"
+                @click="showDeleteModal(slotProps.data)" />
+            </div>
           </template>
         </Column>
       </DataTable>
@@ -209,6 +280,11 @@ onMounted(() => {
         :question="promoteModalQuestion" :description="promoteModalDescription" confirm-label="Promote to Admin"
         cancel-label="Cancel" severity="warning" icon="pi pi-shield" :countdown-seconds="3"
         @confirm="handlePromoteConfirmed" />
+
+      <!-- Delete User Confirmation Modal -->
+      <ConfirmationModal v-model:visible="showDeleteUserModal" title="Delete User" :question="deleteModalQuestion"
+        :description="deleteModalDescription" confirm-label="Delete User" cancel-label="Cancel" severity="danger"
+        icon="pi pi-trash" :countdown-seconds="3" @confirm="handleDeleteConfirmed" />
     </template>
   </Card>
 </template>

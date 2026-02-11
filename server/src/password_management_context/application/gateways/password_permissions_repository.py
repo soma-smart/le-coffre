@@ -44,3 +44,7 @@ class PasswordPermissionsRepository(Protocol):
     def revoke_all_access_for_password(self, password_id: UUID):
         """Revoke all access (permissions and ownerships) for a specific password"""
         ...
+
+    def revoke_all_access_for_owner_group(self, group_id: UUID) -> None:
+        """Revoke all access (permissions and ownerships) for all passwords owned by a group"""
+        ...
