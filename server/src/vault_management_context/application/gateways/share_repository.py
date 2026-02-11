@@ -1,4 +1,5 @@
-from typing import List, Protocol
+from typing import List, Protocol, Optional
+from datetime import datetime
 from vault_management_context.domain.entities import Share
 
 
@@ -8,3 +9,5 @@ class ShareRepository(Protocol):
     def add(self, shares: List[Share]) -> None: ...
 
     def clear(self) -> None: ...
+
+    def get_last_share_timestamp(self) -> Optional[datetime]: ...

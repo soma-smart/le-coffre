@@ -30,9 +30,6 @@ class UnlockVaultUseCase:
         self._share_repository = share_repository
 
     def execute(self, command: UnlockVaultCommand) -> None:
-        if command.reset:
-            self._share_repository.clear()
-
         vault = self._vault_repository.get()
         if vault is None:
             raise VaultNotSetupException()

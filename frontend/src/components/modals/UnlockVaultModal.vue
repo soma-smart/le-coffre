@@ -1,32 +1,66 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import { unlockVaultVaultUnlockPost } from '@/client/sdk.gen';
+import { useConfirm } from 'primevue/useconfirm';
+import { unlockVaultVaultUnlockPost, getVaultStatusVaultStatusGet, clearPendingSharesVaultUnlockClearDelete } from '@/client/sdk.gen';
+import type { VaultStatus } from '@/client/types.gen';
 
-const visible = defineModel<boolean>('visible', { required: true });
+const visible = defineModel<boolean>('visible', { required: true});
+
+const props = defineProps<{
+  vaultStatus?: VaultStatus | null;
+  lastShareTimestamp?: string | null;
+}>();
 
 const emit = defineEmits<{
   (e: 'unlocked'): void;
+  (e: 'statusChanged', status: VaultStatus): void;
 }>();
 
 const toast = useToast();
+const confirm = useConfirm();
 
-const shares = ref<string[]>(['', '']);
+const shares = ref<string[]>(['']);
 
 const loading = ref(false);
+
+const isPendingUnlock = computed(() => props.vaultStatus === 'PENDING_UNLOCK');
+
+const hasStalePendingShares = computed(() => {
+  if (!isPendingUnlock.value || !props.lastShareTimestamp) return false;
+  
+  const lastSubmit = new Date(props.lastShareTimestamp);
+  const ageMinutes = (Date.now() - lastSubmit.getTime()) / 60000;
+  return ageMinutes > 10; // Warn if older than 10 minutes
+});
+
+const lastShareAge = computed(() => {
+  if (!props.lastShareTimestamp) return '';
+  
+  const lastSubmit = new Date(props.lastShareTimestamp);
+  const ageMinutes = Math.floor((Date.now() - lastSubmit.getTime()) / 60000);
+  
+  if (ageMinutes < 1) return 'just now';
+  if (ageMinutes === 1) return '1 minute ago';
+  if (ageMinutes < 60) return `${ageMinutes} minutes ago`;
+  
+  const ageHours = Math.floor(ageMinutes / 60);
+  if (ageHours === 1) return '1 hour ago';
+  return `${ageHours} hours ago`;
+});
 
 const addShare = () => {
   shares.value.push('');
 };
 
 const removeShare = (index: number) => {
-  if (shares.value.length > 2) {
+  if (shares.value.length > 1) {
     shares.value.splice(index, 1);
   }
 };
 
 const isValid = computed(() => {
-  return shares.value.length >= 2 &&
+  return shares.value.length >= 1 &&
     shares.value.every(share => share.trim().length > 0);
 });
 
@@ -50,6 +84,7 @@ const handleSubmit = async () => {
       body: { shares: shareSecrets }
     });
 
+    // Check if there's an error (400 or 500)
     if (response.error) {
       const errorData = response.error as { detail?: string };
       const errorMessage = errorData?.detail || 'Failed to unlock vault';
@@ -62,15 +97,32 @@ const handleSubmit = async () => {
       return;
     }
 
-    toast.add({
-      severity: 'success',
-      summary: 'Success',
-      detail: 'Vault unlocked successfully',
-      life: 3000
-    });
+    // Check vault status after unlock attempt
+    const statusResponse = await getVaultStatusVaultStatusGet();
+    const newStatus = statusResponse.data?.status;
 
-    visible.value = false;
-    emit('unlocked');
+    if (newStatus === 'UNLOCKED') {
+      toast.add({
+        severity: 'success',
+        summary: 'Success',
+        detail: 'Vault unlocked successfully',
+        life: 3000
+      });
+      visible.value = false;
+      emit('unlocked');
+    } else if (newStatus === 'PENDING_UNLOCK') {
+      // This happens when we get 202 (shares accepted but not enough)
+      toast.add({
+        severity: 'info',
+        summary: 'Shares Added',
+        detail: 'Shares added. Waiting for additional shares to unlock.',
+        life: 5000
+      });
+      // Emit status change to refresh the modal UI
+      emit('statusChanged', newStatus);
+      // Reset the input fields for next shares
+      shares.value = [''];
+    }
   } catch (err: unknown) {
     const error = err as { detail?: string; message?: string };
     const errorMessage = error?.detail || error?.message || 'Failed to unlock vault';
@@ -85,36 +137,113 @@ const handleSubmit = async () => {
     loading.value = false;
   }
 };
+
+const handleReset = async () => {
+  confirm.require({
+    message: 'This will clear all pending shares. Continue?',
+    header: 'Clear Pending Shares',
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: 'Clear Shares',
+    rejectLabel: 'Cancel',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      try {
+        loading.value = true;
+        
+        await clearPendingSharesVaultUnlockClearDelete();
+        
+        toast.add({
+          severity: 'success',
+          summary: 'Shares Cleared',
+          detail: 'All pending shares have been cleared',
+          life: 3000
+        });
+        
+        // Refresh vault status
+        emit('statusChanged', 'LOCKED');
+      } catch (err: unknown) {
+        const error = err as { detail?: string; message?: string };
+        const errorMessage = error?.detail || error?.message || 'Failed to clear shares';
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: errorMessage,
+          life: 5000
+        });
+        console.error('Failed to clear shares:', err);
+      } finally {
+        loading.value = false;
+      }
+    }
+  });
+};
 </script>
 
 <template>
   <Dialog v-model:visible="visible" modal header="Unlock Vault" :closable="false" :closeOnEscape="false"
     :style="{ width: '40rem' }">
     <div class="flex flex-col gap-4">
-      <Message severity="warn" :closable="false">
+      <!-- Warning message based on vault status -->
+      <Message :severity="isPendingUnlock ? 'info' : 'warn'" :closable="false">
         <div class="flex gap-2">
-          <i class="pi pi-lock mt-0.5"></i>
+          <i :class="isPendingUnlock ? 'pi pi-info-circle' : 'pi pi-lock'" class="mt-0.5"></i>
           <div>
             <p class="text-sm font-semibold mb-1">
-              Vault is Locked
+              {{ isPendingUnlock ? 'Unlock in Progress' : 'Vault is Locked' }}
             </p>
             <p class="text-sm">
-              Please enter your Shamir shares to unlock the vault and access your passwords.
+              {{ isPendingUnlock 
+                ? 'At least one share has already been submitted. Your shares will be added to the existing ones.' 
+                : 'Please enter your Shamir shares to unlock the vault and access your passwords.' 
+              }}
+            </p>
+          </div>
+        </div>
+      </Message>
+
+      <!-- Stale shares warning -->
+      <Message v-if="hasStalePendingShares" severity="warn" :closable="false">
+        <div class="flex gap-2">
+          <i class="pi pi-clock"></i>
+          <div>
+            <p class="text-sm font-semibold mb-1">Pending shares are old</p>
+            <p class="text-sm">
+              Last share was submitted {{ lastShareAge }}. 
+              Consider clearing and starting fresh.
             </p>
           </div>
         </div>
       </Message>
 
       <div class="flex flex-col gap-3">
+        <!-- Show existing shares placeholder when PENDING_UNLOCK -->
+        <div v-if="isPendingUnlock" class="flex gap-2 items-start">
+          <div class="flex-1">
+            <label class="block text-sm font-semibold mb-1">
+              Existing Share(s)
+            </label>
+            <Password 
+              model-value="••••••••••••••••" 
+              placeholder="Existing shares" 
+              disabled 
+              :feedback="false" 
+              class="w-full" 
+              inputClass="w-full font-mono" 
+            />
+          </div>
+          <div class="mt-7 w-10"></div> <!-- Spacer to align with other rows -->
+        </div>
+
+        <!-- User input shares -->
         <div v-for="(share, index) in shares" :key="index" class="flex gap-2 items-start">
           <div class="flex-1">
             <label :for="`share-${index}`" class="block text-sm font-semibold mb-1">
-              Share {{ index + 1 }}
+              {{ isPendingUnlock ? `Additional Share ${index + 1}` : `Share ${index + 1}` }}
             </label>
             <Password :id="`share-${index}`" v-model="shares[index]" placeholder="Enter share secret"
               :disabled="loading" :feedback="false" toggleMask class="w-full" inputClass="w-full font-mono" />
           </div>
-          <Button v-if="shares.length > 2" icon="pi pi-trash" severity="danger" text rounded :disabled="loading"
+          <Button v-if="shares.length > 1" icon="pi pi-trash" severity="danger" text rounded :disabled="loading"
             @click="removeShare(index)" class="mt-7" v-tooltip.top="'Remove share'" />
         </div>
 
@@ -128,7 +257,25 @@ const handleSubmit = async () => {
     </div>
 
     <template #footer>
-      <Button label="Unlock Vault" @click="handleSubmit" :loading="loading" :disabled="!isValid" icon="pi pi-unlock" />
+      <div class="flex justify-between w-full">
+        <Button 
+          v-if="isPendingUnlock"
+          label="Clear Pending Shares" 
+          @click="handleReset" 
+          :loading="loading" 
+          icon="pi pi-times" 
+          severity="danger"
+          outlined
+        />
+        <div v-else></div> <!-- Spacer to push unlock button to the right when no reset button -->
+        <Button 
+          :label="isPendingUnlock ? 'Add Shares' : 'Submit Shares'" 
+          @click="handleSubmit" 
+          :loading="loading" 
+          :disabled="!isValid" 
+          icon="pi pi-unlock" 
+        />
+      </div>
     </template>
   </Dialog>
 </template>

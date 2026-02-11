@@ -93,6 +93,16 @@ export type AdminLoginResponse = {
 };
 
 /**
+ * ClearPendingSharesResponse
+ */
+export type ClearPendingSharesResponse = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * ConfigureSsoProviderRequest
  *
  * Configure SSO provider with OpenID Connect auto-discovery.
@@ -682,12 +692,6 @@ export type UnlockVaultPostRequest = {
      * List of share secrets (hex strings with embedded index)
      */
     shares: Array<string>;
-    /**
-     * Reset
-     *
-     * If true, clear existing shares before unlocking. If false, combine with existing shares.
-     */
-    reset?: boolean;
 };
 
 /**
@@ -830,6 +834,10 @@ export type VaultStatus = 'LOCKED' | 'UNLOCKED' | 'NOT_SETUP' | 'PENDING' | 'SET
  */
 export type VaultStatusResponse = {
     status: VaultStatus;
+    /**
+     * Last Share Timestamp
+     */
+    last_share_timestamp?: string | null;
 };
 
 export type HealthCheckHealthGetData = {
@@ -920,6 +928,22 @@ export type UnlockVaultVaultUnlockPostResponses = {
 };
 
 export type UnlockVaultVaultUnlockPostResponse = UnlockVaultVaultUnlockPostResponses[keyof UnlockVaultVaultUnlockPostResponses];
+
+export type ClearPendingSharesVaultUnlockClearDeleteData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/vault/unlock/clear';
+};
+
+export type ClearPendingSharesVaultUnlockClearDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: ClearPendingSharesResponse;
+};
+
+export type ClearPendingSharesVaultUnlockClearDeleteResponse = ClearPendingSharesVaultUnlockClearDeleteResponses[keyof ClearPendingSharesVaultUnlockClearDeleteResponses];
 
 export type LockVaultVaultLockPostData = {
     body?: never;

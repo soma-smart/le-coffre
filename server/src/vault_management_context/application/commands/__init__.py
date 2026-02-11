@@ -5,6 +5,7 @@ from .encrypt_command import EncryptCommand
 from .decrypt_command import DecryptCommand
 from .get_vault_status_command import GetVaultStatusCommand
 from .validate_vault_setup_command import ValidateVaultSetupCommand
+from .clear_pending_shares_command import ClearPendingSharesCommand
 
 __all__ = [
     "CreateVaultCommand",
@@ -14,4 +15,5 @@ __all__ = [
     "DecryptCommand",
     "GetVaultStatusCommand",
     "ValidateVaultSetupCommand",
+    "ClearPendingSharesCommand",
 ]

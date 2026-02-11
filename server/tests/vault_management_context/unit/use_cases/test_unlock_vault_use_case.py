@@ -152,43 +152,7 @@ def test_given_already_unlocked_vault_when_unlocking_vault_should_raise_vault_un
         use_case.execute(command)
 
 
-def test_given_reset_true_when_unlocking_vault_should_empty_share_repository(
-    use_case,
-    vault_repository: FakeVaultRepository,
-    shamir_gateway: FakeShamirGateway,
-    encryption_gateway: FakeEncryptionGateway,
-    share_repository: FakeShareRepository,
-):
-    vault_key = "test_vault_key_12345678"
-    master_key = "master_key"
-    encrypted_key = "encrypted_vault_key_hex"
-    shares = [Share("share0"), Share("share1")]
-
-    vault_repository.save(
-        Vault(
-            nb_shares=3,
-            threshold=2,
-            encrypted_key=encrypted_key,
-            setup_id="test-setup-id",
-            status=VaultStatus.SETUPED.value,
-        )
-    )
-
-    old_shares = [Share("old_share0"), Share("old_share1")]
-    share_repository.add(old_shares)
-
-    shamir_gateway.set_shamir_result(ShamirResult(shares, master_key))
-    encryption_gateway.set_decrypted_data(vault_key)
-    encryption_gateway.set_encrypted_data(encrypted_key)
-    encryption_gateway.set_master_key(master_key)
-
-    command = UnlockVaultCommand(shares=shares, reset=True)
-    use_case.execute(command)
-
-    assert len(share_repository.get_all()) == 0
-
-
-def test_given_reset_false_and_existing_shares_when_unlocking_vault_should_combine_shares(
+def test_given_existing_shares_when_unlocking_vault_should_combine_shares(
     use_case,
     vault_repository: FakeVaultRepository,
     shamir_gateway: FakeShamirGateway,
@@ -220,7 +184,7 @@ def test_given_reset_false_and_existing_shares_when_unlocking_vault_should_combi
     encryption_gateway.set_encrypted_data(encrypted_key)
     encryption_gateway.set_master_key(master_key)
 
-    command = UnlockVaultCommand(shares=new_shares, reset=False)
+    command = UnlockVaultCommand(shares=new_shares)
     use_case.execute(command)
 
     decrypted_key = vault_session_gateway.get_decrypted_key()
@@ -244,7 +208,7 @@ def test_given_insufficient_shares_when_unlocking_fails_should_add_shares_to_rep
 
     shares = [Share("share0")]
 
-    command = UnlockVaultCommand(shares=shares, reset=False)
+    command = UnlockVaultCommand(shares=shares)
 
     with pytest.raises(ShareReconstructionError):
         use_case.execute(command)
