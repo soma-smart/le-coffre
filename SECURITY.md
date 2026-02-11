@@ -9,7 +9,7 @@ Security fixes are **never backported** to unsupported versions.
 
 | Version | Supported |
 | ------- | --------- |
-| >= 0.3.4 (latest) | :white_check_mark: |
+| >= 0.3.2 (latest) | :white_check_mark: |
 
 If you are running an unsupported version, you are strongly encouraged to
 upgrade before reporting a vulnerability.
@@ -22,7 +22,11 @@ upgrade before reporting a vulnerability.
 
 ### How to report
 
-To report a security vulnerability, please use the **GitHub Private Vulnerability Reporting**
+To report a security vulnerability, please use the **GitHub Private Vulnerability Reporting** feature:
+
+1. Navigate to: https://github.com/soma-smart/le-coffre/security/advisories/new
+2. Or go to the repository's **Security** tab and click **Report a vulnerability**
+3. Fill in the private advisory form with the details below
 
 ### What to include
 
@@ -109,3 +113,8 @@ This project implements **server-side encryption and key management**.
   is considered **high severity**.
 
 Please report such issues immediately using the channels described above.
+
+---
+
+For details about the cryptographic design and key management model,
+please refer to: [CRYPTOGRAPHIC_ARCHITECTURE.md](CRYPTOGRAPHIC_ARCHITECTURE.md)
