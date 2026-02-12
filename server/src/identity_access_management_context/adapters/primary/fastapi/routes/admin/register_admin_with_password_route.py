@@ -14,6 +14,8 @@ from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -71,5 +73,5 @@ async def register_admin(
     except AdminAlreadyExistsException as e:
         raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in register admin")
         raise HTTPException(status_code=500, detail="Internal server error")

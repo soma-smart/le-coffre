@@ -20,6 +20,8 @@ from vault_management_context.application.use_cases import (
     CreateVaultUseCase,
 )
 from vault_management_context.domain.value_objects.shamir_result import ShamirResult
+from vault_management_context.domain.events import VaultCreatedEvent
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
 
 @pytest.fixture()
@@ -28,9 +30,10 @@ def use_case(
     shamir_gateway: FakeShamirGateway,
     encryption_gateway: FakeEncryptionGateway,
     vault_session_gateway: FakeVaultSessionGateway,
+    event_publisher,
 ):
     return CreateVaultUseCase(
-        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway
+        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway, event_publisher
     )
 
 
@@ -173,3 +176,30 @@ def test_given_threshold_greater_than_nb_shares_when_creating_vault_should_raise
         "Threshold 4 cannot exceed share count 3 - impossible to unlock vault"
     )
     assert str(exc_info.value) == expected_message
+
+
+def test_given_valid_vault_config_when_creating_vault_should_publish_vault_created_event(
+    use_case,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
+    event_publisher: FakeDomainEventPublisher,
+):
+    expected_shares = [Share("1"), Share("2"), Share("3"), Share("4"), Share("5")]
+    master_key = "master_secret_from_shamir"
+    encrypted_key = "encrypted_vault_key_123"
+    setup_id = uuid4()
+
+    shamir_result = ShamirResult(shares=expected_shares, master_key=master_key)
+    shamir_gateway.set_shamir_result(shamir_result)
+    encryption_gateway.set_encrypted_data(encrypted_key)
+    encryption_gateway.set_master_key(master_key)
+    encryption_gateway.set_decrypted_data("decrypted_vault_key")
+
+    command = CreateVaultCommand(nb_shares=5, threshold=3, setup_id=setup_id)
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(VaultCreatedEvent)
+    assert len(events) == 1
+    assert events[0].setup_id == str(setup_id)
+    assert events[0].nb_shares == 5
+    assert events[0].threshold == 3

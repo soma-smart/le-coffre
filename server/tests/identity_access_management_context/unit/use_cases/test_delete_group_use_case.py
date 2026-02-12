@@ -15,6 +15,8 @@ from identity_access_management_context.domain.exceptions import (
     CannotDeleteGroupStillUsedException,
 )
 from identity_access_management_context.domain.entities import Group
+from identity_access_management_context.domain.events import GroupDeletedEvent
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
 
@@ -24,11 +26,13 @@ def use_case(
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
     group_usage_gateway: GroupUsageGateway,
+    event_publisher,
 ):
     return DeleteGroupUseCase(
         group_repository=group_repository,
         group_member_repository=group_member_repository,
         group_usage_gateway=group_usage_gateway,
+        event_publisher=event_publisher,
     )
 
 
@@ -201,3 +205,27 @@ def test_given_admin_user_not_owner_when_deleting_group_then_group_is_deleted(
 
     # Assert
     assert group_repository.get_by_id(group_id) is None
+
+
+def test_given_owner_when_deleting_group_then_should_publish_group_deleted_event(
+    use_case: DeleteGroupUseCase,
+    group_repository: GroupRepository,
+    group_member_repository: GroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+
+    group = Group(id=group_id, name="Test Group", is_personal=False)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+
+    requesting_user = AuthenticatedUser(user_id=owner_id, roles=[])
+    command = DeleteGroupCommand(requesting_user=requesting_user, group_id=group_id)
+
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(GroupDeletedEvent)
+    assert len(events) == 1
+    assert events[0].group_id == group_id
+    assert events[0].deleted_by_user_id == owner_id

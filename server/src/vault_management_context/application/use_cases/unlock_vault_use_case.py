@@ -12,6 +12,8 @@ from vault_management_context.application.gateways import (
     ShareRepository,
 )
 from vault_management_context.application.services import KeySessionManager
+from vault_management_context.domain.events import VaultUnlockedEvent
+from shared_kernel.application.gateways import DomainEventPublisher
 
 
 class UnlockVaultUseCase:
@@ -22,12 +24,14 @@ class UnlockVaultUseCase:
         encryption_gateway: EncryptionGateway,
         vault_session_gateway: VaultSessionGateway,
         share_repository: ShareRepository,
+        event_publisher: DomainEventPublisher,
     ):
         self._vault_repository = vault_repository
         self._shamir_gateway = shamir_gateway
         self._encryption_gateway = encryption_gateway
         self._vault_session_gateway = vault_session_gateway
         self._share_repository = share_repository
+        self._event_publisher = event_publisher
 
     def execute(self, command: UnlockVaultCommand) -> None:
         vault = self._vault_repository.get()
@@ -48,6 +52,7 @@ class UnlockVaultUseCase:
             )
 
             self._share_repository.clear()
+            self._event_publisher.publish(VaultUnlockedEvent())
         except VaultUnlockedError as e:
             raise e
         except Exception as e:

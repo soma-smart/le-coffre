@@ -26,7 +26,8 @@ from identity_access_management_context.application.services import (
     SsoConfigurationDecryptingService,
 )
 from identity_access_management_context.domain.entities.sso_user import SsoUser
-from shared_kernel.application.gateways import TimeGateway
+from identity_access_management_context.domain.events import SsoLoginEvent
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 
 class SsoLoginUseCase:
@@ -52,6 +53,7 @@ class SsoLoginUseCase:
         group_member_repository: GroupMemberRepository,
         sso_configuration_repository: SsoConfigurationRepository,
         sso_encryption_gateway: SsoEncryptionGateway,
+        event_publisher: DomainEventPublisher,
     ):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
@@ -63,6 +65,7 @@ class SsoLoginUseCase:
         self._group_member_repository = group_member_repository
         self._sso_configuration_repository = sso_configuration_repository
         self._sso_encryption_gateway = sso_encryption_gateway
+        self._event_publisher = event_publisher
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
         # Step 0: Retrieve SSO and decrypt secret key
@@ -144,6 +147,12 @@ class SsoLoginUseCase:
             email=email,
             roles=["user"],
         )
+
+        self._event_publisher.publish(SsoLoginEvent(
+            user_id=user_id,
+            email=email,
+            is_new_user=is_new_user,
+        ))
 
         return SsoLoginResponse(
             jwt_token=token.value,

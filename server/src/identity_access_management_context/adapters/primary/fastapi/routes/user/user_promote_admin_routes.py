@@ -16,6 +16,8 @@ from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/users", tags=["User Management"])
 
 
@@ -58,5 +60,5 @@ def promote_user_to_admin(
     except IdentityAccessManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in promote admin")
         raise HTTPException(status_code=500, detail="Internal server error")

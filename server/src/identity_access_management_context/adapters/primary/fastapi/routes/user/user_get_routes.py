@@ -14,6 +14,8 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/users", tags=["User Management"])
 
 
@@ -57,5 +59,5 @@ def get_user(
     except UserNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in get user")
         raise HTTPException(status_code=500, detail="Internal server error")

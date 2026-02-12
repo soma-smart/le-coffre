@@ -17,6 +17,8 @@ from identity_access_management_context.domain.exceptions import (
 )
 from config import get_cookie_secure_setting, get_jwt_access_token_expiration_minutes
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -74,5 +76,5 @@ async def refresh_access_token(
     except InvalidRefreshTokenException as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(f"Error refreshing access token: {e}")
+        logger.exception("Unexpected error in refresh access token")
         raise HTTPException(status_code=500, detail="Internal server error")

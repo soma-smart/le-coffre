@@ -19,7 +19,12 @@ from vault_management_context.application.gateways import (
 from vault_management_context.adapters.secondary import (
     SqlVaultRepository,
 )
+from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.adapters.primary.dependencies import get_session
+
+
+def get_event_publisher(request: Request) -> DomainEventPublisher:
+    return request.app.state.domain_event_publisher
 
 
 def get_vault_repository(session: Session = Depends(get_session)) -> VaultRepository:
@@ -47,9 +52,10 @@ def get_create_vault_usecase(
     shamir_gateway: ShamirGateway = Depends(get_shamir_gateway),
     encryption_gateway: EncryptionGateway = Depends(get_encryption_gateway),
     vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return CreateVaultUseCase(
-        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway
+        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway, event_publisher
     )
 
 
@@ -59,6 +65,7 @@ def get_unlock_vault_usecase(
     encryption_gateway: EncryptionGateway = Depends(get_encryption_gateway),
     vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
     share_repository: ShareRepository = Depends(get_share_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return UnlockVaultUseCase(
         vault_repository,
@@ -66,14 +73,16 @@ def get_unlock_vault_usecase(
         encryption_gateway,
         vault_session_gateway,
         share_repository,
+        event_publisher,
     )
 
 
 def get_lock_vault_usecase(
     vault_repository: VaultRepository = Depends(get_vault_repository),
     vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
-    return LockVaultUseCase(vault_repository, vault_session_gateway)
+    return LockVaultUseCase(vault_repository, vault_session_gateway, event_publisher)
 
 
 def get_vault_status_usecase(

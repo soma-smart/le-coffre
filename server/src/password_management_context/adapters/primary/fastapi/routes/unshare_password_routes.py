@@ -14,6 +14,8 @@ from password_management_context.domain.exceptions import (
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
@@ -53,5 +55,5 @@ def unshare_password(
     except CannotUnshareWithOwnerError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in unshare password")
         raise HTTPException(status_code=500, detail="Internal server error")

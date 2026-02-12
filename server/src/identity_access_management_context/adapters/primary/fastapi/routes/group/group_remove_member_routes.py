@@ -22,6 +22,7 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/groups", tags=["Group Management"])
 
@@ -78,5 +79,5 @@ def remove_member_from_group(
     except CannotRemoveOwnerException as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(f"Error removing member from group: {e}")
+        logger.exception("Unexpected error in remove member from group")
         raise HTTPException(status_code=500, detail="Internal server error")

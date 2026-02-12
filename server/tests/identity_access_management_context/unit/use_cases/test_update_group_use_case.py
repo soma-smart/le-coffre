@@ -18,6 +18,8 @@ from identity_access_management_context.domain.exceptions import (
 )
 
 from identity_access_management_context.domain.entities import Group
+from identity_access_management_context.domain.events import GroupUpdatedEvent
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
@@ -27,10 +29,12 @@ from shared_kernel.domain.value_objects import ADMIN_ROLE
 def use_case(
     group_repository: GroupRepository,
     group_member_repository: GroupMemberRepository,
+    event_publisher,
 ):
     return UpdateGroupUseCase(
         group_repository=group_repository,
         group_member_repository=group_member_repository,
+        event_publisher=event_publisher,
     )
 
 
@@ -164,3 +168,31 @@ def test_given_personal_group_when_updating_group_should_raise_cannot_modify_per
 
     with pytest.raises(CannotModifyPersonalGroupException):
         use_case.execute(command)
+
+
+def test_given_user_is_owner_when_updating_group_should_publish_group_updated_event(
+    use_case: UpdateGroupUseCase,
+    group_repository: GroupRepository,
+    group_member_repository: GroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+):
+    group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+
+    group = Group(id=group_id, name="Old Name", is_personal=False, user_id=None)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, requester_id, is_owner=True)
+
+    command = UpdateGroupCommand(
+        requesting_user=AuthenticatedUser(requester_id, []),
+        group_id=group_id,
+        name="New Name",
+    )
+
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(GroupUpdatedEvent)
+    assert len(events) == 1
+    assert events[0].group_id == group_id
+    assert events[0].new_name == "New Name"
+    assert events[0].updated_by_user_id == requester_id

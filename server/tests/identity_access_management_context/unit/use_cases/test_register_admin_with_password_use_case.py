@@ -7,9 +7,11 @@ from identity_access_management_context.application.use_cases import (
 from identity_access_management_context.application.commands import (
     RegisterAdminWithPasswordCommand,
 )
+from identity_access_management_context.domain.events import AdminRegisteredEvent
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import (
     FakeUserPasswordRepository,
     FakePasswordHashingGateway,
@@ -26,6 +28,7 @@ def use_case(
     user_repository: FakeUserRepository,
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
+    event_publisher,
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
@@ -33,6 +36,7 @@ def use_case(
         user_repository,
         group_repository,
         group_member_repository,
+        event_publisher,
     )
 
 
@@ -140,3 +144,23 @@ async def test_should_delegate_admin_creation_to_user_management_context(
     assert created_user.email == email
     assert created_user.name == display_name
     assert "admin" in created_user.roles
+
+
+@pytest.mark.asyncio
+async def test_should_publish_admin_registered_event_on_successful_registration(
+    use_case: RegisterAdminWithPasswordUseCase,
+    event_publisher: FakeDomainEventPublisher,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+
+    command = RegisterAdminWithPasswordCommand(
+        id=user_id, email=email, password="secure123!", display_name="Admin User"
+    )
+
+    await use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(AdminRegisteredEvent)
+    assert len(events) == 1
+    assert events[0].admin_id == user_id
+    assert events[0].email == email

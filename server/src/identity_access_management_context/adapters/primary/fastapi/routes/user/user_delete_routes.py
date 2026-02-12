@@ -14,6 +14,8 @@ from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/users", tags=["User Management"])
 
 
@@ -45,5 +47,5 @@ def delete_user(
     except NotAdminError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in delete user")
         raise HTTPException(status_code=500, detail="Internal server error")

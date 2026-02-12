@@ -19,6 +19,8 @@ from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -102,5 +104,5 @@ async def admin_login(
     except (InvalidCredentialsException, AdminNotFoundException) as e:
         raise HTTPException(status_code=401, detail=str(e))
     except Exception as e:
-        logging.error(e)
+        logger.exception("Unexpected error in admin login")
         raise HTTPException(status_code=500, detail="Internal server error")

@@ -15,9 +15,11 @@ from identity_access_management_context.application.services import (
     UserCreationService,
 )
 from identity_access_management_context.domain.entities import UserPassword
+from identity_access_management_context.domain.events import AdminRegisteredEvent
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
+from shared_kernel.application.gateways import DomainEventPublisher
 
 
 class RegisterAdminWithPasswordUseCase:
@@ -28,12 +30,14 @@ class RegisterAdminWithPasswordUseCase:
         user_repository: UserRepository,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
+        event_publisher: DomainEventPublisher,
     ):
         self._user_password_repository = user_password_repository
         self._password_hashing_gateway = password_hashing_gateway
         self._user_repository = user_repository
         self._group_repository = group_repository
         self._group_member_repository = group_member_repository
+        self._event_publisher = event_publisher
 
     async def execute(self, command: RegisterAdminWithPasswordCommand) -> UUID:
         # Create service instance
@@ -70,5 +74,10 @@ class RegisterAdminWithPasswordUseCase:
             group_repository=self._group_repository,
             group_member_repository=self._group_member_repository,
         )
+
+        self._event_publisher.publish(AdminRegisteredEvent(
+            admin_id=user_password.id,
+            email=command.email,
+        ))
 
         return user_password.id

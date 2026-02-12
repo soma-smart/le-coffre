@@ -17,6 +17,7 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/groups", tags=["Group Management"])
 
@@ -58,5 +59,5 @@ def delete_group(
     except IdentityAccessManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(e, exc_info=True)
+        logger.exception("Unexpected error in delete group")
         raise HTTPException(status_code=500, detail="Internal server error")

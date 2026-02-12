@@ -1,13 +1,29 @@
+import logging
 import os
 import time
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
 from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
+
+
+def configure_logging():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 from config import (
     get_database_url,
@@ -17,6 +33,7 @@ from config import (
     get_jwt_refresh_token_expiration_days,
 )
 
+from shared_kernel.adapters.primary.logging_middleware import RequestLoggingMiddleware
 from shared_kernel.adapters.secondary import (
     UtcTimeGateway,
     InMemoryDomainEventPublisher,
@@ -72,9 +89,7 @@ def run_migrations(max_retries: int = 5, retry_delay: float = 5.0):
             return
         except Exception as e:
             if attempt < max_retries - 1:
-                print(
-                    f"Migration attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {retry_delay}s..."
-                )
+                logger.warning("Migration attempt %d/%d failed: %s. Retrying in %.1fs...", attempt + 1, max_retries, e, retry_delay)
                 time.sleep(retry_delay)
             else:
                 raise
@@ -93,7 +108,9 @@ def _build_engine(database_url: str):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Run migrations instead of create_tables
+    logger.info("Starting database migrations...")
     run_migrations()
+    logger.info("Database migrations completed")
 
     engine = _build_engine(get_database_url())
 
@@ -150,12 +167,29 @@ async def lifespan(app: FastAPI):
     domain_event_publisher = InMemoryDomainEventPublisher()
     app.state.domain_event_publisher = domain_event_publisher
 
+    logger.info("Application started successfully")
     yield
+    logger.info("Application shutting down")
 
 
 # Create the main app with lifespan
 # root_path="/api" ensures OpenAPI docs are served at /api/openapi.json
 app = FastAPI(lifespan=lifespan, root_path="/api")
+
+app.add_middleware(RequestLoggingMiddleware)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error("Unhandled exception on %s %s", request.method, request.url.path, exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    if exc.status_code >= 500:
+        logger.error("HTTP %d on %s %s: %s", exc.status_code, request.method, request.url.path, exc.detail)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
 # Health check endpoint for Kubernetes

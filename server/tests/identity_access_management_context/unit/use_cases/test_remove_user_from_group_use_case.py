@@ -15,6 +15,8 @@ from identity_access_management_context.domain.exceptions import (
     CannotRemoveOwnerException,
 )
 from identity_access_management_context.domain.entities import User, Group
+from identity_access_management_context.domain.events import UserRemovedFromGroupEvent
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
 
 
@@ -23,11 +25,13 @@ def use_case(
     user_repository: FakeUserRepository,
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
+    event_publisher,
 ):
     return RemoveUserFromGroupUseCase(
         user_repository=user_repository,
         group_repository=group_repository,
         group_member_repository=group_member_repository,
+        event_publisher=event_publisher,
     )
 
 
@@ -254,3 +258,34 @@ def test_given_owner_being_removed_when_removing_then_raise_cannot_remove_owner_
 
     with pytest.raises(CannotRemoveOwnerException):
         use_case.execute(command)
+
+
+def test_given_owner_when_removing_member_then_should_publish_user_removed_from_group_event(
+    use_case: RemoveUserFromGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    member_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+
+    owner = User(id=owner_id, username="owner", email="owner@example.com", name="Owner User")
+    member = User(id=member_id, username="member", email="member@example.com", name="Member User")
+    user_repository.save(owner)
+    user_repository.save(member)
+
+    group = Group(id=group_id, name="Development Team", is_personal=False)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, member_id, is_owner=False)
+
+    command = RemoveUserFromGroupCommand(requester_id=owner_id, group_id=group_id, user_id=member_id)
+    use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(UserRemovedFromGroupEvent)
+    assert len(events) == 1
+    assert events[0].group_id == group_id
+    assert events[0].user_id == member_id
+    assert events[0].removed_by_user_id == owner_id

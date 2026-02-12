@@ -19,6 +19,8 @@ from identity_access_management_context.domain.exceptions import (
     InvalidSsoSettingsException,
 )
 from shared_kernel.adapters.primary.exceptions import NotAdminError
+from identity_access_management_context.domain.events import SsoConfiguredEvent
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
 
 @pytest.fixture
@@ -33,10 +35,11 @@ def use_case(
     sso_gateway: FakeSsoGateway,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     sso_encryption_gateway: FakeSsoEncryptionGateway,
+    event_publisher,
 ):
     """Use case configured for tests."""
     return ConfigureSsoProviderUseCase(
-        sso_gateway, sso_configuration_repository, sso_encryption_gateway
+        sso_gateway, sso_configuration_repository, sso_encryption_gateway, event_publisher
     )
 
 
@@ -125,3 +128,23 @@ async def test_execute_discovery_failure(
             discovery_url="https://invalid-provider.com/.well-known/openid_configuration",
         )
         await use_case.execute(command)
+
+
+@pytest.mark.asyncio
+async def test_execute_success_should_publish_sso_configured_event(
+    use_case,
+    admin_user,
+    event_publisher: FakeDomainEventPublisher,
+):
+    command = ConfigureSsoProviderCommand(
+        requesting_user=admin_user,
+        client_id="test_client_id",
+        client_secret="test_client_secret",
+        discovery_url="https://provider.com/.well-known/openid_configuration",
+    )
+    await use_case.execute(command)
+
+    events = event_publisher.get_published_events_of_type(SsoConfiguredEvent)
+    assert len(events) == 1
+    assert events[0].configured_by_user_id == admin_user.user_id
+    assert events[0].discovery_url == "https://provider.com/.well-known/openid_configuration"

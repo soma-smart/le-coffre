@@ -6,6 +6,7 @@ from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
 )
+from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
 from identity_access_management_context.domain.exceptions import (
     UserNotOwnerOfGroupException,
     GroupNotFoundException,
@@ -13,6 +14,7 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
     UserNotMemberOfGroupException,
 )
+from shared_kernel.application.gateways import DomainEventPublisher
 
 
 class AddOwnerToGroupUseCase:
@@ -21,10 +23,12 @@ class AddOwnerToGroupUseCase:
         user_repository: UserRepository,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
+        event_publisher: DomainEventPublisher,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
+        self._event_publisher = event_publisher
 
     def execute(self, command: AddOwnerToGroupCommand) -> None:
         group = self.group_repository.get_by_id(command.group_id)
@@ -51,3 +55,9 @@ class AddOwnerToGroupUseCase:
         self.group_member_repository.add_member(
             command.group_id, command.user_id, is_owner=True
         )
+
+        self._event_publisher.publish(OwnerAddedToGroupEvent(
+            group_id=command.group_id,
+            user_id=command.user_id,
+            added_by_user_id=command.requester_id,
+        ))

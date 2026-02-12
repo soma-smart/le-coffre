@@ -85,6 +85,11 @@ def domain_event_publisher():
     return FakeDomainEventPublisher()
 
 
+@pytest.fixture
+def event_publisher():
+    return FakeDomainEventPublisher()
+
+
 def create_sso_user_from_provider(
     email: str, display_name: str, sso_user_id: str, sso_provider: str
 ) -> SsoUserInfo:
