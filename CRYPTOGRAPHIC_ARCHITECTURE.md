@@ -111,8 +111,6 @@ flowchart TD
     I --> K
     J --> |"Used for decryption"| K
     K --> L
-    L --> |"After use"| M
-    M --> |"Secure erasure"| N["Memory cleared"]
     
     %% Legend
     O(["Sensitive Data"]):::sensitive
