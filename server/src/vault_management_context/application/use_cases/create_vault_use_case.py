@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from vault_management_context.application.commands import CreateVaultCommand
@@ -19,6 +20,8 @@ from vault_management_context.application.responses.vault_setup_response import 
 )
 from vault_management_context.domain.events import VaultCreatedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
+
+logger = logging.getLogger(__name__)
 
 
 class CreateVaultUseCase:
@@ -68,6 +71,7 @@ class CreateVaultUseCase:
 
         self.vault_repo.save(vault)
 
+        logger.info("Vault created (nb_shares=%d, threshold=%d)", command.nb_shares, command.threshold)
         event = VaultCreatedEvent(
             setup_id=str(command.setup_id),
             nb_shares=command.nb_shares,

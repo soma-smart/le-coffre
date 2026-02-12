@@ -1,4 +1,7 @@
+import logging
+
 from vault_management_context.application.commands import LockVaultCommand
+
 from vault_management_context.application.gateways import (
     VaultRepository,
     VaultSessionGateway,
@@ -11,6 +14,8 @@ from vault_management_context.domain.exceptions import (
 from shared_kernel.domain.services import AdminPermissionChecker
 from vault_management_context.domain.events import VaultLockedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
+
+logger = logging.getLogger(__name__)
 
 
 class LockVaultUseCase:
@@ -41,6 +46,7 @@ class LockVaultUseCase:
 
         self._vault_session_gateway.clear_decrypted_key()
 
+        logger.info("Vault locked by user=%s", command.requesting_user.user_id)
         event = VaultLockedEvent(locked_by_user_id=command.requesting_user.user_id)
         self._event_publisher.publish(event)
         self._vault_event_repository.append_event(

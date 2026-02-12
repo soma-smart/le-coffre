@@ -168,7 +168,9 @@ async def lifespan(app: FastAPI):
     domain_event_publisher = InMemoryDomainEventPublisher()
     app.state.domain_event_publisher = domain_event_publisher
 
-    logger.info("Application started successfully")
+    db_url = get_database_url()
+    db_type = "postgresql" if db_url.startswith("postgresql") else "sqlite"
+    logger.info("Application started — db=%s base_url=%s", db_type, base_url)
     yield
     logger.info("Application shutting down")
 

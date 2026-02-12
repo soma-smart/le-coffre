@@ -1,3 +1,5 @@
+import logging
+
 from identity_access_management_context.application.commands import AdminLoginCommand
 from identity_access_management_context.application.responses import AdminLoginResponse
 from identity_access_management_context.application.gateways import (
@@ -13,6 +15,8 @@ from identity_access_management_context.domain.exceptions import (
 )
 from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
+
+logger = logging.getLogger(__name__)
 
 
 class AdminLoginUseCase:
@@ -35,6 +39,7 @@ class AdminLoginUseCase:
     async def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
         user_password = self._user_password_repository.get_by_email(command.email)
         if not user_password:
+            logger.warning("Login failed for email=%s reason='User not found'", command.email)
             event = AdminLoginFailedEvent(email=command.email, reason="User not found")
             self._event_publisher.publish(event)
             self._iam_event_repository.append_event(
@@ -49,6 +54,7 @@ class AdminLoginUseCase:
         if not self._password_hashing_gateway.verify(
             command.password, user_password.password_hash
         ):
+            logger.warning("Login failed for email=%s reason='Invalid credentials'", command.email)
             event = AdminLoginFailedEvent(email=command.email, reason="Invalid credentials")
             self._event_publisher.publish(event)
             self._iam_event_repository.append_event(

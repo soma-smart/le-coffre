@@ -1,4 +1,7 @@
+import logging
+
 from vault_management_context.application.commands import UnlockVaultCommand
+
 from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
     ShareReconstructionError,
@@ -15,6 +18,8 @@ from vault_management_context.application.gateways import (
 from vault_management_context.application.services import KeySessionManager
 from vault_management_context.domain.events import VaultUnlockedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
+
+logger = logging.getLogger(__name__)
 
 
 class UnlockVaultUseCase:
@@ -55,6 +60,7 @@ class UnlockVaultUseCase:
             )
 
             self._share_repository.clear()
+            logger.info("Vault unlocked")
             event = VaultUnlockedEvent()
             self._event_publisher.publish(event)
             self._vault_event_repository.append_event(
