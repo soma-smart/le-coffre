@@ -50,8 +50,6 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupMemberRepository,
     SqlSsoUserRepository,
     SqlSsoConfigurationRepository,
-)
-from identity_access_management_context.adapters.secondary.sql.sql_iam_event_repository import (
     SqlIamEventRepository,
 )
 from identity_access_management_context.application.gateways import IamEventRepository

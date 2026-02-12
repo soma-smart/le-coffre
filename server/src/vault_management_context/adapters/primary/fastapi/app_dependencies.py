@@ -18,8 +18,6 @@ from vault_management_context.application.gateways import (
 )
 from vault_management_context.adapters.secondary import (
     SqlVaultRepository,
-)
-from vault_management_context.adapters.secondary.sql.sql_vault_event_repository import (
     SqlVaultEventRepository,
 )
 from vault_management_context.application.gateways import VaultEventRepository
