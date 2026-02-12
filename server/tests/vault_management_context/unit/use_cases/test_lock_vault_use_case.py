@@ -21,9 +21,8 @@ def use_case(
     vault_repository: FakeVaultRepository,
     vault_session_gateway: FakeVaultSessionGateway,
     event_publisher,
-    vault_event_repository,
 ):
-    return LockVaultUseCase(vault_repository, vault_session_gateway, event_publisher, vault_event_repository)
+    return LockVaultUseCase(vault_repository, vault_session_gateway, event_publisher)
 
 
 def test_given_unlocked_vault_when_locking_vault_should_clear_session_key(

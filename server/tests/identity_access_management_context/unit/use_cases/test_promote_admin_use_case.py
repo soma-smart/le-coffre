@@ -16,8 +16,8 @@ from shared_kernel.adapters.primary.exceptions import NotAdminError
 
 
 @pytest.fixture
-def use_case(user_repository: UserRepository, event_publisher, iam_event_repository):
-    return PromoteAdminUseCase(user_repository, event_publisher, iam_event_repository)
+def use_case(user_repository: UserRepository, event_publisher):
+    return PromoteAdminUseCase(user_repository, event_publisher)
 
 
 def test_given_admin_user_and_non_admin_target_when_promoting_should_add_admin_role(

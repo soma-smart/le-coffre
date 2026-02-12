@@ -27,14 +27,12 @@ def use_case(
     group_member_repository: GroupMemberRepository,
     group_usage_gateway: GroupUsageGateway,
     event_publisher,
-    iam_event_repository,
 ):
     return DeleteGroupUseCase(
         group_repository=group_repository,
         group_member_repository=group_member_repository,
         group_usage_gateway=group_usage_gateway,
         event_publisher=event_publisher,
-        iam_event_repository=iam_event_repository,
     )
 
 
