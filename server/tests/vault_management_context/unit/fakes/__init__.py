@@ -3,6 +3,7 @@ from .fake_shamir_gateway import FakeShamirGateway
 from .fake_vault_repository import FakeVaultRepository
 from .fake_vault_session_gateway import FakeVaultSessionGateway
 from .fake_share_repository import FakeShareRepository
+from .fake_vault_event_repository import FakeVaultEventRepository
 
 __all__ = [
     "FakeEncryptionGateway",
@@ -10,4 +11,5 @@ __all__ = [
     "FakeVaultRepository",
     "FakeVaultSessionGateway",
     "FakeShareRepository",
+    "FakeVaultEventRepository",
 ]
