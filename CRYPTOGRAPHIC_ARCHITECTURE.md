@@ -64,6 +64,30 @@ When a user wants to retrieve a password, the system:
 
 The IV is essential for ensuring that the same password encrypted multiple times will yield different ciphertexts, preventing pattern analysis and enhancing security.
 
+### Encryption Process
+
+```mermaid
+flowchart TD
+    %% Styles
+    classDef sensitive fill:#ffcccc,stroke:#ff0000
+    classDef storage fill:#f9f9f9,stroke:#666
+    classDef memory fill:#e6f3ff,stroke:#0066cc
+
+    A(["Plaintext Password"]):::sensitive
+    B["Random IV Generator"]
+    C["AES-256-GCM Encryption"]
+    D[(Database)]:::storage
+    E(["Encryption Key in Memory"]):::memory
+
+    A --> C
+    B --> |"Generates unique IV"| C
+    E --> |"Used for encryption"| C
+    C --> |"Store encrypted password"| D
+    B --> |"Store IV"| D
+```
+
+### Decryption Process
+
 ```mermaid
 flowchart TD
     %% Styles
@@ -72,40 +96,24 @@ flowchart TD
     classDef storage fill:#f9f9f9,stroke:#666
     classDef memory fill:#e6f3ff,stroke:#0066cc
 
-    subgraph s1["Password Encryption Process"]
-        A(["Plaintext Password"]):::sensitive
-        B["Random IV Generator"]
-        C["AES-256-GCM Encryption"]
-        D[(Database)]:::storage
-        E(["Encryption Key in Memory"]):::memory
+    F(["User Authentication"])
+    G[(Database)]:::storage
+    H["Encrypted Password"]:::encrypted
+    I["Initialization Vector"]
+    J(["Encryption Key in Memory"]):::memory
+    K["AES-256-GCM Decryption"]
+    L(["Plaintext Password"]):::sensitive
+    M["Memory Cleaning"]
 
-        A --> C
-        B --> |"Generates unique IV"| C
-        E --> |"Used for encryption"| C
-        C --> |"Store encrypted password"| D
-        B --> |"Store IV"| D
-    end
-
-    subgraph s2["Password Decryption Process"]
-        F(["User Authentication"])
-        G[(Database)]:::storage
-        H["Encrypted Password"]:::encrypted
-        I["Initialization Vector"]
-        J(["Encryption Key in Memory"]):::memory
-        K["AES-256-GCM Decryption"]
-        L(["Plaintext Password"]):::sensitive
-        M["Memory Cleaning"]
-
-        F --> |"If authorized"| G
-        G --> H & I
-        H --> K
-        I --> K
-        J --> |"Used for decryption"| K
-        K --> L
-        L --> |"After use"| M
-        M --> |"Secure erasure"| N["Memory cleared"]
-    end
-
+    F --> |"If authorized"| G
+    G --> H & I
+    H --> K
+    I --> K
+    J --> |"Used for decryption"| K
+    K --> L
+    L --> |"After use"| M
+    M --> |"Secure erasure"| N["Memory cleared"]
+    
     %% Legend
     O(["Sensitive Data"]):::sensitive
     P["Encrypted Data"]:::encrypted
