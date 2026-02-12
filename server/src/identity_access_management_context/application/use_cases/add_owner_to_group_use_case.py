@@ -5,7 +5,6 @@ from identity_access_management_context.application.gateways import (
     UserRepository,
     GroupRepository,
     GroupMemberRepository,
-    IamEventRepository,
 )
 from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
 from identity_access_management_context.domain.exceptions import (
@@ -25,13 +24,11 @@ class AddOwnerToGroupUseCase:
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
         event_publisher: DomainEventPublisher,
-        iam_event_repository: IamEventRepository,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self._event_publisher = event_publisher
-        self._iam_event_repository = iam_event_repository
 
     def execute(self, command: AddOwnerToGroupCommand) -> None:
         group = self.group_repository.get_by_id(command.group_id)
@@ -59,16 +56,8 @@ class AddOwnerToGroupUseCase:
             command.group_id, command.user_id, is_owner=True
         )
 
-        event = OwnerAddedToGroupEvent(
+        self._event_publisher.publish(OwnerAddedToGroupEvent(
             group_id=command.group_id,
             user_id=command.user_id,
             added_by_user_id=command.requester_id,
-        )
-        self._event_publisher.publish(event)
-        self._iam_event_repository.append_event(
-            event_id=event.event_id,
-            event_type=type(event).__name__,
-            occurred_on=event.occurred_on,
-            actor_user_id=command.requester_id,
-            event_data={"group_id": str(command.group_id), "user_id": str(command.user_id)},
-        )
+        ))

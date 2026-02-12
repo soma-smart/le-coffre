@@ -1,7 +1,4 @@
-import logging
-
 from vault_management_context.application.commands import UnlockVaultCommand
-
 from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
     ShareReconstructionError,
@@ -13,13 +10,10 @@ from vault_management_context.application.gateways import (
     EncryptionGateway,
     VaultSessionGateway,
     ShareRepository,
-    VaultEventRepository,
 )
 from vault_management_context.application.services import KeySessionManager
 from vault_management_context.domain.events import VaultUnlockedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
-
-logger = logging.getLogger(__name__)
 
 
 class UnlockVaultUseCase:
@@ -31,7 +25,6 @@ class UnlockVaultUseCase:
         vault_session_gateway: VaultSessionGateway,
         share_repository: ShareRepository,
         event_publisher: DomainEventPublisher,
-        vault_event_repository: VaultEventRepository,
     ):
         self._vault_repository = vault_repository
         self._shamir_gateway = shamir_gateway
@@ -39,7 +32,6 @@ class UnlockVaultUseCase:
         self._vault_session_gateway = vault_session_gateway
         self._share_repository = share_repository
         self._event_publisher = event_publisher
-        self._vault_event_repository = vault_event_repository
 
     def execute(self, command: UnlockVaultCommand) -> None:
         vault = self._vault_repository.get()
@@ -60,16 +52,7 @@ class UnlockVaultUseCase:
             )
 
             self._share_repository.clear()
-            logger.info("Vault unlocked")
-            event = VaultUnlockedEvent()
-            self._event_publisher.publish(event)
-            self._vault_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_user_id=None,
-                event_data={},
-            )
+            self._event_publisher.publish(VaultUnlockedEvent())
         except VaultUnlockedError as e:
             raise e
         except Exception as e:

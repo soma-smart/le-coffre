@@ -10,7 +10,6 @@ from .fake_user_repository import FakeUserRepository
 from .fake_sso_user_repository import FakeSsoUserRepository
 from .fake_sso_encryption_gateway import FakeSsoEncryptionGateway
 from .fake_group_usage_gateway import FakeGroupUsageGateway
-from .fake_iam_event_repository import FakeIamEventRepository
 
 __all__ = [
     "FakeTokenGateway",
@@ -25,5 +24,4 @@ __all__ = [
     "FakeGroupUsageGateway",
     "FakeTimeGateway",
     "FakeUserRepository",
-    "FakeIamEventRepository",
 ]

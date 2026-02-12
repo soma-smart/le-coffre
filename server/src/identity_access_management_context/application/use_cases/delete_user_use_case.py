@@ -2,7 +2,6 @@ from identity_access_management_context.application.gateways import (
     UserRepository,
     GroupRepository,
     GroupMemberRepository,
-    IamEventRepository,
 )
 from identity_access_management_context.application.commands import DeleteUserCommand
 from identity_access_management_context.domain.events import UserDeletedEvent
@@ -17,13 +16,11 @@ class DeleteUserUseCase:
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
         event_publisher: DomainEventPublisher,
-        iam_event_repository: IamEventRepository,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.event_publisher = event_publisher
-        self._iam_event_repository = iam_event_repository
 
     def execute(self, command: DeleteUserCommand) -> None:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
@@ -55,13 +52,6 @@ class DeleteUserUseCase:
             personal_group_id=personal_group_id,
         )
         self.event_publisher.publish(event)
-        self._iam_event_repository.append_event(
-            event_id=event.event_id,
-            event_type=type(event).__name__,
-            occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
-            event_data={"user_id": str(user_id), "personal_group_id": str(personal_group_id) if personal_group_id else None},
-        )
 
         # Delete personal group after event (so password context can clean up)
         if personal_group:

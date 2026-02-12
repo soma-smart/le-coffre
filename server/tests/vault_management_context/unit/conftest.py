@@ -7,7 +7,6 @@ from .fakes import (
     FakeEncryptionGateway,
     FakeVaultSessionGateway,
     FakeShareRepository,
-    FakeVaultEventRepository,
 )
 
 
@@ -34,11 +33,6 @@ def vault_session_gateway():
 @pytest.fixture()
 def share_repository():
     return FakeShareRepository()
-
-
-@pytest.fixture()
-def vault_event_repository():
-    return FakeVaultEventRepository()
 
 
 @pytest.fixture()

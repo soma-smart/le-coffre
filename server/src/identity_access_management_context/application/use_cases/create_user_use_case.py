@@ -7,7 +7,6 @@ from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
     PasswordHashingGateway,
-    IamEventRepository,
 )
 from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import User, UserPassword
@@ -25,7 +24,6 @@ class CreateUserUseCase:
         group_member_repository: GroupMemberRepository,
         password_hashing_gateway: PasswordHashingGateway,
         event_publisher: DomainEventPublisher,
-        iam_event_repository: IamEventRepository,
     ):
         self.user_repository = user_repository
         self.user_password_repository = user_password_repository
@@ -33,7 +31,6 @@ class CreateUserUseCase:
         self.group_member_repository = group_member_repository
         self.password_hashing_gateway = password_hashing_gateway
         self._event_publisher = event_publisher
-        self._iam_event_repository = iam_event_repository
 
     def execute(self, command: CreateUserCommand) -> UUID:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "Create User")
@@ -65,19 +62,11 @@ class CreateUserUseCase:
             group_member_repository=self.group_member_repository,
         )
 
-        event = UserCreatedEvent(
+        self._event_publisher.publish(UserCreatedEvent(
             user_id=user.id,
             username=user.username,
             email=user.email,
             created_by_user_id=command.requesting_user.user_id,
-        )
-        self._event_publisher.publish(event)
-        self._iam_event_repository.append_event(
-            event_id=event.event_id,
-            event_type=type(event).__name__,
-            occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
-            event_data={"user_id": str(user.id), "username": user.username, "email": user.email},
-        )
+        ))
 
         return user.id

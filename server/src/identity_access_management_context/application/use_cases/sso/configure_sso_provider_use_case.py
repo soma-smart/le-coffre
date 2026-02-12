@@ -7,7 +7,6 @@ from identity_access_management_context.application.gateways import (
     SsoGateway,
     SsoConfigurationRepository,
     SsoEncryptionGateway,
-    IamEventRepository,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
 from identity_access_management_context.domain.events import SsoConfiguredEvent
@@ -34,13 +33,11 @@ class ConfigureSsoProviderUseCase:
         sso_configuration_repository: SsoConfigurationRepository,
         sso_encryption_gateway: SsoEncryptionGateway,
         event_publisher: DomainEventPublisher,
-        iam_event_repository: IamEventRepository,
     ):
         self._sso_gateway = sso_gateway
         self._sso_configuration_repository = sso_configuration_repository
         self._sso_encryption_gateway = sso_encryption_gateway
         self._event_publisher = event_publisher
-        self._iam_event_repository = iam_event_repository
 
     async def execute(self, command: ConfigureSsoProviderCommand) -> None:
         """
@@ -87,18 +84,10 @@ class ConfigureSsoProviderUseCase:
             )
             self._sso_configuration_repository.save(config)
 
-            event = SsoConfiguredEvent(
+            self._event_publisher.publish(SsoConfiguredEvent(
                 configured_by_user_id=command.requesting_user.user_id,
                 discovery_url=command.discovery_url,
-            )
-            self._event_publisher.publish(event)
-            self._iam_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_user_id=command.requesting_user.user_id,
-                event_data={"discovery_url": command.discovery_url},
-            )
+            ))
 
         except ValueError as e:
             raise InvalidSsoSettingsException(f"Auto-discovery failed: {str(e)}")

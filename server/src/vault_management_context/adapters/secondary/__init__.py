@@ -5,7 +5,6 @@ from .in_memory_vault_session_gateway import InMemoryVaultSessionGateway
 from .in_memory_share_repository import InMemoryShareRepository
 
 from .sql.sql_vault_repository import SqlVaultRepository
-from .sql.sql_vault_event_repository import SqlVaultEventRepository
 
 __all__ = [
     "CryptoShamirGateway",
@@ -13,5 +12,4 @@ __all__ = [
     "InMemoryVaultSessionGateway",
     "InMemoryShareRepository",
     "SqlVaultRepository",
-    "SqlVaultEventRepository",
 ]

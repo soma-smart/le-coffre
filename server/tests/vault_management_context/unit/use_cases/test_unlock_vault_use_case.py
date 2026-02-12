@@ -31,7 +31,6 @@ def use_case(
     vault_session_gateway: FakeVaultSessionGateway,
     share_repository: FakeShareRepository,
     event_publisher,
-    vault_event_repository,
 ):
     return UnlockVaultUseCase(
         vault_repository,
@@ -40,7 +39,6 @@ def use_case(
         vault_session_gateway,
         share_repository,
         event_publisher,
-        vault_event_repository,
     )
 
 
