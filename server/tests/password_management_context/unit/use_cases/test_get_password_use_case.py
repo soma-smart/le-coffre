@@ -1,5 +1,6 @@
 import pytest
 from uuid import UUID
+from datetime import datetime
 
 from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.use_cases import GetPasswordUseCase
@@ -159,3 +160,198 @@ def test_given_user_is_group_member_when_getting_password_should_return_decrypte
     assert result.id == password_entity.id
     assert result.name == password_entity.name
     assert result.password == "supersecret"
+
+
+def test_given_password_with_creation_event_when_getting_password_should_return_created_at_date(
+    use_case: GetPasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+    password_entity = Password(
+        id=password_id,
+        name="Gmail",
+        encrypted_value="encrypted(supersecret)",
+        folder="default",
+    )
+    password_repository.save(password_entity)
+    password_permissions_repository.set_owner(group_id, password_entity.id)
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    creation_date = datetime(2025, 1, 15, 10, 30, 0)
+    password_event_repository.append_event(
+        event_id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordCreatedEvent",
+        occurred_on=creation_date,
+        password_id=password_id,
+        actor_user_id=user_id,
+        event_data={
+            "password_id": str(password_id),
+            "password_name": "Gmail",
+            "owner_group_id": str(group_id),
+            "folder": "default",
+        },
+    )
+
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_entity.id)
+    result = use_case.execute(command)
+
+    assert result.created_at == creation_date
+
+
+def test_given_password_with_password_update_events_when_getting_password_should_return_last_password_updated_at(
+    use_case: GetPasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+    password_entity = Password(
+        id=password_id,
+        name="Gmail",
+        encrypted_value="encrypted(newsecret)",
+        folder="default",
+    )
+    password_repository.save(password_entity)
+    password_permissions_repository.set_owner(group_id, password_entity.id)
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    first_update = datetime(2025, 1, 16, 10, 0, 0)
+    password_event_repository.append_event(
+        event_id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordUpdatedEvent",
+        occurred_on=first_update,
+        password_id=password_id,
+        actor_user_id=user_id,
+        event_data={
+            "password_id": str(password_id),
+            "has_name_changed": False,
+            "has_password_changed": True,
+            "has_folder_changed": False,
+        },
+    )
+
+    second_update = datetime(2025, 1, 20, 14, 30, 0)
+    password_event_repository.append_event(
+        event_id=UUID("a0e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordUpdatedEvent",
+        occurred_on=second_update,
+        password_id=password_id,
+        actor_user_id=user_id,
+        event_data={
+            "password_id": str(password_id),
+            "has_name_changed": False,
+            "has_password_changed": True,
+            "has_folder_changed": False,
+        },
+    )
+
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_entity.id)
+    result = use_case.execute(command)
+
+    assert result.last_password_updated_at == second_update
+
+
+def test_given_password_with_only_name_folder_updates_when_getting_password_should_return_none_for_last_password_updated_at(
+    use_case: GetPasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+    password_entity = Password(
+        id=password_id,
+        name="Gmail Updated",
+        encrypted_value="encrypted(supersecret)",
+        folder="work",
+    )
+    password_repository.save(password_entity)
+    password_permissions_repository.set_owner(group_id, password_entity.id)
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    name_update = datetime(2025, 1, 16, 10, 0, 0)
+    password_event_repository.append_event(
+        event_id=UUID("e0e2cb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordUpdatedEvent",
+        occurred_on=name_update,
+        password_id=password_id,
+        actor_user_id=user_id,
+        event_data={
+            "password_id": str(password_id),
+            "has_name_changed": True,
+            "has_password_changed": False,
+            "has_folder_changed": False,
+        },
+    )
+
+    folder_update = datetime(2025, 1, 20, 14, 30, 0)
+    password_event_repository.append_event(
+        event_id=UUID("a0e2cb09-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordUpdatedEvent",
+        occurred_on=folder_update,
+        password_id=password_id,
+        actor_user_id=user_id,
+        event_data={
+            "password_id": str(password_id),
+            "has_name_changed": False,
+            "has_password_changed": False,
+            "has_folder_changed": True,
+        },
+    )
+
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_entity.id)
+    result = use_case.execute(command)
+
+    assert result.last_password_updated_at is None
+
+
+def test_given_password_without_update_events_when_getting_password_should_return_created_at_for_last_password_updated_at(
+    use_case: GetPasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+    password_entity = Password(
+        id=password_id,
+        name="Gmail",
+        encrypted_value="encrypted(supersecret)",
+        folder="default",
+    )
+    password_repository.save(password_entity)
+    password_permissions_repository.set_owner(group_id, password_entity.id)
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    creation_date = datetime(2025, 1, 15, 10, 30, 0)
+    password_event_repository.append_event(
+        event_id=UUID("e0e2cb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordCreatedEvent",
+        occurred_on=creation_date,
+        password_id=password_id,
+        actor_user_id=user_id,
+        event_data={
+            "password_id": str(password_id),
+            "password_name": "Gmail",
+            "owner_group_id": str(group_id),
+            "folder": "default",
+        },
+    )
+
+    command = GetPasswordCommand(requester_id=user_id, password_id=password_entity.id)
+    result = use_case.execute(command)
+
+    assert result.created_at == creation_date
+    assert result.last_password_updated_at == creation_date

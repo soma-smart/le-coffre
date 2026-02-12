@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from uuid import UUID
 import logging
+from datetime import datetime
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_get_password_usecase,
@@ -27,6 +28,8 @@ class GetPasswordResponse(BaseModel):
     name: str
     password: str
     folder: str
+    created_at: datetime | None
+    last_password_updated_at: datetime | None
 
 
 @router.get(
@@ -57,6 +60,8 @@ def get_password(
             name=password_response.name,
             password=password_response.password,
             folder=password_response.folder,
+            created_at=password_response.created_at,
+            last_password_updated_at=password_response.last_password_updated_at,
         )
     except (PasswordNotFoundError, PasswordAccessDeniedError) as e:
         # For security, treat both not found and access denied as 404

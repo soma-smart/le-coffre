@@ -55,6 +55,24 @@ class GetPasswordUseCase:
             password_entity.encrypted_value
         )
 
+        # Retrieve creation event
+        creation_events = self.password_event_repository.list_events(
+            password_id=command.password_id,
+            event_types=["PasswordCreatedEvent"],
+        )
+        created_at = creation_events[0]["occurred_on"] if creation_events else None
+
+        # Retrieve last password update event (only those that changed the password)
+        update_events = self.password_event_repository.list_events(
+            password_id=command.password_id,
+            event_types=["PasswordUpdatedEvent"],
+        )
+        last_password_updated_at = created_at
+        for event in update_events:
+            if event["event_data"].get("has_password_changed", False):
+                last_password_updated_at = event["occurred_on"]
+                break
+
         # Store domain event
         event = PasswordAccessedEvent(
             password_id=password_entity.id,
@@ -71,6 +89,8 @@ class GetPasswordUseCase:
             name=password_entity.name,
             password=decrypted_password,
             folder=password_entity.folder,
+            created_at=created_at,
+            last_password_updated_at=last_password_updated_at,
         )
 
     def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
