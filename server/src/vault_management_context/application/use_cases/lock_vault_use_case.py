@@ -2,6 +2,7 @@ from vault_management_context.application.commands import LockVaultCommand
 from vault_management_context.application.gateways import (
     VaultRepository,
     VaultSessionGateway,
+    VaultEventRepository,
 )
 from vault_management_context.domain.exceptions import (
     VaultNotSetupException,
@@ -18,10 +19,12 @@ class LockVaultUseCase:
         vault_repository: VaultRepository,
         vault_session_gateway: VaultSessionGateway,
         event_publisher: DomainEventPublisher,
+        vault_event_repository: VaultEventRepository,
     ):
         self._vault_repository = vault_repository
         self._vault_session_gateway = vault_session_gateway
         self._event_publisher = event_publisher
+        self._vault_event_repository = vault_event_repository
 
     def execute(self, command: LockVaultCommand) -> None:
         """Lock the vault by clearing the decrypted key from memory"""
@@ -38,6 +41,12 @@ class LockVaultUseCase:
 
         self._vault_session_gateway.clear_decrypted_key()
 
-        self._event_publisher.publish(VaultLockedEvent(
-            locked_by_user_id=command.requesting_user.user_id,
-        ))
+        event = VaultLockedEvent(locked_by_user_id=command.requesting_user.user_id)
+        self._event_publisher.publish(event)
+        self._vault_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=command.requesting_user.user_id,
+            event_data={},
+        )

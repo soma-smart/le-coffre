@@ -11,6 +11,7 @@ from vault_management_context.application.gateways import (
     ShamirGateway,
     EncryptionGateway,
     VaultSessionGateway,
+    VaultEventRepository,
 )
 from vault_management_context.application.services import KeySessionManager
 from vault_management_context.application.responses.vault_setup_response import (
@@ -28,12 +29,14 @@ class CreateVaultUseCase:
         encryption_gateway: EncryptionGateway,
         vault_session_gateway: VaultSessionGateway,
         event_publisher: DomainEventPublisher,
+        vault_event_repository: VaultEventRepository,
     ) -> None:
         self.vault_repo = vault_repo
         self.shamir_gateway = shamir_gateway
         self.encryption_gateway = encryption_gateway
         self.vault_session_gateway = vault_session_gateway
         self._event_publisher = event_publisher
+        self._vault_event_repository = vault_event_repository
 
     def execute(self, command: CreateVaultCommand) -> VaultSetupResponse:
         existing_vault: Optional[Vault] = self.vault_repo.get()
@@ -65,11 +68,19 @@ class CreateVaultUseCase:
 
         self.vault_repo.save(vault)
 
-        self._event_publisher.publish(VaultCreatedEvent(
+        event = VaultCreatedEvent(
             setup_id=str(command.setup_id),
             nb_shares=command.nb_shares,
             threshold=command.threshold,
-        ))
+        )
+        self._event_publisher.publish(event)
+        self._vault_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=None,
+            event_data={"setup_id": str(command.setup_id), "nb_shares": command.nb_shares, "threshold": command.threshold},
+        )
 
         return VaultSetupResponse(
             setup_id=str(command.setup_id), shares=shamir_result.shares

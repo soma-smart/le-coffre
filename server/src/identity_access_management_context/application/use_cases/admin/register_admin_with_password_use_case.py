@@ -9,6 +9,7 @@ from identity_access_management_context.application.gateways import (
     UserRepository,
     GroupRepository,
     GroupMemberRepository,
+    IamEventRepository,
 )
 from identity_access_management_context.application.services import (
     UserManagementService,
@@ -31,6 +32,7 @@ class RegisterAdminWithPasswordUseCase:
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
         event_publisher: DomainEventPublisher,
+        iam_event_repository: IamEventRepository,
     ):
         self._user_password_repository = user_password_repository
         self._password_hashing_gateway = password_hashing_gateway
@@ -38,6 +40,7 @@ class RegisterAdminWithPasswordUseCase:
         self._group_repository = group_repository
         self._group_member_repository = group_member_repository
         self._event_publisher = event_publisher
+        self._iam_event_repository = iam_event_repository
 
     async def execute(self, command: RegisterAdminWithPasswordCommand) -> UUID:
         # Create service instance
@@ -75,9 +78,14 @@ class RegisterAdminWithPasswordUseCase:
             group_member_repository=self._group_member_repository,
         )
 
-        self._event_publisher.publish(AdminRegisteredEvent(
-            admin_id=user_password.id,
-            email=command.email,
-        ))
+        event = AdminRegisteredEvent(admin_id=user_password.id, email=command.email)
+        self._event_publisher.publish(event)
+        self._iam_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=user_password.id,
+            event_data={"email": command.email},
+        )
 
         return user_password.id

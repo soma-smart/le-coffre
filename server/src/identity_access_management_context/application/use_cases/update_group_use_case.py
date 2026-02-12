@@ -4,6 +4,7 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupMemberRepository,
+    IamEventRepository,
 )
 from identity_access_management_context.domain.events import GroupUpdatedEvent
 from identity_access_management_context.domain.exceptions import (
@@ -21,10 +22,12 @@ class UpdateGroupUseCase:
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
         event_publisher: DomainEventPublisher,
+        iam_event_repository: IamEventRepository,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self._event_publisher = event_publisher
+        self._iam_event_repository = iam_event_repository
 
     def execute(self, command: UpdateGroupCommand) -> None:
         group = self.group_repository.get_by_id(command.group_id)
@@ -44,8 +47,16 @@ class UpdateGroupUseCase:
         group.name = command.name
         self.group_repository.save_group(group)
 
-        self._event_publisher.publish(GroupUpdatedEvent(
+        event = GroupUpdatedEvent(
             group_id=command.group_id,
             new_name=command.name,
             updated_by_user_id=command.requesting_user.user_id,
-        ))
+        )
+        self._event_publisher.publish(event)
+        self._iam_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=command.requesting_user.user_id,
+            event_data={"group_id": str(command.group_id), "new_name": command.name},
+        )
