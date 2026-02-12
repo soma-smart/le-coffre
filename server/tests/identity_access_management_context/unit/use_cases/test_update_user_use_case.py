@@ -13,8 +13,9 @@ from ..fakes import FakeUserRepository
 def use_case(
     user_repository: FakeUserRepository,
     event_publisher,
+    iam_event_repository,
 ):
-    return UpdateUserUseCase(user_repository, event_publisher)
+    return UpdateUserUseCase(user_repository, event_publisher, iam_event_repository)
 
 
 def test_given_valid_update_data_when_updating_user_should_persist_changes(

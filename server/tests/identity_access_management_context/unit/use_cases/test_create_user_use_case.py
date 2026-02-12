@@ -28,6 +28,7 @@ def use_case(
     group_member_repository: FakeGroupMemberRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     event_publisher,
+    iam_event_repository,
 ):
     return CreateUserUseCase(
         user_repository,
@@ -36,6 +37,7 @@ def use_case(
         group_member_repository,
         password_hashing_gateway,
         event_publisher,
+        iam_event_repository,
     )
 
 

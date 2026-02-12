@@ -21,12 +21,14 @@ def use_case(
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
     domain_event_publisher: FakeDomainEventPublisher,
+    iam_event_repository,
 ):
     return DeleteUserUseCase(
         user_repository,
         group_repository,
         group_member_repository,
         domain_event_publisher,
+        iam_event_repository,
     )
 
 

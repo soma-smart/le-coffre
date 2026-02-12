@@ -17,11 +17,20 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         duration_ms = (time.perf_counter() - start) * 1000
 
-        logger.info(
-            "%s %s %d %.0fms",
-            request.method,
-            request.url.path,
-            response.status_code,
-            duration_ms,
-        )
+        if duration_ms > 500:
+            logger.warning(
+                "Slow request %s %s %d %.0fms",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+            )
+        else:
+            logger.info(
+                "%s %s %d %.0fms",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+            )
         return response

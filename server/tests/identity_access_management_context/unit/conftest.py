@@ -17,6 +17,7 @@ from .fakes import (
     FakeGroupRepository,
     FakeGroupMemberRepository,
     FakeGroupUsageGateway,
+    FakeIamEventRepository,
 )
 
 
@@ -78,6 +79,11 @@ def group_member_repository():
 @pytest.fixture
 def group_usage_gateway():
     return FakeGroupUsageGateway()
+
+
+@pytest.fixture
+def iam_event_repository():
+    return FakeIamEventRepository()
 
 
 @pytest.fixture

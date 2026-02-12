@@ -29,6 +29,7 @@ def use_case(
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
     event_publisher,
+    iam_event_repository,
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
@@ -37,6 +38,7 @@ def use_case(
         group_repository,
         group_member_repository,
         event_publisher,
+        iam_event_repository,
     )
 
 

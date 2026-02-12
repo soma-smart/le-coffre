@@ -22,6 +22,8 @@ from password_management_context.adapters.secondary.sql import (
     PasswordEventTable,
 )
 from vault_management_context.adapters.secondary.sql import VaultTable
+from vault_management_context.adapters.secondary.sql.models.vault_event import VaultEventTable
+from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
 
 
 from config import get_database_url
@@ -39,6 +41,8 @@ _ = (
     PasswordTable,
     PasswordEventTable,
     VaultTable,
+    VaultEventTable,
+    IamEventTable,
 )
 
 # this is the Alembic Config object, which provides
