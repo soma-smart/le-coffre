@@ -27,6 +27,7 @@ def use_case(
     token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
     event_publisher,
+    iam_event_repository,
 ):
     return AdminLoginUseCase(
         user_password_repository,
@@ -34,6 +35,7 @@ def use_case(
         token_gateway,
         time_provider,
         event_publisher,
+        iam_event_repository,
     )
 
 

@@ -31,9 +31,10 @@ def use_case(
     encryption_gateway: FakeEncryptionGateway,
     vault_session_gateway: FakeVaultSessionGateway,
     event_publisher,
+    vault_event_repository,
 ):
     return CreateVaultUseCase(
-        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway, event_publisher
+        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway, event_publisher, vault_event_repository
     )
 
 
