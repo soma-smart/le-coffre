@@ -203,3 +203,29 @@ def test_given_valid_vault_config_when_creating_vault_should_publish_vault_creat
     assert events[0].setup_id == str(setup_id)
     assert events[0].nb_shares == 5
     assert events[0].threshold == 3
+
+
+def test_given_valid_vault_config_when_creating_vault_should_store_vault_created_event(
+    use_case,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
+    vault_event_repository,
+):
+    expected_shares = [Share("1"), Share("2"), Share("3"), Share("4"), Share("5")]
+    master_key = "master_secret_from_shamir"
+    encrypted_key = "encrypted_vault_key_123"
+    setup_id = uuid4()
+
+    shamir_result = ShamirResult(shares=expected_shares, master_key=master_key)
+    shamir_gateway.set_shamir_result(shamir_result)
+    encryption_gateway.set_encrypted_data(encrypted_key)
+    encryption_gateway.set_master_key(master_key)
+    encryption_gateway.set_decrypted_data("decrypted_vault_key")
+
+    command = CreateVaultCommand(nb_shares=5, threshold=3, setup_id=setup_id)
+    use_case.execute(command)
+
+    assert len(vault_event_repository.events) == 1
+    stored = vault_event_repository.events[0]
+    assert stored["event_type"] == "VaultCreatedEvent"
+    assert stored["actor_user_id"] is None

@@ -25,12 +25,14 @@ def use_case(
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
     event_publisher,
+    group_event_repository,
 ):
     return AddUserToGroupUseCase(
         user_repository=user_repository,
         group_repository=group_repository,
         group_member_repository=group_member_repository,
         event_publisher=event_publisher,
+        group_event_repository=group_event_repository,
     )
 
 
@@ -296,3 +298,32 @@ def test_given_owner_when_adding_user_to_group_then_should_publish_user_added_to
     assert events[0].group_id == group_id
     assert events[0].user_id == new_user_id
     assert events[0].added_by_user_id == owner_id
+
+
+def test_given_owner_when_adding_user_to_group_then_should_store_user_added_to_group_event(
+    use_case: AddUserToGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    group_event_repository,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    new_user_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+
+    owner = User(id=owner_id, username="owner", email="owner@example.com", name="Owner User")
+    new_user = User(id=new_user_id, username="newuser", email="newuser@example.com", name="New User")
+    user_repository.save(owner)
+    user_repository.save(new_user)
+
+    group = Group(id=group_id, name="Development Team", is_personal=False)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+
+    command = AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, user_id=new_user_id)
+    use_case.execute(command)
+
+    assert len(group_event_repository.events) == 1
+    stored = group_event_repository.events[0]
+    assert stored["event_type"] == "UserAddedToGroupEvent"
+    assert stored["actor_user_id"] == owner_id

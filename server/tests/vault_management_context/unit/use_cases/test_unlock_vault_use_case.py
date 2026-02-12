@@ -251,3 +251,39 @@ def test_given_insufficient_shares_when_unlocking_fails_should_add_shares_to_rep
     stored_shares = share_repository.get_all()
     assert len(stored_shares) == 1
     assert stored_shares[0].secret == "share0"
+
+
+def test_given_valid_shares_when_unlocking_vault_should_store_vault_unlocked_event(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
+    vault_event_repository,
+):
+    vault_key = "test_vault_key_12345678"
+    master_key = "master_key"
+    encrypted_key = "encrypted_vault_key_hex"
+    shares = [Share("share0"), Share("share1")]
+
+    vault_repository.save(
+        Vault(
+            nb_shares=3,
+            threshold=2,
+            encrypted_key=encrypted_key,
+            setup_id="test-setup-id",
+            status=VaultStatus.SETUPED.value,
+        )
+    )
+
+    shamir_gateway.set_shamir_result(ShamirResult(shares, master_key))
+    encryption_gateway.set_decrypted_data(vault_key)
+    encryption_gateway.set_encrypted_data(encrypted_key)
+    encryption_gateway.set_master_key(master_key)
+
+    command = UnlockVaultCommand(shares=shares)
+    use_case.execute(command)
+
+    assert len(vault_event_repository.events) == 1
+    stored = vault_event_repository.events[0]
+    assert stored["event_type"] == "VaultUnlockedEvent"
+    assert stored["actor_user_id"] is None

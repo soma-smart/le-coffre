@@ -11,6 +11,7 @@ dependencies = [
   "passlib[bcrypt]==1.7.4",
   "PyCryptodome==3.23.0",
   "pyjwt==2.10.1",
+  "python-json-logger>=3.2.1",
   "sqlmodel==0.0.31",
 ]
 

@@ -21,12 +21,14 @@ def use_case(
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
     domain_event_publisher: FakeDomainEventPublisher,
+    user_event_repository,
 ):
     return DeleteUserUseCase(
         user_repository,
         group_repository,
         group_member_repository,
         domain_event_publisher,
+        user_event_repository,
     )
 
 
@@ -264,3 +266,25 @@ def test_given_user_when_deleting_should_publish_event_with_personal_group_id(
     assert published_event.user_id == user_uuid
     assert published_event.deleted_by_user_id == admin_uuid
     assert published_event.personal_group_id == personal_group_id
+
+
+def test_given_admin_user_when_deleting_user_should_store_user_deleted_event(
+    use_case: DeleteUserUseCase,
+    user_repository: FakeUserRepository,
+    user_event_repository,
+):
+    user_uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174001")
+
+    user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
+    user_repository.save(user)
+
+    admin_user = AuthenticatedUser(user_id=admin_uuid, roles=["admin"])
+    command = DeleteUserCommand(user_id=user_uuid, requesting_user=admin_user)
+
+    use_case.execute(command)
+
+    assert len(user_event_repository.events) == 1
+    stored = user_event_repository.events[0]
+    assert stored["event_type"] == "UserDeletedEvent"
+    assert stored["actor_user_id"] == admin_uuid

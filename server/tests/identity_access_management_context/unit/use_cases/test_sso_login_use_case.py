@@ -43,6 +43,7 @@ def use_case(
     sso_configuration_repository: FakeSsoConfigurationRepository,
     sso_encryption_gateway: FakeSsoEncryptionGateway,
     event_publisher,
+    sso_event_repository,
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
@@ -56,6 +57,7 @@ def use_case(
         sso_configuration_repository=sso_configuration_repository,
         sso_encryption_gateway=sso_encryption_gateway,
         event_publisher=event_publisher,
+        sso_event_repository=sso_event_repository,
     )
 
 
@@ -346,3 +348,45 @@ async def test_should_publish_sso_login_event_on_successful_login(
     assert events[0].user_id == user_id
     assert events[0].email == email
     assert events[0].is_new_user is False
+
+
+@pytest.mark.asyncio
+async def test_should_store_sso_login_event_on_successful_login(
+    use_case: SsoLoginUseCase,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    token_gateway: FakeTokenGateway,
+    sso_event_repository,
+):
+    sso_code = "valid_sso_code_123"
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    display_name = "John Doe"
+    sso_provider = "google"
+    sso_user_id = "google_123456"
+
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id", "encrypted(client_secret)", "url", "auth", "token", "userinfo", None,
+        )
+    )
+
+    sso_user_from_provider = create_sso_user_from_provider(
+        email, display_name, sso_user_id, sso_provider
+    )
+    existing_sso_user = create_existing_sso_user(
+        user_id, email, display_name, sso_user_id, sso_provider
+    )
+
+    sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
+    sso_user_repository.create(existing_sso_user)
+    token_gateway.set_unique_jwt_part("unique_token_part")
+
+    command = SsoLoginCommand(code=sso_code)
+    await use_case.execute(command)
+
+    assert len(sso_event_repository.events) == 1
+    stored = sso_event_repository.events[0]
+    assert stored["event_type"] == "SsoLoginEvent"
+    assert stored["actor_user_id"] == user_id

@@ -17,6 +17,10 @@ from .fakes import (
     FakeGroupRepository,
     FakeGroupMemberRepository,
     FakeGroupUsageGateway,
+    FakeUserEventRepository,
+    FakeGroupEventRepository,
+    FakeSsoEventRepository,
+    FakeAdminEventRepository,
 )
 
 
@@ -78,6 +82,26 @@ def group_member_repository():
 @pytest.fixture
 def group_usage_gateway():
     return FakeGroupUsageGateway()
+
+
+@pytest.fixture
+def user_event_repository():
+    return FakeUserEventRepository()
+
+
+@pytest.fixture
+def group_event_repository():
+    return FakeGroupEventRepository()
+
+
+@pytest.fixture
+def sso_event_repository():
+    return FakeSsoEventRepository()
+
+
+@pytest.fixture
+def admin_event_repository():
+    return FakeAdminEventRepository()
 
 
 @pytest.fixture

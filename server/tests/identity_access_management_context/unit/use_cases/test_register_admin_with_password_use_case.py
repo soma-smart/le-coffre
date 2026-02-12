@@ -29,6 +29,7 @@ def use_case(
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
     event_publisher,
+    admin_event_repository,
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
@@ -37,6 +38,7 @@ def use_case(
         group_repository,
         group_member_repository,
         event_publisher,
+        admin_event_repository,
     )
 
 
@@ -164,3 +166,23 @@ async def test_should_publish_admin_registered_event_on_successful_registration(
     assert len(events) == 1
     assert events[0].admin_id == user_id
     assert events[0].email == email
+
+
+@pytest.mark.asyncio
+async def test_should_store_admin_registered_event_on_successful_registration(
+    use_case: RegisterAdminWithPasswordUseCase,
+    admin_event_repository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+
+    command = RegisterAdminWithPasswordCommand(
+        id=user_id, email=email, password="secure123!", display_name="Admin User"
+    )
+
+    await use_case.execute(command)
+
+    assert len(admin_event_repository.events) == 1
+    stored = admin_event_repository.events[0]
+    assert stored["event_type"] == "AdminRegisteredEvent"
+    assert stored["actor_user_id"] == user_id

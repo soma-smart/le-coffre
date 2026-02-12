@@ -1,4 +1,4 @@
-from identity_access_management_context.application.gateways import UserRepository
+from identity_access_management_context.application.gateways import UserRepository, UserEventRepository
 from identity_access_management_context.application.commands import UpdateUserCommand
 from identity_access_management_context.domain.events import UserUpdatedEvent
 from identity_access_management_context.domain.exceptions import UserNotFoundError
@@ -11,9 +11,11 @@ class UpdateUserUseCase:
         self,
         user_repository: UserRepository,
         event_publisher: DomainEventPublisher,
+        user_event_repository: UserEventRepository,
     ):
         self.user_repository = user_repository
         self._event_publisher = event_publisher
+        self._user_event_repository = user_event_repository
 
     def execute(self, command: UpdateUserCommand) -> UUID:
         user = self.user_repository.get_by_id(command.id)
@@ -26,9 +28,17 @@ class UpdateUserUseCase:
 
         self.user_repository.update(user)
 
-        self._event_publisher.publish(UserUpdatedEvent(
+        event = UserUpdatedEvent(
             user_id=command.id,
             updated_by_user_id=command.id,
-        ))
+        )
+        self._event_publisher.publish(event)
+        self._user_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=command.id,
+            event_data={"user_id": str(command.id)},
+        )
 
         return user.id

@@ -1,3 +1,5 @@
+import logging
+
 from password_management_context.application.commands import UnshareResourceCommand
 from password_management_context.application.gateways import (
     PasswordRepository,
@@ -19,6 +21,8 @@ from password_management_context.domain.events import (
     PasswordUnsharedEvent,
 )
 from shared_kernel.application.gateways import DomainEventPublisher
+
+logger = logging.getLogger(__name__)
 
 
 class UnshareAccessUseCase:
@@ -73,6 +77,15 @@ class UnshareAccessUseCase:
         # Revoke all access from the target group
         self.password_permissions_repository.revoke_access(
             command.group_id, command.password_id
+        )
+
+        logger.info(
+            "Password share revoked",
+            extra={
+                "password_id": str(command.password_id),
+                "unshared_with_group_id": str(command.group_id),
+                "revoked_by": str(command.owner_id),
+            },
         )
 
         # Store domain event

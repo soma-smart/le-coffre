@@ -27,12 +27,14 @@ def use_case(
     group_member_repository: GroupMemberRepository,
     group_usage_gateway: GroupUsageGateway,
     event_publisher,
+    group_event_repository,
 ):
     return DeleteGroupUseCase(
         group_repository=group_repository,
         group_member_repository=group_member_repository,
         group_usage_gateway=group_usage_gateway,
         event_publisher=event_publisher,
+        group_event_repository=group_event_repository,
     )
 
 
@@ -229,3 +231,27 @@ def test_given_owner_when_deleting_group_then_should_publish_group_deleted_event
     assert len(events) == 1
     assert events[0].group_id == group_id
     assert events[0].deleted_by_user_id == owner_id
+
+
+def test_given_owner_when_deleting_group_then_should_store_group_deleted_event(
+    use_case: DeleteGroupUseCase,
+    group_repository: GroupRepository,
+    group_member_repository: GroupMemberRepository,
+    group_event_repository,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+
+    group = Group(id=group_id, name="Test Group", is_personal=False)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+
+    requesting_user = AuthenticatedUser(user_id=owner_id, roles=[])
+    command = DeleteGroupCommand(requesting_user=requesting_user, group_id=group_id)
+
+    use_case.execute(command)
+
+    assert len(group_event_repository.events) == 1
+    stored = group_event_repository.events[0]
+    assert stored["event_type"] == "GroupDeletedEvent"
+    assert stored["actor_user_id"] == owner_id

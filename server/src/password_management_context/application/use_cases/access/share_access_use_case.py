@@ -1,3 +1,5 @@
+import logging
+
 from password_management_context.application.commands import ShareResourceCommand
 from password_management_context.application.gateways import (
     PasswordRepository,
@@ -19,6 +21,8 @@ from password_management_context.domain.events import (
 )
 from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.application.gateways import DomainEventPublisher
+
+logger = logging.getLogger(__name__)
 
 
 class ShareAccessUseCase:
@@ -70,6 +74,8 @@ class ShareAccessUseCase:
         self.password_permissions_repository.grant_access(
             command.group_id, command.password_id, PasswordPermission.READ
         )
+
+        logger.info("Password shared", extra={"password_id": str(command.password_id), "shared_with_group_id": str(command.group_id), "by_user_id": str(command.owner_id)})
 
         # Store domain event
         event = PasswordSharedEvent(

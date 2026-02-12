@@ -16,8 +16,8 @@ from shared_kernel.adapters.primary.exceptions import NotAdminError
 
 
 @pytest.fixture
-def use_case(user_repository: UserRepository, event_publisher):
-    return PromoteAdminUseCase(user_repository, event_publisher)
+def use_case(user_repository: UserRepository, event_publisher, user_event_repository):
+    return PromoteAdminUseCase(user_repository, event_publisher, user_event_repository)
 
 
 def test_given_admin_user_and_non_admin_target_when_promoting_should_add_admin_role(
@@ -176,3 +176,31 @@ def test_given_admin_user_and_non_admin_target_when_promoting_should_publish_adm
     assert len(events) == 1
     assert events[0].user_id == target_user_id
     assert events[0].promoted_by_user_id == admin_id
+
+
+def test_given_admin_user_when_promoting_should_store_admin_promoted_event(
+    use_case: PromoteAdminUseCase,
+    user_repository: UserRepository,
+    user_event_repository,
+):
+    admin_id = UUID("11111111-1111-1111-1111-111111111111")
+    target_user_id = UUID("22222222-2222-2222-2222-222222222222")
+
+    target_user = User(
+        id=target_user_id,
+        username="targetuser",
+        email="target@example.com",
+        name="Target User",
+        roles=[],
+    )
+    user_repository.save(target_user)
+
+    requesting_user = AuthenticatedUser(user_id=admin_id, roles=[ADMIN_ROLE])
+    command = PromoteAdminCommand(requesting_user=requesting_user, user_id=target_user_id)
+
+    use_case.execute(command)
+
+    assert len(user_event_repository.events) == 1
+    stored = user_event_repository.events[0]
+    assert stored["event_type"] == "AdminPromotedEvent"
+    assert stored["actor_user_id"] == admin_id

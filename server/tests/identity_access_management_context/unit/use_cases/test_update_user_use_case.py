@@ -13,8 +13,9 @@ from ..fakes import FakeUserRepository
 def use_case(
     user_repository: FakeUserRepository,
     event_publisher,
+    user_event_repository,
 ):
-    return UpdateUserUseCase(user_repository, event_publisher)
+    return UpdateUserUseCase(user_repository, event_publisher, user_event_repository)
 
 
 def test_given_valid_update_data_when_updating_user_should_persist_changes(
@@ -71,3 +72,27 @@ def test_given_valid_update_data_when_updating_user_should_publish_user_updated_
     assert len(events) == 1
     assert events[0].user_id == uuid
     assert events[0].updated_by_user_id == uuid
+
+
+def test_given_valid_update_data_when_updating_user_should_store_user_updated_event(
+    use_case: UpdateUserUseCase,
+    user_repository: FakeUserRepository,
+    user_event_repository,
+):
+    uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    user = User(id=uuid, username="testuser", email="testuser@example.com", name="User")
+    user_repository.save(user)
+
+    command = UpdateUserCommand(
+        id=uuid,
+        username="updateduser",
+        email="updateduser@example.com",
+        name="New User",
+    )
+
+    use_case.execute(command)
+
+    assert len(user_event_repository.events) == 1
+    stored = user_event_repository.events[0]
+    assert stored["event_type"] == "UserUpdatedEvent"
+    assert stored["actor_user_id"] == uuid

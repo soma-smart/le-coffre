@@ -26,6 +26,7 @@ from identity_access_management_context.application.services import (
     SsoConfigurationDecryptingService,
 )
 from identity_access_management_context.domain.entities.sso_user import SsoUser
+from identity_access_management_context.application.gateways import SsoEventRepository
 from identity_access_management_context.domain.events import SsoLoginEvent
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
@@ -54,6 +55,7 @@ class SsoLoginUseCase:
         sso_configuration_repository: SsoConfigurationRepository,
         sso_encryption_gateway: SsoEncryptionGateway,
         event_publisher: DomainEventPublisher,
+        sso_event_repository: SsoEventRepository,
     ):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
@@ -66,6 +68,7 @@ class SsoLoginUseCase:
         self._sso_configuration_repository = sso_configuration_repository
         self._sso_encryption_gateway = sso_encryption_gateway
         self._event_publisher = event_publisher
+        self._sso_event_repository = sso_event_repository
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
         # Step 0: Retrieve SSO and decrypt secret key
@@ -148,11 +151,15 @@ class SsoLoginUseCase:
             roles=["user"],
         )
 
-        self._event_publisher.publish(SsoLoginEvent(
-            user_id=user_id,
-            email=email,
-            is_new_user=is_new_user,
-        ))
+        event = SsoLoginEvent(user_id=user_id, email=email, is_new_user=is_new_user)
+        self._event_publisher.publish(event)
+        self._sso_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=user_id,
+            event_data={"email": email, "is_new_user": is_new_user},
+        )
 
         return SsoLoginResponse(
             jwt_token=token.value,

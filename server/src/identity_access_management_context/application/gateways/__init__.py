@@ -9,6 +9,10 @@ from .user_password_repository import UserPasswordRepository
 from .group_repository import GroupRepository
 from .group_member_repository import GroupMemberRepository
 from .group_usage_gateway import GroupUsageGateway
+from .user_event_repository import UserEventRepository
+from .group_event_repository import GroupEventRepository
+from .sso_event_repository import SsoEventRepository
+from .admin_event_repository import AdminEventRepository
 
 __all__ = [
     "UserRepository",
@@ -25,4 +29,8 @@ __all__ = [
     "GroupRepository",
     "GroupMemberRepository",
     "GroupUsageGateway",
+    "UserEventRepository",
+    "GroupEventRepository",
+    "SsoEventRepository",
+    "AdminEventRepository",
 ]

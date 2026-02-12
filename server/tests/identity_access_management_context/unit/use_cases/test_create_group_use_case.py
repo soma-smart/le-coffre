@@ -23,12 +23,14 @@ def use_case(
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
     event_publisher,
+    group_event_repository,
 ):
     return CreateGroupUseCase(
         user_repository=user_repository,
         group_repository=group_repository,
         group_member_repository=group_member_repository,
         event_publisher=event_publisher,
+        group_event_repository=group_event_repository,
     )
 
 
@@ -129,3 +131,23 @@ def test_given_valid_data_when_creating_group_then_should_publish_group_created_
     assert events[0].group_id == group_id
     assert events[0].group_name == "Development Team"
     assert events[0].created_by_user_id == creator_id
+
+
+def test_given_valid_data_when_creating_group_then_should_store_group_created_event(
+    use_case: CreateGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_event_repository,
+):
+    group_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    creator_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+
+    user = User(id=creator_id, username="creator", email="creator@example.com", name="Creator User")
+    user_repository.save(user)
+
+    command = CreateGroupCommand(id=group_id, name="Development Team", creator_id=creator_id)
+    use_case.execute(command)
+
+    assert len(group_event_repository.events) == 1
+    stored = group_event_repository.events[0]
+    assert stored["event_type"] == "GroupCreatedEvent"
+    assert stored["actor_user_id"] == creator_id

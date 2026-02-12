@@ -28,6 +28,7 @@ def use_case(
     group_member_repository: FakeGroupMemberRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     event_publisher,
+    user_event_repository,
 ):
     return CreateUserUseCase(
         user_repository,
@@ -36,6 +37,7 @@ def use_case(
         group_member_repository,
         password_hashing_gateway,
         event_publisher,
+        user_event_repository,
     )
 
 
@@ -202,3 +204,26 @@ def test_given_valid_user_data_when_creating_user_should_publish_user_created_ev
     assert events[0].username == "testuser"
     assert events[0].email == "testuser@example.com"
     assert events[0].created_by_user_id == admin_id
+
+
+def test_given_valid_user_data_when_creating_user_should_store_user_created_event(
+    use_case: CreateUserUseCase,
+    user_event_repository,
+):
+    uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    admin_id = UUID("423e4567-e89b-12d3-a456-426614174000")
+    command = CreateUserCommand(
+        requesting_user=AuthenticatedUser(admin_id, [ADMIN_ROLE]),
+        id=uuid,
+        username="testuser",
+        email="testuser@example.com",
+        name="Test User",
+        password="secure_password123",
+    )
+
+    use_case.execute(command)
+
+    assert len(user_event_repository.events) == 1
+    stored = user_event_repository.events[0]
+    assert stored["event_type"] == "UserCreatedEvent"
+    assert stored["actor_user_id"] == admin_id

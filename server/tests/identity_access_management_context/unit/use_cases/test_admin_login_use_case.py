@@ -27,6 +27,7 @@ def use_case(
     token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
     event_publisher,
+    admin_event_repository,
 ):
     return AdminLoginUseCase(
         user_password_repository,
@@ -34,6 +35,7 @@ def use_case(
         token_gateway,
         time_provider,
         event_publisher,
+        admin_event_repository,
     )
 
 
@@ -183,3 +185,69 @@ async def test_should_publish_admin_login_failed_event_on_non_existent_admin(
     assert len(events) == 1
     assert events[0].email == "nonexistent@lecoffre.com"
     assert events[0].reason == "User not found"
+
+
+@pytest.mark.asyncio
+async def test_should_store_admin_login_event_on_successful_login(
+    use_case: AdminLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
+    admin_event_repository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    password_hash = b"hashed(secure123!)"
+
+    user_password = UserPassword(
+        id=user_id, email=email, password_hash=password_hash, display_name="Admin User"
+    )
+    user_password_repository.save(user_password)
+    token_gateway.set_unique_jwt_part("uniqueness")
+
+    command = AdminLoginCommand(email=email, password="secure123!")
+    await use_case.execute(command)
+
+    assert len(admin_event_repository.events) == 1
+    stored = admin_event_repository.events[0]
+    assert stored["event_type"] == "AdminLoginEvent"
+    assert stored["actor_user_id"] == user_id
+
+
+@pytest.mark.asyncio
+async def test_should_store_admin_login_failed_event_on_wrong_password(
+    use_case: AdminLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    admin_event_repository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    password_hash = b"hashed(secure123!)"
+
+    user_password = UserPassword(
+        id=user_id, email=email, password_hash=password_hash, display_name="Admin User"
+    )
+    user_password_repository.save(user_password)
+
+    command = AdminLoginCommand(email=email, password="wrong_password")
+    with pytest.raises(InvalidCredentialsException):
+        await use_case.execute(command)
+
+    assert len(admin_event_repository.events) == 1
+    stored = admin_event_repository.events[0]
+    assert stored["event_type"] == "AdminLoginFailedEvent"
+    assert stored["actor_user_id"] is None
+
+
+@pytest.mark.asyncio
+async def test_should_store_admin_login_failed_event_on_non_existent_admin(
+    use_case: AdminLoginUseCase,
+    admin_event_repository,
+):
+    command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
+    with pytest.raises(AdminNotFoundException):
+        await use_case.execute(command)
+
+    assert len(admin_event_repository.events) == 1
+    stored = admin_event_repository.events[0]
+    assert stored["event_type"] == "AdminLoginFailedEvent"
+    assert stored["actor_user_id"] is None

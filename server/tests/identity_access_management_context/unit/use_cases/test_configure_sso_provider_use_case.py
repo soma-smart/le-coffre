@@ -36,10 +36,11 @@ def use_case(
     sso_configuration_repository: FakeSsoConfigurationRepository,
     sso_encryption_gateway: FakeSsoEncryptionGateway,
     event_publisher,
+    sso_event_repository,
 ):
     """Use case configured for tests."""
     return ConfigureSsoProviderUseCase(
-        sso_gateway, sso_configuration_repository, sso_encryption_gateway, event_publisher
+        sso_gateway, sso_configuration_repository, sso_encryption_gateway, event_publisher, sso_event_repository
     )
 
 
@@ -148,3 +149,23 @@ async def test_execute_success_should_publish_sso_configured_event(
     assert len(events) == 1
     assert events[0].configured_by_user_id == admin_user.user_id
     assert events[0].discovery_url == "https://provider.com/.well-known/openid_configuration"
+
+
+@pytest.mark.asyncio
+async def test_execute_success_should_store_sso_configured_event(
+    use_case,
+    admin_user,
+    sso_event_repository,
+):
+    command = ConfigureSsoProviderCommand(
+        requesting_user=admin_user,
+        client_id="test_client_id",
+        client_secret="test_client_secret",
+        discovery_url="https://provider.com/.well-known/openid_configuration",
+    )
+    await use_case.execute(command)
+
+    assert len(sso_event_repository.events) == 1
+    stored = sso_event_repository.events[0]
+    assert stored["event_type"] == "SsoConfiguredEvent"
+    assert stored["actor_user_id"] == admin_user.user_id

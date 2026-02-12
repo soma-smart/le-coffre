@@ -110,3 +110,26 @@ def test_given_unlocked_vault_when_locking_vault_should_publish_vault_locked_eve
     events = event_publisher.get_published_events_of_type(VaultLockedEvent)
     assert len(events) == 1
     assert events[0].locked_by_user_id == UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+
+
+def test_given_unlocked_vault_when_locking_vault_should_store_vault_locked_event(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    vault_session_gateway: FakeVaultSessionGateway,
+    vault_event_repository,
+):
+    admin_user = AuthenticatedUser(
+        user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
+    )
+    vault_repository.save_vault_with_shares(
+        nb_shares=3, threshold=2, encrypted_key="encrypted_vault_key_hex"
+    )
+    vault_session_gateway.store_decrypted_key("decrypted_vault_key")
+
+    command = LockVaultCommand(requesting_user=admin_user)
+    use_case.execute(command)
+
+    assert len(vault_event_repository.events) == 1
+    stored = vault_event_repository.events[0]
+    assert stored["event_type"] == "VaultLockedEvent"
+    assert stored["actor_user_id"] == UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
