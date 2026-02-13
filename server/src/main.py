@@ -13,6 +13,15 @@ from alembic import command
 
 logger = logging.getLogger(__name__)
 
+
+class _HealthCheckFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        return not ("GET /api/health" in msg and "200 OK" in msg)
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+
 from config import (
     get_database_url,
     get_jwt_secret_key,
