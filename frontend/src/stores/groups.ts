@@ -239,6 +239,7 @@ export const useGroupsStore = defineStore('groups', () => {
 
   const invalidateCache = () => {
     lastFetch.value = null;
+    globalPendingPromise = null;
   };
 
   const refresh = async () => {

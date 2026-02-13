@@ -68,6 +68,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
 
   const invalidateCache = () => {
     lastFetch.value = null;
+    globalPendingPromise = null;
   };
 
   const refresh = async () => {
