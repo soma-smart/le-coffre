@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class _HealthCheckFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         msg = record.getMessage()
-        return not ("GET /api/health" in msg and "200 OK" in msg)
+        return not ("GET /api/health" in msg and '" 200' in msg)
 
 
 logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
