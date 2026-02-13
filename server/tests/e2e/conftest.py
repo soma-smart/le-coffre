@@ -13,6 +13,80 @@ from alembic import command
 from main import app
 
 
+class CsrfTestClient(TestClient):
+    """
+    TestClient wrapper that automatically adds CSRF token to mutating requests.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._csrf_token = None
+        self._auto_csrf = True  # Flag to enable/disable auto CSRF injection
+
+    def disable_auto_csrf(self):
+        """Temporarily disable automatic CSRF token injection."""
+        self._auto_csrf = False
+
+    def enable_auto_csrf(self):
+        """Re-enable automatic CSRF token injection."""
+        self._auto_csrf = True
+
+    def _get_csrf_token(self, force_refresh=False):
+        """Fetch CSRF token from the API."""
+        if not self._csrf_token or force_refresh:
+            try:
+                response = super().get("/api/auth/csrf-token")
+                if response.status_code == 200:
+                    self._csrf_token = response.json()["csrf_token"]
+            except Exception:
+                # Token not available or not authenticated yet
+                pass
+        return self._csrf_token
+
+    def refresh_csrf_token(self):
+        """Force refresh the CSRF token (call after login)."""
+        return self._get_csrf_token(force_refresh=True)
+
+    def post(self, *args, **kwargs):
+        """POST with automatic CSRF token injection."""
+        return self._request_with_csrf(super().post, *args, **kwargs)
+
+    def put(self, *args, **kwargs):
+        """PUT with automatic CSRF token injection."""
+        return self._request_with_csrf(super().put, *args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """DELETE with automatic CSRF token injection."""
+        return self._request_with_csrf(super().delete, *args, **kwargs)
+
+    def patch(self, *args, **kwargs):
+        """PATCH with automatic CSRF token injection."""
+        return self._request_with_csrf(super().patch, *args, **kwargs)
+
+    def _request_with_csrf(self, method, *args, **kwargs):
+        """Add CSRF token header if available and not already present."""
+        # Get or create headers dict
+        headers = kwargs.get("headers", {})
+        if isinstance(headers, dict):
+            headers = dict(headers)  # Make a copy
+        else:
+            # Convert to dict if it's another type
+            headers = dict(headers)
+
+        # Add CSRF token if auto-csrf is enabled and token not already present
+        if (
+            self._auto_csrf
+            and "X-CSRF-Token" not in headers
+            and "x-csrf-token" not in headers
+        ):
+            token = self._get_csrf_token()
+            if token:
+                headers["X-CSRF-Token"] = token
+
+        kwargs["headers"] = headers
+        return method(*args, **kwargs)
+
+
 @pytest.fixture(scope="session")
 def env_vars():
     os.environ["JWT_SECRET_KEY"] = secrets.token_urlsafe(32)
@@ -84,7 +158,7 @@ def database(database_path):
 
 @pytest.fixture
 def e2e_client(database, env_vars):
-    with TestClient(app) as client:
+    with CsrfTestClient(app) as client:
         yield client
 
 
@@ -254,6 +328,10 @@ def authenticate_sso_user(e2e_client, oidc_server, sso_user):
     token = valid_callback_response.cookies.get("access_token")
     assert token is not None, "access_token cookie should be set"
 
+    # Refresh CSRF token after authentication (for CsrfTestClient)
+    if hasattr(e2e_client, "refresh_csrf_token"):
+        e2e_client.refresh_csrf_token()
+
     return {
         "token": token,
         "user_id": callback_data["user"]["user_id"],
@@ -281,6 +359,11 @@ def register_and_login_admin(client):
         },
     )
     assert login_response.status_code == 200
+
+    # Refresh CSRF token after login (for CsrfTestClient)
+    if hasattr(client, "refresh_csrf_token"):
+        client.refresh_csrf_token()
+
     return login_response
 
 
@@ -336,12 +419,12 @@ def admin_token(e2e_client):
 @pytest.fixture
 def client_factory(database, env_vars):
     """
-    Factory to create TestClient instances that share the same database and env_vars.
+    Factory to create CsrfTestClient instances that share the same database and env_vars.
     All clients created by this factory will use the same DATABASE_URL and JWT settings.
     """
 
     def _make_client():
-        return TestClient(app)
+        return CsrfTestClient(app)
 
     return _make_client
 

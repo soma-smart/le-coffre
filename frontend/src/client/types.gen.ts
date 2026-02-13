@@ -249,6 +249,16 @@ export type CreateVaultPostResponse = {
 };
 
 /**
+ * CsrfTokenResponse
+ */
+export type CsrfTokenResponse = {
+    /**
+     * Csrf Token
+     */
+    csrf_token: string;
+};
+
+/**
  * GetGroupResponse
  */
 export type GetGroupResponse = {
@@ -1666,6 +1676,22 @@ export type RefreshAccessTokenAuthRefreshTokenPostResponses = {
 };
 
 export type RefreshAccessTokenAuthRefreshTokenPostResponse = RefreshAccessTokenAuthRefreshTokenPostResponses[keyof RefreshAccessTokenAuthRefreshTokenPostResponses];
+
+export type GetCsrfTokenAuthCsrfTokenGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/csrf-token';
+};
+
+export type GetCsrfTokenAuthCsrfTokenGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: CsrfTokenResponse;
+};
+
+export type GetCsrfTokenAuthCsrfTokenGetResponse = GetCsrfTokenAuthCsrfTokenGetResponses[keyof GetCsrfTokenAuthCsrfTokenGetResponses];
 
 export type CreateGroupGroupsPostData = {
     body: CreateGroupRequest;

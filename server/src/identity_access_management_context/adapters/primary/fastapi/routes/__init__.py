@@ -34,6 +34,7 @@ from .group import (
 )
 
 from . import refresh_access_token_routes
+from . import csrf_token_routes
 
 
 def get_user_management_router():
@@ -61,6 +62,7 @@ def get_authentication_router():
     authentication_router.include_router(sso_callback_route.router)
     authentication_router.include_router(is_sso_config_set_route.router)
     authentication_router.include_router(refresh_access_token_routes.router)
+    authentication_router.include_router(csrf_token_routes.router)
 
     return authentication_router
 

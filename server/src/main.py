@@ -30,9 +30,11 @@ from config import (
     get_jwt_refresh_token_expiration_days,
 )
 
+from shared_kernel.adapters.primary.middleware import CsrfMiddleware
 from shared_kernel.adapters.secondary import (
     UtcTimeGateway,
     InMemoryDomainEventPublisher,
+    InMemoryCsrfTokenGateway,
 )
 from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
@@ -156,6 +158,10 @@ async def lifespan(app: FastAPI):
     )
     app.state.token_gateway = token_gateway
 
+    # CSRF token gateway (tokens valid for entire session, no expiration)
+    csrf_token_gateway = InMemoryCsrfTokenGateway()
+    app.state.csrf_token_gateway = csrf_token_gateway
+
     # SSO Gateway (stateless)
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")
     sso_gateway = OAuth2SsoGateway(
@@ -179,6 +185,10 @@ async def lifespan(app: FastAPI):
 # Create the main app with lifespan
 # root_path="/api" ensures OpenAPI docs are served at /api/openapi.json
 app = FastAPI(lifespan=lifespan, root_path="/api")
+
+
+# Add CSRF protection middleware
+app.add_middleware(CsrfMiddleware)
 
 
 @app.exception_handler(Exception)

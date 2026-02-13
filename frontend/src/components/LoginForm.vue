@@ -7,12 +7,14 @@ import { ref, onMounted } from 'vue';
 import z from 'zod';
 import { usePasswordsStore } from '@/stores/passwords';
 import { useUserStore } from '@/stores/user';
+import { useCsrfStore } from '@/stores/csrf';
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast();
 const passwordsStore = usePasswordsStore();
 const userStore = useUserStore();
+const csrfStore = useCsrfStore();
 
 const isSsoConfigured = ref(false);
 
@@ -64,6 +66,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       // Invalidate caches to force refetch after login
       passwordsStore.invalidateCache();
       userStore.clearUser();
+
+      // Fetch CSRF token after successful login
+      await csrfStore.fetchCsrfToken();
 
       // Redirect to the page specified in query or to home page
       const redirectPath = route.query.redirect as string || '/';

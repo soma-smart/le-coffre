@@ -142,6 +142,10 @@ async def test_complete_sso_authentication_flow(
     )
     print(f"✅ SSO login successful for {user_info['email']}")
 
+    # Refresh CSRF token after authentication (for CsrfTestClient)
+    if hasattr(e2e_client, 'refresh_csrf_token'):
+        e2e_client.refresh_csrf_token()
+
     # Step 6: Validate token by creating a password (this proves the JWT token works)
     print("\n🔑 Step 6: Validating JWT token by creating a password...")
 
