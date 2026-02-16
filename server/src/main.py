@@ -30,11 +30,10 @@ from config import (
     get_jwt_refresh_token_expiration_days,
 )
 
-from shared_kernel.adapters.primary.middleware import CsrfMiddleware
+from security import CsrfMiddleware, CsrfTokenManager
 from shared_kernel.adapters.secondary import (
     UtcTimeGateway,
     InMemoryDomainEventPublisher,
-    InMemoryCsrfTokenGateway,
 )
 from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
@@ -158,9 +157,9 @@ async def lifespan(app: FastAPI):
     )
     app.state.token_gateway = token_gateway
 
-    # CSRF token gateway (tokens valid for entire session, no expiration)
-    csrf_token_gateway = InMemoryCsrfTokenGateway()
-    app.state.csrf_token_gateway = csrf_token_gateway
+    # CSRF token manager (tokens valid for entire session)
+    csrf_token_manager = CsrfTokenManager()
+    app.state.csrf_token_manager = csrf_token_manager
 
     # SSO Gateway (stateless)
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")

@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from shared_kernel.adapters.primary.dependencies import get_current_user
-from shared_kernel.application.gateways import CsrfTokenGateway
 from shared_kernel.domain.entities import ValidatedUser
+from security.csrf_tokens import CsrfTokenManager
 
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -13,9 +13,9 @@ class CsrfTokenResponse(BaseModel):
     csrf_token: str
 
 
-def get_csrf_token_gateway_dependency(request: Request) -> CsrfTokenGateway:
-    """Dependency to get CSRF token gateway from app state."""
-    return request.app.state.csrf_token_gateway
+def get_csrf_token_manager(request: Request) -> CsrfTokenManager:
+    """Dependency to get CSRF token manager from app state."""
+    return request.app.state.csrf_token_manager
 
 
 @router.get(
@@ -26,7 +26,7 @@ def get_csrf_token_gateway_dependency(request: Request) -> CsrfTokenGateway:
 )
 async def get_csrf_token(
     current_user: ValidatedUser = Depends(get_current_user),
-    csrf_gateway: CsrfTokenGateway = Depends(get_csrf_token_gateway_dependency),
+    csrf_manager: CsrfTokenManager = Depends(get_csrf_token_manager),
 ):
     """
     Get a CSRF token for the current authenticated user.
@@ -39,5 +39,5 @@ async def get_csrf_token(
 
     Returns a CSRF token that remains valid for the entire session.
     """
-    token = csrf_gateway.generate_token(current_user.user_id)
+    token = csrf_manager.generate_token(current_user.user_id)
     return CsrfTokenResponse(csrf_token=token)

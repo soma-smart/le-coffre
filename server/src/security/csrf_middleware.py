@@ -1,3 +1,5 @@
+"""CSRF protection middleware for FastAPI."""
+
 import logging
 
 from fastapi import Request
@@ -78,7 +80,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         try:
             # Get dependencies from app state
             session_maker = request.app.state.session_maker
-            csrf_token_gateway = request.app.state.csrf_token_gateway
+            csrf_token_manager = request.app.state.csrf_token_manager
             token_gateway = request.app.state.token_gateway
 
             with session_maker() as session:
@@ -97,7 +99,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                 user_id = response.user_id
 
                 # Validate CSRF token
-                if not csrf_token_gateway.validate_token(user_id, csrf_token):
+                if not csrf_token_manager.validate_token(user_id, csrf_token):
                     logger.warning(
                         f"Invalid CSRF token for user {user_id} on {request.method} {request.url.path}"
                     )
