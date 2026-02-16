@@ -24,6 +24,29 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 export const healthCheckHealthGet = <ThrowOnError extends boolean = false>(options?: Options<HealthCheckHealthGetData, ThrowOnError>) => (options?.client ?? client).get<HealthCheckHealthGetResponses, unknown, ThrowOnError>({ url: '/health', ...options });
 
 /**
+ * Get CSRF token
+ *
+ * Get a CSRF token for the current authenticated user.
+ *
+ * This endpoint must be called after successful authentication to obtain
+ * a CSRF token. The token must be included in the X-CSRF-Token header
+ * for all mutating requests (POST, PUT, DELETE, PATCH).
+ *
+ * - **Authorization**: Requires valid access_token cookie
+ *
+ * Returns a CSRF token that remains valid for the entire session.
+ */
+export const getCsrfTokenAuthCsrfTokenGet = <ThrowOnError extends boolean = false>(options?: Options<GetCsrfTokenAuthCsrfTokenGetData, ThrowOnError>) => (options?.client ?? client).get<GetCsrfTokenAuthCsrfTokenGetResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/auth/csrf-token',
+    ...options
+});
+
+/**
  * Create a new vault in pending state
  *
  * Create a new vault with Shamir's Secret Sharing in pending state.
@@ -649,29 +672,6 @@ export const isSsoConfigSetAuthSsoIsConfiguredGet = <ThrowOnError extends boolea
  * - **500**: Internal server error
  */
 export const refreshAccessTokenAuthRefreshTokenPost = <ThrowOnError extends boolean = false>(options?: Options<RefreshAccessTokenAuthRefreshTokenPostData, ThrowOnError>) => (options?.client ?? client).post<RefreshAccessTokenAuthRefreshTokenPostResponses, RefreshAccessTokenAuthRefreshTokenPostErrors, ThrowOnError>({ url: '/auth/refresh-token', ...options });
-
-/**
- * Get CSRF token
- *
- * Get a CSRF token for the current authenticated user.
- *
- * This endpoint must be called after successful authentication to obtain
- * a CSRF token. The token must be included in the X-CSRF-Token header
- * for all mutating requests (POST, PUT, DELETE, PATCH).
- *
- * - **Authorization**: Requires valid access_token cookie
- *
- * Returns a CSRF token that remains valid for the entire session.
- */
-export const getCsrfTokenAuthCsrfTokenGet = <ThrowOnError extends boolean = false>(options?: Options<GetCsrfTokenAuthCsrfTokenGetData, ThrowOnError>) => (options?.client ?? client).get<GetCsrfTokenAuthCsrfTokenGetResponses, unknown, ThrowOnError>({
-    security: [{
-            in: 'cookie',
-            name: 'access_token',
-            type: 'apiKey'
-        }],
-    url: '/auth/csrf-token',
-    ...options
-});
 
 /**
  * Create a new group
