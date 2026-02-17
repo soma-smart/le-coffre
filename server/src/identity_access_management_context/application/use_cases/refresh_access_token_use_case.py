@@ -42,7 +42,7 @@ class RefreshAccessTokenUseCase:
         new_access_token = await self.token_gateway.generate_token(
             user_id=token_data.user_id,
             email=token_data.email,
-            roles=token_data.roles,
+            roles=user.roles,
         )
 
         return RefreshAccessTokenResponse(

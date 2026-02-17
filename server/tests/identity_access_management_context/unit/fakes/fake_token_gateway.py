@@ -9,6 +9,7 @@ class FakeTokenGateway(TokenGateway):
         self.generation_calls = []
         self.unique_part = ""
         self.valid_refresh_tokens = {}
+        self.last_generated_token = None
 
     def set_unique_jwt_part(self, unique_part: str):
         self.unique_part = unique_part
@@ -48,6 +49,7 @@ class FakeTokenGateway(TokenGateway):
             claims={"user_id": str(user_id), "email": email, "roles": roles, **claims},
         )
         self.generated_tokens[token_str] = token_obj
+        self.last_generated_token = token_obj
         return token_obj
 
     async def generate_refresh_token(
@@ -80,3 +82,6 @@ class FakeTokenGateway(TokenGateway):
 
     async def validate_refresh_token(self, refresh_token: str) -> Token | None:
         return self.valid_refresh_tokens.get(refresh_token)
+
+    def get_last_generated_token(self) -> Token | None:
+        return self.last_generated_token
