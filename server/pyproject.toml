@@ -6,10 +6,12 @@ dependencies = [
   "alembic>=1.18.1",
   "authlib==1.6.6",
   "bcrypt==5.0.0",
+  "cryptography>=46.0.5",
   "fastapi[standard]>=0.128.0",
   "httpx==0.28.1",
   "passlib[bcrypt]==1.7.4",
   "PyCryptodome==3.23.0",
+  "python-multipart>=0.0.22",
   "pyjwt==2.10.1",
 "sqlmodel==0.0.31",
 ]
