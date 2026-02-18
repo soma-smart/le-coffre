@@ -11,6 +11,68 @@ from alembic.config import Config
 from alembic import command
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
+from sqlmodel import SQLModel
+
+# Import all models to register them with SQLModel.metadata
+from identity_access_management_context.adapters.secondary.sql import (
+    UserTable,
+    GroupTable,
+    GroupMemberTable,
+    SsoConfigurationTable,
+    SsoUsersTable,
+    UserPasswordTable,
+)
+from password_management_context.adapters.secondary.sql import (
+    PermissionsTable,
+    OwnershipTable,
+    PasswordTable,
+    PasswordEventTable,
+)
+from vault_management_context.adapters.secondary.sql import VaultTable
+from vault_management_context.adapters.secondary.sql.models.vault_event import VaultEventTable
+from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
+
+# Silence unused-import warnings
+_ = (
+    UserTable,
+    GroupTable,
+    GroupMemberTable,
+    SsoConfigurationTable,
+    SsoUsersTable,
+    UserPasswordTable,
+    PermissionsTable,
+    OwnershipTable,
+    PasswordTable,
+    PasswordEventTable,
+    VaultTable,
+    VaultEventTable,
+    IamEventTable,
+)
+
+
+def get_expected_application_tables():
+    """
+    Get the list of expected application table names.
+    
+    This function returns table names from the imported model classes,
+    ensuring the test stays in sync with model changes without including
+    test-only tables.
+    """
+    return [
+        UserTable.__tablename__,
+        GroupTable.__tablename__,
+        GroupMemberTable.__tablename__,
+        SsoConfigurationTable.__tablename__,
+        SsoUsersTable.__tablename__,
+        UserPasswordTable.__tablename__,
+        PermissionsTable.__tablename__,
+        OwnershipTable.__tablename__,
+        PasswordTable.__tablename__,
+        PasswordEventTable.__tablename__,
+        VaultTable.__tablename__,
+        VaultEventTable.__tablename__,
+        IamEventTable.__tablename__,
+    ]
 
 
 @pytest.fixture
@@ -60,23 +122,11 @@ def test_upgrade_migration_creates_all_tables(alembic_config, temp_database):
         ))
         assert result.fetchone() is not None, "alembic_version table should exist"
         
-        # Check for application tables
-        expected_tables = [
-            'GroupMember',
-            'Group',
-            'Ownership',
-            'Password',
-            'Permission',
-            'SsoConfiguration',
-            'SsoUser',
-            'UserPassword',
-            'User',
-            'Vault',
-            'IamEvent',
-            'PasswordEvent',
-            'VaultEvent',
-        ]
+        # Get expected tables dynamically from model __tablename__ attributes
+        # This ensures the test stays in sync with model changes
+        expected_tables = get_expected_application_tables()
         
+        # Verify each expected table exists
         for table_name in expected_tables:
             result = conn.execute(text(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name=:table_name"
