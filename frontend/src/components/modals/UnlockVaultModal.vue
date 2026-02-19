@@ -25,6 +25,7 @@ const setupStore = useSetupStore();
 const shares = ref<string[]>(['']);
 
 const loading = ref(false);
+const focusedShareIndex = ref<number | null>(null);
 
 const isPendingUnlock = computed(() => props.vaultStatus === 'PENDING_UNLOCK');
 
@@ -58,7 +59,50 @@ const addShare = () => {
 const removeShare = (index: number) => {
   if (shares.value.length > 1) {
     shares.value.splice(index, 1);
+    // Reset focus if we removed the focused field
+    if (focusedShareIndex.value === index) {
+      focusedShareIndex.value = null;
+    } else if (focusedShareIndex.value !== null && focusedShareIndex.value > index) {
+      // Adjust focus index if we removed a field before the focused one
+      focusedShareIndex.value--;
+    }
   }
+};
+
+// Display bullets when share field is not focused
+const getDisplayedShare = (index: number) => {
+  if (focusedShareIndex.value === index) {
+    return shares.value[index];
+  }
+  // Show bullets if there's content
+  return shares.value[index] ? '•'.repeat(shares.value[index].length) : '';
+};
+
+const handleShareInput = (event: Event, index: number) => {
+  const target = event.target as HTMLInputElement;
+  const cursorPosition = target.selectionStart || 0;
+  const inputValue = target.value;
+
+  // If the input contains bullets and user is typing
+  if (inputValue.includes('•')) {
+    // User is trying to edit, clear the field
+    shares.value[index] = inputValue.replace(/•/g, '');
+  } else {
+    shares.value[index] = inputValue;
+  }
+
+  // Restore cursor position
+  setTimeout(() => {
+    target.setSelectionRange(cursorPosition, cursorPosition);
+  }, 0);
+};
+
+const handleShareFocus = (index: number) => {
+  focusedShareIndex.value = index;
+};
+
+const handleShareBlur = () => {
+  focusedShareIndex.value = null;
 };
 
 const isValid = computed(() => {
@@ -236,8 +280,11 @@ const handleReset = async () => {
             <label :for="`share-${index}`" class="block text-sm font-semibold mb-1">
               {{ isPendingUnlock ? `Additional Share ${index + 1}` : `Share ${index + 1}` }}
             </label>
-            <Password :id="`share-${index}`" v-model="shares[index]" placeholder="Enter share secret"
-              :disabled="loading" :feedback="false" toggleMask class="w-full" inputClass="w-full font-mono" />
+            <InputText :id="`share-${index}`" :value="getDisplayedShare(index)"
+              @input="(e) => handleShareInput(e, index)" @focus="handleShareFocus(index)" @blur="handleShareBlur"
+              type="text" placeholder="Enter share secret" :disabled="loading" autocomplete="off" autocorrect="off"
+              autocapitalize="off" spellcheck="false" :name="`share-secret-${index}`" data-protonpass-ignore="true"
+              data-1p-ignore="true" data-lpignore="true" class="w-full font-mono" fluid />
           </div>
           <Button v-if="shares.length > 1" icon="pi pi-trash" severity="danger" text rounded :disabled="loading"
             @click="removeShare(index)" class="mt-7" v-tooltip.top="'Remove share'" />

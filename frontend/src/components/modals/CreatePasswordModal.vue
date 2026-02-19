@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useToast } from 'primevue/usetoast';
 import { storeToRefs } from 'pinia';
 import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen';
@@ -27,8 +27,18 @@ const password = ref('');
 const folder = ref('');
 const selectedGroupId = ref<string>('');
 const loading = ref(false);
+const passwordFieldFocused = ref(false);
 
 const isEditMode = ref(false);
+
+// Display bullets when password field is not focused
+const displayedPassword = computed(() => {
+  if (passwordFieldFocused.value) {
+    return password.value;
+  }
+  // Show bullets if there's a password
+  return password.value ? '•'.repeat(password.value.length) : '';
+});
 
 // Initialize groups on mount
 onMounted(async () => {
@@ -231,6 +241,33 @@ const handleCancel = () => {
 const handleGenerate = (generatedPassword: string) => {
   password.value = generatedPassword;
 };
+
+const handlePasswordInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const cursorPosition = target.selectionStart || 0;
+  const inputValue = target.value;
+
+  // If the input contains bullets and user is typing
+  if (inputValue.includes('•')) {
+    // User is trying to edit, clear the field
+    password.value = inputValue.replace(/•/g, '');
+  } else {
+    password.value = inputValue;
+  }
+
+  // Restore cursor position
+  setTimeout(() => {
+    target.setSelectionRange(cursorPosition, cursorPosition);
+  }, 0);
+};
+
+const handlePasswordFocus = () => {
+  passwordFieldFocused.value = true;
+};
+
+const handlePasswordBlur = () => {
+  passwordFieldFocused.value = false;
+};
 </script>
 
 <template>
@@ -245,16 +282,8 @@ const handleGenerate = (generatedPassword: string) => {
       <!-- Group Selection (only for create mode) -->
       <div v-if="!isEditMode" class="flex flex-col gap-2">
         <label for="password-group" class="font-semibold">Owner</label>
-        <Select 
-          id="password-group"
-          v-model="selectedGroupId" 
-          :options="groupsForPasswordCreation"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="Select owner group"
-          :disabled="loading"
-          class="w-full"
-        >
+        <Select id="password-group" v-model="selectedGroupId" :options="groupsForPasswordCreation" optionLabel="name"
+          optionValue="id" placeholder="Select owner group" :disabled="loading" class="w-full">
           <template #option="slotProps">
             <div class="flex items-center gap-2">
               <i :class="slotProps.option.is_personal ? 'pi pi-user' : 'pi pi-users'" class="text-sm"></i>
@@ -264,8 +293,9 @@ const handleGenerate = (generatedPassword: string) => {
           </template>
           <template #value="slotProps">
             <div v-if="slotProps.value" class="flex items-center gap-2">
-              <i :class="groupsForPasswordCreation.find(g => g.id === slotProps.value)?.is_personal ? 'pi pi-user' : 'pi pi-users'" class="text-sm"></i>
-              <span>{{ groupsForPasswordCreation.find(g => g.id === slotProps.value)?.name }}</span>
+              <i :class="groupsForPasswordCreation.find(g => g.id === slotProps.value)?.is_personal ? 'pi pi-user' : 'pi pi-users'"
+                class="text-sm"></i>
+              <span>{{groupsForPasswordCreation.find(g => g.id === slotProps.value)?.name}}</span>
             </div>
             <span v-else>{{ slotProps.placeholder }}</span>
           </template>
@@ -276,11 +306,14 @@ const handleGenerate = (generatedPassword: string) => {
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="password-value" class="font-semibold">Password{{ isEditMode ? ' (leave empty to keep current)' : ''
+        <label for="password-value" class="font-semibold">Password{{ isEditMode ? ' (leave empty to keep current)' :
+          ''
           }}</label>
-        <Password id="password-value" v-model="password"
+        <InputText id="password-value" :value="displayedPassword" @input="handlePasswordInput"
+          @focus="handlePasswordFocus" @blur="handlePasswordBlur" type="text"
           :placeholder="isEditMode ? 'Leave empty to keep current password' : 'Enter password'" :disabled="loading"
-          toggleMask :feedback="false" fluid />
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="stored-password-value"
+          data-protonpass-ignore="true" data-1p-ignore="true" data-lpignore="true" class="font-mono" fluid />
       </div>
 
       <!-- Password Generator -->
