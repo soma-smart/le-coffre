@@ -1,5 +1,6 @@
 import pytest
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Iterator
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
@@ -133,3 +134,22 @@ class TestRateLimitMiddleware:
             for _ in range(5):
                 r = c.get("/something")
                 assert r.status_code == 200
+
+    def test_should_handle_concurrent_requests_safely(self, client: TestClient):
+        """Verify rate limiter is thread-safe under concurrent load."""
+
+        def make_request():
+            return client.get("/api/passwords")
+
+        # Launch 10 concurrent requests (limit is 5)
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = [executor.submit(make_request) for _ in range(10)]
+            results = [f.result() for f in as_completed(futures)]
+
+        # Count responses
+        success = [r for r in results if r.status_code == 200]
+        limited = [r for r in results if r.status_code == 429]
+
+        # Exactly 5 should succeed, 5 should be rate-limited
+        assert len(success) == 5, f"Expected 5 successful, got {len(success)}"
+        assert len(limited) == 5, f"Expected 5 rate-limited, got {len(limited)}"
