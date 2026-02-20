@@ -26,19 +26,36 @@ jobs:
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
+      - name: Cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install dependencies
         working-directory: frontend/
         run: bun install --frozen-lockfile
 
       - name: Run Linting
         working-directory: frontend/
-        run: bun run lint
+        run: bunx eslint .
+
+      - name: Check Formatting
+        working-directory: frontend/
+        run: bunx prettier --check src/
 
       - name: Check Dependencies Security
         working-directory: frontend/
         # GHSA-2g4f-4pwh-qvx6: ajv ReDoS via $data option (moderate) — unfixable in ESLint 9,
         # ajv@6 is required by @eslint/eslintrc (ESLint internal dep). Tracked for ESLint 10 upgrade.
         run: bun audit --audit-level=moderate --ignore=GHSA-2g4f-4pwh-qvx6
+
+      - name: Run Unit Tests
+        if: success() || failure()
+        working-directory: frontend/
+        run: bunx vitest run
 
       - name: Type Checking
         if: success() || failure()
@@ -58,28 +75,36 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.12
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('server/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install dependencies
         working-directory: server/
         run: |
           pip install uv
-          uv sync --frozen --no-cache
+          uv sync --frozen
 
       - name: Check Alembic Migrations
         working-directory: server/
         run: |
           # First, upgrade the database to the current head
           uv run alembic upgrade head
-          
+
           # Generate a new migration to check if schema is in sync
           uv run alembic revision --autogenerate -m "CI check" > /tmp/migration_output.txt
-          
+
           # Get the generated migration file
           MIGRATION_FILE=$(ls -t alembic/versions/*.py | head -1)
-          
+
           # Check if the migration contains any actual changes
           # A migration with no changes will only have the boilerplate code
           if grep -q "op.create_table\|op.drop_table\|op.add_column\|op.drop_column\|op.alter_column\|op.create_index\|op.drop_index\|op.create_constraint\|op.drop_constraint" "$MIGRATION_FILE"; then
@@ -94,9 +119,15 @@ jobs:
           else
             echo "✅ Database schema is in sync with migrations"
           fi
-          
+
           # Clean up the generated migration file
           rm "$MIGRATION_FILE"
+
+      - name: Check Dependencies Security
+        working-directory: server/
+        run: |
+          uv export --format requirements-txt --no-hashes > /tmp/requirements.txt
+          uvx pip-audit -r /tmp/requirements.txt
 
       - name: Run Unit Tests
         if: success() || failure()
@@ -111,15 +142,23 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: 3.12
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('server/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install Python dependencies
         working-directory: server/
         run: |
           pip install uv
-          uv sync --frozen --no-cache
+          uv sync --frozen
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -131,6 +170,14 @@ jobs:
           curl -fsSL https://bun.sh/install | bash
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
+      - name: Cache bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('frontend/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install frontend dependencies
         working-directory: frontend/
         run: bun install --frozen-lockfile
@@ -141,8 +188,9 @@ jobs:
           # Start FastAPI in background
           uv run fastapi dev src/main.py --host 0.0.0.0 --port 8000 &
           FASTAPI_PID=$!
+          echo "FASTAPI_PID=$FASTAPI_PID" >> $GITHUB_ENV
           echo "FastAPI started with PID: $FASTAPI_PID"
-          
+
           # Wait for the server to be ready
           echo "Waiting for FastAPI to be ready..."
           for i in {1..30}; do
@@ -182,4 +230,11 @@ jobs:
             exit 1
           else
             echo "✅ OpenAPI client is in sync"
+          fi
+
+      - name: Stop FastAPI server
+        if: always()
+        run: |
+          if [ -n "$FASTAPI_PID" ]; then
+            kill $FASTAPI_PID 2>/dev/null || true
           fi
