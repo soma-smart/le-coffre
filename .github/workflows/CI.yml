@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   front-ci:
     timeout-minutes: 10
@@ -16,15 +20,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
       - name: Install Bun
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+        uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
         working-directory: frontend/
@@ -32,13 +29,22 @@ jobs:
 
       - name: Run Linting
         working-directory: frontend/
-        run: bun run lint
+        run: bunx eslint .
+
+      - name: Check Formatting
+        working-directory: frontend/
+        run: bunx prettier --check src/
 
       - name: Check Dependencies Security
         working-directory: frontend/
         # GHSA-2g4f-4pwh-qvx6: ajv ReDoS via $data option (moderate) — unfixable in ESLint 9,
         # ajv@6 is required by @eslint/eslintrc (ESLint internal dep). Tracked for ESLint 10 upgrade.
         run: bun audit --audit-level=moderate --ignore=GHSA-2g4f-4pwh-qvx6
+
+      - name: Run Unit Tests
+        if: success() || failure()
+        working-directory: frontend/
+        run: bunx vitest run
 
       - name: Type Checking
         if: success() || failure()
@@ -57,29 +63,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: 3.12
+          enable-cache: true
+          cache-dependency-glob: "server/uv.lock"
 
       - name: Install dependencies
         working-directory: server/
-        run: |
-          pip install uv
-          uv sync --frozen --no-cache
+        run: uv sync --frozen
 
       - name: Check Alembic Migrations
         working-directory: server/
         run: |
           # First, upgrade the database to the current head
           uv run alembic upgrade head
-          
+
           # Generate a new migration to check if schema is in sync
           uv run alembic revision --autogenerate -m "CI check" > /tmp/migration_output.txt
-          
+
           # Get the generated migration file
           MIGRATION_FILE=$(ls -t alembic/versions/*.py | head -1)
-          
+
           # Check if the migration contains any actual changes
           # A migration with no changes will only have the boilerplate code
           if grep -q "op.create_table\|op.drop_table\|op.add_column\|op.drop_column\|op.alter_column\|op.create_index\|op.drop_index\|op.create_constraint\|op.drop_constraint" "$MIGRATION_FILE"; then
@@ -94,9 +99,15 @@ jobs:
           else
             echo "✅ Database schema is in sync with migrations"
           fi
-          
+
           # Clean up the generated migration file
           rm "$MIGRATION_FILE"
+
+      - name: Check Dependencies Security
+        working-directory: server/
+        run: |
+          uv export --format requirements-txt --no-hashes > /tmp/requirements.txt
+          uvx pip-audit -r /tmp/requirements.txt
 
       - name: Run Unit Tests
         if: success() || failure()
@@ -110,26 +121,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: 3.12
+          enable-cache: true
+          cache-dependency-glob: "server/uv.lock"
 
       - name: Install Python dependencies
         working-directory: server/
-        run: |
-          pip install uv
-          uv sync --frozen --no-cache
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
+        run: uv sync --frozen
 
       - name: Install Bun
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+        uses: oven-sh/setup-bun@v2
 
       - name: Install frontend dependencies
         working-directory: frontend/
@@ -141,8 +144,9 @@ jobs:
           # Start FastAPI in background
           uv run fastapi dev src/main.py --host 0.0.0.0 --port 8000 &
           FASTAPI_PID=$!
+          echo "FASTAPI_PID=$FASTAPI_PID" >> $GITHUB_ENV
           echo "FastAPI started with PID: $FASTAPI_PID"
-          
+
           # Wait for the server to be ready
           echo "Waiting for FastAPI to be ready..."
           for i in {1..30}; do
@@ -182,4 +186,11 @@ jobs:
             exit 1
           else
             echo "✅ OpenAPI client is in sync"
+          fi
+
+      - name: Stop FastAPI server
+        if: always()
+        run: |
+          if [ -n "$FASTAPI_PID" ]; then
+            kill $FASTAPI_PID 2>/dev/null || true
           fi

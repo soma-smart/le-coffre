@@ -1,111 +1,104 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
-import { useToast } from 'primevue';
-import { useConfirm } from 'primevue/useconfirm';
-import { storeToRefs } from 'pinia';
-import { useGroupsStore } from '@/stores/groups';
-import { listUsersUsersGet, getGroupGroupsGroupIdGet } from '@/client/sdk.gen';
-import type { GroupItem, ListUserResponse, GetGroupResponse } from '@/client/types.gen';
+import { ref, watch, computed } from 'vue'
+import { useToast } from 'primevue'
+import { useConfirm } from 'primevue/useconfirm'
+import { storeToRefs } from 'pinia'
+import { useGroupsStore } from '@/stores/groups'
+import { listUsersUsersGet, getGroupGroupsGroupIdGet } from '@/client/sdk.gen'
+import type { GroupItem, ListUserResponse, GetGroupResponse } from '@/client/types.gen'
 
-const visible = defineModel<boolean>('visible', { required: true });
+const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
-  group?: GroupItem | null;
-}>();
+  group?: GroupItem | null
+}>()
 
 const emit = defineEmits<{
-  (e: 'memberRemoved'): void;
-  (e: 'memberAdded'): void;
-}>();
+  (e: 'memberRemoved'): void
+  (e: 'memberAdded'): void
+}>()
 
-const toast = useToast();
-const confirm = useConfirm();
-const groupsStore = useGroupsStore();
-const { currentUserId } = storeToRefs(groupsStore);
+const toast = useToast()
+const confirm = useConfirm()
+const groupsStore = useGroupsStore()
+const { currentUserId } = storeToRefs(groupsStore)
 
-const users = ref<ListUserResponse[]>([]);
-const loadingUsers = ref(false);
-const loadingAction = ref(false);
-const loadingGroupDetails = ref(false);
-const showAddMemberDialog = ref(false);
-const selectedUserId = ref<string>('');
+const users = ref<ListUserResponse[]>([])
+const loadingUsers = ref(false)
+const loadingAction = ref(false)
+const loadingGroupDetails = ref(false)
+const showAddMemberDialog = ref(false)
+const selectedUserId = ref<string>('')
 
 // Group details with owners and members
-const groupDetails = ref<GetGroupResponse | null>(null);
-const ownerUsers = ref<ListUserResponse[]>([]);
-const memberUsers = ref<ListUserResponse[]>([]);
+const groupDetails = ref<GetGroupResponse | null>(null)
+const ownerUsers = ref<ListUserResponse[]>([])
+const memberUsers = ref<ListUserResponse[]>([])
 
 // Filter users who are not already in the group
 const availableUsers = computed(() => {
-  if (!groupDetails.value) return users.value;
+  if (!groupDetails.value) return users.value
 
-  const allMemberIds = [
-    ...groupDetails.value.owners,
-    ...groupDetails.value.members
-  ];
+  const allMemberIds = [...groupDetails.value.owners, ...groupDetails.value.members]
 
-  return users.value.filter(u => !allMemberIds.includes(u.id));
-});
+  return users.value.filter((u) => !allMemberIds.includes(u.id))
+})
 
 const isOwner = computed(() => {
-  if (!groupDetails.value || !currentUserId.value) return false;
-  return groupDetails.value.owners.includes(currentUserId.value);
-});
+  if (!groupDetails.value || !currentUserId.value) return false
+  return groupDetails.value.owners.includes(currentUserId.value)
+})
 
 // Load users
 const loadUsers = async () => {
-  loadingUsers.value = true;
+  loadingUsers.value = true
   try {
-    const response = await listUsersUsersGet();
+    const response = await listUsersUsersGet()
     if (response.data) {
-      users.value = response.data;
+      users.value = response.data
     }
   } catch (error) {
-    console.error('Failed to load users:', error);
+    console.error('Failed to load users:', error)
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: 'Failed to load users',
-      life: 5000
-    });
+      life: 5000,
+    })
   } finally {
-    loadingUsers.value = false;
+    loadingUsers.value = false
   }
-};
+}
 
 // Load group details with owners and members
 const loadGroupDetails = async () => {
-  if (!props.group) return;
+  if (!props.group) return
 
-  loadingGroupDetails.value = true;
+  loadingGroupDetails.value = true
   try {
     const response = await getGroupGroupsGroupIdGet({
-      path: { group_id: props.group.id }
-    });
+      path: { group_id: props.group.id },
+    })
 
     if (response.data) {
-      groupDetails.value = response.data;
+      groupDetails.value = response.data
 
       // Map user IDs to user objects
-      ownerUsers.value = users.value.filter(u =>
-        groupDetails.value?.owners.includes(u.id)
-      );
-      memberUsers.value = users.value.filter(u =>
-        groupDetails.value?.members.includes(u.id)
-      );
+      ownerUsers.value = users.value.filter((u) => groupDetails.value?.owners.includes(u.id))
+      memberUsers.value = users.value.filter((u) => groupDetails.value?.members.includes(u.id))
     }
   } catch (error) {
-    console.error('Failed to load group details:', error);
+    console.error('Failed to load group details:', error)
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: 'Failed to load group details',
-      life: 5000
-    });
+      life: 5000,
+    })
   } finally {
-    loadingGroupDetails.value = false;
+    loadingGroupDetails.value = false
   }
-};
+}
 
 // Add member to group
 const addMember = async () => {
@@ -114,75 +107,75 @@ const addMember = async () => {
       severity: 'error',
       summary: 'Validation Error',
       detail: 'Please select a user',
-      life: 5000
-    });
-    return;
+      life: 5000,
+    })
+    return
   }
 
-  loadingAction.value = true;
+  loadingAction.value = true
   try {
-    await groupsStore.addMemberToGroup(props.group.id, selectedUserId.value);
+    await groupsStore.addMemberToGroup(props.group.id, selectedUserId.value)
 
     toast.add({
       severity: 'success',
       summary: 'Success',
       detail: 'Member added successfully',
-      life: 5000
-    });
+      life: 5000,
+    })
 
-    showAddMemberDialog.value = false;
-    selectedUserId.value = '';
+    showAddMemberDialog.value = false
+    selectedUserId.value = ''
 
     // Reload group details to get updated members list
-    await loadGroupDetails();
-    emit('memberAdded');
+    await loadGroupDetails()
+    emit('memberAdded')
   } catch (error) {
-    console.error('Failed to add member:', error);
+    console.error('Failed to add member:', error)
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: 'Failed to add member to group',
-      life: 5000
-    });
+      life: 5000,
+    })
   } finally {
-    loadingAction.value = false;
+    loadingAction.value = false
   }
-};
+}
 
 // Remove member from group
 const removeMember = async (userId: string) => {
-  if (!props.group) return;
+  if (!props.group) return
 
-  loadingAction.value = true;
+  loadingAction.value = true
   try {
-    await groupsStore.removeMemberFromGroup(props.group.id, userId);
+    await groupsStore.removeMemberFromGroup(props.group.id, userId)
 
     toast.add({
       severity: 'success',
       summary: 'Success',
       detail: 'Member removed successfully',
-      life: 5000
-    });
+      life: 5000,
+    })
 
     // Reload group details to get updated members list
-    await loadGroupDetails();
-    emit('memberRemoved');
+    await loadGroupDetails()
+    emit('memberRemoved')
   } catch (error) {
-    console.error('Failed to remove member:', error);
+    console.error('Failed to remove member:', error)
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: 'Failed to remove member from group',
-      life: 5000
-    });
+      life: 5000,
+    })
   } finally {
-    loadingAction.value = false;
+    loadingAction.value = false
   }
-};
+}
 
 // Promote member to owner
 const promoteToOwner = async (user: ListUserResponse) => {
-  if (!props.group) return;
+  if (!props.group) return
 
   confirm.require({
     message: `Are you sure you want to promote ${user.name} to owner?`,
@@ -191,53 +184,62 @@ const promoteToOwner = async (user: ListUserResponse) => {
     acceptLabel: 'Promote',
     rejectLabel: 'Cancel',
     accept: async () => {
-      loadingAction.value = true;
+      loadingAction.value = true
       try {
-        await groupsStore.promoteToOwner(props.group!.id, user.id);
+        await groupsStore.promoteToOwner(props.group!.id, user.id)
 
         toast.add({
           severity: 'success',
           summary: 'Success',
           detail: `${user.name} promoted to owner`,
-          life: 5000
-        });
+          life: 5000,
+        })
 
         // Reload group details to get updated members list
-        await loadGroupDetails();
-        emit('memberAdded'); // Reuse this event to trigger refresh in parent
+        await loadGroupDetails()
+        emit('memberAdded') // Reuse this event to trigger refresh in parent
       } catch (error) {
-        console.error('Failed to promote member:', error);
+        console.error('Failed to promote member:', error)
         toast.add({
           severity: 'error',
           summary: 'Error',
           detail: 'Failed to promote member to owner',
-          life: 5000
-        });
+          life: 5000,
+        })
       } finally {
-        loadingAction.value = false;
+        loadingAction.value = false
       }
-    }
-  });
-};
+    },
+  })
+}
 
 // Watch for group changes
-watch(() => props.group, async (newGroup) => {
-  if (newGroup && visible.value) {
-    await loadUsers();
-    await loadGroupDetails();
-  }
-}, { immediate: true });
+watch(
+  () => props.group,
+  async (newGroup) => {
+    if (newGroup && visible.value) {
+      await loadUsers()
+      await loadGroupDetails()
+    }
+  },
+  { immediate: true },
+)
 
 watch(visible, async (isVisible) => {
   if (isVisible && props.group) {
-    await loadUsers();
-    await loadGroupDetails();
+    await loadUsers()
+    await loadGroupDetails()
   }
-});
+})
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" modal :header="group?.name || 'Group Details'" :style="{ width: '40rem' }">
+  <Dialog
+    v-model:visible="visible"
+    modal
+    :header="group?.name || 'Group Details'"
+    :style="{ width: '40rem' }"
+  >
     <div v-if="!group" class="text-center py-4">
       <p class="text-muted-color">No group selected</p>
     </div>
@@ -253,7 +255,7 @@ watch(visible, async (isVisible) => {
       </div>
 
       <div v-if="loadingGroupDetails" class="text-center py-4">
-        <ProgressSpinner style="width: 30px; height: 30px;" />
+        <ProgressSpinner style="width: 30px; height: 30px" />
         <p class="text-sm text-muted-color mt-2">Loading members...</p>
       </div>
 
@@ -270,10 +272,16 @@ watch(visible, async (isVisible) => {
           </div>
 
           <div v-else class="space-y-2">
-            <Card v-for="user in ownerUsers" :key="user.id" :class="[
-              'transition-colors',
-              user.id === currentUserId ? 'bg-primary-50 border-primary-200' : 'hover:bg-surface-50'
-            ]">
+            <Card
+              v-for="user in ownerUsers"
+              :key="user.id"
+              :class="[
+                'transition-colors',
+                user.id === currentUserId
+                  ? 'bg-primary-50 border-primary-200'
+                  : 'hover:bg-surface-50',
+              ]"
+            >
               <template #content>
                 <div class="flex justify-between items-center py-1">
                   <div class="flex items-center gap-3">
@@ -281,7 +289,9 @@ watch(visible, async (isVisible) => {
                     <div>
                       <p class="font-semibold">
                         {{ user.name }}
-                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2">(You)</span>
+                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
+                          >(You)</span
+                        >
                       </p>
                       <p class="text-sm text-muted-color">{{ user.email }}</p>
                     </div>
@@ -301,8 +311,13 @@ watch(visible, async (isVisible) => {
             </h3>
 
             <!-- Add Member Button (only for owners of non-personal groups) -->
-            <Button v-if="isOwner && !group.is_personal" label="Add Member" icon="pi pi-user-plus" size="small"
-              @click="showAddMemberDialog = true" />
+            <Button
+              v-if="isOwner && !group.is_personal"
+              label="Add Member"
+              icon="pi pi-user-plus"
+              size="small"
+              @click="showAddMemberDialog = true"
+            />
           </div>
 
           <div v-if="memberUsers.length === 0" class="text-center py-3 text-muted-color">
@@ -310,10 +325,16 @@ watch(visible, async (isVisible) => {
           </div>
 
           <div v-else class="space-y-2 max-h-64 overflow-y-auto">
-            <Card v-for="user in memberUsers" :key="user.id" :class="[
-              'transition-colors',
-              user.id === currentUserId ? 'bg-primary-50 border-primary-200' : 'hover:bg-surface-50'
-            ]">
+            <Card
+              v-for="user in memberUsers"
+              :key="user.id"
+              :class="[
+                'transition-colors',
+                user.id === currentUserId
+                  ? 'bg-primary-50 border-primary-200'
+                  : 'hover:bg-surface-50',
+              ]"
+            >
               <template #content>
                 <div class="flex justify-between items-center py-1">
                   <div class="flex items-center gap-3">
@@ -321,7 +342,9 @@ watch(visible, async (isVisible) => {
                     <div>
                       <p class="font-semibold">
                         {{ user.name }}
-                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2">(You)</span>
+                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
+                          >(You)</span
+                        >
                       </p>
                       <p class="text-sm text-muted-color">{{ user.email }}</p>
                     </div>
@@ -329,11 +352,28 @@ watch(visible, async (isVisible) => {
 
                   <!-- Action buttons (only for owner of non-personal groups) -->
                   <div v-if="isOwner && !group.is_personal" class="flex gap-1">
-                    <Button icon="pi pi-crown" text rounded severity="warning" size="small"
-                      aria-label="Promote to owner" v-tooltip.top="'Promote to owner'" :loading="loadingAction"
-                      @click="promoteToOwner(user)" />
-                    <Button icon="pi pi-times" text rounded severity="danger" size="small" aria-label="Remove member"
-                      v-tooltip.top="'Remove member'" :loading="loadingAction" @click="removeMember(user.id)" />
+                    <Button
+                      icon="pi pi-crown"
+                      text
+                      rounded
+                      severity="warning"
+                      size="small"
+                      aria-label="Promote to owner"
+                      v-tooltip.top="'Promote to owner'"
+                      :loading="loadingAction"
+                      @click="promoteToOwner(user)"
+                    />
+                    <Button
+                      icon="pi pi-times"
+                      text
+                      rounded
+                      severity="danger"
+                      size="small"
+                      aria-label="Remove member"
+                      v-tooltip.top="'Remove member'"
+                      :loading="loadingAction"
+                      @click="removeMember(user.id)"
+                    />
                   </div>
                 </div>
               </template>
@@ -349,10 +389,22 @@ watch(visible, async (isVisible) => {
   </Dialog>
 
   <!-- Add Member Dialog -->
-  <Dialog v-model:visible="showAddMemberDialog" modal header="Add Member" :style="{ width: '30rem' }">
+  <Dialog
+    v-model:visible="showAddMemberDialog"
+    modal
+    header="Add Member"
+    :style="{ width: '30rem' }"
+  >
     <div class="flex flex-col gap-3">
-      <Select v-model="selectedUserId" :options="availableUsers" optionLabel="name" optionValue="id"
-        placeholder="Select a user to add" :disabled="loadingAction" class="w-full">
+      <Select
+        v-model="selectedUserId"
+        :options="availableUsers"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select a user to add"
+        :disabled="loadingAction"
+        class="w-full"
+      >
         <template #option="slotProps">
           <div class="flex flex-col">
             <span class="font-semibold">{{ slotProps.option.name }}</span>
@@ -364,8 +416,13 @@ watch(visible, async (isVisible) => {
 
     <template #footer>
       <Button label="Cancel" severity="secondary" @click="showAddMemberDialog = false" />
-      <Button label="Add" icon="pi pi-user-plus" @click="addMember" :loading="loadingAction"
-        :disabled="!selectedUserId || loadingAction" />
+      <Button
+        label="Add"
+        icon="pi pi-user-plus"
+        @click="addMember"
+        :loading="loadingAction"
+        :disabled="!selectedUserId || loadingAction"
+      />
     </template>
   </Dialog>
 </template>

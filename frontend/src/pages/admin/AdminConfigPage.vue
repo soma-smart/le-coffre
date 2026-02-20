@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import MainLayout from '../../layouts/MainLayout.vue';
-import VaultManagementCard from '../../components/admin/VaultManagementCard.vue';
-import SsoConfigurationCard from '../../components/admin/SsoConfigurationCard.vue';
+import MainLayout from '../../layouts/MainLayout.vue'
+import VaultManagementCard from '../../components/admin/VaultManagementCard.vue'
+import SsoConfigurationCard from '../../components/admin/SsoConfigurationCard.vue'
 </script>
 
 <template>
