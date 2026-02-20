@@ -62,6 +62,7 @@
     "vue-tsc": "^3.2.3"
   },
   "overrides": {
-    "lodash": "4.17.23"
+    "lodash": "4.17.23",
+    "minimatch": "^10.2.1"
   }
 }

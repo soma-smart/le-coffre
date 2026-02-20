@@ -23,7 +23,7 @@ const router = createRouter({
       path: '/setup',
       name: 'Setup',
       component: SetupView,
-      meta: { skipSetupCheck: true }
+      meta: { skipSetupCheck: true },
     },
     {
       path: '/login',
@@ -34,7 +34,7 @@ const router = createRouter({
       path: '/sso/callback',
       name: 'SsoCallback',
       component: () => import('@/pages/SsoCallbackPage.vue'),
-      meta: { skipSetupCheck: true }
+      meta: { skipSetupCheck: true },
     },
     {
       path: '/groups',
@@ -48,77 +48,77 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      redirect: '/admin/config'
+      redirect: '/admin/config',
     },
     {
       path: '/admin/config',
       name: 'AdminConfig',
       component: () => import('@/pages/admin/AdminConfigPage.vue'),
-      meta: { requiresAdmin: true }
+      meta: { requiresAdmin: true },
     },
     {
       path: '/admin/users',
       name: 'AdminUsers',
       component: () => import('@/pages/admin/AdminUsersPage.vue'),
-      meta: { requiresAdmin: true }
-    }
+      meta: { requiresAdmin: true },
+    },
   ],
 })
 
 router.beforeEach(async (to) => {
-  const setupStore = useSetupStore();
-  const userStore = useUserStore();
+  const setupStore = useSetupStore()
+  const userStore = useUserStore()
 
   // Determine the vault setup status
   // It will use the cached value or call the API once
-  const isSetup = await setupStore.isSetup();
+  const isSetup = await setupStore.isSetup()
 
   // If trying to access /setup but vault is already setup, redirect to home
   if (isSetup && to.name === 'Setup') {
-    return { name: 'Home' };
+    return { name: 'Home' }
   }
 
   // If the route is marked to skip the check, allow navigation
   if (to.meta.skipSetupCheck) {
-    return true;
+    return true
   }
 
   // Check for redirection
   if (!isSetup) {
     // If NOT_SETUP and trying to access any page other than /setup, redirect
-    return '/setup';
+    return '/setup'
   }
 
   // Trigger vault status check (will be deduplicated if already running)
   // This updates the vaultStatus plugin with the data from setupStore
   if (isSetup) {
-    checkVaultStatus().catch(err => {
-      console.error('Error checking vault status in router guard:', err);
-    });
+    checkVaultStatus().catch((err) => {
+      console.error('Error checking vault status in router guard:', err)
+    })
   }
 
   // If we are not logged in, redirect to login
   // Check for both JWT cookies (SSO login)
-  const isLoggedIn = isAuthenticated();
+  const isLoggedIn = isAuthenticated()
   if (!isLoggedIn && to.name !== 'Login') {
     // Clear user store when not authenticated
-    userStore.clearUser();
-    return { name: 'Login' };
+    userStore.clearUser()
+    return { name: 'Login' }
   }
 
   // Check if route requires admin privileges
   if (to.meta.requiresAdmin && isLoggedIn) {
     // Fetch user data to check admin status (will use cache if already loaded)
-    await userStore.fetchCurrentUser();
-    
+    await userStore.fetchCurrentUser()
+
     if (!userStore.isAdmin) {
       // User is not an admin, redirect to home
-      return { name: 'Home' };
+      return { name: 'Home' }
     }
   }
 
   // Otherwise, the app is set up and logged in, allow the navigation
-  return true;
-});
+  return true
+})
 
 export default router

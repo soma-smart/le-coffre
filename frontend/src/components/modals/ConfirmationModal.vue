@@ -1,132 +1,141 @@
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from 'vue';
+import { ref, watch, computed, nextTick } from 'vue'
 
-const visible = defineModel<boolean>('visible', { required: true });
+const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
-  title: string;
-  question: string;
-  description: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  severity?: 'danger' | 'warning' | 'info' | 'success';
-  icon?: string;
-  countdownSeconds?: number;
-  warningMessage?: string;
-}>();
+  title: string
+  question: string
+  description: string
+  confirmLabel?: string
+  cancelLabel?: string
+  severity?: 'danger' | 'warning' | 'info' | 'success'
+  icon?: string
+  countdownSeconds?: number
+  warningMessage?: string
+}>()
 
 const emit = defineEmits<{
-  (e: 'confirm'): void;
-  (e: 'cancel'): void;
-}>();
+  (e: 'confirm'): void
+  (e: 'cancel'): void
+}>()
 
-const countdown = ref(props.countdownSeconds || 0);
-const isProcessing = ref(false);
-const countdownTimer = ref<number | null>(null);
+const countdown = ref(props.countdownSeconds || 0)
+const isProcessing = ref(false)
+const countdownTimer = ref<number | null>(null)
 
 const canConfirm = computed(() => {
-  const countdownComplete = countdown.value === 0;
-  return countdownComplete;
-});
+  const countdownComplete = countdown.value === 0
+  return countdownComplete
+})
 
 // Compute button label based on countdown
 const confirmButtonLabel = computed(() => {
   if (countdown.value > 0) {
-    return `${props.confirmLabel || 'Confirm'} in ${countdown.value}s`;
+    return `${props.confirmLabel || 'Confirm'} in ${countdown.value}s`
   }
-  return props.confirmLabel || 'Confirm';
-});
+  return props.confirmLabel || 'Confirm'
+})
 
 // Get icon based on severity
 const iconClass = computed(() => {
-  if (props.icon) return props.icon;
+  if (props.icon) return props.icon
 
   switch (props.severity) {
     case 'danger':
-      return 'pi pi-exclamation-triangle';
+      return 'pi pi-exclamation-triangle'
     case 'warning':
-      return 'pi pi-exclamation-circle';
+      return 'pi pi-exclamation-circle'
     case 'info':
-      return 'pi pi-info-circle';
+      return 'pi pi-info-circle'
     case 'success':
-      return 'pi pi-check-circle';
+      return 'pi pi-check-circle'
     default:
-      return 'pi pi-question-circle';
+      return 'pi pi-question-circle'
   }
-});
+})
 
 const iconColor = computed(() => {
   switch (props.severity) {
     case 'danger':
-      return 'text-red-500';
+      return 'text-red-500'
     case 'warning':
-      return 'text-yellow-500';
+      return 'text-yellow-500'
     case 'info':
-      return 'text-blue-500';
+      return 'text-blue-500'
     case 'success':
-      return 'text-green-500';
+      return 'text-green-500'
     default:
-      return 'text-muted-color';
+      return 'text-muted-color'
   }
-});
+})
 
 // Start countdown when modal opens
 watch(visible, async (newVisible) => {
   if (newVisible) {
     // Reset countdown when modal opens
-    countdown.value = props.countdownSeconds || 0;
-    isProcessing.value = false; // Reset processing state
+    countdown.value = props.countdownSeconds || 0
+    isProcessing.value = false // Reset processing state
 
     // Use nextTick to ensure reactivity is complete
-    await nextTick();
+    await nextTick()
 
     if (countdown.value > 0) {
-      startCountdown();
+      startCountdown()
     }
   } else {
-    stopCountdown();
-    isProcessing.value = false; // Reset when modal closes
+    stopCountdown()
+    isProcessing.value = false // Reset when modal closes
   }
-});
+})
 
 const startCountdown = () => {
-  stopCountdown(); // Clear any existing timer
+  stopCountdown() // Clear any existing timer
   countdownTimer.value = window.setInterval(() => {
     if (countdown.value > 0) {
-      countdown.value--;
+      countdown.value--
     } else {
-      stopCountdown();
+      stopCountdown()
     }
-  }, 1000);
-};
+  }, 1000)
+}
 
 const stopCountdown = () => {
   if (countdownTimer.value !== null) {
-    clearInterval(countdownTimer.value);
-    countdownTimer.value = null;
+    clearInterval(countdownTimer.value)
+    countdownTimer.value = null
   }
-};
+}
 
 const handleConfirm = () => {
-  emit('confirm');
-  visible.value = false;
-};
+  emit('confirm')
+  visible.value = false
+}
 
 const handleCancel = () => {
-  emit('cancel');
-  visible.value = false;
-};
+  emit('cancel')
+  visible.value = false
+}
 
 // Clean up timer when component unmounts
-watch(() => visible.value, (newVal) => {
-  if (!newVal) {
-    stopCountdown();
-  }
-});
+watch(
+  () => visible.value,
+  (newVal) => {
+    if (!newVal) {
+      stopCountdown()
+    }
+  },
+)
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" :header="title" :modal="true" :closable="!isProcessing" :style="{ width: '30rem' }">
+  <Dialog
+    v-model:visible="visible"
+    :header="title"
+    :modal="true"
+    :closable="!isProcessing"
+    :style="{ width: '30rem' }"
+  >
     <div class="flex flex-col gap-4 py-4">
       <div class="flex items-start gap-3">
         <i :class="[iconClass, iconColor, 'text-2xl']"></i>
@@ -144,8 +153,10 @@ watch(() => visible.value, (newVal) => {
           </div>
 
           <!-- Warning message -->
-          <div v-if="warningMessage"
-            class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mb-3">
+          <div
+            v-if="warningMessage"
+            class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mb-3"
+          >
             <p class="text-sm text-yellow-800 dark:text-yellow-200">
               <i class="pi pi-exclamation-triangle mr-2"></i>
               {{ warningMessage }}
@@ -156,9 +167,21 @@ watch(() => visible.value, (newVal) => {
     </div>
 
     <template #footer>
-      <Button :label="cancelLabel || 'Cancel'" icon="pi pi-times" text @click="handleCancel" :disabled="isProcessing" />
-      <Button :label="confirmButtonLabel" icon="pi pi-check" :severity="severity || 'primary'" @click="handleConfirm"
-        :disabled="!canConfirm || isProcessing" :loading="isProcessing" />
+      <Button
+        :label="cancelLabel || 'Cancel'"
+        icon="pi pi-times"
+        text
+        @click="handleCancel"
+        :disabled="isProcessing"
+      />
+      <Button
+        :label="confirmButtonLabel"
+        icon="pi pi-check"
+        :severity="severity || 'primary'"
+        @click="handleConfirm"
+        :disabled="!canConfirm || isProcessing"
+        :loading="isProcessing"
+      />
     </template>
   </Dialog>
 </template>

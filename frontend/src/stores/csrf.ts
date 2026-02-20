@@ -4,7 +4,7 @@ import { getCsrfTokenAuthCsrfTokenGet } from '@/client'
 
 /**
  * CSRF Token Store
- * 
+ *
  * Manages CSRF tokens for protecting against Cross-Site Request Forgery attacks.
  * The token is fetched after login and remains valid for the entire session.
  */
