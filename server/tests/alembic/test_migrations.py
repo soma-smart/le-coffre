@@ -6,11 +6,57 @@ This module tests that migrations can be applied and rolled back successfully.
 import pytest
 import tempfile
 import os
+import importlib
+import inspect
 from pathlib import Path
 from alembic.config import Config
 from alembic import command
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, text
+from sqlmodel import SQLModel
+
+
+def get_expected_application_tables():
+    """
+    Dynamically discover all SQLModel table classes from the application.
+    
+    This function scans all adapters/secondary/sql/__init__.py files in the src directory,
+    imports them, and extracts all classes that inherit from SQLModel and have table=True.
+    This ensures the test automatically stays in sync with model changes.
+    """
+    # Get the src directory path
+    src_dir = Path(__file__).parent.parent.parent / "src"
+    
+    # Find all sql __init__.py files
+    sql_init_files = list(src_dir.glob("**/adapters/secondary/sql/__init__.py"))
+    
+    table_names = []
+    
+    for init_file in sql_init_files:
+        # Build module path relative to src directory
+        relative_path = init_file.relative_to(src_dir)
+        module_parts = list(relative_path.parts[:-1])  # Remove __init__.py
+        module_name = ".".join(module_parts)
+        
+        try:
+            # Import the module
+            module = importlib.import_module(module_name)
+            
+            # Inspect all members of the module
+            for name, obj in inspect.getmembers(module):
+                # Check if it's a class that inherits from SQLModel
+                if (inspect.isclass(obj) and 
+                    issubclass(obj, SQLModel) and 
+                    obj is not SQLModel):
+                    # Check if it has table=True (has __tablename__ attribute)
+                    if hasattr(obj, '__tablename__'):
+                        table_names.append(obj.__tablename__)
+        except (ImportError, AttributeError) as e:
+            # Some modules might not be importable or might not have tables
+            # This is expected (e.g., shared_kernel has no tables)
+            continue
+    
+    return sorted(set(table_names))  # Return unique sorted list
 
 
 @pytest.fixture
@@ -60,20 +106,11 @@ def test_upgrade_migration_creates_all_tables(alembic_config, temp_database):
         ))
         assert result.fetchone() is not None, "alembic_version table should exist"
         
-        # Check for application tables
-        expected_tables = [
-            'GroupMemberTable',
-            'GroupTable',
-            'OwnershipTable',
-            'PasswordTable',
-            'PermissionsTable',
-            'SsoConfigurationTable',
-            'SsoUsersTable',
-            'UserPasswordTable',
-            'UserTable',
-            'vault',
-        ]
+        # Get expected tables dynamically from model __tablename__ attributes
+        # This ensures the test stays in sync with model changes
+        expected_tables = get_expected_application_tables()
         
+        # Verify each expected table exists
         for table_name in expected_tables:
             result = conn.execute(text(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name=:table_name"
@@ -94,9 +131,9 @@ def test_downgrade_migration_removes_tables(alembic_config, temp_database):
     engine = create_engine(database_url)
     with engine.connect() as conn:
         result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='UserTable'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='User'"
         ))
-        assert result.fetchone() is not None, "UserTable should exist before downgrade"
+        assert result.fetchone() is not None, "User should exist before downgrade"
     engine.dispose()
     
     # Now downgrade
@@ -106,14 +143,14 @@ def test_downgrade_migration_removes_tables(alembic_config, temp_database):
     engine = create_engine(database_url)
     with engine.connect() as conn:
         result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='UserTable'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='User'"
         ))
-        assert result.fetchone() is None, "UserTable should not exist after downgrade"
+        assert result.fetchone() is None, "User should not exist after downgrade"
         
         result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='vault'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='Vault'"
         ))
-        assert result.fetchone() is None, "vault table should not exist after downgrade"
+        assert result.fetchone() is None, "Vault table should not exist after downgrade"
         
         # alembic_version should still exist
         result = conn.execute(text(
@@ -155,7 +192,7 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
     engine = create_engine(database_url)
     with engine.connect() as conn:
         result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='UserTable'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='User'"
         ))
         assert result.fetchone() is not None
     engine.dispose()
@@ -165,7 +202,7 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
     engine = create_engine(database_url)
     with engine.connect() as conn:
         result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='UserTable'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='User'"
         ))
         assert result.fetchone() is None
     engine.dispose()
@@ -175,7 +212,7 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
     engine = create_engine(database_url)
     with engine.connect() as conn:
         result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='UserTable'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='User'"
         ))
         assert result.fetchone() is not None
     engine.dispose()
@@ -185,7 +222,7 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
     engine = create_engine(database_url)
     with engine.connect() as conn:
         result = conn.execute(text(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='UserTable'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='User'"
         ))
         assert result.fetchone() is None
     engine.dispose()

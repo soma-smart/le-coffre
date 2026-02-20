@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 
 class PasswordTable(SQLModel, table=True):
-    __tablename__: str = "PasswordTable"
+    __tablename__: str = "Password"
 
     id: UUID = Field(
         default_factory=uuid4, nullable=False, primary_key=True, index=True

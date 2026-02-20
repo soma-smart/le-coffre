@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 
 class SsoConfigurationTable(SQLModel, table=True):
-    __tablename__: str = "SsoConfigurationTable"
+    __tablename__: str = "SsoConfiguration"
 
     id: int = Field(default=1, primary_key=True)  # Always 1 - single row
     client_id: str = Field(description="OAuth client ID", nullable=False)

@@ -13,62 +13,65 @@
             </p>
           </div>
         </div>
-        <i :class="[
-          'pi',
-          isOpen ? 'pi-chevron-up' : 'pi-chevron-down',
-          'text-gray-400'
-        ]"></i>
+        <i :class="['pi', isOpen ? 'pi-chevron-up' : 'pi-chevron-down', 'text-gray-400']"></i>
       </div>
 
       <!-- Expanded folder content -->
       <div v-if="isOpen" class="mt-4 pt-4 border-t border-surface space-y-">
-        <PasswordCard v-for="password in folder.passwords" :key="password.id" :password="password" @edit="handleEdit"
-          @share="handleShare" @history="handleHistory" @deleted="handleDeleted" />
+        <PasswordCard
+          v-for="password in folder.passwords"
+          :key="password.id"
+          :password="password"
+          @edit="handleEdit"
+          @share="handleShare"
+          @history="handleHistory"
+          @deleted="handleDeleted"
+        />
       </div>
     </template>
   </Card>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import type { GetPasswordListResponse } from '@/client/types.gen';
-import PasswordCard from './PasswordCard.vue';
+import { ref } from 'vue'
+import type { GetPasswordListResponse } from '@/client/types.gen'
+import PasswordCard from './PasswordCard.vue'
 
 const props = defineProps<{
   folder: {
-    name: string;
-    count: number;
-    passwords: GetPasswordListResponse[];
-  };
-  initialOpen?: boolean;
-}>();
+    name: string
+    count: number
+    passwords: GetPasswordListResponse[]
+  }
+  initialOpen?: boolean
+}>()
 
 const emit = defineEmits<{
-  (e: 'edit', password: GetPasswordListResponse): void;
-  (e: 'share', password: GetPasswordListResponse): void;
-  (e: 'history', password: GetPasswordListResponse): void;
-  (e: 'deleted'): void;
-}>();
+  (e: 'edit', password: GetPasswordListResponse): void
+  (e: 'share', password: GetPasswordListResponse): void
+  (e: 'history', password: GetPasswordListResponse): void
+  (e: 'deleted'): void
+}>()
 
-const isOpen = ref(props.initialOpen ?? false);
+const isOpen = ref(props.initialOpen ?? false)
 
 const toggleFolder = () => {
-  isOpen.value = !isOpen.value;
-};
+  isOpen.value = !isOpen.value
+}
 
 const handleEdit = (password: GetPasswordListResponse) => {
-  emit('edit', password);
-};
+  emit('edit', password)
+}
 
 const handleShare = (password: GetPasswordListResponse) => {
-  emit('share', password);
-};
+  emit('share', password)
+}
 
 const handleHistory = (password: GetPasswordListResponse) => {
-  emit('history', password);
-};
+  emit('history', password)
+}
 
 const handleDeleted = () => {
-  emit('deleted');
-};
+  emit('deleted')
+}
 </script>

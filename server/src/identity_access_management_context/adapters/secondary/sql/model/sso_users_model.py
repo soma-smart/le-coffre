@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 
 class SsoUsersTable(SQLModel, table=True):
-    __tablename__: str = "SsoUsersTable"
+    __tablename__: str = "SsoUser"
 
     internal_user_id: UUID = Field(
         default_factory=uuid4, nullable=False, primary_key=True, index=True

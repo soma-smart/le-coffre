@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel, JSON, Column
 class VaultEventTable(SQLModel, table=True):
     """SQLModel table for vault audit events"""
 
-    __tablename__: str = "vault_events"
+    __tablename__: str = "VaultEvent"
 
     event_id: UUID = Field(primary_key=True)
     event_type: str = Field(index=True)

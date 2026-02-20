@@ -3,7 +3,7 @@ from uuid import UUID
 
 
 class GroupMemberTable(SQLModel, table=True):
-    __tablename__: str = "GroupMemberTable"
+    __tablename__: str = "GroupMember"
 
     group_id: UUID = Field(nullable=False, primary_key=True, index=True)
     user_id: UUID = Field(nullable=False, primary_key=True, index=True)

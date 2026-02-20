@@ -143,7 +143,7 @@ def database(database_path):
 
         # Drop each table
         for table in tables:
-            conn.execute(text(f"DROP TABLE IF EXISTS {table}"))
+            conn.execute(text(f'DROP TABLE IF EXISTS "{table}"'))
 
         conn.execute(text("PRAGMA foreign_keys = ON"))
         conn.commit()

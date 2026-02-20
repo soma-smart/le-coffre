@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 
 class UserPasswordTable(SQLModel, table=True):
-    __tablename__: str = "UserPasswordTable"
+    __tablename__: str = "UserPassword"
 
     id: UUID = Field(
         default_factory=uuid4, nullable=False, primary_key=True, index=True

@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel, JSON, Column
 class PasswordEventTable(SQLModel, table=True):
     """SQLModel table for password audit events"""
 
-    __tablename__: str = "password_events"
+    __tablename__: str = "PasswordEvent"
 
     event_id: UUID = Field(primary_key=True)
     event_type: str = Field(index=True)
