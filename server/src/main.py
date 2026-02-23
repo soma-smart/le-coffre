@@ -11,16 +11,27 @@ from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
 
+# Switch all handlers to JSON output before any logger fires.
+from logging_config import configure_logging
+configure_logging()
+
 logger = logging.getLogger(__name__)
 
 
-class _HealthCheckFilter(logging.Filter):
+class _NoiseFilter(logging.Filter):
+    """Suppress high-frequency OK responses that would flood Loki with useless entries."""
+
+    _SUPPRESSED = (
+        ("GET /api/health", '" 200'),
+        ("GET /api/metrics", '" 200'),
+    )
+
     def filter(self, record: logging.LogRecord) -> bool:
         msg = record.getMessage()
-        return not ("GET /api/health" in msg and '" 200' in msg)
+        return not any(path in msg and status in msg for path, status in self._SUPPRESSED)
 
 
-logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+logging.getLogger("uvicorn.access").addFilter(_NoiseFilter())
 
 from config import (
     get_database_url,
