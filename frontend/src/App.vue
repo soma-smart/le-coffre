@@ -27,7 +27,7 @@ const handleStatusChanged = async () => {
 </script>
 
 <template>
-  <Toast />
+  <Toast position="bottom-right" />
   <ConfirmDialog />
   <RouterView />
 

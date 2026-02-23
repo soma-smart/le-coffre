@@ -130,7 +130,7 @@ onMounted(() => {
 
 <template>
   <MainLayout>
-    <Toast />
+    <Toast position="bottom-right" />
     <div class="max-w-4xl mx-auto">
       <h1 class="text-3xl font-bold mb-6">Profil</h1>
 
