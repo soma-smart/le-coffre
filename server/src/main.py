@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import uuid
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -10,9 +11,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 # Switch all handlers to JSON output before any logger fires.
-from logging_config import configure_logging
+from logging_config import configure_logging, rewire_uvicorn_logging, _trace_id_var
 configure_logging()
 
 logger = logging.getLogger(__name__)
@@ -21,17 +23,50 @@ logger = logging.getLogger(__name__)
 class _NoiseFilter(logging.Filter):
     """Suppress high-frequency OK responses that would flood Loki with useless entries."""
 
-    _SUPPRESSED = (
-        ("GET /api/health", '" 200'),
-        ("GET /api/metrics", '" 200'),
-    )
+    _SUPPRESSED_ROUTES = frozenset({"/api/health", "/api/metrics"})
 
     def filter(self, record: logging.LogRecord) -> bool:
-        msg = record.getMessage()
-        return not any(path in msg and status in msg for path, status in self._SUPPRESSED)
+        # Parse record.args directly — uvicorn access log format is a 5-tuple:
+        # (client_addr, method, path, http_version, status_code)
+        # Using args avoids coupling to uvicorn's internal format string.
+        args = record.args
+        if (
+            isinstance(args, tuple)
+            and len(args) == 5
+            and args[1] == "GET"
+            and args[2] in self._SUPPRESSED_ROUTES
+            and args[4] == 200
+        ):
+            return False
+        return True
 
 
 logging.getLogger("uvicorn.access").addFilter(_NoiseFilter())
+
+
+class _TraceIdMiddleware:
+    """Assign a unique trace_id per request for structured log correlation.
+
+    Reads the X-Trace-Id header if present (useful for distributed tracing),
+    otherwise generates a new UUID. The trace_id is injected into every log
+    record emitted during the request via _TraceIdFilter.
+    Will be wired to the actual OpenTelemetry trace ID in Priority 3 (Tempo).
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            headers = {k.lower(): v for k, v in scope.get("headers", [])}
+            trace_id = headers.get(b"x-trace-id", b"").decode() or str(uuid.uuid4())
+            token = _trace_id_var.set(trace_id)
+            try:
+                await self.app(scope, receive, send)
+            finally:
+                _trace_id_var.reset(token)
+        else:
+            await self.app(scope, receive, send)
 
 from config import (
     get_database_url,
@@ -121,6 +156,10 @@ def _build_engine(database_url: str):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Re-apply JSON formatter to uvicorn's handlers. Uvicorn may have
+    # re-initialised its logging config after our module was imported.
+    rewire_uvicorn_logging()
+
     # Run migrations instead of create_tables
     logger.info("Starting database migrations...")
     run_migrations()
@@ -197,8 +236,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan, root_path="/api")
 
 
-# Add CSRF protection middleware
+# _TraceIdMiddleware must be outermost so trace_id is set before any other
+# middleware or handler emits log records.
 app.add_middleware(CsrfMiddleware)
+app.add_middleware(_TraceIdMiddleware)
 
 
 @app.exception_handler(Exception)
