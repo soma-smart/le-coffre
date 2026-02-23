@@ -1,17 +1,67 @@
 version: 2
 updates:
-  # Check for updates to npm dependencies
+  # Python/uv dependencies (server)
+  - package-ecosystem: uv
+    directory: /server
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - python:uv
+    reviewers:
+      - vianneybacoup
+      - Quentin-L-Inge
+      - gmalonga
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # Bloquer les major bumps automatiques (risque de breaking changes)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      python-patch:
+        update-types:
+          - "patch"
+      python-minor:
+        update-types:
+          - "minor"
+
+  # npm dependencies (frontend)
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     labels:
       - dependencies
       - npm
-    compatibility-score: 70
+    reviewers:
+      - vianneybacoup
+      - Quentin-L-Inge
+      - gmalonga
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # Bloquer les major bumps automatiques (risque de breaking changes)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-production-patch:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+      npm-production-minor:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+      npm-dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
 
-  # Check for updates to GitHub Actions
+  # GitHub Actions
   - package-ecosystem: github-actions
     directory: /.github/workflows
     schedule:
@@ -20,9 +70,18 @@ updates:
     labels:
       - dependencies
       - github-actions
-    compatibility-score: 70
+    reviewers:
+      - vianneybacoup
+      - Quentin-L-Inge
+      - gmalonga
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
-  # Check for updates to Docker dependencies
+  # Docker
   - package-ecosystem: docker
     directory: /
     schedule:
@@ -31,4 +90,20 @@ updates:
     labels:
       - dependencies
       - docker
-    compatibility-score: 70
+    reviewers:
+      - vianneybacoup
+      - Quentin-L-Inge
+      - gmalonga
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # Bloquer les major bumps automatiques (risque de breaking changes)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      docker-patch:
+        update-types:
+          - "patch"
+      docker-minor:
+        update-types:
+          - "minor"
