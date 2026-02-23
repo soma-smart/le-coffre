@@ -1,11 +1,11 @@
 import logging
 import pytest
-from main import _HealthCheckFilter
+from main import _NoiseFilter
 
 
 @pytest.fixture
 def filter_instance():
-    return _HealthCheckFilter()
+    return _NoiseFilter()
 
 
 def make_uvicorn_record(client: str, method: str, path: str, status: int) -> logging.LogRecord:
@@ -32,6 +32,12 @@ def test_health_503_is_not_filtered(filter_instance):
     """Failed health checks (DB down) must remain visible in logs."""
     record = make_uvicorn_record("100.64.7.58:57990", "GET", "/api/health", 503)
     assert filter_instance.filter(record) is True
+
+
+def test_metrics_200_is_filtered(filter_instance):
+    """Successful Prometheus scrapes must not appear in logs."""
+    record = make_uvicorn_record("10.32.7.62:12345", "GET", "/api/metrics", 200)
+    assert filter_instance.filter(record) is False
 
 
 def test_other_routes_are_not_filtered(filter_instance):
