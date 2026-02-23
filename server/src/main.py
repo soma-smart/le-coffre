@@ -18,14 +18,22 @@ logger = logging.getLogger(__name__)
 class _UvicornAccessFilter(logging.Filter):
     """Suppress noisy OK responses from health checks and Prometheus scrapes."""
 
-    _SUPPRESSED = (
-        ("GET /api/health", '" 200'),
-        ("GET /api/metrics", '" 200'),
-    )
+    _SUPPRESSED_ROUTES = frozenset({"/api/health", "/api/metrics"})
 
     def filter(self, record: logging.LogRecord) -> bool:
-        msg = record.getMessage()
-        return not any(path in msg and status in msg for path, status in self._SUPPRESSED)
+        # Parse record.args directly — uvicorn access log format is a 5-tuple:
+        # (client_addr, method, path, http_version, status_code)
+        # Using args avoids coupling to uvicorn's internal format string.
+        args = record.args
+        if (
+            isinstance(args, tuple)
+            and len(args) == 5
+            and args[1] == "GET"
+            and args[2] in self._SUPPRESSED_ROUTES
+            and args[4] == 200
+        ):
+            return False
+        return True
 
 
 logging.getLogger("uvicorn.access").addFilter(_UvicornAccessFilter())

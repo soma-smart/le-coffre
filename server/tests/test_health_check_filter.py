@@ -40,6 +40,26 @@ def test_metrics_200_is_filtered(filter_instance):
     assert filter_instance.filter(record) is False
 
 
+def test_filter_is_independent_of_message_format(filter_instance):
+    """Filter must work regardless of uvicorn's log format string."""
+    record = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="%s %s %s HTTP/%s %d",  # format without quotes — args tuple is what matters
+        args=("10.32.7.62:12345", "GET", "/api/metrics", "1.1", 200),
+        exc_info=None,
+    )
+    assert filter_instance.filter(record) is False
+
+
+def test_metrics_503_is_not_filtered(filter_instance):
+    """Failed Prometheus scrapes must remain visible in logs."""
+    record = make_uvicorn_record("10.32.7.62:12345", "GET", "/api/metrics", 503)
+    assert filter_instance.filter(record) is True
+
+
 def test_other_routes_are_not_filtered(filter_instance):
     """Business endpoint logs must not be affected by the filter."""
     record = make_uvicorn_record("100.64.7.208:35250", "GET", "/api/passwords/list", 200)
