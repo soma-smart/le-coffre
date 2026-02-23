@@ -31,7 +31,39 @@ client.interceptors.request.use(async (request, options) => {
 });
 
 // Configure the global error interceptor
-client.interceptors.error.use(async (error: unknown) => {
+client.interceptors.error.use(async (error: unknown, response: Response | undefined) => {
+  // ── Rate Limiting (429) ──────────────────────────────────────
+  if (response?.status === 429) {
+    const retryAfter = response.headers.get('Retry-After');
+    const seconds = retryAfter ? parseInt(retryAfter, 10) : 0;
+    const detail = seconds > 0
+      ? `Too many requests. Please try again in ${seconds} seconds.`
+      : 'Too many requests. Please try again later.';
+
+    // Dispatch a custom event so components can react (e.g. LoginForm countdown)
+    window.dispatchEvent(
+      new CustomEvent('rate-limited', { detail: { retryAfter: seconds } }),
+    );
+
+    // Show a global toast via PrimeVue's event bus
+    import('primevue').then(({ useToast }) => {
+      try {
+        const toast = useToast();
+        toast.add({
+          severity: 'warn',
+          summary: 'Rate Limited',
+          detail,
+          life: 5000,
+        });
+      } catch {
+        // Toast not available outside component context — silently ignore
+      }
+    });
+
+    return error;
+  }
+
+  // ── Authentication errors ────────────────────────────────────
   console.error('Global API Error Interceptor caught an error:', error);
 
   const errorDetail = (error as HttpValidationError).detail;
