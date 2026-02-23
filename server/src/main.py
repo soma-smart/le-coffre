@@ -3,7 +3,7 @@ import os
 import time
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
-from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_fastapi_instrumentator import Instrumentator, metrics as pfi_metrics
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
@@ -197,8 +197,23 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Add CSRF protection middleware
 app.add_middleware(CsrfMiddleware)
 
-# Expose Prometheus metrics at /metrics (only reachable in-cluster, not via ingress)
-Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+# Expose Prometheus metrics at /metrics (only reachable in-cluster, not via ingress).
+# - should_group_status_codes=False: keep individual codes (200, 401, 500) for precise alerting.
+# - should_ignore_untemplated=True: drop metrics for unmatched routes (bots, scanners) to avoid
+#   cardinality explosion.
+# - should_instrument_requests_inprogress=True: track concurrent requests for saturation detection.
+# - excluded_handlers: exclude health and metrics endpoints to avoid inflating request metrics with
+#   k8s probes (every 10s) and Prometheus scrapes (every 30s).
+Instrumentator(
+    should_group_status_codes=False,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/health", "/metrics"],
+).add(
+    pfi_metrics.request_size()
+).add(
+    pfi_metrics.response_size()
+).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 @app.exception_handler(Exception)
