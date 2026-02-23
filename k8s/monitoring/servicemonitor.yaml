@@ -1,0 +1,23 @@
+# ServiceMonitor tells Prometheus (via the Operator) to scrape the le-coffre backend.
+# The label "release: prometheus" matches the Prometheus instance's serviceMonitorSelector.
+# The backend Service exposes port "http" (8080), and /metrics is served at that port.
+# This endpoint is NOT reachable externally — ingress only routes /api/* to the backend.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: le-coffre-backend
+  namespace: le-coffre
+  labels:
+    app.kubernetes.io/name: le-coffre
+    app.kubernetes.io/component: backend
+    release: prometheus  # must match Prometheus operator's serviceMonitorSelector
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: le-coffre
+      app.kubernetes.io/component: backend
+  endpoints:
+    - port: http
+      path: /api/metrics
+      interval: 30s
+      scrapeTimeout: 10s

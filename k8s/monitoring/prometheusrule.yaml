@@ -1,0 +1,118 @@
+# PrometheusRules define alerting and recording rules for le-coffre.
+# The label "release: prometheus" matches the Prometheus instance's ruleSelector.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: le-coffre
+  namespace: le-coffre
+  labels:
+    app.kubernetes.io/name: le-coffre
+    release: prometheus  # must match Prometheus operator's ruleSelector
+spec:
+  groups:
+    # ---------------------------------------------------------------------------
+    # Availability
+    # ---------------------------------------------------------------------------
+    - name: le-coffre.availability
+      rules:
+        - alert: LeCoffreBackendDown
+          expr: |
+            absent(up{job="le-coffre-backend", namespace="le-coffre"} == 1)
+          for: 1m
+          labels:
+            severity: critical
+            app: le-coffre
+          annotations:
+            summary: "Le Coffre backend is unreachable"
+            description: "Prometheus has not been able to scrape the le-coffre backend for more than 1 minute."
+
+        - alert: LeCoffrePodNotReady
+          expr: |
+            kube_pod_status_ready{namespace="le-coffre", condition="true"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            app: le-coffre
+          annotations:
+            summary: "Le Coffre pod {{ $labels.pod }} is not ready"
+            description: "Pod {{ $labels.pod }} in namespace le-coffre has been unready for more than 2 minutes."
+
+        - alert: LeCoffrePodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="le-coffre"}[15m]) > 3
+          for: 0m
+          labels:
+            severity: critical
+            app: le-coffre
+          annotations:
+            summary: "Le Coffre pod {{ $labels.pod }} is crash-looping"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} has restarted {{ $value | humanize }} times in the last 15 minutes."
+
+    # ---------------------------------------------------------------------------
+    # HTTP error rate
+    # ---------------------------------------------------------------------------
+    - name: le-coffre.http
+      rules:
+        - alert: LeCoffreHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="le-coffre", status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{namespace="le-coffre"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            app: le-coffre
+          annotations:
+            summary: "Le Coffre HTTP 5xx error rate above 5%"
+            description: "{{ $value | humanizePercentage }} of requests are returning 5xx errors over the last 5 minutes."
+
+        - alert: LeCoffreHighLatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{namespace="le-coffre"}[5m])) by (le)
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+            app: le-coffre
+          annotations:
+            summary: "Le Coffre P95 latency above 2s"
+            description: "The 95th percentile response time is {{ $value | humanizeDuration }}, exceeding the 2s threshold."
+
+    # ---------------------------------------------------------------------------
+    # Security (password manager specific)
+    # ---------------------------------------------------------------------------
+    - name: le-coffre.security
+      rules:
+        - alert: LeCoffreHighAuthFailureRate
+          expr: |
+            sum(rate(http_requests_total{namespace="le-coffre", handler=~".*/auth/login.*", status="401"}[5m])) > 0.5
+          for: 2m
+          labels:
+            severity: warning
+            app: le-coffre
+          annotations:
+            summary: "High authentication failure rate on Le Coffre"
+            description: "More than 0.5 failed login attempts per second over the last 5 minutes. Possible brute force attack."
+
+    # ---------------------------------------------------------------------------
+    # Resources
+    # ---------------------------------------------------------------------------
+    - name: le-coffre.resources
+      rules:
+        - alert: LeCoffreHighMemoryUsage
+          expr: |
+            (
+              container_memory_working_set_bytes{namespace="le-coffre", container="le-coffre-backend"}
+              /
+              container_spec_memory_limit_bytes{namespace="le-coffre", container="le-coffre-backend"}
+            ) > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            app: le-coffre
+          annotations:
+            summary: "Le Coffre backend memory usage above 85%"
+            description: "Memory usage is at {{ $value | humanizePercentage }} of the configured limit."

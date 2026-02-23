@@ -3,6 +3,7 @@ import os
 import time
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
@@ -14,13 +15,20 @@ from alembic import command
 logger = logging.getLogger(__name__)
 
 
-class _HealthCheckFilter(logging.Filter):
+class _UvicornAccessFilter(logging.Filter):
+    """Suppress noisy OK responses from health checks and Prometheus scrapes."""
+
+    _SUPPRESSED = (
+        ("GET /api/health", '" 200'),
+        ("GET /api/metrics", '" 200'),
+    )
+
     def filter(self, record: logging.LogRecord) -> bool:
         msg = record.getMessage()
-        return not ("GET /api/health" in msg and '" 200' in msg)
+        return not any(path in msg and status in msg for path, status in self._SUPPRESSED)
 
 
-logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
+logging.getLogger("uvicorn.access").addFilter(_UvicornAccessFilter())
 
 from config import (
     get_database_url,
@@ -188,6 +196,9 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 
 # Add CSRF protection middleware
 app.add_middleware(CsrfMiddleware)
+
+# Expose Prometheus metrics at /metrics (only reachable in-cluster, not via ingress)
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 @app.exception_handler(Exception)
