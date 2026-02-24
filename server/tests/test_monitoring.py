@@ -242,19 +242,33 @@ def test_json_formatter_handles_uvicorn_access_tuple_args():
 
 def test_setup_logging_noop_when_log_format_not_set():
     """Without LOG_FORMAT, handlers must keep their original formatters."""
-    env = {k: v for k, v in os.environ.items() if k != "LOG_FORMAT"}
-    with patch.dict(os.environ, env, clear=True):
-        setup_logging()
-    for handler in logging.getLogger().handlers:
-        assert not isinstance(handler.formatter, JsonFormatter)
+    access_logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    original_formatter = logging.Formatter()
+    handler.setFormatter(original_formatter)
+    access_logger.addHandler(handler)
+    try:
+        env = {k: v for k, v in os.environ.items() if k != "LOG_FORMAT"}
+        with patch.dict(os.environ, env, clear=True):
+            setup_logging()
+        assert handler.formatter is original_formatter
+    finally:
+        access_logger.removeHandler(handler)
 
 
 def test_setup_logging_noop_when_log_format_is_text():
     """LOG_FORMAT=text must be a no-op."""
-    with patch.dict(os.environ, {"LOG_FORMAT": "text"}):
-        setup_logging()
-    for handler in logging.getLogger().handlers:
-        assert not isinstance(handler.formatter, JsonFormatter)
+    access_logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    original_formatter = logging.Formatter()
+    handler.setFormatter(original_formatter)
+    access_logger.addHandler(handler)
+    try:
+        with patch.dict(os.environ, {"LOG_FORMAT": "text"}):
+            setup_logging()
+        assert handler.formatter is original_formatter
+    finally:
+        access_logger.removeHandler(handler)
 
 
 def test_setup_logging_installs_json_formatter_on_uvicorn_access():
@@ -268,7 +282,6 @@ def test_setup_logging_installs_json_formatter_on_uvicorn_access():
         assert isinstance(handler.formatter, JsonFormatter)
     finally:
         access_logger.removeHandler(handler)
-        handler.setFormatter(None)
 
 
 def test_setup_logging_installs_json_formatter_on_uvicorn_error():
@@ -282,4 +295,3 @@ def test_setup_logging_installs_json_formatter_on_uvicorn_error():
         assert isinstance(handler.formatter, JsonFormatter)
     finally:
         error_logger.removeHandler(handler)
-        handler.setFormatter(None)
