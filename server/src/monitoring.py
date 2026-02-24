@@ -1,7 +1,44 @@
+import json
 import logging
 import os
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+
+
+class JsonFormatter(logging.Formatter):
+    """Formats log records as single-line JSON for structured log ingestion."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        entry: dict = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc)
+                         .isoformat(timespec="milliseconds"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(entry, ensure_ascii=False)
+
+
+def setup_logging() -> None:
+    """Configure JSON log formatting when LOG_FORMAT=json.
+
+    Opt-in, environment-agnostic. Works in any deployment context.
+    Default (no variable set) keeps uvicorn's standard text format.
+    Called at module level in main.py — uvicorn configures its loggers before
+    importing the app module, so all handlers are already present at call time.
+    """
+    if os.getenv("LOG_FORMAT", "").lower() != "json":
+        return
+
+    formatter = JsonFormatter()
+    # Target uvicorn's loggers specifically. If the ASGI server changes,
+    # update this list to match the new server's logger hierarchy.
+    for name in ("", "uvicorn", "uvicorn.access", "uvicorn.error"):
+        for handler in logging.getLogger(name).handlers:
+            handler.setFormatter(formatter)
 
 
 class _UvicornAccessFilter(logging.Filter):
@@ -113,18 +150,31 @@ def _configure_otel(app) -> None:
 
 
 def _parse_resource_attributes() -> dict:
-    """Parse OTEL_RESOURCE_ATTRIBUTES env var into a dict.
+    """Build OTEL resource attributes from env vars.
 
-    Format: key=value,key2=value2
+    Merges two sources (explicit wins over auto-detected):
+    1. Well-known Kubernetes downward API env vars (POD_NAME, NODE_NAME,
+       POD_NAMESPACE) are mapped to OTel semantic convention attribute names.
+    2. OTEL_RESOURCE_ATTRIBUTES (key=value,key2=value2) overrides any
+       auto-detected value for the same key.
     """
+    _K8S_ENV_MAPPING = {
+        "POD_NAME": "k8s.pod.name",
+        "NODE_NAME": "k8s.node.name",
+        "POD_NAMESPACE": "k8s.namespace.name",
+    }
+    result = {
+        otel_key: value
+        for env_var, otel_key in _K8S_ENV_MAPPING.items()
+        if (value := os.getenv(env_var))
+    }
+
     raw = os.getenv("OTEL_RESOURCE_ATTRIBUTES", "")
-    if not raw:
-        return {}
-    result = {}
     for pair in raw.split(","):
         if "=" in pair:
             k, v = pair.split("=", 1)
             result[k.strip()] = v.strip()
+
     return result
 
 

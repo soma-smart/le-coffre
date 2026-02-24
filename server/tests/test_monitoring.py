@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -5,7 +6,7 @@ import pytest
 from unittest.mock import patch, MagicMock, call
 from fastapi import FastAPI
 
-from monitoring import setup_monitoring, _UvicornAccessFilter
+from monitoring import JsonFormatter, setup_monitoring, _UvicornAccessFilter, setup_logging, _parse_resource_attributes
 
 
 @pytest.fixture
@@ -176,3 +177,171 @@ def test_filter_keeps_business_routes():
     """Business endpoint logs must never be filtered."""
     f = _UvicornAccessFilter(monitoring_active=True)
     assert f.filter(_make_record("GET", "/api/passwords/list", 200)) is True
+
+
+def _make_application_record(level=logging.INFO, msg="hello world", name="src.main"):
+    record = logging.LogRecord(
+        name=name, level=level, pathname="", lineno=0,
+        msg=msg, args=(), exc_info=None,
+    )
+    return record
+
+
+def test_json_formatter_returns_valid_json():
+    fmt = JsonFormatter()
+    output = fmt.format(_make_application_record())
+    parsed = json.loads(output)  # must not raise
+    assert isinstance(parsed, dict)
+
+
+def test_json_formatter_contains_required_fields():
+    fmt = JsonFormatter()
+    parsed = json.loads(fmt.format(_make_application_record()))
+    assert {"timestamp", "level", "logger", "message"} <= parsed.keys()
+
+
+def test_json_formatter_level_is_uppercase_string():
+    fmt = JsonFormatter()
+    parsed = json.loads(fmt.format(_make_application_record(level=logging.WARNING)))
+    assert parsed["level"] == "WARNING"
+
+
+def test_json_formatter_message_matches_record():
+    fmt = JsonFormatter()
+    parsed = json.loads(fmt.format(_make_application_record(msg="startup complete")))
+    assert parsed["message"] == "startup complete"
+
+
+def test_json_formatter_with_exc_info_includes_exception():
+    fmt = JsonFormatter()
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        record = logging.LogRecord(
+            name="src.main", level=logging.ERROR, pathname="", lineno=0,
+            msg="something failed", args=(), exc_info=sys.exc_info(),
+        )
+        parsed = json.loads(fmt.format(record))
+    assert "exception" in parsed
+    assert "ValueError" in parsed["exception"]
+
+
+def test_json_formatter_handles_uvicorn_access_tuple_args():
+    """Uvicorn access logs use tuple args — must not crash."""
+    fmt = JsonFormatter()
+    record = logging.LogRecord(
+        name="uvicorn.access", level=logging.INFO, pathname="", lineno=0,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1:1234", "GET", "/api/passwords/list", "1.1", 200),
+        exc_info=None,
+    )
+    output = fmt.format(record)
+    parsed = json.loads(output)
+    assert "200" in parsed["message"] or "/api/passwords/list" in parsed["message"]
+
+
+def test_setup_logging_noop_when_log_format_not_set():
+    """Without LOG_FORMAT, handlers must keep their original formatters."""
+    access_logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    original_formatter = logging.Formatter()
+    handler.setFormatter(original_formatter)
+    access_logger.addHandler(handler)
+    try:
+        env = {k: v for k, v in os.environ.items() if k != "LOG_FORMAT"}
+        with patch.dict(os.environ, env, clear=True):
+            setup_logging()
+        assert handler.formatter is original_formatter
+    finally:
+        access_logger.removeHandler(handler)
+
+
+def test_setup_logging_noop_when_log_format_is_text():
+    """LOG_FORMAT=text must be a no-op."""
+    access_logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    original_formatter = logging.Formatter()
+    handler.setFormatter(original_formatter)
+    access_logger.addHandler(handler)
+    try:
+        with patch.dict(os.environ, {"LOG_FORMAT": "text"}):
+            setup_logging()
+        assert handler.formatter is original_formatter
+    finally:
+        access_logger.removeHandler(handler)
+
+
+def test_setup_logging_installs_json_formatter_on_uvicorn_access():
+    """LOG_FORMAT=json must install JsonFormatter on uvicorn.access handlers."""
+    access_logger = logging.getLogger("uvicorn.access")
+    handler = logging.StreamHandler()
+    access_logger.addHandler(handler)
+    try:
+        with patch.dict(os.environ, {"LOG_FORMAT": "json"}):
+            setup_logging()
+        assert isinstance(handler.formatter, JsonFormatter)
+    finally:
+        access_logger.removeHandler(handler)
+
+
+def test_setup_logging_installs_json_formatter_on_uvicorn_error():
+    """LOG_FORMAT=json must install JsonFormatter on uvicorn.error handlers."""
+    error_logger = logging.getLogger("uvicorn.error")
+    handler = logging.StreamHandler()
+    error_logger.addHandler(handler)
+    try:
+        with patch.dict(os.environ, {"LOG_FORMAT": "json"}):
+            setup_logging()
+        assert isinstance(handler.formatter, JsonFormatter)
+    finally:
+        error_logger.removeHandler(handler)
+
+
+# --- _parse_resource_attributes: Kubernetes downward API auto-detection ---
+
+
+def test_parse_resource_attributes_empty_when_no_env_vars():
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("OTEL_RESOURCE_ATTRIBUTES", "POD_NAME", "NODE_NAME", "POD_NAMESPACE")}
+    with patch.dict(os.environ, env, clear=True):
+        assert _parse_resource_attributes() == {}
+
+
+def test_parse_resource_attributes_maps_pod_name():
+    with patch.dict(os.environ, {"POD_NAME": "le-coffre-backend-abc123"}, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.pod.name") == "le-coffre-backend-abc123"
+
+
+def test_parse_resource_attributes_maps_node_name():
+    with patch.dict(os.environ, {"NODE_NAME": "node-1"}, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.node.name") == "node-1"
+
+
+def test_parse_resource_attributes_maps_pod_namespace():
+    with patch.dict(os.environ, {"POD_NAMESPACE": "le-coffre"}, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.namespace.name") == "le-coffre"
+
+
+def test_parse_resource_attributes_explicit_overrides_auto_detected():
+    """OTEL_RESOURCE_ATTRIBUTES must take precedence over downward API vars."""
+    env = {
+        "POD_NAME": "auto-detected-pod",
+        "OTEL_RESOURCE_ATTRIBUTES": "k8s.pod.name=explicit-override",
+    }
+    with patch.dict(os.environ, env, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.pod.name") == "explicit-override"
+
+
+def test_parse_resource_attributes_merges_both_sources():
+    env = {
+        "POD_NAME": "le-coffre-backend-abc123",
+        "OTEL_RESOURCE_ATTRIBUTES": "app.version=1.2.0",
+    }
+    with patch.dict(os.environ, env, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.pod.name") == "le-coffre-backend-abc123"
+    assert result.get("app.version") == "1.2.0"
