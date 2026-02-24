@@ -11,17 +11,9 @@ from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
 
+from monitoring import setup_monitoring
+
 logger = logging.getLogger(__name__)
-
-
-class _HealthCheckFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        msg = record.getMessage()
-        return not ("GET /api/health" in msg and '" 200' in msg)
-
-
-logging.getLogger("uvicorn.access").addFilter(_HealthCheckFilter())
-
 from config import (
     get_database_url,
     get_jwt_secret_key,
@@ -188,6 +180,8 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 
 # Add CSRF protection middleware
 app.add_middleware(CsrfMiddleware)
+
+setup_monitoring(app)
 
 
 @app.exception_handler(Exception)

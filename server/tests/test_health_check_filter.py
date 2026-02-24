@@ -1,11 +1,11 @@
 import logging
 import pytest
-from main import _HealthCheckFilter
+from monitoring import _UvicornAccessFilter
 
 
 @pytest.fixture
 def filter_instance():
-    return _HealthCheckFilter()
+    return _UvicornAccessFilter(monitoring_active=True)
 
 
 def make_uvicorn_record(client: str, method: str, path: str, status: int) -> logging.LogRecord:
@@ -31,6 +31,32 @@ def test_health_200_is_filtered(filter_instance):
 def test_health_503_is_not_filtered(filter_instance):
     """Failed health checks (DB down) must remain visible in logs."""
     record = make_uvicorn_record("100.64.7.58:57990", "GET", "/api/health", 503)
+    assert filter_instance.filter(record) is True
+
+
+def test_metrics_200_is_filtered(filter_instance):
+    """Successful metrics route responses must not appear in logs."""
+    record = make_uvicorn_record("10.32.7.62:12345", "GET", "/api/metrics", 200)
+    assert filter_instance.filter(record) is False
+
+
+def test_filter_is_independent_of_message_format(filter_instance):
+    """Filter must work regardless of uvicorn's log format string."""
+    record = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="%s %s %s HTTP/%s %d",  # format without quotes — args tuple is what matters
+        args=("10.32.7.62:12345", "GET", "/api/metrics", "1.1", 200),
+        exc_info=None,
+    )
+    assert filter_instance.filter(record) is False
+
+
+def test_metrics_503_is_not_filtered(filter_instance):
+    """Failed metrics route responses must remain visible in logs."""
+    record = make_uvicorn_record("10.32.7.62:12345", "GET", "/api/metrics", 503)
     assert filter_instance.filter(record) is True
 
 

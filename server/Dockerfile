@@ -15,7 +15,7 @@ WORKDIR /app/backend
 ENV UV_PROJECT_ENVIRONMENT=/app/backend/.venv
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-cache --group postgres
+RUN uv sync --frozen --no-dev --no-cache --group postgres --group monitoring
 
 COPY . ./
 
