@@ -176,3 +176,68 @@ def test_filter_keeps_business_routes():
     """Business endpoint logs must never be filtered."""
     f = _UvicornAccessFilter(monitoring_active=True)
     assert f.filter(_make_record("GET", "/api/passwords/list", 200)) is True
+
+
+import json
+from monitoring import JsonFormatter
+
+
+def _make_application_record(level=logging.INFO, msg="hello world", name="src.main"):
+    record = logging.LogRecord(
+        name=name, level=level, pathname="", lineno=0,
+        msg=msg, args=(), exc_info=None,
+    )
+    return record
+
+
+def test_json_formatter_returns_valid_json():
+    fmt = JsonFormatter()
+    output = fmt.format(_make_application_record())
+    parsed = json.loads(output)  # must not raise
+    assert isinstance(parsed, dict)
+
+
+def test_json_formatter_contains_required_fields():
+    fmt = JsonFormatter()
+    parsed = json.loads(fmt.format(_make_application_record()))
+    assert {"timestamp", "level", "logger", "message"} <= parsed.keys()
+
+
+def test_json_formatter_level_is_uppercase_string():
+    fmt = JsonFormatter()
+    parsed = json.loads(fmt.format(_make_application_record(level=logging.WARNING)))
+    assert parsed["level"] == "WARNING"
+
+
+def test_json_formatter_message_matches_record():
+    fmt = JsonFormatter()
+    parsed = json.loads(fmt.format(_make_application_record(msg="startup complete")))
+    assert parsed["message"] == "startup complete"
+
+
+def test_json_formatter_with_exc_info_includes_exception():
+    fmt = JsonFormatter()
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        record = logging.LogRecord(
+            name="src.main", level=logging.ERROR, pathname="", lineno=0,
+            msg="something failed", args=(), exc_info=sys.exc_info(),
+        )
+    parsed = json.loads(fmt.format(record))
+    assert "exception" in parsed
+    assert "ValueError" in parsed["exception"]
+
+
+def test_json_formatter_handles_uvicorn_access_tuple_args():
+    """Uvicorn access logs use tuple args — must not crash."""
+    fmt = JsonFormatter()
+    record = logging.LogRecord(
+        name="uvicorn.access", level=logging.INFO, pathname="", lineno=0,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1:1234", "GET", "/api/passwords/list", "1.1", 200),
+        exc_info=None,
+    )
+    output = fmt.format(record)
+    parsed = json.loads(output)
+    assert "200" in parsed["message"] or "/api/passwords/list" in parsed["message"]
