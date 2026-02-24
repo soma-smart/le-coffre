@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class JsonFormatter(logging.Formatter):
-    """Formats log records as single-line JSON for Loki ingestion."""
+    """Formats log records as single-line JSON for structured log ingestion."""
 
     def format(self, record: logging.LogRecord) -> str:
         entry: dict = {
@@ -34,6 +34,8 @@ def setup_logging() -> None:
         return
 
     formatter = JsonFormatter()
+    # Target uvicorn's loggers specifically. If the ASGI server changes,
+    # update this list to match the new server's logger hierarchy.
     for name in ("", "uvicorn", "uvicorn.access", "uvicorn.error"):
         for handler in logging.getLogger(name).handlers:
             handler.setFormatter(formatter)
