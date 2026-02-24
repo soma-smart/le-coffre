@@ -6,7 +6,7 @@ import pytest
 from unittest.mock import patch, MagicMock, call
 from fastapi import FastAPI
 
-from monitoring import JsonFormatter, setup_monitoring, _UvicornAccessFilter, setup_logging
+from monitoring import JsonFormatter, setup_monitoring, _UvicornAccessFilter, setup_logging, _parse_resource_attributes
 
 
 @pytest.fixture
@@ -295,3 +295,53 @@ def test_setup_logging_installs_json_formatter_on_uvicorn_error():
         assert isinstance(handler.formatter, JsonFormatter)
     finally:
         error_logger.removeHandler(handler)
+
+
+# --- _parse_resource_attributes: Kubernetes downward API auto-detection ---
+
+
+def test_parse_resource_attributes_empty_when_no_env_vars():
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("OTEL_RESOURCE_ATTRIBUTES", "POD_NAME", "NODE_NAME", "POD_NAMESPACE")}
+    with patch.dict(os.environ, env, clear=True):
+        assert _parse_resource_attributes() == {}
+
+
+def test_parse_resource_attributes_maps_pod_name():
+    with patch.dict(os.environ, {"POD_NAME": "le-coffre-backend-abc123"}, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.pod.name") == "le-coffre-backend-abc123"
+
+
+def test_parse_resource_attributes_maps_node_name():
+    with patch.dict(os.environ, {"NODE_NAME": "node-1"}, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.node.name") == "node-1"
+
+
+def test_parse_resource_attributes_maps_pod_namespace():
+    with patch.dict(os.environ, {"POD_NAMESPACE": "le-coffre"}, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.namespace.name") == "le-coffre"
+
+
+def test_parse_resource_attributes_explicit_overrides_auto_detected():
+    """OTEL_RESOURCE_ATTRIBUTES must take precedence over downward API vars."""
+    env = {
+        "POD_NAME": "auto-detected-pod",
+        "OTEL_RESOURCE_ATTRIBUTES": "k8s.pod.name=explicit-override",
+    }
+    with patch.dict(os.environ, env, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.pod.name") == "explicit-override"
+
+
+def test_parse_resource_attributes_merges_both_sources():
+    env = {
+        "POD_NAME": "le-coffre-backend-abc123",
+        "OTEL_RESOURCE_ATTRIBUTES": "app.version=1.2.0",
+    }
+    with patch.dict(os.environ, env, clear=False):
+        result = _parse_resource_attributes()
+    assert result.get("k8s.pod.name") == "le-coffre-backend-abc123"
+    assert result.get("app.version") == "1.2.0"

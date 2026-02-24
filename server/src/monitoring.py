@@ -150,18 +150,31 @@ def _configure_otel(app) -> None:
 
 
 def _parse_resource_attributes() -> dict:
-    """Parse OTEL_RESOURCE_ATTRIBUTES env var into a dict.
+    """Build OTEL resource attributes from env vars.
 
-    Format: key=value,key2=value2
+    Merges two sources (explicit wins over auto-detected):
+    1. Well-known Kubernetes downward API env vars (POD_NAME, NODE_NAME,
+       POD_NAMESPACE) are mapped to OTel semantic convention attribute names.
+    2. OTEL_RESOURCE_ATTRIBUTES (key=value,key2=value2) overrides any
+       auto-detected value for the same key.
     """
+    _K8S_ENV_MAPPING = {
+        "POD_NAME": "k8s.pod.name",
+        "NODE_NAME": "k8s.node.name",
+        "POD_NAMESPACE": "k8s.namespace.name",
+    }
+    result = {
+        otel_key: value
+        for env_var, otel_key in _K8S_ENV_MAPPING.items()
+        if (value := os.getenv(env_var))
+    }
+
     raw = os.getenv("OTEL_RESOURCE_ATTRIBUTES", "")
-    if not raw:
-        return {}
-    result = {}
     for pair in raw.split(","):
         if "=" in pair:
             k, v = pair.split("=", 1)
             result[k.strip()] = v.strip()
+
     return result
 
 
