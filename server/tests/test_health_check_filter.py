@@ -1,11 +1,11 @@
 import logging
 import pytest
-from main import _UvicornAccessFilter
+from monitoring import _UvicornAccessFilter
 
 
 @pytest.fixture
 def filter_instance():
-    return _UvicornAccessFilter()
+    return _UvicornAccessFilter(monitoring_active=True)
 
 
 def make_uvicorn_record(client: str, method: str, path: str, status: int) -> logging.LogRecord:

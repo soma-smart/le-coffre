@@ -3,7 +3,6 @@ import os
 import time
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
-from prometheus_fastapi_instrumentator import Instrumentator, metrics as pfi_metrics
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
@@ -14,29 +13,7 @@ from alembic import command
 
 logger = logging.getLogger(__name__)
 
-
-class _UvicornAccessFilter(logging.Filter):
-    """Suppress noisy OK responses from health checks and Prometheus scrapes."""
-
-    _SUPPRESSED_ROUTES = frozenset({"/api/health", "/api/metrics"})
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        # Parse record.args directly — uvicorn access log format is a 5-tuple:
-        # (client_addr, method, path, http_version, status_code)
-        # Using args avoids coupling to uvicorn's internal format string.
-        args = record.args
-        if (
-            isinstance(args, tuple)
-            and len(args) == 5
-            and args[1] == "GET"
-            and args[2] in self._SUPPRESSED_ROUTES
-            and args[4] == 200
-        ):
-            return False
-        return True
-
-
-logging.getLogger("uvicorn.access").addFilter(_UvicornAccessFilter())
+from monitoring import setup_monitoring
 
 from config import (
     get_database_url,
@@ -205,23 +182,7 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Add CSRF protection middleware
 app.add_middleware(CsrfMiddleware)
 
-# Expose Prometheus metrics at /metrics (only reachable in-cluster, not via ingress).
-# - should_group_status_codes=False: keep individual codes (200, 401, 500) for precise alerting.
-# - should_ignore_untemplated=True: drop metrics for unmatched routes (bots, scanners) to avoid
-#   cardinality explosion.
-# - should_instrument_requests_inprogress=True: track concurrent requests for saturation detection.
-# - excluded_handlers: exclude health and metrics endpoints to avoid inflating request metrics with
-#   k8s probes (every 10s) and Prometheus scrapes (every 30s).
-Instrumentator(
-    should_group_status_codes=False,
-    should_ignore_untemplated=True,
-    should_instrument_requests_inprogress=True,
-    excluded_handlers=["/health", "/metrics"],
-).add(
-    pfi_metrics.request_size()
-).add(
-    pfi_metrics.response_size()
-).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+setup_monitoring(app)
 
 
 @app.exception_handler(Exception)
