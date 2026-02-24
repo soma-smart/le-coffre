@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 class _UvicornAccessFilter(logging.Filter):
-    """Suppress noisy OK responses from health checks and, when active, Prometheus scrapes."""
+    """Suppress noisy OK responses from health checks and, when active, the /metrics route."""
 
     _ALWAYS_SUPPRESSED = frozenset({"/api/health"})
     _MONITORING_SUPPRESSED = frozenset({"/api/metrics"})
@@ -46,6 +46,13 @@ def setup_monitoring(app) -> None:
 
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
     if not endpoint and os.getenv("ENABLE_MONITORING", "").lower() != "true":
+        _install_filter(monitoring_active=False)
+        return
+
+    if not endpoint:
+        logger.warning(
+            "ENABLE_MONITORING=true but OTEL_EXPORTER_OTLP_ENDPOINT is not set — metrics will not be exported"
+        )
         _install_filter(monitoring_active=False)
         return
 
@@ -94,7 +101,7 @@ def _configure_otel(app) -> None:
 
     FastAPIInstrumentor.instrument_app(
         app,
-        excluded_urls="/health,/metrics",
+        excluded_urls="/api/health,/api/metrics",
         meter_provider=provider,
     )
 

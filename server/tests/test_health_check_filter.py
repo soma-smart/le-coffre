@@ -35,7 +35,7 @@ def test_health_503_is_not_filtered(filter_instance):
 
 
 def test_metrics_200_is_filtered(filter_instance):
-    """Successful Prometheus scrapes must not appear in logs."""
+    """Successful metrics route responses must not appear in logs."""
     record = make_uvicorn_record("10.32.7.62:12345", "GET", "/api/metrics", 200)
     assert filter_instance.filter(record) is False
 
@@ -55,7 +55,7 @@ def test_filter_is_independent_of_message_format(filter_instance):
 
 
 def test_metrics_503_is_not_filtered(filter_instance):
-    """Failed Prometheus scrapes must remain visible in logs."""
+    """Failed metrics route responses must remain visible in logs."""
     record = make_uvicorn_record("10.32.7.62:12345", "GET", "/api/metrics", 503)
     assert filter_instance.filter(record) is True
 

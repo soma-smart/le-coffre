@@ -97,6 +97,33 @@ def test_setup_monitoring_without_dependencies_logs_info(caplog):
     assert "Monitoring dependencies not installed" in caplog.text
 
 
+# --- ENABLE_MONITORING=true without endpoint ---
+
+
+def test_setup_monitoring_enable_true_without_endpoint_is_noop():
+    """When ENABLE_MONITORING=true but no endpoint, monitoring must be a silent no-op."""
+    app = _make_fresh_app()
+    env = {k: v for k, v in os.environ.items() if k != "OTEL_EXPORTER_OTLP_ENDPOINT"}
+    env["ENABLE_MONITORING"] = "true"
+    env.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)
+    with patch("monitoring._configure_otel") as mock_configure:
+        with patch.dict(os.environ, env, clear=True):
+            setup_monitoring(app)
+    mock_configure.assert_not_called()
+
+
+def test_setup_monitoring_enable_true_without_endpoint_logs_warning(caplog):
+    """When ENABLE_MONITORING=true but no endpoint, a WARNING must be emitted."""
+    app = _make_fresh_app()
+    env = {k: v for k, v in os.environ.items() if k != "OTEL_EXPORTER_OTLP_ENDPOINT"}
+    env["ENABLE_MONITORING"] = "true"
+    env.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)
+    with patch.dict(os.environ, env, clear=True):
+        with caplog.at_level(logging.WARNING, logger="monitoring"):
+            setup_monitoring(app)
+    assert "OTEL_EXPORTER_OTLP_ENDPOINT" in caplog.text
+
+
 # --- Active monitoring with OTLP endpoint ---
 
 
