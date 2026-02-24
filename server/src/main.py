@@ -11,10 +11,9 @@ from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
 
-logger = logging.getLogger(__name__)
-
 from monitoring import setup_monitoring
 
+logger = logging.getLogger(__name__)
 from config import (
     get_database_url,
     get_jwt_secret_key,
