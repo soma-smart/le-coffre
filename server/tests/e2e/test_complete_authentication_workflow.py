@@ -29,7 +29,7 @@ async def test_complete_authentication_workflow(
     - CSRF protection
     - SSO authentication
     - Token refresh mechanism
-    
+
     Note: Uses session_vault_setup_data to set up vault, then creates admin fresh.
     """
 
@@ -53,6 +53,10 @@ async def test_complete_authentication_workflow(
     }
     register_response = e2e_client.post("/api/auth/register-admin", json=admin_data)
     assert register_response.status_code == 201
+    register_data = register_response.json()
+    assert register_data["email"] == admin_data["email"]
+    assert register_data["display_name"] == admin_data["display_name"]
+    assert register_data["message"] == "Admin registered successfully"
     print("✅ Admin user registered successfully")
 
     # Step 1.2: Login and verify cookies are set
@@ -70,7 +74,7 @@ async def test_complete_authentication_workflow(
     cookies = login_response.cookies
     assert "access_token" in cookies, "access_token cookie should be set"
     assert "refresh_token" in cookies, "refresh_token cookie should be set"
-    
+
     access_token = cookies.get("access_token")
     refresh_token = cookies.get("refresh_token")
     assert access_token is not None
@@ -99,12 +103,12 @@ async def test_complete_authentication_workflow(
     assert "roles" in user_data
     assert "is_sso" in user_data
     assert "personal_group_id" in user_data
-    
+
     assert user_data["email"] == "admin@example.com"
     assert user_data["name"] == "Test Admin"
     assert user_data["is_sso"] is False
     assert "admin" in user_data["roles"]
-    
+
     admin_personal_group_id = user_data["personal_group_id"]
     print(f"✅ User info retrieved: {user_data['email']} (ID: {user_data['id']})")
     print(f"   Personal Group ID: {admin_personal_group_id}")
@@ -112,7 +116,9 @@ async def test_complete_authentication_workflow(
     # Step 2.3: Set up vault (required for password encryption)
     print("\n🔐 Step 2.3: Setting up vault with shares...")
     vault_status = e2e_client.get("/api/vault/status")
-    if vault_status.json().get("needs_validation", True) or not vault_status.json().get("is_setup", False):
+    if vault_status.json().get("needs_validation", True) or not vault_status.json().get(
+        "is_setup", False
+    ):
         # Initialize vault
         init_response = e2e_client.post(
             "/api/vault/setup",
@@ -123,14 +129,16 @@ async def test_complete_authentication_workflow(
         )
         assert init_response.status_code == 201
         setup_id = init_response.json()["setup_id"]
-        
+
         # Validate setup
         validate_response = e2e_client.post(
             "/api/vault/validate-setup",
             json={"setup_id": setup_id},
         )
         assert validate_response.status_code == 200
-        print(f"✅ Vault initialized and validated with {session_vault_setup_data['threshold']}/{session_vault_setup_data['nb_shares']} shares")
+        print(
+            f"✅ Vault initialized and validated with {session_vault_setup_data['threshold']}/{session_vault_setup_data['nb_shares']} shares"
+        )
     else:
         print("✅ Vault already set up")
 
@@ -287,7 +295,10 @@ async def test_complete_authentication_workflow(
     # Step 4.9: Verify refresh token endpoint is exempt from CSRF
     print("\n🔄 Step 4.9: Verifying refresh token endpoint is exempt from CSRF...")
     refresh_csrf_response = e2e_client.post("/api/auth/refresh-token")
-    assert refresh_csrf_response.status_code != 403 or "CSRF" not in refresh_csrf_response.json().get("detail", "")
+    assert (
+        refresh_csrf_response.status_code != 403
+        or "CSRF" not in refresh_csrf_response.json().get("detail", "")
+    )
     print("✅ Refresh token endpoint correctly exempt from CSRF protection")
 
     # =========================================================================
@@ -328,7 +339,7 @@ async def test_complete_authentication_workflow(
     print("\n🔗 Step 5.4: Getting SSO authorization URL...")
     url_response = e2e_client.get("/api/auth/sso/url")
     assert url_response.status_code == 200
-    
+
     sso_url_data = url_response.json()
     if isinstance(sso_url_data, str):
         sso_url = sso_url_data
@@ -336,7 +347,7 @@ async def test_complete_authentication_workflow(
         sso_url = sso_url_data["url"]
     else:
         sso_url = str(sso_url_data)
-    
+
     assert isinstance(sso_url, str)
     assert "http" in sso_url.lower()
     print(f"✅ SSO authorization URL obtained: {sso_url[:50]}...")
@@ -363,10 +374,10 @@ async def test_complete_authentication_workflow(
         follow_redirects=False,
     )
     assert auth_response.status_code in [302, 303]
-    
+
     callback_url = auth_response.headers.get("location")
     assert callback_url
-    
+
     parsed = urlparse(callback_url)
     query_params = parse_qs(parsed.query)
     valid_code = query_params.get("code", [None])[0]
@@ -379,17 +390,17 @@ async def test_complete_authentication_workflow(
         f"/api/auth/sso/callback?code={valid_code}"
     )
     assert valid_callback_response.status_code == 200
-    
+
     callback_data = valid_callback_response.json()
     assert "message" in callback_data
     assert "user" in callback_data
-    
+
     # Extract SSO tokens from cookies
     sso_access_token = valid_callback_response.cookies.get("access_token")
     sso_refresh_token = valid_callback_response.cookies.get("refresh_token")
     assert sso_access_token is not None
     assert sso_refresh_token is not None
-    
+
     sso_user_info = callback_data["user"]
     assert sso_user_info["email"] == oidc_test_user["email"]
     assert sso_user_info["display_name"] == oidc_test_user["name"]
@@ -398,20 +409,20 @@ async def test_complete_authentication_workflow(
     print("✅ SSO tokens set in cookies")
 
     # Refresh CSRF token after SSO authentication
-    if hasattr(e2e_client, 'refresh_csrf_token'):
+    if hasattr(e2e_client, "refresh_csrf_token"):
         e2e_client.refresh_csrf_token()
 
     # Step 5.8: Validate SSO token by getting user info
     print("\n👤 Step 5.8: Validating SSO token with /users/me...")
     sso_me_response = e2e_client.get("/api/users/me")
     assert sso_me_response.status_code == 200
-    
+
     sso_user_data = sso_me_response.json()
     assert sso_user_data["email"] == oidc_test_user["email"]
     assert sso_user_data["name"] == oidc_test_user["name"]
     assert sso_user_data["id"] == sso_user_id
     assert sso_user_data["is_sso"] is True
-    
+
     sso_personal_group_id = sso_user_data["personal_group_id"]
     print(f"✅ SSO user info validated: {sso_user_data['email']}")
     print(f"   SSO User Personal Group ID: {sso_personal_group_id}")
@@ -443,14 +454,14 @@ async def test_complete_authentication_workflow(
     print("\n🔄 Step 6.1: Using refresh token to get new access token...")
     # Set refresh token cookie explicitly
     e2e_client.cookies.set("refresh_token", sso_refresh_token)
-    
+
     refresh_response = e2e_client.post("/api/auth/refresh-token")
     assert refresh_response.status_code == 200
-    
+
     refresh_data = refresh_response.json()
     assert "message" in refresh_data
     assert refresh_data["message"] == "Access token refreshed successfully"
-    
+
     # Extract new access token from cookie
     new_access_token = refresh_response.cookies.get("access_token")
     assert new_access_token is not None
@@ -464,7 +475,7 @@ async def test_complete_authentication_workflow(
     # The new token is already set in cookies by the refresh response
     validate_response = e2e_client.get("/api/users/me")
     assert validate_response.status_code == 200
-    
+
     validated_user = validate_response.json()
     assert validated_user["email"] == oidc_test_user["email"]
     print(f"✅ New access token validated successfully for {validated_user['email']}")
