@@ -188,45 +188,23 @@ EVERY context's integration `conftest.py` MUST provide:
 #### For SQL Implementations:
 ```python
 import pytest
-import tempfile
-import os
-from pathlib import Path
-from sqlmodel import create_engine, Session
-from alembic.config import Config
-from alembic import command
+from sqlmodel import create_engine, Session, SQLModel
 
 @pytest.fixture(scope="function")
 def database_engine():
-    """CRITICAL: Function-scoped for test isolation"""
-    db_fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(db_fd)
-    
-    try:
-        database_url = f"sqlite:///{db_path}"
-        engine = create_engine(
-            database_url, 
-            connect_args={"check_same_thread": False}
-        )
-        
-        # MANDATORY: Use Alembic migrations, NEVER create_all()
-        alembic_ini_path = Path(__file__).parent.parent.parent.parent / "alembic.ini"
-        alembic_cfg = Config(str(alembic_ini_path))
-        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-        command.upgrade(alembic_cfg, "head")
-        
-        yield engine
-    finally:
-        try:
-            os.unlink(db_path)
-        except OSError:
-            pass
+    """CRITICAL: Function-scoped for test isolation. In-memory SQLite is fast and needs no cleanup."""
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+    )
+    SQLModel.metadata.create_all(engine)
+    yield engine
+    engine.dispose()
 
 @pytest.fixture(scope="function")
 def session(database_engine):
-    """CRITICAL: Function-scoped, auto-cleanup"""
-    session = Session(database_engine)
-    yield session
-    session.close()
+    with Session(database_engine) as session:
+        yield session
 
 @pytest.fixture
 def sql_entity_repository(session):
@@ -371,7 +349,7 @@ Test Cases:
 
 Infrastructure Needed:
 - PasswordTable model in sql/model/password.py
-- Database fixture in conftest.py using Alembic migrations
+- Database fixture in conftest.py using in-memory SQLite + SQLModel.metadata.create_all()
 - Session fixture
 
 Domain Exceptions:
@@ -442,8 +420,8 @@ NEVER refactor if ANY test is failing.
 3. **One Method At A Time**: NEVER implement multiple methods before testing
 4. **Real Infrastructure**: Integration tests MUST use real implementations (SQL, crypto libraries)
 5. **No Mocking**: NEVER mock in integration tests (use real dependencies)
-6. **Cleanup**: Temporary resources MUST be cleaned up automatically (tempfile.mkstemp)
-7. **Migrations**: SQL tests MUST use Alembic migrations, NEVER create_all()
+6. **Cleanup**: Use `sqlite:///:memory:` — no temp files, no manual cleanup needed
+7. **Schema Setup**: Integration tests use `SQLModel.metadata.create_all()` with in-memory SQLite (fast); Alembic migrations are for E2E tests and production only
 
 ## FINAL VALIDATION
 
