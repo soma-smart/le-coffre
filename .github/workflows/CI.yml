@@ -37,9 +37,7 @@ jobs:
 
       - name: Check Dependencies Security
         working-directory: frontend/
-        # GHSA-2g4f-4pwh-qvx6: ajv ReDoS via $data option (moderate) — unfixable in ESLint 9,
-        # ajv@6 is required by @eslint/eslintrc (ESLint internal dep). Tracked for ESLint 10 upgrade.
-        run: bun audit --audit-level=moderate --ignore=GHSA-2g4f-4pwh-qvx6
+        run: bun audit --audit-level=moderate
 
       - name: Run Unit Tests
         if: success() || failure()
@@ -61,10 +59,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "server/uv.lock"
