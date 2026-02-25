@@ -73,9 +73,17 @@ def test_commit_and_refresh_marks_span_error_on_exception(repo):
 
     mock_span.set_status.assert_called_once()
     mock_span.record_exception.assert_called_once()
+    status_arg = mock_span.set_status.call_args[0][0]
+    assert status_arg == StatusCode.ERROR
 
 
-def test_commit_is_noop_without_provider(repo):
-    """commit() must work correctly with the real no-op tracer."""
-    repo.commit()  # no crash, session.commit() called
+def test_operations_are_noop_without_provider(repo):
+    """commit() and commit_and_refresh() must work with the real no-op tracer."""
+    obj = MagicMock()
+    repo.commit()
     repo._session.commit.assert_called_once()
+
+    repo._session.reset_mock()
+    repo.commit_and_refresh(obj)
+    repo._session.commit.assert_called_once()
+    repo._session.refresh.assert_called_once_with(obj)
