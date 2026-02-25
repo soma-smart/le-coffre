@@ -226,133 +226,152 @@ app.include_router(get_<context>_management_router(), prefix="/api")
 
 ### Test Structure
 
-**Location**: `tests/e2e/<context>/test_<feature>_workflow.py`
+**Location**: `tests/e2e/test_<domain>_workflow.py` — all E2E tests are flat in `tests/e2e/`, NO subdirectories.
 
-**Naming Convention (MANDATORY)**:
-- Test complete workflows, not individual endpoints
-- Format: `test_<feature>_workflow`
-- Examples: `test_share_password_workflow`, `test_user_creation_with_personal_group`
+**Existing workflow files**:
+- `test_complete_user_workflow.py` — user creation, deletion, promotion, password update
+- `test_complete_groups_workflow.py` — group CRUD, ownership, membership
+- `test_complete_authentication_workflow.py` — login, SSO, token refresh
+- `test_password_management_workflow.py` — password CRUD, sharing, access control
+- `test_vault_workflow.py` — vault setup, lock/unlock
+
+**CRITICAL — Update before Create (MANDATORY)**:
+1. **First**, identify which existing workflow file covers the same domain as the route you are adding
+2. **If one exists**: add a new phase/section to the existing test function — do NOT create a new file
+3. **Only if no related workflow exists**: create a new `test_<domain>_workflow.py` with a single test function `test_complete_<domain>_workflow`
+
+**Naming Convention**:
+- File: `test_<domain>_workflow.py`
+- Function: `test_complete_<domain>_workflow` (one function per file)
+- Examples: `test_password_management_workflow.py::test_complete_password_management_workflow`
 
 ### Test Pattern (MANDATORY)
 
-**Complete Workflow Example**:
-ALWAYS write one test for the whole workflow, not multiples
+All E2E tests follow a **single large function per file**, divided into clearly labelled phases using comment blocks. Each new feature is added as a new phase at the end of the relevant existing test.
 
+**Adding to an existing test (default case)**:
 ```python
-def test_password_crud_workflow(e2e_client, setup):
+# In tests/e2e/test_password_management_workflow.py
+
+def test_complete_password_management_workflow(
+    client_factory, setup, configured_sso, sso_user_token
+):
     """
-    Complete workflow: Create → Read → Update → Read → Delete → Verify Deleted
-    
-    This tests the entire password lifecycle end-to-end.
+    ...(existing docstring)...
+    Phase N: <New feature description>
+    - <bullet describing new steps>
     """
-    # Setup: Register and login admin
-    admin_data = {
-        "email": "admin@example.com",
-        "password": "admin",
-        "display_name": "Admin",
-    }
-    e2e_client.post("/api/auth/register-admin", json=admin_data)
-    e2e_client.post("/api/auth/login", json={"email": "admin@example.com", "password": "admin"})
-    
-    # Get personal group
-    me_response = e2e_client.get("/api/users/me")
+    # ... existing phases ...
+
+    # =========================================================================
+    # PHASE N: <NEW FEATURE NAME IN CAPS>
+    # =========================================================================
+
+    admin_client = client_factory()
+    # ... setup for this phase (re-use variables from earlier phases when available) ...
+
+    # Step N.1: <description>
+    response = admin_client.post("/api/passwords/export", json={"format": "csv"})
+    assert response.status_code == 200
+    assert "name" in response.json()[0]
+
+    # Step N.2: <description>
+    ...
+```
+
+**Creating a new workflow file (only when no related file exists)**:
+```python
+# tests/e2e/test_<domain>_workflow.py
+"""
+Complete end-to-end test for <domain> workflow.
+
+This consolidated test covers:
+- <feature 1>
+- <feature 2>
+"""
+
+
+def test_complete_<domain>_workflow(client_factory, setup):
+    """
+    Complete <domain> workflow.
+
+    Phase 1: <description>
+    - <bullet>
+    Phase 2: <description>
+    - <bullet>
+    """
+
+    # =========================================================================
+    # PHASE 1: <FEATURE NAME IN CAPS>
+    # =========================================================================
+
+    admin_client = client_factory()
+    # register + login admin
+    admin_client.post(
+        "/api/auth/register-admin",
+        json={"email": "admin@example.com", "password": "admin", "display_name": "Admin"},
+    )
+    admin_client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.com", "password": "admin"},
+    )
+
+    me_response = admin_client.get("/api/users/me")
     assert me_response.status_code == 200
     group_id = me_response.json()["personal_group_id"]
-    
-    # Step 1: CREATE - Create a password
-    create_response = e2e_client.post(
+
+    # Step 1.1: CREATE
+    create_response = admin_client.post(
         "/api/passwords",
-        json={
-            "name": "Test Password",
-            "password": "SecureP@ss123",
-            "folder": "Work",
-            "group_id": group_id,
-        },
+        json={"name": "Test", "password": "SecureP@ss123", "group_id": group_id},
     )
     assert create_response.status_code == 201
-    password_id = create_response.json()["id"]
-    
-    # Step 2: READ - Verify password was created
-    get_response = e2e_client.get(f"/api/passwords/{password_id}")
+    resource_id = create_response.json()["id"]
+
+    # Step 1.2: READ
+    get_response = admin_client.get(f"/api/passwords/{resource_id}")
     assert get_response.status_code == 200
-    assert get_response.json()["name"] == "Test Password"
-    assert get_response.json()["password"] == "SecureP@ss123"
-    
-    # Step 3: UPDATE - Update the password
-    update_response = e2e_client.put(
-        f"/api/passwords/{password_id}",
-        json={
-            "name": "Updated Password",
-            "password": "NewP@ss456",
-            "folder": "Personal",
-        },
-    )
-    assert update_response.status_code == 200
-    
-    # Step 4: READ - Verify update was successful
-    get_updated = e2e_client.get(f"/api/passwords/{password_id}")
-    assert get_updated.status_code == 200
-    assert get_updated.json()["name"] == "Updated Password"
-    assert get_updated.json()["password"] == "NewP@ss456"
-    assert get_updated.json()["folder"] == "Personal"
-    
-    # Step 5: DELETE - Delete the password
-    delete_response = e2e_client.delete(f"/api/passwords/{password_id}")
-    assert delete_response.status_code == 204
-    
-    # Step 6: VERIFY DELETED - Confirm password no longer exists
-    get_deleted = e2e_client.get(f"/api/passwords/{password_id}")
-    assert get_deleted.status_code == 404
+    assert get_response.json()["name"] == "Test"
+
+    # =========================================================================
+    # PHASE 2: <NEXT FEATURE IN CAPS>
+    # =========================================================================
+
+    # ...
 ```
 
 ### E2E Test Fixtures (conftest.py)
 
 **Available Fixtures (MANDATORY USAGE)**:
+
+| Fixture | Scope | Description |
+|---|---|---|
+| `client_factory` | function | Returns a factory `_make_client()` → fresh `CsrfTestClient` per call. **Preferred over `e2e_client` for multi-user tests.** |
+| `e2e_client` | function | Single `CsrfTestClient`. Use only when one actor is enough. |
+| `setup` | function | Runs vault setup via `authenticated_admin_client`. Required when encryption is used. |
+| `authenticated_admin_client` | function | `e2e_client` already logged in as `admin@example.com` / `admin`. |
+| `unauthenticated_client` | function | Fresh client with no session. |
+| `configured_sso` | function | Configures OIDC provider. Requires `setup`. |
+| `sso_user_factory` | function | `factory(email, name)` → `{token, user_id, email, display_name, client}`. Requires `configured_sso`. |
+
+**CRITICAL**: Always use `client_factory` when a test involves more than one user to avoid cookie interference:
 ```python
-@pytest.fixture
-def e2e_client(database, env_vars):
-    """TestClient with temporary database and environment"""
-    with TestClient(app) as client:
-        yield client
-
-@pytest.fixture
-def setup(e2e_client):
-    """Sets up vault with default shares (required for encryption)"""
-    # Auto-setup vault
-
-@pytest.fixture
-def client_factory():
-    """Creates separate clients to avoid cookie interference"""
-    def _create_client():
-        return TestClient(app)
-    return _create_client
-
-@pytest.fixture
-def sso_user_factory(client_factory, configured_sso):
-    """Factory to create and authenticate multiple SSO users"""
-    def _create_sso_user(email: str, name: str):
-        # Returns: {token, user_id, email, display_name, client}
-    return _create_sso_user
-```
-
-**CRITICAL**: When testing with multiple users, use `client_factory` to avoid cookie interference:
-```python
-def test_multi_user_workflow(client_factory, setup):
+def test_complete_sharing_workflow(client_factory, setup):
     admin_client = client_factory()
-    user1_client = client_factory()
-    
-    # Each client has separate cookies
+    user_client = client_factory()
+    # Each client carries its own cookies independently
 ```
 
 ### E2E Test Rules (CRITICAL)
 
-1. **Test Happy Path Only**: E2E tests verify complete workflows work correctly
-2. **Use Real FastAPI App**: Import from `main` module (not mocked)
-3. **Temporary Database**: Each test gets fresh database via fixtures
-4. **Complete Workflows**: Test sequences of operations, not single endpoints
-5. **Assert at Each Step**: Verify state after each operation
-6. **Authentication Setup**: Include login/registration when needed
-7. **Clean Test Names**: Describe the full workflow being tested
+1. **Update before Create**: Always add to an existing workflow file when the domain matches; create a new file only if none exists
+2. **One function per file**: Each workflow file contains exactly one `test_complete_<domain>_workflow` function
+3. **Phase structure**: Organise steps into named phases with `# ===` separator comments and numbered steps (`# Step N.M:`)
+4. **Test Happy Path Only**: E2E tests verify complete workflows work correctly
+5. **Use Real FastAPI App**: Import `app` from `main` module (never mock)
+6. **Temporary Database**: The `database` fixture wipes rows between tests — no manual cleanup needed
+7. **Assert at Each Step**: Verify state after every operation, not just at the end
+8. **No `e2e_client` for multi-user**: Use `client_factory()` whenever more than one authenticated user is needed
 
 ## TDD PROCESS (CRITICAL - NEVER SKIP STEPS)
 
@@ -401,13 +420,13 @@ Dependencies Needed:
 - get_group_access_gateway(request)
 - get_create_password_usecase(...dependencies...)
 
-E2E Test Workflow:
-1. Setup admin user and login
-2. Get admin's personal group ID
-3. Create password with POST /api/passwords
-4. Verify 201 response with password ID
-5. Get password with GET /api/passwords/{id}
-6. Verify password details match creation request
+E2E Test:
+- Related file: tests/e2e/test_password_management_workflow.py (already exists)
+- Action: add a new phase "PHASE N: PASSWORD CREATION" to the existing test function
+- Steps:
+  1. Use client_factory() for the admin client
+  2. Create password with POST /api/passwords → assert 201 + id
+  3. Read back with GET /api/passwords/{id} → assert name/password match
 ```
 
 ### STEP 2: IMPLEMENT Phase
@@ -419,11 +438,12 @@ E2E Test Workflow:
 6. Update `main.py` if new dependencies needed in lifespan
 
 ### STEP 3: TEST Phase
-1. Create E2E workflow test in `tests/e2e/<context>/`
-2. Test complete workflow in one test
-3. Use appropriate fixtures (e2e_client, setup, client_factory)
-4. Assert state at each step
-5. Run test: `uv pytest tests/e2e/<context>/test_<feature>_workflow.py`
+1. Identify the relevant existing workflow file in `tests/e2e/` (check the list above)
+2. **If a related file exists**: append a new phase to the existing test function
+3. **If no related file exists**: create `tests/e2e/test_<domain>_workflow.py` with a single `test_complete_<domain>_workflow` function
+4. Use appropriate fixtures (`client_factory`, `setup`, `configured_sso`, etc.)
+5. Assert state at each step
+6. Run test: `uv run pytest tests/e2e/test_<domain>_workflow.py`
 
 ### STEP 4: FINALIZE Phase
 Verify:
@@ -442,7 +462,7 @@ Verify:
 5. **Logging**: ALWAYS log unexpected exceptions
 6. **Documentation**: Complete docstrings with field descriptions
 7. **Dependencies**: Access via `request.app.state`, NEVER instantiate directly
-8. **E2E Tests**: Test workflows, not individual endpoints
+8. **E2E Tests**: Update an existing workflow file when the domain matches; create a new one only if none exists
 
 ## FINAL VALIDATION
 
@@ -456,9 +476,10 @@ Before marking routes as complete, verify:
 - [ ] Dependencies are in `app_dependencies.py` using `request.app.state`
 - [ ] Route is registered in `__init__.py` (order matters!)
 - [ ] `main.py` lifespan initializes required dependencies
-- [ ] E2E workflow test covers complete user journey
-- [ ] E2E test uses proper fixtures (e2e_client, setup, client_factory)
-- [ ] E2E test passes: `uv pytest tests/e2e/<context>/test_<feature>_workflow.py`
+- [ ] Existing related workflow file was updated (or new file created if none existed)
+- [ ] New steps added as a new phase with `# ===` separator and numbered steps
+- [ ] E2E test uses proper fixtures (`client_factory` for multi-user, `setup` when encryption needed)
+- [ ] E2E test passes: `uv run pytest tests/e2e/test_<domain>_workflow.py`
 
 ## DISCREPANCY RESOLUTION
 
