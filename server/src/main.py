@@ -18,9 +18,19 @@ from config import (
     get_jwt_algorithm,
     get_jwt_access_token_expiration_minutes,
     get_jwt_refresh_token_expiration_days,
+    get_rate_limit_enabled,
+    get_rate_limit_auth_max_requests,
+    get_rate_limit_api_max_requests,
+    get_rate_limit_window_seconds,
 )
 
-from security import CsrfMiddleware, CsrfTokenManager, csrf_router
+from security import (
+    CsrfMiddleware,
+    CsrfTokenManager,
+    csrf_router,
+    InMemoryRateLimiter,
+    RateLimitMiddleware,
+)
 from shared_kernel.adapters.secondary import (
     UtcTimeGateway,
     InMemoryDomainEventPublisher,
@@ -168,6 +178,13 @@ async def lifespan(app: FastAPI):
     domain_event_publisher = InMemoryDomainEventPublisher()
     app.state.domain_event_publisher = domain_event_publisher
 
+    # Rate limiter (in-memory sliding window)
+    rate_limiter = InMemoryRateLimiter()
+    app.state.rate_limiter = rate_limiter
+    app.state.rate_limit_auth_max_requests = get_rate_limit_auth_max_requests()
+    app.state.rate_limit_api_max_requests = get_rate_limit_api_max_requests()
+    app.state.rate_limit_window_seconds = get_rate_limit_window_seconds()
+
     db_url = get_database_url()
     db_type = "postgresql" if db_url.startswith("postgresql") else "sqlite"
     logger.info("Application started — db=%s base_url=%s", db_type, base_url)
@@ -183,6 +200,9 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Add CSRF protection middleware
 app.add_middleware(CsrfMiddleware)
 
+# Add rate limiting middleware (runs before CSRF since middlewares execute in reverse order)
+if get_rate_limit_enabled():
+    app.add_middleware(RateLimitMiddleware)
 setup_monitoring(app)
 
 

@@ -64,3 +64,26 @@ def get_cookie_secure_setting() -> bool:
     In development/testing, allow HTTP (secure=False).
     """
     return is_production()
+
+
+# ── Rate Limiting ────────────────────────────────────────────────
+
+
+def get_rate_limit_enabled() -> bool:
+    """Whether rate limiting is enabled. Default is True."""
+    return os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true"
+
+
+def get_rate_limit_auth_max_requests() -> int:
+    """Max requests per window for authentication routes (login, register, SSO). Default 5."""
+    return int(os.environ.get("RATE_LIMIT_AUTH_MAX_REQUESTS", "5"))
+
+
+def get_rate_limit_api_max_requests() -> int:
+    """Max requests per window for general API routes. Default 60."""
+    return int(os.environ.get("RATE_LIMIT_API_MAX_REQUESTS", "60"))
+
+
+def get_rate_limit_window_seconds() -> int:
+    """Sliding window duration in seconds. Default 60 (1 minute)."""
+    return int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
