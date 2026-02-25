@@ -8,12 +8,30 @@ from forgetting to add rollback logic in individual repository methods.
 from typing import Any
 from sqlmodel import Session
 import logging
-import opentelemetry.trace as otel_trace
-from opentelemetry.trace import StatusCode
+
+try:
+    import opentelemetry.trace as otel_trace
+    from opentelemetry.trace import StatusCode
+    tracer = otel_trace.get_tracer(__name__)
+except ImportError:
+    import types
+
+    class _NoOpSpan:
+        def __enter__(self): return self
+        def __exit__(self, *_): pass
+        def set_attribute(self, *_): pass
+        def set_status(self, *_): pass
+        def record_exception(self, *_): pass
+
+    class _NoOpTracer:
+        def start_as_current_span(self, *_, **__): return _NoOpSpan()
+
+    class StatusCode:
+        ERROR = "ERROR"
+
+    tracer = _NoOpTracer()
 
 logger = logging.getLogger(__name__)
-
-tracer = otel_trace.get_tracer(__name__)
 
 
 class SQLBaseRepository:

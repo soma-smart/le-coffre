@@ -20,11 +20,9 @@ from vault_management_context.application.responses.vault_setup_response import 
 )
 from vault_management_context.domain.events import VaultCreatedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
-
 from shared_kernel.application.tracing import TracedUseCase
+
 logger = logging.getLogger(__name__)
-
-
 
 
 class CreateVaultUseCase(TracedUseCase):
