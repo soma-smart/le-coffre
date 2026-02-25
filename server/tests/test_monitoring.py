@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 import pytest
+pytest.importorskip("opentelemetry")
 from unittest.mock import patch, MagicMock, call
 from fastapi import FastAPI
 import opentelemetry.trace as otel_trace

@@ -2,6 +2,46 @@
 
 Thank you for considering contributing to Le Coffre! We welcome contributions of all kinds. Please follow these guidelines to ensure a smooth collaboration.
 
+## Development Setup
+
+### Prerequisites
+
+- [uv](https://docs.astral.sh/uv/) — Python package manager
+- [Bun](https://bun.sh/) — JavaScript runtime and package manager
+
+### Backend
+
+```bash
+cd server
+
+# Install core dependencies (required)
+uv sync
+
+# Install with optional OpenTelemetry monitoring support
+uv sync --group monitoring
+```
+
+The `monitoring` group is **optional**. The application runs fully without it — all observability features degrade gracefully to no-ops. Only install it if you are working on distributed tracing or metrics.
+
+### Running the backend tests
+
+```bash
+# Without monitoring group — OTel-specific tests are skipped automatically
+uv run pytest
+
+# With monitoring group — full suite including OTel tests
+uv sync --group monitoring
+uv run pytest
+```
+
+### Frontend
+
+```bash
+cd frontend
+bun install
+bun run dev
+```
+
 ## How to Contribute
 
 1. **Fork the Repository**  

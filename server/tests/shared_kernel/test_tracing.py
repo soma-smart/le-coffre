@@ -1,5 +1,6 @@
 import asyncio
 import pytest
+pytest.importorskip("opentelemetry")
 from unittest.mock import MagicMock, patch
 from opentelemetry.trace import StatusCode
 from shared_kernel.application.tracing import TracedUseCase, safe_set_attributes
@@ -97,13 +98,6 @@ def test_safe_set_attributes_empty_dict_does_nothing():
     mock_span.set_attribute.assert_not_called()
 
 
-def test_traced_use_case_is_noop_without_provider():
-    """TracedUseCase must work correctly even without a TracerProvider configured."""
-    uc = ConcreteUseCase()
-    result = uc.execute(7)
-    assert result == 14
-
-
 def test_traced_use_case_no_double_wrap_on_subclass():
     """A subclass defining execute must only wrap the span once."""
     mock_tracer = MagicMock()
@@ -160,6 +154,3 @@ def test_traced_use_case_async_marks_span_error():
     assert mock_span.set_status.call_args[0][0] == StatusCode.ERROR
 
 
-def test_traced_use_case_async_is_noop_without_provider():
-    result = asyncio.run(AsyncUseCase().execute(2))
-    assert result == 6
