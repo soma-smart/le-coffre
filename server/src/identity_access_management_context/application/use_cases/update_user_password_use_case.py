@@ -12,6 +12,8 @@ from identity_access_management_context.domain.exceptions import (
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class UpdateUserPasswordUseCase(TracedUseCase):
     def __init__(
         self,

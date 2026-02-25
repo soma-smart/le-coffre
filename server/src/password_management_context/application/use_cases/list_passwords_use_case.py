@@ -15,6 +15,8 @@ from password_management_context.domain.value_objects import PasswordPermission
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class ListPasswordsUseCase(TracedUseCase):
     def __init__(
         self,

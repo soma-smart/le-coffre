@@ -17,6 +17,8 @@ from shared_kernel.domain.services import AdminPermissionChecker
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class UpdateGroupUseCase(TracedUseCase):
     def __init__(
         self,

@@ -11,6 +11,8 @@ from vault_management_context.domain.entities.vault import Vault
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class GetVaultStatusUseCase(TracedUseCase):
     def __init__(
         self,

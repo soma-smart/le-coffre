@@ -12,6 +12,8 @@ from shared_kernel.application.gateways import DomainEventPublisher
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class DeletePasswordsForDeletedUserUseCase(TracedUseCase):
     """
     System-level use case triggered by UserDeletedEvent.

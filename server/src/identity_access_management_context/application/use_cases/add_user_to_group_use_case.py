@@ -18,6 +18,8 @@ from shared_kernel.application.gateways import DomainEventPublisher
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class AddUserToGroupUseCase(TracedUseCase):
     def __init__(
         self,

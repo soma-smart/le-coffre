@@ -14,6 +14,8 @@ from vault_management_context.domain.exceptions import (
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class ValidateVaultSetupUseCase(TracedUseCase):
     def __init__(
         self,

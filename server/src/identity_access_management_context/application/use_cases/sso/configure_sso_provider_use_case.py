@@ -19,6 +19,8 @@ from shared_kernel.domain.services import AdminPermissionChecker
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class ConfigureSsoProviderUseCase(TracedUseCase):
     """
     Use case to configure SSO provider via OpenID Connect auto-discovery.

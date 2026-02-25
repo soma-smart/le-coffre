@@ -10,6 +10,8 @@ from identity_access_management_context.application.responses import (
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class ListGroupsUseCase(TracedUseCase):
     def __init__(
         self,

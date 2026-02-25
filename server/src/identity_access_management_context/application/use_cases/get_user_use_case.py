@@ -5,6 +5,8 @@ from identity_access_management_context.domain.exceptions import UserNotFoundErr
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class GetUserUseCase(TracedUseCase):
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository

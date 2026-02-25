@@ -7,6 +7,8 @@ from uuid import UUID
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class UpdateUserUseCase(TracedUseCase):
     def __init__(
         self,

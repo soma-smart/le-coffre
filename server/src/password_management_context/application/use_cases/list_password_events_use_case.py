@@ -21,6 +21,8 @@ from password_management_context.domain.exceptions import (
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class ListPasswordEventsUseCase(TracedUseCase):
     def __init__(
         self,

@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class UnlockVaultUseCase(TracedUseCase):
     def __init__(
         self,

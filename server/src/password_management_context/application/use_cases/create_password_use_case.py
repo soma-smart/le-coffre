@@ -23,6 +23,8 @@ from shared_kernel.application.gateways import DomainEventPublisher
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class CreatePasswordUseCase(TracedUseCase):
     def __init__(
         self,

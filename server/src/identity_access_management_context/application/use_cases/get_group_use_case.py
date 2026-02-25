@@ -8,6 +8,8 @@ from identity_access_management_context.domain.exceptions import GroupNotFoundEx
 
 
 from shared_kernel.application.tracing import TracedUseCase
+
+
 class GetGroupUseCase(TracedUseCase):
     def __init__(
         self,
