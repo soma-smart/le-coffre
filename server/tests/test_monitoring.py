@@ -400,6 +400,65 @@ def test_setup_monitoring_returns_providers_tuple_when_active(app):
     assert result == (fake_tracer, fake_meter)
 
 
+def _make_sampling_modules():
+    """Build a sys.modules patch that provides a minimal opentelemetry.sdk.trace.sampling mock."""
+    always_on = MagicMock(name="ALWAYS_ON")
+    parent_based_cls = MagicMock(name="ParentBased", side_effect=lambda root: MagicMock(spec=["__class__"], _root=root, _ParentBased=True))
+    traceid_ratio_cls = MagicMock(name="TraceIdRatioBased", side_effect=lambda ratio: MagicMock(spec=["__class__"], _ratio=ratio, _TraceIdRatio=True))
+
+    sampling_mod = MagicMock(
+        ALWAYS_ON=always_on,
+        ParentBased=parent_based_cls,
+        TraceIdRatioBased=traceid_ratio_cls,
+    )
+    sdk_trace_mod = MagicMock(sampling=sampling_mod)
+    return {
+        "opentelemetry": MagicMock(),
+        "opentelemetry.sdk": MagicMock(),
+        "opentelemetry.sdk.trace": sdk_trace_mod,
+        "opentelemetry.sdk.trace.sampling": sampling_mod,
+    }, sampling_mod
+
+
+def test_build_sampler_default_returns_parentbased_always_on():
+    from monitoring import _build_sampler
+    modules, sampling = _make_sampling_modules()
+    env = {k: v for k, v in os.environ.items() if k not in ("OTEL_TRACES_SAMPLER", "OTEL_TRACES_SAMPLER_ARG")}
+    with patch.dict(sys.modules, modules):
+        with patch.dict(os.environ, env, clear=True):
+            sampler = _build_sampler()
+    sampling.ParentBased.assert_called_once_with(sampling.ALWAYS_ON)
+
+
+def test_build_sampler_traceidratio():
+    from monitoring import _build_sampler
+    modules, sampling = _make_sampling_modules()
+    with patch.dict(sys.modules, modules):
+        with patch.dict(os.environ, {"OTEL_TRACES_SAMPLER": "traceidratio", "OTEL_TRACES_SAMPLER_ARG": "0.5"}):
+            sampler = _build_sampler()
+    sampling.TraceIdRatioBased.assert_called_once_with(0.5)
+
+
+def test_build_sampler_invalid_arg_falls_back_to_parentbased(caplog):
+    from monitoring import _build_sampler
+    modules, sampling = _make_sampling_modules()
+    with patch.dict(sys.modules, modules):
+        with patch.dict(os.environ, {"OTEL_TRACES_SAMPLER": "traceidratio", "OTEL_TRACES_SAMPLER_ARG": "not-a-float"}):
+            with caplog.at_level(logging.WARNING, logger="monitoring"):
+                sampler = _build_sampler()
+    sampling.ParentBased.assert_called_once_with(sampling.ALWAYS_ON)
+    assert "OTEL_TRACES_SAMPLER_ARG" in caplog.text
+
+
+def test_build_sampler_out_of_range_falls_back_to_parentbased(caplog):
+    from monitoring import _build_sampler
+    modules, sampling = _make_sampling_modules()
+    with patch.dict(sys.modules, modules):
+        with patch.dict(os.environ, {"OTEL_TRACES_SAMPLER": "traceidratio", "OTEL_TRACES_SAMPLER_ARG": "1.5"}):
+            with caplog.at_level(logging.WARNING, logger="monitoring"):
+                sampler = _build_sampler()
+    sampling.ParentBased.assert_called_once_with(sampling.ALWAYS_ON)
+    assert "OTEL_TRACES_SAMPLER_ARG" in caplog.text
 
 
 def test_configure_otel_sets_global_tracer_provider(app):
@@ -466,6 +525,7 @@ def test_configure_otel_sets_global_tracer_provider(app):
             result = _configure_otel(app)
 
     mock_otel_trace.set_tracer_provider.assert_called_once_with(mock_tracer_provider_instance)
+    mock_otel_metrics.set_meter_provider.assert_called_once_with(mock_meter_provider_instance)
     assert result is not None
     tracer_prov, meter_prov = result
     assert tracer_prov is mock_tracer_provider_instance

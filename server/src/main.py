@@ -183,7 +183,7 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Add CSRF protection middleware
 app.add_middleware(CsrfMiddleware)
 
-setup_monitoring(app)
+_otel_providers = setup_monitoring(app)
 
 
 @app.exception_handler(Exception)

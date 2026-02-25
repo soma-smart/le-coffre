@@ -137,7 +137,6 @@ def _configure_otel(app) -> tuple:
     from opentelemetry.sdk.resources import Resource, SERVICE_NAME
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.sdk.trace.sampling import ALWAYS_ON, ParentBased, TraceIdRatioBased
     import opentelemetry.trace as otel_trace
     import opentelemetry.metrics as otel_metrics
 
@@ -186,11 +185,28 @@ def _build_sampler():
     from opentelemetry.sdk.trace.sampling import ALWAYS_ON, ParentBased, TraceIdRatioBased
 
     name = os.getenv("OTEL_TRACES_SAMPLER", "parentbased_always_on")
-    arg = os.getenv("OTEL_TRACES_SAMPLER_ARG", "1.0")
+    raw_arg = os.getenv("OTEL_TRACES_SAMPLER_ARG", "1.0")
+
+    try:
+        ratio = float(raw_arg)
+    except ValueError:
+        logger.warning(
+            "Invalid OTEL_TRACES_SAMPLER_ARG=%r — must be a float in [0.0, 1.0], falling back to ParentBased(ALWAYS_ON)",
+            raw_arg,
+        )
+        return ParentBased(ALWAYS_ON)
+
+    if name in ("traceidratio", "parentbased_traceidratio") and not (0.0 <= ratio <= 1.0):
+        logger.warning(
+            "OTEL_TRACES_SAMPLER_ARG=%r is outside [0.0, 1.0] — falling back to ParentBased(ALWAYS_ON)",
+            raw_arg,
+        )
+        return ParentBased(ALWAYS_ON)
+
     if name == "traceidratio":
-        return TraceIdRatioBased(float(arg))
+        return TraceIdRatioBased(ratio)
     if name == "parentbased_traceidratio":
-        return ParentBased(TraceIdRatioBased(float(arg)))
+        return ParentBased(TraceIdRatioBased(ratio))
     return ParentBased(ALWAYS_ON)
 
 
