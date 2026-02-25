@@ -600,7 +600,7 @@ def test_json_formatter_no_trace_id_when_opentelemetry_not_importable():
 
 
 def test_setup_monitoring_returns_providers_that_can_be_shut_down(app):
-    """The returned providers must expose force_flush and shutdown."""
+    """The returned providers must expose and accept force_flush and shutdown calls."""
     with patch("monitoring._configure_otel") as mock_configure:
         mock_tracer = MagicMock()
         mock_meter = MagicMock()
@@ -609,9 +609,11 @@ def test_setup_monitoring_returns_providers_that_can_be_shut_down(app):
             with patch("monitoring._try_import_otel", return_value=True):
                 result = setup_monitoring(app)
 
-    assert result == (mock_tracer, mock_meter)
-    # Verify shutdown methods exist (duck-type check)
     tracer_p, meter_p = result
-    assert hasattr(tracer_p, "force_flush")
-    assert hasattr(tracer_p, "shutdown")
-    assert hasattr(meter_p, "shutdown")
+    # Call the shutdown methods — the lifespan uses them; they must not raise
+    tracer_p.force_flush()
+    tracer_p.shutdown()
+    meter_p.shutdown()
+    tracer_p.force_flush.assert_called_once()
+    tracer_p.shutdown.assert_called_once()
+    meter_p.shutdown.assert_called_once()
