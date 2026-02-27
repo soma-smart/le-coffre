@@ -10,12 +10,6 @@ from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
-try:
-    from psycopg2 import OperationalError as Psycopg2OperationalError
-except ImportError:
-    # psycopg2 is an optional dependency (postgres group); define a placeholder
-    # so tenacity retry_if_exception_type still works in SQLite-only environments.
-    Psycopg2OperationalError = type("Psycopg2OperationalError", (Exception,), {})
 from tenacity import (
     before_sleep_log,
     retry,
@@ -98,7 +92,7 @@ def run_migrations() -> None:
 
 @retry(
     wait=wait_exponential_jitter(initial=2, max=60),
-    retry=retry_if_exception_type((SQLAlchemyOperationalError, Psycopg2OperationalError)),
+    retry=retry_if_exception_type(SQLAlchemyOperationalError),
     stop=stop_after_delay(600),
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
