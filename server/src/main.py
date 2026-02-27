@@ -1,15 +1,22 @@
 import logging
 import os
-import time
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from sqlmodel import Session, create_engine
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_delay,
+    wait_exponential_jitter,
+)
 
 from monitoring import setup_logging, setup_monitoring
 from config import (
@@ -79,32 +86,24 @@ logging.getLogger().addFilter(RequestIdFilter())
 logger = logging.getLogger(__name__)
 
 
-def run_migrations(max_retries: int = 5, retry_delay: float = 5.0):
-    """Run database migrations using Alembic, with retry on connection failure."""
-    # Get the path to alembic.ini relative to this file
-    # main.py is in server/src/, alembic.ini is in server/
+def run_migrations() -> None:
+    """Run Alembic migrations with exponential backoff retry on transient DB errors."""
     alembic_ini_path = Path(__file__).parent.parent / "alembic.ini"
     alembic_cfg = Config(str(alembic_ini_path))
-    # Escape % characters for ConfigParser interpolation
     database_url = get_database_url().replace("%", "%%")
     alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+    _run_migrations_with_retry(alembic_cfg)
 
-    for attempt in range(max_retries):
-        try:
-            command.upgrade(alembic_cfg, "head")
-            return
-        except Exception as e:
-            if attempt < max_retries - 1:
-                logger.warning(
-                    "Migration attempt %d/%d failed: %s. Retrying in %.1fs...",
-                    attempt + 1,
-                    max_retries,
-                    e,
-                    retry_delay,
-                )
-                time.sleep(retry_delay)
-            else:
-                raise
+
+@retry(
+    wait=wait_exponential_jitter(initial=2, max=60),
+    retry=retry_if_exception_type(SQLAlchemyOperationalError),
+    stop=stop_after_delay(600),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
+def _run_migrations_with_retry(alembic_cfg: Config) -> None:
+    command.upgrade(alembic_cfg, "head")
 
 
 def _build_engine(database_url: str):
