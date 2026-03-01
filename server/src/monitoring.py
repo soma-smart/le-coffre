@@ -155,6 +155,24 @@ def _try_import_otel() -> bool:
     return _OTEL_AVAILABLE
 
 
+# Routes excluded from span instrumentation — all routes that handle secret material
+# (vault shares, credentials, plaintext passwords) must be listed here so that
+# the OTel HTTP instrumentation never creates spans for them, preventing any
+# accidental capture of sensitive data in span attributes or exception events.
+_EXCLUDED_URLS = ",".join([
+    "/api/health",
+    "/api/metrics",
+    "/api/vault/unlock",
+    "/api/vault/setup",
+    "/api/vault/validate-setup",
+    "/api/auth/login",
+    "/api/auth/register-admin",
+    "/api/auth/refresh-token",
+    "/api/users/me/password",
+    "/api/passwords",
+])
+
+
 def _configure_otel(app) -> tuple:
     """Configure OpenTelemetry metrics and distributed tracing.
 
@@ -163,6 +181,8 @@ def _configure_otel(app) -> tuple:
     """
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
     service_name = os.getenv("OTEL_SERVICE_NAME", "le-coffre")
+
+    _warn_insecure_otlp(endpoint)
 
     resource = Resource.create({
         SERVICE_NAME: service_name,
@@ -187,13 +207,17 @@ def _configure_otel(app) -> tuple:
 
     FastAPIInstrumentor.instrument_app(
         app,
-        excluded_urls="/api/health,/api/metrics",
+        # Exclude all routes that handle secret material — see _EXCLUDED_URLS above.
+        excluded_urls=_EXCLUDED_URLS,
         meter_provider=meter_provider,
         tracer_provider=tracer_provider,
     )
     SQLAlchemyInstrumentor().instrument(
         tracer_provider=tracer_provider,
         enable_commenter=True,
+        # Never capture bound parameter values — queries may reference encrypted
+        # content or user identifiers that should not appear in trace backends.
+        capture_parameters=False,
     )
     HTTPXClientInstrumentor().instrument(
         tracer_provider=tracer_provider,
@@ -208,10 +232,29 @@ def _configure_otel(app) -> tuple:
     return tracer_provider, meter_provider
 
 
+def _warn_insecure_otlp(endpoint: str) -> None:
+    """Emit warnings when the OTLP transport is insecure or unauthenticated."""
+    if endpoint.startswith("http://"):
+        logger.warning(
+            "OTLP endpoint uses plain HTTP — telemetry may be intercepted in transit. "
+            "Set OTEL_EXPORTER_OTLP_ENDPOINT to an https:// URL for production deployments."
+        )
+    if not os.getenv("OTEL_EXPORTER_OTLP_HEADERS"):
+        logger.warning(
+            "OTEL_EXPORTER_OTLP_HEADERS is not set — telemetry is exported without authentication. "
+            "Configure a bearer token via OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer <token>."
+        )
+
+
 def _build_sampler():
-    """Build a trace sampler from OTEL_TRACES_SAMPLER / OTEL_TRACES_SAMPLER_ARG env vars."""
-    name = os.getenv("OTEL_TRACES_SAMPLER", "parentbased_always_on")
-    raw_arg = os.getenv("OTEL_TRACES_SAMPLER_ARG", "1.0")
+    """Build a trace sampler from OTEL_TRACES_SAMPLER / OTEL_TRACES_SAMPLER_ARG env vars.
+
+    Defaults to 5% sampling (parentbased_traceidratio at 0.05) to limit the
+    volume of telemetry exported and reduce exposure of request metadata.
+    Set OTEL_TRACES_SAMPLER=parentbased_always_on to capture 100% of traces.
+    """
+    name = os.getenv("OTEL_TRACES_SAMPLER", "parentbased_traceidratio")
+    raw_arg = os.getenv("OTEL_TRACES_SAMPLER_ARG", "0.05")
 
     try:
         ratio = float(raw_arg)
@@ -260,7 +303,12 @@ def _parse_resource_attributes() -> dict:
     for pair in raw.split(","):
         if "=" in pair:
             k, v = pair.split("=", 1)
-            result[k.strip()] = v.strip()
+            k = k.strip()
+            v = v.strip()
+            # Protect service.name — it is already set from OTEL_SERVICE_NAME above
+            # and must not be overridden by a generic resource attribute.
+            if k and k != SERVICE_NAME:
+                result[k] = v
 
     return result
 

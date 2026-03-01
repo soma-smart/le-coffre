@@ -39,5 +39,7 @@ class CryptoShamirGateway(ShamirGateway):
 
             secret_bytes = Shamir.combine(crypto_shares, False)
             return secret_bytes.hex()
-        except Exception as e:
-            raise ValueError(f"Failed to reconstruct secret: {e}") from e
+        except Exception:
+            # Do not propagate the original exception — it may contain share data
+            # (e.g. hex decoding errors that echo the share value).
+            raise ValueError("Failed to reconstruct secret") from None

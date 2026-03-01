@@ -20,6 +20,12 @@ from identity_access_management_context.adapters.secondary.sql import (
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_path(path: str) -> str:
+    """Truncate path to at most 3 segments to avoid logging resource IDs (UUIDs)."""
+    parts = path.split("/")
+    return "/".join(parts[:4])
+
+
 class CsrfMiddleware(BaseHTTPMiddleware):
     """
     CSRF protection middleware using the Synchronizer Token Pattern.
@@ -70,7 +76,9 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         csrf_token = request.headers.get("X-CSRF-Token")
         if not csrf_token:
             logger.warning(
-                f"CSRF token missing for {request.method} {request.url.path}"
+                "CSRF token missing for %s %s",
+                request.method,
+                _sanitize_path(request.url.path),
             )
             return JSONResponse(
                 status_code=403,
@@ -101,15 +109,18 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                 # Validate CSRF token
                 if not csrf_token_manager.validate_token(user_id, csrf_token):
                     logger.warning(
-                        f"Invalid CSRF token for user {user_id} on {request.method} {request.url.path}"
+                        "Invalid CSRF token for user %s on %s %s",
+                        user_id,
+                        request.method,
+                        _sanitize_path(request.url.path),
                     )
                     return JSONResponse(
                         status_code=403,
                         content={"detail": "Invalid or expired CSRF token"},
                     )
 
-        except Exception as e:
-            logger.exception(f"Error validating CSRF token: {e}")
+        except Exception:
+            logger.exception("Error validating CSRF token")
             return JSONResponse(
                 status_code=403,
                 content={"detail": "CSRF validation failed"},

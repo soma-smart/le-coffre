@@ -56,7 +56,7 @@ class GetPasswordUseCase(TracedUseCase):
         ):
             raise PasswordAccessDeniedError(command.requester_id, command.password_id)
 
-        logger.info("Password accessed", extra={"password_id": str(command.password_id), "user_id": str(command.requester_id)})
+        logger.info("Password accessed")
         decrypted_password = self.password_encryption_gateway.decrypt(
             password_entity.encrypted_value
         )

@@ -406,21 +406,20 @@ def test_setup_monitoring_returns_providers_tuple_when_active(app):
 # --- _build_sampler tests ---
 
 
-def test_build_sampler_default_returns_parentbased_always_on():
+def test_build_sampler_default_returns_parentbased_traceidratio():
     from monitoring import _build_sampler
 
-    mock_always_on = MagicMock(name="ALWAYS_ON")
     mock_parent_based = MagicMock(name="ParentBased")
     mock_traceid_ratio = MagicMock(name="TraceIdRatioBased")
 
     env = {k: v for k, v in os.environ.items() if k not in ("OTEL_TRACES_SAMPLER", "OTEL_TRACES_SAMPLER_ARG")}
-    with patch("monitoring.ALWAYS_ON", mock_always_on):
-        with patch("monitoring.ParentBased", mock_parent_based):
-            with patch("monitoring.TraceIdRatioBased", mock_traceid_ratio):
-                with patch.dict(os.environ, env, clear=True):
-                    _build_sampler()
+    with patch("monitoring.ParentBased", mock_parent_based):
+        with patch("monitoring.TraceIdRatioBased", mock_traceid_ratio):
+            with patch.dict(os.environ, env, clear=True):
+                _build_sampler()
 
-    mock_parent_based.assert_called_once_with(mock_always_on)
+    mock_traceid_ratio.assert_called_once_with(0.05)
+    mock_parent_based.assert_called_once_with(mock_traceid_ratio())
 
 
 def test_build_sampler_traceidratio():
@@ -482,20 +481,21 @@ def test_configure_otel_instruments_sqlalchemy(app):
     """_configure_otel must call SQLAlchemyInstrumentor().instrument()."""
     from monitoring import _configure_otel
     mock_sqla = MagicMock()
-    with patch("monitoring.SQLAlchemyInstrumentor", mock_sqla):
-        with patch("monitoring.HTTPXClientInstrumentor", MagicMock()):
-            with patch("monitoring.TracerProvider", MagicMock()):
-                with patch("monitoring.MeterProvider", MagicMock()):
-                    with patch("monitoring.OTLPMetricExporter", MagicMock()):
-                        with patch("monitoring.OTLPSpanExporter", MagicMock()):
-                            with patch("monitoring.PeriodicExportingMetricReader", MagicMock()):
-                                with patch("monitoring.Resource", MagicMock()):
-                                    with patch("monitoring.BatchSpanProcessor", MagicMock()):
-                                        with patch("monitoring.FastAPIInstrumentor", MagicMock()):
-                                            with patch("monitoring.otel_trace", MagicMock()):
-                                                with patch("monitoring.otel_metrics", MagicMock()):
-                                                    with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
-                                                        _configure_otel(app)
+    with patch("monitoring._warn_insecure_otlp"):
+        with patch("monitoring.SQLAlchemyInstrumentor", mock_sqla):
+            with patch("monitoring.HTTPXClientInstrumentor", MagicMock()):
+                with patch("monitoring.TracerProvider", MagicMock()):
+                    with patch("monitoring.MeterProvider", MagicMock()):
+                        with patch("monitoring.OTLPMetricExporter", MagicMock()):
+                            with patch("monitoring.OTLPSpanExporter", MagicMock()):
+                                with patch("monitoring.PeriodicExportingMetricReader", MagicMock()):
+                                    with patch("monitoring.Resource", MagicMock()):
+                                        with patch("monitoring.BatchSpanProcessor", MagicMock()):
+                                            with patch("monitoring.FastAPIInstrumentor", MagicMock()):
+                                                with patch("monitoring.otel_trace", MagicMock()):
+                                                    with patch("monitoring.otel_metrics", MagicMock()):
+                                                        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
+                                                            _configure_otel(app)
     mock_sqla.return_value.instrument.assert_called_once()
 
 
@@ -503,20 +503,21 @@ def test_configure_otel_instruments_httpx(app):
     """_configure_otel must call HTTPXClientInstrumentor().instrument()."""
     from monitoring import _configure_otel
     mock_httpx = MagicMock()
-    with patch("monitoring.SQLAlchemyInstrumentor", MagicMock()):
-        with patch("monitoring.HTTPXClientInstrumentor", mock_httpx):
-            with patch("monitoring.TracerProvider", MagicMock()):
-                with patch("monitoring.MeterProvider", MagicMock()):
-                    with patch("monitoring.OTLPMetricExporter", MagicMock()):
-                        with patch("monitoring.OTLPSpanExporter", MagicMock()):
-                            with patch("monitoring.PeriodicExportingMetricReader", MagicMock()):
-                                with patch("monitoring.Resource", MagicMock()):
-                                    with patch("monitoring.BatchSpanProcessor", MagicMock()):
-                                        with patch("monitoring.FastAPIInstrumentor", MagicMock()):
-                                            with patch("monitoring.otel_trace", MagicMock()):
-                                                with patch("monitoring.otel_metrics", MagicMock()):
-                                                    with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
-                                                        _configure_otel(app)
+    with patch("monitoring._warn_insecure_otlp"):
+        with patch("monitoring.SQLAlchemyInstrumentor", MagicMock()):
+            with patch("monitoring.HTTPXClientInstrumentor", mock_httpx):
+                with patch("monitoring.TracerProvider", MagicMock()):
+                    with patch("monitoring.MeterProvider", MagicMock()):
+                        with patch("monitoring.OTLPMetricExporter", MagicMock()):
+                            with patch("monitoring.OTLPSpanExporter", MagicMock()):
+                                with patch("monitoring.PeriodicExportingMetricReader", MagicMock()):
+                                    with patch("monitoring.Resource", MagicMock()):
+                                        with patch("monitoring.BatchSpanProcessor", MagicMock()):
+                                            with patch("monitoring.FastAPIInstrumentor", MagicMock()):
+                                                with patch("monitoring.otel_trace", MagicMock()):
+                                                    with patch("monitoring.otel_metrics", MagicMock()):
+                                                        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
+                                                            _configure_otel(app)
     mock_httpx.return_value.instrument.assert_called_once()
 
 
@@ -542,22 +543,23 @@ def test_configure_otel_sets_global_tracer_provider(app):
     mock_parent_based = MagicMock(name="ParentBased", side_effect=lambda root: root)
     mock_traceid_ratio = MagicMock(name="TraceIdRatioBased")
 
-    with patch("monitoring.otel_trace", mock_otel_trace):
-        with patch("monitoring.otel_metrics", mock_otel_metrics):
-            with patch("monitoring.TracerProvider", mock_tracer_provider_cls):
-                with patch("monitoring.MeterProvider", mock_meter_provider_cls):
-                    with patch("monitoring.OTLPMetricExporter", mock_otlp_metric):
-                        with patch("monitoring.OTLPSpanExporter", mock_otlp_trace):
-                            with patch("monitoring.PeriodicExportingMetricReader", mock_reader):
-                                with patch("monitoring.Resource", mock_resource_cls):
-                                    with patch("monitoring.SERVICE_NAME", "service.name"):
-                                        with patch("monitoring.BatchSpanProcessor", mock_batch_processor):
-                                            with patch("monitoring.FastAPIInstrumentor", mock_instrumentor):
-                                                with patch("monitoring.ALWAYS_ON", mock_always_on):
-                                                    with patch("monitoring.ParentBased", mock_parent_based):
-                                                        with patch("monitoring.TraceIdRatioBased", mock_traceid_ratio):
-                                                            with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
-                                                                result = _configure_otel(app)
+    with patch("monitoring._warn_insecure_otlp"):
+        with patch("monitoring.otel_trace", mock_otel_trace):
+            with patch("monitoring.otel_metrics", mock_otel_metrics):
+                with patch("monitoring.TracerProvider", mock_tracer_provider_cls):
+                    with patch("monitoring.MeterProvider", mock_meter_provider_cls):
+                        with patch("monitoring.OTLPMetricExporter", mock_otlp_metric):
+                            with patch("monitoring.OTLPSpanExporter", mock_otlp_trace):
+                                with patch("monitoring.PeriodicExportingMetricReader", mock_reader):
+                                    with patch("monitoring.Resource", mock_resource_cls):
+                                        with patch("monitoring.SERVICE_NAME", "service.name"):
+                                            with patch("monitoring.BatchSpanProcessor", mock_batch_processor):
+                                                with patch("monitoring.FastAPIInstrumentor", mock_instrumentor):
+                                                    with patch("monitoring.ALWAYS_ON", mock_always_on):
+                                                        with patch("monitoring.ParentBased", mock_parent_based):
+                                                            with patch("monitoring.TraceIdRatioBased", mock_traceid_ratio):
+                                                                with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
+                                                                    result = _configure_otel(app)
 
     mock_otel_trace.set_tracer_provider.assert_called_once_with(mock_tracer_provider_instance)
     mock_otel_metrics.set_meter_provider.assert_called_once_with(mock_meter_provider_instance)
