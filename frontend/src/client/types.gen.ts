@@ -553,6 +553,16 @@ export type LockVaultPostResponse = {
 };
 
 /**
+ * LogoutResponse
+ */
+export type LogoutResponse = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * PasswordEventResponse
  */
 export type PasswordEventResponse = {
@@ -1702,6 +1712,31 @@ export type RefreshAccessTokenAuthRefreshTokenPostResponses = {
 };
 
 export type RefreshAccessTokenAuthRefreshTokenPostResponse = RefreshAccessTokenAuthRefreshTokenPostResponses[keyof RefreshAccessTokenAuthRefreshTokenPostResponses];
+
+export type LogoutAuthLogoutPostData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/auth/logout';
+};
+
+export type LogoutAuthLogoutPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type LogoutAuthLogoutPostError = LogoutAuthLogoutPostErrors[keyof LogoutAuthLogoutPostErrors];
+
+export type LogoutAuthLogoutPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: LogoutResponse;
+};
+
+export type LogoutAuthLogoutPostResponse = LogoutAuthLogoutPostResponses[keyof LogoutAuthLogoutPostResponses];
 
 export type CreateGroupGroupsPostData = {
     body: CreateGroupRequest;
