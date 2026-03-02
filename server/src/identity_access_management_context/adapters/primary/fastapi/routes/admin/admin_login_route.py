@@ -10,10 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
-    get_admin_login_usecase,
+    get_password_login_usecase,
 )
 from identity_access_management_context.application.commands import AdminLoginCommand
-from identity_access_management_context.application.use_cases import AdminLoginUseCase
+from identity_access_management_context.application.use_cases import (
+    PasswordLoginUseCase,
+)
 from identity_access_management_context.domain.exceptions import (
     AdminNotFoundException,
     InvalidCredentialsException,
@@ -44,7 +46,7 @@ class AdminLoginResponse(BaseModel):
 async def admin_login(
     request: AdminLoginRequest,
     response: Response,
-    usecase: AdminLoginUseCase = Depends(get_admin_login_usecase),
+    usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),
 ):
     """
     Login an admin user.
@@ -103,6 +105,6 @@ async def admin_login(
 
     except (InvalidCredentialsException, AdminNotFoundException) as e:
         raise HTTPException(status_code=401, detail=str(e))
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error in admin login")
         raise HTTPException(status_code=500, detail="Internal server error")

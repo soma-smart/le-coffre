@@ -11,7 +11,7 @@ from identity_access_management_context.application.use_cases import (
     CreateUserUseCase,
     ListUserUseCase,
     PromoteAdminUseCase,
-    AdminLoginUseCase,
+    PasswordLoginUseCase,
     RegisterAdminWithPasswordUseCase,
     GetSsoAuthorizeUrlUseCase,
     ConfigureSsoProviderUseCase,
@@ -72,19 +72,27 @@ def get_event_publisher(request: Request) -> DomainEventPublisher:
     return request.app.state.domain_event_publisher
 
 
-def get_user_event_repository(session: Session = Depends(get_session)) -> UserEventRepository:
+def get_user_event_repository(
+    session: Session = Depends(get_session),
+) -> UserEventRepository:
     return SqlIamEventRepository(session)
 
 
-def get_group_event_repository(session: Session = Depends(get_session)) -> GroupEventRepository:
+def get_group_event_repository(
+    session: Session = Depends(get_session),
+) -> GroupEventRepository:
     return SqlIamEventRepository(session)
 
 
-def get_sso_event_repository(session: Session = Depends(get_session)) -> SsoEventRepository:
+def get_sso_event_repository(
+    session: Session = Depends(get_session),
+) -> SsoEventRepository:
     return SqlIamEventRepository(session)
 
 
-def get_admin_event_repository(session: Session = Depends(get_session)) -> AdminEventRepository:
+def get_admin_event_repository(
+    session: Session = Depends(get_session),
+) -> AdminEventRepository:
     return SqlIamEventRepository(session)
 
 
@@ -248,10 +256,11 @@ def get_get_user_me_usecase(
 
 
 # Authentication Use Cases
-def get_admin_login_usecase(
+def get_password_login_usecase(
     user_password_repository: UserPasswordRepository = Depends(
         get_user_password_repository
     ),
+    user_repository: UserRepository = Depends(get_user_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(
         get_password_hashing_gateway
     ),
@@ -260,8 +269,9 @@ def get_admin_login_usecase(
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
-    return AdminLoginUseCase(
+    return PasswordLoginUseCase(
         user_password_repository,
+        user_repository,
         password_hashing_gateway,
         token_gateway,
         time_provider,
@@ -326,7 +336,11 @@ def get_configure_sso_provider_usecase(
     sso_event_repository: SsoEventRepository = Depends(get_sso_event_repository),
 ):
     return ConfigureSsoProviderUseCase(
-        sso_gateway, sso_configuration_repository, sso_encryption_gateway, event_publisher, sso_event_repository
+        sso_gateway,
+        sso_configuration_repository,
+        sso_encryption_gateway,
+        event_publisher,
+        sso_event_repository,
     )
 
 
@@ -493,7 +507,12 @@ def get_update_group_usecase(
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
 ):
-    return UpdateGroupUseCase(group_repository, group_member_repository, event_publisher, group_event_repository)
+    return UpdateGroupUseCase(
+        group_repository,
+        group_member_repository,
+        event_publisher,
+        group_event_repository,
+    )
 
 
 def get_delete_group_usecase(
@@ -506,5 +525,9 @@ def get_delete_group_usecase(
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
 ):
     return DeleteGroupUseCase(
-        group_repository, group_member_repository, group_usage_gateway, event_publisher, group_event_repository
+        group_repository,
+        group_member_repository,
+        group_usage_gateway,
+        event_publisher,
+        group_event_repository,
     )
