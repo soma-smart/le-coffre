@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from uuid import UUID
+
+from shared_kernel.domain.entities import AuthenticatedUser
 
 
 @dataclass
 class ListPasswordsCommand:
-    requester_id: UUID
+    requester: AuthenticatedUser
     folder: str | None = None

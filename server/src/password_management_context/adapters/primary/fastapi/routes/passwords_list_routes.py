@@ -29,6 +29,8 @@ class GetPasswordListResponse(BaseModel):
     group_id: UUID
     created_at: datetime
     last_updated_at: datetime
+    can_read: bool
+    can_write: bool
 
 
 @router.get(
@@ -51,7 +53,10 @@ def list_passwords(
     Returns a list of passwords accessible by the user.
     """
     try:
-        command = ListPasswordsCommand(requester_id=current_user.user_id, folder=folder)
+        command = ListPasswordsCommand(
+            requester=current_user.to_authenticated_user(),
+            folder=folder,
+        )
         passwords = usecase.execute(command)
         return [
             GetPasswordListResponse(
@@ -61,6 +66,8 @@ def list_passwords(
                 group_id=password.group_id,
                 created_at=password.created_at,
                 last_updated_at=password.last_password_updated_at,
+                can_read=password.can_read,
+                can_write=password.can_write,
             )
             for password in passwords
         ]
@@ -70,6 +77,6 @@ def list_passwords(
         raise HTTPException(status_code=403, detail=str(e))
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error in list passwords")
         raise HTTPException(status_code=500, detail="Internal server error")

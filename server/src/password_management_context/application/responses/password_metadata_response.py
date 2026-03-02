@@ -11,3 +11,5 @@ class PasswordMetadataResponse:
     group_id: UUID
     created_at: datetime
     last_password_updated_at: datetime
+    can_read: bool
+    can_write: bool
