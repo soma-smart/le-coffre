@@ -50,6 +50,6 @@ class AesEncryptionGateway(EncryptionGateway):
         derived_key = PBKDF2(master_key, salt, 32, count=100000)
 
         # Create AES cipher in GCM mod
-        if nonce:
+        if nonce is not None:
             return AES.new(derived_key, AES.MODE_GCM, nonce=nonce)
         return AES.new(derived_key, AES.MODE_GCM)

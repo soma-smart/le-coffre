@@ -115,8 +115,10 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       // Fetch CSRF token after successful login
       await csrfStore.fetchCsrfToken()
 
-      // Redirect to the page specified in query or to home page
-      const redirectPath = (route.query.redirect as string) || '/'
+      // Redirect to the page specified in query or to home page.
+      // Only allow same-origin relative paths to prevent open redirect attacks.
+      const raw = route.query.redirect as string | undefined
+      const redirectPath = raw && raw.startsWith('/') && !raw.startsWith('//') ? raw : '/'
       router.push(redirectPath)
     } finally {
       loading.value = false

@@ -58,6 +58,67 @@ async def test_given_valid_refresh_token_when_execute_then_returns_new_access_to
 
 
 @pytest.mark.asyncio
+async def test_given_valid_refresh_token_when_execute_then_returns_new_refresh_token(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+):
+    # Arrange
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "valid_refresh_token_123"
+
+    user = User(
+        id=user_id, username="testuser", email=email, name="Test User", roles=roles
+    )
+    user_repository.save(user)
+
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles)
+    token_gateway.set_unique_jwt_part("new_token")
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    # Act
+    result = await use_case.execute(command)
+
+    # Assert: a new refresh token is returned and it is different from the old one
+    assert result.refresh_token is not None
+    assert result.refresh_token == f"refresh_token_for_{user_id}_new_token"
+    assert result.refresh_token != refresh_token
+
+
+@pytest.mark.asyncio
+async def test_given_valid_refresh_token_when_execute_then_old_token_is_revoked(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+):
+    # Arrange
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "valid_refresh_token_123"
+
+    user = User(
+        id=user_id, username="testuser", email=email, name="Test User", roles=roles
+    )
+    user_repository.save(user)
+
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles)
+    token_gateway.set_unique_jwt_part("new_token")
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    # Act
+    await use_case.execute(command)
+
+    # Assert: old refresh token is now revoked and cannot be used again
+    assert refresh_token in token_gateway.revoked_refresh_tokens
+    assert await token_gateway.validate_refresh_token(refresh_token) is None
+
+
+@pytest.mark.asyncio
 async def test_given_invalid_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(
     use_case: RefreshAccessTokenUseCase,
 ):

@@ -7,6 +7,7 @@ from .update_user_use_case import UpdateUserUseCase
 from .update_user_password_use_case import UpdateUserPasswordUseCase
 from .validate_user_token_use_case import ValidateUserTokenUseCase
 from .refresh_access_token_use_case import RefreshAccessTokenUseCase
+from .logout_use_case import LogoutUseCase
 from .create_group_use_case import CreateGroupUseCase
 from .add_user_to_group_use_case import AddUserToGroupUseCase
 from .add_owner_to_group_use_case import AddOwnerToGroupUseCase
@@ -37,6 +38,7 @@ __all__ = [
     "UpdateUserPasswordUseCase",
     "ValidateUserTokenUseCase",
     "RefreshAccessTokenUseCase",
+    "LogoutUseCase",
     "CreateGroupUseCase",
     "AddUserToGroupUseCase",
     "AddOwnerToGroupUseCase",

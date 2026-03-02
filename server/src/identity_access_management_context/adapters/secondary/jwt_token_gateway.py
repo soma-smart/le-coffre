@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Set
 from uuid import UUID
 import jwt
 from datetime import datetime, timedelta, UTC
@@ -18,6 +18,7 @@ class JwtTokenGateway(TokenGateway):
         self._algorithm = algorithm
         self._access_token_expiration_minutes = access_token_expiration_minutes
         self._refresh_token_expiration_days = refresh_token_expiration_days
+        self._revoked_tokens: Set[str] = set()
 
     async def generate_token(
         self,
@@ -99,6 +100,10 @@ class JwtTokenGateway(TokenGateway):
             return None
 
     async def validate_refresh_token(self, refresh_token: str) -> Optional[Token]:
+        # Reject revoked tokens immediately
+        if refresh_token in self._revoked_tokens:
+            return None
+
         try:
             payload = jwt.decode(
                 refresh_token, self._secret_key, algorithms=[self._algorithm]
@@ -126,3 +131,7 @@ class JwtTokenGateway(TokenGateway):
             return None
         except jwt.InvalidTokenError:
             return None
+
+    async def revoke_refresh_token(self, refresh_token: str) -> None:
+        """Add the refresh token to the in-memory revocation set."""
+        self._revoked_tokens.add(refresh_token)

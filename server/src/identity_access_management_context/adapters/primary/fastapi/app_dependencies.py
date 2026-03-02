@@ -17,6 +17,7 @@ from identity_access_management_context.application.use_cases import (
     ConfigureSsoProviderUseCase,
     SsoLoginUseCase,
     RefreshAccessTokenUseCase,
+    LogoutUseCase,
     CreateGroupUseCase,
     AddUserToGroupUseCase,
     AddOwnerToGroupUseCase,
@@ -201,10 +202,14 @@ def get_update_user_password_usecase(
     password_hashing_gateway: PasswordHashingGateway = Depends(
         get_password_hashing_gateway
     ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    user_event_repository: UserEventRepository = Depends(get_user_event_repository),
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
+        event_publisher,
+        user_event_repository,
     )
 
 
@@ -383,6 +388,18 @@ def get_refresh_access_token_usecase(
         token_gateway,
         user_repository,
         time_provider,
+    )
+
+
+def get_logout_usecase(
+    token_gateway: TokenGateway = Depends(get_token_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+):
+    return LogoutUseCase(
+        token_gateway,
+        event_publisher,
+        admin_event_repository,
     )
 
 

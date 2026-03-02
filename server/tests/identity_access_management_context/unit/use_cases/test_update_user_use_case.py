@@ -5,6 +5,7 @@ from identity_access_management_context.application.use_cases import UpdateUserU
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import UserUpdatedEvent
 from identity_access_management_context.application.commands import UpdateUserCommand
+from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import FakeUserRepository
 
@@ -34,7 +35,9 @@ def test_given_valid_update_data_when_updating_user_should_persist_changes(
     new_email = "updateduser@example.com"
     new_name = "New User"
 
+    requesting_user = AuthenticatedUser(user_id=uuid, roles=[])
     command = UpdateUserCommand(
+        requesting_user=requesting_user,
         id=uuid,
         username=new_username,
         email=new_email,
@@ -59,7 +62,9 @@ def test_given_valid_update_data_when_updating_user_should_publish_user_updated_
     user = User(id=uuid, username="testuser", email="testuser@example.com", name="User")
     user_repository.save(user)
 
+    requesting_user = AuthenticatedUser(user_id=uuid, roles=[])
     command = UpdateUserCommand(
+        requesting_user=requesting_user,
         id=uuid,
         username="updateduser",
         email="updateduser@example.com",
@@ -83,7 +88,9 @@ def test_given_valid_update_data_when_updating_user_should_store_user_updated_ev
     user = User(id=uuid, username="testuser", email="testuser@example.com", name="User")
     user_repository.save(user)
 
+    requesting_user = AuthenticatedUser(user_id=uuid, roles=[])
     command = UpdateUserCommand(
+        requesting_user=requesting_user,
         id=uuid,
         username="updateduser",
         email="updateduser@example.com",

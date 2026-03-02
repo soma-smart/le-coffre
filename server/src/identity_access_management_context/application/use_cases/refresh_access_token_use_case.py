@@ -39,7 +39,16 @@ class RefreshAccessTokenUseCase:
         if user is None:
             raise InvalidRefreshTokenException("User no longer exists")
 
+        # Revoke the old refresh token before issuing a new one
+        await self.token_gateway.revoke_refresh_token(command.refresh_token)
+
         new_access_token = await self.token_gateway.generate_token(
+            user_id=token_data.user_id,
+            email=token_data.email,
+            roles=user.roles,
+        )
+
+        new_refresh_token = await self.token_gateway.generate_refresh_token(
             user_id=token_data.user_id,
             email=token_data.email,
             roles=user.roles,
@@ -47,5 +56,6 @@ class RefreshAccessTokenUseCase:
 
         return RefreshAccessTokenResponse(
             access_token=new_access_token.value,
+            refresh_token=new_refresh_token,
             user_id=token_data.user_id,
         )

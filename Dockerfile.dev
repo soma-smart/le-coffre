@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
     git \
     gh \
     bash \
-    sudo \
     curl \
     unzip \
     nginx \
@@ -25,9 +24,7 @@ ARG USER_GID=1000
 ARG USERNAME=devuser
 
 RUN groupadd -g $USER_GID $USERNAME \
-    && useradd -u $USER_UID -g $USER_GID -m -s /bin/bash $USERNAME \
-    && echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
+    && useradd -u $USER_UID -g $USER_GID -m -s /bin/bash $USERNAME
 
 # Install Bun globally for all users
 RUN curl -fsSL https://bun.sh/install | bash

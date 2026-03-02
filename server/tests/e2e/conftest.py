@@ -3,6 +3,7 @@ import tempfile
 import os
 import httpx
 import secrets
+from unittest.mock import patch
 from urllib.parse import quote, urlparse, parse_qs
 from fastapi.testclient import TestClient
 import oidc_provider_mock
@@ -154,6 +155,15 @@ def database(database_path):
 
     engine.dispose()
     yield database_path
+
+
+@pytest.fixture(scope="session", autouse=True)
+def bypass_ssrf_validation_for_e2e():
+    """Bypass SSRF URL validation for E2E tests using a local mock OIDC server."""
+    with patch(
+        "identity_access_management_context.adapters.secondary.oauth2_sso_gateway._validate_discovery_url"
+    ):
+        yield
 
 
 @pytest.fixture

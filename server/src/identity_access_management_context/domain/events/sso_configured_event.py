@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 from shared_kernel.domain.entities import DomainEvent
 from shared_kernel.domain.value_objects import EventPriority
@@ -14,7 +14,7 @@ class SsoConfiguredEvent(DomainEvent):
     ):
         super().__init__(
             event_id=event_id or uuid4(),
-            occurred_on=occurred_on or datetime.now(),
+            occurred_on=occurred_on or datetime.now(timezone.utc),
             priority=EventPriority.HIGH,
         )
         self.configured_by_user_id = configured_by_user_id

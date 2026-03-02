@@ -1,4 +1,6 @@
 from typing import Any, Dict
+import ipaddress
+import socket
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
@@ -9,7 +11,35 @@ from identity_access_management_context.application.gateways import (
 )
 from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
 from identity_access_management_context.domain.entities import SsoConfiguration
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
+
+
+def _validate_discovery_url(url: str) -> None:
+    """Reject non-HTTPS schemes and private/loopback/link-local targets."""
+    parsed = urlparse(url)
+    if parsed.scheme != "https":
+        raise ValueError("Discovery URL must use HTTPS")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("Discovery URL must have a valid hostname")
+
+    try:
+        addr = ipaddress.ip_address(hostname)
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            raise ValueError("Discovery URL must not target a private or reserved address")
+    except ValueError as exc:
+        # Not an IP literal — check resolved addresses
+        if "Discovery URL" in str(exc):
+            raise
+        try:
+            resolved = socket.getaddrinfo(hostname, None)
+            for *_, sockaddr in resolved:
+                addr = ipaddress.ip_address(sockaddr[0])
+                if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+                    raise ValueError("Discovery URL resolves to a private or reserved address")
+        except OSError:
+            raise ValueError(f"Discovery URL hostname could not be resolved: {hostname}")
 
 
 class OAuth2SsoGateway(SsoGateway):
@@ -37,6 +67,7 @@ class OAuth2SsoGateway(SsoGateway):
     ) -> SsoDiscoveryResult:
         """Validate SSO discovery configuration and return endpoints."""
         try:
+            _validate_discovery_url(discovery_url)
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(discovery_url)
                 response.raise_for_status()

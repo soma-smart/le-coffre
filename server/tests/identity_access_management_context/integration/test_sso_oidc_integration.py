@@ -1,12 +1,22 @@
 from datetime import datetime
 import pytest
 import httpx
+from unittest.mock import patch
 from urllib.parse import urlparse, parse_qs, quote
 import oidc_provider_mock
 
 from identity_access_management_context.adapters.secondary import OAuth2SsoGateway
 from identity_access_management_context.application.gateways import SsoGateway
 from identity_access_management_context.domain.entities import SsoConfiguration
+
+
+@pytest.fixture(autouse=True)
+def bypass_ssrf_check():
+    """Bypass SSRF URL validation for integration tests that use a local mock OIDC server."""
+    with patch(
+        "identity_access_management_context.adapters.secondary.oauth2_sso_gateway._validate_discovery_url"
+    ):
+        yield
 
 
 @pytest.fixture

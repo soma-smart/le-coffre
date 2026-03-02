@@ -6,7 +6,9 @@ from password_management_context.application.commands import (
 from password_management_context.application.gateways import (
     PasswordRepository,
     PasswordPermissionsRepository,
+    PasswordEventRepository,
 )
+from password_management_context.application.services import PasswordEventStorageService
 from password_management_context.domain.events import PasswordDeletedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
 
@@ -23,10 +25,12 @@ class DeletePasswordsForDeletedUserUseCase:
         password_repository: PasswordRepository,
         password_permissions_repository: PasswordPermissionsRepository,
         event_publisher: DomainEventPublisher,
+        password_event_repository: PasswordEventRepository,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
         self.event_publisher = event_publisher
+        self.password_event_repository = password_event_repository
 
     def execute(self, command: DeletePasswordsForDeletedUserCommand) -> None:
         personal_group_id = command.personal_group_id
@@ -53,7 +57,8 @@ class DeletePasswordsForDeletedUserUseCase:
             personal_group_id
         )
 
-        # Publish events for each deleted password (for audit trail)
+        # Publish and persist events for each deleted password (for audit trail)
+        event_storage_service = PasswordEventStorageService(self.password_event_repository)
         for password_id in password_ids_owned:
             event = PasswordDeletedEvent(
                 password_id=password_id,
@@ -61,3 +66,4 @@ class DeletePasswordsForDeletedUserUseCase:
                 owner_group_id=personal_group_id,
             )
             self.event_publisher.publish(event)
+            event_storage_service.store_event(event)

@@ -11,6 +11,7 @@ from password_management_context.domain.value_objects import PasswordPermission
 from ..fakes import (
     FakePasswordPermissionsRepository,
     FakePasswordRepository,
+    FakePasswordEventRepository,
 )
 from tests.fakes import FakeDomainEventPublisher
 from password_management_context.domain.entities import Password
@@ -23,11 +24,13 @@ def use_case(
     password_repository: FakePasswordRepository,
     password_permissions_repository: FakePasswordPermissionsRepository,
     domain_event_publisher: FakeDomainEventPublisher,
+    password_event_repository: FakePasswordEventRepository,
 ):
     return DeletePasswordsForDeletedUserUseCase(
         password_repository,
         password_permissions_repository,
         domain_event_publisher,
+        password_event_repository,
     )
 
 
@@ -169,3 +172,49 @@ def test_given_user_without_passwords_when_user_deleted_should_do_nothing(
     use_case.execute(command)
 
     assert len(domain_event_publisher.published_events) == 0
+
+
+def test_given_user_with_passwords_when_user_deleted_should_persist_events(
+    use_case: DeletePasswordsForDeletedUserUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    password_event_repository: FakePasswordEventRepository,
+):
+    personal_group_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    admin_user_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    password1_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+    password2_id = UUID("423e4567-e89b-12d3-a456-426614174003")
+
+    password1 = Password(
+        id=password1_id,
+        name="Password 1",
+        encrypted_value="encrypted1",
+        folder="folder",
+    )
+    password2 = Password(
+        id=password2_id,
+        name="Password 2",
+        encrypted_value="encrypted2",
+        folder="folder",
+    )
+
+    password_repository.save(password1)
+    password_repository.save(password2)
+    password_repository.set_owner_for_password(password1_id, personal_group_id)
+    password_repository.set_owner_for_password(password2_id, personal_group_id)
+    password_permissions_repository.set_owner(personal_group_id, password1_id)
+    password_permissions_repository.set_owner(personal_group_id, password2_id)
+
+    command = DeletePasswordsForDeletedUserCommand(
+        personal_group_id=personal_group_id,
+        deleted_by_user_id=admin_user_id,
+    )
+
+    use_case.execute(command)
+
+    assert len(password_event_repository.events) == 2
+    persisted_password_ids = {e["password_id"] for e in password_event_repository.events}
+    assert persisted_password_ids == {password1_id, password2_id}
+    for persisted in password_event_repository.events:
+        assert persisted["event_type"] == "PasswordDeletedEvent"
+        assert persisted["actor_user_id"] == admin_user_id

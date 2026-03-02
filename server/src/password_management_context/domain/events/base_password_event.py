@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -13,7 +13,7 @@ class BasePasswordEvent(ABC):
 
     password_id: UUID
     event_id: UUID = field(default_factory=uuid4)
-    occurred_on: datetime = field(default_factory=datetime.now)
+    occurred_on: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @abstractmethod
     def get_actor_user_id(self) -> UUID:

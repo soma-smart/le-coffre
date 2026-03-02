@@ -15,7 +15,11 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
-from config import get_cookie_secure_setting, get_jwt_access_token_expiration_minutes
+from config import (
+    get_cookie_secure_setting,
+    get_jwt_access_token_expiration_minutes,
+    get_jwt_refresh_token_expiration_days,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +47,8 @@ async def refresh_access_token(
     This endpoint allows clients to obtain a new access token using a valid refresh token.
     The refresh token must be provided as an HTTP-only cookie.
 
-    Sets a new access token in an HTTP-only secure cookie.
-    The refresh token remains valid and unchanged.
+    Rotates the refresh token: sets both a new access token and a new refresh token in
+    HTTP-only secure cookies. The old refresh token is revoked and can no longer be used.
 
     **Responses**:
     - **200**: Successfully refreshed access token
@@ -59,17 +63,27 @@ async def refresh_access_token(
             )
 
         command = RefreshAccessTokenCommand(refresh_token=refresh_token_cookie)
-        # Set new access token in HTTP-only secure cookie
         result = await usecase.execute(command)
         is_secure = get_cookie_secure_setting()
+
+        # Set new access token in HTTP-only secure cookie
         response.set_cookie(
             key="access_token",
             value=result.access_token,
             httponly=True,
             secure=is_secure,
             samesite="lax",
-            max_age=get_jwt_access_token_expiration_minutes()
-            * 60,  # Convert minutes to seconds
+            max_age=get_jwt_access_token_expiration_minutes() * 60,
+        )
+
+        # Set rotated refresh token in HTTP-only secure cookie
+        response.set_cookie(
+            key="refresh_token",
+            value=result.refresh_token,
+            httponly=True,
+            secure=is_secure,
+            samesite="lax",
+            max_age=get_jwt_refresh_token_expiration_days() * 86400,
         )
 
         return RefreshAccessTokenResponse(message="Access token refreshed successfully")
