@@ -1,4 +1,6 @@
 import { useUserStore } from '@/stores/user'
+import { usePasswordsStore } from '@/stores/passwords'
+import { useCsrfStore } from '@/stores/csrf'
 
 /**
  * Logout utility - clears all authentication cookies and localStorage
@@ -17,7 +19,13 @@ export function logout(): void {
   // Clear localStorage
   localStorage.removeItem('login')
 
-  // Clear user store
+  // Clear all stores to prevent data leaking between users
   const userStore = useUserStore()
   userStore.clearUser()
+
+  const passwordsStore = usePasswordsStore()
+  passwordsStore.clear()
+
+  const csrfStore = useCsrfStore()
+  csrfStore.clearCsrfToken()
 }
