@@ -3,6 +3,9 @@ from uuid import UUID
 
 from password_management_context.domain.value_objects import PasswordPermission
 
+GroupPermissions = dict[UUID, tuple[bool, set[PasswordPermission]]]
+BulkGroupPermissions = dict[UUID, GroupPermissions]
+
 
 class PasswordPermissionsRepository(Protocol):
     """Repository for managing password access permissions"""
@@ -31,10 +34,17 @@ class PasswordPermissionsRepository(Protocol):
         """Revoke a group's access to a password"""
         ...
 
-    def list_all_permissions_for(
-        self, password_id: UUID
-    ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
+    def list_all_permissions_for(self, password_id: UUID) -> GroupPermissions:
         """Get all groups who have access to a password with their permissions"""
+        ...
+
+    def list_all_permissions_for_bulk(
+        self, password_ids: list[UUID]
+    ) -> BulkGroupPermissions:
+        """Get all group permissions for multiple passwords in a single call.
+
+        Returns {password_id -> {group_id -> (is_owner, permissions)}}
+        """
         ...
 
     def has_any_password_for_group(self, group_id: UUID) -> bool:

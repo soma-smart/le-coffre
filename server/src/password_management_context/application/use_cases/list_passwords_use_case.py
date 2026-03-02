@@ -1,4 +1,3 @@
-from typing import List, Optional
 from uuid import UUID
 
 from password_management_context.application.commands import ListPasswordsCommand
@@ -7,6 +6,10 @@ from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEventRepository,
+)
+from password_management_context.application.gateways.password_permissions_repository import (
+    GroupPermissions,
+    BulkGroupPermissions,
 )
 from password_management_context.application.responses import PasswordMetadataResponse
 from password_management_context.application.services import PasswordTimestampService
@@ -37,144 +40,99 @@ class ListPasswordsUseCase(TracedUseCase):
         if command.folder and len(password_entities) == 0:
             raise FolderNotFoundError(command.folder)
 
-        if AdminPermissionChecker.is_admin(command.requester):
-            return self._build_admin_responses(
-                command.requester.user_id, password_entities
-            )
-
-        accessible_passwords = []
-
-        for password_entity in password_entities:
-            access_info = self._user_has_access_through_groups(
-                command.requester.user_id, password_entity.id
-            )
-            if access_info is not None:
-                user_group_id, owner_group_id, is_owner_access = access_info
-                accessible_passwords.append(
-                    (password_entity, owner_group_id, is_owner_access)
-                )
-
-        if not accessible_passwords:
+        if not password_entities:
             return []
 
-        timestamp_service = PasswordTimestampService(self.password_event_repository)
-        password_ids = [pwd.id for pwd, _, __ in accessible_passwords]
-        timestamps_map = timestamp_service.get_timestamps_bulk(password_ids)
-
-        password_responses = []
-        for password_entity, owner_group_id, is_owner_access in accessible_passwords:
-            created_at, last_password_updated_at = timestamps_map.get(
-                password_entity.id, (None, None)
+        password_ids = [p.id for p in password_entities]
+        all_permissions = (
+            self.password_permissions_repository.list_all_permissions_for_bulk(
+                password_ids
             )
-            password_response = PasswordMetadataResponse(
-                id=password_entity.id,
-                name=password_entity.name,
-                folder=password_entity.folder,
+        )
+
+        is_admin = AdminPermissionChecker.is_admin(command.requester)
+        accessible = self._resolve_access(
+            command.requester.user_id, password_entities, all_permissions, is_admin
+        )
+
+        if not accessible:
+            return []
+
+        timestamps_map = PasswordTimestampService(
+            self.password_event_repository
+        ).get_timestamps_bulk([p.id for p, *_ in accessible])
+
+        return [
+            PasswordMetadataResponse(
+                id=password.id,
+                name=password.name,
+                folder=password.folder,
                 group_id=owner_group_id,
-                created_at=created_at,
-                last_password_updated_at=last_password_updated_at,
-                can_read=True,
-                can_write=is_owner_access,
+                created_at=timestamps_map.get(password.id, (None, None))[0],
+                last_password_updated_at=timestamps_map.get(password.id, (None, None))[
+                    1
+                ],
+                can_read=can_read,
+                can_write=can_write,
             )
-            password_responses.append(password_response)
+            for password, owner_group_id, can_read, can_write in accessible
+        ]
 
-        return password_responses
+    def _resolve_access(
+        self,
+        user_id: UUID,
+        password_entities,
+        all_permissions: BulkGroupPermissions,
+        is_admin: bool,
+    ) -> list[tuple]:
+        membership_cache: dict[UUID, tuple[bool, bool]] = {}
+        result = []
 
-    def _build_admin_responses(
-        self, user_id: UUID, password_entities
-    ) -> List[PasswordMetadataResponse]:
-        accessible_passwords = []
-        for password_entity in password_entities:
-            owner_group_id = self._find_owner_group_id(password_entity.id)
-            if owner_group_id is not None:
-                access_info = self._user_has_access_through_groups(
-                    user_id, password_entity.id
-                )
-                if access_info is not None:
-                    _, _, is_owner_access = access_info
-                    accessible_passwords.append(
-                        (password_entity, owner_group_id, True, is_owner_access)
-                    )
-                else:
-                    accessible_passwords.append(
-                        (password_entity, owner_group_id, False, False)
-                    )
-
-        if not accessible_passwords:
-            return []
-
-        timestamp_service = PasswordTimestampService(self.password_event_repository)
-        password_ids = [pwd.id for pwd, _, __, ___ in accessible_passwords]
-        timestamps_map = timestamp_service.get_timestamps_bulk(password_ids)
-
-        password_responses = []
-        for (
-            password_entity,
-            owner_group_id,
-            can_read,
-            can_write,
-        ) in accessible_passwords:
-            created_at, last_password_updated_at = timestamps_map.get(
-                password_entity.id, (None, None)
+        for password in password_entities:
+            permissions = all_permissions.get(password.id, {})
+            owner_group_id = next(
+                (gid for gid, (is_owner, _) in permissions.items() if is_owner), None
             )
-            password_responses.append(
-                PasswordMetadataResponse(
-                    id=password_entity.id,
-                    name=password_entity.name,
-                    folder=password_entity.folder,
-                    group_id=owner_group_id,
-                    created_at=created_at,
-                    last_password_updated_at=last_password_updated_at,
-                    can_read=can_read,
-                    can_write=can_write,
-                )
+            if owner_group_id is None:
+                continue
+
+            user_access = self._find_user_access(user_id, permissions, membership_cache)
+
+            if user_access is not None:
+                can_write = user_access
+                result.append((password, owner_group_id, True, can_write))
+            elif is_admin:
+                result.append((password, owner_group_id, False, False))
+
+        return result
+
+    def _find_user_access(
+        self,
+        user_id: UUID,
+        permissions: GroupPermissions,
+        membership_cache: dict[UUID, tuple[bool, bool]],
+    ) -> bool | None:
+        """Return True if the user has write access, False for read-only, None if no access."""
+        for group_id, (is_owner_group, perms) in permissions.items():
+            is_user_owner, is_user_member = self._cached_membership(
+                user_id, group_id, membership_cache
             )
-        return password_responses
-
-    def _find_owner_group_id(self, password_id: UUID) -> Optional[UUID]:
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            password_id
-        )
-        for group_id, (is_owner, _) in all_permissions.items():
-            if is_owner:
-                return group_id
-        return None
-
-    def _user_has_access_through_groups(
-        self, user_id: UUID, password_id: UUID
-    ) -> tuple[UUID, UUID, bool] | None:
-        """Check if user has access to password through any of their groups.
-
-        Returns a tuple of (user_group_id, owner_group_id, is_owner_access) if access is granted, None otherwise.
-        - user_group_id: The group through which the user has access
-        - owner_group_id: The group that owns the password
-        - is_owner_access: True if the user's group owns the password (full write access)
-        """
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            password_id
-        )
-
-        owner_group_id = None
-        for group_id, (is_owner, permissions) in all_permissions.items():
-            if is_owner:
-                owner_group_id = group_id
-                break
-
-        if owner_group_id is None:
-            return None
-
-        for group_id, (is_owner, permissions) in all_permissions.items():
-            is_user_owner = self.group_access_gateway.is_user_owner_of_group(
-                user_id, group_id
-            )
-            is_user_member = self.group_access_gateway.is_user_member_of_group(
-                user_id, group_id
-            )
-
             if is_user_owner or is_user_member:
-                if is_owner:
-                    return (group_id, owner_group_id, True)
-                elif PasswordPermission.READ in permissions:
-                    return (group_id, owner_group_id, False)
-
+                if is_owner_group:
+                    return True
+                if PasswordPermission.READ in perms:
+                    return False
         return None
+
+    def _cached_membership(
+        self,
+        user_id: UUID,
+        group_id: UUID,
+        cache: dict[UUID, tuple[bool, bool]],
+    ) -> tuple[bool, bool]:
+        if group_id not in cache:
+            cache[group_id] = (
+                self.group_access_gateway.is_user_owner_of_group(user_id, group_id),
+                self.group_access_gateway.is_user_member_of_group(user_id, group_id),
+            )
+        return cache[group_id]
