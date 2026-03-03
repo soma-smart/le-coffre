@@ -11,6 +11,9 @@ def rate_limited_client(database, env_vars):
         app.state.rate_limit_auth_max_requests = 3
         app.state.rate_limit_api_max_requests = 5
         app.state.rate_limit_window_seconds = 60
+        # Clear any state left by previous tests so each test starts with a
+        # clean slate — the rate limiter is a singleton on the shared app object.
+        app.state.rate_limiter.reset()
         yield client
 
 
@@ -18,6 +21,12 @@ class TestRateLimitingWorkflow:
     def test_should_return_429_when_login_rate_limit_exceeded(
         self, rate_limited_client
     ):
+        # Disable auto-CSRF: the CSRF endpoint requires auth and always returns 401
+        # when unauthenticated, so the token is never cached and each POST would
+        # waste 2 API bucket slots (one CSRF fetch + one POST).  We're testing
+        # auth rate limiting here — CSRF is orthogonal.
+        rate_limited_client.disable_auto_csrf()
+
         for _ in range(3):
             r = rate_limited_client.post(
                 "/api/auth/login",
