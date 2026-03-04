@@ -9,33 +9,95 @@
           <code class="text-sm surface-card px-3 py-1 rounded border surface-border font-mono">
             {{ isVisible && passwordValue ? passwordValue : '••••••••' }}
           </code>
-          <Button :icon="isVisible ? 'pi pi-eye-slash' : 'pi pi-eye'" text rounded size="small" severity="secondary"
-            :aria-label="isVisible ? 'Hide password' : 'Show password'" :loading="isLoading"
-            :disabled="!password.can_read" v-tooltip.top="!password.can_read ? 'You don\'t have read access to this password' : undefined
-              " @click="toggleVisibility" />
-          <Button icon="pi pi-copy" text rounded size="small" severity="secondary" aria-label="Copy password"
-            :disabled="!password.can_read" v-tooltip.top="!password.can_read ? 'You don\'t have read access to this password' : undefined
-              " @click="copyToClipboard" />
+          <Button
+            :icon="isVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            :aria-label="isVisible ? 'Hide password' : 'Show password'"
+            :loading="isLoading"
+            :disabled="!password.can_read"
+            v-tooltip.top="
+              !password.can_read ? 'You don\'t have read access to this password' : undefined
+            "
+            @click="toggleVisibility"
+          />
+          <Button
+            icon="pi pi-copy"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            aria-label="Copy password"
+            :disabled="!password.can_read"
+            v-tooltip.top="
+              !password.can_read ? 'You don\'t have read access to this password' : undefined
+            "
+            @click="copyToClipboard"
+          />
         </div>
         <div class="text-xs text-color-secondary flex gap-4">
-          <i v-if="needsUpdate" class="pi pi-exclamation-triangle text-orange-500"
-            v-tooltip.top="'Password not updated in 3+ months'" />
+          <i
+            v-if="needsUpdate"
+            class="pi pi-exclamation-triangle text-orange-500"
+            v-tooltip.top="'Password not updated in 3+ months'"
+          />
           <span>Created: {{ formatDate(password.created_at) }}</span>
           <span>Updated: {{ formatDate(password.last_updated_at) }}</span>
         </div>
       </div>
       <div class="flex gap-1">
-        <Button icon="pi pi-history" text rounded size="small" severity="secondary" aria-label="History"
-          @click="handleHistory" v-tooltip.top="'View history'" />
-        <Button icon=" pi pi-share-alt" text rounded size="small" severity="secondary" aria-label="Share"
-          :disabled="!password.can_write" @click="handleShare" v-tooltip.top="password.can_write ? 'Share password' : 'You don\'t have write access to this password'
-            " />
-        <Button icon="pi pi-pencil" text rounded size="small" severity="secondary" aria-label="Edit"
-          :disabled="!password.can_write" v-tooltip.top="!password.can_write ? 'You don\'t have write access to this password' : undefined
-            " @click="handleEdit" />
-        <Button icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Delete" :loading="isDeleting"
-          :disabled="!password.can_write" v-tooltip.top="!password.can_write ? 'You don\'t have write access to this password' : undefined
-            " @click="handleDelete" />
+        <Button
+          icon="pi pi-history"
+          text
+          rounded
+          size="small"
+          severity="secondary"
+          aria-label="History"
+          @click="handleHistory"
+          v-tooltip.top="'View history'"
+        />
+        <Button
+          icon=" pi pi-share-alt"
+          text
+          rounded
+          size="small"
+          severity="secondary"
+          aria-label="Share"
+          :disabled="!password.can_write"
+          @click="handleShare"
+          v-tooltip.top="
+            password.can_write ? 'Share password' : 'You don\'t have write access to this password'
+          "
+        />
+        <Button
+          icon="pi pi-pencil"
+          text
+          rounded
+          size="small"
+          severity="secondary"
+          aria-label="Edit"
+          :disabled="!password.can_write"
+          v-tooltip.top="
+            !password.can_write ? 'You don\'t have write access to this password' : undefined
+          "
+          @click="handleEdit"
+        />
+        <Button
+          icon="pi pi-trash"
+          text
+          rounded
+          size="small"
+          severity="danger"
+          aria-label="Delete"
+          :loading="isDeleting"
+          :disabled="!password.can_write"
+          v-tooltip.top="
+            !password.can_write ? 'You don\'t have write access to this password' : undefined
+          "
+          @click="handleDelete"
+        />
       </div>
     </div>
   </div>
