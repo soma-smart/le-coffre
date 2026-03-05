@@ -232,8 +232,34 @@ def _configure_otel(app) -> tuple:
     return tracer_provider, meter_provider
 
 
+def _is_internal_endpoint(endpoint: str) -> bool:
+    """Return True if the endpoint targets a cluster-internal or loopback host.
+
+    Internal endpoints (localhost, single-label hostnames, *.svc, *.svc.cluster.local,
+    *.local, loopback IPs) do not require TLS or auth tokens — traffic stays within
+    the cluster network and is never exposed to the internet.
+    """
+    from urllib.parse import urlparse
+    host = urlparse(endpoint).hostname or ""
+    return (
+        host in ("localhost", "127.0.0.1", "::1")
+        or not host
+        or "." not in host  # single-label: alloy, otel-collector, …
+        or host.endswith(".svc")
+        or host.endswith(".svc.cluster.local")
+        or host.endswith(".local")
+    )
+
+
 def _warn_insecure_otlp(endpoint: str) -> None:
-    """Emit warnings when the OTLP transport is insecure or unauthenticated."""
+    """Emit warnings when the OTLP transport is insecure or unauthenticated.
+
+    Skipped for cluster-internal endpoints (loopback, single-label hostnames,
+    *.svc, *.svc.cluster.local, *.local) where plain HTTP and no auth token
+    are acceptable because traffic never leaves the cluster network.
+    """
+    if _is_internal_endpoint(endpoint):
+        return
     if endpoint.startswith("http://"):
         logger.warning(
             "OTLP endpoint uses plain HTTP — telemetry may be intercepted in transit. "
