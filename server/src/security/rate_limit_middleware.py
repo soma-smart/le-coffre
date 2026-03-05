@@ -15,16 +15,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """
     Rate limiting middleware using a sliding window counter.
 
-    Applies two independent checks per request:
-    1. **IP-based** – every request is rate-limited by the caller's IP
-       address so that anonymous and authenticated traffic is both bounded.
-    2. **User-based** – when the caller carries a valid ``access_token``
-       cookie, an additional per-user limit is enforced.  The user ID is
-       extracted from the JWT *without* a database round-trip.
+    Every ``/api`` request is checked against a general **API bucket** keyed by
+    the caller's IP (``ip:<ip>:api``).  Authentication routes additionally go
+    through a stricter **auth bucket** (``ip:<ip>:auth``) to mitigate
+    brute-force and credential-stuffing attacks.  For non-auth routes, when the
+    caller carries a valid ``access_token`` cookie, an additional **per-user
+    bucket** (``user:<id>:api``) is also enforced so that a single compromised
+    account cannot exhaust the shared IP quota.
 
-    Authentication routes (login, register, SSO) are subject to a stricter
-    limit to mitigate brute-force attacks.  Health-check and documentation
-    endpoints are exempt.
+    After a **successful login** (2xx on ``/api/auth/login``) only the auth
+    bucket is reset so shared IPs (e.g. office NAT) are not locked out of the
+    login page.  The API and user buckets are intentionally kept intact.
+
+    Health-check and documentation endpoints are exempt from all limiting.
     """
 
     AUTH_ROUTES = [
@@ -52,47 +55,66 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         rate_limiter: InMemoryRateLimiter = request.app.state.rate_limiter
-        auth_max = request.app.state.rate_limit_auth_max_requests
         api_max = request.app.state.rate_limit_api_max_requests
+        auth_max = request.app.state.rate_limit_auth_max_requests
         window = request.app.state.rate_limit_window_seconds
 
-        is_auth_route = self._is_auth_route(request.url.path)
-        max_requests = auth_max if is_auth_route else api_max
-
-        # ── IP-based check ──────────────────────────────────────
         client_ip = self._get_client_ip(request)
-        category = "auth" if is_auth_route else "api"
-        ip_key = f"ip:{client_ip}:{category}"
-        ip_result = rate_limiter.check(ip_key, max_requests, window)
+        is_auth_route = self._is_auth_route(request.url.path)
+        api_key = f"ip:{client_ip}:api"
+        auth_key = f"ip:{client_ip}:auth"
 
-        if ip_result.is_limited:
+        # ── General API check (all /api routes) ────────────────
+        api_result = rate_limiter.check(api_key, api_max, window)
+        if api_result.is_limited:
             logger.warning(
                 "Rate limit exceeded for IP %s on %s %s",
                 client_ip,
                 request.method,
                 request.url.path,
             )
-            return self._build_429_response(ip_result)
+            return self._build_429_response(api_result)
 
-        # ── User-based check ───────────────────────────────────
-        user_id = await self._try_extract_user_id(request)
-        if user_id:
-            user_key = f"user:{user_id}:{category}"
-            user_result = rate_limiter.check(user_key, max_requests, window)
-
-            if user_result.is_limited:
+        # ── Additional auth check (auth routes only) ────────────
+        auth_result = None
+        if is_auth_route:
+            auth_result = rate_limiter.check(auth_key, auth_max, window)
+            if auth_result.is_limited:
                 logger.warning(
-                    "Rate limit exceeded for user %s on %s %s",
-                    user_id,
+                    "Rate limit exceeded for IP %s on %s %s",
+                    client_ip,
                     request.method,
                     request.url.path,
                 )
-                return self._build_429_response(user_result)
+                return self._build_429_response(auth_result)
+
+        # ── Per-user check (non-auth routes only) ───────────────
+        if not is_auth_route:
+            user_id = await self._try_extract_user_id(request)
+            if user_id:
+                user_key = f"user:{user_id}:api"
+                user_result = rate_limiter.check(user_key, api_max, window)
+                if user_result.is_limited:
+                    logger.warning(
+                        "Rate limit exceeded for user %s on %s %s",
+                        user_id,
+                        request.method,
+                        request.url.path,
+                    )
+                    return self._build_429_response(user_result)
 
         # ── Proceed ────────────────────────────────────────────
         response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(ip_result.limit)
-        response.headers["X-RateLimit-Remaining"] = str(ip_result.remaining)
+
+        # Expose the most relevant limit: auth bucket for auth routes, API bucket otherwise
+        header_result = auth_result if auth_result is not None else api_result
+        response.headers["X-RateLimit-Limit"] = str(header_result.limit)
+        response.headers["X-RateLimit-Remaining"] = str(header_result.remaining)
+
+        # On successful login reset only the auth bucket; the API bucket keeps counting
+        if request.url.path == "/api/auth/login" and response.status_code < 300:
+            rate_limiter.reset_key(auth_key)
+
         return response
 
     # ── Helpers ─────────────────────────────────────────────────
@@ -118,8 +140,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         Best-effort extraction of the user ID from the JWT cookie.
 
         Uses the ``token_gateway`` stored in app state to decode the token.
-        Returns ``None`` if the token is absent, expired or invalid — rate
-        limiting then relies solely on the IP-based check.
+        Returns ``None`` if the token is absent, expired, invalid, or if no
+        ``token_gateway`` is configured — rate limiting then relies solely on
+        the IP-based check.
         """
         access_token = request.cookies.get("access_token")
         if not access_token:
@@ -127,6 +150,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         try:
             token_gateway = request.app.state.token_gateway
+            if token_gateway is None:
+                return None
             token = await token_gateway.validate_token(access_token)
             if token:
                 return str(token.user_id)

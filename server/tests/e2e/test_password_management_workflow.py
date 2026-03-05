@@ -100,7 +100,9 @@ def test_complete_password_management_workflow(
     # PHASE 1: BASIC CRUD OPERATIONS
     # ===================================================================
 
+
     print("\n=== PHASE 1: BASIC CRUD OPERATIONS ===")
+
 
     # Step 1.1: CREATE - Create a password and verify timestamps
     print("Step 1.1: Creating password...")
@@ -135,6 +137,7 @@ def test_complete_password_management_workflow(
     assert password_data["created_at"] is not None
     assert "last_password_updated_at" in password_data
     assert password_data["last_password_updated_at"] is not None
+
 
     original_created_at = password_data["created_at"]
     original_updated_at = password_data["last_password_updated_at"]
@@ -172,16 +175,26 @@ def test_complete_password_management_workflow(
 
     # Verify timestamps: created_at should stay same, last_password_updated_at should change
     assert updated_data["created_at"] == original_created_at, (
+    assert updated_data["created_at"] == original_created_at, (
         "created_at should not change after update"
+    )
+    assert updated_data["last_password_updated_at"] != original_updated_at, (
     )
     assert updated_data["last_password_updated_at"] != original_updated_at, (
         "last_password_updated_at should change after update"
     )
     assert updated_data["last_password_updated_at"] > original_updated_at, (
+    )
+    assert updated_data["last_password_updated_at"] > original_updated_at, (
         "last_password_updated_at should be more recent"
     )
 
+    )
+
     print(f"✓ created_at unchanged: {updated_data['created_at']}")
+    print(
+        f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}"
+    )
     print(
         f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}"
     )
@@ -238,6 +251,77 @@ def test_complete_password_management_workflow(
     get_deleted = admin_client.get(f"/api/passwords/{password_id}")
     assert get_deleted.status_code == 404
     print("✓ Password confirmed deleted (404)")
+
+    # Step 1.10: SSO USER CREATES THEIR OWN PASSWORD
+    print("Step 1.10: SSO user creates their own password...")
+    sso_create_response = sso_client.post(
+        "/api/passwords",
+        json={
+            "name": "SSO User Password",
+            "password": STRONG_PASSWORD,
+            "folder": "Work",
+            "group_id": sso_user_group_id,
+        },
+    )
+    assert sso_create_response.status_code == 201
+    sso_password_id = sso_create_response.json()["id"]
+    print(f"✓ SSO user password created: {sso_password_id}")
+
+    # Step 1.11: ADMIN LISTS ALL PASSWORDS
+    # Admin should see every password regardless of ownership.
+    # Passwords the admin owns → can_read=True, can_write=True.
+    # Passwords the admin has no group access to → can_read=False, can_write=False.
+    print(
+        "Step 1.11: Admin lists all passwords (should see all, with access flags reflecting group membership)..."
+    )
+    admin_list_response = admin_client.get("/api/passwords/list")
+    assert admin_list_response.status_code == 200
+    admin_passwords = admin_list_response.json()
+
+    all_ids = [p["id"] for p in admin_passwords]
+    assert sso_password_id in all_ids, "Admin should see SSO user's password"
+
+    sso_password_entry = next(p for p in admin_passwords if p["id"] == sso_password_id)
+    assert sso_password_entry["can_read"] is False, (
+        "Admin should have can_read=False for SSO user's password"
+    )
+    assert sso_password_entry["can_write"] is False, (
+        "Admin should have can_write=False for SSO user's password"
+    )
+
+    admin_owned = [p for p in admin_passwords if p["id"] != sso_password_id]
+    for p in admin_owned:
+        assert p["can_read"] is True, (
+            f"Admin password {p['id']} (owned by admin) should have can_read=True"
+        )
+        assert p["can_write"] is True, (
+            f"Admin password {p['id']} (owned by admin) should have can_write=True"
+        )
+    print(
+        f"✓ Admin sees {len(admin_passwords)} passwords, own passwords with full access and SSO user's password with no access"
+    )
+
+    # Step 1.12: SSO USER LISTS THEIR OWN PASSWORDS
+    # Regular user should only see their own passwords, with correct permission flags
+    print(
+        "Step 1.12: SSO user lists their own passwords (can_read=True, can_write=True)..."
+    )
+    sso_list_response = sso_client.get("/api/passwords/list")
+    assert sso_list_response.status_code == 200
+    sso_passwords = sso_list_response.json()
+
+    sso_password_ids = [p["id"] for p in sso_passwords]
+    assert sso_password_id in sso_password_ids, "SSO user should see their own password"
+    for p in sso_passwords:
+        assert p["can_read"] is True, (
+            f"SSO user password {p['id']} should have can_read=True"
+        )
+        assert p["can_write"] is True, (
+            f"SSO user password {p['id']} should have can_write=True"
+        )
+    print(
+        f"✓ SSO user sees {len(sso_passwords)} password(s), all with can_read=True and can_write=True"
+    )
 
     # ===================================================================
     # PHASE 2: SHARING AND ACCESS CONTROL

@@ -13,17 +13,21 @@ if (runtimeConfig?.apiBaseUrl) {
 }
 
 // Configure CSRF token interceptor for mutating requests
-client.interceptors.request.use(async (request, options) => {
+client.interceptors.request.use((request, options) => {
   // Only add CSRF token for mutating methods
   const method = options.method?.toUpperCase()
   const mutateMethods = ['POST', 'PUT', 'DELETE', 'PATCH']
 
   if (method && mutateMethods.includes(method)) {
     const csrfStore = useCsrfStore()
-    const token = await csrfStore.getToken()
+    // Only use an already-cached token — never auto-fetch from within a request
+    // interceptor, as that would trigger a second request (and its own error
+    // handling) before the current request completes, causing race conditions
+    // during login (when no token exists yet).
+    // The token is explicitly fetched right after a successful login/SSO callback.
+    const token = csrfStore.csrfToken
 
     if (token) {
-      // Add CSRF token to request headers
       request.headers.set('X-CSRF-Token', token)
     }
   }

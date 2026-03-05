@@ -203,7 +203,8 @@ export const listPasswordsPasswordsListGet = <ThrowOnError extends boolean = fal
  *
  * Retrieve the event history for a specific password.
  *
- * Requires READ permission on the password.
+ * Admins can list events for any password. Owners and members can list events
+ * for passwords they have access to through their groups.
  *
  * - **password_id**: The ID of the password
  * - **event_type**: Optional filter by event types

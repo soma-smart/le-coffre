@@ -3,6 +3,8 @@ from sqlmodel import select, Session
 
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
+    GroupPermissions,
+    BulkGroupPermissions,
 )
 from password_management_context.domain.value_objects.password_permission import (
     PasswordPermission,
@@ -97,11 +99,9 @@ class SqlPasswordPermissionsRepository(
         if permission_entries:
             self.commit()
 
-    def list_all_permissions_for(
-        self, password_id: UUID
-    ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
+    def list_all_permissions_for(self, password_id: UUID) -> GroupPermissions:
         """Get all groups who have access to a password with their permissions"""
-        result: dict[UUID, tuple[bool, set[PasswordPermission]]] = {}
+        result: GroupPermissions = {}
 
         # Get all owner groups
         ownership_statement = select(OwnershipTable).where(
@@ -126,6 +126,34 @@ class SqlPasswordPermissionsRepository(
                 )
             except ValueError:
                 # Skip invalid permissions
+                pass
+
+        return result
+
+    def list_all_permissions_for_bulk(
+        self, password_ids: list[UUID]
+    ) -> BulkGroupPermissions:
+        """Get all group permissions for multiple passwords in two SQL queries."""
+        result: BulkGroupPermissions = {pwd_id: {} for pwd_id in password_ids}
+
+        ownership_statement = select(OwnershipTable).where(
+            OwnershipTable.resource_id.in_(password_ids)
+        )
+        for ownership in self._session.exec(ownership_statement).all():
+            result[ownership.resource_id][ownership.group_id] = (True, set())
+
+        permission_statement = select(PermissionsTable).where(
+            PermissionsTable.resource_id.in_(password_ids)
+        )
+        for perm_entry in self._session.exec(permission_statement).all():
+            pwd_perms = result[perm_entry.resource_id]
+            if perm_entry.group_id not in pwd_perms:
+                pwd_perms[perm_entry.group_id] = (False, set())
+            try:
+                pwd_perms[perm_entry.group_id][1].add(
+                    PasswordPermission(perm_entry.permission)
+                )
+            except ValueError:
                 pass
 
         return result

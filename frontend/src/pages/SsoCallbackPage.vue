@@ -5,6 +5,7 @@ import { useToast } from 'primevue'
 import { ssoCallbackAuthSsoCallbackGet } from '@/client'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useUserStore } from '@/stores/user'
+import { useCsrfStore } from '@/stores/csrf'
 import BlankLayout from '../layouts/BlankLayout.vue'
 
 const route = useRoute()
@@ -12,6 +13,7 @@ const router = useRouter()
 const toast = useToast()
 const passwordsStore = usePasswordsStore()
 const userStore = useUserStore()
+const csrfStore = useCsrfStore()
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
@@ -77,6 +79,9 @@ onMounted(async () => {
       // Invalidate caches to force refetch after SSO login
       passwordsStore.invalidateCache()
       userStore.clearUser() // Clear cached user data to fetch fresh data on navigation
+
+      // Fetch CSRF token after successful SSO login
+      await csrfStore.fetchCsrfToken()
 
       // Redirect to home page
       await router.push('/')

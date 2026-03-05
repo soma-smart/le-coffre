@@ -59,7 +59,8 @@ def list_password_events(
     """
     Retrieve the event history for a specific password.
 
-    Requires READ permission on the password.
+    Admins can list events for any password. Owners and members can list events
+    for passwords they have access to through their groups.
 
     - **password_id**: The ID of the password
     - **event_type**: Optional filter by event types
@@ -70,7 +71,7 @@ def list_password_events(
     try:
         command = ListPasswordEventsCommand(
             password_id=password_id,
-            user_id=current_user.user_id,
+            requesting_user=current_user.to_authenticated_user(),
             event_types=event_type,
             start_date=start_date,
             end_date=end_date,
@@ -90,10 +91,9 @@ def list_password_events(
                 for event in response.events
             ]
         )
-    except (PasswordNotFoundError, PasswordAccessDeniedError) as e:
-        # For security, treat both not found and access denied as 404
+    except PasswordNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except AccessDeniedError as e:
+    except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))

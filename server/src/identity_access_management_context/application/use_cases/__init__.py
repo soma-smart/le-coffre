@@ -17,10 +17,8 @@ from .get_group_use_case import GetGroupUseCase
 from .update_group_use_case import UpdateGroupUseCase
 from .promote_admin_use_case import PromoteAdminUseCase
 from .sso.is_sso_config_set_use_case import IsSsoConfigSetUseCase
-
-# Import from subdirectories
-from .admin.admin_login_use_case import AdminLoginUseCase
-from .admin.register_admin_with_password_use_case import (
+from .password_login_use_case import PasswordLoginUseCase
+from .register_admin_with_password_use_case import (
     RegisterAdminWithPasswordUseCase,
 )
 from .sso.get_sso_authorize_url_use_case import GetSsoAuthorizeUrlUseCase
@@ -47,7 +45,7 @@ __all__ = [
     "UpdateGroupUseCase",
     "PromoteAdminUseCase",
     "IsSsoConfigSetUseCase",
-    "AdminLoginUseCase",
+    "PasswordLoginUseCase",
     "RegisterAdminWithPasswordUseCase",
     "GetSsoAuthorizeUrlUseCase",
     "ConfigureSsoProviderUseCase",

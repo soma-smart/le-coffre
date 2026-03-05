@@ -81,6 +81,21 @@ class InMemoryRateLimiter:
                 del self._requests[key]
             return len(expired_keys)
 
+    def reset_key(self, key: str) -> bool:
+        """
+        Remove a single key's tracked state.
+
+        Returns ``True`` if the key existed and was removed, ``False``
+        otherwise.  Useful for clearing a rate-limit bucket after a
+        successful authentication so that shared IPs (e.g. office NAT)
+        are not permanently locked out.
+        """
+        with self._lock:
+            if key in self._requests:
+                del self._requests[key]
+                return True
+            return False
+
     def reset(self) -> None:
         """Clear all tracked state. Useful for testing."""
         with self._lock:

@@ -71,6 +71,12 @@ export const usePasswordsStore = defineStore('passwords', () => {
     globalPendingPromise = null
   }
 
+  const clear = () => {
+    passwords.value = []
+    error.value = null
+    invalidateCache()
+  }
+
   const refresh = async () => {
     await fetchPasswords(true)
   }
@@ -88,6 +94,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     // Actions
     fetchPasswords,
     invalidateCache,
+    clear,
     refresh,
   }
 })

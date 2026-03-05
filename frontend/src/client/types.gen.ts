@@ -316,6 +316,14 @@ export type GetPasswordListResponse = {
      * Last Updated At
      */
     last_updated_at: string;
+    /**
+     * Can Read
+     */
+    can_read: boolean;
+    /**
+     * Can Write
+     */
+    can_write: boolean;
 };
 
 /**

@@ -18,6 +18,7 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     PasswordAccessDeniedError,
 )
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 from shared_kernel.application.tracing import TracedUseCase
@@ -43,13 +44,14 @@ class ListPasswordEventsUseCase(TracedUseCase):
         if not password_entity:
             raise PasswordNotFoundError(command.password_id)
 
-        # Check if user has access through their groups
-        if not self._user_has_access_through_groups(
-            command.user_id, command.password_id
-        ):
-            raise PasswordAccessDeniedError(command.user_id, command.password_id)
+        if not AdminPermissionChecker.is_admin(command.requesting_user):
+            if not self._user_has_access_through_groups(
+                command.requesting_user.user_id, command.password_id
+            ):
+                raise PasswordAccessDeniedError(
+                    command.requesting_user.user_id, command.password_id
+                )
 
-        # Fetch events from repository
         events = self.password_event_repository.list_events(
             password_id=command.password_id,
             event_types=command.event_types,
@@ -57,13 +59,10 @@ class ListPasswordEventsUseCase(TracedUseCase):
             end_date=command.end_date,
         )
 
-        # Convert to response DTOs
         event_items = []
         for event in events:
-            # Enrich event_data with group names
             enriched_event_data = dict(event["event_data"])
 
-            # Add group name for PasswordSharedEvent
             if (
                 event["event_type"] == "PasswordSharedEvent"
                 and "shared_with_group_id" in enriched_event_data
@@ -76,7 +75,6 @@ class ListPasswordEventsUseCase(TracedUseCase):
                     if group_name:
                         enriched_event_data["shared_with_group_name"] = group_name
 
-            # Add group name for PasswordUnsharedEvent
             if (
                 event["event_type"] == "PasswordUnsharedEvent"
                 and "unshared_with_group_id" in enriched_event_data
@@ -107,13 +105,11 @@ class ListPasswordEventsUseCase(TracedUseCase):
         return ListPasswordEventsResponse(events=event_items)
 
     def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
-        """Check if user has access to password through any of their groups"""
         all_permissions = self.password_permissions_repository.list_all_permissions_for(
             password_id
         )
 
-        for group_id, (is_owner, permissions) in all_permissions.items():
-            # Check if user is owner or member of this group
+        for group_id in all_permissions:
             is_user_owner = self.group_access_gateway.is_user_owner_of_group(
                 user_id, group_id
             )
@@ -121,7 +117,6 @@ class ListPasswordEventsUseCase(TracedUseCase):
                 user_id, group_id
             )
 
-            # If user is in the group (owner or member), they can see events
             if is_user_owner or is_user_member:
                 return True
 

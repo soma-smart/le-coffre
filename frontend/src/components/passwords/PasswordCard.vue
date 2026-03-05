@@ -17,6 +17,10 @@
             severity="secondary"
             :aria-label="isVisible ? 'Hide password' : 'Show password'"
             :loading="isLoading"
+            :disabled="!password.can_read"
+            v-tooltip.top="
+              !password.can_read ? 'You don\'t have read access to this password' : undefined
+            "
             @click="toggleVisibility"
           />
           <Button
@@ -26,6 +30,10 @@
             size="small"
             severity="secondary"
             aria-label="Copy password"
+            :disabled="!password.can_read"
+            v-tooltip.top="
+              !password.can_read ? 'You don\'t have read access to this password' : undefined
+            "
             @click="copyToClipboard"
           />
         </div>
@@ -47,27 +55,20 @@
           size="small"
           severity="secondary"
           aria-label="History"
-          :disabled="!isOwner"
           @click="handleHistory"
-          v-tooltip.top="
-            isOwner
-              ? 'View history'
-              : `Only owners can view history. Owners: ${ownerGroupNames.join(', ')}`
-          "
+          v-tooltip.top="'View history'"
         />
         <Button
-          icon="pi pi-share-alt"
+          icon=" pi pi-share-alt"
           text
           rounded
           size="small"
           severity="secondary"
           aria-label="Share"
-          :disabled="!isOwner"
+          :disabled="!password.can_write"
           @click="handleShare"
           v-tooltip.top="
-            isOwner
-              ? 'Share password'
-              : `Only owners can share. Owners: ${ownerGroupNames.join(', ')}`
+            password.can_write ? 'Share password' : 'You don\'t have write access to this password'
           "
         />
         <Button
@@ -77,6 +78,10 @@
           size="small"
           severity="secondary"
           aria-label="Edit"
+          :disabled="!password.can_write"
+          v-tooltip.top="
+            !password.can_write ? 'You don\'t have write access to this password' : undefined
+          "
           @click="handleEdit"
         />
         <Button
@@ -87,6 +92,10 @@
           severity="danger"
           aria-label="Delete"
           :loading="isDeleting"
+          :disabled="!password.can_write"
+          v-tooltip.top="
+            !password.can_write ? 'You don\'t have write access to this password' : undefined
+          "
           @click="handleDelete"
         />
       </div>
@@ -95,16 +104,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import { storeToRefs } from 'pinia'
 import type { GetPasswordListResponse } from '@/client/types.gen'
 import {
   getPasswordPasswordsPasswordIdGet,
   deletePasswordPasswordsPasswordIdDelete,
 } from '@/client'
-import { useGroupsStore } from '@/stores/groups'
 
 const props = defineProps<{
   password: GetPasswordListResponse
@@ -119,15 +126,11 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const confirm = useConfirm()
-const groupsStore = useGroupsStore()
-const { currentUserId, groups } = storeToRefs(groupsStore)
 
 const passwordValue = ref<string | null>(null)
 const isVisible = ref(false)
 const isLoading = ref(false)
 const isDeleting = ref(false)
-const isOwner = ref(false)
-const ownerGroupNames = ref<string[]>([])
 
 // Check if password needs update (3 months = 90 days)
 const needsUpdate = computed(() => {
@@ -149,41 +152,6 @@ const formatDate = (dateString: string): string => {
     minute: '2-digit',
   })
 }
-
-// Check if current user is owner by checking if they own the group that owns this password
-const checkOwnership = () => {
-  // Find the group that owns this password
-  const ownerGroup = groups.value.find((g) => g.id === props.password.group_id)
-
-  if (ownerGroup) {
-    // Check if current user owns this group
-    // Personal groups: user_id matches current user
-    const isPersonalOwner = ownerGroup.user_id === currentUserId.value
-    // Shared groups: current user is in the owners list
-    const isSharedOwner = ownerGroup.owners && ownerGroup.owners.includes(currentUserId.value!)
-
-    isOwner.value = isPersonalOwner || isSharedOwner
-    ownerGroupNames.value = [ownerGroup.name]
-  } else {
-    isOwner.value = false
-    ownerGroupNames.value = []
-  }
-}
-
-onMounted(async () => {
-  // Ensure groups are loaded
-  await groupsStore.fetchAllGroups()
-  checkOwnership()
-})
-
-// Watch for changes in groups and re-check ownership
-watch(
-  () => groupsStore.groups,
-  () => {
-    checkOwnership()
-  },
-  { deep: true },
-)
 
 const fetchPassword = async () => {
   if (passwordValue.value !== null) return // Already fetched

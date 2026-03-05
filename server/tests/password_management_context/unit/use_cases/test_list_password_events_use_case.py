@@ -15,12 +15,22 @@ from password_management_context.domain.exceptions import (
 from password_management_context.domain.entities import Password
 from password_management_context.domain.value_objects import PasswordPermission
 
+from shared_kernel.domain.entities import AuthenticatedUser
+
 from ..fakes import (
     FakePasswordRepository,
     FakePasswordPermissionsRepository,
     FakeGroupAccessGateway,
     FakePasswordEventRepository,
     FakeUserInfoGateway,
+)
+
+ADMIN_USER = AuthenticatedUser(
+    user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
+)
+
+REGULAR_USER = AuthenticatedUser(
+    user_id=UUID("9a742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=[]
 )
 
 
@@ -46,16 +56,12 @@ def use_case(
     )
 
 
-def test_should_return_events_when_user_has_read_permission(
+def test_should_return_events_when_admin_user(
     use_case: ListPasswordEventsUseCase,
     password_repository: FakePasswordRepository,
-    password_permissions_repository: FakePasswordPermissionsRepository,
-    group_access_gateway: FakeGroupAccessGateway,
     password_event_repository: FakePasswordEventRepository,
 ):
-    # Arrange
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    # Arrange - admin has NO group access, but should still see events
     password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
 
     password = Password(
@@ -65,12 +71,6 @@ def test_should_return_events_when_user_has_read_permission(
         folder="default",
     )
     password_repository.save(password)
-
-    # Grant READ permission to group
-    password_permissions_repository.grant_access(
-        group_id, password_id, PasswordPermission.READ
-    )
-    group_access_gateway.set_group_owner(group_id, user_id)
 
     # Add some events
     event1_id = UUID("a1111111-1111-1111-1111-111111111111")
@@ -83,7 +83,7 @@ def test_should_return_events_when_user_has_read_permission(
         event_type="password.created",
         occurred_on=occurred_on1,
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={"title": "Gmail", "folder_id": None},
     )
     password_event_repository.append_event(
@@ -91,14 +91,14 @@ def test_should_return_events_when_user_has_read_permission(
         event_type="password.updated",
         occurred_on=occurred_on2,
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={"title": "Gmail Account", "folder_id": None},
     )
 
     # Act
     command = ListPasswordEventsCommand(
         password_id=password_id,
-        user_id=user_id,
+        requesting_user=ADMIN_USER,
     )
     response = use_case.execute(command)
 
@@ -112,7 +112,7 @@ def test_should_return_events_when_user_has_read_permission(
     assert response.events[1].event_type == "password.created"
 
 
-def test_should_filter_events_by_event_types_when_specified(
+def test_should_return_events_when_owner_has_group_access(
     use_case: ListPasswordEventsUseCase,
     password_repository: FakePasswordRepository,
     password_permissions_repository: FakePasswordPermissionsRepository,
@@ -120,22 +120,57 @@ def test_should_filter_events_by_event_types_when_specified(
     password_event_repository: FakePasswordEventRepository,
 ):
     # Arrange
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
     password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
 
-    password = Password(
-        id=password_id,
-        name="Gmail",
-        encrypted_value="encrypted(secret)",
-        folder="default",
+    password_repository.save(
+        Password(
+            id=password_id,
+            name="Gmail",
+            encrypted_value="encrypted(secret)",
+            folder="default",
+        )
     )
-    password_repository.save(password)
-
     password_permissions_repository.grant_access(
         group_id, password_id, PasswordPermission.READ
     )
-    group_access_gateway.set_group_owner(group_id, user_id)
+    group_access_gateway.set_group_owner(group_id, REGULAR_USER.user_id)
+
+    password_event_repository.append_event(
+        event_id=UUID("a1111111-1111-1111-1111-111111111111"),
+        event_type="password.created",
+        occurred_on=datetime(2026, 2, 6, 10, 0, 0),
+        password_id=password_id,
+        actor_user_id=REGULAR_USER.user_id,
+        event_data={},
+    )
+
+    command = ListPasswordEventsCommand(
+        password_id=password_id,
+        requesting_user=REGULAR_USER,
+    )
+    response = use_case.execute(command)
+
+    assert len(response.events) == 1
+    assert response.events[0].event_type == "password.created"
+
+
+def test_should_filter_events_by_event_types_when_specified(
+    use_case: ListPasswordEventsUseCase,
+    password_repository: FakePasswordRepository,
+    password_event_repository: FakePasswordEventRepository,
+):
+    # Arrange
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+
+    password_repository.save(
+        Password(
+            id=password_id,
+            name="Gmail",
+            encrypted_value="encrypted(secret)",
+            folder="default",
+        )
+    )
 
     # Add multiple event types
     password_event_repository.append_event(
@@ -143,7 +178,7 @@ def test_should_filter_events_by_event_types_when_specified(
         event_type="password.created",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -151,7 +186,7 @@ def test_should_filter_events_by_event_types_when_specified(
         event_type="password.accessed",
         occurred_on=datetime(2026, 2, 6, 11, 0, 0),
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -159,14 +194,14 @@ def test_should_filter_events_by_event_types_when_specified(
         event_type="password.updated",
         occurred_on=datetime(2026, 2, 6, 12, 0, 0),
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={},
     )
 
     # Act - Filter only accessed events
     command = ListPasswordEventsCommand(
         password_id=password_id,
-        user_id=user_id,
+        requesting_user=ADMIN_USER,
         event_types=["password.accessed"],
     )
     response = use_case.execute(command)
@@ -179,27 +214,19 @@ def test_should_filter_events_by_event_types_when_specified(
 def test_should_filter_events_by_date_range_when_specified(
     use_case: ListPasswordEventsUseCase,
     password_repository: FakePasswordRepository,
-    password_permissions_repository: FakePasswordPermissionsRepository,
-    group_access_gateway: FakeGroupAccessGateway,
     password_event_repository: FakePasswordEventRepository,
 ):
     # Arrange
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
     password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
 
-    password = Password(
-        id=password_id,
-        name="Gmail",
-        encrypted_value="encrypted(secret)",
-        folder="default",
+    password_repository.save(
+        Password(
+            id=password_id,
+            name="Gmail",
+            encrypted_value="encrypted(secret)",
+            folder="default",
+        )
     )
-    password_repository.save(password)
-
-    password_permissions_repository.grant_access(
-        group_id, password_id, PasswordPermission.READ
-    )
-    group_access_gateway.set_group_owner(group_id, user_id)
 
     # Add events at different times
     password_event_repository.append_event(
@@ -207,7 +234,7 @@ def test_should_filter_events_by_date_range_when_specified(
         event_type="password.created",
         occurred_on=datetime(2026, 2, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -215,7 +242,7 @@ def test_should_filter_events_by_date_range_when_specified(
         event_type="password.accessed",
         occurred_on=datetime(2026, 2, 5, 11, 0, 0),
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -223,14 +250,14 @@ def test_should_filter_events_by_date_range_when_specified(
         event_type="password.updated",
         occurred_on=datetime(2026, 2, 10, 12, 0, 0),
         password_id=password_id,
-        actor_user_id=user_id,
+        actor_user_id=ADMIN_USER.user_id,
         event_data={},
     )
 
     # Act - Filter events between Feb 4 and Feb 7
     command = ListPasswordEventsCommand(
         password_id=password_id,
-        user_id=user_id,
+        requesting_user=ADMIN_USER,
         start_date=datetime(2026, 2, 4, 0, 0, 0),
         end_date=datetime(2026, 2, 7, 23, 59, 59),
     )
@@ -248,32 +275,30 @@ def test_should_raise_error_when_password_not_found(
     with pytest.raises(PasswordNotFoundError):
         command = ListPasswordEventsCommand(
             password_id=UUID("00000000-0000-0000-0000-000000000000"),
-            user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"),
+            requesting_user=ADMIN_USER,
         )
         use_case.execute(command)
 
 
-def test_should_raise_error_when_user_has_no_access(
+def test_given_non_admin_user_when_listing_events_should_raise_not_admin_error(
     use_case: ListPasswordEventsUseCase,
     password_repository: FakePasswordRepository,
 ):
-    # Arrange
+    # Arrange - regular user with no group access
     password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-
-    password = Password(
-        id=password_id,
-        name="Gmail",
-        encrypted_value="encrypted(secret)",
-        folder="default",
+    password_repository.save(
+        Password(
+            id=password_id,
+            name="Gmail",
+            encrypted_value="encrypted(secret)",
+            folder="default",
+        )
     )
-    password_repository.save(password)
-    # No permissions granted
 
     # Act & Assert
     with pytest.raises(PasswordAccessDeniedError):
         command = ListPasswordEventsCommand(
             password_id=password_id,
-            user_id=user_id,
+            requesting_user=REGULAR_USER,
         )
         use_case.execute(command)

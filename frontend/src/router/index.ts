@@ -3,6 +3,7 @@ import HomeView from '@/pages/HomePage.vue'
 import SetupView from '@/pages/SetupPage.vue'
 import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
+import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
 
@@ -104,6 +105,18 @@ router.beforeEach(async (to) => {
     // Clear user store when not authenticated
     userStore.clearUser()
     return { name: 'Login' }
+  }
+
+  // Ensure the CSRF token is available for authenticated users.
+  // The token is fetched after login/SSO, but it lives only in memory (Pinia).
+  // On a page refresh the store is cleared, so we must re-fetch it here so
+  // that mutating requests (POST/PUT/DELETE/PATCH) — including vault unlock —
+  // include the required X-CSRF-Token header.
+  if (isLoggedIn) {
+    const csrfStore = useCsrfStore()
+    if (!csrfStore.csrfToken) {
+      await csrfStore.fetchCsrfToken()
+    }
   }
 
   // Check if route requires admin privileges

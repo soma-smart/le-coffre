@@ -1,6 +1,10 @@
 from typing import Dict, Set, Tuple
 from uuid import UUID
 
+from password_management_context.application.gateways.password_permissions_repository import (
+    GroupPermissions,
+    BulkGroupPermissions,
+)
 from password_management_context.domain.value_objects import PasswordPermission
 
 
@@ -39,10 +43,8 @@ class FakePasswordPermissionsRepository:
         if key in self._permissions:
             del self._permissions[key]
 
-    def list_all_permissions_for(
-        self, password_id: UUID
-    ) -> dict[UUID, tuple[bool, set[PasswordPermission]]]:
-        result: dict[UUID, tuple[bool, set[PasswordPermission]]] = {}
+    def list_all_permissions_for(self, password_id: UUID) -> GroupPermissions:
+        result: GroupPermissions = {}
 
         # First, add owner groups (owners take precedence)
         for owner_id, pwd_id in self._ownerships:
@@ -55,6 +57,13 @@ class FakePasswordPermissionsRepository:
                 result[group_id] = (False, permissions.copy())
 
         return result
+
+    def list_all_permissions_for_bulk(
+        self, password_ids: list[UUID]
+    ) -> BulkGroupPermissions:
+        return {
+            pwd_id: self.list_all_permissions_for(pwd_id) for pwd_id in password_ids
+        }
 
     def clear(self) -> None:
         self._ownerships.clear()
