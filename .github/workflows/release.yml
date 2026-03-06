@@ -73,12 +73,36 @@ jobs:
             const tag = context.ref.replace('refs/tags/', '');
             const changelog = `${{ steps.changelog.outputs.changelog }}`;
 
-            await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: tag,
-              name: `Release ${tag}`,
-              body: changelog,
-              draft: false,
-              prerelease: false
-            });
+            let existingRelease;
+            try {
+              const { data } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tag,
+              });
+              existingRelease = data;
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
+
+            if (existingRelease) {
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: existingRelease.id,
+                name: `Release ${tag}`,
+                body: changelog,
+                draft: false,
+                prerelease: false,
+              });
+            } else {
+              await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag,
+                name: `Release ${tag}`,
+                body: changelog,
+                draft: false,
+                prerelease: false,
+              });
+            }
