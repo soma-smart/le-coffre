@@ -329,7 +329,7 @@ const handlePasswordBlur = () => {
                 " class="text-sm"></i>
               <span>{{
                 groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.name
-              }}</span>
+                }}</span>
             </div>
             <span v-else>{{ slotProps.placeholder }}</span>
           </template>
@@ -341,7 +341,7 @@ const handlePasswordBlur = () => {
 
       <div class="flex flex-col gap-2">
         <label for="password-value" class="font-semibold">Password{{ isEditMode ? ' (leave empty to keep current)' : ''
-        }}</label>
+          }}</label>
         <InputText id="password-value" :value="displayedPassword" @input="handlePasswordInput"
           @focus="handlePasswordFocus" @blur="handlePasswordBlur" type="text"
           :placeholder="isEditMode ? 'Leave empty to keep current password' : 'Enter password'" :disabled="loading"
@@ -354,7 +354,8 @@ const handlePasswordBlur = () => {
 
       <div class="flex flex-col gap-2">
         <label for="password-login" class="font-semibold">Login (optional)</label>
-        <InputText id="password-login" v-model="login" :disabled="loading" autocomplete="off" />
+        <InputText id="password-login" v-model="login" placeholder="e.g., user@example.com" :disabled="loading"
+          autocomplete="off" />
       </div>
 
       <div class="flex flex-col gap-2">
