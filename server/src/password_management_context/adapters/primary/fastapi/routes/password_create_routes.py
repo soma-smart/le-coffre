@@ -22,6 +22,8 @@ class CreatePasswordRequest(BaseModel):
     name: str
     password: str
     folder: str | None = None
+    login: str | None = None
+    url: str | None = None
     group_id: str
 
 
@@ -47,6 +49,8 @@ def create_password(
     - **name**: Name/title for the password entry
     - **password**: The actual password to store (will be encrypted)
     - **folder**: Optional folder to organize the password
+    - **login**: Optional login or username associated with the password
+    - **url**: Optional URL associated with the password entry
     - **group_id**: Optional group ID. If not provided, uses the user's personal group
     - **Authentication**: Requires authentication via access_token cookie
     """
@@ -59,6 +63,8 @@ def create_password(
             name=request_body.name,
             decrypted_password=request_body.password,
             folder=request_body.folder,
+            login=request_body.login,
+            url=request_body.url,
         )
 
         created_password_id = usecase.execute(command)

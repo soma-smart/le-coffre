@@ -40,7 +40,42 @@ def use_case(
     )
 
 
-def test_given_user_owns_group_when_creating_password_should_return_password_id(
+def test_given_user_owns_group_when_creating_password_with_all_optional_fields_should_return_password_id(
+    use_case: CreatePasswordUseCase,
+    password_repository: FakePasswordRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+):
+    password_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
+    name = "My Password"
+    login = "My Login"
+    url = "https://example.com"
+    decrypted_password = ANY_PASSWORD
+
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    command = CreatePasswordCommand(
+        user_id=user_id,
+        group_id=group_id,
+        id=password_id,
+        name=name,
+        decrypted_password=decrypted_password,
+        login=login,
+        url=url,
+    )
+
+    result_id = use_case.execute(command)
+
+    assert result_id == password_id
+    saved_password = password_repository.get_by_id(password_id)
+    assert saved_password is not None
+    assert saved_password.name == name
+    assert saved_password.login == login
+    assert saved_password.url == url
+
+
+def test_given_user_owns_group_when_creating_password_without_optional_fields_should_return_password_id(
     use_case: CreatePasswordUseCase,
     password_repository: FakePasswordRepository,
     group_access_gateway: FakeGroupAccessGateway,
@@ -67,6 +102,8 @@ def test_given_user_owns_group_when_creating_password_should_return_password_id(
     saved_password = password_repository.get_by_id(password_id)
     assert saved_password is not None
     assert saved_password.name == name
+    assert saved_password.login is None
+    assert saved_password.url is None
 
 
 def test_given_user_not_owner_when_creating_password_should_raise_user_not_owner_error(
@@ -86,6 +123,8 @@ def test_given_user_not_owner_when_creating_password_should_raise_user_not_owner
         id=password_id,
         name="My Password",
         decrypted_password=ANY_PASSWORD,
+        login="My Login",
+        url="https://example.com",
     )
 
     with pytest.raises(UserNotOwnerOfGroupError) as exc_info:
@@ -108,6 +147,8 @@ def test_given_group_not_exists_when_creating_password_should_raise_group_not_fo
         id=password_id,
         name="My Password",
         decrypted_password=ANY_PASSWORD,
+        login="My Login",
+        url="https://example.com",
     )
 
     with pytest.raises(GroupNotFoundError) as exc_info:
@@ -133,6 +174,8 @@ def test_given_valid_password_when_creating_password_should_set_group_as_owner(
         id=password_id,
         name="My Password",
         decrypted_password=ANY_PASSWORD,
+        login="My Login",
+        url="https://example.com",
     )
 
     use_case.execute(command)
@@ -149,6 +192,8 @@ def test_given_password_with_uuid_when_creating_password_should_store_encrypted_
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
     name = "name"
+    login = "My Login"
+    url = "https://example.com"
     decrypted_password = ANY_PASSWORD
     expected_encrypted = "encrypted(" + decrypted_password + ")"
 
@@ -160,6 +205,8 @@ def test_given_password_with_uuid_when_creating_password_should_store_encrypted_
         id=uuid,
         name=name,
         decrypted_password=decrypted_password,
+        login=login,
+        url=url,
     )
 
     password_id = use_case.execute(command)
@@ -169,6 +216,8 @@ def test_given_password_with_uuid_when_creating_password_should_store_encrypted_
     saved_password = password_repository.get_by_id(password_id)
     assert saved_password.id == uuid
     assert saved_password.name == name
+    assert saved_password.login == login
+    assert saved_password.url == url
     assert saved_password.encrypted_value == expected_encrypted
 
 
@@ -182,6 +231,8 @@ def test_given_password_with_folder_when_creating_password_should_store_in_folde
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
     folder = "Work"
     name = "Slack"
+    login = "My Login"
+    url = "https://example.com"
     decrypted_password = ANY_PASSWORD
     expected_encrypted = "encrypted(" + decrypted_password + ")"
 
@@ -192,6 +243,8 @@ def test_given_password_with_folder_when_creating_password_should_store_in_folde
         group_id=group_id,
         id=uuid,
         name=name,
+        login=login,
+        url=url,
         decrypted_password=decrypted_password,
         folder=folder,
     )
@@ -202,6 +255,8 @@ def test_given_password_with_folder_when_creating_password_should_store_in_folde
     saved_password = password_repository.get_by_id(password_id)
     assert saved_password.name == name
     assert saved_password.folder == folder
+    assert saved_password.login == login
+    assert saved_password.url == url
     assert saved_password.encrypted_value == expected_encrypted
 
 
@@ -214,6 +269,8 @@ def test_given_no_folder_specified_when_creating_password_should_use_default_fol
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
     name = "Slack"
+    login = "My Login"
+    url = "https://example.com"
     decrypted_password = ANY_PASSWORD
 
     group_access_gateway.set_group_owner(group_id, user_id)
@@ -223,6 +280,8 @@ def test_given_no_folder_specified_when_creating_password_should_use_default_fol
         group_id=group_id,
         id=uuid,
         name=name,
+        login=login,
+        url=url,
         decrypted_password=decrypted_password,
     )
 
@@ -231,6 +290,9 @@ def test_given_no_folder_specified_when_creating_password_should_use_default_fol
     assert password_id == uuid
     saved_password = password_repository.get_by_id(password_id)
     assert saved_password.folder == "default"
+    assert saved_password.name == name
+    assert saved_password.login == login
+    assert saved_password.url == url
 
 
 def test_given_valid_user_when_creating_password_should_set_permissions_for_user(
@@ -242,6 +304,8 @@ def test_given_valid_user_when_creating_password_should_set_permissions_for_user
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
     name = "name"
+    login = "My Login"
+    url = "https://example.com"
     decrypted_password = ANY_PASSWORD
 
     group_access_gateway.set_group_owner(group_id, user_id)
@@ -251,6 +315,8 @@ def test_given_valid_user_when_creating_password_should_set_permissions_for_user
         group_id=group_id,
         id=uuid,
         name=name,
+        login=login,
+        url=url,
         decrypted_password=decrypted_password,
     )
 
@@ -268,6 +334,8 @@ def test_given_valid_password_when_creating_password_should_store_password_creat
     user_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
     name = "my-password"
+    login = "My Login"
+    url = "https://example.com"
     folder = "work"
     decrypted_password = ANY_PASSWORD
 
@@ -278,6 +346,8 @@ def test_given_valid_password_when_creating_password_should_store_password_creat
         group_id=group_id,
         id=uuid,
         name=name,
+        login=login,
+        url=url,
         decrypted_password=decrypted_password,
         folder=folder,
     )

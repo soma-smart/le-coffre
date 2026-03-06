@@ -27,6 +27,8 @@ class GetPasswordResponse(BaseModel):
     id: UUID
     name: str
     password: str
+    login: str | None
+    url: str | None
     folder: str
     created_at: datetime | None
     last_password_updated_at: datetime | None
@@ -60,6 +62,8 @@ def get_password(
             name=password_response.name,
             password=password_response.password,
             folder=password_response.folder,
+            login=password_response.login,
+            url=password_response.url,
             created_at=password_response.created_at,
             last_password_updated_at=password_response.last_password_updated_at,
         )
@@ -70,6 +74,6 @@ def get_password(
         raise HTTPException(status_code=403, detail=str(e))
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error in get password")
         raise HTTPException(status_code=500, detail="Internal server error")

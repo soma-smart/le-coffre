@@ -12,3 +12,5 @@ class PasswordTable(SQLModel, table=True):
     name: str = Field(description="Password name")
     encrypted_value: str = Field(description="encrypted Password")
     folder: str | None = Field(description="Path to folder")
+    login: str | None = Field(description="Login matching the password")
+    url: str | None = Field(description="URL matching the password")

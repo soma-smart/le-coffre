@@ -26,6 +26,8 @@ class UpdatePasswordRequest(BaseModel):
     name: str | None = None
     password: str | None = None
     folder: str | None = None
+    login: str | None = None
+    url: str | None = None
 
 
 @router.put(
@@ -46,6 +48,8 @@ def update_password(
     - **name**: Name/title for the password entry
     - **password**: The actual password to store (will be encrypted)
     - **folder**: Optional folder to organize the password
+    - **login**: Optional login/username associated with the password entry
+    - **url**: Optional URL associated with the password entry
     - **Authentication**: Requires authentication via access_token cookie
     """
     try:
@@ -55,6 +59,8 @@ def update_password(
             name=request.name,
             password=request.password,
             folder=request.folder,
+            login=request.login,
+            url=request.url,
         )
 
         usecase.execute(command)

@@ -70,6 +70,8 @@ class UpdatePasswordUseCase(TracedUseCase):
         has_name_changed = False
         has_password_changed = False
         has_folder_changed = False
+        has_login_changed = False
+        has_url_changed = False
 
         if new_password.password:
             existing_password.encrypted_value = (
@@ -85,6 +87,14 @@ class UpdatePasswordUseCase(TracedUseCase):
             existing_password.folder = new_password.folder
             has_folder_changed = True
 
+        if new_password.login:
+            existing_password.login = new_password.login
+            has_login_changed = True
+
+        if new_password.url:
+            existing_password.url = new_password.url
+            has_url_changed = True
+
         self.password_repository.update(existing_password)
 
         # Store domain event
@@ -94,6 +104,8 @@ class UpdatePasswordUseCase(TracedUseCase):
             has_name_changed=has_name_changed,
             has_password_changed=has_password_changed,
             has_folder_changed=has_folder_changed,
+            has_login_changed=has_login_changed,
+            has_url_changed=has_url_changed,
         )
         event_storage_service = PasswordEventStorageService(
             self.password_event_repository

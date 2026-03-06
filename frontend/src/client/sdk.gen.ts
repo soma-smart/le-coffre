@@ -161,6 +161,8 @@ export const getVaultStatusVaultStatusGet = <ThrowOnError extends boolean = fals
  * - **name**: Name/title for the password entry
  * - **password**: The actual password to store (will be encrypted)
  * - **folder**: Optional folder to organize the password
+ * - **login**: Optional login or username associated with the password
+ * - **url**: Optional URL associated with the password entry
  * - **group_id**: Optional group ID. If not provided, uses the user's personal group
  * - **Authentication**: Requires authentication via access_token cookie
  */
@@ -269,6 +271,8 @@ export const getPasswordPasswordsPasswordIdGet = <ThrowOnError extends boolean =
  * - **name**: Name/title for the password entry
  * - **password**: The actual password to store (will be encrypted)
  * - **folder**: Optional folder to organize the password
+ * - **login**: Optional login/username associated with the password entry
+ * - **url**: Optional URL associated with the password entry
  * - **Authentication**: Requires authentication via access_token cookie
  */
 export const updatePasswordPasswordsPasswordIdPut = <ThrowOnError extends boolean = false>(options: Options<UpdatePasswordPasswordsPasswordIdPutData, ThrowOnError>) => (options.client ?? client).put<UpdatePasswordPasswordsPasswordIdPutResponses, UpdatePasswordPasswordsPasswordIdPutErrors, ThrowOnError>({

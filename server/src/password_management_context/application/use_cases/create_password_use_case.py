@@ -60,6 +60,8 @@ class CreatePasswordUseCase(TracedUseCase):
             name=command.name,
             encrypted_value=encrypted_value,
             folder=command.folder,
+            login=command.login,
+            url=command.url,
         )
 
         self.password_repository.save(password)
@@ -72,6 +74,8 @@ class CreatePasswordUseCase(TracedUseCase):
             owner_group_id=command.group_id,
             created_by_user_id=command.user_id,
             folder=password.folder,
+            login=password.login,
+            url=password.url,
         )
         event_storage_service = PasswordEventStorageService(
             self.password_event_repository

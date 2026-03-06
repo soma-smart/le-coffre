@@ -11,3 +11,5 @@ class CreatePasswordCommand:
     name: str
     decrypted_password: str
     folder: str | None = None
+    login: str | None = None
+    url: str | None = None

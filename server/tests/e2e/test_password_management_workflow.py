@@ -18,6 +18,8 @@ import jwt
 
 
 STRONG_PASSWORD = "StrongP@ssw0rd123"
+LOGIN = "My Login"
+URL = "http://example.com"
 
 
 def get_user_id_from_token(token: str) -> str:
@@ -109,6 +111,8 @@ def test_complete_password_management_workflow(
             "password": STRONG_PASSWORD,
             "folder": "Work",
             "group_id": admin_group_id,
+            "login": LOGIN,
+            "url": URL,
         },
     )
     assert create_response.status_code == 201
@@ -123,6 +127,8 @@ def test_complete_password_management_workflow(
     assert password_data["name"] == "Test Password"
     assert password_data["password"] == STRONG_PASSWORD
     assert password_data["folder"] == "Work"
+    assert password_data["login"] == LOGIN
+    assert password_data["url"] == URL
 
     # Verify timestamps exist and are valid
     assert "created_at" in password_data
@@ -146,6 +152,8 @@ def test_complete_password_management_workflow(
             "name": "Updated Password",
             "password": "NewStrongP@ssw0rd!",
             "folder": "Personal",
+            "login": "NEW " + LOGIN,
+            "url": "NEW " + URL,
         },
     )
     assert update_response.status_code == 201
@@ -159,19 +167,26 @@ def test_complete_password_management_workflow(
     assert updated_data["name"] == "Updated Password"
     assert updated_data["password"] == "NewStrongP@ssw0rd!"
     assert updated_data["folder"] == "Personal"
+    assert updated_data["login"] == "NEW " + LOGIN
+    assert updated_data["url"] == "NEW " + URL
 
     # Verify timestamps: created_at should stay same, last_password_updated_at should change
     assert updated_data["created_at"] == original_created_at, (
         "created_at should not change after update"
     )
+    assert updated_data["last_password_updated_at"] != original_updated_at, ()
     assert updated_data["last_password_updated_at"] != original_updated_at, (
         "last_password_updated_at should change after update"
     )
+    assert updated_data["last_password_updated_at"] > original_updated_at, ()
     assert updated_data["last_password_updated_at"] > original_updated_at, (
         "last_password_updated_at should be more recent"
     )
 
     print(f"✓ created_at unchanged: {updated_data['created_at']}")
+    print(
+        f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}"
+    )
     print(
         f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}"
     )
@@ -185,6 +200,8 @@ def test_complete_password_management_workflow(
                 "name": f"Test Password {i}",
                 "password": f"StrongP@ssw0rd{i}!",
                 "folder": "Work",
+                "login": f"user{i}",
+                "url": f"http://example_{i}.com",
                 "group_id": admin_group_id,
             },
         )
@@ -313,6 +330,8 @@ def test_complete_password_management_workflow(
             "password": STRONG_PASSWORD,
             "folder": "Shared",
             "group_id": admin_group_id,
+            "login": LOGIN,
+            "url": URL,
         },
     )
     assert create_share_response.status_code == 201
@@ -373,6 +392,8 @@ def test_complete_password_management_workflow(
     shared_data = get_after_share.json()
     assert shared_data["name"] == "Shared Test Password"
     assert shared_data["password"] == STRONG_PASSWORD
+    assert shared_data["login"] == LOGIN
+    assert shared_data["url"] == URL
     print("✓ SSO user can access shared password")
 
     # Step 2.8: LIST ACCESS AFTER SHARING - Should show owner + shared user
@@ -455,6 +476,8 @@ def test_complete_password_management_workflow(
     group_shared_data = get_after_group_share.json()
     assert group_shared_data["name"] == "Shared Test Password"
     assert group_shared_data["password"] == STRONG_PASSWORD
+    assert group_shared_data["login"] == LOGIN
+    assert group_shared_data["url"] == URL
     print("✓ Group member can access shared password")
 
     # ===================================================================
@@ -512,6 +535,8 @@ def test_complete_password_management_workflow(
         json={
             "name": "Unauthorized",
             "password": "test",
+            "login": LOGIN,
+            "url": URL,
             "group_id": admin_group_id,
         },
     )
@@ -528,7 +553,13 @@ def test_complete_password_management_workflow(
     print("Step 5.3: Verifying authentication required for update...")
     unauth_update = unauthenticated_client.put(
         f"/api/passwords/{shared_password_id}",
-        json={"name": "Unauthorized", "password": "test", "folder": "test"},
+        json={
+            "name": "Unauthorized",
+            "password": "test",
+            "folder": "test",
+            "login": LOGIN,
+            "url": URL,
+        },
     )
     assert unauth_update.status_code == 401
     print("✓ Unauthenticated update correctly rejected (401)")
@@ -546,7 +577,13 @@ def test_complete_password_management_workflow(
     nonexistent_id = str(UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e7"))
     update_404 = admin_client.put(
         f"/api/passwords/{nonexistent_id}",
-        json={"name": "Test", "password": "test", "folder": "test"},
+        json={
+            "name": "Test",
+            "password": "test",
+            "folder": "test",
+            "login": LOGIN,
+            "url": URL,
+        },
     )
     assert update_404.status_code == 404
     print("✓ Update non-existent password returns 404")

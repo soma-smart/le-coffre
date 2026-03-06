@@ -2,7 +2,11 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen'
+import {
+  createPasswordPasswordsPost,
+  updatePasswordPasswordsPasswordIdPut,
+  getPasswordPasswordsPasswordIdGet,
+} from '@/client/sdk.gen'
 import type { GetPasswordListResponse } from '@/client/types.gen'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useGroupsStore } from '@/stores/groups'
@@ -24,12 +28,21 @@ const { groupsForPasswordCreation } = storeToRefs(groupsStore)
 
 const name = ref('')
 const password = ref('')
+const login = ref('')
+const url = ref('')
 const folder = ref('')
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
 
 const isEditMode = ref(false)
+
+const urlError = computed(() => {
+  if (url.value && !/^https?:\/\//i.test(url.value)) {
+    return 'URL must start with http:// or https://'
+  }
+  return ''
+})
 
 // Display bullets when password field is not focused
 const displayedPassword = computed(() => {
@@ -75,11 +88,22 @@ watch(
       isEditMode.value = true
       name.value = newValue.name
       password.value = '' // Don't prefill password for security
+      login.value = ''
+      url.value = ''
       folder.value = newValue.folder || ''
+      // Fetch detail to pre-fill optional fields
+      getPasswordPasswordsPasswordIdGet({ path: { password_id: newValue.id } }).then((response) => {
+        if (response.data) {
+          login.value = response.data.login || ''
+          url.value = response.data.url || ''
+        }
+      })
     } else {
       isEditMode.value = false
       name.value = ''
       password.value = ''
+      login.value = ''
+      url.value = ''
       folder.value = ''
       // Set default group to personal group
       if (groupsStore.currentUserPersonalGroupId) {
@@ -98,6 +122,17 @@ const handleSubmit = async () => {
       severity: 'error',
       summary: 'Validation Error',
       detail: 'Name is required',
+      life: 5000,
+    })
+    return
+  }
+
+  // URL must start with http:// or https:// if provided
+  if (urlError.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: urlError.value,
       life: 5000,
     })
     return
@@ -130,9 +165,17 @@ const handleSubmit = async () => {
 
     if (isEditMode.value && props.editPassword) {
       // Update existing password
-      const updateBody: { name: string; folder: string | null; password?: string } = {
+      const updateBody: {
+        name: string
+        folder: string | null
+        password?: string
+        login?: string | null
+        url?: string | null
+      } = {
         name: name.value,
         folder: folder.value || null,
+        login: login.value || null,
+        url: url.value || null,
       }
 
       // Only include password if it was changed
@@ -172,6 +215,8 @@ const handleSubmit = async () => {
         body: {
           name: name.value,
           password: password.value,
+          login: login.value || null,
+          url: url.value || null,
           folder: folder.value || null,
           group_id: selectedGroupId.value!,
         },
@@ -203,6 +248,8 @@ const handleSubmit = async () => {
     // Reset form
     name.value = ''
     password.value = ''
+    login.value = ''
+    url.value = ''
     folder.value = ''
     // Reset to personal group instead of empty
     if (groupsStore.currentUserPersonalGroupId) {
@@ -233,6 +280,8 @@ const handleSubmit = async () => {
 const handleCancel = () => {
   name.value = ''
   password.value = ''
+  login.value = ''
+  url.value = ''
   folder.value = ''
   // Reset to personal group instead of empty
   if (groupsStore.currentUserPersonalGroupId) {
@@ -371,6 +420,30 @@ const handlePasswordBlur = () => {
 
       <!-- Password Generator -->
       <PasswordGenerator @generate="handleGenerate" />
+
+      <div class="flex flex-col gap-2">
+        <label for="password-login" class="font-semibold">Login (optional)</label>
+        <InputText
+          id="password-login"
+          v-model="login"
+          placeholder="e.g., user@example.com"
+          :disabled="loading"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label for="password-url" class="font-semibold">URL (optional)</label>
+        <InputText
+          id="password-url"
+          v-model="url"
+          placeholder="e.g., https://example.com"
+          :disabled="loading"
+          :invalid="!!urlError"
+          autocomplete="off"
+        />
+        <small v-if="urlError" class="text-red-500">{{ urlError }}</small>
+      </div>
 
       <div class="flex flex-col gap-2">
         <label for="password-folder" class="font-semibold">Folder (optional)</label>

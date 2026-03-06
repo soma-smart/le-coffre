@@ -37,6 +37,25 @@
             @click="copyToClipboard"
           />
         </div>
+        <div
+          v-if="detailFetched && (loginValue || urlValue)"
+          class="flex items-center gap-4 mb-2 text-sm"
+        >
+          <span v-if="loginValue" class="flex items-center gap-1 text-color-secondary">
+            <i class="pi pi-user text-xs" />
+            {{ loginValue }}
+          </span>
+          <a
+            v-if="urlValue"
+            :href="urlValue"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="flex items-center gap-1 text-primary hover:underline"
+          >
+            <i class="pi pi-external-link text-xs" />
+            {{ urlValue }}
+          </a>
+        </div>
         <div class="text-xs text-color-secondary flex gap-4">
           <i
             v-if="needsUpdate"
@@ -128,6 +147,9 @@ const toast = useToast()
 const confirm = useConfirm()
 
 const passwordValue = ref<string | null>(null)
+const loginValue = ref<string | null>(null)
+const urlValue = ref<string | null>(null)
+const detailFetched = ref(false)
 const isVisible = ref(false)
 const isLoading = ref(false)
 const isDeleting = ref(false)
@@ -154,7 +176,7 @@ const formatDate = (dateString: string): string => {
 }
 
 const fetchPassword = async () => {
-  if (passwordValue.value !== null) return // Already fetched
+  if (detailFetched.value) return // Already fetched
 
   isLoading.value = true
   try {
@@ -164,6 +186,9 @@ const fetchPassword = async () => {
 
     if (response.data) {
       passwordValue.value = response.data.password
+      loginValue.value = response.data.login
+      urlValue.value = response.data.url
+      detailFetched.value = true
     }
   } catch (error) {
     console.error('Error fetching password:', error)

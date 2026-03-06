@@ -173,6 +173,14 @@ export type CreatePasswordRequest = {
      */
     folder?: string | null;
     /**
+     * Login
+     */
+    login?: string | null;
+    /**
+     * Url
+     */
+    url?: string | null;
+    /**
      * Group Id
      */
     group_id: string;
@@ -342,6 +350,14 @@ export type GetPasswordResponse = {
      * Password
      */
     password: string;
+    /**
+     * Login
+     */
+    login: string | null;
+    /**
+     * Url
+     */
+    url: string | null;
     /**
      * Folder
      */
@@ -786,6 +802,14 @@ export type UpdatePasswordRequest = {
      * Folder
      */
     folder?: string | null;
+    /**
+     * Login
+     */
+    login?: string | null;
+    /**
+     * Url
+     */
+    url?: string | null;
 };
 
 /**

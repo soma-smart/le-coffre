@@ -73,6 +73,48 @@ def test_given_valid_update_data_when_updating_password_should_persist_changes(
     )
 
 
+def test_given_valid_update_data_when_updating_password_logain_and_url_should_persist_changes(
+    use_case: UpdatePasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+):
+    requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    original_password = Password(
+        id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"),
+        name="original",
+        encrypted_value="encrypted(original)",
+        folder="folder",
+        login="original_login",
+        url="original_url",
+    )
+    password_repository.save(original_password)
+    # Set group as owner and user as owner of group
+    password_permissions_repository.set_owner(group_id, original_password.id)
+    group_access_gateway.set_group_owner(group_id, requester_id)
+
+    updated_password = UpdatePasswordCommand(
+        requester_id=requester_id,
+        id=original_password.id,
+        name="updated",
+        password="updated",
+        folder="folder",
+        login="updated_login",
+        url="updated_url",
+    )
+
+    use_case.execute(new_password=updated_password)
+
+    assert password_repository.get_by_id(original_password.id).name == "updated"
+    assert (
+        password_repository.get_by_id(original_password.id).encrypted_value
+        == "encrypted(updated)"
+    )
+    assert password_repository.get_by_id(original_password.id).login == "updated_login"
+    assert password_repository.get_by_id(original_password.id).url == "updated_url"
+
+
 # For security purpose, PasswordNotFound and AccessDenied are indistinguishable
 def test_given_non_existing_password_when_updating_password_should_raise_password_not_found(
     use_case: UpdatePasswordUseCase,

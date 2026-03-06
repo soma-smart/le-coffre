@@ -10,3 +10,5 @@ class UpdatePasswordCommand:
     name: str | None = None
     password: str | None = None
     folder: str | None = None
+    login: str | None = None
+    url: str | None = None

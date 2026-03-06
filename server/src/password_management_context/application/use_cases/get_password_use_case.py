@@ -83,6 +83,8 @@ class GetPasswordUseCase(TracedUseCase):
             name=password_entity.name,
             password=decrypted_password,
             folder=password_entity.folder,
+            login=password_entity.login,
+            url=password_entity.url,
             created_at=created_at,
             last_password_updated_at=last_password_updated_at,
         )

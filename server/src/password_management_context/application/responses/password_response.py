@@ -9,5 +9,7 @@ class PasswordResponse:
     name: str
     password: str
     folder: str
+    login: str | None
+    url: str | None
     created_at: datetime
     last_password_updated_at: datetime
