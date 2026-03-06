@@ -132,18 +132,23 @@ class SsoLoginUseCase(TracedUseCase):
             )
             self._sso_user_repository.create(sso_user)
 
-        # Step 4: Generate JWT token
+        # Step 4: Fetch current roles from the User repository so that promotions
+        # (e.g. to admin) are reflected immediately in the new token.
+        user = self._user_repository.get_by_id(user_id)
+        roles = user.roles if user is not None else []
+
+        # Step 5: Generate JWT token
         token = await self._token_gateway.generate_token(
             user_id=user_id,
             email=email,
-            roles=["user"],  # SSO users get 'user' role by default
+            roles=roles,
             claims={"display_name": display_name},
         )
 
         refresh_token = await self._token_gateway.generate_refresh_token(
             user_id=user_id,
             email=email,
-            roles=["user"],
+            roles=roles,
         )
 
         event = SsoLoginEvent(user_id=user_id, email=email, is_new_user=is_new_user)
