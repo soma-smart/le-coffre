@@ -10,12 +10,11 @@ Le Coffre is an open-source password manager that allows you to securely store a
 - [Contributing](#contributing)
 - [Security implementation](#security-implementation)
 - [Init](#init)
-- [ORM](#orm)
 - [TODO](#todo)
 - [Library used](#library-used)
 - [Production deployment](#production-deployment)
 - [Security considerations](#security-considerations)
-- [Setup](#setup)
+- [Database Migrations](#database-migrations)
 - [Development Server](#development-server)
 - [Production](#production)
 - [Security](#security)
@@ -53,27 +52,42 @@ Le Coffre uses the following security measures to ensure the safety of your pass
 ## TODO
 
 - [x] Setup an ORM for database - Using SQLModel with Alembic migrations
-- [ ] Generate encryption key when master key is created
-- [ ] Add a password generator
-- [ ] Permission system
-- [ ] Organize passwords in folders
+- [x] Generate encryption key when master key is created
+- [x] Add a password generator
+- [x] Permission system (groups with owners and members)
+- [x] Organize passwords in folders
+- [x] Sharing passwords with groups
+- [x] Audit log for all actions (who, when, what, where)
+- [x] Versioning of passwords (keep track of changes)
 - [ ] Customize folders (name, colors, icons)
 - [ ] Add metadata to passwords (url, tags, notes, etc.)
 - [ ] Search function
 - [ ] Rotate passwords (notify user when password is about to expire)
-- [ ] Audit log for all actions (who, when, what, where)
 - [ ] Clear clipboard after a certain time
-- [ ] Versioning of passwords and metadata (keep track of changes, rollback if needed)
 - [ ] Add a bin for deleted passwords (soft delete)
 - [ ] Allow regeneration of Shamir shares / encryption key generation and reencryption of all passwords
 - [ ] Allow import/export of passwords from other password managers (Keepass, CSV, JSON, etc.)
 
 ## Library used
 
-- Nuxt
-- Nuxt UI
-- Better Auth
-- shamir-secret-sharing
+**Frontend**
+
+- Vue 3 + Vite
+- PrimeVue 4 (UI components)
+- Tailwind CSS
+- Pinia (state management)
+- Vue Router
+- Zod (schema validation)
+
+**Backend**
+
+- FastAPI
+- SQLModel + Alembic (ORM & migrations)
+- PyCryptodome (AES encryption, Shamir's Secret Sharing)
+- Authlib (SSO / OAuth2 OIDC)
+- passlib + bcrypt (password hashing)
+- PyJWT (authentication tokens)
+- Tenacity (retry logic)
 
 ## Production deployment
 
@@ -85,7 +99,7 @@ Le Coffre uses the following security measures to ensure the safety of your pass
 Before considering deploying Le Coffre in a production environment, please consider the following security measures:
 
 1. The application is designed to be run in a secure environment, such as a private server or a trusted cloud provider. Any memory access is beyond threat model.
-   See: https://github.com/hashicorp/vault/issues/1446 for comparable issue.
+   See: <https://github.com/hashicorp/vault/issues/1446> for comparable issue.
 2. Limit access to the application to trusted users only. Use strong passwords and two-factor authentication (2FA) where possible.
 3. Regularly update the application and its dependencies to ensure that any security vulnerabilities are patched.
 4. Monitor the application for any suspicious activity, such as unauthorized access attempts or unusual behavior.
@@ -93,24 +107,6 @@ Before considering deploying Le Coffre in a production environment, please consi
 6. Consider using a web application firewall (WAF) to protect the application from common web-based attacks, such as SQL injection and cross-site scripting (XSS).
 7. Limit the number of users who have administrative access to the application, and regularly review user permissions to ensure that only authorized users have access to sensitive data.
 8. Limit access to the application to trusted IP addresses / networks, and use a VPN or other secure connection method to access the application remotely.
-
-## Setup
-
-Make sure to install dependencies:
-
-```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
 
 ## Development Server
 
@@ -129,11 +125,11 @@ See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions
 
 **Access Points:**
 
-- **Main App:** http://127.0.0.1:8123 (via nginx - use this for development)
-- Frontend (direct): http://127.0.0.1:5173
-- Backend API (direct): http://127.0.0.1:8000
-- API Docs: http://127.0.0.1:8000/docs
-- OpenAPI Spec: http://127.0.0.1:8000/openapi.json
+- **Main App:** <http://127.0.0.1:8123> (via nginx - use this for development)
+- Frontend (direct): <http://127.0.0.1:5173>
+- Backend API (direct): <http://127.0.0.1:8000>
+- API Docs: <http://127.0.0.1:8000/docs>
+- OpenAPI Spec: <http://127.0.0.1:8000/openapi.json>
 
 > **Why nginx?** The frontend makes API calls to `/api/*` which are proxied to the backend. Always use port 8123 for development.
 
@@ -167,19 +163,20 @@ See [server/alembic/README.md](server/alembic/README.md) for detailed migration 
 
 ## Production
 
-Build the application for production:
+The application is deployed using Docker Compose. Each service (frontend, backend, nginx) has its own production-optimised Docker image.
 
 ```bash
-# Build docker
-docker build -t le-coffre .
-# Create a named volume
-docker volume create le-coffre-volume
-# Run a container using the named volume
-docker run -p 3000:3000 le-coffre:latest --volume le-coffre-volume:/app
+# Copy and configure the environment file
+cp .env.example .env
+# Edit .env to set DATABASE_URL, JWT_SECRET_KEY, and other required values
 
-# Pull docker image
-docker pull rg.fr-par.scw.cloud/soma-smart-cr/le-coffre:latest
+# Build and start all services
+docker compose up --build -d
 ```
+
+The application will be available at <http://127.0.0.1:8123> via nginx.
+
+> Always place a TLS-terminating reverse proxy (nginx, Caddy, etc.) in front for production deployments.
 
 ## Security
 

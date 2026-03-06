@@ -1,6 +1,8 @@
-# le-coffre
+# Le Coffre — Frontend
 
-Frontend for Le Coffre.
+Vue 3 single-page application for the Le Coffre password manager.
+
+**Stack:** Vue 3, Vite, PrimeVue 4, Tailwind CSS, Pinia, Vue Router, TypeScript, Zod
 
 ## Recommended IDE Setup
 
@@ -9,17 +11,6 @@ Frontend for Le Coffre.
 ## Type Support for `.vue` Imports in TS
 
 TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Generate TS Types from OpenAPI Spec
-
-```sh
-bun run openapi-ts
-```
-
 
 ## Project Setup
 
@@ -64,12 +55,25 @@ bun test:e2e tests/example.spec.ts
 bun test:e2e --debug
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+### Lint and Format
 
 ```sh
 bun lint
-```
-
-```sh
 bun format
 ```
+
+## Generate TypeScript Types from OpenAPI Spec
+
+The client types under `src/client/` are auto-generated from the backend's OpenAPI schema. Regenerate them after backend API changes:
+
+```sh
+bun run openapi-ts
+```
+
+## Configuration
+
+The runtime configuration is loaded from `public/config.js`, which is served statically by nginx. This allows environment-specific settings (e.g. API base URL) to be injected at deploy time without rebuilding the frontend image.
+
+## Vite Configuration
+
+See [Vite Configuration Reference](https://vite.dev/config/).
