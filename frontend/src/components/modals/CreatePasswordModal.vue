@@ -37,6 +37,13 @@ const passwordFieldFocused = ref(false)
 
 const isEditMode = ref(false)
 
+const urlError = computed(() => {
+  if (url.value && !/^https?:\/\//i.test(url.value)) {
+    return 'URL must start with http:// or https://'
+  }
+  return ''
+})
+
 // Display bullets when password field is not focused
 const displayedPassword = computed(() => {
   if (passwordFieldFocused.value) {
@@ -115,6 +122,17 @@ const handleSubmit = async () => {
       severity: 'error',
       summary: 'Validation Error',
       detail: 'Name is required',
+      life: 5000,
+    })
+    return
+  }
+
+  // URL must start with http:// or https:// if provided
+  if (urlError.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: urlError.value,
       life: 5000,
     })
     return
@@ -421,8 +439,10 @@ const handlePasswordBlur = () => {
           v-model="url"
           placeholder="e.g., https://example.com"
           :disabled="loading"
+          :invalid="!!urlError"
           autocomplete="off"
         />
+        <small v-if="urlError" class="text-red-500">{{ urlError }}</small>
       </div>
 
       <div class="flex flex-col gap-2">
