@@ -61,25 +61,28 @@ Then set the required environment variables before starting the server:
 
 ## Database migrations
 
-Migrations are applied automatically on application startup. Manual commands:
+When you add or modify a SQLModel table:
 
-```bash
-cd server
+1. Make your changes to the model files in `src/*/adapters/secondary/sql/model/`
+2. Create a migration:
 
-# Check current migration version
-alembic current
+   ```bash
+   cd server
+   uv run alembic revision --autogenerate -m "Add new_column to UserTable"
+   ```
 
-# Apply all pending migrations
-alembic upgrade head
+3. Review the generated file in `alembic/versions/`
+4. Test the migration:
 
-# Create a new migration after model changes
-alembic revision --autogenerate -m "Description of changes"
+   ```bash
+   uv run alembic upgrade head  # Apply
+   uv run alembic downgrade -1  # Rollback
+   uv run alembic upgrade head  # Re-apply
+   ```
 
-# Rollback the last migration
-alembic downgrade -1
-```
+5. Commit the migration file to version control
 
-See [server/alembic/README.md](server/alembic/README.md) for detailed migration documentation.
+See [server/alembic/README.md](alembic/README.md) for migration full documentation.
 
 ## Run the tests
 

@@ -141,25 +141,7 @@ Within each `frontend/` or `server/` folder you will find a README.md with more 
 
 The backend uses Alembic for database schema management. Migrations are automatically applied on application startup.
 
-**Manual migration commands:**
-
-```bash
-cd server
-
-# Check current database version
-alembic current
-
-# Apply all pending migrations
-alembic upgrade head
-
-# Create a new migration after model changes
-alembic revision --autogenerate -m "Description of changes"
-
-# Rollback the last migration
-alembic downgrade -1
-```
-
-See [server/alembic/README.md](server/alembic/README.md) for detailed migration documentation.
+See [server/README.md](server/README.md) for migration commands.
 
 ## Production
 
