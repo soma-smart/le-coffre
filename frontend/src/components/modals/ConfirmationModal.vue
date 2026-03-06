@@ -129,8 +129,17 @@ watch(
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" :header="title" :modal="true" :closable="!isProcessing" :style="{ width: '30rem' }">
-    <div class="flex flex-col gap-4 py-4" @keydown.enter.prevent="canConfirm && !isProcessing && handleConfirm()">
+  <Dialog
+    v-model:visible="visible"
+    :header="title"
+    :modal="true"
+    :closable="!isProcessing"
+    :style="{ width: '30rem' }"
+  >
+    <div
+      class="flex flex-col gap-4 py-4"
+      @keydown.enter.prevent="canConfirm && !isProcessing && handleConfirm()"
+    >
       <div class="flex items-start gap-3">
         <i :class="[iconClass, iconColor, 'text-2xl']"></i>
         <div class="flex-1">
@@ -147,8 +156,10 @@ watch(
           </div>
 
           <!-- Warning message -->
-          <div v-if="warningMessage"
-            class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mb-3">
+          <div
+            v-if="warningMessage"
+            class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mb-3"
+          >
             <p class="text-sm text-yellow-800 dark:text-yellow-200">
               <i class="pi pi-exclamation-triangle mr-2"></i>
               {{ warningMessage }}
@@ -159,9 +170,21 @@ watch(
     </div>
 
     <template #footer>
-      <Button :label="cancelLabel || 'Cancel'" icon="pi pi-times" text @click="handleCancel" :disabled="isProcessing" />
-      <Button :label="confirmButtonLabel" icon="pi pi-check" :severity="severity || 'primary'" @click="handleConfirm"
-        :disabled="!canConfirm || isProcessing" :loading="isProcessing" />
+      <Button
+        :label="cancelLabel || 'Cancel'"
+        icon="pi pi-times"
+        text
+        @click="handleCancel"
+        :disabled="isProcessing"
+      />
+      <Button
+        :label="confirmButtonLabel"
+        icon="pi pi-check"
+        :severity="severity || 'primary'"
+        @click="handleConfirm"
+        :disabled="!canConfirm || isProcessing"
+        :loading="isProcessing"
+      />
     </template>
   </Dialog>
 </template>

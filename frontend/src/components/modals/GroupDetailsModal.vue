@@ -234,7 +234,12 @@ watch(visible, async (isVisible) => {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" modal :header="group?.name || 'Group Details'" :style="{ width: '40rem' }">
+  <Dialog
+    v-model:visible="visible"
+    modal
+    :header="group?.name || 'Group Details'"
+    :style="{ width: '40rem' }"
+  >
     <div v-if="!group" class="text-center py-4">
       <p class="text-muted-color">No group selected</p>
     </div>
@@ -267,12 +272,16 @@ watch(visible, async (isVisible) => {
           </div>
 
           <div v-else class="space-y-2">
-            <Card v-for="user in ownerUsers" :key="user.id" :class="[
-              'transition-colors',
-              user.id === currentUserId
-                ? 'bg-primary-50 border-primary-200'
-                : 'hover:bg-surface-50',
-            ]">
+            <Card
+              v-for="user in ownerUsers"
+              :key="user.id"
+              :class="[
+                'transition-colors',
+                user.id === currentUserId
+                  ? 'bg-primary-50 border-primary-200'
+                  : 'hover:bg-surface-50',
+              ]"
+            >
               <template #content>
                 <div class="flex justify-between items-center py-1">
                   <div class="flex items-center gap-3">
@@ -280,7 +289,9 @@ watch(visible, async (isVisible) => {
                     <div>
                       <p class="font-semibold">
                         {{ user.name }}
-                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2">(You)</span>
+                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
+                          >(You)</span
+                        >
                       </p>
                       <p class="text-sm text-muted-color">{{ user.email }}</p>
                     </div>
@@ -300,8 +311,13 @@ watch(visible, async (isVisible) => {
             </h3>
 
             <!-- Add Member Button (only for owners of non-personal groups) -->
-            <Button v-if="isOwner && !group.is_personal" label="Add Member" icon="pi pi-user-plus" size="small"
-              @click="showAddMemberDialog = true" />
+            <Button
+              v-if="isOwner && !group.is_personal"
+              label="Add Member"
+              icon="pi pi-user-plus"
+              size="small"
+              @click="showAddMemberDialog = true"
+            />
           </div>
 
           <div v-if="memberUsers.length === 0" class="text-center py-3 text-muted-color">
@@ -309,12 +325,16 @@ watch(visible, async (isVisible) => {
           </div>
 
           <div v-else class="space-y-2 max-h-64 overflow-y-auto">
-            <Card v-for="user in memberUsers" :key="user.id" :class="[
-              'transition-colors',
-              user.id === currentUserId
-                ? 'bg-primary-50 border-primary-200'
-                : 'hover:bg-surface-50',
-            ]">
+            <Card
+              v-for="user in memberUsers"
+              :key="user.id"
+              :class="[
+                'transition-colors',
+                user.id === currentUserId
+                  ? 'bg-primary-50 border-primary-200'
+                  : 'hover:bg-surface-50',
+              ]"
+            >
               <template #content>
                 <div class="flex justify-between items-center py-1">
                   <div class="flex items-center gap-3">
@@ -322,7 +342,9 @@ watch(visible, async (isVisible) => {
                     <div>
                       <p class="font-semibold">
                         {{ user.name }}
-                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2">(You)</span>
+                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
+                          >(You)</span
+                        >
                       </p>
                       <p class="text-sm text-muted-color">{{ user.email }}</p>
                     </div>
@@ -330,11 +352,28 @@ watch(visible, async (isVisible) => {
 
                   <!-- Action buttons (only for owner of non-personal groups) -->
                   <div v-if="isOwner && !group.is_personal" class="flex gap-1">
-                    <Button icon="pi pi-crown" text rounded severity="warning" size="small"
-                      aria-label="Promote to owner" v-tooltip.top="'Promote to owner'" :loading="loadingAction"
-                      @click="promoteToOwner(user)" />
-                    <Button icon="pi pi-times" text rounded severity="danger" size="small" aria-label="Remove member"
-                      v-tooltip.top="'Remove member'" :loading="loadingAction" @click="removeMember(user.id)" />
+                    <Button
+                      icon="pi pi-crown"
+                      text
+                      rounded
+                      severity="warning"
+                      size="small"
+                      aria-label="Promote to owner"
+                      v-tooltip.top="'Promote to owner'"
+                      :loading="loadingAction"
+                      @click="promoteToOwner(user)"
+                    />
+                    <Button
+                      icon="pi pi-times"
+                      text
+                      rounded
+                      severity="danger"
+                      size="small"
+                      aria-label="Remove member"
+                      v-tooltip.top="'Remove member'"
+                      :loading="loadingAction"
+                      @click="removeMember(user.id)"
+                    />
                   </div>
                 </div>
               </template>
@@ -350,10 +389,25 @@ watch(visible, async (isVisible) => {
   </Dialog>
 
   <!-- Add Member Dialog -->
-  <Dialog v-model:visible="showAddMemberDialog" modal header="Add Member" :style="{ width: '30rem' }">
-    <div class="flex flex-col gap-3" @keydown.enter.prevent="selectedUserId && !loadingAction && addMember()">
-      <Select v-model="selectedUserId" :options="availableUsers" optionLabel="name" optionValue="id"
-        placeholder="Select a user to add" :disabled="loadingAction" class="w-full">
+  <Dialog
+    v-model:visible="showAddMemberDialog"
+    modal
+    header="Add Member"
+    :style="{ width: '30rem' }"
+  >
+    <div
+      class="flex flex-col gap-3"
+      @keydown.enter.prevent="selectedUserId && !loadingAction && addMember()"
+    >
+      <Select
+        v-model="selectedUserId"
+        :options="availableUsers"
+        optionLabel="name"
+        optionValue="id"
+        placeholder="Select a user to add"
+        :disabled="loadingAction"
+        class="w-full"
+      >
         <template #option="slotProps">
           <div class="flex flex-col">
             <span class="font-semibold">{{ slotProps.option.name }}</span>
@@ -365,8 +419,13 @@ watch(visible, async (isVisible) => {
 
     <template #footer>
       <Button label="Cancel" severity="secondary" @click="showAddMemberDialog = false" />
-      <Button label="Add" icon="pi pi-user-plus" @click="addMember" :loading="loadingAction"
-        :disabled="!selectedUserId || loadingAction" />
+      <Button
+        label="Add"
+        icon="pi pi-user-plus"
+        @click="addMember"
+        :loading="loadingAction"
+        :disabled="!selectedUserId || loadingAction"
+      />
     </template>
   </Dialog>
 </template>

@@ -282,15 +282,27 @@ onMounted(async () => {
       <ProgressSpinner />
     </div>
 
-    <div v-else class="flex flex-col gap-4"
-      @keydown.enter.prevent="isOwner && !!selectedGroupId && !loading && sharePassword()">
+    <div
+      v-else
+      class="flex flex-col gap-4"
+      @keydown.enter.prevent="isOwner && !!selectedGroupId && !loading && sharePassword()"
+    >
       <!-- Share with new group (only for owners) -->
       <div v-if="isOwner" class="flex flex-col gap-4 pb-4 border-b">
         <h3 class="font-semibold text-lg">Share with Group</h3>
         <div class="flex gap-2">
-          <Select id="group-select" v-model="selectedGroupId" :options="availableGroupsForSharing" optionLabel="name"
-            optionValue="id" placeholder="Select a group to share with" :disabled="loading" filter
-            filterPlaceholder="Search groups..." class="flex-1">
+          <Select
+            id="group-select"
+            v-model="selectedGroupId"
+            :options="availableGroupsForSharing"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Select a group to share with"
+            :disabled="loading"
+            filter
+            filterPlaceholder="Search groups..."
+            class="flex-1"
+          >
             <template #option="slotProps">
               <div class="flex items-center gap-2">
                 <i class="pi pi-users text-sm"></i>
@@ -298,13 +310,21 @@ onMounted(async () => {
               </div>
             </template>
           </Select>
-          <Button label="Share" icon="pi pi-share-alt" @click="sharePassword" :loading="loading"
-            :disabled="!selectedGroupId || loading" />
+          <Button
+            label="Share"
+            icon="pi pi-share-alt"
+            @click="sharePassword"
+            :loading="loading"
+            :disabled="!selectedGroupId || loading"
+          />
         </div>
       </div>
 
       <!-- Current user's access (for non-owners) -->
-      <div v-if="!isOwner && currentUserAccessGroups.length > 0" class="flex flex-col gap-3 pb-4 border-b">
+      <div
+        v-if="!isOwner && currentUserAccessGroups.length > 0"
+        class="flex flex-col gap-3 pb-4 border-b"
+      >
         <h3 class="font-semibold text-lg">Your Access</h3>
         <Message severity="info" :closable="false">
           You have access to this password through the following group(s):
@@ -336,8 +356,11 @@ onMounted(async () => {
         </div>
 
         <div v-else class="space-y-2">
-          <Card v-for="accessItem in userAccessList" :key="accessItem.user_id"
-            class="hover:bg-surface-50 transition-colors">
+          <Card
+            v-for="accessItem in userAccessList"
+            :key="accessItem.user_id"
+            class="hover:bg-surface-50 transition-colors"
+          >
             <template #content>
               <div class="flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -372,7 +395,11 @@ onMounted(async () => {
         </h3>
 
         <div class="space-y-2">
-          <Card v-for="group in groupAccessList" :key="group.user_id" class="hover:bg-surface-50 transition-colors">
+          <Card
+            v-for="group in groupAccessList"
+            :key="group.user_id"
+            class="hover:bg-surface-50 transition-colors"
+          >
             <template #content>
               <div class="flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -397,8 +424,17 @@ onMounted(async () => {
 
                 <!-- Unshare button (only for owners and non-owner groups) -->
                 <div v-if="isOwner && !group.is_owner">
-                  <Button icon="pi pi-times" text rounded severity="danger" size="small" aria-label="Revoke access"
-                    :loading="loading" @click="unshareFromGroup(group.user_id)" v-tooltip="'Remove group access'" />
+                  <Button
+                    icon="pi pi-times"
+                    text
+                    rounded
+                    severity="danger"
+                    size="small"
+                    aria-label="Revoke access"
+                    :loading="loading"
+                    @click="unshareFromGroup(group.user_id)"
+                    v-tooltip="'Remove group access'"
+                  />
                 </div>
               </div>
             </template>

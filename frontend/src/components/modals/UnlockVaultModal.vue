@@ -228,8 +228,14 @@ const handleReset = async () => {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" modal header="Unlock Vault" :closable="false" :closeOnEscape="false"
-    :style="{ width: '40rem' }">
+  <Dialog
+    v-model:visible="visible"
+    modal
+    header="Unlock Vault"
+    :closable="false"
+    :closeOnEscape="false"
+    :style="{ width: '40rem' }"
+  >
     <div class="flex flex-col gap-4" @keydown.enter.prevent="isValid && !loading && handleSubmit()">
       <!-- Warning message based on vault status -->
       <Message :severity="isPendingUnlock ? 'info' : 'warn'" :closable="false">
@@ -268,8 +274,14 @@ const handleReset = async () => {
         <div v-if="isPendingUnlock" class="flex gap-2 items-start">
           <div class="flex-1">
             <label class="block text-sm font-semibold mb-1"> Existing Share(s) </label>
-            <Password model-value="••••••••••••••••" placeholder="Existing shares" disabled :feedback="false"
-              class="w-full" inputClass="w-full font-mono" />
+            <Password
+              model-value="••••••••••••••••"
+              placeholder="Existing shares"
+              disabled
+              :feedback="false"
+              class="w-full"
+              inputClass="w-full font-mono"
+            />
           </div>
           <div class="mt-7 w-10"></div>
           <!-- Spacer to align with other rows -->
@@ -281,18 +293,48 @@ const handleReset = async () => {
             <label :for="`share-${index}`" class="block text-sm font-semibold mb-1">
               {{ isPendingUnlock ? `Additional Share ${index + 1}` : `Share ${index + 1}` }}
             </label>
-            <InputText :id="`share-${index}`" :value="getDisplayedShare(index)"
-              @input="(e) => handleShareInput(e, index)" @focus="handleShareFocus(index)" @blur="handleShareBlur"
-              type="text" placeholder="Enter share secret" :disabled="loading" autocomplete="off" autocorrect="off"
-              autocapitalize="off" spellcheck="false" :name="`share-secret-${index}`" data-protonpass-ignore="true"
-              data-1p-ignore="true" data-lpignore="true" class="w-full font-mono" fluid />
+            <InputText
+              :id="`share-${index}`"
+              :value="getDisplayedShare(index)"
+              @input="(e) => handleShareInput(e, index)"
+              @focus="handleShareFocus(index)"
+              @blur="handleShareBlur"
+              type="text"
+              placeholder="Enter share secret"
+              :disabled="loading"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              :name="`share-secret-${index}`"
+              data-protonpass-ignore="true"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              class="w-full font-mono"
+              fluid
+            />
           </div>
-          <Button v-if="shares.length > 1" icon="pi pi-trash" severity="danger" text rounded :disabled="loading"
-            @click="removeShare(index)" class="mt-7" v-tooltip.top="'Remove share'" />
+          <Button
+            v-if="shares.length > 1"
+            icon="pi pi-trash"
+            severity="danger"
+            text
+            rounded
+            :disabled="loading"
+            @click="removeShare(index)"
+            class="mt-7"
+            v-tooltip.top="'Remove share'"
+          />
         </div>
 
-        <Button icon="pi pi-plus" label="Add Share" severity="secondary" outlined :disabled="loading"
-          @click="addShare" />
+        <Button
+          icon="pi pi-plus"
+          label="Add Share"
+          severity="secondary"
+          outlined
+          :disabled="loading"
+          @click="addShare"
+        />
       </div>
 
       <Message severity="info" :closable="false" class="text-sm">
@@ -303,12 +345,24 @@ const handleReset = async () => {
 
     <template #footer>
       <div class="flex justify-between w-full">
-        <Button v-if="isPendingUnlock" label="Clear Pending Shares" @click="handleReset" :loading="loading"
-          icon="pi pi-times" severity="danger" outlined />
+        <Button
+          v-if="isPendingUnlock"
+          label="Clear Pending Shares"
+          @click="handleReset"
+          :loading="loading"
+          icon="pi pi-times"
+          severity="danger"
+          outlined
+        />
         <div v-else></div>
         <!-- Spacer to push unlock button to the right when no reset button -->
-        <Button :label="isPendingUnlock ? 'Add Shares' : 'Submit Shares'" @click="handleSubmit" :loading="loading"
-          :disabled="!isValid" icon="pi pi-unlock" />
+        <Button
+          :label="isPendingUnlock ? 'Add Shares' : 'Submit Shares'"
+          @click="handleSubmit"
+          :loading="loading"
+          :disabled="!isValid"
+          icon="pi pi-unlock"
+        />
       </div>
     </template>
   </Dialog>
