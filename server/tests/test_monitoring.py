@@ -10,7 +10,7 @@ import opentelemetry.trace as otel_trace
 from opentelemetry.trace import NonRecordingSpan, INVALID_SPAN_CONTEXT
 from opentelemetry.trace import StatusCode
 
-from monitoring import JsonFormatter, setup_monitoring, _UvicornAccessFilter, setup_logging, _parse_resource_attributes
+from monitoring import JsonFormatter, setup_monitoring, _UvicornAccessFilter, setup_logging, _parse_resource_attributes, _is_internal_endpoint, _warn_insecure_otlp
 
 
 @pytest.fixture
@@ -472,6 +472,69 @@ def test_build_sampler_out_of_range_falls_back_to_parentbased(caplog):
 
     mock_parent_based.assert_called_once_with(mock_always_on)
     assert "OTEL_TRACES_SAMPLER_ARG" in caplog.text
+
+
+# --- _is_internal_endpoint ---
+
+
+@pytest.mark.parametrize("endpoint", [
+    "http://alloy:4318",
+    "http://otel-collector:4318",
+    "http://localhost:4318",
+    "http://127.0.0.1:4318",
+    "http://alloy.monitoring.svc:4318",
+    "http://alloy.monitoring.svc.cluster.local:4318",
+    "http://collector.local:4318",
+])
+def test_is_internal_endpoint_returns_true_for_internal(endpoint):
+    assert _is_internal_endpoint(endpoint) is True
+
+
+@pytest.mark.parametrize("endpoint", [
+    "http://otel.example.com:4318",
+    "https://otel.example.com:4318",
+    "http://collector.mycompany.io:4318",
+])
+def test_is_internal_endpoint_returns_false_for_external(endpoint):
+    assert _is_internal_endpoint(endpoint) is False
+
+
+# --- _warn_insecure_otlp ---
+
+
+def test_warn_insecure_otlp_no_warning_for_internal_http(caplog):
+    """Internal HTTP endpoints must not trigger any warning."""
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("OTEL_EXPORTER_OTLP_HEADERS", None)
+        with caplog.at_level(logging.WARNING, logger="monitoring"):
+            _warn_insecure_otlp("http://alloy:4318")
+    assert caplog.text == ""
+
+
+def test_warn_insecure_otlp_warns_http_for_external(caplog):
+    """External HTTP endpoint must trigger the plain-HTTP warning."""
+    env = {k: v for k, v in os.environ.items() if k != "OTEL_EXPORTER_OTLP_HEADERS"}
+    with patch.dict(os.environ, env, clear=True):
+        with caplog.at_level(logging.WARNING, logger="monitoring"):
+            _warn_insecure_otlp("http://otel.example.com:4318")
+    assert "plain HTTP" in caplog.text
+
+
+def test_warn_insecure_otlp_warns_no_auth_for_external(caplog):
+    """External endpoint without headers must trigger the auth warning."""
+    env = {k: v for k, v in os.environ.items() if k != "OTEL_EXPORTER_OTLP_HEADERS"}
+    with patch.dict(os.environ, env, clear=True):
+        with caplog.at_level(logging.WARNING, logger="monitoring"):
+            _warn_insecure_otlp("http://otel.example.com:4318")
+    assert "OTEL_EXPORTER_OTLP_HEADERS" in caplog.text
+
+
+def test_warn_insecure_otlp_no_warning_for_external_https_with_auth(caplog):
+    """External HTTPS endpoint with auth headers must not trigger any warning."""
+    with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Bearer token123"}):
+        with caplog.at_level(logging.WARNING, logger="monitoring"):
+            _warn_insecure_otlp("https://otel.example.com:4318")
+    assert caplog.text == ""
 
 
 # --- _configure_otel test ---
