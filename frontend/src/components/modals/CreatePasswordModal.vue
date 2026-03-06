@@ -43,6 +43,14 @@ const urlError = computed(() => {
   }
   return ''
 })
+// True when at least one field differs from the original in edit mode
+const hasChanges = computed(() => {
+  if (!isEditMode.value || !props.editPassword) return true // always allow submit in create mode
+  const nameChanged = name.value !== props.editPassword.name
+  const folderChanged = (folder.value || '') !== (props.editPassword.folder || '')
+  const passwordChanged = password.value !== ''
+  return nameChanged || folderChanged || passwordChanged
+})
 
 // Display bullets when password field is not focused
 const displayedPassword = computed(() => {
@@ -172,15 +180,20 @@ const handleSubmit = async () => {
         login?: string | null
         url?: string | null
       } = {
-        name: name.value,
-        folder: folder.value || null,
+        name: props.editPassword.name ? props.editPassword.name : '',
+        folder: props.editPassword.folder || null,
         login: login.value || null,
         url: url.value || null,
       }
 
-      // Only include password if it was changed
       if (password.value) {
         updateBody.password = password.value
+      }
+
+      // Nothing changed — skip the API call
+      if (Object.keys(updateBody).length === 0) {
+        visible.value = false
+        return
       }
 
       const response = await updatePasswordPasswordsPasswordIdPut({
@@ -327,59 +340,32 @@ const handlePasswordBlur = () => {
 </script>
 
 <template>
-  <Dialog
-    v-model:visible="visible"
-    modal
-    :header="isEditMode ? 'Edit Password' : 'Create New Password'"
-    :style="{ width: '32rem' }"
-  >
+  <Dialog v-model:visible="visible" modal :header="isEditMode ? 'Edit Password' : 'Create New Password'"
+    :style="{ width: '32rem' }">
     <div class="flex flex-col gap-4">
       <div class="flex flex-col gap-2">
         <label for="password-name" class="font-semibold">Name</label>
-        <InputText
-          id="password-name"
-          v-model="name"
-          placeholder="e.g., Gmail Account"
-          :disabled="loading"
-          autofocus
-        />
+        <InputText id="password-name" v-model="name" placeholder="e.g., Gmail Account" :disabled="loading" autofocus />
       </div>
 
       <!-- Group Selection (only for create mode) -->
       <div v-if="!isEditMode" class="flex flex-col gap-2">
         <label for="password-group" class="font-semibold">Owner</label>
-        <Select
-          id="password-group"
-          v-model="selectedGroupId"
-          :options="groupsForPasswordCreation"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="Select owner group"
-          :disabled="loading"
-          class="w-full"
-        >
+        <Select id="password-group" v-model="selectedGroupId" :options="groupsForPasswordCreation" optionLabel="name"
+          optionValue="id" placeholder="Select owner group" :disabled="loading" class="w-full">
           <template #option="slotProps">
             <div class="flex items-center gap-2">
-              <i
-                :class="slotProps.option.is_personal ? 'pi pi-user' : 'pi pi-users'"
-                class="text-sm"
-              ></i>
+              <i :class="slotProps.option.is_personal ? 'pi pi-user' : 'pi pi-users'" class="text-sm"></i>
               <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.is_personal" class="text-xs text-muted-color"
-                >(Personal)</span
-              >
+              <span v-if="slotProps.option.is_personal" class="text-xs text-muted-color">(Personal)</span>
             </div>
           </template>
           <template #value="slotProps">
             <div v-if="slotProps.value" class="flex items-center gap-2">
-              <i
-                :class="
-                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.is_personal
-                    ? 'pi pi-user'
-                    : 'pi pi-users'
-                "
-                class="text-sm"
-              ></i>
+              <i :class="groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.is_personal
+                ? 'pi pi-user'
+                : 'pi pi-users'
+                " class="text-sm"></i>
               <span>{{
                 groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.name
               }}</span>
@@ -393,29 +379,13 @@ const handlePasswordBlur = () => {
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="password-value" class="font-semibold"
-          >Password{{ isEditMode ? ' (leave empty to keep current)' : '' }}</label
-        >
-        <InputText
-          id="password-value"
-          :value="displayedPassword"
-          @input="handlePasswordInput"
-          @focus="handlePasswordFocus"
-          @blur="handlePasswordBlur"
-          type="text"
-          :placeholder="isEditMode ? 'Leave empty to keep current password' : 'Enter password'"
-          :disabled="loading"
-          autocomplete="off"
-          autocorrect="off"
-          autocapitalize="off"
-          spellcheck="false"
-          name="stored-password-value"
-          data-protonpass-ignore="true"
-          data-1p-ignore="true"
-          data-lpignore="true"
-          class="font-mono"
-          fluid
-        />
+        <label for="password-value" class="font-semibold">Password{{ isEditMode ? ' (leave empty to keep current)' : ''
+        }}</label>
+        <InputText id="password-value" :value="displayedPassword" @input="handlePasswordInput"
+          @focus="handlePasswordFocus" @blur="handlePasswordBlur" type="text"
+          :placeholder="isEditMode ? 'Leave empty to keep current password' : 'Enter password'" :disabled="loading"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="stored-password-value"
+          data-protonpass-ignore="true" data-1p-ignore="true" data-lpignore="true" class="font-mono" fluid />
       </div>
 
       <!-- Password Generator -->
@@ -423,47 +393,27 @@ const handlePasswordBlur = () => {
 
       <div class="flex flex-col gap-2">
         <label for="password-login" class="font-semibold">Login (optional)</label>
-        <InputText
-          id="password-login"
-          v-model="login"
-          placeholder="e.g., user@example.com"
-          :disabled="loading"
-          autocomplete="off"
-        />
+        <InputText id="password-login" v-model="login" placeholder="e.g., user@example.com" :disabled="loading"
+          autocomplete="off" />
       </div>
 
       <div class="flex flex-col gap-2">
         <label for="password-url" class="font-semibold">URL (optional)</label>
-        <InputText
-          id="password-url"
-          v-model="url"
-          placeholder="e.g., https://example.com"
-          :disabled="loading"
-          :invalid="!!urlError"
-          autocomplete="off"
-        />
+        <InputText id="password-url" v-model="url" placeholder="e.g., https://example.com" :disabled="loading"
+          :invalid="!!urlError" autocomplete="off" />
         <small v-if="urlError" class="text-red-500">{{ urlError }}</small>
       </div>
 
       <div class="flex flex-col gap-2">
         <label for="password-folder" class="font-semibold">Folder (optional)</label>
-        <InputText
-          id="password-folder"
-          v-model="folder"
-          placeholder="e.g., Personal, Work"
-          :disabled="loading"
-        />
+        <InputText id="password-folder" v-model="folder" placeholder="e.g., Personal, Work" :disabled="loading" />
       </div>
     </div>
 
     <template #footer>
       <Button label="Cancel" severity="secondary" @click="handleCancel" :disabled="loading" />
-      <Button
-        :label="isEditMode ? 'Update' : 'Create'"
-        @click="handleSubmit"
-        :loading="loading"
-        icon="pi pi-check"
-      />
+      <Button :label="isEditMode ? 'Update' : 'Create'" @click="handleSubmit" :loading="loading" :disabled="!hasChanges"
+        icon="pi pi-check" />
     </template>
   </Dialog>
 </template>
