@@ -564,7 +564,7 @@ def test_configure_otel_sets_global_tracer_provider(app):
     mock_otel_trace.set_tracer_provider.assert_called_once_with(mock_tracer_provider_instance)
     mock_otel_metrics.set_meter_provider.assert_called_once_with(mock_meter_provider_instance)
     assert result is not None
-    tracer_prov, meter_prov = result
+    tracer_prov, meter_prov, *_ = result
     assert tracer_prov is mock_tracer_provider_instance
     assert meter_prov is mock_meter_provider_instance
 
