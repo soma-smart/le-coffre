@@ -24,6 +24,7 @@ dev = [
   "pytest-asyncio==1.3.0",
   "pytest-watcher==0.6.3",
   "pytest-xdist==3.8.0",
+  "ruff>=0.15.5",
 ]
 monitoring = [
     "opentelemetry-instrumentation-fastapi>=0.52b0",
@@ -39,3 +40,21 @@ postgres = ["psycopg2==2.9.11", "psycopg[binary]==3.3.3"]
 pythonpath = "src"
 addopts = "-ra --strict-markers --strict-config"
 testpaths = ["tests"]
+
+[tool.ruff]
+fix = true
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "S101",
+  "S105",
+  "S106",
+  "S608",
+  "S110",
+  "E501"
+]

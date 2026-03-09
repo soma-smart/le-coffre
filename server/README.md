@@ -99,3 +99,11 @@ uv run pytest
 ```
 
 Tests that require OpenTelemetry are automatically skipped if the `monitoring` group is not installed.
+
+## Formatting
+
+To ensure code quality, run these command:
+
+```bash
+uv run ruff check .
+```
