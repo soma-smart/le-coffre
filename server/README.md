@@ -105,5 +105,6 @@ Tests that require OpenTelemetry are automatically skipped if the `monitoring` g
 To ensure code quality, run these command:
 
 ```bash
+uv run ruff format .
 uv run ruff check .
 ```
