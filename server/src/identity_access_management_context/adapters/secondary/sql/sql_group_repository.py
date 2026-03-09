@@ -1,10 +1,11 @@
-from typing import Optional
 from uuid import UUID
+
 from sqlmodel import Session, select
 
 from identity_access_management_context.application.gateways import GroupRepository
-from identity_access_management_context.domain.entities import PersonalGroup, Group
+from identity_access_management_context.domain.entities import Group, PersonalGroup
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+
 from .model.group_model import GroupTable
 
 
@@ -39,9 +40,7 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
 
     def get_by_user_id(self, user_id: UUID) -> PersonalGroup | None:
         """Get a personal group by user ID."""
-        statement = select(GroupTable).where(
-            GroupTable.user_id == user_id, GroupTable.is_personal
-        )
+        statement = select(GroupTable).where(GroupTable.user_id == user_id, GroupTable.is_personal)
         result = self._session.exec(statement).first()
         if result is None:
             return None

@@ -1,5 +1,5 @@
-from vault_management_context.domain.entities.vault import Vault
 from vault_management_context.application.responses import VaultStatus
+from vault_management_context.domain.entities.vault import Vault
 
 
 def test_should_return_none_when_no_vault_exists(vault_repository):

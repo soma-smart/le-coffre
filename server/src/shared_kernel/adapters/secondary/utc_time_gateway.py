@@ -1,4 +1,5 @@
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 from shared_kernel.application.gateways import TimeGateway
 
 

@@ -1,17 +1,18 @@
-from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel
-from uuid import UUID, uuid4
 import logging
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_password_usecase,
 )
-from password_management_context.application.use_cases import CreatePasswordUseCase
 from password_management_context.application.commands import CreatePasswordCommand
+from password_management_context.application.use_cases import CreatePasswordUseCase
 from password_management_context.domain.exceptions import PasswordManagementDomainError
-from shared_kernel.domain.exceptions import AccessDeniedError
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.domain.exceptions import AccessDeniedError
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,8 @@ class CreatePasswordResponse(BaseModel):
 def create_password(
     request_body: CreatePasswordRequest,
     request: Request,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: CreatePasswordUseCase = Depends(get_create_password_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: CreatePasswordUseCase = Depends(get_create_password_usecase),  # noqa: B008
 ):
     """
     Create a new password entry.
@@ -71,9 +72,9 @@ def create_password(
 
         return CreatePasswordResponse(id=created_password_id)
     except PasswordManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except AccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in create password")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

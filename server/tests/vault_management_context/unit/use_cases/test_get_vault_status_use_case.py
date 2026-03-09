@@ -1,12 +1,13 @@
 import pytest
 
 from vault_management_context.application.commands import GetVaultStatusCommand
-from vault_management_context.domain.entities import Vault, Share
+from vault_management_context.application.responses import VaultStatus
 from vault_management_context.application.use_cases import (
     GetVaultStatusUseCase,
 )
-from vault_management_context.application.responses import VaultStatus
-from ..fakes import FakeVaultRepository, FakeVaultSessionGateway, FakeShareRepository
+from vault_management_context.domain.entities import Share, Vault
+
+from ..fakes import FakeShareRepository, FakeVaultRepository, FakeVaultSessionGateway
 
 
 @pytest.fixture()
@@ -15,9 +16,7 @@ def use_case(
     vault_session_gateway: FakeVaultSessionGateway,
     share_repository: FakeShareRepository,
 ):
-    return GetVaultStatusUseCase(
-        vault_repository, vault_session_gateway, share_repository
-    )
+    return GetVaultStatusUseCase(vault_repository, vault_session_gateway, share_repository)
 
 
 def test_given_no_vault_exists_when_getting_vault_status_should_return_not_setup(

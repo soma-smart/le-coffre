@@ -1,5 +1,6 @@
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from identity_access_management_context.domain.entities import SsoUser
 from identity_access_management_context.domain.exceptions import (

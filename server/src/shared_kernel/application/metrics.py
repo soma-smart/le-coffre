@@ -10,6 +10,7 @@ lightweight no-op stubs so callers never need to guard against ImportError.
 
 try:
     import opentelemetry.metrics as otel_metrics
+
     _meter = otel_metrics.get_meter("le-coffre")
     access_check_not_found_counter = _meter.create_counter(
         "access.check.not_found",
@@ -17,7 +18,9 @@ try:
         description="Number of access checks that returned NOT_FOUND (resource missing or no permission).",
     )
 except ImportError:
+
     class _NoOpCounter:
         def add(self, *_, **__):
             pass
+
     access_check_not_found_counter = _NoOpCounter()

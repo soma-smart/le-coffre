@@ -15,9 +15,7 @@ class CheckAccessUseCase(TracedUseCase):
         if self.permission_repository.is_owner(command.user_id, command.resource_id):
             return AccessResult(granted=Granted.ACCESS, is_owner=True)
 
-        has_permission = self.permission_repository.has_access(
-            command.user_id, command.resource_id, command.permission
-        )
+        has_permission = self.permission_repository.has_access(command.user_id, command.resource_id, command.permission)
 
         if not has_permission:
             access_check_not_found_counter.add(1)

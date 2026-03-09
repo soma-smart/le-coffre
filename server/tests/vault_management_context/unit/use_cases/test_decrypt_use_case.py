@@ -4,6 +4,7 @@ from vault_management_context.application.commands import DecryptCommand
 from vault_management_context.application.use_cases import (
     DecryptUseCase,
 )
+
 from ..fakes import FakeEncryptionGateway, FakeVaultSessionGateway
 
 

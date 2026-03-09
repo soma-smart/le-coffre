@@ -2,23 +2,21 @@ from uuid import UUID
 
 from password_management_context.application.commands import ListPasswordsCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEventRepository,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.gateways.password_permissions_repository import (
-    GroupPermissions,
     BulkGroupPermissions,
+    GroupPermissions,
 )
 from password_management_context.application.responses import PasswordMetadataResponse
 from password_management_context.application.services import PasswordTimestampService
 from password_management_context.domain.exceptions import FolderNotFoundError
 from password_management_context.domain.value_objects import PasswordPermission
-from shared_kernel.domain.services import AdminPermissionChecker
-
-
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class ListPasswordsUseCase(TracedUseCase):
@@ -44,23 +42,17 @@ class ListPasswordsUseCase(TracedUseCase):
             return []
 
         password_ids = [p.id for p in password_entities]
-        all_permissions = (
-            self.password_permissions_repository.list_all_permissions_for_bulk(
-                password_ids
-            )
-        )
+        all_permissions = self.password_permissions_repository.list_all_permissions_for_bulk(password_ids)
 
         is_admin = AdminPermissionChecker.is_admin(command.requester)
-        accessible = self._resolve_access(
-            command.requester.user_id, password_entities, all_permissions, is_admin
-        )
+        accessible = self._resolve_access(command.requester.user_id, password_entities, all_permissions, is_admin)
 
         if not accessible:
             return []
 
-        timestamps_map = PasswordTimestampService(
-            self.password_event_repository
-        ).get_timestamps_bulk([p.id for p, *_ in accessible])
+        timestamps_map = PasswordTimestampService(self.password_event_repository).get_timestamps_bulk(
+            [p.id for p, *_ in accessible]
+        )
 
         return [
             PasswordMetadataResponse(
@@ -69,9 +61,7 @@ class ListPasswordsUseCase(TracedUseCase):
                 folder=password.folder,
                 group_id=owner_group_id,
                 created_at=timestamps_map.get(password.id, (None, None))[0],
-                last_password_updated_at=timestamps_map.get(password.id, (None, None))[
-                    1
-                ],
+                last_password_updated_at=timestamps_map.get(password.id, (None, None))[1],
                 can_read=can_read,
                 can_write=can_write,
             )
@@ -90,9 +80,7 @@ class ListPasswordsUseCase(TracedUseCase):
 
         for password in password_entities:
             permissions = all_permissions.get(password.id, {})
-            owner_group_id = next(
-                (gid for gid, (is_owner, _) in permissions.items() if is_owner), None
-            )
+            owner_group_id = next((gid for gid, (is_owner, _) in permissions.items() if is_owner), None)
             if owner_group_id is None:
                 continue
 
@@ -114,9 +102,7 @@ class ListPasswordsUseCase(TracedUseCase):
     ) -> bool | None:
         """Return True if the user has write access, False for read-only, None if no access."""
         for group_id, (is_owner_group, perms) in permissions.items():
-            is_user_owner, is_user_member = self._cached_membership(
-                user_id, group_id, membership_cache
-            )
+            is_user_owner, is_user_member = self._cached_membership(user_id, group_id, membership_cache)
             if is_user_owner or is_user_member:
                 if is_owner_group:
                     return True

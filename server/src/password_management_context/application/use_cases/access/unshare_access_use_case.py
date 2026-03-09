@@ -2,23 +2,23 @@ import logging
 
 from password_management_context.application.commands import UnshareResourceCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEventRepository,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.services import (
     PasswordEventStorageService,
 )
-from password_management_context.domain.exceptions import (
-    PasswordAccessDeniedError,
-    CannotUnshareWithOwnerError,
-    PasswordNotFoundError,
-    UserNotOwnerOfGroupError,
-    GroupNotFoundError,
-)
 from password_management_context.domain.events import (
     PasswordUnsharedEvent,
+)
+from password_management_context.domain.exceptions import (
+    CannotUnshareWithOwnerError,
+    GroupNotFoundError,
+    PasswordAccessDeniedError,
+    PasswordNotFoundError,
+    UserNotOwnerOfGroupError,
 )
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
@@ -51,9 +51,7 @@ class UnshareAccessUseCase(TracedUseCase):
             raise GroupNotFoundError(command.group_id)
 
         # Get the owner group of the password
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            command.password_id
-        )
+        all_permissions = self.password_permissions_repository.list_all_permissions_for(command.password_id)
 
         # Find the owner group
         owner_group_id = None
@@ -66,9 +64,7 @@ class UnshareAccessUseCase(TracedUseCase):
             raise PasswordAccessDeniedError(command.owner_id, command.password_id)
 
         # Check if the requester owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(
-            command.owner_id, owner_group_id
-        ):
+        if not self.group_access_gateway.is_user_owner_of_group(command.owner_id, owner_group_id):
             raise UserNotOwnerOfGroupError(command.owner_id, owner_group_id)
 
         # Cannot unshare with the owner group
@@ -76,9 +72,7 @@ class UnshareAccessUseCase(TracedUseCase):
             raise CannotUnshareWithOwnerError(command.group_id, command.password_id)
 
         # Revoke all access from the target group
-        self.password_permissions_repository.revoke_access(
-            command.group_id, command.password_id
-        )
+        self.password_permissions_repository.revoke_access(command.group_id, command.password_id)
 
         logger.info(
             "Password share revoked",
@@ -96,7 +90,5 @@ class UnshareAccessUseCase(TracedUseCase):
             unshared_with_group_id=command.group_id,
             unshared_by_user_id=command.owner_id,
         )
-        event_storage_service = PasswordEventStorageService(
-            self.password_event_repository
-        )
+        event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)

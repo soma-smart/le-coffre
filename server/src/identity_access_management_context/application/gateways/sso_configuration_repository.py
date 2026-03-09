@@ -1,4 +1,5 @@
 from typing import Protocol
+
 from identity_access_management_context.domain.entities import SsoConfiguration
 
 

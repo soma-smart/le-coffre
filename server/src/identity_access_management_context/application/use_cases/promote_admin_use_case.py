@@ -1,24 +1,25 @@
 from identity_access_management_context.application.commands import PromoteAdminCommand
-from identity_access_management_context.application.gateways import UserRepository, UserEventRepository
+from identity_access_management_context.application.gateways import UserEventRepository, UserRepository
 from identity_access_management_context.domain.events import AdminPromotedEvent
 from identity_access_management_context.domain.exceptions import UserNotFoundException
 from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
 
-from shared_kernel.application.tracing import TracedUseCase
-
-
 class PromoteAdminUseCase(TracedUseCase):
-    def __init__(self, user_repository: UserRepository, event_publisher: DomainEventPublisher, user_event_repository: UserEventRepository):
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        event_publisher: DomainEventPublisher,
+        user_event_repository: UserEventRepository,
+    ):
         self.user_repository = user_repository
         self._event_publisher = event_publisher
         self._user_event_repository = user_event_repository
 
     def execute(self, command: PromoteAdminCommand) -> None:
-        AdminPermissionChecker.ensure_admin(
-            command.requesting_user, "promote users to admin"
-        )
+        AdminPermissionChecker.ensure_admin(command.requesting_user, "promote users to admin")
 
         user = self.user_repository.get_by_id(command.user_id)
         if user is None:

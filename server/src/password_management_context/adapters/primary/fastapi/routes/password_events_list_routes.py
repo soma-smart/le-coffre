@@ -1,8 +1,9 @@
-from datetime import datetime
-from fastapi import APIRouter, HTTPException, Depends, Query
-from pydantic import BaseModel
-from uuid import UUID
 import logging
+from datetime import datetime
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_password_events_usecase,
@@ -14,13 +15,12 @@ from password_management_context.application.use_cases import (
     ListPasswordEventsUseCase,
 )
 from password_management_context.domain.exceptions import (
+    PasswordAccessDeniedError,
     PasswordManagementDomainError,
     PasswordNotFoundError,
-    PasswordAccessDeniedError,
 )
-from shared_kernel.domain.exceptions import AccessDeniedError
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
@@ -46,15 +46,11 @@ class ListPasswordEventsResponse(BaseModel):
 )
 def list_password_events(
     password_id: UUID,
-    event_type: list[str] | None = Query(None, description="Filter by event types"),
-    start_date: datetime | None = Query(
-        None, description="Filter events from this date (inclusive)"
-    ),
-    end_date: datetime | None = Query(
-        None, description="Filter events until this date (inclusive)"
-    ),
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: ListPasswordEventsUseCase = Depends(get_list_password_events_usecase),
+    event_type: list[str] | None = Query(None, description="Filter by event types"),  # noqa: B008
+    start_date: datetime | None = Query(None, description="Filter events from this date (inclusive)"),  # noqa: B008
+    end_date: datetime | None = Query(None, description="Filter events until this date (inclusive)"),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: ListPasswordEventsUseCase = Depends(get_list_password_events_usecase),  # noqa: B008
 ):
     """
     Retrieve the event history for a specific password.
@@ -92,11 +88,11 @@ def list_password_events(
             ]
         )
     except PasswordNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except PasswordAccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except PasswordManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logging.error(e)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

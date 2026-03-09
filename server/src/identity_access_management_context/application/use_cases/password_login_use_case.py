@@ -1,21 +1,21 @@
 import logging
 
 from identity_access_management_context.application.commands import AdminLoginCommand
-from identity_access_management_context.application.responses import AdminLoginResponse
 from identity_access_management_context.application.gateways import (
-    UserRepository,
-    UserPasswordRepository,
+    AdminEventRepository,
     PasswordHashingGateway,
     TokenGateway,
-    AdminEventRepository,
+    UserPasswordRepository,
+    UserRepository,
 )
+from identity_access_management_context.application.responses import AdminLoginResponse
 from identity_access_management_context.domain.events import (
     AdminLoginEvent,
     AdminLoginFailedEvent,
 )
 from identity_access_management_context.domain.exceptions import (
-    InvalidCredentialsException,
     AdminNotFoundException,
+    InvalidCredentialsException,
 )
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
@@ -45,9 +45,7 @@ class PasswordLoginUseCase(TracedUseCase):
     async def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
         user_password = self._user_password_repository.get_by_email(command.email)
         if not user_password:
-            logger.warning(
-                "Login failed for email=%s reason='User not found'", command.email
-            )
+            logger.warning("Login failed for email=%s reason='User not found'", command.email)
             event = AdminLoginFailedEvent(email=command.email, reason="User not found")
             self._event_publisher.publish(event)
             self._admin_event_repository.append_event(
@@ -59,15 +57,9 @@ class PasswordLoginUseCase(TracedUseCase):
             )
             raise AdminNotFoundException("User not found")
 
-        if not self._password_hashing_gateway.verify(
-            command.password, user_password.password_hash
-        ):
-            logger.warning(
-                "Login failed for email=%s reason='Invalid credentials'", command.email
-            )
-            event = AdminLoginFailedEvent(
-                email=command.email, reason="Invalid credentials"
-            )
+        if not self._password_hashing_gateway.verify(command.password, user_password.password_hash):
+            logger.warning("Login failed for email=%s reason='Invalid credentials'", command.email)
+            event = AdminLoginFailedEvent(email=command.email, reason="Invalid credentials")
             self._event_publisher.publish(event)
             self._admin_event_repository.append_event(
                 event_id=event.event_id,

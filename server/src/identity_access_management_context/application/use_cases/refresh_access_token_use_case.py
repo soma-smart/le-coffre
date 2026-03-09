@@ -1,19 +1,17 @@
 from identity_access_management_context.application.commands import (
     RefreshAccessTokenCommand,
 )
-from identity_access_management_context.application.responses import (
-    RefreshAccessTokenResponse,
-)
 from identity_access_management_context.application.gateways import (
     TokenGateway,
     UserRepository,
+)
+from identity_access_management_context.application.responses import (
+    RefreshAccessTokenResponse,
 )
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
 from shared_kernel.application.gateways import TimeGateway
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -28,12 +26,8 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         self.user_repository = user_repository
         self.time_provider = time_provider
 
-    async def execute(
-        self, command: RefreshAccessTokenCommand
-    ) -> RefreshAccessTokenResponse:
-        token_data = await self.token_gateway.validate_refresh_token(
-            command.refresh_token
-        )
+    async def execute(self, command: RefreshAccessTokenCommand) -> RefreshAccessTokenResponse:
+        token_data = await self.token_gateway.validate_refresh_token(command.refresh_token)
 
         if token_data is None:
             raise InvalidRefreshTokenException("Invalid or expired refresh token")

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+
 from identity_access_management_context.domain.entities import Group, GroupMember
 
 

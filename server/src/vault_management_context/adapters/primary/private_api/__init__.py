@@ -1,1 +1,1 @@
-from .encryption import EncryptionApi
+from .encryption import EncryptionApi as EncryptionApi

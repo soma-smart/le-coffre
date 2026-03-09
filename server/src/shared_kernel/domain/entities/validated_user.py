@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from uuid import UUID
-from typing import List
 
 from .authenticated_user import AuthenticatedUser
 

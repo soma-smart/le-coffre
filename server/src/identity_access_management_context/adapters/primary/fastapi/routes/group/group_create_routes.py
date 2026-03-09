@@ -1,18 +1,19 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID, uuid4
 import logging
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_group_usecase,
 )
-from identity_access_management_context.application.use_cases import CreateGroupUseCase
 from identity_access_management_context.application.commands import CreateGroupCommand
+from identity_access_management_context.application.use_cases import CreateGroupUseCase
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,8 @@ class CreateGroupResponse(BaseModel):
 )
 def create_group(
     request: CreateGroupRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: CreateGroupUseCase = Depends(get_create_group_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: CreateGroupUseCase = Depends(get_create_group_usecase),  # noqa: B008
 ):
     """
     Create a new group with the authenticated user as owner.
@@ -67,7 +68,7 @@ def create_group(
         )
 
     except UserNotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in create group")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

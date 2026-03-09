@@ -2,21 +2,19 @@ from identity_access_management_context.application.commands import (
     UpdateGroupCommand,
 )
 from identity_access_management_context.application.gateways import (
-    GroupRepository,
-    GroupMemberRepository,
     GroupEventRepository,
+    GroupMemberRepository,
+    GroupRepository,
 )
 from identity_access_management_context.domain.events import GroupUpdatedEvent
 from identity_access_management_context.domain.exceptions import (
+    CannotModifyPersonalGroupException,
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
-    CannotModifyPersonalGroupException,
 )
 from shared_kernel.application.gateways import DomainEventPublisher
-from shared_kernel.domain.services import AdminPermissionChecker
-
-
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class UpdateGroupUseCase(TracedUseCase):
@@ -43,9 +41,7 @@ class UpdateGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_owner(
             command.group_id, command.requesting_user.user_id
         ) and not AdminPermissionChecker().is_admin(command.requesting_user):
-            raise UserNotOwnerOfGroupException(
-                command.requesting_user.user_id, command.group_id
-            )
+            raise UserNotOwnerOfGroupException(command.requesting_user.user_id, command.group_id)
 
         group.name = command.name
         self.group_repository.save_group(group)

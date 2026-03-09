@@ -1,4 +1,4 @@
-from sqlmodel import CheckConstraint, SQLModel, Field
+from sqlmodel import CheckConstraint, Field, SQLModel
 
 
 class VaultTable(SQLModel, table=True):

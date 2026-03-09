@@ -1,14 +1,15 @@
 import pytest
 
 from vault_management_context.application.commands import ValidateVaultSetupCommand
-from vault_management_context.domain.entities import Vault
+from vault_management_context.application.responses import VaultStatus
 from vault_management_context.application.use_cases import ValidateVaultSetupUseCase
+from vault_management_context.domain.entities import Vault
 from vault_management_context.domain.exceptions import (
     NoVaultExisting,
     VaultAlreadySetuped,
     VaultSetupIdNotFound,
 )
-from vault_management_context.application.responses import VaultStatus
+
 from ..fakes import FakeVaultRepository
 
 

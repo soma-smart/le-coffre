@@ -1,71 +1,71 @@
 from fastapi import Depends
-from starlette.requests import Request
 from sqlmodel import Session
+from starlette.requests import Request
 
-from identity_access_management_context.application.use_cases import (
-    GetUserUseCase,
-    GetUserMeUseCase,
-    DeleteUserUseCase,
-    UpdateUserUseCase,
-    UpdateUserPasswordUseCase,
-    CreateUserUseCase,
-    ListUserUseCase,
-    PromoteAdminUseCase,
-    PasswordLoginUseCase,
-    RegisterAdminWithPasswordUseCase,
-    GetSsoAuthorizeUrlUseCase,
-    ConfigureSsoProviderUseCase,
-    SsoLoginUseCase,
-    RefreshAccessTokenUseCase,
-    CreateGroupUseCase,
-    AddUserToGroupUseCase,
-    AddOwnerToGroupUseCase,
-    RemoveUserFromGroupUseCase,
-    GetGroupUseCase,
-    ListGroupsUseCase,
-    UpdateGroupUseCase,
-    IsSsoConfigSetUseCase,
-    DeleteGroupUseCase,
-)
 from identity_access_management_context.adapters.primary.private_api import (
     UserInfoApi,
-)
-from identity_access_management_context.application.gateways import (
-    UserRepository,
-    UserPasswordRepository,
-    PasswordHashingGateway,
-    TokenGateway,
-    SsoGateway,
-    SsoUserRepository,
-    SsoConfigurationRepository,
-    SsoEncryptionGateway,
-    GroupRepository,
-    GroupMemberRepository,
-    GroupUsageGateway,
-    UserEventRepository,
-    GroupEventRepository,
-    SsoEventRepository,
-    AdminEventRepository,
-)
-from identity_access_management_context.adapters.secondary.sql import (
-    SqlUserRepository,
-    SqlUserPasswordRepository,
-    SqlGroupRepository,
-    SqlGroupMemberRepository,
-    SqlSsoUserRepository,
-    SqlSsoConfigurationRepository,
-    SqlIamEventRepository,
 )
 from identity_access_management_context.adapters.secondary.private_api import (
     PrivateApiGroupUsageGateway,
 )
+from identity_access_management_context.adapters.secondary.sql import (
+    SqlGroupMemberRepository,
+    SqlGroupRepository,
+    SqlIamEventRepository,
+    SqlSsoConfigurationRepository,
+    SqlSsoUserRepository,
+    SqlUserPasswordRepository,
+    SqlUserRepository,
+)
+from identity_access_management_context.application.gateways import (
+    AdminEventRepository,
+    GroupEventRepository,
+    GroupMemberRepository,
+    GroupRepository,
+    GroupUsageGateway,
+    PasswordHashingGateway,
+    SsoConfigurationRepository,
+    SsoEncryptionGateway,
+    SsoEventRepository,
+    SsoGateway,
+    SsoUserRepository,
+    TokenGateway,
+    UserEventRepository,
+    UserPasswordRepository,
+    UserRepository,
+)
+from identity_access_management_context.application.use_cases import (
+    AddOwnerToGroupUseCase,
+    AddUserToGroupUseCase,
+    ConfigureSsoProviderUseCase,
+    CreateGroupUseCase,
+    CreateUserUseCase,
+    DeleteGroupUseCase,
+    DeleteUserUseCase,
+    GetGroupUseCase,
+    GetSsoAuthorizeUrlUseCase,
+    GetUserMeUseCase,
+    GetUserUseCase,
+    IsSsoConfigSetUseCase,
+    ListGroupsUseCase,
+    ListUserUseCase,
+    PasswordLoginUseCase,
+    PromoteAdminUseCase,
+    RefreshAccessTokenUseCase,
+    RegisterAdminWithPasswordUseCase,
+    RemoveUserFromGroupUseCase,
+    SsoLoginUseCase,
+    UpdateGroupUseCase,
+    UpdateUserPasswordUseCase,
+    UpdateUserUseCase,
+)
+from password_management_context.adapters.primary.private_api import GroupUsageApi
 from password_management_context.adapters.secondary import (
     SqlPasswordPermissionsRepository,
 )
 from password_management_context.application.use_cases import IsGroupUsedUseCase
-from password_management_context.adapters.primary.private_api import GroupUsageApi
-from shared_kernel.application.gateways import TimeGateway, DomainEventPublisher
 from shared_kernel.adapters.primary.dependencies import get_session
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 
 def get_event_publisher(request: Request) -> DomainEventPublisher:
@@ -73,41 +73,41 @@ def get_event_publisher(request: Request) -> DomainEventPublisher:
 
 
 def get_user_event_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> UserEventRepository:
     return SqlIamEventRepository(session)
 
 
 def get_group_event_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> GroupEventRepository:
     return SqlIamEventRepository(session)
 
 
 def get_sso_event_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> SsoEventRepository:
     return SqlIamEventRepository(session)
 
 
 def get_admin_event_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> AdminEventRepository:
     return SqlIamEventRepository(session)
 
 
-def get_group_repository(session: Session = Depends(get_session)) -> GroupRepository:
+def get_group_repository(session: Session = Depends(get_session)) -> GroupRepository:  # noqa: B008
     return SqlGroupRepository(session)
 
 
 def get_group_member_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> GroupMemberRepository:
     return SqlGroupMemberRepository(session)
 
 
 def get_group_usage_gateway(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> GroupUsageGateway:
     # Create the password permissions repository with session
     password_permissions_repository = SqlPasswordPermissionsRepository(session)
@@ -119,24 +119,24 @@ def get_group_usage_gateway(
     return PrivateApiGroupUsageGateway(group_usage_api)
 
 
-def get_user_repository(session: Session = Depends(get_session)) -> UserRepository:
+def get_user_repository(session: Session = Depends(get_session)) -> UserRepository:  # noqa: B008
     return SqlUserRepository(session)
 
 
 def get_user_password_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> UserPasswordRepository:
     return SqlUserPasswordRepository(session)
 
 
 def get_sso_user_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> SsoUserRepository:
     return SqlSsoUserRepository(session)
 
 
 def get_sso_configuration_repository(
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> SsoConfigurationRepository:
     return SqlSsoConfigurationRepository(session)
 
@@ -163,19 +163,19 @@ def get_sso_encryption_gateway(request: Request) -> SsoEncryptionGateway:
 
 # User Management Use Cases
 def get_get_user_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
 ):
     return GetUserUseCase(user_repository)
 
 
 def get_delete_user_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    user_event_repository: UserEventRepository = Depends(get_user_event_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    user_event_repository: UserEventRepository = Depends(get_user_event_repository),  # noqa: B008
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -187,26 +187,26 @@ def get_delete_user_usecase(
 
 
 def get_promote_admin_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    user_event_repository: UserEventRepository = Depends(get_user_event_repository),
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    user_event_repository: UserEventRepository = Depends(get_user_event_repository),  # noqa: B008
 ):
     return PromoteAdminUseCase(user_repository, event_publisher, user_event_repository)
 
 
 def get_update_user_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    user_event_repository: UserEventRepository = Depends(get_user_event_repository),
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    user_event_repository: UserEventRepository = Depends(get_user_event_repository),  # noqa: B008
 ):
     return UpdateUserUseCase(user_repository, event_publisher, user_event_repository)
 
 
 def get_update_user_password_usecase(
-    user_password_repository: UserPasswordRepository = Depends(
+    user_password_repository: UserPasswordRepository = Depends(  # noqa: B008
         get_user_password_repository
     ),
-    password_hashing_gateway: PasswordHashingGateway = Depends(
+    password_hashing_gateway: PasswordHashingGateway = Depends(  # noqa: B008
         get_password_hashing_gateway
     ),
 ):
@@ -217,19 +217,19 @@ def get_update_user_password_usecase(
 
 
 def get_create_user_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    user_password_repository: UserPasswordRepository = Depends(
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    user_password_repository: UserPasswordRepository = Depends(  # noqa: B008
         get_user_password_repository
     ),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    password_hashing_gateway: PasswordHashingGateway = Depends(
+    password_hashing_gateway: PasswordHashingGateway = Depends(  # noqa: B008
         get_password_hashing_gateway
     ),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    user_event_repository: UserEventRepository = Depends(get_user_event_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    user_event_repository: UserEventRepository = Depends(get_user_event_repository),  # noqa: B008
 ):
     return CreateUserUseCase(
         user_repository,
@@ -243,31 +243,31 @@ def get_create_user_usecase(
 
 
 def get_list_user_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
 ):
     return ListUserUseCase(user_repository)
 
 
 def get_get_user_me_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),  # noqa: B008
 ):
     return GetUserMeUseCase(user_repository, sso_user_repository)
 
 
 # Authentication Use Cases
 def get_password_login_usecase(
-    user_password_repository: UserPasswordRepository = Depends(
+    user_password_repository: UserPasswordRepository = Depends(  # noqa: B008
         get_user_password_repository
     ),
-    user_repository: UserRepository = Depends(get_user_repository),
-    password_hashing_gateway: PasswordHashingGateway = Depends(
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    password_hashing_gateway: PasswordHashingGateway = Depends(  # noqa: B008
         get_password_hashing_gateway
     ),
-    token_gateway: TokenGateway = Depends(get_token_gateway),
-    time_provider: TimeGateway = Depends(get_time_provider),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    token_gateway: TokenGateway = Depends(get_token_gateway),  # noqa: B008
+    time_provider: TimeGateway = Depends(get_time_provider),  # noqa: B008
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),  # noqa: B008
 ):
     return PasswordLoginUseCase(
         user_password_repository,
@@ -281,19 +281,19 @@ def get_password_login_usecase(
 
 
 def get_register_admin_with_password_usecase(
-    user_password_repository: UserPasswordRepository = Depends(
+    user_password_repository: UserPasswordRepository = Depends(  # noqa: B008
         get_user_password_repository
     ),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    password_hashing_gateway: PasswordHashingGateway = Depends(
+    password_hashing_gateway: PasswordHashingGateway = Depends(  # noqa: B008
         get_password_hashing_gateway
     ),
-    user_repository: UserRepository = Depends(get_user_repository),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),  # noqa: B008
 ):
     return RegisterAdminWithPasswordUseCase(
         user_password_repository,
@@ -311,15 +311,13 @@ get_register_admin_usecase = get_register_admin_with_password_usecase
 
 
 def get_sso_authorize_url_usecase(
-    sso_gateway: SsoGateway = Depends(get_sso_gateway),
-    sso_configuration_repository: SsoConfigurationRepository = Depends(
+    sso_gateway: SsoGateway = Depends(get_sso_gateway),  # noqa: B008
+    sso_configuration_repository: SsoConfigurationRepository = Depends(  # noqa: B008
         get_sso_configuration_repository
     ),
-    sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),
+    sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),  # noqa: B008
 ):
-    return GetSsoAuthorizeUrlUseCase(
-        sso_gateway, sso_configuration_repository, sso_encryption_gateway
-    )
+    return GetSsoAuthorizeUrlUseCase(sso_gateway, sso_configuration_repository, sso_encryption_gateway)
 
 
 # Alias for backward compatibility
@@ -327,13 +325,13 @@ get_sso_url_usecase = get_sso_authorize_url_usecase
 
 
 def get_configure_sso_provider_usecase(
-    sso_gateway: SsoGateway = Depends(get_sso_gateway),
-    sso_configuration_repository: SsoConfigurationRepository = Depends(
+    sso_gateway: SsoGateway = Depends(get_sso_gateway),  # noqa: B008
+    sso_configuration_repository: SsoConfigurationRepository = Depends(  # noqa: B008
         get_sso_configuration_repository
     ),
-    sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    sso_event_repository: SsoEventRepository = Depends(get_sso_event_repository),
+    sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),  # noqa: B008
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    sso_event_repository: SsoEventRepository = Depends(get_sso_event_repository),  # noqa: B008
 ):
     return ConfigureSsoProviderUseCase(
         sso_gateway,
@@ -345,7 +343,7 @@ def get_configure_sso_provider_usecase(
 
 
 def get_is_sso_config_set_usecase(
-    sso_configuration_repository: SsoConfigurationRepository = Depends(
+    sso_configuration_repository: SsoConfigurationRepository = Depends(  # noqa: B008
         get_sso_configuration_repository
     ),
 ):
@@ -353,24 +351,24 @@ def get_is_sso_config_set_usecase(
 
 
 def get_sso_login_usecase(
-    sso_gateway: SsoGateway = Depends(get_sso_gateway),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
-    user_repository: UserRepository = Depends(get_user_repository),
-    password_hashing_gateway: PasswordHashingGateway = Depends(
+    sso_gateway: SsoGateway = Depends(get_sso_gateway),  # noqa: B008
+    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),  # noqa: B008
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    password_hashing_gateway: PasswordHashingGateway = Depends(  # noqa: B008
         get_password_hashing_gateway
     ),
-    token_gateway: TokenGateway = Depends(get_token_gateway),
-    time_provider: TimeGateway = Depends(get_time_provider),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    token_gateway: TokenGateway = Depends(get_token_gateway),  # noqa: B008
+    time_provider: TimeGateway = Depends(get_time_provider),  # noqa: B008
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    sso_configuration_repository: SsoConfigurationRepository = Depends(
+    sso_configuration_repository: SsoConfigurationRepository = Depends(  # noqa: B008
         get_sso_configuration_repository
     ),
-    sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    sso_event_repository: SsoEventRepository = Depends(get_sso_event_repository),
+    sso_encryption_gateway: SsoEncryptionGateway = Depends(get_sso_encryption_gateway),  # noqa: B008
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    sso_event_repository: SsoEventRepository = Depends(get_sso_event_repository),  # noqa: B008
 ):
     return SsoLoginUseCase(
         sso_gateway,
@@ -389,9 +387,9 @@ def get_sso_login_usecase(
 
 
 def get_refresh_access_token_usecase(
-    token_gateway: TokenGateway = Depends(get_token_gateway),
-    user_repository: UserRepository = Depends(get_user_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
+    token_gateway: TokenGateway = Depends(get_token_gateway),  # noqa: B008
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    time_provider: TimeGateway = Depends(get_time_provider),  # noqa: B008
 ):
     return RefreshAccessTokenUseCase(
         token_gateway,
@@ -402,13 +400,13 @@ def get_refresh_access_token_usecase(
 
 # Group Management Use Cases
 def get_create_group_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),  # noqa: B008
 ):
     return CreateGroupUseCase(
         user_repository,
@@ -420,13 +418,13 @@ def get_create_group_usecase(
 
 
 def get_add_user_to_group_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),  # noqa: B008
 ):
     return AddUserToGroupUseCase(
         user_repository,
@@ -438,13 +436,13 @@ def get_add_user_to_group_usecase(
 
 
 def get_add_owner_to_group_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),  # noqa: B008
 ):
     return AddOwnerToGroupUseCase(
         user_repository,
@@ -456,13 +454,13 @@ def get_add_owner_to_group_usecase(
 
 
 def get_remove_user_from_group_usecase(
-    user_repository: UserRepository = Depends(get_user_repository),
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    user_repository: UserRepository = Depends(get_user_repository),  # noqa: B008
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),  # noqa: B008
 ):
     return RemoveUserFromGroupUseCase(
         user_repository,
@@ -474,8 +472,8 @@ def get_remove_user_from_group_usecase(
 
 
 def get_get_group_usecase(
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
 ):
@@ -483,16 +481,16 @@ def get_get_group_usecase(
 
 
 def get_user_info_api(
-    get_user_usecase: GetUserUseCase = Depends(get_get_user_usecase),
-    get_group_usecase: GetGroupUseCase = Depends(get_get_group_usecase),
+    get_user_usecase: GetUserUseCase = Depends(get_get_user_usecase),  # noqa: B008
+    get_group_usecase: GetGroupUseCase = Depends(get_get_group_usecase),  # noqa: B008
 ) -> UserInfoApi:
     """Private API for other contexts to query user information"""
     return UserInfoApi(get_user_usecase, get_group_usecase)
 
 
 def get_list_groups_usecase(
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
 ):
@@ -500,12 +498,12 @@ def get_list_groups_usecase(
 
 
 def get_update_group_usecase(
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),  # noqa: B008
 ):
     return UpdateGroupUseCase(
         group_repository,
@@ -516,13 +514,13 @@ def get_update_group_usecase(
 
 
 def get_delete_group_usecase(
-    group_repository: GroupRepository = Depends(get_group_repository),
-    group_member_repository: GroupMemberRepository = Depends(
+    group_repository: GroupRepository = Depends(get_group_repository),  # noqa: B008
+    group_member_repository: GroupMemberRepository = Depends(  # noqa: B008
         get_group_member_repository
     ),
-    group_usage_gateway: GroupUsageGateway = Depends(get_group_usage_gateway),
-    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
-    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    group_usage_gateway: GroupUsageGateway = Depends(get_group_usage_gateway),  # noqa: B008
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),  # noqa: B008
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),  # noqa: B008
 ):
     return DeleteGroupUseCase(
         group_repository,

@@ -1,4 +1,4 @@
-from typing import List, Optional, Protocol
+from typing import Protocol
 from uuid import UUID
 
 from password_management_context.domain.entities import Password

@@ -1,8 +1,8 @@
 from uuid import UUID
 
 from identity_access_management_context.application.gateways import (
-    GroupRepository,
     GroupMemberRepository,
+    GroupRepository,
 )
 
 

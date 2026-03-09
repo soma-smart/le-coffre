@@ -1,16 +1,12 @@
-from typing import Optional
-
+from shared_kernel.application.tracing import TracedUseCase
 from vault_management_context.application.commands import GetVaultStatusCommand
 from vault_management_context.application.gateways import (
-    VaultSessionGateway,
-    VaultRepository,
     ShareRepository,
+    VaultRepository,
+    VaultSessionGateway,
 )
 from vault_management_context.application.responses import VaultStatus
 from vault_management_context.domain.entities.vault import Vault
-
-
-from shared_kernel.application.tracing import TracedUseCase
 
 
 class GetVaultStatusUseCase(TracedUseCase):

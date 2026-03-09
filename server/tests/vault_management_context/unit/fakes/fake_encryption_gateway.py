@@ -24,19 +24,11 @@ class FakeEncryptionGateway(EncryptionGateway):
         return self._encrypted_data
 
     def encrypt(self, decrypted_data: str, master_key: str) -> str:
-        if (
-            self._encrypted_data is None
-            or self._decrypted_data != decrypted_data
-            or self._master_key != master_key
-        ):
+        if self._encrypted_data is None or self._decrypted_data != decrypted_data or self._master_key != master_key:
             raise ValueError("Decrypted data does not match configured value")
         return self._encrypted_data
 
     def decrypt(self, encrypted_data: str, master_key: str) -> str:
-        if (
-            self._decrypted_data is None
-            or self._encrypted_data != encrypted_data
-            or self._master_key != master_key
-        ):
+        if self._decrypted_data is None or self._encrypted_data != encrypted_data or self._master_key != master_key:
             raise ValueError("Encrypted data does not match configured value")
         return self._decrypted_data

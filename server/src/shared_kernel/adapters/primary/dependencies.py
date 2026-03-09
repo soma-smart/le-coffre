@@ -1,23 +1,22 @@
+from typing import Generator
+
 from fastapi import Depends, HTTPException
 from fastapi.security.api_key import APIKeyCookie
-from typing import Optional, Generator
-from starlette.requests import Request
 from sqlmodel import Session
+from starlette.requests import Request
 
-from identity_access_management_context.application.use_cases import (
-    ValidateUserTokenUseCase,
+from identity_access_management_context.adapters.secondary.sql import (
+    SqlSsoUserRepository,
+    SqlUserPasswordRepository,
 )
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
 )
 from identity_access_management_context.application.gateways import (
-    UserPasswordRepository,
     TokenGateway,
-    SsoUserRepository,
 )
-from identity_access_management_context.adapters.secondary.sql import (
-    SqlUserPasswordRepository,
-    SqlSsoUserRepository,
+from identity_access_management_context.application.use_cases import (
+    ValidateUserTokenUseCase,
 )
 from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
@@ -25,15 +24,13 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
 from shared_kernel.domain.entities import ValidatedUser
+
 from .exceptions import (
     MissingTokenError,
 )
 
-
 # Security scheme for Swagger documentation
-cookie_scheme = APIKeyCookie(
-    name="access_token", scheme_name="CookieAuth", auto_error=False
-)
+cookie_scheme = APIKeyCookie(name="access_token", scheme_name="CookieAuth", auto_error=False)
 
 
 def get_session(request: Request) -> Generator[Session, None, None]:
@@ -48,7 +45,7 @@ def get_session(request: Request) -> Generator[Session, None, None]:
 
 def get_validate_token_usecase(
     request: Request,
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> ValidateUserTokenUseCase:
     user_password_repository = SqlUserPasswordRepository(session)
     token_gateway: TokenGateway = request.app.state.token_gateway
@@ -63,7 +60,7 @@ def get_validate_token_usecase(
 
 async def get_current_user(
     access_token: str | None = Depends(cookie_scheme),
-    validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
+    validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),  # noqa: B008
 ) -> ValidatedUser:
     """
     Validates the JWT token from cookie and returns the current user information.
@@ -91,6 +88,6 @@ async def get_current_user(
         UserNotFoundException,
         MissingTokenError,
     ) as e:
-        raise HTTPException(status_code=401, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Authentication service error")
+        raise HTTPException(status_code=401, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Authentication service error") from e

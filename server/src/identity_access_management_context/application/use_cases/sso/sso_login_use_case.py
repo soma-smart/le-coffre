@@ -1,36 +1,32 @@
-from uuid import uuid4
 from datetime import datetime
+from uuid import uuid4
 
 from identity_access_management_context.application.commands.sso_login_command import (
     SsoLoginCommand,
 )
-from identity_access_management_context.application.responses.sso_login_response import (
-    SsoLoginResponse,
-)
 from identity_access_management_context.application.gateways import (
+    GroupMemberRepository,
+    GroupRepository,
+    PasswordHashingGateway,
+    SsoConfigurationRepository,
+    SsoEncryptionGateway,
+    SsoEventRepository,
     SsoGateway,
     SsoUserRepository,
     TokenGateway,
     UserRepository,
-    PasswordHashingGateway,
-    GroupRepository,
-    GroupMemberRepository,
-    SsoConfigurationRepository,
-    SsoEncryptionGateway,
 )
-from identity_access_management_context.application.services import (
-    UserManagementService,
-    UserCreationService,
+from identity_access_management_context.application.responses.sso_login_response import (
+    SsoLoginResponse,
 )
 from identity_access_management_context.application.services import (
     SsoConfigurationDecryptingService,
+    UserCreationService,
+    UserManagementService,
 )
 from identity_access_management_context.domain.entities.sso_user import SsoUser
-from identity_access_management_context.application.gateways import SsoEventRepository
 from identity_access_management_context.domain.events import SsoLoginEvent
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -80,9 +76,7 @@ class SsoLoginUseCase(TracedUseCase):
         ).decrypt()
 
         # Step 1: Validate SSO code and get user info from provider
-        sso_user_from_provider = await self._sso_gateway.validate_callback(
-            sso_config, command.code
-        )
+        sso_user_from_provider = await self._sso_gateway.validate_callback(sso_config, command.code)
 
         # Step 2: Check if user already exists in our system
         existing_sso_user = self._sso_user_repository.get_by_sso_user_id(
@@ -110,9 +104,7 @@ class SsoLoginUseCase(TracedUseCase):
             is_new_user = True
 
             # Create user in User Management context via service
-            user_management_service = UserManagementService(
-                self._user_repository, self._password_hashing_gateway
-            )
+            user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
             user = user_management_service.create_user(
                 user_id=user_id,
                 email=email,

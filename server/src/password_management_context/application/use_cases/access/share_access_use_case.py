@@ -2,22 +2,22 @@ import logging
 
 from password_management_context.application.commands import ShareResourceCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEventRepository,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.services import (
     PasswordEventStorageService,
 )
+from password_management_context.domain.events import (
+    PasswordSharedEvent,
+)
 from password_management_context.domain.exceptions import (
+    GroupNotFoundError,
     PasswordAccessDeniedError,
     PasswordNotFoundError,
     UserNotOwnerOfGroupError,
-    GroupNotFoundError,
-)
-from password_management_context.domain.events import (
-    PasswordSharedEvent,
 )
 from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.application.gateways import DomainEventPublisher
@@ -51,9 +51,7 @@ class ShareAccessUseCase(TracedUseCase):
             raise GroupNotFoundError(command.group_id)
 
         # Get the owner group of the password
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            command.password_id
-        )
+        all_permissions = self.password_permissions_repository.list_all_permissions_for(command.password_id)
 
         # Find the owner group
         owner_group_id = None
@@ -66,9 +64,7 @@ class ShareAccessUseCase(TracedUseCase):
             raise PasswordAccessDeniedError(command.owner_id, command.password_id)
 
         # Check if the requester owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(
-            command.owner_id, owner_group_id
-        ):
+        if not self.group_access_gateway.is_user_owner_of_group(command.owner_id, owner_group_id):
             raise UserNotOwnerOfGroupError(command.owner_id, owner_group_id)
 
         # Grant READ access to the target group (not setting as owner)
@@ -76,7 +72,14 @@ class ShareAccessUseCase(TracedUseCase):
             command.group_id, command.password_id, PasswordPermission.READ
         )
 
-        logger.info("Password shared", extra={"password_id": str(command.password_id), "shared_with_group_id": str(command.group_id), "by_user_id": str(command.owner_id)})
+        logger.info(
+            "Password shared",
+            extra={
+                "password_id": str(command.password_id),
+                "shared_with_group_id": str(command.group_id),
+                "by_user_id": str(command.owner_id),
+            },
+        )
 
         # Store domain event
         event = PasswordSharedEvent(
@@ -85,7 +88,5 @@ class ShareAccessUseCase(TracedUseCase):
             shared_with_group_id=command.group_id,
             shared_by_user_id=command.owner_id,
         )
-        event_storage_service = PasswordEventStorageService(
-            self.password_event_repository
-        )
+        event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)

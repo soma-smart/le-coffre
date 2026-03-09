@@ -1,17 +1,18 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from uuid import UUID
 import logging
+from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
+from identity_access_management_context.domain.exceptions import UserNotFoundException
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_share_access_usecase,
 )
-from password_management_context.application.use_cases import ShareAccessUseCase
 from password_management_context.application.commands import ShareResourceCommand
+from password_management_context.application.use_cases import ShareAccessUseCase
 from password_management_context.domain.exceptions import PasswordAccessDeniedError
-from identity_access_management_context.domain.exceptions import UserNotFoundException
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +36,8 @@ class SharePasswordResponse(BaseModel):
 def share_password(
     password_id: UUID,
     request: SharePasswordRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: ShareAccessUseCase = Depends(get_share_access_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: ShareAccessUseCase = Depends(get_share_access_usecase),  # noqa: B008
 ):
     """
     Share a password with a group.
@@ -59,9 +60,9 @@ def share_password(
             message=f"Password {password_id} successfully shared with group {request.group_id}"
         )
     except PasswordAccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
-    except UserNotFoundException:
-        raise HTTPException(status_code=404, detail="User does not exist")
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except UserNotFoundException as e:
+        raise HTTPException(status_code=404, detail="User does not exist") from e
     except Exception as e:
         logger.exception("Unexpected error in share password")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

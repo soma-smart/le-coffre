@@ -5,19 +5,20 @@ from datetime import datetime, timezone
 
 # Optional OpenTelemetry SDK — installed via the [monitoring] dependency group.
 try:
+    import opentelemetry.metrics as otel_metrics
+    import opentelemetry.trace as otel_trace
     from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-    import opentelemetry.metrics as otel_metrics
-    import opentelemetry.trace as otel_trace
     from opentelemetry.sdk.metrics import MeterProvider
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-    from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
     from opentelemetry.sdk.trace.sampling import ALWAYS_ON, ParentBased, TraceIdRatioBased
+
     _OTEL_AVAILABLE = True
 except ImportError:
     _OTEL_AVAILABLE = False
@@ -25,12 +26,32 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Standard LogRecord attributes — excluded from the extra-fields merge.
-_LOGRECORD_RESERVED = frozenset({
-    "name", "msg", "args", "created", "filename", "funcName", "levelname",
-    "levelno", "lineno", "module", "msecs", "pathname", "process",
-    "processName", "relativeCreated", "stack_info", "thread", "threadName",
-    "exc_info", "exc_text", "message", "taskName",
-})
+_LOGRECORD_RESERVED = frozenset(
+    {
+        "name",
+        "msg",
+        "args",
+        "created",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "thread",
+        "threadName",
+        "exc_info",
+        "exc_text",
+        "message",
+        "taskName",
+    }
+)
 
 
 class JsonFormatter(logging.Formatter):
@@ -38,8 +59,7 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         entry: dict = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc)
-                         .isoformat(timespec="milliseconds"),
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(timespec="milliseconds"),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -91,9 +111,7 @@ class _UvicornAccessFilter(logging.Filter):
 
     def __init__(self, monitoring_active: bool = True) -> None:
         super().__init__()
-        self._suppressed = self._ALWAYS_SUPPRESSED | (
-            self._MONITORING_SUPPRESSED if monitoring_active else frozenset()
-        )
+        self._suppressed = self._ALWAYS_SUPPRESSED | (self._MONITORING_SUPPRESSED if monitoring_active else frozenset())
 
     def filter(self, record: logging.LogRecord) -> bool:
         # Parse record.args directly — uvicorn access log format is a 5-tuple:
@@ -159,18 +177,20 @@ def _try_import_otel() -> bool:
 # (vault shares, credentials, plaintext passwords) must be listed here so that
 # the OTel HTTP instrumentation never creates spans for them, preventing any
 # accidental capture of sensitive data in span attributes or exception events.
-_EXCLUDED_URLS = ",".join([
-    "/api/health",
-    "/api/metrics",
-    "/api/vault/unlock",
-    "/api/vault/setup",
-    "/api/vault/validate-setup",
-    "/api/auth/login",
-    "/api/auth/register-admin",
-    "/api/auth/refresh-token",
-    "/api/users/me/password",
-    "/api/passwords",
-])
+_EXCLUDED_URLS = ",".join(
+    [
+        "/api/health",
+        "/api/metrics",
+        "/api/vault/unlock",
+        "/api/vault/setup",
+        "/api/vault/validate-setup",
+        "/api/auth/login",
+        "/api/auth/register-admin",
+        "/api/auth/refresh-token",
+        "/api/users/me/password",
+        "/api/passwords",
+    ]
+)
 
 
 def _configure_otel(app) -> tuple:
@@ -184,24 +204,22 @@ def _configure_otel(app) -> tuple:
 
     _warn_insecure_otlp(endpoint)
 
-    resource = Resource.create({
-        SERVICE_NAME: service_name,
-        **_parse_resource_attributes(),
-    })
+    resource = Resource.create(
+        {
+            SERVICE_NAME: service_name,
+            **_parse_resource_attributes(),
+        }
+    )
 
     # --- Metrics ---
-    reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(endpoint=f"{endpoint.rstrip('/')}/v1/metrics")
-    )
+    reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{endpoint.rstrip('/')}/v1/metrics"))
     meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
     otel_metrics.set_meter_provider(meter_provider)
 
     # --- Traces ---
     tracer_provider = TracerProvider(resource=resource, sampler=_build_sampler())
     tracer_provider.add_span_processor(
-        BatchSpanProcessor(
-            OTLPSpanExporter(endpoint=f"{endpoint.rstrip('/')}/v1/traces")
-        )
+        BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{endpoint.rstrip('/')}/v1/traces"))
     )
     otel_trace.set_tracer_provider(tracer_provider)
 
@@ -260,7 +278,8 @@ def _build_sampler():
         ratio = float(raw_arg)
     except ValueError:
         logger.warning(
-            "Invalid OTEL_TRACES_SAMPLER_ARG=%r — must be a float in [0.0, 1.0], falling back to ParentBased(ALWAYS_ON)",
+            "Invalid OTEL_TRACES_SAMPLER_ARG=%r — must be a float in [0.0, 1.0], "
+            "falling back to ParentBased(ALWAYS_ON)",
             raw_arg,
         )
         return ParentBased(ALWAYS_ON)
@@ -293,11 +312,7 @@ def _parse_resource_attributes() -> dict:
         "NODE_NAME": "k8s.node.name",
         "POD_NAMESPACE": "k8s.namespace.name",
     }
-    result = {
-        otel_key: value
-        for env_var, otel_key in _K8S_ENV_MAPPING.items()
-        if (value := os.getenv(env_var))
-    }
+    result = {otel_key: value for env_var, otel_key in _K8S_ENV_MAPPING.items() if (value := os.getenv(env_var))}
 
     raw = os.getenv("OTEL_RESOURCE_ATTRIBUTES", "")
     for pair in raw.split(","):
@@ -315,7 +330,5 @@ def _parse_resource_attributes() -> dict:
 
 def _install_filter(monitoring_active: bool) -> None:
     uvicorn_logger = logging.getLogger("uvicorn.access")
-    uvicorn_logger.filters = [
-        f for f in uvicorn_logger.filters if not isinstance(f, _UvicornAccessFilter)
-    ]
+    uvicorn_logger.filters = [f for f in uvicorn_logger.filters if not isinstance(f, _UvicornAccessFilter)]
     uvicorn_logger.addFilter(_UvicornAccessFilter(monitoring_active=monitoring_active))

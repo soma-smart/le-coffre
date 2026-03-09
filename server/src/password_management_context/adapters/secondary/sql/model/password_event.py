@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import UUID
-from sqlmodel import Field, SQLModel, JSON, Column
+
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class PasswordEventTable(SQLModel, table=True):

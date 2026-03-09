@@ -34,9 +34,7 @@ class FakePasswordRepository(PasswordRepository):
     def delete_by_owner_group(self, group_id: UUID) -> None:
         """Delete all passwords owned by a specific group"""
         password_ids_to_delete = [
-            password_id
-            for password_id, owner_id in self._password_owners.items()
-            if owner_id == group_id
+            password_id for password_id, owner_id in self._password_owners.items() if owner_id == group_id
         ]
         for password_id in password_ids_to_delete:
             if password_id in self.storage:

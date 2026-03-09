@@ -1,1 +1,1 @@
-from .vault_creation_service import VaultCreationService
+from .vault_creation_service import VaultCreationService as VaultCreationService

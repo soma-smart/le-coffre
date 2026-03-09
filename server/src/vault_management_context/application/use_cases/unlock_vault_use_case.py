@@ -1,28 +1,25 @@
 import logging
 
+from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.application.tracing import TracedUseCase
 from vault_management_context.application.commands import UnlockVaultCommand
-
-from vault_management_context.domain.exceptions import (
-    VaultNotSetupException,
-    ShareReconstructionError,
-    VaultUnlockedError,
-)
 from vault_management_context.application.gateways import (
-    VaultRepository,
-    ShamirGateway,
     EncryptionGateway,
-    VaultSessionGateway,
+    ShamirGateway,
     ShareRepository,
     VaultEventRepository,
+    VaultRepository,
+    VaultSessionGateway,
 )
 from vault_management_context.application.services import KeySessionManager
 from vault_management_context.domain.events import VaultUnlockedEvent
-from shared_kernel.application.gateways import DomainEventPublisher
+from vault_management_context.domain.exceptions import (
+    ShareReconstructionError,
+    VaultNotSetupException,
+    VaultUnlockedError,
+)
 
-from shared_kernel.application.tracing import TracedUseCase
 logger = logging.getLogger(__name__)
-
-
 
 
 class UnlockVaultUseCase(TracedUseCase):

@@ -1,8 +1,9 @@
 from datetime import datetime
-import pytest
+from urllib.parse import parse_qs, quote, urlparse
+
 import httpx
-from urllib.parse import urlparse, parse_qs, quote
 import oidc_provider_mock
+import pytest
 
 from identity_access_management_context.adapters.secondary import OAuth2SsoGateway
 from identity_access_management_context.application.gateways import SsoGateway
@@ -203,17 +204,13 @@ async def test_oauth2_flow_with_invalid_code(sso_gateway: SsoGateway, oidc_serve
 
     # The exception should indicate authentication failure
     error_message = str(exc_info.value).lower()
-    assert (
-        "invalid" in error_message
-        or "fail" in error_message
-        or "error" in error_message
-    )
+    assert "invalid" in error_message or "fail" in error_message or "error" in error_message
 
 
 @pytest.mark.asyncio
 async def test_oidc_discovery_with_invalid_url(sso_gateway: SsoGateway):
     """Test that invalid discovery URL fails gracefully."""
-    with pytest.raises(Exception) as exc_info:
+    with pytest.raises(ValueError):
         await sso_gateway.validate_discovery(
             client_id="test-client",
             client_secret="test-secret",
@@ -266,9 +263,7 @@ async def test_multiple_users_authentication(oidc_server, sso_gateway):
 
     # Authenticate as user1
     auth_url1 = await sso_gateway.get_authorize_url(config)
-    response1 = httpx.post(
-        auth_url1, data={"sub": user1_data["sub"]}, follow_redirects=False
-    )
+    response1 = httpx.post(auth_url1, data={"sub": user1_data["sub"]}, follow_redirects=False)
     callback_url1 = response1.headers.get("location")
     code1 = parse_qs(urlparse(callback_url1).query).get("code", [None])[0]
     sso_user1 = await sso_gateway.validate_callback(config, code1)
@@ -278,9 +273,7 @@ async def test_multiple_users_authentication(oidc_server, sso_gateway):
 
     # Authenticate as user2
     auth_url2 = await sso_gateway.get_authorize_url(config)
-    response2 = httpx.post(
-        auth_url2, data={"sub": user2_data["sub"]}, follow_redirects=False
-    )
+    response2 = httpx.post(auth_url2, data={"sub": user2_data["sub"]}, follow_redirects=False)
     callback_url2 = response2.headers.get("location")
     code2 = parse_qs(urlparse(callback_url2).query).get("code", [None])[0]
     sso_user2 = await sso_gateway.validate_callback(config, code2)

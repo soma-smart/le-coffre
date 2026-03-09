@@ -1,26 +1,27 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_remove_user_from_group_usecase,
 )
-from identity_access_management_context.application.use_cases import (
-    RemoveUserFromGroupUseCase,
-)
 from identity_access_management_context.application.commands import (
     RemoveUserFromGroupCommand,
 )
-from identity_access_management_context.domain.exceptions import (
-    GroupNotFoundException,
-    UserNotOwnerOfGroupException,
-    CannotModifyPersonalGroupException,
-    UserNotMemberOfGroupException,
-    CannotRemoveOwnerException,
+from identity_access_management_context.application.use_cases import (
+    RemoveUserFromGroupUseCase,
 )
-from shared_kernel.domain.entities import ValidatedUser
+from identity_access_management_context.domain.exceptions import (
+    CannotModifyPersonalGroupException,
+    CannotRemoveOwnerException,
+    GroupNotFoundException,
+    UserNotMemberOfGroupException,
+    UserNotOwnerOfGroupException,
+)
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,8 @@ class RemoveMemberFromGroupResponse(BaseModel):
 def remove_member_from_group(
     group_id: UUID,
     user_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: RemoveUserFromGroupUseCase = Depends(get_remove_user_from_group_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: RemoveUserFromGroupUseCase = Depends(get_remove_user_from_group_usecase),  # noqa: B008
 ):
     """
     Remove a member from a group.
@@ -69,15 +70,15 @@ def remove_member_from_group(
         )
 
     except GroupNotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except UserNotOwnerOfGroupException as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except CannotModifyPersonalGroupException as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except UserNotMemberOfGroupException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except CannotRemoveOwnerException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in remove member from group")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

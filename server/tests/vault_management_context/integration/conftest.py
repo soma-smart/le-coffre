@@ -1,5 +1,5 @@
 import pytest
-from sqlmodel import create_engine, Session, SQLModel
+from sqlmodel import Session, SQLModel, create_engine
 
 from vault_management_context.adapters.secondary import (
     SqlVaultRepository,

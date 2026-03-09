@@ -1,11 +1,13 @@
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from identity_access_management_context.adapters.secondary.group_access_gateway_adapter import (
     GroupAccessGatewayAdapter,
 )
-from ..fakes import FakeGroupRepository, FakeGroupMemberRepository
-from identity_access_management_context.domain.entities import PersonalGroup, Group
+from identity_access_management_context.domain.entities import Group, PersonalGroup
+
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository
 
 
 @pytest.fixture
@@ -32,9 +34,7 @@ def test_should_return_true_when_user_owns_group(
     assert result is True
 
 
-def test_should_return_false_when_user_does_not_own_group(
-    adapter, group_repository: FakeGroupRepository
-):
+def test_should_return_false_when_user_does_not_own_group(adapter, group_repository: FakeGroupRepository):
     user_id = uuid4()
     other_user_id = uuid4()
     group_id = uuid4()

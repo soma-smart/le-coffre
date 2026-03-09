@@ -1,11 +1,13 @@
 from uuid import UUID
-from sqlmodel import Session, select, delete
+
+from sqlmodel import Session, delete, select
 
 from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
 )
 from identity_access_management_context.domain.entities import GroupMember
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+
 from .model.group_member_model import GroupMemberTable
 
 
@@ -69,9 +71,7 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
 
     def get_members(self, group_id: UUID) -> list[GroupMember]:
         """Get all members of a group."""
-        statement = select(GroupMemberTable).where(
-            GroupMemberTable.group_id == group_id
-        )
+        statement = select(GroupMemberTable).where(GroupMemberTable.group_id == group_id)
         results = self._session.exec(statement).all()
         return [
             GroupMember(
@@ -92,9 +92,7 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         return len(results)
 
     def delete_by_group_id(self, group_id: UUID) -> None:
-        statement = select(GroupMemberTable).where(
-            GroupMemberTable.group_id == group_id
-        )
+        statement = select(GroupMemberTable).where(GroupMemberTable.group_id == group_id)
         members = self._session.exec(statement).all()
         for member in members:
             self._session.delete(member)

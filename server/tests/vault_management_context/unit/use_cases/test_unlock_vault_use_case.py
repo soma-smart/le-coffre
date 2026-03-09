@@ -1,25 +1,26 @@
 import pytest
 
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from vault_management_context.application.commands import UnlockVaultCommand
 from vault_management_context.application.responses import VaultStatus
-from vault_management_context.domain.entities import Share, Vault
-from vault_management_context.domain.value_objects import ShamirResult
-from vault_management_context.domain.exceptions import (
-    VaultNotSetupException,
-    ShareReconstructionError,
-    VaultUnlockedError,
-)
 from vault_management_context.application.use_cases import (
     UnlockVaultUseCase,
 )
+from vault_management_context.domain.entities import Share, Vault
 from vault_management_context.domain.events import VaultUnlockedEvent
-from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+from vault_management_context.domain.exceptions import (
+    ShareReconstructionError,
+    VaultNotSetupException,
+    VaultUnlockedError,
+)
+from vault_management_context.domain.value_objects import ShamirResult
+
 from ..fakes import (
-    FakeVaultRepository,
-    FakeShamirGateway,
     FakeEncryptionGateway,
-    FakeVaultSessionGateway,
+    FakeShamirGateway,
     FakeShareRepository,
+    FakeVaultRepository,
+    FakeVaultSessionGateway,
 )
 
 
@@ -211,8 +212,11 @@ def test_given_valid_shares_when_unlocking_vault_should_publish_vault_unlocked_e
 
     vault_repository.save(
         Vault(
-            nb_shares=3, threshold=2, encrypted_key=encrypted_key,
-            setup_id="test-setup-id", status=VaultStatus.SETUPED.value,
+            nb_shares=3,
+            threshold=2,
+            encrypted_key=encrypted_key,
+            setup_id="test-setup-id",
+            status=VaultStatus.SETUPED.value,
         )
     )
 

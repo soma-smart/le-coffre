@@ -2,17 +2,15 @@ from uuid import UUID
 
 from identity_access_management_context.application.commands import CreateGroupCommand
 from identity_access_management_context.application.gateways import (
-    UserRepository,
-    GroupRepository,
-    GroupMemberRepository,
     GroupEventRepository,
+    GroupMemberRepository,
+    GroupRepository,
+    UserRepository,
 )
 from identity_access_management_context.domain.entities import Group
 from identity_access_management_context.domain.events import GroupCreatedEvent
 from identity_access_management_context.domain.exceptions import UserNotFoundException
 from shared_kernel.application.gateways import DomainEventPublisher
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -43,9 +41,7 @@ class CreateGroupUseCase(TracedUseCase):
         )
 
         self.group_repository.save_group(group)
-        self.group_member_repository.add_member(
-            command.id, command.creator_id, is_owner=True
-        )
+        self.group_member_repository.add_member(command.id, command.creator_id, is_owner=True)
 
         event = GroupCreatedEvent(
             group_id=group.id,

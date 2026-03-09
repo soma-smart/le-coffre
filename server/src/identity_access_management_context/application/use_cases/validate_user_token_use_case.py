@@ -1,21 +1,19 @@
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
 )
+from identity_access_management_context.application.gateways import (
+    SsoUserRepository,
+    TokenGateway,
+    UserPasswordRepository,
+)
 from identity_access_management_context.application.responses import (
     ValidateUserTokenResponse,
 )
-from identity_access_management_context.application.gateways import (
-    UserPasswordRepository,
-    TokenGateway,
-    SsoUserRepository,
-)
 from identity_access_management_context.domain.exceptions import (
+    InsufficientRoleException,
     InvalidTokenException,
     UserNotFoundException,
-    InsufficientRoleException,
 )
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -30,9 +28,7 @@ class ValidateUserTokenUseCase(TracedUseCase):
         self._token_gateway = token_gateway
         self._sso_user_repository = sso_user_repository
 
-    async def execute(
-        self, command: ValidateUserTokenCommand
-    ) -> ValidateUserTokenResponse:
+    async def execute(self, command: ValidateUserTokenCommand) -> ValidateUserTokenResponse:
         token_obj = await self._token_gateway.validate_token(command.jwt_token)
         if not token_obj:
             raise InvalidTokenException()

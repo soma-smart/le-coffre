@@ -1,11 +1,9 @@
+from shared_kernel.application.tracing import TracedUseCase
 from vault_management_context.application.commands import EncryptCommand
 from vault_management_context.application.gateways import (
     EncryptionGateway,
     VaultSessionGateway,
 )
-
-
-from shared_kernel.application.tracing import TracedUseCase
 
 
 class EncryptUseCase(TracedUseCase):

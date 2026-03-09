@@ -1,25 +1,23 @@
+from password_management_context.application.commands import UpdatePasswordCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEncryptionGateway,
     PasswordEventRepository,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.services import (
     PasswordEventStorageService,
 )
-from password_management_context.application.commands import UpdatePasswordCommand
-from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
-    NotPasswordOwnerError,
-    UserNotOwnerOfGroupError,
-)
 from password_management_context.domain.events import (
     PasswordUpdatedEvent,
 )
+from password_management_context.domain.exceptions import (
+    NotPasswordOwnerError,
+    PasswordNotFoundError,
+    UserNotOwnerOfGroupError,
+)
 from shared_kernel.application.gateways import DomainEventPublisher
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -46,9 +44,7 @@ class UpdatePasswordUseCase(TracedUseCase):
             raise PasswordNotFoundError(new_password.id)
 
         # Get the owner group of the password
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            new_password.id
-        )
+        all_permissions = self.password_permissions_repository.list_all_permissions_for(new_password.id)
 
         # Find the owner group (there should be exactly one)
         owner_group_id = None
@@ -61,9 +57,7 @@ class UpdatePasswordUseCase(TracedUseCase):
             raise NotPasswordOwnerError(new_password.requester_id, new_password.id)
 
         # Check if the user owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(
-            new_password.requester_id, owner_group_id
-        ):
+        if not self.group_access_gateway.is_user_owner_of_group(new_password.requester_id, owner_group_id):
             raise UserNotOwnerOfGroupError(new_password.requester_id, owner_group_id)
 
         # Track what changed
@@ -74,9 +68,7 @@ class UpdatePasswordUseCase(TracedUseCase):
         has_url_changed = False
 
         if new_password.password:
-            existing_password.encrypted_value = (
-                self.password_encryption_gateway.encrypt(new_password.password)
-            )
+            existing_password.encrypted_value = self.password_encryption_gateway.encrypt(new_password.password)
             has_password_changed = True
 
         if new_password.name:
@@ -107,7 +99,5 @@ class UpdatePasswordUseCase(TracedUseCase):
             has_login_changed=has_login_changed,
             has_url_changed=has_url_changed,
         )
-        event_storage_service = PasswordEventStorageService(
-            self.password_event_repository
-        )
+        event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)

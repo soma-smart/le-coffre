@@ -1,5 +1,4 @@
-from typing import Optional
-
+from shared_kernel.application.tracing import TracedUseCase
 from vault_management_context.application.commands import ValidateVaultSetupCommand
 from vault_management_context.application.gateways import (
     VaultRepository,
@@ -11,9 +10,6 @@ from vault_management_context.domain.exceptions import (
     VaultAlreadySetuped,
     VaultSetupIdNotFound,
 )
-
-
-from shared_kernel.application.tracing import TracedUseCase
 
 
 class ValidateVaultSetupUseCase(TracedUseCase):

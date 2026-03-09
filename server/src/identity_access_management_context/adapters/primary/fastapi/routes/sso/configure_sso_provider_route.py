@@ -1,21 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_configure_sso_provider_usecase,
-)
-
-from identity_access_management_context.application.use_cases import (
-    ConfigureSsoProviderUseCase,
 )
 from identity_access_management_context.application.commands import (
     ConfigureSsoProviderCommand,
 )
+from identity_access_management_context.application.use_cases import (
+    ConfigureSsoProviderUseCase,
+)
 from identity_access_management_context.domain.exceptions import (
     InvalidSsoSettingsException,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
-
+from shared_kernel.domain.entities import ValidatedUser
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -43,8 +42,8 @@ class ConfigureSsoProviderRequest(BaseModel):
 )
 async def configure_sso_provider(
     request: ConfigureSsoProviderRequest,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: ConfigureSsoProviderUseCase = Depends(get_configure_sso_provider_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: ConfigureSsoProviderUseCase = Depends(get_configure_sso_provider_usecase),  # noqa: B008
 ):
     """
     Configure an SSO provider via OpenID Connect auto-discovery.
@@ -80,4 +79,4 @@ async def configure_sso_provider(
         await usecase.execute(command)
 
     except InvalidSsoSettingsException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e

@@ -1,13 +1,14 @@
 import pytest
 
+from tests.fakes import FakeDomainEventPublisher
+
 from .fakes import (
-    FakePasswordPermissionsRepository,
-    FakePasswordRepository,
     FakeGroupAccessGateway,
     FakePasswordEncryptionGateway,
     FakePasswordEventRepository,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
 )
-from tests.fakes import FakeDomainEventPublisher
 
 
 @pytest.fixture

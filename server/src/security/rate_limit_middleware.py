@@ -155,7 +155,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             token = await token_gateway.validate_token(access_token)
             if token:
                 return str(token.user_id)
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         return None
 

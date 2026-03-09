@@ -4,16 +4,16 @@ from identity_access_management_context.application.commands import (
     RegisterAdminWithPasswordCommand,
 )
 from identity_access_management_context.application.gateways import (
-    UserPasswordRepository,
-    PasswordHashingGateway,
-    UserRepository,
-    GroupRepository,
-    GroupMemberRepository,
     AdminEventRepository,
+    GroupMemberRepository,
+    GroupRepository,
+    PasswordHashingGateway,
+    UserPasswordRepository,
+    UserRepository,
 )
 from identity_access_management_context.application.services import (
-    UserManagementService,
     UserCreationService,
+    UserManagementService,
 )
 from identity_access_management_context.domain.entities import UserPassword
 from identity_access_management_context.domain.events import AdminRegisteredEvent
@@ -21,8 +21,6 @@ from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
 from shared_kernel.application.gateways import DomainEventPublisher
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -47,9 +45,7 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
 
     async def execute(self, command: RegisterAdminWithPasswordCommand) -> UUID:
         # Create service instance
-        user_management_service = UserManagementService(
-            self._user_repository, self._password_hashing_gateway
-        )
+        user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
 
         # Check if admin can be created
         if not user_management_service.can_create_admin():

@@ -1,6 +1,7 @@
-from password_management_context.application.use_cases import IsGroupUsedUseCase
-from password_management_context.application.commands import IsGroupUsedCommand
 from uuid import UUID
+
+from password_management_context.application.commands import IsGroupUsedCommand
+from password_management_context.application.use_cases import IsGroupUsedUseCase
 
 
 class GroupUsageApi:

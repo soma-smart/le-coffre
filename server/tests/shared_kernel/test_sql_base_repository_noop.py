@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
 
 

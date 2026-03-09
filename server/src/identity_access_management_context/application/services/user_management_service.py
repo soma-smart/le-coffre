@@ -4,11 +4,10 @@ This service contains business logic that can be reused across multiple use case
 """
 
 from uuid import UUID
-from typing import List
 
 from identity_access_management_context.application.gateways import (
-    UserRepository,
     PasswordHashingGateway,
+    UserRepository,
 )
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
@@ -61,9 +60,7 @@ class UserManagementService:
             raise AdminAlreadyExistsError()
 
         # Create user with admin role
-        admin = User(
-            id=user_id, email=email, username=username, name=name, roles=[ADMIN_ROLE]
-        )
+        admin = User(id=user_id, email=email, username=username, name=name, roles=[ADMIN_ROLE])
 
         self._user_repository.save(admin)
         return admin

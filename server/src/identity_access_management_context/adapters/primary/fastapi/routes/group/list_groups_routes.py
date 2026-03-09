@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
@@ -8,9 +9,8 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
 )
 from identity_access_management_context.application.commands import ListGroupsCommand
 from identity_access_management_context.application.use_cases import ListGroupsUseCase
-
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +41,8 @@ def list_groups(
         True,
         description="Include personal groups in results. Set to false to only show shared groups.",
     ),
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: ListGroupsUseCase = Depends(get_list_groups_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: ListGroupsUseCase = Depends(get_list_groups_usecase),  # noqa: B008
 ):
     """
     List all groups with optional filtering.
@@ -80,4 +80,4 @@ def list_groups(
 
     except Exception as e:
         logger.exception("Unexpected error in list groups")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

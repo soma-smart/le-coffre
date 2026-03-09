@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 import logging
 from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_validate_vault_setup_usecase,
@@ -31,7 +32,7 @@ class ValidateSetupResponse(BaseModel):
 )
 def validate_vault_setup(
     request: ValidateSetupRequest,
-    usecase: ValidateVaultSetupUseCase = Depends(get_validate_vault_setup_usecase),
+    usecase: ValidateVaultSetupUseCase = Depends(get_validate_vault_setup_usecase),  # noqa: B008
 ):
     """
     Validate and complete vault setup using the setup_id from initial setup.
@@ -42,9 +43,9 @@ def validate_vault_setup(
         command = ValidateVaultSetupCommand(setup_id=str(request.setup_id))
         usecase.execute(command)
     except VaultManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in validate vault setup")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
     return {"message": "Vault setup completed successfully"}

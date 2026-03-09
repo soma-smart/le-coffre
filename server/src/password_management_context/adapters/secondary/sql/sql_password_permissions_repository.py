@@ -1,24 +1,23 @@
 from uuid import UUID
-from sqlmodel import select, Session
 
+from sqlmodel import Session, select
+
+from password_management_context.adapters.secondary.sql import (
+    OwnershipTable,
+    PermissionsTable,
+)
 from password_management_context.application.gateways.password_permissions_repository import (
-    PasswordPermissionsRepository,
-    GroupPermissions,
     BulkGroupPermissions,
+    GroupPermissions,
+    PasswordPermissionsRepository,
 )
 from password_management_context.domain.value_objects.password_permission import (
     PasswordPermission,
 )
-from password_management_context.adapters.secondary.sql import (
-    PermissionsTable,
-    OwnershipTable,
-)
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 
-class SqlPasswordPermissionsRepository(
-    SQLBaseRepository, PasswordPermissionsRepository
-):
+class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRepository):
     """SQL implementation of PasswordPermissionsRepository using shared tables"""
 
     def __init__(self, session: Session):
@@ -47,9 +46,7 @@ class SqlPasswordPermissionsRepository(
         result = self._session.exec(statement).first()
         return result is not None
 
-    def has_access(
-        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
-    ) -> bool:
+    def has_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
         """Check if a group has access to a password"""
         # Check if group is the owner
         if self.is_owner(group_id, password_id):
@@ -64,9 +61,7 @@ class SqlPasswordPermissionsRepository(
         result = self._session.exec(statement).first()
         return result is not None
 
-    def grant_access(
-        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
-    ) -> None:
+    def grant_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> None:
         """Grant a specific permission to a group for a password"""
         # Check if permission already exists
         statement = select(PermissionsTable).where(
@@ -104,55 +99,41 @@ class SqlPasswordPermissionsRepository(
         result: GroupPermissions = {}
 
         # Get all owner groups
-        ownership_statement = select(OwnershipTable).where(
-            OwnershipTable.resource_id == password_id
-        )
+        ownership_statement = select(OwnershipTable).where(OwnershipTable.resource_id == password_id)
         ownerships = self._session.exec(ownership_statement).all()
         for ownership in ownerships:
             if ownership.group_id not in result:
                 result[ownership.group_id] = (True, set())
 
         # Get all groups with permissions
-        permission_statement = select(PermissionsTable).where(
-            PermissionsTable.resource_id == password_id
-        )
+        permission_statement = select(PermissionsTable).where(PermissionsTable.resource_id == password_id)
         permissions = self._session.exec(permission_statement).all()
         for permission_entry in permissions:
             if permission_entry.group_id not in result:
                 result[permission_entry.group_id] = (False, set())
             try:
-                result[permission_entry.group_id][1].add(
-                    PasswordPermission(permission_entry.permission)
-                )
+                result[permission_entry.group_id][1].add(PasswordPermission(permission_entry.permission))
             except ValueError:
                 # Skip invalid permissions
                 pass
 
         return result
 
-    def list_all_permissions_for_bulk(
-        self, password_ids: list[UUID]
-    ) -> BulkGroupPermissions:
+    def list_all_permissions_for_bulk(self, password_ids: list[UUID]) -> BulkGroupPermissions:
         """Get all group permissions for multiple passwords in two SQL queries."""
         result: BulkGroupPermissions = {pwd_id: {} for pwd_id in password_ids}
 
-        ownership_statement = select(OwnershipTable).where(
-            OwnershipTable.resource_id.in_(password_ids)
-        )
+        ownership_statement = select(OwnershipTable).where(OwnershipTable.resource_id.in_(password_ids))
         for ownership in self._session.exec(ownership_statement).all():
             result[ownership.resource_id][ownership.group_id] = (True, set())
 
-        permission_statement = select(PermissionsTable).where(
-            PermissionsTable.resource_id.in_(password_ids)
-        )
+        permission_statement = select(PermissionsTable).where(PermissionsTable.resource_id.in_(password_ids))
         for perm_entry in self._session.exec(permission_statement).all():
             pwd_perms = result[perm_entry.resource_id]
             if perm_entry.group_id not in pwd_perms:
                 pwd_perms[perm_entry.group_id] = (False, set())
             try:
-                pwd_perms[perm_entry.group_id][1].add(
-                    PasswordPermission(perm_entry.permission)
-                )
+                pwd_perms[perm_entry.group_id][1].add(PasswordPermission(perm_entry.permission))
             except ValueError:
                 pass
 
@@ -176,9 +157,7 @@ class SqlPasswordPermissionsRepository(
 
     def revoke_all_access_for_password(self, password_id: UUID):
         """Revoke all access (permissions and ownerships) for a specific password"""
-        ownership_statement = select(OwnershipTable).where(
-            OwnershipTable.resource_id == password_id
-        )
+        ownership_statement = select(OwnershipTable).where(OwnershipTable.resource_id == password_id)
         ownership_entries = self._session.exec(ownership_statement).all()
         for ownership_entry in ownership_entries:
             self._session.delete(ownership_entry)
@@ -195,26 +174,20 @@ class SqlPasswordPermissionsRepository(
     def revoke_all_access_for_owner_group(self, group_id: UUID) -> None:
         """Revoke all access for all passwords owned by a group in one SQL operation"""
         # First, get all password IDs owned by this group
-        ownership_select = select(OwnershipTable.resource_id).where(
-            OwnershipTable.group_id == group_id
-        )
+        ownership_select = select(OwnershipTable.resource_id).where(OwnershipTable.group_id == group_id)
         password_ids = list(self._session.exec(ownership_select).all())
 
         if not password_ids:
             return
 
         # Delete all ownerships for these passwords
-        ownership_statement = select(OwnershipTable).where(
-            OwnershipTable.resource_id.in_(password_ids)
-        )
+        ownership_statement = select(OwnershipTable).where(OwnershipTable.resource_id.in_(password_ids))
         ownership_entries = self._session.exec(ownership_statement).all()
         for ownership_entry in ownership_entries:
             self._session.delete(ownership_entry)
 
         # Delete all permissions for these passwords
-        permission_statement = select(PermissionsTable).where(
-            PermissionsTable.resource_id.in_(password_ids)
-        )
+        permission_statement = select(PermissionsTable).where(PermissionsTable.resource_id.in_(password_ids))
         permission_entries = self._session.exec(permission_statement).all()
         for permission_entry in permission_entries:
             self._session.delete(permission_entry)

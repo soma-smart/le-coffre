@@ -1,21 +1,22 @@
+import logging
 from datetime import datetime
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from uuid import UUID
-import logging
 
-from password_management_context.application.commands import ListPasswordsCommand
-from password_management_context.application.use_cases import ListPasswordsUseCase
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_passwords_usecase,
 )
+from password_management_context.application.commands import ListPasswordsCommand
+from password_management_context.application.use_cases import ListPasswordsUseCase
 from password_management_context.domain.exceptions import (
-    PasswordManagementDomainError,
     FolderNotFoundError,
+    PasswordManagementDomainError,
 )
-from shared_kernel.domain.exceptions import AccessDeniedError
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.domain.exceptions import AccessDeniedError
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,8 @@ class GetPasswordListResponse(BaseModel):
 )
 def list_passwords(
     folder: str | None = None,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),  # noqa: B008
 ):
     """
     List all passwords for the authenticated user, optionally filtered by folder.
@@ -72,11 +73,11 @@ def list_passwords(
             for password in passwords
         ]
     except FolderNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except AccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except PasswordManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
         logger.exception("Unexpected error in list passwords")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

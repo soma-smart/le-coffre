@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
@@ -11,8 +12,8 @@ from identity_access_management_context.application.use_cases import GetGroupUse
 from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,8 @@ class GetGroupResponse(BaseModel):
 )
 def get_group(
     group_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: GetGroupUseCase = Depends(get_get_group_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: GetGroupUseCase = Depends(get_get_group_usecase),  # noqa: B008
 ):
     """
     Retrieve a group by its ID.
@@ -76,7 +77,7 @@ def get_group(
         )
 
     except GroupNotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in get group")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

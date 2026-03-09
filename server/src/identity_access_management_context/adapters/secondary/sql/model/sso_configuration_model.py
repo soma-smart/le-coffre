@@ -1,6 +1,6 @@
-from typing import Optional
-from sqlmodel import SQLModel, Field
 from datetime import datetime, timezone
+
+from sqlmodel import Field, SQLModel
 
 
 class SsoConfigurationTable(SQLModel, table=True):
@@ -10,16 +10,10 @@ class SsoConfigurationTable(SQLModel, table=True):
     client_id: str = Field(description="OAuth client ID", nullable=False)
     client_secret: str = Field(description="OAuth client secret", nullable=False)
     discovery_url: str = Field(description="OIDC discovery URL", nullable=False)
-    authorization_endpoint: str = Field(
-        description="OAuth authorization endpoint", nullable=False
-    )
+    authorization_endpoint: str = Field(description="OAuth authorization endpoint", nullable=False)
     token_endpoint: str = Field(description="OAuth token endpoint", nullable=False)
-    userinfo_endpoint: str = Field(
-        description="OAuth userinfo endpoint", nullable=False
-    )
-    jwks_uri: str | None = Field(
-        description="JWKS URI for token validation", nullable=True, default=None
-    )
+    userinfo_endpoint: str = Field(description="OAuth userinfo endpoint", nullable=False)
+    jwks_uri: str | None = Field(description="JWKS URI for token validation", nullable=True, default=None)
     updated_at: datetime = Field(
         description="Last update timestamp",
         nullable=False,

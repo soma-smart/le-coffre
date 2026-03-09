@@ -1,5 +1,6 @@
-from sqlmodel import SQLModel, Field
 from uuid import UUID
+
+from sqlmodel import Field, SQLModel
 
 
 class GroupMemberTable(SQLModel, table=True):

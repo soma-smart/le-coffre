@@ -1,5 +1,6 @@
 from uuid import uuid4
-from identity_access_management_context.domain.entities import PersonalGroup, Group
+
+from identity_access_management_context.domain.entities import Group, PersonalGroup
 
 
 def test_given_personal_group_when_saving_then_group_is_stored(sql_group_repository):
@@ -57,15 +58,11 @@ def test_given_multiple_groups_when_getting_all_then_all_groups_are_retrieved(
     # Given
     group1_id = uuid4()
     user1_id = uuid4()
-    group1 = PersonalGroup(
-        id=group1_id, name="User1's Personal Group", user_id=user1_id
-    )
+    group1 = PersonalGroup(id=group1_id, name="User1's Personal Group", user_id=user1_id)
 
     group2_id = uuid4()
     user2_id = uuid4()
-    group2 = PersonalGroup(
-        id=group2_id, name="User2's Personal Group", user_id=user2_id
-    )
+    group2 = PersonalGroup(id=group2_id, name="User2's Personal Group", user_id=user2_id)
 
     sql_group_repository.save_personal_group(group1)
     sql_group_repository.save_personal_group(group2)

@@ -1,33 +1,33 @@
 """Tests for ConfigureSsoProviderUseCase."""
 
-import pytest
 from uuid import UUID
 
-from ..fakes import (
-    FakeSsoGateway,
-    FakeSsoConfigurationRepository,
-    FakeSsoEncryptionGateway,
-)
-from shared_kernel.domain.entities import AuthenticatedUser
+import pytest
+
 from identity_access_management_context.application.commands import (
     ConfigureSsoProviderCommand,
 )
 from identity_access_management_context.application.use_cases.sso.configure_sso_provider_use_case import (
     ConfigureSsoProviderUseCase,
 )
+from identity_access_management_context.domain.events import SsoConfiguredEvent
 from identity_access_management_context.domain.exceptions import (
     InvalidSsoSettingsException,
 )
 from shared_kernel.adapters.primary.exceptions import NotAdminError
-from identity_access_management_context.domain.events import SsoConfiguredEvent
+from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+
+from ..fakes import (
+    FakeSsoConfigurationRepository,
+    FakeSsoEncryptionGateway,
+    FakeSsoGateway,
+)
 
 
 @pytest.fixture
 def admin_user():
-    return AuthenticatedUser(
-        user_id=UUID("12345678-1234-5678-1234-567812345678"), roles=["admin"]
-    )
+    return AuthenticatedUser(user_id=UUID("12345678-1234-5678-1234-567812345678"), roles=["admin"])
 
 
 @pytest.fixture
@@ -47,9 +47,7 @@ def use_case(
 @pytest.mark.asyncio
 async def test_given_not_admin_when_configuring_sso_should_fail(use_case):
     """Test configuration failure for non-admin users."""
-    non_admin_user = AuthenticatedUser(
-        user_id=UUID("87654321-4321-8765-4321-876543218765"), roles=["user"]
-    )
+    non_admin_user = AuthenticatedUser(user_id=UUID("87654321-4321-8765-4321-876543218765"), roles=["user"])
 
     command = ConfigureSsoProviderCommand(
         requesting_user=non_admin_user,
@@ -80,9 +78,7 @@ async def test_execute_success_with_auto_discovery(
     assert config is not None
     assert config.client_id == "test_client_id"
     assert config.client_secret == "encrypted(test_client_secret)"
-    assert (
-        config.discovery_url == "https://provider.com/.well-known/openid_configuration"
-    )
+    assert config.discovery_url == "https://provider.com/.well-known/openid_configuration"
     assert config.authorization_endpoint == "https://provider.com/authorize"
     assert config.token_endpoint == "https://provider.com/token"
     assert config.userinfo_endpoint == "https://provider.com/userinfo"
@@ -97,9 +93,7 @@ async def test_execute_success_with_auto_discovery(
         ("test_client_id", "test_secret", ""),
     ],
 )
-async def test_execute_missing_required_parameters(
-    use_case, client_id, client_secret, discovery_url, admin_user
-):
+async def test_execute_missing_required_parameters(use_case, client_id, client_secret, discovery_url, admin_user):
     """Test validation with missing required parameters."""
     with pytest.raises(
         InvalidSsoSettingsException,
@@ -115,9 +109,7 @@ async def test_execute_missing_required_parameters(
 
 
 @pytest.mark.asyncio
-async def test_execute_discovery_failure(
-    use_case, sso_gateway: FakeSsoGateway, admin_user
-):
+async def test_execute_discovery_failure(use_case, sso_gateway: FakeSsoGateway, admin_user):
     """Test configuration failure due to discovery error."""
     sso_gateway.set_discovery_error(ValueError("HTTP 404"))
 

@@ -1,5 +1,5 @@
-from typing import Protocol
 from dataclasses import dataclass
+from typing import Protocol
 
 from identity_access_management_context.domain.entities import SsoConfiguration
 
@@ -30,9 +30,7 @@ class SsoDiscoveryResult:
 class SsoGateway(Protocol):
     async def get_authorize_url(self, config: SsoConfiguration) -> str: ...
 
-    async def validate_callback(
-        self, config: SsoConfiguration, code: str
-    ) -> SsoUserInfo: ...
+    async def validate_callback(self, config: SsoConfiguration, code: str) -> SsoUserInfo: ...
 
     async def validate_discovery(
         self,

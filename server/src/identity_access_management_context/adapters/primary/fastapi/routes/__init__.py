@@ -1,39 +1,36 @@
 from fastapi import APIRouter
-from .user import (
-    user_get_routes,
-    user_delete_routes,
-    user_update_routes,
-    user_update_password_routes,
-    user_list_routes,
-    user_me_routes,
-    user_create_routes,
-    user_promote_admin_routes,
-)
 
+from . import refresh_access_token_routes
 from .admin import (
     admin_login_route,
     register_admin_with_password_route,
 )
-
+from .group import (
+    get_group_router,
+    group_add_member_router,
+    group_add_owner_router,
+    group_create_router,
+    group_delete_router,
+    group_remove_member_router,
+    group_update_router,
+    list_groups_router,
+)
 from .sso import (
     configure_sso_provider_route,
     get_sso_url_route,
-    sso_callback_route,
     is_sso_config_set_route,
+    sso_callback_route,
 )
-
-from .group import (
-    group_create_router,
-    group_add_member_router,
-    group_add_owner_router,
-    group_remove_member_router,
-    group_update_router,
-    get_group_router,
-    list_groups_router,
-    group_delete_router,
+from .user import (
+    user_create_routes,
+    user_delete_routes,
+    user_get_routes,
+    user_list_routes,
+    user_me_routes,
+    user_promote_admin_routes,
+    user_update_password_routes,
+    user_update_routes,
 )
-
-from . import refresh_access_token_routes
 
 
 def get_user_management_router():

@@ -1,10 +1,11 @@
-from datetime import datetime
 from abc import ABC
+from datetime import datetime
 from uuid import UUID
+
 from shared_kernel.domain.value_objects import EventPriority
 
 
-class DomainEvent(ABC):
+class DomainEvent(ABC):  # noqa: B024
     def __init__(
         self,
         event_id: UUID,

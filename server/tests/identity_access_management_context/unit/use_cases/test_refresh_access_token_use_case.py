@@ -1,17 +1,19 @@
-import pytest
 from uuid import UUID
 
-from identity_access_management_context.application.use_cases import (
-    RefreshAccessTokenUseCase,
-)
+import pytest
+
 from identity_access_management_context.application.commands import (
     RefreshAccessTokenCommand,
 )
+from identity_access_management_context.application.use_cases import (
+    RefreshAccessTokenUseCase,
+)
+from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
-from identity_access_management_context.domain.entities import User
-from ..fakes import FakeTokenGateway, FakeUserRepository, FakeTimeGateway
+
+from ..fakes import FakeTimeGateway, FakeTokenGateway, FakeUserRepository
 
 
 @pytest.fixture
@@ -39,9 +41,7 @@ async def test_given_valid_refresh_token_when_execute_then_returns_new_access_to
     roles = ["user"]
     refresh_token = "valid_refresh_token_123"
 
-    user = User(
-        id=user_id, username="testuser", email=email, name="Test User", roles=roles
-    )
+    user = User(id=user_id, username="testuser", email=email, name="Test User", roles=roles)
     user_repository.save(user)
 
     token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles)
@@ -153,9 +153,7 @@ async def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_ha
     # (not with stale roles from the old refresh token)
     last_generated_token = token_gateway.get_last_generated_token()
     assert last_generated_token is not None, "Token should have been generated"
-    assert "admin" in last_generated_token.roles, (
-        "New access token should include admin role from database"
-    )
+    assert "admin" in last_generated_token.roles, "New access token should include admin role from database"
     assert last_generated_token.roles == ["user", "admin"], (
         "New access token should have current roles: ['user', 'admin']"
     )

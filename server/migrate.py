@@ -5,14 +5,15 @@ Database migration helper script.
 This script provides a convenient way to manage database migrations.
 It's a wrapper around Alembic commands.
 """
+
 import sys
-import os
 from pathlib import Path
 
 # Add src to path so we can import config
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from alembic.config import Config
+
 from alembic import command
 from config import get_database_url
 

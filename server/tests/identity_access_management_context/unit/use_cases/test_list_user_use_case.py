@@ -1,11 +1,13 @@
 from uuid import UUID
+
 import pytest
+
 from identity_access_management_context.application.commands import ListUserCommand
 from identity_access_management_context.application.use_cases import ListUserUseCase
-
 from identity_access_management_context.domain.entities import User
-from ..fakes import FakeUserRepository
 from shared_kernel.domain.entities import AuthenticatedUser
+
+from ..fakes import FakeUserRepository
 
 
 @pytest.fixture
@@ -16,9 +18,7 @@ def use_case(user_repository: FakeUserRepository):
 def test_given_admin_user_when_listing_users_should_return_all_users(
     use_case: ListUserUseCase, user_repository: FakeUserRepository
 ):
-    admin_user = AuthenticatedUser(
-        user_id=UUID("999e4567-e89b-12d3-a456-426614174999"), roles=["admin"]
-    )
+    admin_user = AuthenticatedUser(user_id=UUID("999e4567-e89b-12d3-a456-426614174999"), roles=["admin"])
 
     user1 = User(
         id=UUID("123e4567-e89b-12d3-a456-426614174000"),

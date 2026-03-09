@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID, uuid4
+
 from shared_kernel.domain.entities import DomainEvent
 from shared_kernel.domain.value_objects import EventPriority
 

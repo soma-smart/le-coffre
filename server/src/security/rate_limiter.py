@@ -26,9 +26,7 @@ class InMemoryRateLimiter:
         self._requests: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
 
-    def check(
-        self, key: str, max_requests: int, window_seconds: int
-    ) -> RateLimitResult:
+    def check(self, key: str, max_requests: int, window_seconds: int) -> RateLimitResult:
         """
         Record a request attempt and return whether the caller is rate-limited.
 

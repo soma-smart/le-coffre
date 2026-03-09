@@ -1,6 +1,7 @@
-from typing import Optional
 from uuid import UUID
-from sqlmodel import select, Session
+
+from sqlmodel import Session, select
+
 from identity_access_management_context.adapters.secondary.sql.model.user_password_model import (
     UserPasswordTable,
 )
@@ -32,9 +33,7 @@ class SqlUserPasswordRepository(SQLBaseRepository):
             self.commit()
 
     def get_by_id(self, id: UUID) -> UserPassword | None:
-        user_password_table = self._session.exec(
-            select(UserPasswordTable).where(UserPasswordTable.id == id)
-        ).first()
+        user_password_table = self._session.exec(select(UserPasswordTable).where(UserPasswordTable.id == id)).first()
         if user_password_table:
             return UserPassword(
                 id=user_password_table.id,

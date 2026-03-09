@@ -1,7 +1,10 @@
 import pytest
+
 pytest.importorskip("opentelemetry")
 from unittest.mock import MagicMock, patch
+
 from opentelemetry.trace import StatusCode
+
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
 
 
@@ -75,5 +78,3 @@ def test_commit_and_refresh_marks_span_error_on_exception(repo):
     mock_span.record_exception.assert_called_once()
     status_arg = mock_span.set_status.call_args[0][0]
     assert status_arg == StatusCode.ERROR
-
-

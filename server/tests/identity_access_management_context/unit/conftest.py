@@ -1,26 +1,28 @@
-import pytest
 from uuid import UUID
 
-from identity_access_management_context.domain.entities import SsoUser
+import pytest
+
 from identity_access_management_context.application.gateways import SsoUserInfo
+from identity_access_management_context.domain.entities import SsoUser
 from tests.fakes import FakeDomainEventPublisher
+
 from .fakes import (
-    FakeUserPasswordRepository,
-    FakePasswordHashingGateway,
-    FakeTokenGateway,
-    FakeSsoGateway,
-    FakeSsoConfigurationRepository,
-    FakeTimeGateway,
-    FakeSsoUserRepository,
-    FakeUserRepository,
-    FakeSsoEncryptionGateway,
-    FakeGroupRepository,
-    FakeGroupMemberRepository,
-    FakeGroupUsageGateway,
-    FakeUserEventRepository,
-    FakeGroupEventRepository,
-    FakeSsoEventRepository,
     FakeAdminEventRepository,
+    FakeGroupEventRepository,
+    FakeGroupMemberRepository,
+    FakeGroupRepository,
+    FakeGroupUsageGateway,
+    FakePasswordHashingGateway,
+    FakeSsoConfigurationRepository,
+    FakeSsoEncryptionGateway,
+    FakeSsoEventRepository,
+    FakeSsoGateway,
+    FakeSsoUserRepository,
+    FakeTimeGateway,
+    FakeTokenGateway,
+    FakeUserEventRepository,
+    FakeUserPasswordRepository,
+    FakeUserRepository,
 )
 
 
@@ -114,9 +116,7 @@ def event_publisher():
     return FakeDomainEventPublisher()
 
 
-def create_sso_user_from_provider(
-    email: str, display_name: str, sso_user_id: str, sso_provider: str
-) -> SsoUserInfo:
+def create_sso_user_from_provider(email: str, display_name: str, sso_user_id: str, sso_provider: str) -> SsoUserInfo:
     """Helper to create SSO user data as returned from provider"""
     return SsoUserInfo(
         email=email,

@@ -1,5 +1,6 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from identity_access_management_context.application.commands import (
     AddOwnerToGroupCommand,
@@ -7,17 +8,18 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     AddOwnerToGroupUseCase,
 )
-from identity_access_management_context.domain.exceptions import (
-    UserNotFoundException,
-    GroupNotFoundException,
-    UserNotOwnerOfGroupException,
-    CannotModifyPersonalGroupException,
-    UserNotMemberOfGroupException,
-)
-from identity_access_management_context.domain.entities import User, Group
+from identity_access_management_context.domain.entities import Group, User
 from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
+from identity_access_management_context.domain.exceptions import (
+    CannotModifyPersonalGroupException,
+    GroupNotFoundException,
+    UserNotFoundException,
+    UserNotMemberOfGroupException,
+    UserNotOwnerOfGroupException,
+)
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
-from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
+
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository, FakeUserRepository
 
 
 @pytest.fixture
@@ -184,9 +186,7 @@ def test_given_personal_group_when_adding_owner_then_raise_cannot_modify_persona
     user_repository.save(owner)
     user_repository.save(member)
 
-    group = Group(
-        id=group_id, name="Personal Group", is_personal=True, user_id=owner_id
-    )
+    group = Group(id=group_id, name="Personal Group", is_personal=True, user_id=owner_id)
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 

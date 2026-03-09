@@ -48,8 +48,7 @@ class PasswordTooShortError(PasswordComplexityError):
         self.current_length = current_length
         self.min_length = min_length
         super().__init__(
-            f"Password is too short: {current_length} characters. "
-            f"Minimum required: {min_length} characters"
+            f"Password is too short: {current_length} characters. Minimum required: {min_length} characters"
         )
 
 
@@ -95,9 +94,7 @@ class PasswordAccessDeniedError(PasswordManagementDomainError):
     def __init__(self, user_id: UUID, password_id: UUID):
         self.user_id = user_id
         self.password_id = password_id
-        super().__init__(
-            f"User {user_id} does not have permission to access password {password_id}"
-        )
+        super().__init__(f"User {user_id} does not have permission to access password {password_id}")
 
 
 class NotPasswordOwnerError(PasswordManagementDomainError):
@@ -115,6 +112,4 @@ class CannotUnshareWithOwnerError(PasswordManagementDomainError):
     def __init__(self, owner_id: UUID, password_id: UUID):
         self.owner_id = owner_id
         self.password_id = password_id
-        super().__init__(
-            f"Owner {owner_id} cannot have access revoked from password {password_id}"
-        )
+        super().__init__(f"Owner {owner_id} cannot have access revoked from password {password_id}")

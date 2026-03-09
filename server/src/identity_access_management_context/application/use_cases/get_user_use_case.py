@@ -2,8 +2,6 @@ from identity_access_management_context.application.commands import GetUserComma
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import UserNotFoundError
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 

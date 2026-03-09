@@ -11,9 +11,10 @@ This test covers the entire authentication system in one comprehensive workflow:
 7. Token validation with protected endpoints
 """
 
-import pytest
+from urllib.parse import parse_qs, urlparse
+
 import httpx
-from urllib.parse import urlparse, parse_qs
+import pytest
 
 
 @pytest.mark.asyncio
@@ -116,9 +117,7 @@ async def test_complete_authentication_workflow(
     # Step 2.3: Set up vault (required for password encryption)
     print("\n🔐 Step 2.3: Setting up vault with shares...")
     vault_status = e2e_client.get("/api/vault/status")
-    if vault_status.json().get("needs_validation", True) or not vault_status.json().get(
-        "is_setup", False
-    ):
+    if vault_status.json().get("needs_validation", True) or not vault_status.json().get("is_setup", False):
         # Initialize vault
         init_response = e2e_client.post(
             "/api/vault/setup",
@@ -171,9 +170,7 @@ async def test_complete_authentication_workflow(
 
     # Step 3.2: Try to create password without authentication (should fail)
     print("\n🚫 Step 3.2: Attempting to create password without authentication...")
-    unauth_create_response = unauthenticated_client.post(
-        "/api/passwords/", json=password_data
-    )
+    unauth_create_response = unauthenticated_client.post("/api/passwords/", json=password_data)
     assert unauth_create_response.status_code == 401
     print("✅ Unauthenticated password creation correctly rejected (401)")
 
@@ -295,10 +292,7 @@ async def test_complete_authentication_workflow(
     # Step 4.9: Verify refresh token endpoint is exempt from CSRF
     print("\n🔄 Step 4.9: Verifying refresh token endpoint is exempt from CSRF...")
     refresh_csrf_response = e2e_client.post("/api/auth/refresh-token")
-    assert (
-        refresh_csrf_response.status_code != 403
-        or "CSRF" not in refresh_csrf_response.json().get("detail", "")
-    )
+    assert refresh_csrf_response.status_code != 403 or "CSRF" not in refresh_csrf_response.json().get("detail", "")
     print("✅ Refresh token endpoint correctly exempt from CSRF protection")
 
     # =========================================================================
@@ -354,9 +348,7 @@ async def test_complete_authentication_workflow(
 
     # Step 5.5: Test invalid authorization code
     print("\n🚫 Step 5.5: Testing SSO callback with invalid code...")
-    invalid_callback_response = e2e_client.get(
-        "/api/auth/sso/callback?code=invalid-code-12345"
-    )
+    invalid_callback_response = e2e_client.get("/api/auth/sso/callback?code=invalid-code-12345")
     assert invalid_callback_response.status_code == 400
     error_data = invalid_callback_response.json()
     assert (
@@ -386,9 +378,7 @@ async def test_complete_authentication_workflow(
 
     # Step 5.7: Complete SSO login with valid code
     print("\n✨ Step 5.7: Completing SSO login with valid code...")
-    valid_callback_response = e2e_client.get(
-        f"/api/auth/sso/callback?code={valid_code}"
-    )
+    valid_callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}")
     assert valid_callback_response.status_code == 200
 
     callback_data = valid_callback_response.json()

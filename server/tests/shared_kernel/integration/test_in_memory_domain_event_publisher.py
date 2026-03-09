@@ -1,14 +1,13 @@
-import pytest
-from unittest.mock import Mock
 from datetime import datetime
+from unittest.mock import Mock
 from uuid import uuid4
 
-from .conftest import SampleTestEvent, AnotherSampleTestEvent
+import pytest
+
+from .conftest import AnotherSampleTestEvent, SampleTestEvent
 
 
-def test_given_subscriber_when_matching_event_published_then_handler_called(
-    event_publisher, test_event
-):
+def test_given_subscriber_when_matching_event_published_then_handler_called(event_publisher, test_event):
     # Arrange
     handler = Mock()
     event_publisher.subscribe(SampleTestEvent, handler)
@@ -20,9 +19,7 @@ def test_given_subscriber_when_matching_event_published_then_handler_called(
     handler.assert_called_once_with(test_event)
 
 
-def test_given_multiple_subscribers_when_event_published_then_all_handlers_called(
-    event_publisher, test_event
-):
+def test_given_multiple_subscribers_when_event_published_then_all_handlers_called(event_publisher, test_event):
     # Arrange
     handler1 = Mock()
     handler2 = Mock()
@@ -78,9 +75,7 @@ def test_given_subscribers_for_different_events_when_other_event_published_then_
     another_event_handler.assert_called_once_with(another_test_event)
 
 
-def test_given_no_subscribers_when_event_published_then_no_error_occurs(
-    event_publisher, test_event
-):
+def test_given_no_subscribers_when_event_published_then_no_error_occurs(event_publisher, test_event):
     # Act & Assert
     event_publisher.publish(test_event)
 

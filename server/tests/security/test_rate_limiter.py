@@ -19,18 +19,12 @@ class TestInMemoryRateLimiter:
         assert result.remaining == 4
         assert result.retry_after == 0
 
-    def test_should_decrement_remaining_on_each_request(
-        self, limiter: InMemoryRateLimiter
-    ):
+    def test_should_decrement_remaining_on_each_request(self, limiter: InMemoryRateLimiter):
         for i in range(4):
-            result = limiter.check(
-                "ip:127.0.0.1:api", max_requests=5, window_seconds=60
-            )
+            result = limiter.check("ip:127.0.0.1:api", max_requests=5, window_seconds=60)
             assert result.remaining == 4 - i
 
-    def test_should_block_requests_when_limit_reached(
-        self, limiter: InMemoryRateLimiter
-    ):
+    def test_should_block_requests_when_limit_reached(self, limiter: InMemoryRateLimiter):
         for _ in range(5):
             limiter.check("ip:127.0.0.1:api", max_requests=5, window_seconds=60)
 
@@ -40,9 +34,7 @@ class TestInMemoryRateLimiter:
         assert result.remaining == 0
         assert result.retry_after > 0
 
-    def test_should_track_separate_keys_independently(
-        self, limiter: InMemoryRateLimiter
-    ):
+    def test_should_track_separate_keys_independently(self, limiter: InMemoryRateLimiter):
         for _ in range(5):
             limiter.check("ip:1.1.1.1:api", max_requests=5, window_seconds=60)
 
@@ -59,9 +51,7 @@ class TestInMemoryRateLimiter:
                 limiter.check("ip:127.0.0.1:api", max_requests=5, window_seconds=60)
 
         with patch("security.rate_limiter.time.monotonic", return_value=base_time + 61):
-            result = limiter.check(
-                "ip:127.0.0.1:api", max_requests=5, window_seconds=60
-            )
+            result = limiter.check("ip:127.0.0.1:api", max_requests=5, window_seconds=60)
 
         assert result.is_limited is False
         assert result.remaining == 4
@@ -96,9 +86,7 @@ class TestInMemoryRateLimiter:
         with patch("security.rate_limiter.time.monotonic", return_value=base_time):
             limiter.check("old_key", max_requests=10, window_seconds=60)
 
-        with patch(
-            "security.rate_limiter.time.monotonic", return_value=base_time + 400
-        ):
+        with patch("security.rate_limiter.time.monotonic", return_value=base_time + 400):
             limiter.check("fresh_key", max_requests=10, window_seconds=60)
             removed = limiter.cleanup(max_age_seconds=300)
 

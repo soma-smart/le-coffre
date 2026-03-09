@@ -1,14 +1,14 @@
 import logging
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel
+
 from config import (
     get_cookie_secure_setting,
     get_jwt_access_token_expiration_minutes,
     get_jwt_refresh_token_expiration_days,
 )
-from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
-
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_password_login_usecase,
 )
@@ -46,7 +46,7 @@ class AdminLoginResponse(BaseModel):
 async def admin_login(
     request: AdminLoginRequest,
     response: Response,
-    usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),
+    usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),  # noqa: B008
 ):
     """
     Login an admin user.
@@ -72,8 +72,7 @@ async def admin_login(
             httponly=True,
             secure=is_secure,  # HTTPS only in production
             samesite="lax",  # CSRF protection
-            max_age=get_jwt_access_token_expiration_minutes()
-            * 60,  # Convert minutes to seconds
+            max_age=get_jwt_access_token_expiration_minutes() * 60,  # Convert minutes to seconds
         )
 
         # Also set refresh token in cookie
@@ -83,8 +82,7 @@ async def admin_login(
             httponly=True,
             secure=is_secure,  # HTTPS only in production
             samesite="lax",
-            max_age=get_jwt_refresh_token_expiration_days()
-            * 86400,  # Convert days to seconds
+            max_age=get_jwt_refresh_token_expiration_days() * 86400,  # Convert days to seconds
         )
 
         # Set a non-httpOnly cookie that frontend can read to check auth status
@@ -104,7 +102,7 @@ async def admin_login(
         )
 
     except (InvalidCredentialsException, AdminNotFoundException) as e:
-        raise HTTPException(status_code=401, detail=str(e))
-    except Exception:
+        raise HTTPException(status_code=401, detail=str(e)) from e
+    except Exception as e:
         logger.exception("Unexpected error in admin login")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

@@ -1,5 +1,7 @@
-import pytest
 from uuid import uuid4
+
+import pytest
+
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import PasswordNotFoundError
 
@@ -94,9 +96,7 @@ def test_should_list_all_passwords_when_no_folder_filter(sql_password_repository
         )
         for i in range(4)
     ]
-    folder_password = Password(
-        id=uuid4(), name="nofolderpwd", encrypted_value="enc", folder="folder1"
-    )
+    folder_password = Password(id=uuid4(), name="nofolderpwd", encrypted_value="enc", folder="folder1")
     sql_password_repository.save(folder_password)
     for pwd in passwords:
         sql_password_repository.save(pwd)

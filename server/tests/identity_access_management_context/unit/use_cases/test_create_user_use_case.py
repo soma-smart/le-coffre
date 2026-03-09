@@ -1,5 +1,6 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.use_cases import CreateUserUseCase
@@ -7,16 +8,17 @@ from identity_access_management_context.domain.events import UserCreatedEvent
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyExistsError,
 )
-from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from shared_kernel.adapters.primary.exceptions import NotAdminError
-from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 from shared_kernel.domain.entities import AuthenticatedUser
+from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+
 from ..fakes import (
-    FakeUserRepository,
-    FakeUserPasswordRepository,
+    FakeGroupMemberRepository,
     FakeGroupRepository,
     FakePasswordHashingGateway,
-    FakeGroupMemberRepository,
+    FakeUserPasswordRepository,
+    FakeUserRepository,
 )
 
 
@@ -52,9 +54,7 @@ def test_given_valid_user_data_when_creating_user_should_create_user(
     password = "secure_password123"
 
     command = CreateUserCommand(
-        requesting_user=AuthenticatedUser(
-            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
-        ),
+        requesting_user=AuthenticatedUser(UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]),
         id=uuid,
         username=username,
         email=email,
@@ -82,9 +82,7 @@ def test_given_non_admin_user_when_creating_user_should_raise_not_admin_error(
     password = "secure_password123"
 
     command = CreateUserCommand(
-        requesting_user=AuthenticatedUser(
-            UUID("423e4567-e89b-12d3-a456-426614174000"), []
-        ),
+        requesting_user=AuthenticatedUser(UUID("423e4567-e89b-12d3-a456-426614174000"), []),
         id=uuid,
         username=username,
         email=email,
@@ -107,9 +105,7 @@ def test_given_user_with_password_when_creating_user_should_store_hashed_passwor
     password = "secure_password123"
 
     command = CreateUserCommand(
-        requesting_user=AuthenticatedUser(
-            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
-        ),
+        requesting_user=AuthenticatedUser(UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]),
         id=uuid,
         username=username,
         email=email,
@@ -137,9 +133,7 @@ def test_given_existing_user_when_creating_user_should_raise_user_already_exists
     password = "secure_password123"
 
     command = CreateUserCommand(
-        requesting_user=AuthenticatedUser(
-            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
-        ),
+        requesting_user=AuthenticatedUser(UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]),
         id=uuid,
         username=username,
         email=email,
@@ -163,9 +157,7 @@ def test_given_new_user_when_creating_user_should_create_personal_group(
     password = "secure_password123"
 
     command = CreateUserCommand(
-        requesting_user=AuthenticatedUser(
-            UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]
-        ),
+        requesting_user=AuthenticatedUser(UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]),
         id=uuid,
         username=username,
         email=email,

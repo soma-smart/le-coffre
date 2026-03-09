@@ -1,12 +1,13 @@
-from typing import List, Optional
 from uuid import UUID
-from .model.password import PasswordTable
-from sqlmodel import select, Session
-from password_management_context.domain.exceptions import PasswordNotFoundError
 
-from password_management_context.domain.entities import Password
+from sqlmodel import Session, select
+
 from password_management_context.application.gateways import PasswordRepository
+from password_management_context.domain.entities import Password
+from password_management_context.domain.exceptions import PasswordNotFoundError
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+
+from .model.password import PasswordTable
 
 
 class SqlPasswordRepository(SQLBaseRepository, PasswordRepository):
@@ -50,18 +51,14 @@ class SqlPasswordRepository(SQLBaseRepository, PasswordRepository):
         from password_management_context.adapters.secondary.sql import OwnershipTable
 
         # First, get all password IDs owned by this group
-        ownership_statement = select(OwnershipTable.resource_id).where(
-            OwnershipTable.group_id == group_id
-        )
+        ownership_statement = select(OwnershipTable.resource_id).where(OwnershipTable.group_id == group_id)
         password_ids = list(self._session.exec(ownership_statement).all())
 
         if not password_ids:
             return
 
         # Delete all passwords in one query
-        delete_statement = select(PasswordTable).where(
-            PasswordTable.id.in_(password_ids)
-        )
+        delete_statement = select(PasswordTable).where(PasswordTable.id.in_(password_ids))
         passwords_to_delete = self._session.exec(delete_statement).all()
 
         for password in passwords_to_delete:

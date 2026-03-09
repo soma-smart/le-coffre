@@ -1,16 +1,16 @@
 from uuid import UUID
 
-from identity_access_management_context.application.use_cases import (
-    GetUserUseCase,
-    GetGroupUseCase,
-)
 from identity_access_management_context.application.commands import (
-    GetUserCommand,
     GetGroupCommand,
+    GetUserCommand,
+)
+from identity_access_management_context.application.use_cases import (
+    GetGroupUseCase,
+    GetUserUseCase,
 )
 from identity_access_management_context.domain.exceptions import (
-    UserNotFoundError,
     GroupNotFoundException,
+    UserNotFoundError,
 )
 
 
@@ -21,9 +21,7 @@ class UserInfoApi:
     internal implementation details like repositories or database models.
     """
 
-    def __init__(
-        self, get_user_use_case: GetUserUseCase, get_group_use_case: GetGroupUseCase
-    ):
+    def __init__(self, get_user_use_case: GetUserUseCase, get_group_use_case: GetGroupUseCase):
         self._get_user_use_case = get_user_use_case
         self._get_group_use_case = get_group_use_case
 

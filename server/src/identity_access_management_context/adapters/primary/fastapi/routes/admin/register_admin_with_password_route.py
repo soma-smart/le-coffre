@@ -1,15 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID, uuid4
 import logging
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_register_admin_usecase,
 )
+from identity_access_management_context.application.commands import RegisterAdminWithPasswordCommand
 from identity_access_management_context.application.use_cases import (
     RegisterAdminWithPasswordUseCase,
 )
-from identity_access_management_context.application.commands import RegisterAdminWithPasswordCommand
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
@@ -40,7 +41,7 @@ class RegisterAdminResponse(BaseModel):
 )
 async def register_admin(
     request: RegisterAdminRequest,
-    usecase: RegisterAdminWithPasswordUseCase = Depends(get_register_admin_usecase),
+    usecase: RegisterAdminWithPasswordUseCase = Depends(get_register_admin_usecase),  # noqa: B008
 ):
     """
     Register the first admin user for the system.
@@ -71,7 +72,7 @@ async def register_admin(
         )
 
     except AdminAlreadyExistsException as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in register admin")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

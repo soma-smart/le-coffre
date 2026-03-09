@@ -1,20 +1,20 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from uuid import UUID
 import logging
-from typing import List, Optional
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_get_user_me_usecase,
     get_group_repository,
 )
-from identity_access_management_context.application.use_cases import GetUserMeUseCase
 from identity_access_management_context.application.commands import GetUserMeCommand
+from identity_access_management_context.application.use_cases import GetUserMeUseCase
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,9 @@ class GetUserMeResponse(BaseModel):
     summary="Get current user information",
 )
 def get_user_me(
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: GetUserMeUseCase = Depends(get_get_user_me_usecase),
-    group_repository=Depends(get_group_repository),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: GetUserMeUseCase = Depends(get_get_user_me_usecase),  # noqa: B008
+    group_repository=Depends(get_group_repository),  # noqa: B008
 ):
     """
     Retrieve the authenticated user's information including personal group ID.
@@ -69,7 +69,7 @@ def get_user_me(
             is_sso=user_response.is_sso,
         )
     except UserNotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in get user me")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

@@ -1,14 +1,12 @@
 from identity_access_management_context.application.commands import ListGroupsCommand
 from identity_access_management_context.application.gateways import (
-    GroupRepository,
     GroupMemberRepository,
+    GroupRepository,
 )
 from identity_access_management_context.application.responses import (
-    ListGroupResponse,
     GroupResponse,
+    ListGroupResponse,
 )
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 

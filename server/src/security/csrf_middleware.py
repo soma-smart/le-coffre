@@ -6,15 +6,15 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from identity_access_management_context.adapters.secondary.sql import (
+    SqlSsoUserRepository,
+    SqlUserPasswordRepository,
+)
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
 )
 from identity_access_management_context.application.use_cases import (
     ValidateUserTokenUseCase,
-)
-from identity_access_management_context.adapters.secondary.sql import (
-    SqlUserPasswordRepository,
-    SqlSsoUserRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,9 +61,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Skip CSRF check for OpenAPI documentation endpoints
-        if request.url.path.startswith("/docs") or request.url.path.startswith(
-            "/openapi"
-        ):
+        if request.url.path.startswith("/docs") or request.url.path.startswith("/openapi"):
             return await call_next(request)
 
         # Check authentication first - if no auth token, let auth middleware handle it (returns 401)

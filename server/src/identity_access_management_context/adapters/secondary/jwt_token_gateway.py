@@ -1,9 +1,10 @@
-from typing import Dict, Any, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
-import jwt
-from datetime import datetime, timedelta, UTC
 
-from identity_access_management_context.application.gateways import TokenGateway, Token
+import jwt
+
+from identity_access_management_context.application.gateways import Token, TokenGateway
 
 
 class JwtTokenGateway(TokenGateway):
@@ -36,8 +37,7 @@ class JwtTokenGateway(TokenGateway):
             "user_id": user_id_str,
             "email": email,
             "roles": roles,
-            "exp": datetime.now(UTC)
-            + timedelta(minutes=self._access_token_expiration_minutes),
+            "exp": datetime.now(UTC) + timedelta(minutes=self._access_token_expiration_minutes),
             "iat": datetime.now(UTC),
             **claims,
         }
@@ -65,14 +65,11 @@ class JwtTokenGateway(TokenGateway):
             "email": email,
             "roles": roles,
             "type": "refresh",
-            "exp": datetime.now(UTC)
-            + timedelta(days=self._refresh_token_expiration_days),
+            "exp": datetime.now(UTC) + timedelta(days=self._refresh_token_expiration_days),
             "iat": datetime.now(UTC),
         }
 
-        refresh_token_value = jwt.encode(
-            payload, self._secret_key, algorithm=self._algorithm
-        )
+        refresh_token_value = jwt.encode(payload, self._secret_key, algorithm=self._algorithm)
         return refresh_token_value
 
     async def validate_token(self, token: str) -> Token | None:
@@ -100,9 +97,7 @@ class JwtTokenGateway(TokenGateway):
 
     async def validate_refresh_token(self, refresh_token: str) -> Token | None:
         try:
-            payload = jwt.decode(
-                refresh_token, self._secret_key, algorithms=[self._algorithm]
-            )
+            payload = jwt.decode(refresh_token, self._secret_key, algorithms=[self._algorithm])
 
             # Check if it's a refresh token
             if payload.get("type") != "refresh":

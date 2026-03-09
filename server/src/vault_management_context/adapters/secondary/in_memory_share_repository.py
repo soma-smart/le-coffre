@@ -1,5 +1,5 @@
-from typing import List, Optional
 from datetime import datetime, timezone
+
 from vault_management_context.application.gateways import ShareRepository
 from vault_management_context.domain.entities import Share
 

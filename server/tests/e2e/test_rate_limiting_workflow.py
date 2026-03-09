@@ -18,9 +18,7 @@ def rate_limited_client(database, env_vars):
 
 
 class TestRateLimitingWorkflow:
-    def test_should_return_429_when_login_rate_limit_exceeded(
-        self, rate_limited_client
-    ):
+    def test_should_return_429_when_login_rate_limit_exceeded(self, rate_limited_client):
         # Disable auto-CSRF: the CSRF endpoint requires auth and always returns 401
         # when unauthenticated, so the token is never cached and each POST would
         # waste 2 API bucket slots (one CSRF fetch + one POST).  We're testing

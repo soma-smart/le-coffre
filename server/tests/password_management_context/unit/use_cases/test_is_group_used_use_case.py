@@ -1,8 +1,9 @@
-import pytest
 from uuid import UUID
 
-from password_management_context.application.use_cases import IsGroupUsedUseCase
+import pytest
+
 from password_management_context.application.commands import IsGroupUsedCommand
+from password_management_context.application.use_cases import IsGroupUsedUseCase
 from tests.password_management_context.unit.fakes import (
     FakePasswordPermissionsRepository,
 )

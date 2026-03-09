@@ -1,11 +1,12 @@
 from fastapi import APIRouter
+
 from . import (
-    vault_setup_routes,
-    vault_validate_setup_routes,
-    vault_unlock_routes,
     vault_clear_pending_shares_routes,
     vault_lock_routes,
+    vault_setup_routes,
     vault_status_get_routes,
+    vault_unlock_routes,
+    vault_validate_setup_routes,
 )
 
 

@@ -1,15 +1,15 @@
 import logging
 import os
-from pathlib import Path
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from sqlmodel import Session, create_engine
+from pathlib import Path
+
+from alembic.config import Config
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
 from sqlalchemy.orm import sessionmaker
-from alembic.config import Config
-from alembic import command
+from sqlmodel import Session, create_engine
 from tenacity import (
     before_sleep_log,
     retry,
@@ -18,66 +18,64 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
-from monitoring import setup_logging, setup_monitoring
+from alembic import command
 from config import (
     get_database_url,
-    get_jwt_secret_key,
-    get_jwt_algorithm,
     get_jwt_access_token_expiration_minutes,
+    get_jwt_algorithm,
     get_jwt_refresh_token_expiration_days,
-    get_rate_limit_enabled,
-    get_rate_limit_auth_max_requests,
+    get_jwt_secret_key,
     get_rate_limit_api_max_requests,
+    get_rate_limit_auth_max_requests,
+    get_rate_limit_enabled,
     get_rate_limit_window_seconds,
 )
-
-from security import (
-    CsrfMiddleware,
-    CsrfTokenManager,
-    csrf_router,
-    InMemoryRateLimiter,
-    RateLimitMiddleware,
+from identity_access_management_context.adapters.primary.fastapi.routes import (
+    get_authentication_router,
+    get_group_management_router,
+    get_user_management_router,
 )
-from shared_kernel.adapters.primary.request_id_middleware import (
-    RequestIdFilter,
-    RequestIdMiddleware,
-)
-from shared_kernel.adapters.secondary import (
-    UtcTimeGateway,
-    InMemoryDomainEventPublisher,
-)
-from vault_management_context.adapters.primary.fastapi.routes import (
-    get_vault_management_router,
-)
-from vault_management_context.adapters.primary.private_api import EncryptionApi
-from vault_management_context.adapters.secondary import (
-    CryptoShamirGateway,
-    AesEncryptionGateway,
-    InMemoryVaultSessionGateway,
-    InMemoryShareRepository,
-)
-from vault_management_context.application.use_cases import (
-    EncryptUseCase,
-    DecryptUseCase,
-)
-
-from password_management_context.adapters.primary.fastapi.routes import (
-    get_password_management_router,
-)
-from password_management_context.adapters.secondary import (
-    PrivateApiPasswordEncryptionGateway,
-)
-
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
     JwtTokenGateway,
     OAuth2SsoGateway,
     PrivateApiSsoEncryptionGateway,
 )
-from identity_access_management_context.adapters.primary.fastapi.routes import (
-    get_user_management_router,
-    get_authentication_router,
-    get_group_management_router,
+from monitoring import setup_logging, setup_monitoring
+from password_management_context.adapters.primary.fastapi.routes import (
+    get_password_management_router,
+)
+from password_management_context.adapters.secondary import (
+    PrivateApiPasswordEncryptionGateway,
+)
+from security import (
+    CsrfMiddleware,
+    CsrfTokenManager,
+    InMemoryRateLimiter,
+    RateLimitMiddleware,
+    csrf_router,
+)
+from shared_kernel.adapters.primary.request_id_middleware import (
+    RequestIdFilter,
+    RequestIdMiddleware,
+)
+from shared_kernel.adapters.secondary import (
+    InMemoryDomainEventPublisher,
+    UtcTimeGateway,
+)
+from vault_management_context.adapters.primary.fastapi.routes import (
+    get_vault_management_router,
+)
+from vault_management_context.adapters.primary.private_api import EncryptionApi
+from vault_management_context.adapters.secondary import (
+    AesEncryptionGateway,
+    CryptoShamirGateway,
+    InMemoryShareRepository,
+    InMemoryVaultSessionGateway,
+)
+from vault_management_context.application.use_cases import (
+    DecryptUseCase,
+    EncryptUseCase,
 )
 
 setup_logging()
@@ -220,9 +218,7 @@ _otel_providers = setup_monitoring(app)
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    logger.error(
-        "Unhandled exception on %s %s", request.method, request.url.path, exc_info=exc
-    )
+    logger.error("Unhandled exception on %s %s", request.method, request.url.path, exc_info=exc)
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
@@ -249,7 +245,7 @@ async def health_check(request: Request):
             session.exec(text("SELECT 1"))
         return {"status": "healthy"}
     except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Database unhealthy: {e}")
+        raise HTTPException(status_code=503, detail=f"Database unhealthy: {e}") from e
 
 
 # Include API routers without additional prefix

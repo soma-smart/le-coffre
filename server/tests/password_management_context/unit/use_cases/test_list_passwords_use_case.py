@@ -1,20 +1,21 @@
-import pytest
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
+import pytest
 
 from password_management_context.application.commands import ListPasswordsCommand
 from password_management_context.application.use_cases import ListPasswordsUseCase
-
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
-from ..fakes import (
-    FakePasswordPermissionsRepository,
-    FakePasswordRepository,
-    FakeGroupAccessGateway,
-    FakePasswordEventRepository,
-)
 from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.domain.entities import AuthenticatedUser
+
+from ..fakes import (
+    FakeGroupAccessGateway,
+    FakePasswordEventRepository,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+)
 
 
 @pytest.fixture
@@ -37,9 +38,7 @@ def test_given_no_passwords_when_listing_default_folder_should_return_empty_list
 ):
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert result == []
@@ -74,9 +73,7 @@ def test_given_passwords_exist_when_listing_all_folders_should_return_all_access
     group_access_gateway.set_group_owner(group1_id, requester_id)
     password_repository.save(password2)
     password_permissions_repository.set_owner(group2_id, password2.id)
-    password_permissions_repository.grant_access(
-        group2_id, password2.id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(group2_id, password2.id, PasswordPermission.READ)
     group_access_gateway.set_group_owner(group2_id, requester_id)
 
     # Add creation events for both passwords
@@ -107,18 +104,13 @@ def test_given_passwords_exist_when_listing_all_folders_should_return_all_access
         },
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert len(result) == 2
 
     for i in result:
-        assert any(
-            p.id == i.id and p.name == i.name and p.folder == i.folder
-            for p in [password1, password2]
-        )
+        assert any(p.id == i.id and p.name == i.name and p.folder == i.folder for p in [password1, password2])
 
     # Verify group_id is set correctly
     password1_result = next(r for r in result if r.id == password1.id)
@@ -187,9 +179,7 @@ def test_given_specific_folder_when_listing_passwords_should_return_only_folder_
         },
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[]), folder=folder_name
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]), folder=folder_name)
     result = use_case.execute(command)
 
     assert len(result) == 1
@@ -205,9 +195,7 @@ def test_given_non_existent_folder_when_listing_passwords_should_raise_folder_no
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
     folder_name = "NoneExistent"
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[]), folder=folder_name
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]), folder=folder_name)
     with pytest.raises(FolderNotFoundError) as exc_info:
         use_case.execute(command)
 
@@ -257,9 +245,7 @@ def test_given_mixed_access_when_listing_passwords_should_return_only_accessible
         },
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert len(result) == 1
@@ -292,9 +278,7 @@ def test_given_no_access_to_passwords_when_listing_passwords_should_return_empty
     password_repository.save(password2)
     # Not granting access to password2
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert result == []
@@ -330,9 +314,7 @@ def test_given_passwords_owned_by_other_users_when_listing_as_user_with_no_group
         event_data={},
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert result == []
@@ -399,9 +381,7 @@ def test_given_passwords_with_creation_events_when_listing_passwords_should_retu
         },
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert len(result) == 2
@@ -466,9 +446,7 @@ def test_given_passwords_with_password_updates_when_listing_passwords_should_ret
         },
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert len(result) == 1
@@ -506,9 +484,7 @@ def test_given_owner_user_when_listing_passwords_should_return_can_read_and_can_
         event_data={},
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert len(result) == 1
@@ -536,9 +512,7 @@ def test_given_read_only_shared_user_when_listing_passwords_should_return_can_re
     )
     password_repository.save(password)
     password_permissions_repository.set_owner(owner_group_id, password_id)
-    password_permissions_repository.grant_access(
-        shared_group_id, password_id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(shared_group_id, password_id, PasswordPermission.READ)
     group_access_gateway.set_group_owner(shared_group_id, requester_id)
 
     password_event_repository.append_event(
@@ -550,9 +524,7 @@ def test_given_read_only_shared_user_when_listing_passwords_should_return_can_re
         event_data={},
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=requester_id, roles=[])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
     result = use_case.execute(command)
 
     assert len(result) == 1
@@ -610,9 +582,7 @@ def test_given_admin_user_with_no_group_access_when_listing_passwords_should_ret
         event_data={},
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=admin_id, roles=["admin"])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=admin_id, roles=["admin"]))
     result = use_case.execute(command)
 
     assert len(result) == 2
@@ -671,9 +641,7 @@ def test_given_admin_user_with_group_ownership_when_listing_passwords_should_ret
         event_data={},
     )
 
-    command = ListPasswordsCommand(
-        requester=AuthenticatedUser(user_id=admin_id, roles=["admin"])
-    )
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=admin_id, roles=["admin"]))
     result = use_case.execute(command)
 
     assert len(result) == 2

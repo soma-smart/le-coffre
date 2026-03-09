@@ -1,8 +1,8 @@
 from uuid import UUID, uuid4
 
 from identity_access_management_context.application.gateways import (
-    GroupRepository,
     GroupMemberRepository,
+    GroupRepository,
 )
 from identity_access_management_context.domain.entities import PersonalGroup
 

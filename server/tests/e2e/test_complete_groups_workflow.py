@@ -13,9 +13,7 @@ This test covers the entire group management system in one comprehensive workflo
 from uuid import uuid4
 
 
-def test_complete_groups_workflow(
-    authenticated_admin_client, sso_user_factory, client_factory
-):
+def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, client_factory):
     """
     Complete groups workflow covering all group management features step by step.
     """
@@ -139,9 +137,7 @@ def test_complete_groups_workflow(
     assert unauth_list_response.status_code == 401
 
     # Step 2.3: Creating a group requires authentication
-    unauth_create_response = unauthenticated_client.post(
-        "/api/groups/", json={"name": "Unauthorized Group"}
-    )
+    unauth_create_response = unauthenticated_client.post("/api/groups/", json={"name": "Unauthorized Group"})
     assert unauth_create_response.status_code == 401
 
     # Step 2.4: Get non-existent group returns 404
@@ -159,9 +155,7 @@ def test_complete_groups_workflow(
     assert admin_me_response.status_code == 200
     admin_personal_group_id = admin_me_response.json()["personal_group_id"]
 
-    create_response = authenticated_admin_client.post(
-        "/api/groups/", json={"name": "Original Name"}
-    )
+    create_response = authenticated_admin_client.post("/api/groups/", json={"name": "Original Name"})
     assert create_response.status_code == 201
     group_for_update = create_response.json()
     assert group_for_update["name"] == "Original Name"
@@ -230,10 +224,7 @@ def test_complete_groups_workflow(
         json={"name": "Attempted Personal Group Update"},
     )
     assert personal_update_response.status_code == 403
-    assert (
-        "Cannot modify members of personal group"
-        in personal_update_response.json()["detail"]
-    )
+    assert "Cannot modify members of personal group" in personal_update_response.json()["detail"]
 
     # Step 3.9: Cannot update non-existent group
     nonexistent_update_response = authenticated_admin_client.put(
@@ -253,9 +244,7 @@ def test_complete_groups_workflow(
     # =========================================================================
 
     # Step 4.1: Create group for member management tests
-    group_for_members = authenticated_admin_client.post(
-        "/api/groups/", json={"name": "Engineering Team"}
-    )
+    group_for_members = authenticated_admin_client.post("/api/groups/", json={"name": "Engineering Team"})
     assert group_for_members.status_code == 201
     group = group_for_members.json()
     assert group["name"] == "Engineering Team"
@@ -286,16 +275,12 @@ def test_complete_groups_workflow(
     assert add_user1_again_response.status_code == 201
 
     # Step 4.5: Remove user2 from the group
-    remove_user2_response = authenticated_admin_client.delete(
-        f"/api/groups/{members_group_id}/members/{user2_id}"
-    )
+    remove_user2_response = authenticated_admin_client.delete(f"/api/groups/{members_group_id}/members/{user2_id}")
     assert remove_user2_response.status_code == 200, remove_user2_response.text
     assert remove_user2_response.json()["message"] == "Member removed successfully"
 
     # Step 4.6: Cannot remove user that is no longer a member
-    remove_nonmember_response = authenticated_admin_client.delete(
-        f"/api/groups/{members_group_id}/members/{user2_id}"
-    )
+    remove_nonmember_response = authenticated_admin_client.delete(f"/api/groups/{members_group_id}/members/{user2_id}")
     assert remove_nonmember_response.status_code == 400
     assert "is not a member of group" in remove_nonmember_response.json()["detail"]
 
@@ -313,16 +298,12 @@ def test_complete_groups_workflow(
     # =========================================================================
 
     # Step 5.1: Create group for authorization tests
-    auth_group_response = authenticated_admin_client.post(
-        "/api/groups/", json={"name": "Test Group"}
-    )
+    auth_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Test Group"})
     assert auth_group_response.status_code == 201
     admin_group_id = auth_group_response.json()["id"]
 
     # Step 5.2: Add user1 as a member
-    authenticated_admin_client.post(
-        f"/api/groups/{admin_group_id}/members", json={"user_id": user1_id}
-    )
+    authenticated_admin_client.post(f"/api/groups/{admin_group_id}/members", json={"user_id": user1_id})
 
     # Step 5.3: Non-owner (non_owner_user) cannot add members to the group
     add_as_non_owner_response = non_owner_client.post(
@@ -333,9 +314,7 @@ def test_complete_groups_workflow(
     assert "is not an owner of group" in add_as_non_owner_response.json()["detail"]
 
     # Step 5.4: Non-owner cannot remove members from the group
-    remove_as_non_owner_response = non_owner_client.delete(
-        f"/api/groups/{admin_group_id}/members/{user1_id}"
-    )
+    remove_as_non_owner_response = non_owner_client.delete(f"/api/groups/{admin_group_id}/members/{user1_id}")
     assert remove_as_non_owner_response.status_code == 403
     assert "is not an owner of group" in remove_as_non_owner_response.json()["detail"]
 
@@ -343,9 +322,7 @@ def test_complete_groups_workflow(
     admin_id = admin_me_response.json()["id"]
 
     # Step 5.6: Cannot remove an owner from the group
-    remove_owner_response = authenticated_admin_client.delete(
-        f"/api/groups/{admin_group_id}/members/{admin_id}"
-    )
+    remove_owner_response = authenticated_admin_client.delete(f"/api/groups/{admin_group_id}/members/{admin_id}")
     assert remove_owner_response.status_code == 400
     assert "Cannot remove owner" in remove_owner_response.json()["detail"]
 
@@ -354,18 +331,14 @@ def test_complete_groups_workflow(
     # =========================================================================
 
     # Step 6.1: Create a group for ownership tests (admin is owner)
-    ownership_group_response = authenticated_admin_client.post(
-        "/api/groups/", json={"name": "Leadership Team"}
-    )
+    ownership_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Leadership Team"})
     assert ownership_group_response.status_code == 201
     ownership_group_data = ownership_group_response.json()
     assert ownership_group_data["name"] == "Leadership Team"
     ownership_group_id = ownership_group_data["id"]
 
     # Step 6.2: Add owner_user as a member (not an owner yet)
-    authenticated_admin_client.post(
-        f"/api/groups/{ownership_group_id}/members", json={"user_id": owner_user_id}
-    )
+    authenticated_admin_client.post(f"/api/groups/{ownership_group_id}/members", json={"user_id": owner_user_id})
 
     # Step 6.3: Verify owner_user is a member but not an owner
     get_group_before = authenticated_admin_client.get(f"/api/groups/{ownership_group_id}")
@@ -405,9 +378,7 @@ def test_complete_groups_workflow(
     assert "not a member" in add_nonmember_as_owner_response.json()["detail"].lower()
 
     # Step 6.8: Add user2 as a member so owner_user can promote them
-    authenticated_admin_client.post(
-        f"/api/groups/{ownership_group_id}/members", json={"user_id": user2_id}
-    )
+    authenticated_admin_client.post(f"/api/groups/{ownership_group_id}/members", json={"user_id": user2_id})
 
     # Step 6.9: owner_user (who is now an owner) can promote user2
     promote_user2_response = owner_user_client.post(
@@ -426,21 +397,15 @@ def test_complete_groups_workflow(
     # =========================================================================
 
     # Step 7.1: Create group and add members for authorization test
-    restricted_group_response = authenticated_admin_client.post(
-        "/api/groups/", json={"name": "Restricted Team"}
-    )
+    restricted_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Restricted Team"})
     assert restricted_group_response.status_code == 201
     restricted_group_id = restricted_group_response.json()["id"]
 
     # Add non_owner and owner_user as plain members
-    authenticated_admin_client.post(
-        f"/api/groups/{restricted_group_id}/members", json={"user_id": non_owner_user_id}
-    )
+    authenticated_admin_client.post(f"/api/groups/{restricted_group_id}/members", json={"user_id": non_owner_user_id})
     user3 = sso_user_factory("target@example.com", "Target User")
     user3_id = user3["user_id"]
-    authenticated_admin_client.post(
-        f"/api/groups/{restricted_group_id}/members", json={"user_id": user3_id}
-    )
+    authenticated_admin_client.post(f"/api/groups/{restricted_group_id}/members", json={"user_id": user3_id})
 
     # Step 7.2: Non-owner cannot promote members to owner
     non_owner_promote_response = non_owner_client.post(
@@ -450,9 +415,7 @@ def test_complete_groups_workflow(
     assert "not an owner" in non_owner_promote_response.json()["detail"].lower()
 
     # Step 7.3: Cannot add owner to a personal group
-    personal_groups_response = authenticated_admin_client.get(
-        "/api/groups?include_personal=true"
-    )
+    personal_groups_response = authenticated_admin_client.get("/api/groups?include_personal=true")
     all_groups_list = personal_groups_response.json()["groups"]
     admin_personal_group = next((g for g in all_groups_list if g["is_personal"]), None)
     assert admin_personal_group is not None

@@ -1,21 +1,21 @@
-from fastapi import APIRouter, HTTPException, Depends, Response, Cookie
-from pydantic import BaseModel
 import logging
-from typing import Optional
 
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from pydantic import BaseModel
+
+from config import get_cookie_secure_setting, get_jwt_access_token_expiration_minutes
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_refresh_access_token_usecase,
-)
-from identity_access_management_context.application.use_cases import (
-    RefreshAccessTokenUseCase,
 )
 from identity_access_management_context.application.commands import (
     RefreshAccessTokenCommand,
 )
+from identity_access_management_context.application.use_cases import (
+    RefreshAccessTokenUseCase,
+)
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
-from config import get_cookie_secure_setting, get_jwt_access_token_expiration_minutes
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class RefreshAccessTokenResponse(BaseModel):
 async def refresh_access_token(
     response: Response,
     refresh_token_cookie: str | None = Cookie(None, alias="refresh_token"),
-    usecase: RefreshAccessTokenUseCase = Depends(get_refresh_access_token_usecase),
+    usecase: RefreshAccessTokenUseCase = Depends(get_refresh_access_token_usecase),  # noqa: B008
 ):
     """
     Refresh access token using a refresh token.
@@ -68,13 +68,12 @@ async def refresh_access_token(
             httponly=True,
             secure=is_secure,
             samesite="lax",
-            max_age=get_jwt_access_token_expiration_minutes()
-            * 60,  # Convert minutes to seconds
+            max_age=get_jwt_access_token_expiration_minutes() * 60,  # Convert minutes to seconds
         )
 
         return RefreshAccessTokenResponse(message="Access token refreshed successfully")
     except InvalidRefreshTokenException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in refresh access token")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

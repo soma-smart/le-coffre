@@ -1,4 +1,5 @@
 import logging
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -25,6 +26,7 @@ def app_with_middleware():
 def test_request_id_middleware_generates_uuid_when_no_header(app_with_middleware):
     """When X-Request-ID is absent, the middleware must generate a UUID and return it."""
     import uuid
+
     with TestClient(app_with_middleware) as client:
         response = client.get("/ping")
     assert "x-request-id" in response.headers
@@ -42,8 +44,13 @@ def test_request_id_filter_injects_request_id_into_log_record():
     """RequestIdFilter must set record.request_id from the active ContextVar."""
     f = RequestIdFilter()
     record = logging.LogRecord(
-        name="test", level=logging.INFO, pathname="", lineno=0,
-        msg="hello", args=(), exc_info=None,
+        name="test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="hello",
+        args=(),
+        exc_info=None,
     )
     token = _request_id_var.set("req-xyz-123")
     try:
@@ -57,8 +64,13 @@ def test_request_id_filter_uses_default_when_no_context():
     """Outside a request, RequestIdFilter must inject the default '-' value."""
     f = RequestIdFilter()
     record = logging.LogRecord(
-        name="test", level=logging.INFO, pathname="", lineno=0,
-        msg="hello", args=(), exc_info=None,
+        name="test",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg="hello",
+        args=(),
+        exc_info=None,
     )
     f.filter(record)
     assert record.request_id == "-"

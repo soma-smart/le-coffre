@@ -1,9 +1,7 @@
-from typing import Optional
-
-from vault_management_context.domain.entities import Vault
-from vault_management_context.domain.value_objects import VaultConfiguration
-from vault_management_context.domain.exceptions import VaultAlreadyExistsError
 from vault_management_context.application.responses.vault_status import VaultStatus
+from vault_management_context.domain.entities import Vault
+from vault_management_context.domain.exceptions import VaultAlreadyExistsError
+from vault_management_context.domain.value_objects import VaultConfiguration
 
 
 class VaultCreationService:
@@ -21,9 +19,7 @@ class VaultCreationService:
             raise VaultAlreadyExistsError()
 
     @staticmethod
-    def create_vault_entity(
-        configuration: VaultConfiguration, encrypted_key: str, setup_id: str
-    ) -> Vault:
+    def create_vault_entity(configuration: VaultConfiguration, encrypted_key: str, setup_id: str) -> Vault:
         """Create a vault entity with the given configuration and encrypted key
 
         Args:

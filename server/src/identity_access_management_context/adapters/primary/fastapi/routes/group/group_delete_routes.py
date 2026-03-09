@@ -1,21 +1,22 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_delete_group_usecase,
 )
-from identity_access_management_context.application.use_cases import DeleteGroupUseCase
 from identity_access_management_context.application.commands import DeleteGroupCommand
+from identity_access_management_context.application.use_cases import DeleteGroupUseCase
 from identity_access_management_context.domain.exceptions import (
-    GroupNotFoundException,
-    CannotDeletePersonalGroupException,
-    UserNotOwnerOfGroupException,
     CannotDeleteGroupStillUsedException,
+    CannotDeletePersonalGroupException,
+    GroupNotFoundException,
     IdentityAccessManagementDomainError,
+    UserNotOwnerOfGroupException,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,8 @@ router = APIRouter(prefix="/groups", tags=["Group Management"])
 )
 def delete_group(
     group_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),
-    usecase: DeleteGroupUseCase = Depends(get_delete_group_usecase),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    usecase: DeleteGroupUseCase = Depends(get_delete_group_usecase),  # noqa: B008
 ):
     """
     Delete a group by ID.
@@ -49,15 +50,15 @@ def delete_group(
         )
         usecase.execute(command)
     except GroupNotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except UserNotOwnerOfGroupException as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except CannotDeletePersonalGroupException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except CannotDeleteGroupStillUsedException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except IdentityAccessManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in delete group")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

@@ -1,13 +1,13 @@
 from uuid import UUID
 
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel
+
 from config import (
     get_cookie_secure_setting,
     get_jwt_access_token_expiration_minutes,
     get_jwt_refresh_token_expiration_days,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from pydantic import BaseModel
-
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_sso_login_usecase,
 )
@@ -42,7 +42,7 @@ async def sso_callback(
     response: Response,
     code: str = Query(..., description="Authorization code from SSO provider"),
     state: str = Query(None, description="State parameter for CSRF protection"),
-    usecase: SsoLoginUseCase = Depends(get_sso_login_usecase),
+    usecase: SsoLoginUseCase = Depends(get_sso_login_usecase),  # noqa: B008
 ):
     """
     SSO callback endpoint.
@@ -68,8 +68,7 @@ async def sso_callback(
             httponly=True,
             secure=is_secure,  # HTTPS only in production
             samesite="lax",  # CSRF protection
-            max_age=get_jwt_access_token_expiration_minutes()
-            * 60,  # Convert minutes to seconds
+            max_age=get_jwt_access_token_expiration_minutes() * 60,  # Convert minutes to seconds
         )
 
         response.set_cookie(
@@ -78,8 +77,7 @@ async def sso_callback(
             httponly=True,
             secure=is_secure,  # HTTPS only in production
             samesite="lax",
-            max_age=get_jwt_refresh_token_expiration_days()
-            * 86400,  # Convert days to seconds
+            max_age=get_jwt_refresh_token_expiration_days() * 86400,  # Convert days to seconds
         )
 
         # Set a non-httpOnly cookie that frontend can read to check auth status
@@ -102,6 +100,4 @@ async def sso_callback(
             ),
         )
     except InvalidSsoCodeException as e:
-        raise HTTPException(
-            status_code=400, detail=f"SSO authentication failed: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"SSO authentication failed: {str(e)}") from e

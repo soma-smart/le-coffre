@@ -3,10 +3,9 @@
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
+from security.csrf_tokens import CsrfTokenManager
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
-from security.csrf_tokens import CsrfTokenManager
-
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -27,8 +26,8 @@ def get_csrf_token_manager(request: Request) -> CsrfTokenManager:
     summary="Get CSRF token",
 )
 async def get_csrf_token(
-    current_user: ValidatedUser = Depends(get_current_user),
-    csrf_manager: CsrfTokenManager = Depends(get_csrf_token_manager),
+    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
+    csrf_manager: CsrfTokenManager = Depends(get_csrf_token_manager),  # noqa: B008
 ):
     """
     Get a CSRF token for the current authenticated user.

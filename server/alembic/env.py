@@ -1,30 +1,27 @@
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
+from sqlmodel import SQLModel
 
 from alembic import context
-from sqlmodel import SQLModel
+from config import get_database_url
 
 # Import all models so they are registered with SQLModel.metadata
 from identity_access_management_context.adapters.secondary.sql import (
-    UserTable,
-    GroupTable,
     GroupMemberTable,
+    GroupTable,
     SsoConfigurationTable,
     SsoUsersTable,
     UserPasswordTable,
+    UserTable,
 )
+from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
 from password_management_context.adapters.secondary.sql import (
-    PermissionsTable,
     OwnershipTable,
-    PasswordTable,
     PasswordEventTable,
+    PasswordTable,
+    PermissionsTable,
 )
 from vault_management_context.adapters.secondary.sql import VaultTable
 from vault_management_context.adapters.secondary.sql.models.vault_event import VaultEventTable
-from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
-
-
-from config import get_database_url
 
 # Silence ruff unused-import warnings for model registration
 _ = (

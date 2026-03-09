@@ -129,9 +129,7 @@ def test_complete_user_workflow(
     admin_personal_group_id = admin_me_response.json()["personal_group_id"]
 
     # Step 4.1: Create a group
-    create_group_response = authenticated_admin_client.post(
-        "/api/groups/", json={"name": "Test Group to Delete"}
-    )
+    create_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Test Group to Delete"})
     assert create_group_response.status_code == 201
     deletable_group_id = create_group_response.json()["id"]
     assert create_group_response.json()["name"] == "Test Group to Delete"
@@ -150,16 +148,12 @@ def test_complete_user_workflow(
     assert get_deleted_response.status_code == 404
 
     # Step 4.5: Cannot delete personal group
-    delete_personal_response = authenticated_admin_client.delete(
-        f"/api/groups/{admin_personal_group_id}"
-    )
+    delete_personal_response = authenticated_admin_client.delete(f"/api/groups/{admin_personal_group_id}")
     assert delete_personal_response.status_code == 400
     assert "personal group" in delete_personal_response.json()["detail"].lower()
 
     # Step 4.6: Cannot delete group that still has passwords
-    create_group2_response = authenticated_admin_client.post(
-        "/api/groups/", json={"name": "Group with Passwords"}
-    )
+    create_group2_response = authenticated_admin_client.post("/api/groups/", json={"name": "Group with Passwords"})
     assert create_group2_response.status_code == 201
     group_with_passwords_id = create_group2_response.json()["id"]
 
@@ -174,9 +168,7 @@ def test_complete_user_workflow(
     )
     assert create_password_response.status_code == 201
 
-    delete_group_with_passwords_response = authenticated_admin_client.delete(
-        f"/api/groups/{group_with_passwords_id}"
-    )
+    delete_group_with_passwords_response = authenticated_admin_client.delete(f"/api/groups/{group_with_passwords_id}")
     assert delete_group_with_passwords_response.status_code == 400
     assert (
         "still in use" in delete_group_with_passwords_response.json()["detail"].lower()
@@ -185,14 +177,10 @@ def test_complete_user_workflow(
 
     # Step 4.7: Delete the password first, then the group succeeds
     password_id = create_password_response.json()["id"]
-    delete_password_response = authenticated_admin_client.delete(
-        f"/api/passwords/{password_id}"
-    )
+    delete_password_response = authenticated_admin_client.delete(f"/api/passwords/{password_id}")
     assert delete_password_response.status_code == 204
 
-    delete_group_after_cleanup_response = authenticated_admin_client.delete(
-        f"/api/groups/{group_with_passwords_id}"
-    )
+    delete_group_after_cleanup_response = authenticated_admin_client.delete(f"/api/groups/{group_with_passwords_id}")
     assert delete_group_after_cleanup_response.status_code == 204
 
     # =========================================================================
@@ -211,12 +199,8 @@ def test_complete_user_workflow(
     assert "admin" not in user_data.get("roles", [])
 
     # Step 5.3: Admin promotes user to admin
-    promote_response = authenticated_admin_client.post(
-        f"/api/users/{regular_user_id}/promote-admin"
-    )
-    assert promote_response.status_code == 204, (
-        f"Promotion should succeed: {promote_response.text}"
-    )
+    promote_response = authenticated_admin_client.post(f"/api/users/{regular_user_id}/promote-admin")
+    assert promote_response.status_code == 204, f"Promotion should succeed: {promote_response.text}"
 
     # Step 5.4: Verify user now has admin role
     get_promoted_user = authenticated_admin_client.get(f"/api/users/{regular_user_id}")
@@ -225,9 +209,7 @@ def test_complete_user_workflow(
     assert "admin" in promoted_user_data.get("roles", [])
 
     # Step 5.5: Promote already-admin user returns 400
-    promote_again_response = authenticated_admin_client.post(
-        f"/api/users/{regular_user_id}/promote-admin"
-    )
+    promote_again_response = authenticated_admin_client.post(f"/api/users/{regular_user_id}/promote-admin")
     assert promote_again_response.status_code == 400
     error_detail = promote_again_response.json()["detail"].lower()
     assert "already" in error_detail or "admin" in error_detail
@@ -239,9 +221,7 @@ def test_complete_user_workflow(
     target_user = sso_user_factory("target@example.com", "Target User")
     target_user_id = target_user["user_id"]
 
-    unauthorized_promote = non_admin_client.post(
-        f"/api/users/{target_user_id}/promote-admin"
-    )
+    unauthorized_promote = non_admin_client.post(f"/api/users/{target_user_id}/promote-admin")
     assert unauthorized_promote.status_code == 403
     assert "admin" in unauthorized_promote.json()["detail"].lower()
 
@@ -274,12 +254,8 @@ def test_complete_user_workflow(
     assert "admin" not in get_user1_response.json().get("roles", [])
 
     # Step 6.2: Admin promotes user1 to admin
-    promote_user1_response = authenticated_admin_client.post(
-        f"/api/users/{user1_id}/promote-admin"
-    )
-    assert promote_user1_response.status_code == 204, (
-        f"Admin should promote user1: {promote_user1_response.text}"
-    )
+    promote_user1_response = authenticated_admin_client.post(f"/api/users/{user1_id}/promote-admin")
+    assert promote_user1_response.status_code == 204, f"Admin should promote user1: {promote_user1_response.text}"
 
     # Step 6.3: Verify user1 has admin role in database
     get_promoted_user1 = authenticated_admin_client.get(f"/api/users/{user1_id}")
@@ -397,9 +373,7 @@ def test_complete_user_workflow(
         "/api/auth/login",
         json={"email": admin_email, "password": new_password},
     )
-    assert new_password_login.status_code == 200, (
-        f"Login with new password failed: {new_password_login.text}"
-    )
+    assert new_password_login.status_code == 200, f"Login with new password failed: {new_password_login.text}"
     assert new_password_login.cookies.get("access_token") is not None
 
     # Step 8.6: New session can access user data

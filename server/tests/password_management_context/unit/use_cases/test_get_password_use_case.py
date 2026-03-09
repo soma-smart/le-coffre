@@ -1,25 +1,26 @@
-import pytest
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
+import pytest
 
 from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.use_cases import GetPasswordUseCase
+from password_management_context.domain.entities import Password
+from password_management_context.domain.exceptions import (
+    PasswordAccessDeniedError,
+    PasswordNotFoundError,
+)
+from password_management_context.domain.value_objects import (
+    PasswordPermission,
+)
+from tests.fakes import FakeDomainEventPublisher
 
 from ..fakes import (
-    FakePasswordPermissionsRepository,
-    FakePasswordRepository,
     FakeGroupAccessGateway,
     FakePasswordEncryptionGateway,
     FakePasswordEventRepository,
-)
-from tests.fakes import FakeDomainEventPublisher
-from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
-    PasswordAccessDeniedError,
-)
-from password_management_context.domain.entities import Password
-from password_management_context.domain.value_objects import (
-    PasswordPermission,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
 )
 
 
@@ -59,9 +60,7 @@ def test_given_user_with_read_permission_when_getting_password_should_return_dec
     )
     password_repository.save(password_entity)
     # Grant READ permission to group and set user as owner of group
-    password_permissions_repository.grant_access(
-        group_id, password_entity.id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(group_id, password_entity.id, PasswordPermission.READ)
     group_access_gateway.set_group_owner(group_id, user_id)
 
     # Add creation event
@@ -116,9 +115,7 @@ def test_given_password_not_exists_when_getting_password_should_raise_password_n
 
     password_permissions_repository.set_owner(user_id, non_existent_password_id)
 
-    command = GetPasswordCommand(
-        requester_id=user_id, password_id=non_existent_password_id
-    )
+    command = GetPasswordCommand(requester_id=user_id, password_id=non_existent_password_id)
     with pytest.raises(PasswordNotFoundError):
         use_case.execute(command)
 
@@ -183,9 +180,7 @@ def test_given_user_is_group_member_when_getting_password_should_return_decrypte
     )
     password_repository.save(password_entity)
     group_access_gateway.add_group_member(group_id, user_id)
-    password_permissions_repository.grant_access(
-        group_id, password_entity.id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(group_id, password_entity.id, PasswordPermission.READ)
 
     # Add creation event
     password_event_repository.append_event(

@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID
+
 from sqlmodel import Session, select
 
 from password_management_context.adapters.secondary.sql.model.password_event import (
@@ -44,9 +45,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
         end_date: datetime | None = None,
     ) -> list[dict]:
         """List events for a specific password with filters"""
-        query = select(PasswordEventTable).where(
-            PasswordEventTable.password_id == password_id
-        )
+        query = select(PasswordEventTable).where(PasswordEventTable.password_id == password_id)
 
         if actor_user_id:
             query = query.where(PasswordEventTable.actor_user_id == actor_user_id)
