@@ -7,12 +7,17 @@ from datetime import datetime, timezone
 try:
     import opentelemetry.metrics as otel_metrics
     import opentelemetry.trace as otel_trace
+    from opentelemetry._logs import set_logger_provider
+    from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
     from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
     from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+    from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
     from opentelemetry.sdk.metrics import MeterProvider
+    from opentelemetry.sdk.metrics._internal.exemplar import TraceBasedExemplarFilter
     from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
     from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
@@ -78,7 +83,7 @@ class JsonFormatter(logging.Formatter):
         if _OTEL_AVAILABLE:
             span = otel_trace.get_current_span()
             ctx = span.get_span_context()
-            if ctx.is_valid:
+            if ctx.is_valid and isinstance(ctx.trace_id, int) and isinstance(ctx.span_id, int):
                 entry["trace_id"] = format(ctx.trace_id, "032x")
                 entry["span_id"] = format(ctx.span_id, "016x")
         return json.dumps(entry, ensure_ascii=False)
@@ -129,15 +134,15 @@ class _UvicornAccessFilter(logging.Filter):
 
 
 def setup_monitoring(app) -> tuple | None:
-    """Instrument the FastAPI app with OpenTelemetry metrics and traces via OTLP.
+    """Instrument the FastAPI app with OpenTelemetry metrics, traces, and logs via OTLP.
 
     Activation:
     - ENABLE_MONITORING=false → disabled (hard override)
     - OTEL_EXPORTER_OTLP_ENDPOINT not set and ENABLE_MONITORING != true → silent no-op
     - OTel packages not installed → logs INFO and no-op
-    - Otherwise → instruments app and exports metrics + traces via OTLP HTTP
+    - Otherwise → instruments app and exports metrics + traces + logs via OTLP HTTP
 
-    Returns (tracer_provider, meter_provider) when active, None otherwise.
+    Returns (tracer_provider, meter_provider, logger_provider) when active, None otherwise.
     Callers can use the returned providers for graceful shutdown.
     """
     if os.getenv("ENABLE_MONITORING", "").lower() == "false":
@@ -212,8 +217,15 @@ def _configure_otel(app) -> tuple:
     )
 
     # --- Metrics ---
+    # TraceBasedExemplarFilter attaches an exemplar (trace_id + span_id) to histogram
+    # buckets whenever a span is active, enabling one-click metric → trace drill-down in Grafana.
+    # Requires --enable-feature=exemplar-storage on the Prometheus side.
     reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{endpoint.rstrip('/')}/v1/metrics"))
-    meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
+    meter_provider = MeterProvider(
+        resource=resource,
+        metric_readers=[reader],
+        exemplar_filter=TraceBasedExemplarFilter(),
+    )
     otel_metrics.set_meter_provider(meter_provider)
 
     # --- Traces ---
@@ -222,6 +234,19 @@ def _configure_otel(app) -> tuple:
         BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{endpoint.rstrip('/')}/v1/traces"))
     )
     otel_trace.set_tracer_provider(tracer_provider)
+
+    # --- Logs ---
+    # Bridge Python logging → OTel LoggerProvider → OTLP HTTP → Alloy → Loki.
+    # The Alloy pipeline must route OTLP logs to Loki (otelcol.exporter.loki) and
+    # the le-coffre namespace must be dropped from the stdout K8s log collection
+    # to avoid duplicates (see dep-install-tools-on-k8s/alloy/values.yaml).
+    logger_provider = LoggerProvider(resource=resource)
+    logger_provider.add_log_record_processor(
+        BatchLogRecordProcessor(OTLPLogExporter(endpoint=f"{endpoint.rstrip('/')}/v1/logs"))
+    )
+    set_logger_provider(logger_provider)
+    otel_log_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+    logging.getLogger().addHandler(otel_log_handler)
 
     FastAPIInstrumentor.instrument_app(
         app,
@@ -242,12 +267,12 @@ def _configure_otel(app) -> tuple:
     )
 
     logger.info(
-        "OpenTelemetry enabled — service=%s endpoint=%s",
+        "OpenTelemetry enabled — service=%s endpoint=%s (metrics+traces+logs)",
         service_name,
         endpoint,
     )
 
-    return tracer_provider, meter_provider
+    return tracer_provider, meter_provider, logger_provider
 
 
 def _warn_insecure_otlp(endpoint: str) -> None:
