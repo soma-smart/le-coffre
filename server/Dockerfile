@@ -34,6 +34,9 @@ WORKDIR /app
 # Create non-root user
 RUN addgroup --system app && adduser --system --group app
 
+# Create data directory for SQLite persistence (volume mount point)
+RUN mkdir -p /app/data && chown app:app /app/data
+
 # Copy backend + venv
 COPY --from=builder --chown=app:app /app/backend /app/backend
 
