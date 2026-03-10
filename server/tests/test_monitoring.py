@@ -482,9 +482,13 @@ def test_build_sampler_out_of_range_falls_back_to_parentbased(caplog):
     "http://otel-collector:4318",
     "http://localhost:4318",
     "http://127.0.0.1:4318",
+    "http://[::1]:4318",
     "http://alloy.monitoring.svc:4318",
     "http://alloy.monitoring.svc.cluster.local:4318",
     "http://collector.local:4318",
+    "",           # empty string — no endpoint configured
+    "not-a-url",  # unparseable — no hostname extractable
+    "http://",    # scheme only — no hostname
 ])
 def test_is_internal_endpoint_returns_true_for_internal(endpoint):
     assert _is_internal_endpoint(endpoint) is True
@@ -494,6 +498,7 @@ def test_is_internal_endpoint_returns_true_for_internal(endpoint):
     "http://otel.example.com:4318",
     "https://otel.example.com:4318",
     "http://collector.mycompany.io:4318",
+    "http://0.0.0.0:4318",
 ])
 def test_is_internal_endpoint_returns_false_for_external(endpoint):
     assert _is_internal_endpoint(endpoint) is False
@@ -504,8 +509,8 @@ def test_is_internal_endpoint_returns_false_for_external(endpoint):
 
 def test_warn_insecure_otlp_no_warning_for_internal_http(caplog):
     """Internal HTTP endpoints must not trigger any warning."""
-    with patch.dict(os.environ, {}, clear=False):
-        os.environ.pop("OTEL_EXPORTER_OTLP_HEADERS", None)
+    env = {k: v for k, v in os.environ.items() if k != "OTEL_EXPORTER_OTLP_HEADERS"}
+    with patch.dict(os.environ, env, clear=True):
         with caplog.at_level(logging.WARNING, logger="monitoring"):
             _warn_insecure_otlp("http://alloy:4318")
     assert caplog.text == ""
@@ -535,6 +540,16 @@ def test_warn_insecure_otlp_no_warning_for_external_https_with_auth(caplog):
         with caplog.at_level(logging.WARNING, logger="monitoring"):
             _warn_insecure_otlp("https://otel.example.com:4318")
     assert caplog.text == ""
+
+
+def test_warn_insecure_otlp_warns_no_auth_for_external_https(caplog):
+    """External HTTPS endpoint without auth headers must trigger only the auth warning."""
+    env = {k: v for k, v in os.environ.items() if k != "OTEL_EXPORTER_OTLP_HEADERS"}
+    with patch.dict(os.environ, env, clear=True):
+        with caplog.at_level(logging.WARNING, logger="monitoring"):
+            _warn_insecure_otlp("https://otel.example.com:4318")
+    assert "OTEL_EXPORTER_OTLP_HEADERS" in caplog.text
+    assert "plain HTTP" not in caplog.text
 
 
 # --- _configure_otel test ---

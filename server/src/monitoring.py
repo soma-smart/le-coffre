@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 # Optional OpenTelemetry SDK — installed via the [monitoring] dependency group.
 try:
@@ -236,15 +237,20 @@ def _is_internal_endpoint(endpoint: str) -> bool:
     """Return True if the endpoint targets a cluster-internal or loopback host.
 
     Internal endpoints (localhost, single-label hostnames, *.svc, *.svc.cluster.local,
-    *.local, loopback IPs) do not require TLS or auth tokens — traffic stays within
-    the cluster network and is never exposed to the internet.
+    *.local, loopback addresses 127.0.0.1 and ::1) do not require TLS or auth tokens —
+    traffic stays within the cluster network and is never exposed to the internet.
+
+    Note: *.local also matches corporate TLDs (e.g. collector.corp.local); this is an
+    accepted trade-off — such environments are still considered trusted networks.
+
+    An empty or unparseable URL (no extractable hostname) is treated as internal to
+    avoid spurious warnings when the endpoint is not configured.
     """
-    from urllib.parse import urlparse
     host = urlparse(endpoint).hostname or ""
     return (
         host in ("localhost", "127.0.0.1", "::1")
-        or not host
-        or "." not in host  # single-label: alloy, otel-collector, …
+        or not host  # empty or unparseable URL — no real destination to warn about
+        or "." not in host  # Kubernetes in-namespace service name (e.g. alloy, otel-collector)
         or host.endswith(".svc")
         or host.endswith(".svc.cluster.local")
         or host.endswith(".local")
@@ -254,11 +260,20 @@ def _is_internal_endpoint(endpoint: str) -> bool:
 def _warn_insecure_otlp(endpoint: str) -> None:
     """Emit warnings when the OTLP transport is insecure or unauthenticated.
 
-    Skipped for cluster-internal endpoints (loopback, single-label hostnames,
-    *.svc, *.svc.cluster.local, *.local) where plain HTTP and no auth token
-    are acceptable because traffic never leaves the cluster network.
+    Two warnings may be emitted:
+    - Plain HTTP transport (endpoint starts with http://)
+    - Missing OTEL_EXPORTER_OTLP_HEADERS (no auth token configured)
+
+    Both warnings are skipped for cluster-internal endpoints (loopback addresses
+    127.0.0.1 and ::1, single-label hostnames, *.svc, *.svc.cluster.local, *.local)
+    where plain HTTP and no auth token are acceptable because traffic never leaves
+    the cluster network.
     """
     if _is_internal_endpoint(endpoint):
+        logger.debug(
+            "OTLP endpoint %r classified as cluster-internal — skipping insecure transport warnings.",
+            endpoint,
+        )
         return
     if endpoint.startswith("http://"):
         logger.warning(
