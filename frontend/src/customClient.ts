@@ -88,51 +88,49 @@ client.interceptors.request.use((request, options) => {
 // refresh_token cookie) and retries the original request transparently.
 // If the refresh itself fails the session is torn down and the user is
 // redirected to the login page.
-client.interceptors.response.use(
-  async (response: Response, request: Request, opts: unknown) => {
-    if (response.status !== 401) {
-      return response
-    }
-
-    // Never retry auth calls themselves — prevents infinite refresh loops
-    const url = request.url
-    if (url.includes('/auth/refresh-token') || url.includes('/auth/login')) {
-      return response
-    }
-
-    const refreshSucceeded = await attemptTokenRefresh()
-
-    if (refreshSucceeded) {
-      // Rebuild and retry the original request.
-      // - request.headers is not a consumed stream; safe to forward as-is.
-      // - opts.serializedBody is the already-JSON-encoded body string that the
-      //   SDK keeps on the options object, so it is available even after the
-      //   original ReadableStream was consumed by the first fetch call.
-      const resolvedOpts = opts as { serializedBody?: string }
-      const retryInit: RequestInit = {
-        method: request.method,
-        headers: request.headers,
-        credentials: 'include',
-        redirect: 'follow',
-      }
-      if (resolvedOpts.serializedBody !== undefined) {
-        retryInit.body = resolvedOpts.serializedBody
-      }
-      return fetch(request.url, retryInit)
-    }
-
-    // Refresh failed — tear down local session state and redirect to login
-    if (router.currentRoute.value.path !== '/login') {
-      logout()
-      await router.push({
-        path: '/login',
-        query: { redirect: router.currentRoute.value.fullPath, reason: 'session_expired' },
-      })
-    }
-
+client.interceptors.response.use(async (response: Response, request: Request, opts: unknown) => {
+  if (response.status !== 401) {
     return response
-  },
-)
+  }
+
+  // Never retry auth calls themselves — prevents infinite refresh loops
+  const url = request.url
+  if (url.includes('/auth/refresh-token') || url.includes('/auth/login')) {
+    return response
+  }
+
+  const refreshSucceeded = await attemptTokenRefresh()
+
+  if (refreshSucceeded) {
+    // Rebuild and retry the original request.
+    // - request.headers is not a consumed stream; safe to forward as-is.
+    // - opts.serializedBody is the already-JSON-encoded body string that the
+    //   SDK keeps on the options object, so it is available even after the
+    //   original ReadableStream was consumed by the first fetch call.
+    const resolvedOpts = opts as { serializedBody?: string }
+    const retryInit: RequestInit = {
+      method: request.method,
+      headers: request.headers,
+      credentials: 'include',
+      redirect: 'follow',
+    }
+    if (resolvedOpts.serializedBody !== undefined) {
+      retryInit.body = resolvedOpts.serializedBody
+    }
+    return fetch(request.url, retryInit)
+  }
+
+  // Refresh failed — tear down local session state and redirect to login
+  if (router.currentRoute.value.path !== '/login') {
+    logout()
+    await router.push({
+      path: '/login',
+      query: { redirect: router.currentRoute.value.fullPath, reason: 'session_expired' },
+    })
+  }
+
+  return response
+})
 
 // ── Global Error Interceptor ─────────────────────────────────────────────────
 client.interceptors.error.use(async (error: unknown, response: Response | undefined) => {
