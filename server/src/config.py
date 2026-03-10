@@ -42,8 +42,8 @@ def get_jwt_expiration_hours() -> int:
 
 
 def get_jwt_access_token_expiration_minutes() -> int:
-    """Get JWT access token expiration time in minutes. Default is 15 minutes."""
-    return int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRATION_MINUTES", "15"))
+    """Get JWT access token expiration time in minutes. Default is 1 minutes."""
+    return int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRATION_MINUTES", "1"))
 
 
 def get_jwt_refresh_token_expiration_days() -> int:
