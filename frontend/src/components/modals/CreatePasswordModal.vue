@@ -167,10 +167,10 @@ const handleSubmit = async () => {
       // Update existing password
       const updateBody: {
         name: string
-        folder: string | null
         password?: string
-        login?: string | null
-        url?: string | null
+        folder: string | null
+        login: string | null
+        url: string | null
       } = {
         name: name.value,
         folder: folder.value || null,

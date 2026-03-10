@@ -797,7 +797,7 @@ export type UpdatePasswordRequest = {
     /**
      * Password
      */
-    password: string;
+    password?: string | null;
     /**
      * Folder
      */

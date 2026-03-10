@@ -68,8 +68,10 @@ class UpdatePasswordUseCase(TracedUseCase):
         has_url_changed = False
 
         if new_password.password:
-            existing_password.encrypted_value = self.password_encryption_gateway.encrypt(new_password.password)
-            has_password_changed = True
+            new_encrypted = self.password_encryption_gateway.encrypt(new_password.password)
+            if new_encrypted != existing_password.encrypted_value:
+                existing_password.encrypted_value = new_encrypted
+                has_password_changed = True
 
         if new_password.name != existing_password.name:
             existing_password.name = new_password.name
