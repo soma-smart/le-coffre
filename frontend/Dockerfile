@@ -19,8 +19,8 @@ FROM nginx:1.27-alpine
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx template (BACKEND_URL is substituted at container startup)
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Copy built frontend files
 COPY --from=builder /frontend/dist /usr/share/nginx/html

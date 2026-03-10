@@ -1,0 +1,25 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    environment:
+      BACKEND_URL: http://backend:8080
+      NGINX_ENVSUBST_FILTER: BACKEND_URL
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./server
+    environment:
+      DATABASE_URL: sqlite:////app/data/local_db.sqlite
+    volumes:
+      - db_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  db_data:

@@ -11,6 +11,12 @@ import { PrimeVueResolver } from '@primevue/auto-import-resolver';
 export default defineConfig({
   server: {
     host: true,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_URL ?? 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     tailwindcss(),

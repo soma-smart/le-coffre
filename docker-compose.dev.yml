@@ -1,24 +1,32 @@
 services:
-  devcontainer:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-      args:
-        USER_UID: ${USER_UID:-1000}
-        USER_GID: ${USER_GID:-1000}
-        USERNAME: devuser
+  backend:
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+    working_dir: /app/server
     volumes:
-      - .:/app
-      - /app/frontend/node_modules
-      - /app/server/.venv
+      - ./server:/app/server
     ports:
-      - "8000:8000"  # Backend API (direct access for debugging)
-      - "5173:5173"  # Frontend dev server (direct access for debugging)
-      - "8123:8123"  # Nginx reverse proxy (main access point)
-    user: "${USER_UID:-1000}:${USER_GID:-1000}"
+      - "8000:8000"
     environment:
       - PYTHONPATH=/app/server/src
-      - USER_UID=${USER_UID:-1000}
-      - USER_GID=${USER_GID:-1000}
-      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8123}
-    command: tail -f /dev/null
+    env_file:
+      - path: .env
+        required: false
+      - path: server/.env
+        required: false
+    command: >
+      bash -c "uv sync && uv run uvicorn src.main:app
+               --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    image: oven/bun:1
+    working_dir: /app/frontend
+    volumes:
+      - ./frontend:/app/frontend
+      - /app/frontend/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    command: bash -c "[ -d node_modules ] || bun install && bun run dev"
+    depends_on:
+      - backend
