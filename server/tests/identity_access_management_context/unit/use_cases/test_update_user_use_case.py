@@ -1,11 +1,13 @@
 from uuid import UUID
-import pytest
-from identity_access_management_context.application.use_cases import UpdateUserUseCase
 
+import pytest
+
+from identity_access_management_context.application.commands import UpdateUserCommand
+from identity_access_management_context.application.use_cases import UpdateUserUseCase
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import UserUpdatedEvent
-from identity_access_management_context.application.commands import UpdateUserCommand
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+
 from ..fakes import FakeUserRepository
 
 

@@ -1,7 +1,7 @@
 from identity_access_management_context.application.gateways import (
+    SsoDiscoveryResult,
     SsoGateway,
     SsoUserInfo,
-    SsoDiscoveryResult,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
 from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
@@ -17,9 +17,7 @@ class FakeSsoGateway(SsoGateway):
     async def get_authorize_url(self, config: SsoConfiguration) -> str:
         return self._authorize_url
 
-    async def validate_callback(
-        self, config: SsoConfiguration, code: str
-    ) -> SsoUserInfo:
+    async def validate_callback(self, config: SsoConfiguration, code: str) -> SsoUserInfo:
         """Validate the SSO callback code and return user info"""
         if code not in self._valid_codes:
             raise InvalidSsoCodeException(f"Invalid SSO code: {code}")

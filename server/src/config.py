@@ -20,8 +20,7 @@ def get_jwt_secret_key() -> str:
         # Development fallback - generate a random secret for this session
         # This means tokens won't work across server restarts in dev
         warnings.warn(
-            "JWT_SECRET_KEY not set! Using random session key. "
-            "Set JWT_SECRET_KEY environment variable in production!",
+            "JWT_SECRET_KEY not set! Using random session key. Set JWT_SECRET_KEY environment variable in production!",
             stacklevel=2,
         )
         secret = secrets.token_urlsafe(32)

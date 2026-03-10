@@ -1,18 +1,20 @@
-import pytest
 from uuid import UUID
-from identity_access_management_context.application.use_cases import PromoteAdminUseCase
+
+import pytest
+
 from identity_access_management_context.application.commands import PromoteAdminCommand
 from identity_access_management_context.application.gateways import UserRepository
+from identity_access_management_context.application.use_cases import PromoteAdminUseCase
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import AdminPromotedEvent
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyAdminException,
     UserNotFoundException,
 )
-from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
-from shared_kernel.adapters.primary.exceptions import NotAdminError
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
 
 @pytest.fixture

@@ -1,21 +1,23 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.use_cases import DeletePasswordUseCase
-from ..fakes import (
-    FakePasswordPermissionsRepository,
-    FakePasswordRepository,
-    FakeGroupAccessGateway,
-    FakePasswordEventRepository,
-)
-from tests.fakes import FakeDomainEventPublisher
+from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
     UserNotOwnerOfGroupError,
 )
-from password_management_context.domain.entities import Password
 from password_management_context.domain.value_objects import PasswordPermission
+from tests.fakes import FakeDomainEventPublisher
+
+from ..fakes import (
+    FakeGroupAccessGateway,
+    FakePasswordEventRepository,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+)
 
 
 @pytest.fixture
@@ -73,9 +75,7 @@ def test_given_password_not_exists_when_deleting_password_should_raise_password_
     requester_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
     fake_resource_uuid = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
 
-    command = DeletePasswordCommand(
-        requester_id=requester_id, password_id=fake_resource_uuid
-    )
+    command = DeletePasswordCommand(requester_id=requester_id, password_id=fake_resource_uuid)
     with pytest.raises(PasswordNotFoundError):
         use_case.execute(command)
 
@@ -124,9 +124,7 @@ def test_given_password_when_deleting_should_remove_permissions(
 
     password_repository.save(resource)
     password_permissions_repository.set_owner(owner_group_id, resource.id)
-    password_permissions_repository.grant_access(
-        user_id, resource.id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(user_id, resource.id, PasswordPermission.READ)
     group_access_gateway.set_group_owner(owner_group_id, owner_id)
 
     command = DeletePasswordCommand(requester_id=owner_id, password_id=resource.id)

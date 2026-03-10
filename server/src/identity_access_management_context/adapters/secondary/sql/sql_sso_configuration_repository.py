@@ -1,11 +1,13 @@
-from sqlmodel import Session, select
 from datetime import datetime, timezone
+
+from sqlmodel import Session, select
 
 from identity_access_management_context.application.gateways import (
     SsoConfigurationRepository,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+
 from .model.sso_configuration_model import SsoConfigurationTable
 
 

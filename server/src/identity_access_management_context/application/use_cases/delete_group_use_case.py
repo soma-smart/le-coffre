@@ -1,22 +1,20 @@
 from identity_access_management_context.application.commands import DeleteGroupCommand
 from identity_access_management_context.application.gateways import (
-    GroupRepository,
-    GroupMemberRepository,
-    GroupUsageGateway,
     GroupEventRepository,
+    GroupMemberRepository,
+    GroupRepository,
+    GroupUsageGateway,
 )
 from identity_access_management_context.domain.events import GroupDeletedEvent
 from identity_access_management_context.domain.exceptions import (
+    CannotDeleteGroupStillUsedException,
+    CannotDeletePersonalGroupException,
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
-    CannotDeletePersonalGroupException,
-    CannotDeleteGroupStillUsedException,
 )
 from shared_kernel.application.gateways import DomainEventPublisher
-from shared_kernel.domain.services import AdminPermissionChecker
-
-
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class DeleteGroupUseCase(TracedUseCase):
@@ -44,14 +42,10 @@ class DeleteGroupUseCase(TracedUseCase):
 
         # Check if user is admin OR owner of the group
         is_admin = AdminPermissionChecker.is_admin(command.requesting_user)
-        is_owner = self.group_member_repository.is_owner(
-            command.group_id, command.requesting_user.user_id
-        )
+        is_owner = self.group_member_repository.is_owner(command.group_id, command.requesting_user.user_id)
 
         if not (is_admin or is_owner):
-            raise UserNotOwnerOfGroupException(
-                command.requesting_user.user_id, command.group_id
-            )
+            raise UserNotOwnerOfGroupException(command.requesting_user.user_id, command.group_id)
 
         if self.group_usage_gateway.is_group_used(command.group_id):
             raise CannotDeleteGroupStillUsedException(command.group_id)

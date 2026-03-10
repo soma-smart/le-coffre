@@ -1,9 +1,10 @@
-import pytest
 from datetime import datetime
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
-from shared_kernel.domain.entities import DomainEvent
+import pytest
+
 from shared_kernel.adapters.secondary import InMemoryDomainEventPublisher
+from shared_kernel.domain.entities import DomainEvent
 
 
 class SampleTestEvent(DomainEvent):
@@ -25,13 +26,9 @@ def event_publisher():
 
 @pytest.fixture
 def test_event():
-    return SampleTestEvent(
-        event_id=uuid4(), occurred_on=datetime.now(), data="test data"
-    )
+    return SampleTestEvent(event_id=uuid4(), occurred_on=datetime.now(), data="test data")
 
 
 @pytest.fixture
 def another_test_event():
-    return AnotherSampleTestEvent(
-        event_id=uuid4(), occurred_on=datetime.now(), value=42
-    )
+    return AnotherSampleTestEvent(event_id=uuid4(), occurred_on=datetime.now(), value=42)

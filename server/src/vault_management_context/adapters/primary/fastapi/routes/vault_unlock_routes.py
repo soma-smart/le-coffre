@@ -1,7 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from pydantic import BaseModel, ConfigDict, Field
 
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_unlock_vault_usecase,
@@ -12,8 +11,8 @@ from vault_management_context.application.use_cases.unlock_vault_use_case import
 )
 from vault_management_context.domain.entities.share import Share
 from vault_management_context.domain.exceptions import (
-    VaultManagementDomainError,
     ShareReconstructionError,
+    VaultManagementDomainError,
 )
 
 router = APIRouter(prefix="/vault", tags=["Vault"])
@@ -78,11 +77,9 @@ def unlock_vault(
         # Shares were stored but insufficient to unlock
         return JSONResponse(
             status_code=202,
-            content={
-                "message": "Shares accepted. More shares needed to unlock the vault."
-            },
+            content={"message": "Shares accepted. More shares needed to unlock the vault."},
         )
     except VaultManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal server error") from e

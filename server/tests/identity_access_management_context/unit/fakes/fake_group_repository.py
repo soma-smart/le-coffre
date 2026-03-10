@@ -1,7 +1,7 @@
 from typing import Dict
 from uuid import UUID
 
-from identity_access_management_context.domain.entities import PersonalGroup, Group
+from identity_access_management_context.domain.entities import Group, PersonalGroup
 
 
 class FakeGroupRepository:

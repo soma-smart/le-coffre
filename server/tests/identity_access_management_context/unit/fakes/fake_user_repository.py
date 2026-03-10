@@ -1,10 +1,11 @@
 from typing import Optional
 from uuid import UUID
+
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
-    UserNotFoundError,
     UserAlreadyExistsError,
+    UserNotFoundError,
 )
 from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 

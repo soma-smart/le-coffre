@@ -1,19 +1,20 @@
-import pytest
 from uuid import UUID
 
+import pytest
 
 from identity_access_management_context.application.commands import CreateGroupCommand
 from identity_access_management_context.application.use_cases import CreateGroupUseCase
+from identity_access_management_context.domain.entities import User
+from identity_access_management_context.domain.events import GroupCreatedEvent
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
-from identity_access_management_context.domain.entities import User
-from identity_access_management_context.domain.events import GroupCreatedEvent
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+
 from ..fakes import (
-    FakeUserRepository,
-    FakeGroupRepository,
     FakeGroupMemberRepository,
+    FakeGroupRepository,
+    FakeUserRepository,
 )
 
 

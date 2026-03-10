@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from uuid import UUID
-from typing import List
 
 from identity_access_management_context.domain.constants import ADMIN_ROLE
 from identity_access_management_context.domain.exceptions import (

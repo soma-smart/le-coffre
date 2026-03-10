@@ -1,23 +1,24 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
 import logging
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_update_user_password_usecase,
 )
-from identity_access_management_context.application.use_cases import (
-    UpdateUserPasswordUseCase,
-)
 from identity_access_management_context.application.commands import (
     UpdateUserPasswordCommand,
 )
-from identity_access_management_context.domain.exceptions import (
-    UserNotFoundException,
-    InvalidCredentialsException,
-    IdentityAccessManagementDomainError,
+from identity_access_management_context.application.use_cases import (
+    UpdateUserPasswordUseCase,
 )
-from shared_kernel.domain.entities import ValidatedUser
+from identity_access_management_context.domain.exceptions import (
+    IdentityAccessManagementDomainError,
+    InvalidCredentialsException,
+    UserNotFoundException,
+)
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
@@ -59,11 +60,11 @@ def update_user_password(
         usecase.execute(command)
 
     except InvalidCredentialsException as e:
-        raise HTTPException(status_code=401, detail=str(e))
+        raise HTTPException(status_code=401, detail=str(e)) from e
     except UserNotFoundException as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except IdentityAccessManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logging.error(e)
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

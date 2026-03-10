@@ -1,8 +1,9 @@
+import logging
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-import logging
+
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_vault_status_usecase,
 )
@@ -47,4 +48,4 @@ def get_vault_status(usecase=Depends(get_vault_status_usecase)):
         return {"status": status, "last_share_timestamp": last_share_timestamp}
     except Exception as e:
         logger.exception("Error getting vault status")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e

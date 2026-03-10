@@ -1,11 +1,12 @@
 from datetime import datetime
 from uuid import UUID
+
 from sqlmodel import Session
 
+from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
 from vault_management_context.adapters.secondary.sql.models.vault_event import (
     VaultEventTable,
 )
-from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
 
 
 class SqlVaultEventRepository(SQLBaseRepository):

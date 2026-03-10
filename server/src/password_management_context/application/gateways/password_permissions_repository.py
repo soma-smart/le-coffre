@@ -18,15 +18,11 @@ class PasswordPermissionsRepository(Protocol):
         """Check if an owner (user or group) is the owner of a password"""
         ...
 
-    def has_access(
-        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
-    ) -> bool:
+    def has_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
         """Check if a user has any access to a password (owner or shared)"""
         ...
 
-    def grant_access(
-        self, group_id: UUID, password_id: UUID, permission: PasswordPermission
-    ) -> None:
+    def grant_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> None:
         """Grant a user access to a password with specific permission"""
         ...
 
@@ -38,9 +34,7 @@ class PasswordPermissionsRepository(Protocol):
         """Get all groups who have access to a password with their permissions"""
         ...
 
-    def list_all_permissions_for_bulk(
-        self, password_ids: list[UUID]
-    ) -> BulkGroupPermissions:
+    def list_all_permissions_for_bulk(self, password_ids: list[UUID]) -> BulkGroupPermissions:
         """Get all group permissions for multiple passwords in a single call.
 
         Returns {password_id -> {group_id -> (is_owner, permissions)}}

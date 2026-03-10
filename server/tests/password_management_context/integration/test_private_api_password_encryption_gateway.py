@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from password_management_context.adapters.secondary.private_api import (
     PrivateApiPasswordEncryptionGateway,
@@ -18,9 +19,7 @@ def private_api_password_encryption_gateway(mock_encryption_api):
     return PrivateApiPasswordEncryptionGateway(mock_encryption_api)
 
 
-def test_should_encrypt_plaintext_password(
-    private_api_password_encryption_gateway, mock_encryption_api
-):
+def test_should_encrypt_plaintext_password(private_api_password_encryption_gateway, mock_encryption_api):
     # Arrange
     plaintext = "my_super_secret_password"
     expected_encrypted = "encrypted_data_xyz"
@@ -34,9 +33,7 @@ def test_should_encrypt_plaintext_password(
     mock_encryption_api.encrypt.assert_called_once_with(plaintext)
 
 
-def test_should_decrypt_ciphertext(
-    private_api_password_encryption_gateway, mock_encryption_api
-):
+def test_should_decrypt_ciphertext(private_api_password_encryption_gateway, mock_encryption_api):
     # Arrange
     ciphertext = "encrypted_data_xyz"
     expected_plaintext = "my_super_secret_password"

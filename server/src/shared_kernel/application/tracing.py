@@ -1,24 +1,34 @@
 """Distributed tracing utilities for use cases and the shared kernel."""
 
-import asyncio
 import functools
 import inspect
 
 try:
     import opentelemetry.trace as otel_trace
     from opentelemetry.trace import StatusCode
+
     tracer = otel_trace.get_tracer(__name__)
 except ImportError:
     # opentelemetry is not installed — use no-op stubs
     class _NoOpSpan:
-        def __enter__(self): return self
-        def __exit__(self, *_): pass
-        def set_attribute(self, *_): pass
-        def set_status(self, *_): pass
-        def record_exception(self, *_): pass
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def set_attribute(self, *_):
+            pass
+
+        def set_status(self, *_):
+            pass
+
+        def record_exception(self, *_):
+            pass
 
     class _NoOpTracer:
-        def start_as_current_span(self, *_, **__): return _NoOpSpan()
+        def start_as_current_span(self, *_, **__):
+            return _NoOpSpan()
 
     class StatusCode:
         ERROR = "ERROR"
@@ -26,17 +36,19 @@ except ImportError:
 
     tracer = _NoOpTracer()
 
-_ALLOWED_ATTRIBUTES = frozenset({
-    "app.use_case",
-    "app.bounded_context",
-    "user.id",
-    "db.system",
-    "db.operation",
-    "http.method",
-    "http.route",
-    "http.status_code",
-    "error.type",
-})
+_ALLOWED_ATTRIBUTES = frozenset(
+    {
+        "app.use_case",
+        "app.bounded_context",
+        "user.id",
+        "db.system",
+        "db.operation",
+        "http.method",
+        "http.route",
+        "http.status_code",
+        "error.type",
+    }
+)
 
 _TRACED = "_traced_execute"
 
@@ -54,6 +66,7 @@ def _wrap_execute(fn):
     Handles both synchronous and asynchronous execute() implementations.
     """
     if inspect.iscoroutinefunction(fn):
+
         @functools.wraps(fn)
         async def async_wrapper(self, *args, **kwargs):
             span_name = f"{type(self).__name__}.execute"
@@ -65,6 +78,7 @@ def _wrap_execute(fn):
                     span.set_status(StatusCode.ERROR, str(exc))
                     span.record_exception(exc)
                     raise
+
         setattr(async_wrapper, _TRACED, True)
         return async_wrapper
 
@@ -79,6 +93,7 @@ def _wrap_execute(fn):
                 span.set_status(StatusCode.ERROR, str(exc))
                 span.record_exception(exc)
                 raise
+
     setattr(wrapper, _TRACED, True)
     return wrapper
 

@@ -1,18 +1,19 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_update_user_usecase,
 )
-from identity_access_management_context.application.use_cases import UpdateUserUseCase
 from identity_access_management_context.application.commands import UpdateUserCommand
+from identity_access_management_context.application.use_cases import UpdateUserUseCase
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundError,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ def update_user(
         return {"id": updated_user_id, "message": "User updated successfully"}
 
     except UserNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in update user")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

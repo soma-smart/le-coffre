@@ -1,14 +1,15 @@
-import pytest
+from unittest.mock import AsyncMock, Mock
 from uuid import UUID
-from unittest.mock import Mock, AsyncMock
 
-from shared_kernel.adapters.primary.dependencies import get_current_user
+import pytest
+
 from identity_access_management_context.application.responses import (
     ValidateUserTokenResponse,
 )
 from identity_access_management_context.application.use_cases import (
     ValidateUserTokenUseCase,
 )
+from shared_kernel.adapters.primary.dependencies import get_current_user
 
 
 @pytest.mark.asyncio
@@ -31,9 +32,7 @@ async def test_get_current_user_should_use_roles_from_token_response():
     )
 
     # When get_current_user() is called with cookie
-    validated_user = await get_current_user(
-        access_token=jwt_token, validate_usecase=mock_usecase
-    )
+    validated_user = await get_current_user(access_token=jwt_token, validate_usecase=mock_usecase)
 
     # Then ValidatedUser should have roles=["user"]
     assert validated_user.roles == ["user"]
@@ -62,9 +61,7 @@ async def test_get_current_user_should_preserve_admin_role_for_admin_users():
     )
 
     # When get_current_user() is called with cookie
-    validated_user = await get_current_user(
-        access_token=jwt_token, validate_usecase=mock_usecase
-    )
+    validated_user = await get_current_user(access_token=jwt_token, validate_usecase=mock_usecase)
 
     # Then ValidatedUser should have roles=["admin"]
     assert validated_user.roles == ["admin"]

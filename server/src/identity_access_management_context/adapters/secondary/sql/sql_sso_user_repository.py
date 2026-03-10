@@ -1,14 +1,15 @@
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
-from identity_access_management_context.domain.entities.sso_user import SsoUser
-from sqlmodel import select, Session
-from .model.sso_users_model import SsoUsersTable
-from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
+from sqlmodel import Session, select
+
+from identity_access_management_context.domain.entities.sso_user import SsoUser
 from identity_access_management_context.domain.exceptions import (
     SsoUserAlreadyExistsException,
 )
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+
+from .model.sso_users_model import SsoUsersTable
 
 
 class SqlSsoUserRepository(SQLBaseRepository):
@@ -22,24 +23,18 @@ class SqlSsoUserRepository(SQLBaseRepository):
                 f"SSO user {sso_user.sso_user_id} with provider {sso_user.sso_provider} already exists"
             )
 
-        data = {
-            k: v for k, v in vars(sso_user).items() if v is not None
-        }  # Creating a dictionary without None values
+        data = {k: v for k, v in vars(sso_user).items() if v is not None}  # Creating a dictionary without None values
         db_obj = SsoUsersTable(**data)
         self._session.add(db_obj)
         self.commit_and_refresh(db_obj)
 
-    def update_last_login(
-        self, sso_user_id: str, sso_provider: str, last_login: datetime
-    ) -> None:
+    def update_last_login(self, sso_user_id: str, sso_provider: str, last_login: datetime) -> None:
         db_obj = self.get_by_sso_user_id(sso_user_id, sso_provider)
         if db_obj is not None:
             db_obj.last_login = last_login
             self.commit_and_refresh(db_obj)
 
-    def get_by_sso_user_id(
-        self, sso_user_id: str, sso_provider: str = "default"
-    ) -> SsoUser | None:
+    def get_by_sso_user_id(self, sso_user_id: str, sso_provider: str = "default") -> SsoUser | None:
         statement = select(SsoUsersTable).where(
             SsoUsersTable.sso_user_id == str(sso_user_id),
             SsoUsersTable.sso_provider == sso_provider,
@@ -48,8 +43,6 @@ class SqlSsoUserRepository(SQLBaseRepository):
         return results
 
     def get_by_user_id(self, user_id: UUID) -> SsoUser | None:
-        statement = select(SsoUsersTable).where(
-            SsoUsersTable.internal_user_id == user_id
-        )
+        statement = select(SsoUsersTable).where(SsoUsersTable.internal_user_id == user_id)
         results = self._session.exec(statement).first()
         return results

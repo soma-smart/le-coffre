@@ -1,12 +1,12 @@
 from typing import List
 
-from vault_management_context.domain.entities.share import Share
-from vault_management_context.domain.value_objects import (
-    VaultConfiguration,
-    ShamirResult,
-)
 from vault_management_context.application.gateways import (
     ShamirGateway,
+)
+from vault_management_context.domain.entities.share import Share
+from vault_management_context.domain.value_objects import (
+    ShamirResult,
+    VaultConfiguration,
 )
 
 

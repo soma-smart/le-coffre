@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 
 from identity_access_management_context.application.commands import (
@@ -7,8 +9,8 @@ from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
+
 from ..fakes import FakeSsoConfigurationRepository
-from datetime import datetime, timezone
 
 
 @pytest.fixture

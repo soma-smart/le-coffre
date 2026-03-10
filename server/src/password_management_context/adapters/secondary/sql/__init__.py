@@ -1,10 +1,11 @@
-from .model.password import PasswordTable
+from .model.password import PasswordTable as PasswordTable
+from .model.password_event import PasswordEventTable as PasswordEventTable
 from .model.permissions import (
-    PermissionsTable,
-    OwnershipTable,
+    OwnershipTable as OwnershipTable,
 )
-from .model.password_event import PasswordEventTable
-
-from .sql_password_permissions_repository import SqlPasswordPermissionsRepository
-from .sql_password_repository import SqlPasswordRepository
-from .sql_password_event_repository import SqlPasswordEventRepository
+from .model.permissions import (
+    PermissionsTable as PermissionsTable,
+)
+from .sql_password_event_repository import SqlPasswordEventRepository as SqlPasswordEventRepository
+from .sql_password_permissions_repository import SqlPasswordPermissionsRepository as SqlPasswordPermissionsRepository
+from .sql_password_repository import SqlPasswordRepository as SqlPasswordRepository

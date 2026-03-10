@@ -71,6 +71,14 @@ jobs:
         working-directory: server/
         run: uv sync --frozen --group monitoring
 
+      - name: Check Formatting
+        working-directory: server/
+        run: uv run ruff format --check .
+
+      - name: Run Linting
+        working-directory: server/
+        run: uv run ruff check .
+
       - name: Check Alembic Migrations
         working-directory: server/
         run: |
@@ -128,6 +136,14 @@ jobs:
       - name: Install dependencies (without monitoring group)
         working-directory: server/
         run: uv sync --frozen
+
+      - name: Check Formatting
+        working-directory: server/
+        run: uv run ruff format --check .
+
+      - name: Run Linting
+        working-directory: server/
+        run: uv run ruff check .
 
       - name: Run Unit Tests
         working-directory: server/

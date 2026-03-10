@@ -1,19 +1,15 @@
-from identity_access_management_context.application.gateways import (
-    UserRepository,
-    SsoUserRepository,
-)
 from identity_access_management_context.application.commands import GetUserMeCommand
+from identity_access_management_context.application.gateways import (
+    SsoUserRepository,
+    UserRepository,
+)
 from identity_access_management_context.application.responses import GetUserMeResponse
 from identity_access_management_context.domain.exceptions import UserNotFoundException
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
 class GetUserMeUseCase(TracedUseCase):
-    def __init__(
-        self, user_repository: UserRepository, sso_user_repository: SsoUserRepository
-    ):
+    def __init__(self, user_repository: UserRepository, sso_user_repository: SsoUserRepository):
         self.user_repository = user_repository
         self.sso_user_repository = sso_user_repository
 

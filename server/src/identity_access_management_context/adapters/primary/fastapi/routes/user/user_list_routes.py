@@ -1,15 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_user_usecase,
 )
 from identity_access_management_context.application.commands import ListUserCommand
 from identity_access_management_context.application.use_cases import ListUserUseCase
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -57,4 +58,4 @@ def list_users(
         ]
     except Exception as e:
         logger.exception("Unexpected error in list users")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

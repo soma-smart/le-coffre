@@ -1,12 +1,12 @@
-from typing import Optional
 from sqlmodel import Session, select
 
-from .models.vault import VaultTable
-from vault_management_context.domain.entities import Vault
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from vault_management_context.application.gateways.vault_repository import (
     VaultRepository,
 )
-from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+from vault_management_context.domain.entities import Vault
+
+from .models.vault import VaultTable
 
 
 class SqlVaultRepository(SQLBaseRepository, VaultRepository):

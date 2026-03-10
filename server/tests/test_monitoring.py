@@ -2,15 +2,17 @@ import json
 import logging
 import os
 import sys
-import pytest
-pytest.importorskip("opentelemetry")
-from unittest.mock import patch, MagicMock, call
-from fastapi import FastAPI
-import opentelemetry.trace as otel_trace
-from opentelemetry.trace import NonRecordingSpan, INVALID_SPAN_CONTEXT
-from opentelemetry.trace import StatusCode
 
-from monitoring import JsonFormatter, setup_monitoring, _UvicornAccessFilter, setup_logging, _parse_resource_attributes
+import pytest
+
+pytest.importorskip("opentelemetry")
+from unittest.mock import MagicMock, patch
+
+import opentelemetry.trace as otel_trace
+from fastapi import FastAPI
+from opentelemetry.trace import INVALID_SPAN_CONTEXT, NonRecordingSpan
+
+from monitoring import JsonFormatter, _parse_resource_attributes, _UvicornAccessFilter, setup_logging, setup_monitoring
 
 
 @pytest.fixture
@@ -169,8 +171,13 @@ def test_filter_keeps_business_routes():
 
 def _make_application_record(level=logging.INFO, msg="hello world", name="src.main"):
     record = logging.LogRecord(
-        name=name, level=level, pathname="", lineno=0,
-        msg=msg, args=(), exc_info=None,
+        name=name,
+        level=level,
+        pathname="",
+        lineno=0,
+        msg=msg,
+        args=(),
+        exc_info=None,
     )
     return record
 
@@ -206,8 +213,13 @@ def test_json_formatter_with_exc_info_includes_exception():
         raise ValueError("boom")
     except ValueError:
         record = logging.LogRecord(
-            name="src.main", level=logging.ERROR, pathname="", lineno=0,
-            msg="something failed", args=(), exc_info=sys.exc_info(),
+            name="src.main",
+            level=logging.ERROR,
+            pathname="",
+            lineno=0,
+            msg="something failed",
+            args=(),
+            exc_info=sys.exc_info(),
         )
         parsed = json.loads(fmt.format(record))
     assert "exception" in parsed
@@ -240,7 +252,10 @@ def test_json_formatter_handles_uvicorn_access_tuple_args():
     """Uvicorn access logs use tuple args — must not crash."""
     fmt = JsonFormatter()
     record = logging.LogRecord(
-        name="uvicorn.access", level=logging.INFO, pathname="", lineno=0,
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
         msg='%s - "%s %s HTTP/%s" %d',
         args=("127.0.0.1:1234", "GET", "/api/passwords/list", "1.1", 200),
         exc_info=None,
@@ -311,8 +326,11 @@ def test_setup_logging_installs_json_formatter_on_uvicorn_error():
 
 
 def test_parse_resource_attributes_empty_when_no_env_vars():
-    env = {k: v for k, v in os.environ.items()
-           if k not in ("OTEL_RESOURCE_ATTRIBUTES", "POD_NAME", "NODE_NAME", "POD_NAMESPACE")}
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in ("OTEL_RESOURCE_ATTRIBUTES", "POD_NAME", "NODE_NAME", "POD_NAMESPACE")
+    }
     with patch.dict(os.environ, env, clear=True):
         assert _parse_resource_attributes() == {}
 
@@ -448,7 +466,9 @@ def test_build_sampler_invalid_arg_falls_back_to_parentbased(caplog):
     with patch("monitoring.ALWAYS_ON", mock_always_on):
         with patch("monitoring.ParentBased", mock_parent_based):
             with patch("monitoring.TraceIdRatioBased", mock_traceid_ratio):
-                with patch.dict(os.environ, {"OTEL_TRACES_SAMPLER": "traceidratio", "OTEL_TRACES_SAMPLER_ARG": "not-a-float"}):
+                with patch.dict(
+                    os.environ, {"OTEL_TRACES_SAMPLER": "traceidratio", "OTEL_TRACES_SAMPLER_ARG": "not-a-float"}
+                ):
                     with caplog.at_level(logging.WARNING, logger="monitoring"):
                         _build_sampler()
 
@@ -480,6 +500,7 @@ def test_build_sampler_out_of_range_falls_back_to_parentbased(caplog):
 def test_configure_otel_instruments_sqlalchemy(app):
     """_configure_otel must call SQLAlchemyInstrumentor().instrument()."""
     from monitoring import _configure_otel
+
     mock_sqla = MagicMock()
     with patch("monitoring._warn_insecure_otlp"):
         with patch("monitoring.SQLAlchemyInstrumentor", mock_sqla):
@@ -494,7 +515,10 @@ def test_configure_otel_instruments_sqlalchemy(app):
                                             with patch("monitoring.FastAPIInstrumentor", MagicMock()):
                                                 with patch("monitoring.otel_trace", MagicMock()):
                                                     with patch("monitoring.otel_metrics", MagicMock()):
-                                                        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
+                                                        with patch.dict(
+                                                            os.environ,
+                                                            {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"},
+                                                        ):
                                                             _configure_otel(app)
     mock_sqla.return_value.instrument.assert_called_once()
 
@@ -502,6 +526,7 @@ def test_configure_otel_instruments_sqlalchemy(app):
 def test_configure_otel_instruments_httpx(app):
     """_configure_otel must call HTTPXClientInstrumentor().instrument()."""
     from monitoring import _configure_otel
+
     mock_httpx = MagicMock()
     with patch("monitoring._warn_insecure_otlp"):
         with patch("monitoring.SQLAlchemyInstrumentor", MagicMock()):
@@ -516,7 +541,10 @@ def test_configure_otel_instruments_httpx(app):
                                             with patch("monitoring.FastAPIInstrumentor", MagicMock()):
                                                 with patch("monitoring.otel_trace", MagicMock()):
                                                     with patch("monitoring.otel_metrics", MagicMock()):
-                                                        with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
+                                                        with patch.dict(
+                                                            os.environ,
+                                                            {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"},
+                                                        ):
                                                             _configure_otel(app)
     mock_httpx.return_value.instrument.assert_called_once()
 
@@ -557,8 +585,15 @@ def test_configure_otel_sets_global_tracer_provider(app):
                                                 with patch("monitoring.FastAPIInstrumentor", mock_instrumentor):
                                                     with patch("monitoring.ALWAYS_ON", mock_always_on):
                                                         with patch("monitoring.ParentBased", mock_parent_based):
-                                                            with patch("monitoring.TraceIdRatioBased", mock_traceid_ratio):
-                                                                with patch.dict(os.environ, {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"}):
+                                                            with patch(
+                                                                "monitoring.TraceIdRatioBased", mock_traceid_ratio
+                                                            ):
+                                                                with patch.dict(
+                                                                    os.environ,
+                                                                    {
+                                                                        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://collector:4318"
+                                                                    },
+                                                                ):
                                                                     result = _configure_otel(app)
 
     mock_otel_trace.set_tracer_provider.assert_called_once_with(mock_tracer_provider_instance)

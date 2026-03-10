@@ -1,21 +1,24 @@
 from uuid import UUID, uuid4
+
 import pytest
-from password_management_context.application.use_cases import UnshareAccessUseCase
+
 from password_management_context.application.commands import UnshareResourceCommand
+from password_management_context.application.use_cases import UnshareAccessUseCase
 from password_management_context.domain.entities.password import Password
 from password_management_context.domain.exceptions import (
-    PasswordAccessDeniedError,
     CannotUnshareWithOwnerError,
+    PasswordAccessDeniedError,
     PasswordNotFoundError,
 )
+from password_management_context.domain.value_objects import PasswordPermission
+from tests.fakes import FakeDomainEventPublisher
+
 from ..fakes import (
-    FakePasswordPermissionsRepository,
-    FakePasswordRepository,
     FakeGroupAccessGateway,
     FakePasswordEventRepository,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
 )
-from tests.fakes import FakeDomainEventPublisher
-from password_management_context.domain.value_objects import PasswordPermission
 
 
 @pytest.fixture()
@@ -57,20 +60,14 @@ def test_given_owner_and_group_with_read_access_when_unsharing_access_should_rev
     password_permissions_repository.set_owner(owner_group_id, password.id)
     group_access_gateway.set_group_owner(owner_group_id, owner_id)
     # Grant READ to target group
-    password_permissions_repository.grant_access(
-        target_group_id, password.id, PasswordPermission.READ
-    )
-    group_access_gateway.set_group_owner(
-        target_group_id, UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e7")
-    )
+    password_permissions_repository.grant_access(target_group_id, password.id, PasswordPermission.READ)
+    group_access_gateway.set_group_owner(target_group_id, UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e7"))
 
     # Act: When owner unshares from the group
     use_case.execute(UnshareResourceCommand(owner_id, target_group_id, password.id))
 
     # Assert: Then the group should no longer have READ access
-    assert not password_permissions_repository.has_access(
-        target_group_id, password.id, PasswordPermission.READ
-    )
+    assert not password_permissions_repository.has_access(target_group_id, password.id, PasswordPermission.READ)
 
 
 def test_given_non_owner_when_unsharing_access_should_raise_access_denied_error(
@@ -86,18 +83,12 @@ def test_given_non_owner_when_unsharing_access_should_raise_access_denied_error(
 
     password_repository.save(password)
     # Grant READ to target group but no owner set
-    password_permissions_repository.grant_access(
-        target_group_id, password.id, PasswordPermission.READ
-    )
-    group_access_gateway.set_group_owner(
-        target_group_id, UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e7")
-    )
+    password_permissions_repository.grant_access(target_group_id, password.id, PasswordPermission.READ)
+    group_access_gateway.set_group_owner(target_group_id, UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e7"))
 
     # Act & Assert: When non-owner tries to unshare, should fail
     with pytest.raises(PasswordAccessDeniedError):
-        use_case.execute(
-            UnshareResourceCommand(not_owner_id, target_group_id, password.id)
-        )
+        use_case.execute(UnshareResourceCommand(not_owner_id, target_group_id, password.id))
 
 
 def test_given_owner_group_when_unsharing_from_owner_group_should_raise_cannot_unshare_error(
@@ -119,9 +110,7 @@ def test_given_owner_group_when_unsharing_from_owner_group_should_raise_cannot_u
 
     # Act: When owner tries to unshare from the owner group itself
     with pytest.raises(CannotUnshareWithOwnerError):
-        use_case.execute(
-            UnshareResourceCommand(first_owner_id, first_owner_group_id, password.id)
-        )
+        use_case.execute(UnshareResourceCommand(first_owner_id, first_owner_group_id, password.id))
 
 
 def test_given_password_not_exists_when_unsharing_access_should_raise_password_not_found_error(
@@ -135,9 +124,7 @@ def test_given_password_not_exists_when_unsharing_access_should_raise_password_n
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
     password_permissions_repository.set_owner(owner_id, password_id)
-    password_permissions_repository.grant_access(
-        user_id, password_id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(user_id, password_id, PasswordPermission.READ)
 
     # Act: When owner unshares the resource
     with pytest.raises(PasswordNotFoundError):

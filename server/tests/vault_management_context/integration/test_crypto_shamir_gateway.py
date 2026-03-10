@@ -1,9 +1,9 @@
 import pytest
 
+from vault_management_context.adapters.secondary import CryptoShamirGateway
 from vault_management_context.domain.value_objects import (
     VaultConfiguration,
 )
-from vault_management_context.adapters.secondary import CryptoShamirGateway
 
 
 @pytest.fixture

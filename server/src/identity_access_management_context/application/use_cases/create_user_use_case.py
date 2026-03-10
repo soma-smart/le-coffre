@@ -2,21 +2,19 @@ from uuid import UUID
 
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.gateways import (
-    UserRepository,
-    UserPasswordRepository,
-    GroupRepository,
     GroupMemberRepository,
+    GroupRepository,
     PasswordHashingGateway,
     UserEventRepository,
+    UserPasswordRepository,
+    UserRepository,
 )
 from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import User, UserPassword
 from identity_access_management_context.domain.events import UserCreatedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
-from shared_kernel.domain.services import AdminPermissionChecker
-
-
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class CreateUserUseCase(TracedUseCase):

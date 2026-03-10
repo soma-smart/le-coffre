@@ -3,23 +3,23 @@ from uuid import UUID
 
 from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEncryptionGateway,
     PasswordEventRepository,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.responses import PasswordResponse
 from password_management_context.application.services import (
     PasswordEventStorageService,
     PasswordTimestampService,
 )
-from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
-    PasswordAccessDeniedError,
-)
 from password_management_context.domain.events import (
     PasswordAccessedEvent,
+)
+from password_management_context.domain.exceptions import (
+    PasswordAccessDeniedError,
+    PasswordNotFoundError,
 )
 from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.application.gateways import DomainEventPublisher
@@ -51,21 +51,15 @@ class GetPasswordUseCase(TracedUseCase):
             raise PasswordNotFoundError(command.password_id)
 
         # Check if user has access through their groups
-        if not self._user_has_access_through_groups(
-            command.requester_id, command.password_id
-        ):
+        if not self._user_has_access_through_groups(command.requester_id, command.password_id):
             raise PasswordAccessDeniedError(command.requester_id, command.password_id)
 
         logger.info("Password accessed")
-        decrypted_password = self.password_encryption_gateway.decrypt(
-            password_entity.encrypted_value
-        )
+        decrypted_password = self.password_encryption_gateway.decrypt(password_entity.encrypted_value)
 
         # Retrieve timestamps using service
         timestamp_service = PasswordTimestampService(self.password_event_repository)
-        created_at, last_password_updated_at = timestamp_service.get_timestamps(
-            command.password_id
-        )
+        created_at, last_password_updated_at = timestamp_service.get_timestamps(command.password_id)
 
         # Store domain event
         event = PasswordAccessedEvent(
@@ -73,9 +67,7 @@ class GetPasswordUseCase(TracedUseCase):
             password_name=password_entity.name,
             accessed_by_user_id=command.requester_id,
         )
-        event_storage_service = PasswordEventStorageService(
-            self.password_event_repository
-        )
+        event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)
 
         return PasswordResponse(
@@ -91,18 +83,12 @@ class GetPasswordUseCase(TracedUseCase):
 
     def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
         """Check if user has access to password through any of their groups"""
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            password_id
-        )
+        all_permissions = self.password_permissions_repository.list_all_permissions_for(password_id)
 
         for group_id, (is_owner, permissions) in all_permissions.items():
             # Check if user is owner or member of this group
-            is_user_owner = self.group_access_gateway.is_user_owner_of_group(
-                user_id, group_id
-            )
-            is_user_member = self.group_access_gateway.is_user_member_of_group(
-                user_id, group_id
-            )
+            is_user_owner = self.group_access_gateway.is_user_owner_of_group(user_id, group_id)
+            is_user_member = self.group_access_gateway.is_user_member_of_group(user_id, group_id)
 
             if is_user_owner or is_user_member:
                 # If the group is the owner or has READ permission, user has access

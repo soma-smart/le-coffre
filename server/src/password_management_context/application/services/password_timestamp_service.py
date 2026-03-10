@@ -27,9 +27,7 @@ class PasswordTimestampService:
             event_types=["PasswordCreatedEvent"],
         )
         if not creation_events:
-            raise RuntimeError(
-                f"No PasswordCreatedEvent found for password {password_id}"
-            )
+            raise RuntimeError(f"No PasswordCreatedEvent found for password {password_id}")
 
         created_at = self._parse_occurred_on(creation_events[0]["occurred_on"])
 
@@ -37,15 +35,11 @@ class PasswordTimestampService:
             password_id=password_id,
             event_types=["PasswordUpdatedEvent"],
         )
-        last_password_updated_at = self._find_last_password_update(
-            update_events, created_at
-        )
+        last_password_updated_at = self._find_last_password_update(update_events, created_at)
 
         return created_at, last_password_updated_at
 
-    def get_timestamps_bulk(
-        self, password_ids: list[UUID]
-    ) -> dict[UUID, tuple[datetime, datetime]]:
+    def get_timestamps_bulk(self, password_ids: list[UUID]) -> dict[UUID, tuple[datetime, datetime]]:
         """Get timestamps for multiple passwords efficiently.
 
         Returns:
@@ -69,12 +63,8 @@ class PasswordTimestampService:
             password_events = events_by_password.get(password_id, [])
             created_at = self._extract_creation_date(password_events)
             if created_at is None:
-                raise RuntimeError(
-                    f"No PasswordCreatedEvent found for password {password_id}"
-                )
-            last_password_updated_at = self._find_last_password_update(
-                password_events, created_at
-            )
+                raise RuntimeError(f"No PasswordCreatedEvent found for password {password_id}")
+            last_password_updated_at = self._find_last_password_update(password_events, created_at)
             result[password_id] = (created_at, last_password_updated_at)
 
         return result
@@ -85,9 +75,7 @@ class PasswordTimestampService:
             return datetime.fromisoformat(occurred_on)
         return occurred_on
 
-    def _group_events_by_password(
-        self, all_events: list[dict]
-    ) -> dict[UUID, list[dict]]:
+    def _group_events_by_password(self, all_events: list[dict]) -> dict[UUID, list[dict]]:
         """Group events by password_id"""
         events_by_password: dict[UUID, list[dict]] = {}
         for event in all_events:
@@ -106,9 +94,7 @@ class PasswordTimestampService:
                 return self._parse_occurred_on(event["occurred_on"])
         return None
 
-    def _find_last_password_update(
-        self, events: list[dict], default_date: datetime
-    ) -> datetime:
+    def _find_last_password_update(self, events: list[dict], default_date: datetime) -> datetime:
         """Find the most recent password update event (where password value changed)
 
         Returns default_date if no password update events found

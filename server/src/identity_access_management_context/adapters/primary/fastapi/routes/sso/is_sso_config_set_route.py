@@ -1,6 +1,7 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-import logging
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_is_sso_config_set_usecase,
@@ -46,4 +47,4 @@ def is_sso_config_set(
         return IsSsoConfigSetResponse(is_set=result.is_set)
     except Exception as e:
         logger.exception("Unexpected error in check SSO config")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

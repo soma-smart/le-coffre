@@ -19,7 +19,5 @@ class SsoConfigurationDecryptingService:
         if not sso_config:
             raise ValueError("SSO configuration not found")
 
-        sso_config.client_secret_decrypted = self._sso_encryption_gateway.decrypt(
-            sso_config.client_secret
-        )
+        sso_config.client_secret_decrypted = self._sso_encryption_gateway.decrypt(sso_config.client_secret)
         return sso_config

@@ -1,9 +1,11 @@
 from uuid import UUID
+
 import pytest
 
 from identity_access_management_context.application.commands import GetUserCommand
 from identity_access_management_context.application.use_cases import GetUserUseCase
 from identity_access_management_context.domain.entities import User
+
 from ..fakes import FakeUserRepository
 
 

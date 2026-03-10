@@ -1,5 +1,5 @@
-from typing import Dict, Any, Protocol, List, Optional
 from dataclasses import dataclass
+from typing import Any, Protocol
 from uuid import UUID
 
 

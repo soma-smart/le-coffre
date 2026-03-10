@@ -1,8 +1,6 @@
+from shared_kernel.application.tracing import TracedUseCase
 from vault_management_context.application.commands import ClearPendingSharesCommand
 from vault_management_context.application.gateways import ShareRepository
-
-
-from shared_kernel.application.tracing import TracedUseCase
 
 
 class ClearPendingSharesUseCase(TracedUseCase):

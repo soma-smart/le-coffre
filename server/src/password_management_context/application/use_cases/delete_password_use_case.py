@@ -1,24 +1,22 @@
 from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEventRepository,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.services import (
     PasswordEventStorageService,
 )
-from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
-    NotPasswordOwnerError,
-    UserNotOwnerOfGroupError,
-)
 from password_management_context.domain.events import (
     PasswordDeletedEvent,
 )
+from password_management_context.domain.exceptions import (
+    NotPasswordOwnerError,
+    PasswordNotFoundError,
+    UserNotOwnerOfGroupError,
+)
 from shared_kernel.application.gateways import DomainEventPublisher
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -42,9 +40,7 @@ class DeletePasswordUseCase(TracedUseCase):
             raise PasswordNotFoundError(command.password_id)
 
         # Get the owner group of the password
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            command.password_id
-        )
+        all_permissions = self.password_permissions_repository.list_all_permissions_for(command.password_id)
 
         # Find the owner group (there should be exactly one)
         owner_group_id = None
@@ -57,16 +53,12 @@ class DeletePasswordUseCase(TracedUseCase):
             raise NotPasswordOwnerError(command.requester_id, command.password_id)
 
         # Check if the user owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(
-            command.requester_id, owner_group_id
-        ):
+        if not self.group_access_gateway.is_user_owner_of_group(command.requester_id, owner_group_id):
             raise UserNotOwnerOfGroupError(command.requester_id, owner_group_id)
 
         self.password_repository.delete(command.password_id)
         # Revoke all permissions and ownerships for this specific password
-        self.password_permissions_repository.revoke_all_access_for_password(
-            command.password_id
-        )
+        self.password_permissions_repository.revoke_all_access_for_password(command.password_id)
 
         # Store domain event
         event = PasswordDeletedEvent(
@@ -74,7 +66,5 @@ class DeletePasswordUseCase(TracedUseCase):
             deleted_by_user_id=command.requester_id,
             owner_group_id=owner_group_id,
         )
-        event_storage_service = PasswordEventStorageService(
-            self.password_event_repository
-        )
+        event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)

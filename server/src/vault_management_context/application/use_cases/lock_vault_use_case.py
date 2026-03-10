@@ -1,24 +1,21 @@
 import logging
 
+from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 from vault_management_context.application.commands import LockVaultCommand
-
 from vault_management_context.application.gateways import (
+    VaultEventRepository,
     VaultRepository,
     VaultSessionGateway,
-    VaultEventRepository,
 )
-from vault_management_context.domain.exceptions import (
-    VaultNotSetupException,
-    VaultLockedException,
-)
-from shared_kernel.domain.services import AdminPermissionChecker
 from vault_management_context.domain.events import VaultLockedEvent
-from shared_kernel.application.gateways import DomainEventPublisher
+from vault_management_context.domain.exceptions import (
+    VaultLockedException,
+    VaultNotSetupException,
+)
 
-from shared_kernel.application.tracing import TracedUseCase
 logger = logging.getLogger(__name__)
-
-
 
 
 class LockVaultUseCase(TracedUseCase):
@@ -44,8 +41,8 @@ class LockVaultUseCase(TracedUseCase):
 
         try:
             self._vault_session_gateway.get_decrypted_key()
-        except ValueError:
-            raise VaultLockedException()
+        except ValueError as e:
+            raise VaultLockedException() from e
 
         self._vault_session_gateway.clear_decrypted_key()
 

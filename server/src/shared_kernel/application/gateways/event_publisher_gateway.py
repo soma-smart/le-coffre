@@ -1,4 +1,4 @@
-from typing import Protocol, Type, Callable, TypeVar
+from typing import Callable, Protocol, TypeVar
 
 from shared_kernel.domain.entities import DomainEvent
 

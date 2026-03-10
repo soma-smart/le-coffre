@@ -1,17 +1,19 @@
-from typing import Optional, List
+import json
 from uuid import UUID
-from .model.users_model import UserTable
+
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
+
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
-    UserNotFoundError,
     UserAlreadyExistsError,
+    UserNotFoundError,
 )
-from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
-import json
+from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
+
+from .model.users_model import UserTable
 
 
 class SqlUserRepository(SQLBaseRepository, UserRepository):
@@ -70,8 +72,8 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
         self._session.add(db_obj)
         try:
             self.commit_and_refresh(db_obj)
-        except IntegrityError:
-            raise UserAlreadyExistsError(user.username)
+        except IntegrityError as e:
+            raise UserAlreadyExistsError(user.username) from e
 
     def delete(self, user_id: UUID) -> None:
         statement = select(UserTable).where(UserTable.id == user_id)

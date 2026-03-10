@@ -1,27 +1,29 @@
-import pytest
 from uuid import uuid4
 
-from ..fakes import (
-    FakeVaultRepository,
-    FakeShamirGateway,
-    FakeEncryptionGateway,
-    FakeVaultSessionGateway,
-)
+import pytest
+
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from vault_management_context.application.commands import CreateVaultCommand
-from vault_management_context.domain.entities import Vault, Share
 from vault_management_context.application.responses.vault_status import VaultStatus
-from vault_management_context.domain.exceptions import (
-    VaultAlreadyExistsError,
-    InvalidShareCountError,
-    InvalidThresholdError,
-    ThresholdExceedsShareCountError,
-)
 from vault_management_context.application.use_cases import (
     CreateVaultUseCase,
 )
-from vault_management_context.domain.value_objects.shamir_result import ShamirResult
+from vault_management_context.domain.entities import Share, Vault
 from vault_management_context.domain.events import VaultCreatedEvent
-from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+from vault_management_context.domain.exceptions import (
+    InvalidShareCountError,
+    InvalidThresholdError,
+    ThresholdExceedsShareCountError,
+    VaultAlreadyExistsError,
+)
+from vault_management_context.domain.value_objects.shamir_result import ShamirResult
+
+from ..fakes import (
+    FakeEncryptionGateway,
+    FakeShamirGateway,
+    FakeVaultRepository,
+    FakeVaultSessionGateway,
+)
 
 
 @pytest.fixture()
@@ -34,7 +36,12 @@ def use_case(
     vault_event_repository,
 ):
     return CreateVaultUseCase(
-        vault_repository, shamir_gateway, encryption_gateway, vault_session_gateway, event_publisher, vault_event_repository
+        vault_repository,
+        shamir_gateway,
+        encryption_gateway,
+        vault_session_gateway,
+        event_publisher,
+        vault_event_repository,
     )
 
 
@@ -60,9 +67,7 @@ def test_given_valid_vault_config_when_creating_vault_should_create_shares_and_s
 
     encryption_gateway.set_encrypted_data(encrypted_key)
     encryption_gateway.set_master_key(master_key)
-    encryption_gateway.set_decrypted_data(
-        "decrypted_vault_key"
-    )  # For decrypt_and_store_key
+    encryption_gateway.set_decrypted_data("decrypted_vault_key")  # For decrypt_and_store_key
 
     command = CreateVaultCommand(nb_shares=5, threshold=3, setup_id=setup_id)
     result = use_case.execute(command)
@@ -99,9 +104,7 @@ def test_given_existing_validated_vault_when_creating_vault_should_raise_vault_a
     with pytest.raises(VaultAlreadyExistsError) as exc_info:
         use_case.execute(command)
 
-    assert (
-        str(exc_info.value) == "A vault has already been created for this organization"
-    )
+    assert str(exc_info.value) == "A vault has already been created for this organization"
 
 
 def test_given_pending_vault_when_creating_vault_should_allow_re_setup(
@@ -130,9 +133,7 @@ def test_given_pending_vault_when_creating_vault_should_allow_re_setup(
     shamir_gateway.set_shamir_result(shamir_result)
     encryption_gateway.set_encrypted_data(encrypted_key)
     encryption_gateway.set_master_key(master_key)
-    encryption_gateway.set_decrypted_data(
-        "decrypted_vault_key"
-    )  # For decrypt_and_store_key
+    encryption_gateway.set_decrypted_data("decrypted_vault_key")  # For decrypt_and_store_key
 
     # Should be able to re-setup
     command = CreateVaultCommand(nb_shares=2, threshold=2, setup_id=new_setup_id)
@@ -148,10 +149,7 @@ def test_given_nb_shares_less_than_2_when_creating_vault_should_raise_invalid_sh
     with pytest.raises(InvalidShareCountError) as exc_info:
         use_case.execute(command)
 
-    assert (
-        str(exc_info.value)
-        == "Share count must be at least 2 for security reasons, got 1"
-    )
+    assert str(exc_info.value) == "Share count must be at least 2 for security reasons, got 1"
 
 
 def test_given_threshold_less_than_2_when_creating_vault_should_raise_invalid_threshold_error(
@@ -161,9 +159,7 @@ def test_given_threshold_less_than_2_when_creating_vault_should_raise_invalid_th
     with pytest.raises(InvalidThresholdError) as exc_info:
         use_case.execute(command)
 
-    assert (
-        str(exc_info.value) == "Threshold must be at least 2 to ensure security, got 1"
-    )
+    assert str(exc_info.value) == "Threshold must be at least 2 to ensure security, got 1"
 
 
 def test_given_threshold_greater_than_nb_shares_when_creating_vault_should_raise_threshold_exceeds_error(
@@ -173,9 +169,7 @@ def test_given_threshold_greater_than_nb_shares_when_creating_vault_should_raise
     with pytest.raises(ThresholdExceedsShareCountError) as exc_info:
         use_case.execute(command)
 
-    expected_message = (
-        "Threshold 4 cannot exceed share count 3 - impossible to unlock vault"
-    )
+    expected_message = "Threshold 4 cannot exceed share count 3 - impossible to unlock vault"
     assert str(exc_info.value) == expected_message
 
 

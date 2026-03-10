@@ -24,7 +24,7 @@ upgrade before reporting a vulnerability.
 
 To report a security vulnerability, please use the **GitHub Private Vulnerability Reporting** feature:
 
-1. Navigate to: https://github.com/soma-smart/le-coffre/security/advisories/new
+1. Navigate to: <https://github.com/soma-smart/le-coffre/security/advisories/new>
 2. Or go to the repository's **Security** tab and click **Report a vulnerability**
 3. Fill in the private advisory form with the details below
 
@@ -47,11 +47,13 @@ the issue:
 - Regular updates as the issue is investigated
 
 If the vulnerability is accepted:
+
 - We will work on a fix as quickly as possible
 - A security advisory may be published once the fix is released
 - Credit will be given to the reporter unless they request otherwise
 
 If the vulnerability is declined:
+
 - We will provide a clear explanation of the decision
 
 ### Responsible disclosure
@@ -73,6 +75,7 @@ This project is designed under the following security assumptions:
   process memory and therefore cryptographic material by design.
 
 The security model focuses on:
+
 - Preventing unauthorized access through the application layer
 - Enforcing strict authentication and authorization rules
 - Protecting secrets at rest through cryptographic mechanisms
@@ -119,10 +122,12 @@ Please report such issues immediately using the channels described above.
 ## Threat Model Summary
 
 We assume:
+
 - The server-side runtime is trusted unless an application-layer vulnerability is demonstrated.
 - The attacker may obtain database read access and should not be able to recover plaintext secrets from stored data alone.
 
 We aim to protect against:
+
 - Unauthorized access to secrets through broken authentication/authorization
 - Data disclosure from storage compromises (e.g., database leaks)
 - Accidental leakage through logs, telemetry, or backups
@@ -147,6 +152,7 @@ submitting Shamir shares.
 encryption key is needed for application functionality.
 
 **Mitigations**:
+
 - Deploy behind VPN, reverse proxy with IP restrictions, or within a trusted network only
 - All unsealing attempts are logged via audit events
 - Monitor unsealing patterns for anomalies
@@ -169,14 +175,16 @@ administrators only during unsealing operations.
 **Architecture decision**: This is an accepted limitation. An attacker with
 memory access to the running process has already compromised the runtime
 environment, which is outside our threat model (similar to HashiCorp Vault's
-position: https://github.com/hashicorp/vault/issues/1446).
+position: <https://github.com/hashicorp/vault/issues/1446>).
 
 **Mitigations in place**:
+
 - Vault can be locked (`/api/vault/lock`) to clear the key from memory when not in use
 - Only administrators can lock the vault
 - Minimize the duration the vault remains unlocked in production
 
 **Deployment recommendations**:
+
 - Deploy in hardened, isolated environments
 - Disable core dumps (`ulimit -c 0`)
 - Use memory protection features of the operating system where available
@@ -190,18 +198,21 @@ position: https://github.com/hashicorp/vault/issues/1446).
 **Classification**: Partially in scope.
 
 **Risks**:
+
 - Legitimate user exfiltrates all passwords they have access to
 - Group owner shares passwords with unauthorized groups
 - Collusion between users to aggregate access
 - Mass password retrieval without business justification
 
 **Protections in place**:
+
 - All password access operations emit audit events (create, read, update, delete, share, unshare)
 - Group-based permissions limit blast radius
 - Only group owners can share passwords
 - Audit trail records who accessed what and when
 
 **Detection & response**:
+
 - Review audit logs regularly for unusual access patterns
 - Monitor for mass password retrievals
 - Investigate unexpected sharing activities
@@ -222,6 +233,7 @@ controls, monitoring, and least-privilege access policies.
 access to passwords until session expiration.
 
 **Protections required** (deployment-specific):
+
 - HTTPS/TLS mandatory for all connections
 - Secure cookie flags (`Secure`, `HttpOnly`, `SameSite`)
 - Short session timeouts recommended
@@ -242,6 +254,7 @@ master key and decrypt the encryption key from the database, gaining access
 to all passwords.
 
 **Critical security guidance**:
+
 - **Never store N or more shares in the same location**
 - Store shares in physically separate, secure locations
 - Use different custodians for each share
@@ -251,6 +264,7 @@ to all passwords.
 - Treat each share as highly sensitive cryptographic material
 
 **Share distribution best practices**:
+
 1. Generate shares during initial setup
 2. Distribute to N different trusted administrators
 3. Each administrator stores their share securely and separately
@@ -271,6 +285,7 @@ of share holders.
 passwords and the encrypted encryption key.
 
 **Protections in place**:
+
 - All passwords encrypted with AES-256-GCM using unique IVs
 - Encryption key itself is encrypted with the master key (derived from Shamir shares)
 - Master key is never stored; must be reconstructed from shares
@@ -293,6 +308,7 @@ encryption guarantees should be reported as high-severity vulnerabilities.
 **Risk**: Compromised dependencies introduce vulnerabilities or backdoors.
 
 **Mitigations**:
+
 - Regular dependency updates via automated tooling
 - Use of well-established cryptographic libraries (PyCryptodome)
 - Code review for suspicious dependency behavior

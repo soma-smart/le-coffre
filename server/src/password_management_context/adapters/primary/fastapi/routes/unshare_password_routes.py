@@ -1,18 +1,19 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_unshare_access_usecase,
 )
-from password_management_context.application.use_cases import UnshareAccessUseCase
 from password_management_context.application.commands import UnshareResourceCommand
+from password_management_context.application.use_cases import UnshareAccessUseCase
 from password_management_context.domain.exceptions import (
-    PasswordAccessDeniedError,
     CannotUnshareWithOwnerError,
+    PasswordAccessDeniedError,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +52,9 @@ def unshare_password(
 
         return
     except PasswordAccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except CannotUnshareWithOwnerError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in unshare password")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

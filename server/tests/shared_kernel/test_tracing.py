@@ -1,8 +1,12 @@
 import asyncio
+
 import pytest
+
 pytest.importorskip("opentelemetry")
 from unittest.mock import MagicMock, patch
+
 from opentelemetry.trace import StatusCode
+
 from shared_kernel.application.tracing import TracedUseCase, safe_set_attributes
 
 
@@ -71,13 +75,16 @@ def test_traced_use_case_marks_span_error_on_exception():
 
 def test_safe_set_attributes_only_sets_allowlisted_keys():
     mock_span = MagicMock()
-    safe_set_attributes(mock_span, {
-        "user.id": "abc123",
-        "user.password": "secret",      # must be blocked
-        "db.operation": "commit",
-        "unknown.custom": "value",      # must be blocked
-        "app.use_case": "MyUseCase",
-    })
+    safe_set_attributes(
+        mock_span,
+        {
+            "user.id": "abc123",
+            "user.password": "secret",  # must be blocked
+            "db.operation": "commit",
+            "unknown.custom": "value",  # must be blocked
+            "app.use_case": "MyUseCase",
+        },
+    )
     set_keys = {call.args[0] for call in mock_span.set_attribute.call_args_list}
     assert "user.id" in set_keys
     assert "db.operation" in set_keys
@@ -118,6 +125,7 @@ def test_traced_use_case_no_double_wrap_on_subclass():
 
 # --- Async use case tests ---
 
+
 class AsyncUseCase(TracedUseCase):
     async def execute(self, value: int) -> int:
         return value * 3
@@ -152,5 +160,3 @@ def test_traced_use_case_async_marks_span_error():
     mock_span.set_status.assert_called_once()
     mock_span.record_exception.assert_called_once()
     assert mock_span.set_status.call_args[0][0] == StatusCode.ERROR
-
-

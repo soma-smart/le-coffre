@@ -2,15 +2,13 @@ from identity_access_management_context.application.commands import (
     GetSsoAuthorizeUrlCommand,
 )
 from identity_access_management_context.application.gateways import (
-    SsoGateway,
     SsoConfigurationRepository,
     SsoEncryptionGateway,
+    SsoGateway,
 )
 from identity_access_management_context.application.services import (
     SsoConfigurationDecryptingService,
 )
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 

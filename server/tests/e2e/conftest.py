@@ -1,15 +1,16 @@
-import pytest
-import tempfile
 import os
-import httpx
 import secrets
-from urllib.parse import quote, urlparse, parse_qs
-from fastapi.testclient import TestClient
-import oidc_provider_mock
-from sqlalchemy import create_engine, text
-from alembic.config import Config
-from alembic import command
+import tempfile
+from urllib.parse import parse_qs, quote, urlparse
 
+import httpx
+import oidc_provider_mock
+import pytest
+from alembic.config import Config
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, text
+
+from alembic import command
 from main import app
 
 
@@ -74,11 +75,7 @@ class CsrfTestClient(TestClient):
             headers = dict(headers)
 
         # Add CSRF token if auto-csrf is enabled and token not already present
-        if (
-            self._auto_csrf
-            and "X-CSRF-Token" not in headers
-            and "x-csrf-token" not in headers
-        ):
+        if self._auto_csrf and "X-CSRF-Token" not in headers and "x-csrf-token" not in headers:
             token = self._get_csrf_token()
             if token:
                 headers["X-CSRF-Token"] = token
@@ -204,17 +201,13 @@ def configured_sso(authenticated_admin_client, oidc_server, setup, database_path
             "discovery_url": oidc_server["discovery_url"],
         },
     )
-    assert configure_response.status_code == 200, (
-        f"SSO configuration failed: {configure_response.text}"
-    )
+    assert configure_response.status_code == 200, f"SSO configuration failed: {configure_response.text}"
     return oidc_server
 
 
 @pytest.fixture
 def oidc_test_user(oidc_server):
-    return create_sso_user_in_provider(
-        oidc_server, "e2euser@example.com", "E2E Test User"
-    )
+    return create_sso_user_in_provider(oidc_server, "e2euser@example.com", "E2E Test User")
 
 
 @pytest.fixture
@@ -264,9 +257,7 @@ def create_sso_user_in_provider(oidc_server, email, name):
         json=user_data,
     )
     # PUT is idempotent, so 204 means success (created or already exists)
-    assert response.status_code == 204, (
-        f"Failed to create user {email} in OIDC provider: {response.text}"
-    )
+    assert response.status_code == 204, f"Failed to create user {email} in OIDC provider: {response.text}"
 
     return {
         "sub": user_data["sub"],
@@ -283,9 +274,7 @@ def authenticate_sso_user(e2e_client, oidc_server, sso_user):
     """
     # Get SSO authorization URL
     url_response = e2e_client.get("/api/auth/sso/url")
-    assert url_response.status_code == 200, (
-        f"Failed to get SSO URL (is SSO configured?): {url_response.text}"
-    )
+    assert url_response.status_code == 200, f"Failed to get SSO URL (is SSO configured?): {url_response.text}"
 
     sso_url_data = url_response.json()
     if isinstance(sso_url_data, str):
@@ -313,12 +302,8 @@ def authenticate_sso_user(e2e_client, oidc_server, sso_user):
     assert valid_code, f"Authorization code not found in callback URL: {callback_url}"
 
     # Exchange code for token
-    valid_callback_response = e2e_client.get(
-        f"/api/auth/sso/callback?code={valid_code}"
-    )
-    assert valid_callback_response.status_code == 200, (
-        f"Valid callback failed: {valid_callback_response.text}"
-    )
+    valid_callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}")
+    assert valid_callback_response.status_code == 200, f"Valid callback failed: {valid_callback_response.text}"
 
     callback_data = valid_callback_response.json()
     assert "message" in callback_data, "Response should contain message"

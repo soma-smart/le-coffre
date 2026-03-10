@@ -1,13 +1,14 @@
 import pytest
 
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+
 from .fakes import (
-    FakeVaultRepository,
-    FakeShamirGateway,
     FakeEncryptionGateway,
-    FakeVaultSessionGateway,
+    FakeShamirGateway,
     FakeShareRepository,
     FakeVaultEventRepository,
+    FakeVaultRepository,
+    FakeVaultSessionGateway,
 )
 
 

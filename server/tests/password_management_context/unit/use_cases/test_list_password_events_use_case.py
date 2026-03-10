@@ -1,6 +1,7 @@
-import pytest
 from datetime import datetime
 from uuid import UUID
+
+import pytest
 
 from password_management_context.application.commands import (
     ListPasswordEventsCommand,
@@ -8,30 +9,25 @@ from password_management_context.application.commands import (
 from password_management_context.application.use_cases import (
     ListPasswordEventsUseCase,
 )
-from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
-    PasswordAccessDeniedError,
-)
 from password_management_context.domain.entities import Password
+from password_management_context.domain.exceptions import (
+    PasswordAccessDeniedError,
+    PasswordNotFoundError,
+)
 from password_management_context.domain.value_objects import PasswordPermission
-
 from shared_kernel.domain.entities import AuthenticatedUser
 
 from ..fakes import (
-    FakePasswordRepository,
-    FakePasswordPermissionsRepository,
     FakeGroupAccessGateway,
     FakePasswordEventRepository,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
     FakeUserInfoGateway,
 )
 
-ADMIN_USER = AuthenticatedUser(
-    user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"]
-)
+ADMIN_USER = AuthenticatedUser(user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"])
 
-REGULAR_USER = AuthenticatedUser(
-    user_id=UUID("9a742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=[]
-)
+REGULAR_USER = AuthenticatedUser(user_id=UUID("9a742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=[])
 
 
 @pytest.fixture
@@ -131,9 +127,7 @@ def test_should_return_events_when_owner_has_group_access(
             folder="default",
         )
     )
-    password_permissions_repository.grant_access(
-        group_id, password_id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(group_id, password_id, PasswordPermission.READ)
     group_access_gateway.set_group_owner(group_id, REGULAR_USER.user_id)
 
     password_event_repository.append_event(

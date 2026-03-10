@@ -1,10 +1,12 @@
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from identity_access_management_context.application.commands import ListGroupsCommand
 from identity_access_management_context.application.use_cases import ListGroupsUseCase
 from identity_access_management_context.domain.entities import Group
-from ..fakes import FakeGroupRepository, FakeGroupMemberRepository
+
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository
 
 
 @pytest.fixture
@@ -31,12 +33,8 @@ def test_given_groups_when_listing_groups_should_return_list_of_groups(
     user1 = uuid4()
     user2 = uuid4()
 
-    group_repository.save_group(
-        Group(id=group1, name="Group 1", is_personal=False, user_id=None)
-    )
-    group_repository.save_group(
-        Group(id=group2, name="Group 2", is_personal=False, user_id=None)
-    )
+    group_repository.save_group(Group(id=group1, name="Group 1", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=group2, name="Group 2", is_personal=False, user_id=None))
 
     # Add owners to the groups
     group_member_repository.add_member(group1, user1, is_owner=True)
@@ -77,9 +75,7 @@ def test_given_mixed_groups_when_listing_with_personal_should_return_all(
             user_id=user_id,
         )
     )
-    group_repository.save_group(
-        Group(id=shared_group_id, name="Shared Group", is_personal=False, user_id=None)
-    )
+    group_repository.save_group(Group(id=shared_group_id, name="Shared Group", is_personal=False, user_id=None))
 
     # Add owner to shared group
     group_member_repository.add_member(shared_group_id, owner_id, is_owner=True)
@@ -120,9 +116,7 @@ def test_given_mixed_groups_when_listing_without_personal_should_return_only_sha
             user_id=user_id,
         )
     )
-    group_repository.save_group(
-        Group(id=shared_group_id, name="Shared Group", is_personal=False, user_id=None)
-    )
+    group_repository.save_group(Group(id=shared_group_id, name="Shared Group", is_personal=False, user_id=None))
 
     # Add owner to shared group
     group_member_repository.add_member(shared_group_id, owner_id, is_owner=True)

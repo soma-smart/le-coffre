@@ -4,13 +4,11 @@ from password_management_context.application.commands import (
     DeletePasswordsForDeletedUserCommand,
 )
 from password_management_context.application.gateways import (
-    PasswordRepository,
     PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.domain.events import PasswordDeletedEvent
 from shared_kernel.application.gateways import DomainEventPublisher
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -39,11 +37,7 @@ class DeletePasswordsForDeletedUserUseCase(TracedUseCase):
         password_ids_owned: list[UUID] = []
 
         for password in all_passwords:
-            all_permissions = (
-                self.password_permissions_repository.list_all_permissions_for(
-                    password.id
-                )
-            )
+            all_permissions = self.password_permissions_repository.list_all_permissions_for(password.id)
 
             for entity_id, (is_owner, _) in all_permissions.items():
                 if is_owner and entity_id == personal_group_id:
@@ -52,9 +46,7 @@ class DeletePasswordsForDeletedUserUseCase(TracedUseCase):
 
         # Bulk delete all passwords and permissions owned by this group
         self.password_repository.delete_by_owner_group(personal_group_id)
-        self.password_permissions_repository.revoke_all_access_for_owner_group(
-            personal_group_id
-        )
+        self.password_permissions_repository.revoke_all_access_for_owner_group(personal_group_id)
 
         # Publish events for each deleted password (for audit trail)
         for password_id in password_ids_owned:

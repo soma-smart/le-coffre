@@ -1,14 +1,12 @@
 from identity_access_management_context.application.commands import (
     IsSsoConfigSetCommand,
 )
-from identity_access_management_context.application.responses import (
-    IsSsoConfigSetResponse,
-)
 from identity_access_management_context.application.gateways import (
     SsoConfigurationRepository,
 )
-
-
+from identity_access_management_context.application.responses import (
+    IsSsoConfigSetResponse,
+)
 from shared_kernel.application.tracing import TracedUseCase
 
 

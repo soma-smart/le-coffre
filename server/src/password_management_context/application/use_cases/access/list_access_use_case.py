@@ -2,22 +2,20 @@ from uuid import UUID
 
 from password_management_context.application.commands import ListAccessCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.responses import (
-    ListAccessResponse,
     GroupAccessResponse,
+    ListAccessResponse,
     UserAccessResponse,
 )
 from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
     PasswordAccessDeniedError,
+    PasswordNotFoundError,
 )
 from password_management_context.domain.value_objects import PasswordPermission
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -38,14 +36,10 @@ class ListAccessUseCase(TracedUseCase):
             raise PasswordNotFoundError(command.password_id)
 
         # Check if user has access through their groups
-        if not self._user_has_access_through_groups(
-            command.requester_id, command.password_id
-        ):
+        if not self._user_has_access_through_groups(command.requester_id, command.password_id):
             raise PasswordAccessDeniedError(command.requester_id, command.password_id)
 
-        permissions = self.password_permissions_repository.list_all_permissions_for(
-            command.password_id
-        )
+        permissions = self.password_permissions_repository.list_all_permissions_for(command.password_id)
 
         # Expand groups to users for the access list
         ret = ListAccessResponse([], [])
@@ -90,18 +84,12 @@ class ListAccessUseCase(TracedUseCase):
 
     def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
         """Check if user has access to password through any of their groups"""
-        all_permissions = self.password_permissions_repository.list_all_permissions_for(
-            password_id
-        )
+        all_permissions = self.password_permissions_repository.list_all_permissions_for(password_id)
 
         for group_id, (is_owner, permissions) in all_permissions.items():
             # Check if user is owner or member of this group
-            is_user_owner = self.group_access_gateway.is_user_owner_of_group(
-                user_id, group_id
-            )
-            is_user_member = self.group_access_gateway.is_user_member_of_group(
-                user_id, group_id
-            )
+            is_user_owner = self.group_access_gateway.is_user_owner_of_group(user_id, group_id)
+            is_user_member = self.group_access_gateway.is_user_member_of_group(user_id, group_id)
 
             if is_user_owner or is_user_member:
                 # If the group is the owner or has READ permission, user has access

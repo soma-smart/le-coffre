@@ -1,4 +1,5 @@
-from typing import TypeVar, Type, Callable
+from typing import Callable, Type, TypeVar
+
 from shared_kernel.domain.entities import DomainEvent
 
 T = TypeVar("T", bound=DomainEvent)

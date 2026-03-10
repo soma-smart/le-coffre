@@ -1,12 +1,14 @@
-import pytest
 from uuid import UUID
 
+import pytest
+
 from identity_access_management_context.application.commands import GetGroupCommand
-from identity_access_management_context.application.use_cases import GetGroupUseCase
 from identity_access_management_context.application.responses import GetGroupResponse
+from identity_access_management_context.application.use_cases import GetGroupUseCase
 from identity_access_management_context.domain.entities import Group
 from identity_access_management_context.domain.exceptions import GroupNotFoundException
-from ..fakes import FakeGroupRepository, FakeGroupMemberRepository
+
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository
 
 
 @pytest.fixture

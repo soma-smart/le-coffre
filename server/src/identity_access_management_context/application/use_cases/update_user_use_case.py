@@ -1,11 +1,10 @@
-from identity_access_management_context.application.gateways import UserRepository, UserEventRepository
+from uuid import UUID
+
 from identity_access_management_context.application.commands import UpdateUserCommand
+from identity_access_management_context.application.gateways import UserEventRepository, UserRepository
 from identity_access_management_context.domain.events import UserUpdatedEvent
 from identity_access_management_context.domain.exceptions import UserNotFoundError
 from shared_kernel.application.gateways import DomainEventPublisher
-from uuid import UUID
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 

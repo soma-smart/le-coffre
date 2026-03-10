@@ -5,24 +5,37 @@ This class provides automatic rollback on exceptions, preventing developers
 from forgetting to add rollback logic in individual repository methods.
 """
 
-from typing import Any
-from sqlmodel import Session
 import logging
+from typing import Any
+
+from sqlmodel import Session
 
 try:
     import opentelemetry.trace as otel_trace
     from opentelemetry.trace import StatusCode
+
     tracer = otel_trace.get_tracer(__name__)
 except ImportError:
+
     class _NoOpSpan:
-        def __enter__(self): return self
-        def __exit__(self, *_): pass
-        def set_attribute(self, *_): pass
-        def set_status(self, *_): pass
-        def record_exception(self, *_): pass
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
+
+        def set_attribute(self, *_):
+            pass
+
+        def set_status(self, *_):
+            pass
+
+        def record_exception(self, *_):
+            pass
 
     class _NoOpTracer:
-        def start_as_current_span(self, *_, **__): return _NoOpSpan()
+        def start_as_current_span(self, *_, **__):
+            return _NoOpSpan()
 
     class StatusCode:
         ERROR = "ERROR"

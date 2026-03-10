@@ -1,4 +1,5 @@
 import pytest
+
 from identity_access_management_context.application.commands import (
     GetSsoAuthorizeUrlCommand,
 )
@@ -6,10 +7,11 @@ from identity_access_management_context.application.use_cases import (
     GetSsoAuthorizeUrlUseCase,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
+
 from ..fakes import (
-    FakeSsoGateway,
     FakeSsoConfigurationRepository,
     FakeSsoEncryptionGateway,
+    FakeSsoGateway,
 )
 
 
@@ -19,9 +21,7 @@ def use_case(
     sso_configuration_repository: FakeSsoConfigurationRepository,
     sso_encryption_gateway: FakeSsoEncryptionGateway,
 ):
-    return GetSsoAuthorizeUrlUseCase(
-        sso_gateway, sso_configuration_repository, sso_encryption_gateway
-    )
+    return GetSsoAuthorizeUrlUseCase(sso_gateway, sso_configuration_repository, sso_encryption_gateway)
 
 
 @pytest.mark.asyncio

@@ -1,11 +1,12 @@
-import pytest
 from uuid import UUID
 
-from identity_access_management_context.application.use_cases import (
-    UpdateUserPasswordUseCase,
-)
+import pytest
+
 from identity_access_management_context.application.commands import (
     UpdateUserPasswordCommand,
+)
+from identity_access_management_context.application.use_cases import (
+    UpdateUserPasswordUseCase,
 )
 from identity_access_management_context.domain.entities import UserPassword
 from identity_access_management_context.domain.exceptions import (
@@ -13,8 +14,8 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
 from tests.identity_access_management_context.unit.fakes import (
-    FakeUserPasswordRepository,
     FakePasswordHashingGateway,
+    FakeUserPasswordRepository,
 )
 
 

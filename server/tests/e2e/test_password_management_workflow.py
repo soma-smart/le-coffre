@@ -12,10 +12,10 @@ This consolidated test covers the entire password lifecycle including:
 - Timestamp tracking (created_at, last_updated_at)
 """
 
-from uuid import UUID
 import time
-import jwt
+from uuid import UUID
 
+import jwt
 
 STRONG_PASSWORD = "StrongP@ssw0rd123"
 LOGIN = "My Login"
@@ -28,9 +28,7 @@ def get_user_id_from_token(token: str) -> str:
     return decoded["user_id"]
 
 
-def test_complete_password_management_workflow(
-    client_factory, setup, configured_sso, sso_user_token
-):
+def test_complete_password_management_workflow(client_factory, setup, configured_sso, sso_user_token):
     """
     Complete workflow covering all password management operations:
 
@@ -171,9 +169,7 @@ def test_complete_password_management_workflow(
     assert updated_data["url"] == "NEW " + URL
 
     # Verify timestamps: created_at should stay same, last_password_updated_at should change
-    assert updated_data["created_at"] == original_created_at, (
-        "created_at should not change after update"
-    )
+    assert updated_data["created_at"] == original_created_at, "created_at should not change after update"
     assert updated_data["last_password_updated_at"] != original_updated_at, ()
     assert updated_data["last_password_updated_at"] != original_updated_at, (
         "last_password_updated_at should change after update"
@@ -184,12 +180,8 @@ def test_complete_password_management_workflow(
     )
 
     print(f"✓ created_at unchanged: {updated_data['created_at']}")
-    print(
-        f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}"
-    )
-    print(
-        f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}"
-    )
+    print(f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}")
+    print(f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}")
 
     # Step 1.5: CREATE MORE PASSWORDS - Create additional passwords for list testing
     print("Step 1.5: Creating additional passwords for folder listing...")
@@ -219,9 +211,7 @@ def test_complete_password_management_workflow(
     for password in passwords:
         assert "created_at" in password, "Each password should have created_at"
         assert password["created_at"] is not None
-        assert "last_updated_at" in password, (
-            "Each password should have last_updated_at"
-        )
+        assert "last_updated_at" in password, "Each password should have last_updated_at"
         assert password["last_updated_at"] is not None
 
     print(f"✓ Found {len(passwords)} passwords in 'Work' folder with timestamps")
@@ -263,9 +253,7 @@ def test_complete_password_management_workflow(
     # Admin should see every password regardless of ownership.
     # Passwords the admin owns → can_read=True, can_write=True.
     # Passwords the admin has no group access to → can_read=False, can_write=False.
-    print(
-        "Step 1.11: Admin lists all passwords (should see all, with access flags reflecting group membership)..."
-    )
+    print("Step 1.11: Admin lists all passwords (should see all, with access flags reflecting group membership)...")
     admin_list_response = admin_client.get("/api/passwords/list")
     assert admin_list_response.status_code == 200
     admin_passwords = admin_list_response.json()
@@ -274,30 +262,20 @@ def test_complete_password_management_workflow(
     assert sso_password_id in all_ids, "Admin should see SSO user's password"
 
     sso_password_entry = next(p for p in admin_passwords if p["id"] == sso_password_id)
-    assert sso_password_entry["can_read"] is False, (
-        "Admin should have can_read=False for SSO user's password"
-    )
-    assert sso_password_entry["can_write"] is False, (
-        "Admin should have can_write=False for SSO user's password"
-    )
+    assert sso_password_entry["can_read"] is False, "Admin should have can_read=False for SSO user's password"
+    assert sso_password_entry["can_write"] is False, "Admin should have can_write=False for SSO user's password"
 
     admin_owned = [p for p in admin_passwords if p["id"] != sso_password_id]
     for p in admin_owned:
-        assert p["can_read"] is True, (
-            f"Admin password {p['id']} (owned by admin) should have can_read=True"
-        )
-        assert p["can_write"] is True, (
-            f"Admin password {p['id']} (owned by admin) should have can_write=True"
-        )
+        assert p["can_read"] is True, f"Admin password {p['id']} (owned by admin) should have can_read=True"
+        assert p["can_write"] is True, f"Admin password {p['id']} (owned by admin) should have can_write=True"
     print(
         f"✓ Admin sees {len(admin_passwords)} passwords, own passwords with full access and SSO user's password with no access"
     )
 
     # Step 1.12: SSO USER LISTS THEIR OWN PASSWORDS
     # Regular user should only see their own passwords, with correct permission flags
-    print(
-        "Step 1.12: SSO user lists their own passwords (can_read=True, can_write=True)..."
-    )
+    print("Step 1.12: SSO user lists their own passwords (can_read=True, can_write=True)...")
     sso_list_response = sso_client.get("/api/passwords/list")
     assert sso_list_response.status_code == 200
     sso_passwords = sso_list_response.json()
@@ -305,15 +283,9 @@ def test_complete_password_management_workflow(
     sso_password_ids = [p["id"] for p in sso_passwords]
     assert sso_password_id in sso_password_ids, "SSO user should see their own password"
     for p in sso_passwords:
-        assert p["can_read"] is True, (
-            f"SSO user password {p['id']} should have can_read=True"
-        )
-        assert p["can_write"] is True, (
-            f"SSO user password {p['id']} should have can_write=True"
-        )
-    print(
-        f"✓ SSO user sees {len(sso_passwords)} password(s), all with can_read=True and can_write=True"
-    )
+        assert p["can_read"] is True, f"SSO user password {p['id']} should have can_read=True"
+        assert p["can_write"] is True, f"SSO user password {p['id']} should have can_write=True"
+    print(f"✓ SSO user sees {len(sso_passwords)} password(s), all with can_read=True and can_write=True")
 
     # ===================================================================
     # PHASE 2: SHARING AND ACCESS CONTROL
@@ -353,9 +325,7 @@ def test_complete_password_management_workflow(
 
     # Step 2.4: LIST ACCESS - Should show only owner
     print("Step 2.4: Listing access (should show only owner)...")
-    list_access_response = admin_client.get(
-        f"/api/passwords/{shared_password_id}/access"
-    )
+    list_access_response = admin_client.get(f"/api/passwords/{shared_password_id}/access")
     assert list_access_response.status_code == 200
     access_data = list_access_response.json()
     assert access_data["resource_id"] == shared_password_id
@@ -369,9 +339,7 @@ def test_complete_password_management_workflow(
 
     # Step 2.5: NON-OWNER CANNOT LIST ACCESS
     print("Step 2.5: Verifying non-owner cannot list access...")
-    list_access_non_owner = sso_client.get(
-        f"/api/passwords/{shared_password_id}/access"
-    )
+    list_access_non_owner = sso_client.get(f"/api/passwords/{shared_password_id}/access")
     assert list_access_non_owner.status_code == 403
     print("✓ Non-owner correctly denied permission to list access (403)")
 
@@ -412,9 +380,7 @@ def test_complete_password_management_workflow(
 
     # Step 2.9: UNSHARE PASSWORD
     print("Step 2.9: Unsharing password from SSO user...")
-    unshare_response = admin_client.delete(
-        f"/api/passwords/{shared_password_id}/share/{sso_user_group_id}"
-    )
+    unshare_response = admin_client.delete(f"/api/passwords/{shared_password_id}/share/{sso_user_group_id}")
     assert unshare_response.status_code == 204
     print("✓ Password unshared successfully")
 
@@ -448,9 +414,7 @@ def test_complete_password_management_workflow(
     # Step 3.2: ADD MEMBER TO GROUP
     print("Step 3.2: Adding SSO user to group as member...")
     add_member_data = {"user_id": sso_user_id}
-    add_member_response = admin_client.post(
-        f"/api/groups/{group_id}/members", json=add_member_data
-    )
+    add_member_response = admin_client.post(f"/api/groups/{group_id}/members", json=add_member_data)
     assert add_member_response.status_code == 201
     print("✓ SSO user added to group")
 
@@ -566,9 +530,7 @@ def test_complete_password_management_workflow(
 
     # Step 5.4: AUTHENTICATION REQUIRED - DELETE
     print("Step 5.4: Verifying authentication required for delete...")
-    unauth_delete = unauthenticated_client.delete(
-        f"/api/passwords/{shared_password_id}"
-    )
+    unauth_delete = unauthenticated_client.delete(f"/api/passwords/{shared_password_id}")
     assert unauth_delete.status_code == 401
     print("✓ Unauthenticated delete correctly rejected (401)")
 

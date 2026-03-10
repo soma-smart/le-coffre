@@ -20,16 +20,12 @@ class FakeSsoUserRepository:
             )
         self._users[key] = sso_user
 
-    def update_last_login(
-        self, sso_user_id: str, sso_provider: str, last_login: datetime
-    ) -> None:
+    def update_last_login(self, sso_user_id: str, sso_provider: str, last_login: datetime) -> None:
         key = f"{sso_user_id}:{sso_provider}"
         if key in self._users:
             self._users[key].last_login = last_login
 
-    def get_by_sso_user_id(
-        self, sso_user_id: str, sso_provider: str = "default"
-    ) -> Optional[SsoUser]:
+    def get_by_sso_user_id(self, sso_user_id: str, sso_provider: str = "default") -> Optional[SsoUser]:
         key = f"{sso_user_id}:{sso_provider}"
         return self._users.get(key)
 

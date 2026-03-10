@@ -1,5 +1,6 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from identity_access_management_context.application.commands import (
     RemoveUserFromGroupCommand,
@@ -7,17 +8,18 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     RemoveUserFromGroupUseCase,
 )
-from identity_access_management_context.domain.exceptions import (
-    GroupNotFoundException,
-    UserNotOwnerOfGroupException,
-    CannotModifyPersonalGroupException,
-    UserNotMemberOfGroupException,
-    CannotRemoveOwnerException,
-)
-from identity_access_management_context.domain.entities import User, Group
+from identity_access_management_context.domain.entities import Group, User
 from identity_access_management_context.domain.events import UserRemovedFromGroupEvent
+from identity_access_management_context.domain.exceptions import (
+    CannotModifyPersonalGroupException,
+    CannotRemoveOwnerException,
+    GroupNotFoundException,
+    UserNotMemberOfGroupException,
+    UserNotOwnerOfGroupException,
+)
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
-from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
+
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository, FakeUserRepository
 
 
 @pytest.fixture

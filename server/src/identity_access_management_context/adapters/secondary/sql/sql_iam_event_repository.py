@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID
+
 from sqlmodel import Session
 
 from identity_access_management_context.adapters.secondary.sql.model.iam_event import (

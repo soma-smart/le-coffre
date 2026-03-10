@@ -1,22 +1,22 @@
-import pytest
 from uuid import UUID
 
-from ..fakes import (
-    FakePasswordRepository,
-    FakePasswordEncryptionGateway,
-    FakeGroupAccessGateway,
-    FakePasswordPermissionsRepository,
-    FakePasswordEventRepository,
-)
+import pytest
+
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.use_cases import CreatePasswordUseCase
-
 from password_management_context.domain.exceptions import (
     GroupNotFoundError,
     UserNotOwnerOfGroupError,
 )
 from tests.shared_kernel.fakes import FakeEventPublisher
 
+from ..fakes import (
+    FakeGroupAccessGateway,
+    FakePasswordEncryptionGateway,
+    FakePasswordEventRepository,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+)
 
 ANY_PASSWORD = "any_password"
 

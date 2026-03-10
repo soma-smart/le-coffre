@@ -3,18 +3,19 @@ from enum import Enum
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_resource_access_usecase,
 )
-from pydantic import BaseModel
 from password_management_context.application.commands import ListAccessCommand
 from password_management_context.application.use_cases import ListAccessUseCase
 from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
     PasswordAccessDeniedError,
+    PasswordNotFoundError,
 )
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -70,17 +71,13 @@ def list_password_access(
         )
         result = usecase.execute(command)
 
-        ret = ListPasswordAccessResponse(
-            resource_id=password_id, user_access_list=[], group_access_list=[]
-        )
+        ret = ListPasswordAccessResponse(resource_id=password_id, user_access_list=[], group_access_list=[])
         for user_access in result.user_accesses:
             ret.user_access_list.append(
                 UserAccessItem(
                     user_id=user_access.user_id,
                     is_owner=user_access.is_owner,
-                    permissions=[
-                        PermissionEnum(perm.value) for perm in user_access.permissions
-                    ],
+                    permissions=[PermissionEnum(perm.value) for perm in user_access.permissions],
                 )
             )
         for group_access in result.group_accesses:
@@ -88,16 +85,14 @@ def list_password_access(
                 GroupAccessItem(
                     user_id=group_access.group_id,
                     is_owner=group_access.is_owner,
-                    permissions=[
-                        PermissionEnum(perm.value) for perm in group_access.permissions
-                    ],
+                    permissions=[PermissionEnum(perm.value) for perm in group_access.permissions],
                 )
             )
         return ret
     except PasswordAccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except PasswordNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in list password access")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

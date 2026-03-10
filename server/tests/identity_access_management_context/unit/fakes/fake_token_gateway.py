@@ -1,6 +1,7 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 from uuid import UUID
-from identity_access_management_context.application.gateways import TokenGateway, Token
+
+from identity_access_management_context.application.gateways import Token, TokenGateway
 
 
 class FakeTokenGateway(TokenGateway):
@@ -24,9 +25,7 @@ class FakeTokenGateway(TokenGateway):
     ) -> None:
         if claims is None:
             claims = {}
-        token_obj = Token(
-            value=token, user_id=user_id, email=email, roles=roles, claims=claims
-        )
+        token_obj = Token(value=token, user_id=user_id, email=email, roles=roles, claims=claims)
         self.generated_tokens[token] = token_obj
 
     async def generate_token(

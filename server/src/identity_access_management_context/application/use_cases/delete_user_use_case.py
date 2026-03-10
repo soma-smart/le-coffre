@@ -1,16 +1,14 @@
-from identity_access_management_context.application.gateways import (
-    UserRepository,
-    GroupRepository,
-    GroupMemberRepository,
-    UserEventRepository,
-)
 from identity_access_management_context.application.commands import DeleteUserCommand
+from identity_access_management_context.application.gateways import (
+    GroupMemberRepository,
+    GroupRepository,
+    UserEventRepository,
+    UserRepository,
+)
 from identity_access_management_context.domain.events import UserDeletedEvent
-from shared_kernel.domain.services import AdminPermissionChecker
 from shared_kernel.application.gateways import DomainEventPublisher
-
-
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class DeleteUserUseCase(TracedUseCase):
@@ -63,7 +61,10 @@ class DeleteUserUseCase(TracedUseCase):
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
             actor_user_id=command.requesting_user.user_id,
-            event_data={"user_id": str(user_id), "personal_group_id": str(personal_group_id) if personal_group_id else None},
+            event_data={
+                "user_id": str(user_id),
+                "personal_group_id": str(personal_group_id) if personal_group_id else None,
+            },
         )
 
         # Delete personal group after event (so password context can clean up)

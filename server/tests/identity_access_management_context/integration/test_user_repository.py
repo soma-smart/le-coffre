@@ -1,9 +1,11 @@
-import pytest
 from uuid import uuid4
+
+import pytest
+
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
-    UserNotFoundError,
     UserAlreadyExistsError,
+    UserNotFoundError,
 )
 
 
@@ -26,12 +28,8 @@ def test_should_save_and_retrieve_user_when_valid_data_provided(sql_user_reposit
 
 
 def test_should_list_all_users_when_multiple_users_exist(sql_user_repository):
-    user1 = User(
-        id=uuid4(), username="user1", email="test1@test.fr", name="User One", roles=[]
-    )
-    user2 = User(
-        id=uuid4(), username="user2", email="test2@test.fr", name="User Two", roles=[]
-    )
+    user1 = User(id=uuid4(), username="user1", email="test1@test.fr", name="User One", roles=[])
+    user2 = User(id=uuid4(), username="user2", email="test2@test.fr", name="User Two", roles=[])
     sql_user_repository.save(user1)
     sql_user_repository.save(user2)
     users = sql_user_repository.list_all()

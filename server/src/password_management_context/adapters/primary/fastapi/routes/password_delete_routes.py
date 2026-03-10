@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, Depends
-from uuid import UUID
 import logging
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_delete_password_usecase,
@@ -8,13 +9,13 @@ from password_management_context.adapters.primary.fastapi.app_dependencies impor
 from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.use_cases import DeletePasswordUseCase
 from password_management_context.domain.exceptions import (
+    NotPasswordOwnerError,
     PasswordManagementDomainError,
     PasswordNotFoundError,
-    NotPasswordOwnerError,
 )
-from shared_kernel.domain.exceptions import AccessDeniedError
-from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.domain.exceptions import AccessDeniedError
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +41,16 @@ def delete_password(
     Returns status code 204 (No Content) on successful deletion.
     """
     try:
-        command = DeletePasswordCommand(
-            requester_id=current_user.user_id, password_id=password_id
-        )
+        command = DeletePasswordCommand(requester_id=current_user.user_id, password_id=password_id)
         usecase.execute(command)
         return
     except (PasswordNotFoundError, NotPasswordOwnerError) as e:
         # For security, treat both not found and not owner as 404
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except PasswordManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except AccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in delete password")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

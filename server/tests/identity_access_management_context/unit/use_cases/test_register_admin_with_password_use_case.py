@@ -1,23 +1,26 @@
-import pytest
 from uuid import UUID, uuid4
-from identity_access_management_context.domain.entities import User
-from identity_access_management_context.application.use_cases import (
-    RegisterAdminWithPasswordUseCase,
-)
+
+import pytest
+
 from identity_access_management_context.application.commands import (
     RegisterAdminWithPasswordCommand,
 )
+from identity_access_management_context.application.use_cases import (
+    RegisterAdminWithPasswordUseCase,
+)
+from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import AdminRegisteredEvent
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+
 from ..fakes import (
-    FakeUserPasswordRepository,
-    FakePasswordHashingGateway,
-    FakeUserRepository,
-    FakeGroupRepository,
     FakeGroupMemberRepository,
+    FakeGroupRepository,
+    FakePasswordHashingGateway,
+    FakeUserPasswordRepository,
+    FakeUserRepository,
 )
 
 
@@ -53,9 +56,7 @@ async def test_should_register_first_admin_with_password_and_return_user_id(
     password = "secure123!"
     display_name = "Admin User"
 
-    command = RegisterAdminWithPasswordCommand(
-        id=user_id, email=email, password=password, display_name=display_name
-    )
+    command = RegisterAdminWithPasswordCommand(id=user_id, email=email, password=password, display_name=display_name)
 
     result = await use_case.execute(command)
 

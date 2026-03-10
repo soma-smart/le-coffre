@@ -1,21 +1,23 @@
-import pytest
 from uuid import UUID
 
+import pytest
+
+from password_management_context.application.commands import UpdatePasswordCommand
 from password_management_context.application.use_cases import UpdatePasswordUseCase
 from password_management_context.domain.entities import Password
-from password_management_context.application.commands import UpdatePasswordCommand
 from password_management_context.domain.exceptions import (
-    PasswordNotFoundError,
     NotPasswordOwnerError,
-)
-from ..fakes import (
-    FakePasswordRepository,
-    FakePasswordEncryptionGateway,
-    FakePasswordPermissionsRepository,
-    FakeGroupAccessGateway,
-    FakePasswordEventRepository,
+    PasswordNotFoundError,
 )
 from tests.fakes import FakeDomainEventPublisher
+
+from ..fakes import (
+    FakeGroupAccessGateway,
+    FakePasswordEncryptionGateway,
+    FakePasswordEventRepository,
+    FakePasswordPermissionsRepository,
+    FakePasswordRepository,
+)
 
 
 @pytest.fixture
@@ -67,10 +69,7 @@ def test_given_valid_update_data_when_updating_password_should_persist_changes(
     use_case.execute(new_password=updated_password)
 
     assert password_repository.get_by_id(original_password.id).name == "updated"
-    assert (
-        password_repository.get_by_id(original_password.id).encrypted_value
-        == "encrypted(updated)"
-    )
+    assert password_repository.get_by_id(original_password.id).encrypted_value == "encrypted(updated)"
 
 
 def test_given_valid_update_data_when_updating_password_logain_and_url_should_persist_changes(
@@ -107,10 +106,7 @@ def test_given_valid_update_data_when_updating_password_logain_and_url_should_pe
     use_case.execute(new_password=updated_password)
 
     assert password_repository.get_by_id(original_password.id).name == "updated"
-    assert (
-        password_repository.get_by_id(original_password.id).encrypted_value
-        == "encrypted(updated)"
-    )
+    assert password_repository.get_by_id(original_password.id).encrypted_value == "encrypted(updated)"
     assert password_repository.get_by_id(original_password.id).login == "updated_login"
     assert password_repository.get_by_id(original_password.id).url == "updated_url"
 

@@ -5,6 +5,7 @@ This directory contains Alembic database migrations for Le Coffre.
 ## Overview
 
 Le Coffre uses [Alembic](https://alembic.sqlalchemy.org/) to manage database schema changes. Migrations are version-controlled and allow you to:
+
 - Track schema changes over time
 - Apply schema changes to databases
 - Roll back to previous schema versions
@@ -13,6 +14,7 @@ Le Coffre uses [Alembic](https://alembic.sqlalchemy.org/) to manage database sch
 ## Directory Structure
 
 ```
+
 alembic/
 ├── versions/          # Migration scripts
 ├── env.py            # Alembic environment configuration
@@ -23,43 +25,45 @@ alembic/
 ## Common Commands
 
 ### Using the helper script (recommended)
+
 ```bash
 cd server
 
 # Check current migration version
-python migrate.py current
+uv run python migrate.py current
 
 # Apply all pending migrations
-python migrate.py upgrade head
+uv run python migrate.py upgrade head
 
 # Rollback one migration
-python migrate.py downgrade -1
+uv run python migrate.py downgrade -1
 
 # View migration history
-python migrate.py history
+uv run python migrate.py history
 
 # Create a new migration
-python migrate.py revision --autogenerate -m "Description of changes"
+uv run python migrate.py revision --autogenerate -m "Description of changes"
 ```
 
 ### Using Alembic directly
+
 ```bash
 cd server
 
 # Check current migration version
-alembic current
+uv run alembic current
 
 # Apply all pending migrations
-alembic upgrade head
+uv run alembic upgrade head
 
 # Rollback one migration
-alembic downgrade -1
+uv run alembic downgrade -1
 
 # View migration history
-alembic history --verbose
+uv run alembic history --verbose
 
 # Create a new migration
-alembic revision --autogenerate -m "Description of changes"
+uv run alembic revision --autogenerate -m "Description of changes"
 ```
 
 **Important:** Always review the auto-generated migration before applying it. Alembic may not detect all changes correctly.
@@ -78,19 +82,21 @@ When you add or modify a SQLModel table:
 
 1. Make your changes to the model files in `src/*/adapters/secondary/sql/model/`
 2. Create a migration:
+
    ```bash
    cd server
-   python migrate.py revision --autogenerate -m "Add new_column to UserTable"
-   # or use alembic directly:
-   # alembic revision --autogenerate -m "Add new_column to UserTable"
+   uv run alembic revision --autogenerate -m "Add new_column to UserTable"
    ```
+
 3. Review the generated file in `alembic/versions/`
 4. Test the migration:
+
    ```bash
-   python migrate.py upgrade head  # Apply
-   python migrate.py downgrade -1  # Rollback
-   python migrate.py upgrade head  # Re-apply
+   uv run alembic upgrade head  # Apply
+   uv run alembic downgrade -1  # Rollback
+   uv run alembic upgrade head  # Re-apply
    ```
+
 5. Commit the migration file to version control
 
 ## Migration Best Practices
@@ -104,22 +110,28 @@ When you add or modify a SQLModel table:
 ## Troubleshooting
 
 ### "FAILED: Target database is not up to date"
+
 This means your database is behind the latest migration. Run:
+
 ```bash
-alembic upgrade head
+uv run alembic upgrade head
 ```
 
 ### "Can't locate revision identified by '...'"
+
 Your `alembic_version` table may be out of sync. Check:
+
 ```bash
-alembic current
-alembic history
+uv run alembic current
+uv run alembic history
 ```
 
 ### Migration conflicts
+
 If you have multiple feature branches with migrations, you may need to merge them:
+
 ```bash
-alembic merge <rev1> <rev2> -m "Merge migrations"
+uv run alembic merge <rev1> <rev2> -m "Merge migrations"
 ```
 
 ## Reference

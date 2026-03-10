@@ -1,5 +1,6 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from identity_access_management_context.application.commands import (
     AddUserToGroupCommand,
@@ -7,16 +8,17 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     AddUserToGroupUseCase,
 )
-from identity_access_management_context.domain.exceptions import (
-    UserNotFoundException,
-    GroupNotFoundException,
-    UserNotOwnerOfGroupException,
-    CannotModifyPersonalGroupException,
-)
-from identity_access_management_context.domain.entities import User, Group
+from identity_access_management_context.domain.entities import Group, User
 from identity_access_management_context.domain.events import UserAddedToGroupEvent
+from identity_access_management_context.domain.exceptions import (
+    CannotModifyPersonalGroupException,
+    GroupNotFoundException,
+    UserNotFoundException,
+    UserNotOwnerOfGroupException,
+)
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
-from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
+
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository, FakeUserRepository
 
 
 @pytest.fixture

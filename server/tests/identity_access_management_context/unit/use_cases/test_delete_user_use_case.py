@@ -1,18 +1,20 @@
 from uuid import UUID
+
 import pytest
-from identity_access_management_context.application.use_cases import DeleteUserUseCase
+
 from identity_access_management_context.application.commands import DeleteUserCommand
+from identity_access_management_context.application.use_cases import DeleteUserUseCase
 from identity_access_management_context.domain.entities import (
-    User,
     Group,
     PersonalGroup,
+    User,
 )
 from identity_access_management_context.domain.events import UserDeletedEvent
-from ..fakes import FakeUserRepository, FakeGroupRepository, FakeGroupMemberRepository
-from shared_kernel.domain.entities import AuthenticatedUser
-from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 from shared_kernel.adapters.primary.exceptions import NotAdminError
+from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes import FakeDomainEventPublisher
+
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository, FakeUserRepository
 
 
 @pytest.fixture
@@ -59,9 +61,7 @@ def test_given_non_admin_user_when_deleting_user_should_raise_not_admin_error(
     user_uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     regular_user_uuid = UUID("123e4567-e89b-12d3-a456-426614174001")
 
-    user = User(
-        id=user_uuid, username="testuser", email="test@example.com", name="User"
-    )
+    user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
     regular_user = AuthenticatedUser(user_id=regular_user_uuid, roles=[])
@@ -112,16 +112,12 @@ def test_given_user_in_multiple_groups_when_deleting_user_should_remove_from_all
     group2_id = UUID("323e4567-e89b-12d3-a456-426614174002")
     personal_group_id = UUID("423e4567-e89b-12d3-a456-426614174003")
 
-    user = User(
-        id=user_uuid, username="testuser", email="test@example.com", name="User"
-    )
+    user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
     group1 = Group(id=group1_id, name="Group 1", is_personal=False)
     group2 = Group(id=group2_id, name="Group 2", is_personal=False)
-    personal_group = PersonalGroup(
-        id=personal_group_id, name="Personal", user_id=user_uuid
-    )
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
 
     group_repository.save_group(group1)
     group_repository.save_group(group2)
@@ -152,14 +148,10 @@ def test_given_user_with_personal_group_when_deleting_user_should_delete_persona
     admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174001")
     personal_group_id = UUID("423e4567-e89b-12d3-a456-426614174003")
 
-    user = User(
-        id=user_uuid, username="testuser", email="test@example.com", name="User"
-    )
+    user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
-    personal_group = PersonalGroup(
-        id=personal_group_id, name="Personal", user_id=user_uuid
-    )
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
     group_repository.save_personal_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_uuid, is_owner=True)
 
@@ -183,9 +175,7 @@ def test_given_user_owner_of_shared_group_when_deleting_user_should_delete_group
     admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174001")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
 
-    user = User(
-        id=user_uuid, username="testuser", email="test@example.com", name="User"
-    )
+    user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
     group = Group(id=group_id, name="Shared Group", is_personal=False)
@@ -213,9 +203,7 @@ def test_given_user_owner_of_shared_group_when_deleting_user_should_keep_group_i
     other_owner_uuid = UUID("523e4567-e89b-12d3-a456-426614174005")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
 
-    user = User(
-        id=user_uuid, username="testuser", email="test@example.com", name="User"
-    )
+    user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
     group = Group(id=group_id, name="Shared Group", is_personal=False)
@@ -244,14 +232,10 @@ def test_given_user_when_deleting_should_publish_event_with_personal_group_id(
     admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174001")
     personal_group_id = UUID("423e4567-e89b-12d3-a456-426614174003")
 
-    user = User(
-        id=user_uuid, username="testuser", email="test@example.com", name="User"
-    )
+    user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
-    personal_group = PersonalGroup(
-        id=personal_group_id, name="Personal", user_id=user_uuid
-    )
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
     group_repository.save_personal_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_uuid, is_owner=True)
 

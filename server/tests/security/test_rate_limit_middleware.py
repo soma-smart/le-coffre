@@ -1,15 +1,15 @@
-import pytest
-
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Iterator
 from uuid import UUID
+
+import pytest
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from starlette.testclient import TestClient
 
-from security.rate_limiter import InMemoryRateLimiter
-from security.rate_limit_middleware import RateLimitMiddleware
 from identity_access_management_context.application.gateways import Token
+from security.rate_limit_middleware import RateLimitMiddleware
+from security.rate_limiter import InMemoryRateLimiter
 
 
 class _FakeTokenGateway:
@@ -19,9 +19,7 @@ class _FakeTokenGateway:
         self._tokens: dict[str, Token] = {}
 
     def register(self, token: str, user_id: str) -> None:
-        self._tokens[token] = Token(
-            value=token, user_id=UUID(user_id), email="", roles=[], claims={}
-        )
+        self._tokens[token] = Token(value=token, user_id=UUID(user_id), email="", roles=[], claims={})
 
     async def validate_token(self, token: str) -> Token | None:
         return self._tokens.get(token)
@@ -124,9 +122,7 @@ class TestRateLimitMiddleware:
         assert r.status_code == 429
         assert "Too many requests" in r.json()["detail"]
 
-    def test_should_include_rate_limit_headers_on_auth_success(
-        self, client: TestClient
-    ):
+    def test_should_include_rate_limit_headers_on_auth_success(self, client: TestClient):
         # Auth routes expose the auth-bucket limit in headers (the stricter one)
         r = client.post("/api/auth/login")
         assert r.status_code == 401  # failed creds, not yet rate-limited
@@ -267,12 +263,10 @@ class TestRateLimitMiddleware:
         Requests without an access_token cookie are not checked against a user
         bucket — only the IP bucket applies.
         """
-        app = _create_app(
-            auth_max=100, api_max=3, window=60, token_gateway=_FakeTokenGateway()
-        )
+        app = _create_app(auth_max=100, api_max=3, window=60, token_gateway=_FakeTokenGateway())
 
         with TestClient(app) as c:
-            for i in range(3):
+            for _ in range(3):
                 r = c.get("/api/passwords")  # no cookie
                 assert r.status_code == 200
 
@@ -342,9 +336,7 @@ class TestRateLimitMiddleware:
             # api_max=3 was incremented by all 3 logins without ever being reset.
             # The API bucket is now exhausted — next request to any /api route is blocked.
             r = c.get("/api/passwords")
-            assert r.status_code == 429, (
-                "API bucket should be exhausted after 3 logins counted against it"
-            )
+            assert r.status_code == 429, "API bucket should be exhausted after 3 logins counted against it"
 
     def test_should_reset_rate_limit_after_successful_login(self):
         """
@@ -360,9 +352,7 @@ class TestRateLimitMiddleware:
             # With the reset, each successful login clears the bucket — all succeed.
             for i in range(6):
                 r = c.post("/api/auth/login")
-                assert r.status_code == 200, (
-                    f"Request {i + 1} should not be rate-limited"
-                )
+                assert r.status_code == 200, f"Request {i + 1} should not be rate-limited"
 
     def test_should_not_reset_rate_limit_on_failed_login(self):
         """

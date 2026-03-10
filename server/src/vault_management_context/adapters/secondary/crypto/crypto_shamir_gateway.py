@@ -1,14 +1,13 @@
-from Crypto.Random import get_random_bytes
 from Crypto.Protocol.SecretSharing import Shamir
-from typing import List
+from Crypto.Random import get_random_bytes
 
-from vault_management_context.domain.entities.share import Share
-from vault_management_context.domain.value_objects import (
-    VaultConfiguration,
-    ShamirResult,
-)
 from vault_management_context.application.gateways import (
     ShamirGateway,
+)
+from vault_management_context.domain.entities.share import Share
+from vault_management_context.domain.value_objects import (
+    ShamirResult,
+    VaultConfiguration,
 )
 
 
@@ -24,9 +23,7 @@ class CryptoShamirGateway(ShamirGateway):
         )
 
         # Embed index in the share secret: format is "index:hexsecret"
-        return ShamirResult(
-            [Share(f"{share[0]}:{share[1].hex()}") for share in shares], secret.hex()
-        )
+        return ShamirResult([Share(f"{share[0]}:{share[1].hex()}") for share in shares], secret.hex())
 
     def reconstruct_secret(self, shares: list[Share]) -> str:
         try:

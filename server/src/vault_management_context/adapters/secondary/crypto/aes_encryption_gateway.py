@@ -1,7 +1,7 @@
-from typing import Optional
 from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
 from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import get_random_bytes
+
 from vault_management_context.application.gateways import EncryptionGateway
 
 

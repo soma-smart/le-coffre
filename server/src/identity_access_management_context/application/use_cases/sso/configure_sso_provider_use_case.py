@@ -4,10 +4,10 @@ from identity_access_management_context.application.commands import (
     ConfigureSsoProviderCommand,
 )
 from identity_access_management_context.application.gateways import (
-    SsoGateway,
     SsoConfigurationRepository,
     SsoEncryptionGateway,
     SsoEventRepository,
+    SsoGateway,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
 from identity_access_management_context.domain.events import SsoConfiguredEvent
@@ -15,10 +15,8 @@ from identity_access_management_context.domain.exceptions import (
     InvalidSsoSettingsException,
 )
 from shared_kernel.application.gateways import DomainEventPublisher
-from shared_kernel.domain.services import AdminPermissionChecker
-
-
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class ConfigureSsoProviderUseCase(TracedUseCase):
@@ -55,14 +53,10 @@ class ConfigureSsoProviderUseCase(TracedUseCase):
         Raises:
             InvalidSsoSettingsException: If required parameters are missing or discovery fails
         """
-        AdminPermissionChecker().ensure_admin(
-            command.requesting_user, "configure SSO provider"
-        )
+        AdminPermissionChecker().ensure_admin(command.requesting_user, "configure SSO provider")
 
         if not all([command.client_id, command.client_secret, command.discovery_url]):
-            raise InvalidSsoSettingsException(
-                "Client ID, client secret, and discovery URL are required"
-            )
+            raise InvalidSsoSettingsException("Client ID, client secret, and discovery URL are required")
 
         try:
             # Step 1: Validate discovery with the gateway
@@ -73,9 +67,7 @@ class ConfigureSsoProviderUseCase(TracedUseCase):
             )
 
             # Step 2: Encrypt the client secret
-            encrypted_client_secret = self._sso_encryption_gateway.encrypt(
-                command.client_secret
-            )
+            encrypted_client_secret = self._sso_encryption_gateway.encrypt(command.client_secret)
 
             # Step 3: Store the configuration
             config = SsoConfiguration(
@@ -104,6 +96,6 @@ class ConfigureSsoProviderUseCase(TracedUseCase):
             )
 
         except ValueError as e:
-            raise InvalidSsoSettingsException(f"Auto-discovery failed: {str(e)}")
+            raise InvalidSsoSettingsException(f"Auto-discovery failed: {str(e)}") from e
         except Exception as e:
-            raise InvalidSsoSettingsException(f"Configuration failed: {str(e)}")
+            raise InvalidSsoSettingsException(f"Configuration failed: {str(e)}") from e

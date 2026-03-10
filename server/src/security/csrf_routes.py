@@ -3,10 +3,9 @@
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
+from security.csrf_tokens import CsrfTokenManager
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
-from security.csrf_tokens import CsrfTokenManager
-
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

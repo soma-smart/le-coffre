@@ -1,15 +1,16 @@
-from typing import Any, Dict
+from typing import Any
+from urllib.parse import urlencode
+
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from identity_access_management_context.application.gateways import (
+    SsoDiscoveryResult,
     SsoGateway,
     SsoUserInfo,
-    SsoDiscoveryResult,
 )
-from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
 from identity_access_management_context.domain.entities import SsoConfiguration
-from urllib.parse import urlencode
+from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
 
 
 class OAuth2SsoGateway(SsoGateway):
@@ -44,9 +45,7 @@ class OAuth2SsoGateway(SsoGateway):
 
                 # Validate required fields
                 required_fields = ["authorization_endpoint", "token_endpoint"]
-                missing_fields = [
-                    field for field in required_fields if field not in config
-                ]
+                missing_fields = [field for field in required_fields if field not in config]
                 if missing_fields:
                     raise ValueError(f"Missing fields in discovery: {missing_fields}")
 
@@ -56,12 +55,12 @@ class OAuth2SsoGateway(SsoGateway):
                     userinfo_endpoint=config.get("userinfo_endpoint", ""),
                     jwks_uri=config.get("jwks_uri", ""),
                 )
-        except httpx.TimeoutException:
-            raise ValueError("Timeout in discovering endpoints")
+        except httpx.TimeoutException as e:
+            raise ValueError("Timeout in discovering endpoints") from e
         except httpx.HTTPStatusError as e:
-            raise ValueError(f"HTTP error during discovery: {e.response.status_code}")
+            raise ValueError(f"HTTP error during discovery: {e.response.status_code}") from e
         except Exception as e:
-            raise ValueError(f"Error during discovery of endpoints: {str(e)}")
+            raise ValueError(f"Error during discovery of endpoints: {str(e)}") from e
 
     def _get_oauth_client(self, config: SsoConfiguration) -> AsyncOAuth2Client:
         """Get or create the OAuth2 client from stored configuration."""
@@ -85,9 +84,7 @@ class OAuth2SsoGateway(SsoGateway):
 
         return authorization_url
 
-    async def validate_callback(
-        self, config: SsoConfiguration, code: str
-    ) -> SsoUserInfo:
+    async def validate_callback(self, config: SsoConfiguration, code: str) -> SsoUserInfo:
         """
         Validate OAuth2 authorization code and return user information.
 
@@ -132,7 +129,7 @@ class OAuth2SsoGateway(SsoGateway):
             )
 
         except Exception as e:
-            raise InvalidSsoCodeException(f"Failed to validate SSO code: {str(e)}")
+            raise InvalidSsoCodeException(f"Failed to validate SSO code: {str(e)}") from e
 
     def _extract_email(self, user_info: dict[str, Any]) -> str:
         """Extract email from user info based on provider."""

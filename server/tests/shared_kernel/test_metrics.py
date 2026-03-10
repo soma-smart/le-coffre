@@ -5,7 +5,9 @@ from password_management_context.application.commands import CheckAccessCommand
 from password_management_context.application.use_cases.access.check_access_use_case import CheckAccessUseCase
 from shared_kernel.domain.value_objects import Granted
 
-_COUNTER_PATH = "password_management_context.application.use_cases.access.check_access_use_case.access_check_not_found_counter"
+_COUNTER_PATH = (
+    "password_management_context.application.use_cases.access.check_access_use_case.access_check_not_found_counter"
+)
 
 
 def _make_use_case(is_owner=False, has_access=False):

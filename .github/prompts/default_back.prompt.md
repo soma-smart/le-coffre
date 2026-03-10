@@ -66,23 +66,23 @@ The application follows strict Clean Architecture (Ports & Adapters):
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Primary Adapters                      │
-│              (FastAPI Routes, CLI, etc.)                 │
+│                    Primary Adapters                     │
+│              (FastAPI Routes, CLI,etc.)                 │
 └──────────────────────┬──────────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────────┐
-│                  Application Layer                       │
-│          (Use Cases, Commands, Responses)                │
+│                  Application Layer                      │
+│          (Use Cases, Commands,Responses)                │
 └──────────────────────┬──────────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────────┐
-│                    Domain Layer                          │
-│        (Entities, Value Objects, Exceptions)             │
+│                    Domain Layer                         │
+│        (Entities, Value Objects, Exceptions)            │
 └──────────────────────┬──────────────────────────────────┘
                        │
 ┌──────────────────────┴──────────────────────────────────┐
-│                  Secondary Adapters                      │
-│       (SQL Repositories, Crypto, External APIs)          │
+│                  Secondary Adapters                     │
+│       (SQL Repositories, Crypto, ExternalAPIs)          │
 └─────────────────────────────────────────────────────────┘
 ```
 

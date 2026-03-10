@@ -179,9 +179,7 @@ def test_vault_workflow(e2e_client, client_factory):
     e2e_client.post("/api/vault/lock")
 
     # === INVALID SHARES: corrupted secrets ===
-    invalid_shares = [
-        share.replace(share.split(":")[1], "wrongsecret") for share in share_secrets[:3]
-    ]
+    invalid_shares = [share.replace(share.split(":")[1], "wrongsecret") for share in share_secrets[:3]]
     unlock_invalid = e2e_client.post(
         "/api/vault/unlock",
         json={"shares": invalid_shares},

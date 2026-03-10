@@ -2,26 +2,24 @@ from uuid import UUID
 
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.gateways import (
-    PasswordRepository,
-    PasswordPermissionsRepository,
     GroupAccessGateway,
     PasswordEncryptionGateway,
     PasswordEventRepository,
+    PasswordPermissionsRepository,
+    PasswordRepository,
 )
 from password_management_context.application.services import (
     PasswordEventStorageService,
 )
 from password_management_context.domain.entities import Password
+from password_management_context.domain.events import (
+    PasswordCreatedEvent,
+)
 from password_management_context.domain.exceptions import (
     GroupNotFoundError,
     UserNotOwnerOfGroupError,
 )
-from password_management_context.domain.events import (
-    PasswordCreatedEvent,
-)
 from shared_kernel.application.gateways import DomainEventPublisher
-
-
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -46,14 +44,10 @@ class CreatePasswordUseCase(TracedUseCase):
         if not self.group_access_gateway.group_exists(command.group_id):
             raise GroupNotFoundError(command.group_id)
 
-        if not self.group_access_gateway.is_user_owner_of_group(
-            command.user_id, command.group_id
-        ):
+        if not self.group_access_gateway.is_user_owner_of_group(command.user_id, command.group_id):
             raise UserNotOwnerOfGroupError(command.user_id, command.group_id)
 
-        encrypted_value = self.password_encryption_gateway.encrypt(
-            command.decrypted_password
-        )
+        encrypted_value = self.password_encryption_gateway.encrypt(command.decrypted_password)
 
         password = Password.create(
             id=command.id,
@@ -77,9 +71,7 @@ class CreatePasswordUseCase(TracedUseCase):
             login=password.login,
             url=password.url,
         )
-        event_storage_service = PasswordEventStorageService(
-            self.password_event_repository
-        )
+        event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)
 
         return password.id

@@ -39,24 +39,16 @@ class FakePasswordEventRepository:
         end_date: datetime | None = None,
     ) -> list[dict[str, Any]]:
         """List events for a specific password with filters"""
-        filtered = [
-            event for event in self.events if event["password_id"] == password_id
-        ]
+        filtered = [event for event in self.events if event["password_id"] == password_id]
 
         if actor_user_id:
-            filtered = [
-                event for event in filtered if event["actor_user_id"] == actor_user_id
-            ]
+            filtered = [event for event in filtered if event["actor_user_id"] == actor_user_id]
 
         if event_types:
-            filtered = [
-                event for event in filtered if event["event_type"] in event_types
-            ]
+            filtered = [event for event in filtered if event["event_type"] in event_types]
 
         if start_date:
-            filtered = [
-                event for event in filtered if event["occurred_on"] >= start_date
-            ]
+            filtered = [event for event in filtered if event["occurred_on"] >= start_date]
 
         if end_date:
             filtered = [event for event in filtered if event["occurred_on"] <= end_date]
@@ -69,13 +61,9 @@ class FakePasswordEventRepository:
         event_types: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """List events for multiple passwords with optional event type filter"""
-        filtered = [
-            event for event in self.events if event["password_id"] in password_ids
-        ]
+        filtered = [event for event in self.events if event["password_id"] in password_ids]
 
         if event_types:
-            filtered = [
-                event for event in filtered if event["event_type"] in event_types
-            ]
+            filtered = [event for event in filtered if event["event_type"] in event_types]
 
         return sorted(filtered, key=lambda e: e["occurred_on"], reverse=True)

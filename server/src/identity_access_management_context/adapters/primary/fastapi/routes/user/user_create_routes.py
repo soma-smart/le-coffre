@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
-from uuid import UUID, uuid4
 import logging
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_user_usecase,
@@ -9,12 +10,12 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.use_cases import CreateUserUseCase
 from identity_access_management_context.domain.exceptions import (
-    UserAlreadyExistsException,
     IdentityAccessManagementDomainError,
+    UserAlreadyExistsException,
 )
+from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.domain.exceptions import AccessDeniedError
-from shared_kernel.adapters.primary.dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +67,11 @@ def create_user(
 
         return CreateUserResponse(id=user_id)
     except UserAlreadyExistsException as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except AccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except IdentityAccessManagementDomainError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in create user")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

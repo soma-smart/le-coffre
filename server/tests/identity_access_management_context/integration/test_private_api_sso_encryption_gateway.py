@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import Mock
+
+import pytest
 
 from identity_access_management_context.adapters.secondary.private_api import (
     PrivateApiSsoEncryptionGateway,
@@ -18,9 +19,7 @@ def private_api_sso_encryption_gateway(mock_encryption_api):
     return PrivateApiSsoEncryptionGateway(mock_encryption_api)
 
 
-def test_should_encrypt_plaintext(
-    private_api_sso_encryption_gateway, mock_encryption_api
-):
+def test_should_encrypt_plaintext(private_api_sso_encryption_gateway, mock_encryption_api):
     # Arrange
     plaintext = "client_secret_value"
     expected_encrypted = "encrypted_secret_xyz"
@@ -34,9 +33,7 @@ def test_should_encrypt_plaintext(
     mock_encryption_api.encrypt.assert_called_once_with(plaintext)
 
 
-def test_should_decrypt_ciphertext(
-    private_api_sso_encryption_gateway, mock_encryption_api
-):
+def test_should_decrypt_ciphertext(private_api_sso_encryption_gateway, mock_encryption_api):
     # Arrange
     ciphertext = "encrypted_secret_xyz"
     expected_plaintext = "client_secret_value"
@@ -50,9 +47,7 @@ def test_should_decrypt_ciphertext(
     mock_encryption_api.decrypt.assert_called_once_with(ciphertext)
 
 
-def test_should_return_original_data_when_encrypt_then_decrypt(
-    private_api_sso_encryption_gateway, mock_encryption_api
-):
+def test_should_return_original_data_when_encrypt_then_decrypt(private_api_sso_encryption_gateway, mock_encryption_api):
     # Arrange
     original_data = "sso_client_secret_123!@#"
     encrypted_value = "encrypted_xyz_abc"

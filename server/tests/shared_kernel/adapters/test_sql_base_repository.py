@@ -1,9 +1,10 @@
 """Tests for SQLBaseRepository transaction management."""
 
-import pytest
 from uuid import uuid4
-from sqlmodel import Session, SQLModel, Field, create_engine, select
+
+import pytest
 from sqlalchemy.exc import IntegrityError
+from sqlmodel import Field, Session, SQLModel, create_engine, select
 
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 

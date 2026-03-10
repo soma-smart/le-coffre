@@ -1,5 +1,6 @@
-from typing import List, Protocol, Optional
 from datetime import datetime
+from typing import Protocol
+
 from vault_management_context.domain.entities import Share
 
 

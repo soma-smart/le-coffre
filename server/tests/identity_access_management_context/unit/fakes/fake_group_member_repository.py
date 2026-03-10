@@ -10,9 +10,7 @@ class FakeGroupMemberRepository:
 
     def add_member(self, group_id: UUID, user_id: UUID, is_owner: bool) -> None:
         key = (group_id, user_id)
-        self._members[key] = GroupMember(
-            group_id=group_id, user_id=user_id, is_owner=is_owner
-        )
+        self._members[key] = GroupMember(group_id=group_id, user_id=user_id, is_owner=is_owner)
 
     def remove_member(self, group_id: UUID, user_id: UUID) -> None:
         key = (group_id, user_id)
@@ -32,24 +30,14 @@ class FakeGroupMemberRepository:
         return [m for m in self._members.values() if m.group_id == group_id]
 
     def count_owners(self, group_id: UUID) -> int:
-        return sum(
-            1 for m in self._members.values() if m.group_id == group_id and m.is_owner
-        )
+        return sum(1 for m in self._members.values() if m.group_id == group_id and m.is_owner)
 
     def delete_by_group_id(self, group_id: UUID):
-        self._members = {
-            key: member
-            for key, member in self._members.items()
-            if member.group_id != group_id
-        }
+        self._members = {key: member for key, member in self._members.items() if member.group_id != group_id}
 
     def remove_user_from_all_groups(self, user_id: UUID) -> None:
         """Remove a user from all groups they belong to."""
-        self._members = {
-            key: member
-            for key, member in self._members.items()
-            if member.user_id != user_id
-        }
+        self._members = {key: member for key, member in self._members.items() if member.user_id != user_id}
 
     def clear(self) -> None:
         self._members.clear()

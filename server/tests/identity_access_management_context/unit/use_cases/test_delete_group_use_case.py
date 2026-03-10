@@ -1,24 +1,25 @@
-import pytest
 from uuid import UUID
 
+import pytest
+
+from identity_access_management_context.application.commands import DeleteGroupCommand
 from identity_access_management_context.application.gateways import (
-    GroupRepository,
     GroupMemberRepository,
+    GroupRepository,
     GroupUsageGateway,
 )
-from identity_access_management_context.application.commands import DeleteGroupCommand
 from identity_access_management_context.application.use_cases import DeleteGroupUseCase
-from identity_access_management_context.domain.exceptions import (
-    GroupNotFoundException,
-    UserNotOwnerOfGroupException,
-    CannotDeletePersonalGroupException,
-    CannotDeleteGroupStillUsedException,
-)
 from identity_access_management_context.domain.entities import Group
 from identity_access_management_context.domain.events import GroupDeletedEvent
-from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+from identity_access_management_context.domain.exceptions import (
+    CannotDeleteGroupStillUsedException,
+    CannotDeletePersonalGroupException,
+    GroupNotFoundException,
+    UserNotOwnerOfGroupException,
+)
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
+from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
 
 @pytest.fixture

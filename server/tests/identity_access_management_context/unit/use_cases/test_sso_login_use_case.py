@@ -1,32 +1,34 @@
-import pytest
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
 
+import pytest
+
+from identity_access_management_context.application.commands import (
+    SsoLoginCommand,
+)
 from identity_access_management_context.application.use_cases import (
     SsoLoginUseCase,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
-from identity_access_management_context.application.commands import (
-    SsoLoginCommand,
-)
-from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
-from tests.identity_access_management_context.unit.conftest import (
-    create_sso_user_from_provider,
-    create_existing_sso_user,
-)
 from identity_access_management_context.domain.events import SsoLoginEvent
+from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+from tests.identity_access_management_context.unit.conftest import (
+    create_existing_sso_user,
+    create_sso_user_from_provider,
+)
+
 from ..fakes import (
-    FakeSsoGateway,
-    FakeSsoUserRepository,
-    FakeUserRepository,
-    FakePasswordHashingGateway,
-    FakeTokenGateway,
-    FakeTimeGateway,
-    FakeGroupRepository,
     FakeGroupMemberRepository,
+    FakeGroupRepository,
+    FakePasswordHashingGateway,
     FakeSsoConfigurationRepository,
     FakeSsoEncryptionGateway,
+    FakeSsoGateway,
+    FakeSsoUserRepository,
+    FakeTimeGateway,
+    FakeTokenGateway,
+    FakeUserRepository,
 )
 
 
@@ -77,12 +79,8 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     sso_provider = "google"
     sso_user_id = "google_123456"
 
-    sso_user_from_provider = create_sso_user_from_provider(
-        email, display_name, sso_user_id, sso_provider
-    )
-    existing_sso_user = create_existing_sso_user(
-        user_id, email, display_name, sso_user_id, sso_provider
-    )
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
+    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
 
     sso_configuration_repository.save(
         SsoConfiguration(
@@ -168,9 +166,7 @@ async def test_should_create_new_user_for_first_time_sso_login(
         )
     )
 
-    sso_user_from_provider = create_sso_user_from_provider(
-        email, display_name, sso_user_id, sso_provider
-    )
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     assert sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider) is None
@@ -228,9 +224,7 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
         sso_provider,
         last_login=old_login_time,
     )
-    sso_user_from_provider = create_sso_user_from_provider(
-        email, display_name, sso_user_id, sso_provider
-    )
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
 
     sso_user_repository.create(existing_sso_user)
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
@@ -282,12 +276,8 @@ async def test_should_return_refresh_token_on_successful_sso_login(
         )
     )
 
-    sso_user_from_provider = create_sso_user_from_provider(
-        email, display_name, sso_user_id, sso_provider
-    )
-    existing_sso_user = create_existing_sso_user(
-        user_id, email, display_name, sso_user_id, sso_provider
-    )
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
+    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     sso_user_repository.create(existing_sso_user)
@@ -325,23 +315,25 @@ async def test_should_publish_sso_login_event_on_successful_login(
 
     sso_configuration_repository.save(
         SsoConfiguration(
-            "client_id", "encrypted(client_secret)", "url", "auth", "token", "userinfo", None,
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
         )
     )
 
-    sso_user_from_provider = create_sso_user_from_provider(
-        email, display_name, sso_user_id, sso_provider
-    )
-    existing_sso_user = create_existing_sso_user(
-        user_id, email, display_name, sso_user_id, sso_provider
-    )
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
+    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     sso_user_repository.create(existing_sso_user)
     token_gateway.set_unique_jwt_part("unique_token_part")
 
     command = SsoLoginCommand(code=sso_code)
-    response = await use_case.execute(command)
+    await use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(SsoLoginEvent)
     assert len(events) == 1
@@ -368,16 +360,18 @@ async def test_should_store_sso_login_event_on_successful_login(
 
     sso_configuration_repository.save(
         SsoConfiguration(
-            "client_id", "encrypted(client_secret)", "url", "auth", "token", "userinfo", None,
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
         )
     )
 
-    sso_user_from_provider = create_sso_user_from_provider(
-        email, display_name, sso_user_id, sso_provider
-    )
-    existing_sso_user = create_existing_sso_user(
-        user_id, email, display_name, sso_user_id, sso_provider
-    )
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
+    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     sso_user_repository.create(existing_sso_user)

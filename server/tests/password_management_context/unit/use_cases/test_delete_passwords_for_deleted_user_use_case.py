@@ -1,5 +1,6 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from password_management_context.application.commands import (
     DeletePasswordsForDeletedUserCommand,
@@ -7,15 +8,16 @@ from password_management_context.application.commands import (
 from password_management_context.application.use_cases import (
     DeletePasswordsForDeletedUserUseCase,
 )
+from password_management_context.domain.entities import Password
+from password_management_context.domain.events import PasswordDeletedEvent
+from password_management_context.domain.exceptions import PasswordNotFoundError
 from password_management_context.domain.value_objects import PasswordPermission
+from tests.fakes import FakeDomainEventPublisher
+
 from ..fakes import (
     FakePasswordPermissionsRepository,
     FakePasswordRepository,
 )
-from tests.fakes import FakeDomainEventPublisher
-from password_management_context.domain.entities import Password
-from password_management_context.domain.events import PasswordDeletedEvent
-from password_management_context.domain.exceptions import PasswordNotFoundError
 
 
 @pytest.fixture
@@ -94,9 +96,7 @@ def test_given_user_with_passwords_when_user_deleted_should_remove_all_permissio
     password_repository.save(password)
     password_repository.set_owner_for_password(password_id, personal_group_id)
     password_permissions_repository.set_owner(personal_group_id, password_id)
-    password_permissions_repository.grant_access(
-        other_user_id, password_id, PasswordPermission.READ
-    )
+    password_permissions_repository.grant_access(other_user_id, password_id, PasswordPermission.READ)
 
     command = DeletePasswordsForDeletedUserCommand(
         personal_group_id=personal_group_id,
