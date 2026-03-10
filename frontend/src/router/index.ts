@@ -5,6 +5,7 @@ import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
 import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
+import { attemptTokenRefresh } from '@/customClient'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
 
 const router = createRouter({
@@ -93,13 +94,18 @@ router.beforeEach(async (to) => {
     })
   }
 
-  // If we are not logged in, redirect to login
-  // Check for both JWT cookies (SSO login)
-  const isLoggedIn = isAuthenticated()
+  // If we are not logged in, attempt a silent token refresh before giving up.
+  // The logged_in cookie expires together with the access_token, so a tab
+  // navigation after token expiry would otherwise hit this guard before any
+  // API call is made — bypassing the response interceptor in customClient.ts.
+  let isLoggedIn = isAuthenticated()
   if (!isLoggedIn && to.name !== 'Login') {
-    // Clear user store when not authenticated
+    isLoggedIn = await attemptTokenRefresh()
+  }
+  if (!isLoggedIn && to.name !== 'Login') {
+    // Refresh also failed — session is truly gone
     userStore.clearUser()
-    return { name: 'Login' }
+    return { name: 'Login', query: { redirect: to.fullPath, reason: 'session_expired' } }
   }
 
   // Ensure the CSRF token is available for authenticated users.
