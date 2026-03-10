@@ -135,7 +135,11 @@ class SsoLoginUseCase(TracedUseCase):
         # Step 4: Fetch current roles from the User repository so that promotions
         # (e.g. to admin) are reflected immediately in the new token.
         user = self._user_repository.get_by_id(user_id)
-        roles = user.roles if user is not None else []
+        if not user:
+            raise RuntimeError(
+                "User should exist at this point, but was not found in UserRepository"
+            )
+        roles = user.roles
 
         # Step 5: Generate JWT token
         token = await self._token_gateway.generate_token(
