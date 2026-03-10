@@ -41,8 +41,8 @@ class CreatePasswordResponse(BaseModel):
 def create_password(
     request_body: CreatePasswordRequest,
     request: Request,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: CreatePasswordUseCase = Depends(get_create_password_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: CreatePasswordUseCase = Depends(get_create_password_usecase),
 ):
     """
     Create a new password entry.

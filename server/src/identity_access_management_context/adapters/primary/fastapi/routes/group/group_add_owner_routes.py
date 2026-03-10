@@ -47,8 +47,8 @@ class AddOwnerToGroupResponse(BaseModel):
 def add_owner_to_group(
     group_id: UUID,
     request: AddOwnerToGroupRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: AddOwnerToGroupUseCase = Depends(get_add_owner_to_group_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: AddOwnerToGroupUseCase = Depends(get_add_owner_to_group_usecase),
 ):
     """
     Promote an existing member to owner of a group.

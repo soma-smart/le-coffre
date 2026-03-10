@@ -39,8 +39,8 @@ class UpdatePasswordRequest(BaseModel):
 def update_password(
     password_id: UUID,
     request: UpdatePasswordRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: UpdatePasswordUseCase = Depends(get_update_password_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: UpdatePasswordUseCase = Depends(get_update_password_usecase),
 ):
     """
     Update an existing password by its ID.

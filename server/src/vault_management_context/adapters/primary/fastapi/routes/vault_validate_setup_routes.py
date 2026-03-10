@@ -32,7 +32,7 @@ class ValidateSetupResponse(BaseModel):
 )
 def validate_vault_setup(
     request: ValidateSetupRequest,
-    usecase: ValidateVaultSetupUseCase = Depends(get_validate_vault_setup_usecase),  # noqa: B008
+    usecase: ValidateVaultSetupUseCase = Depends(get_validate_vault_setup_usecase),
 ):
     """
     Validate and complete vault setup using the setup_id from initial setup.

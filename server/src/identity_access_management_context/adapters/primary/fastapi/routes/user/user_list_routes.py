@@ -32,8 +32,8 @@ class ListUserResponse(BaseModel):
     summary="List all users",
 )
 def list_users(
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: ListUserUseCase = Depends(get_list_user_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ListUserUseCase = Depends(get_list_user_usecase),
 ):
     """
     Retrieve all users.

@@ -27,8 +27,8 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 )
 def delete_user(
     user_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: DeleteUserUseCase = Depends(get_delete_user_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: DeleteUserUseCase = Depends(get_delete_user_usecase),
 ):
     """
     Delete a user by its ID.

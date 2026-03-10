@@ -20,7 +20,7 @@ class ClearPendingSharesResponse(BaseModel):
 
 
 def get_clear_pending_shares_usecase(
-    share_repository: ShareRepository = Depends(get_share_repository),  # noqa: B008
+    share_repository: ShareRepository = Depends(get_share_repository),
 ) -> ClearPendingSharesUseCase:
     return ClearPendingSharesUseCase(share_repository=share_repository)
 
@@ -32,7 +32,7 @@ def get_clear_pending_shares_usecase(
     summary="Clear all pending shares",
 )
 def clear_pending_shares(
-    usecase: ClearPendingSharesUseCase = Depends(get_clear_pending_shares_usecase),  # noqa: B008
+    usecase: ClearPendingSharesUseCase = Depends(get_clear_pending_shares_usecase),
 ):
     """
     Clear all pending shares that were submitted but didn't unlock the vault.

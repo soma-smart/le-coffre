@@ -38,8 +38,8 @@ class CreateGroupResponse(BaseModel):
 )
 def create_group(
     request: CreateGroupRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: CreateGroupUseCase = Depends(get_create_group_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: CreateGroupUseCase = Depends(get_create_group_usecase),
 ):
     """
     Create a new group with the authenticated user as owner.

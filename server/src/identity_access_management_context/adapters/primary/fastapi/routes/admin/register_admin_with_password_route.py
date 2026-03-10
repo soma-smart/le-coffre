@@ -41,7 +41,7 @@ class RegisterAdminResponse(BaseModel):
 )
 async def register_admin(
     request: RegisterAdminRequest,
-    usecase: RegisterAdminWithPasswordUseCase = Depends(get_register_admin_usecase),  # noqa: B008
+    usecase: RegisterAdminWithPasswordUseCase = Depends(get_register_admin_usecase),
 ):
     """
     Register the first admin user for the system.

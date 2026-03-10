@@ -46,8 +46,8 @@ class AddMemberToGroupResponse(BaseModel):
 def add_member_to_group(
     group_id: UUID,
     request: AddMemberToGroupRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: AddUserToGroupUseCase = Depends(get_add_user_to_group_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: AddUserToGroupUseCase = Depends(get_add_user_to_group_usecase),
 ):
     """
     Add a user as a member to a group.

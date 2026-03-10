@@ -42,8 +42,8 @@ class GetGroupResponse(BaseModel):
 )
 def get_group(
     group_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: GetGroupUseCase = Depends(get_get_group_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: GetGroupUseCase = Depends(get_get_group_usecase),
 ):
     """
     Retrieve a group by its ID.

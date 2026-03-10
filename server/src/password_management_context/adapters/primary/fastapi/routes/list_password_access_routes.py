@@ -52,8 +52,8 @@ class ListPasswordAccessResponse(BaseModel):
 )
 def list_password_access(
     password_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: ListAccessUseCase = Depends(get_list_resource_access_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ListAccessUseCase = Depends(get_list_resource_access_usecase),
 ):
     """
     List all users who have access to a specific password.

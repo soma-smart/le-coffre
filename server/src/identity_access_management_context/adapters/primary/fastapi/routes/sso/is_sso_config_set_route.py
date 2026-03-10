@@ -29,7 +29,7 @@ class IsSsoConfigSetResponse(BaseModel):
     summary="Check if SSO is configured",
 )
 def is_sso_config_set(
-    usecase: IsSsoConfigSetUseCase = Depends(get_is_sso_config_set_usecase),  # noqa: B008
+    usecase: IsSsoConfigSetUseCase = Depends(get_is_sso_config_set_usecase),
 ):
     """
     Check if SSO (Single Sign-On) configuration is set.

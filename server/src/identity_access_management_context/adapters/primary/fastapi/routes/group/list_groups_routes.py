@@ -41,8 +41,8 @@ def list_groups(
         True,
         description="Include personal groups in results. Set to false to only show shared groups.",
     ),
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: ListGroupsUseCase = Depends(get_list_groups_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ListGroupsUseCase = Depends(get_list_groups_usecase),
 ):
     """
     List all groups with optional filtering.

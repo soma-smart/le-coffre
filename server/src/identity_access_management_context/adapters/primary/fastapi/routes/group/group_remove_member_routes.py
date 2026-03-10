@@ -41,8 +41,8 @@ class RemoveMemberFromGroupResponse(BaseModel):
 def remove_member_from_group(
     group_id: UUID,
     user_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: RemoveUserFromGroupUseCase = Depends(get_remove_user_from_group_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: RemoveUserFromGroupUseCase = Depends(get_remove_user_from_group_usecase),
 ):
     """
     Remove a member from a group.

@@ -30,8 +30,8 @@ router = APIRouter(prefix="/groups", tags=["Group Management"])
 )
 def delete_group(
     group_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: DeleteGroupUseCase = Depends(get_delete_group_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: DeleteGroupUseCase = Depends(get_delete_group_usecase),
 ):
     """
     Delete a group by ID.

@@ -38,7 +38,7 @@ class CreateVaultPostResponse(BaseModel):
 )
 def create_vault(
     request: CreateVaultPostRequest,
-    usecase: CreateVaultUseCase = Depends(get_create_vault_usecase),  # noqa: B008
+    usecase: CreateVaultUseCase = Depends(get_create_vault_usecase),
 ):
     """
     Create a new vault with Shamir's Secret Sharing in pending state.

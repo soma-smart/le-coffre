@@ -26,7 +26,7 @@ class VaultStatusResponse(BaseModel):
     response_model=VaultStatusResponse,
     summary="Get the current status of the vault",
 )
-def get_vault_status(usecase=Depends(get_vault_status_usecase)):  # noqa: B008
+def get_vault_status(usecase=Depends(get_vault_status_usecase)):
     """
     Retrieve the current status of the vault.
 

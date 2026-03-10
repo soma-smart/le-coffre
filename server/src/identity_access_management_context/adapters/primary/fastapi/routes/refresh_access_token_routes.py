@@ -35,7 +35,7 @@ class RefreshAccessTokenResponse(BaseModel):
 async def refresh_access_token(
     response: Response,
     refresh_token_cookie: str | None = Cookie(None, alias="refresh_token"),
-    usecase: RefreshAccessTokenUseCase = Depends(get_refresh_access_token_usecase),  # noqa: B008
+    usecase: RefreshAccessTokenUseCase = Depends(get_refresh_access_token_usecase),
 ):
     """
     Refresh access token using a refresh token.

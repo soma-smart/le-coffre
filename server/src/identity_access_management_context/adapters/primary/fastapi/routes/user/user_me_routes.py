@@ -38,9 +38,9 @@ class GetUserMeResponse(BaseModel):
     summary="Get current user information",
 )
 def get_user_me(
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: GetUserMeUseCase = Depends(get_get_user_me_usecase),  # noqa: B008
-    group_repository=Depends(get_group_repository),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: GetUserMeUseCase = Depends(get_get_user_me_usecase),
+    group_repository=Depends(get_group_repository),
 ):
     """
     Retrieve the authenticated user's information including personal group ID.

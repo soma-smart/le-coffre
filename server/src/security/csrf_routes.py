@@ -26,8 +26,8 @@ def get_csrf_token_manager(request: Request) -> CsrfTokenManager:
     summary="Get CSRF token",
 )
 async def get_csrf_token(
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    csrf_manager: CsrfTokenManager = Depends(get_csrf_token_manager),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    csrf_manager: CsrfTokenManager = Depends(get_csrf_token_manager),
 ):
     """
     Get a CSRF token for the current authenticated user.

@@ -11,7 +11,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.get("/sso/url", status_code=200, summary="Get SSO authorization URL")
 async def get_sso_url(
-    usecase: GetSsoAuthorizeUrlUseCase = Depends(get_sso_url_usecase),  # noqa: B008
+    usecase: GetSsoAuthorizeUrlUseCase = Depends(get_sso_url_usecase),
 ):
     """
     Get the SSO authorization URL.

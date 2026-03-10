@@ -46,7 +46,7 @@ class AdminLoginResponse(BaseModel):
 async def admin_login(
     request: AdminLoginRequest,
     response: Response,
-    usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),  # noqa: B008
+    usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),
 ):
     """
     Login an admin user.

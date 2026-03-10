@@ -36,8 +36,8 @@ class GetUserResponse(BaseModel):
 )
 def get_user(
     user_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: GetUserUseCase = Depends(get_get_user_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: GetUserUseCase = Depends(get_get_user_usecase),
 ):
     """
     Retrieve a user by its ID.

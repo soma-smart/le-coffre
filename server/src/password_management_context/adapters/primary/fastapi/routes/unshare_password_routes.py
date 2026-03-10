@@ -28,8 +28,8 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 def unshare_password(
     password_id: UUID,
     group_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: UnshareAccessUseCase = Depends(get_unshare_access_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: UnshareAccessUseCase = Depends(get_unshare_access_usecase),
 ):
     """
     Remove sharing of a password from a specific group.

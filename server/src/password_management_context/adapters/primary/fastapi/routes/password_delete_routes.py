@@ -29,8 +29,8 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 )
 def delete_password(
     password_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: DeletePasswordUseCase = Depends(get_delete_password_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: DeletePasswordUseCase = Depends(get_delete_password_usecase),
 ):
     """
     Delete a password by its ID.

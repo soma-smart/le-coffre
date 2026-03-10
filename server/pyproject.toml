@@ -45,6 +45,9 @@ testpaths = ["tests"]
 fix = true
 line-length = 120
 target-version = "py313"
+exclude = [
+  "alembic/versions/"
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "S"]
@@ -57,4 +60,10 @@ select = ["E", "F", "I", "B", "S"]
   "S608",
   "S110",
   "E501"
+]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+"fastapi.Depends",
+"fastapi.Query",
 ]

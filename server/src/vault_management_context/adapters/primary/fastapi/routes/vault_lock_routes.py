@@ -27,8 +27,8 @@ class LockVaultPostResponse(BaseModel):
     summary="Lock the vault",
 )
 def lock_vault(
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: LockVaultUseCase = Depends(get_lock_vault_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: LockVaultUseCase = Depends(get_lock_vault_usecase),
 ):
     """
     Lock the vault by clearing the decrypted key from memory.

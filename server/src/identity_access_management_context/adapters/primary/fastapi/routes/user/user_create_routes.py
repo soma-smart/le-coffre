@@ -41,8 +41,8 @@ class CreateUserResponse(BaseModel):
 )
 def create_user(
     request_body: CreateUserRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: CreateUserUseCase = Depends(get_create_user_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: CreateUserUseCase = Depends(get_create_user_usecase),
 ):
     """
     Create a new user with password authentication.

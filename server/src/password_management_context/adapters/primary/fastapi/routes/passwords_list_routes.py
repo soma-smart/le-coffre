@@ -42,8 +42,8 @@ class GetPasswordListResponse(BaseModel):
 )
 def list_passwords(
     folder: str | None = None,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),
 ):
     """
     List all passwords for the authenticated user, optionally filtered by folder.

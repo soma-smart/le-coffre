@@ -46,8 +46,8 @@ class UpdateGroupResponse(BaseModel):
 def update_group(
     group_id: UUID,
     request: UpdateGroupRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: UpdateGroupUseCase = Depends(get_update_group_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: UpdateGroupUseCase = Depends(get_update_group_usecase),
 ):
     """
     Update a group's name.

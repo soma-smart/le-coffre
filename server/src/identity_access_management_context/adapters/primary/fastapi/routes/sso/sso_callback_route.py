@@ -42,7 +42,7 @@ async def sso_callback(
     response: Response,
     code: str = Query(..., description="Authorization code from SSO provider"),
     state: str = Query(None, description="State parameter for CSRF protection"),
-    usecase: SsoLoginUseCase = Depends(get_sso_login_usecase),  # noqa: B008
+    usecase: SsoLoginUseCase = Depends(get_sso_login_usecase),
 ):
     """
     SSO callback endpoint.

@@ -46,11 +46,11 @@ class ListPasswordEventsResponse(BaseModel):
 )
 def list_password_events(
     password_id: UUID,
-    event_type: list[str] | None = Query(None, description="Filter by event types"),  # noqa: B008
-    start_date: datetime | None = Query(None, description="Filter events from this date (inclusive)"),  # noqa: B008
-    end_date: datetime | None = Query(None, description="Filter events until this date (inclusive)"),  # noqa: B008
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: ListPasswordEventsUseCase = Depends(get_list_password_events_usecase),  # noqa: B008
+    event_type: list[str] | None = Query(None, description="Filter by event types"),
+    start_date: datetime | None = Query(None, description="Filter events from this date (inclusive)"),
+    end_date: datetime | None = Query(None, description="Filter events until this date (inclusive)"),
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ListPasswordEventsUseCase = Depends(get_list_password_events_usecase),
 ):
     """
     Retrieve the event history for a specific password.

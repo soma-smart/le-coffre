@@ -45,7 +45,7 @@ def get_session(request: Request) -> Generator[Session, None, None]:
 
 def get_validate_token_usecase(
     request: Request,
-    session: Session = Depends(get_session),  # noqa: B008
+    session: Session = Depends(get_session),
 ) -> ValidateUserTokenUseCase:
     user_password_repository = SqlUserPasswordRepository(session)
     token_gateway: TokenGateway = request.app.state.token_gateway
@@ -60,7 +60,7 @@ def get_validate_token_usecase(
 
 async def get_current_user(
     access_token: str | None = Depends(cookie_scheme),
-    validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),  # noqa: B008
+    validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
 ) -> ValidatedUser:
     """
     Validates the JWT token from cookie and returns the current user information.

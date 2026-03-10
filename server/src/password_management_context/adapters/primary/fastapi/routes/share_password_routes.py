@@ -36,8 +36,8 @@ class SharePasswordResponse(BaseModel):
 def share_password(
     password_id: UUID,
     request: SharePasswordRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: ShareAccessUseCase = Depends(get_share_access_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ShareAccessUseCase = Depends(get_share_access_usecase),
 ):
     """
     Share a password with a group.

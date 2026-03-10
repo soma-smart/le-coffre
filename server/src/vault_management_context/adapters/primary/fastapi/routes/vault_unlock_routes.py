@@ -49,7 +49,7 @@ class UnlockVaultPostResponse(BaseModel):
 )
 def unlock_vault(
     request: UnlockVaultPostRequest,
-    usecase: UnlockVaultUseCase = Depends(get_unlock_vault_usecase),  # noqa: B008
+    usecase: UnlockVaultUseCase = Depends(get_unlock_vault_usecase),
 ):
     """
     Unlock the vault using Shamir's Secret Sharing reconstruction.

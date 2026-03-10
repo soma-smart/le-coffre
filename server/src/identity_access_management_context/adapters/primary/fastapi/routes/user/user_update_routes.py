@@ -34,8 +34,8 @@ class UpdateUserRequest(BaseModel):
 def update_user(
     user_id: UUID,
     request: UpdateUserRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: UpdateUserUseCase = Depends(get_update_user_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: UpdateUserUseCase = Depends(get_update_user_usecase),
 ):
     """
     Update a user by its ID.

@@ -29,8 +29,8 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 )
 def promote_user_to_admin(
     user_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: PromoteAdminUseCase = Depends(get_promote_admin_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: PromoteAdminUseCase = Depends(get_promote_admin_usecase),
 ):
     """
     Promote a user to administrator role.

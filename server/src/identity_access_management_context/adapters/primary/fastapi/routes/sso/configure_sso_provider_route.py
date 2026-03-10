@@ -42,8 +42,8 @@ class ConfigureSsoProviderRequest(BaseModel):
 )
 async def configure_sso_provider(
     request: ConfigureSsoProviderRequest,
-    current_user: ValidatedUser = Depends(get_current_user),  # noqa: B008
-    usecase: ConfigureSsoProviderUseCase = Depends(get_configure_sso_provider_usecase),  # noqa: B008
+    current_user: ValidatedUser = Depends(get_current_user),
+    usecase: ConfigureSsoProviderUseCase = Depends(get_configure_sso_provider_usecase),
 ):
     """
     Configure an SSO provider via OpenID Connect auto-discovery.
