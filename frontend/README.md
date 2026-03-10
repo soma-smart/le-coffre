@@ -58,7 +58,8 @@ bun test:e2e --debug
 ### Lint and Format
 
 ```sh
-bun lint
+bun eslint .
+bun prettier --check src/
 bun format
 ```
 
