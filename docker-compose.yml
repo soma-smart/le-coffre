@@ -1,3 +1,5 @@
+name: le-coffre
+
 services:
   frontend:
     build:
