@@ -5,7 +5,6 @@ import { storeToRefs } from 'pinia'
 import {
   createPasswordPasswordsPost,
   updatePasswordPasswordsPasswordIdPut,
-  getPasswordPasswordsPasswordIdGet,
 } from '@/client/sdk.gen'
 import type { GetPasswordListResponse } from '@/client/types.gen'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
@@ -88,16 +87,9 @@ watch(
       isEditMode.value = true
       name.value = newValue.name
       password.value = '' // Don't prefill password for security
-      login.value = ''
-      url.value = ''
+      login.value = newValue.login || ''
+      url.value = newValue.url || ''
       folder.value = newValue.folder || ''
-      // Fetch detail to pre-fill optional fields
-      getPasswordPasswordsPasswordIdGet({ path: { password_id: newValue.id } }).then((response) => {
-        if (response.data) {
-          login.value = response.data.login || ''
-          url.value = response.data.url || ''
-        }
-      })
     } else {
       isEditMode.value = false
       name.value = ''

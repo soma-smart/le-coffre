@@ -38,22 +38,22 @@
           />
         </div>
         <div
-          v-if="detailFetched && (loginValue || urlValue)"
+          v-if="password.login || password.url"
           class="flex items-center gap-4 mb-2 text-sm"
         >
-          <span v-if="loginValue" class="flex items-center gap-1 text-color-secondary">
+          <span v-if="password.login" class="flex items-center gap-1 text-color-secondary">
             <i class="pi pi-user text-xs" />
-            {{ loginValue }}
+            {{ password.login }}
           </span>
           <a
-            v-if="urlValue"
-            :href="urlValue"
+            v-if="password.url"
+            :href="password.url"
             target="_blank"
             rel="noopener noreferrer"
             class="flex items-center gap-1 text-primary hover:underline"
           >
             <i class="pi pi-external-link text-xs" />
-            {{ urlValue }}
+            {{ password.url }}
           </a>
         </div>
         <div class="text-xs text-color-secondary flex gap-4">
@@ -147,8 +147,6 @@ const toast = useToast()
 const confirm = useConfirm()
 
 const passwordValue = ref<string | null>(null)
-const loginValue = ref<string | null>(null)
-const urlValue = ref<string | null>(null)
 const detailFetched = ref(false)
 const isVisible = ref(false)
 const isLoading = ref(false)
@@ -186,8 +184,6 @@ const fetchPassword = async () => {
 
     if (response.data) {
       passwordValue.value = response.data.password
-      loginValue.value = response.data.login
-      urlValue.value = response.data.url
       detailFetched.value = true
     }
   } catch (error) {
