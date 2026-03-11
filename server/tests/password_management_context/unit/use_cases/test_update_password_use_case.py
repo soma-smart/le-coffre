@@ -210,8 +210,9 @@ def test_given_null_folder_when_updating_password_should_set_folder_to_default(
     assert password_repository.get_by_id(PASSWORD_ID).folder == "default"
 
 
-def test_given_same_values_when_updating_password_should_not_mark_fields_as_changed(
+def test_given_same_values_when_updating_password_should_not_persist_nor_emit_event(
     use_case: UpdatePasswordUseCase,
+    password_repository: FakePasswordRepository,
     password_event_repository: FakePasswordEventRepository,
     stored_password: Password,
 ):
@@ -227,12 +228,8 @@ def test_given_same_values_when_updating_password_should_not_mark_fields_as_chan
 
     use_case.execute(new_password=command)
 
-    event_data = password_event_repository.events[0]["event_data"]
-    assert event_data["has_name_changed"] is False
-    assert event_data["has_password_changed"] is False
-    assert event_data["has_folder_changed"] is False
-    assert event_data["has_login_changed"] is False
-    assert event_data["has_url_changed"] is False
+    assert password_repository.update_count == 0
+    assert len(password_event_repository.events) == 0
 
 
 def test_given_non_existing_password_when_updating_password_should_raise_password_not_found(

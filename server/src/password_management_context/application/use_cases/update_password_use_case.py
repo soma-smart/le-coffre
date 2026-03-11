@@ -92,9 +92,21 @@ class UpdatePasswordUseCase(TracedUseCase):
             existing_password.url = new_url
             has_url_changed = True
 
+        anything_changed = any(
+            [
+                has_name_changed,
+                has_password_changed,
+                has_folder_changed,
+                has_login_changed,
+                has_url_changed,
+            ]
+        )
+
+        if not anything_changed:
+            return
+
         self.password_repository.update(existing_password)
 
-        # Store domain event
         event = PasswordUpdatedEvent(
             password_id=existing_password.id,
             updated_by_user_id=new_password.requester_id,
