@@ -64,6 +64,8 @@ class ListPasswordsUseCase(TracedUseCase):
                 last_password_updated_at=timestamps_map.get(password.id, (None, None))[1],
                 can_read=can_read,
                 can_write=can_write,
+                login=password.login,
+                url=password.url,
             )
             for password, owner_group_id, can_read, can_write in accessible
         ]

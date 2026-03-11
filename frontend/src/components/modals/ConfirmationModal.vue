@@ -136,7 +136,10 @@ watch(
     :closable="!isProcessing"
     :style="{ width: '30rem' }"
   >
-    <div class="flex flex-col gap-4 py-4">
+    <div
+      class="flex flex-col gap-4 py-4"
+      @keydown.enter.prevent="canConfirm && !isProcessing && handleConfirm()"
+    >
       <div class="flex items-start gap-3">
         <i :class="[iconClass, iconColor, 'text-2xl']"></i>
         <div class="flex-1">

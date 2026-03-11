@@ -9,11 +9,7 @@ from password_management_context.application.gateways import (
     PasswordPermissionsRepository,
     PasswordRepository,
 )
-from password_management_context.application.responses import PasswordResponse
-from password_management_context.application.services import (
-    PasswordEventStorageService,
-    PasswordTimestampService,
-)
+from password_management_context.application.services import PasswordEventStorageService
 from password_management_context.domain.events import (
     PasswordAccessedEvent,
 )
@@ -45,7 +41,7 @@ class GetPasswordUseCase(TracedUseCase):
         self.event_publisher = event_publisher
         self.password_event_repository = password_event_repository
 
-    def execute(self, command: GetPasswordCommand) -> PasswordResponse:
+    def execute(self, command: GetPasswordCommand) -> str:
         password_entity = self.password_repository.get_by_id(command.password_id)
         if not password_entity:
             raise PasswordNotFoundError(command.password_id)
@@ -57,11 +53,6 @@ class GetPasswordUseCase(TracedUseCase):
         logger.info("Password accessed")
         decrypted_password = self.password_encryption_gateway.decrypt(password_entity.encrypted_value)
 
-        # Retrieve timestamps using service
-        timestamp_service = PasswordTimestampService(self.password_event_repository)
-        created_at, last_password_updated_at = timestamp_service.get_timestamps(command.password_id)
-
-        # Store domain event
         event = PasswordAccessedEvent(
             password_id=password_entity.id,
             password_name=password_entity.name,
@@ -70,16 +61,7 @@ class GetPasswordUseCase(TracedUseCase):
         event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)
 
-        return PasswordResponse(
-            id=password_entity.id,
-            name=password_entity.name,
-            password=decrypted_password,
-            folder=password_entity.folder,
-            login=password_entity.login,
-            url=password_entity.url,
-            created_at=created_at,
-            last_password_updated_at=last_password_updated_at,
-        )
+        return decrypted_password
 
     def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
         """Check if user has access to password through any of their groups"""

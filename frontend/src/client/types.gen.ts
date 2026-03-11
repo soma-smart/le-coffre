@@ -332,24 +332,6 @@ export type GetPasswordListResponse = {
      * Can Write
      */
     can_write: boolean;
-};
-
-/**
- * GetPasswordResponse
- */
-export type GetPasswordResponse = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Password
-     */
-    password: string;
     /**
      * Login
      */
@@ -358,18 +340,16 @@ export type GetPasswordResponse = {
      * Url
      */
     url: string | null;
+};
+
+/**
+ * GetPasswordResponse
+ */
+export type GetPasswordResponse = {
     /**
-     * Folder
+     * Password
      */
-    folder: string;
-    /**
-     * Created At
-     */
-    created_at: string | null;
-    /**
-     * Last Password Updated At
-     */
-    last_password_updated_at: string | null;
+    password: string;
 };
 
 /**
@@ -793,7 +773,7 @@ export type UpdatePasswordRequest = {
     /**
      * Name
      */
-    name?: string | null;
+    name: string;
     /**
      * Password
      */
