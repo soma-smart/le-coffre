@@ -1,11 +1,13 @@
 import os
 import secrets
 import tempfile
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
-from alembic.config import Config
+
 from alembic import command
 
 
