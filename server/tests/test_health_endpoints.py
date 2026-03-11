@@ -23,6 +23,7 @@ def client():
     command.upgrade(alembic_cfg, "head")
 
     from main import app
+
     with TestClient(app) as c:
         yield c
 
