@@ -195,17 +195,24 @@ async def lifespan(app: FastAPI):
             await asyncio.to_thread(run_migrations)
             app.state.ready = True
             logger.info("Database migrations completed — application is ready")
+        except asyncio.CancelledError:
+            logger.warning("Migration task cancelled during shutdown — migration was in progress")
+            raise
         except Exception:
             app.state.migration_failed = True
             logger.critical(
-                "Database migrations failed after all retries — liveness probe will fail to trigger a restart",
+                "Database migrations failed — liveness probe will fail to trigger a restart",
                 exc_info=True,
             )
 
-    migration_task = asyncio.create_task(_run_migrations_in_background())
+    app.state.migration_task = asyncio.create_task(_run_migrations_in_background())
     logger.info("Application started — db=%s base_url=%s", db_type, base_url)
     yield
-    migration_task.cancel()
+    app.state.migration_task.cancel()
+    try:
+        await asyncio.wait_for(app.state.migration_task, timeout=5.0)
+    except (asyncio.CancelledError, asyncio.TimeoutError):
+        pass
     logger.info("Application shutting down")
     # Flush and shut down OTel providers to avoid losing buffered spans/metrics/logs
     if _otel_providers is not None:
@@ -273,8 +280,9 @@ async def readiness_check(request: Request):
         with session_maker() as session:
             session.exec(text("SELECT 1"))
         return {"status": "ready"}
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Database unhealthy: {e}") from e
+    except SQLAlchemyOperationalError:
+        logger.error("Readiness probe DB check failed", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unreachable") from None
 
 
 # Include API routers without additional prefix
