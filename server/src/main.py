@@ -198,8 +198,7 @@ async def lifespan(app: FastAPI):
         except Exception:
             app.state.migration_failed = True
             logger.critical(
-                "Database migrations failed after all retries — "
-                "liveness probe will fail to trigger a restart",
+                "Database migrations failed after all retries — liveness probe will fail to trigger a restart",
                 exc_info=True,
             )
 
