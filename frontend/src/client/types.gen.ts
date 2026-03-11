@@ -940,6 +940,20 @@ export type HealthCheckHealthGetResponses = {
     200: unknown;
 };
 
+export type ReadinessCheckHealthReadyGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/health/ready';
+};
+
+export type ReadinessCheckHealthReadyGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type GetCsrfTokenAuthCsrfTokenGetData = {
     body?: never;
     path?: never;
