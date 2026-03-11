@@ -26,7 +26,7 @@ Le Coffre is an open-source password manager that allows you to securely store a
 | **Login Page** | **Password View** |
 |:---:|:---:|
 | ![Login Page](frontend/public/img/docs/login_page.png) | ![Password View](frontend/public/img/docs/password_view.png) |
-| **Group View** | **Create Password** |
+ | **Create Password**| **Group View** |
 | ![Create Password](frontend/public/img/docs/create_password_view.png)| ![Group View](frontend/public/img/docs/group_view.png) |
 | **Shares Generation** | **Admin Users** |
 | ![Shares Generation](frontend/public/img/docs/shares_generation_page.png) | ![Admin Users](frontend/public/img/docs/admin_users_page.png) |
