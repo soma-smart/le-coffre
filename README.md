@@ -6,6 +6,8 @@
 
 Le Coffre is an open-source password manager that allows you to securely store and manage passwords in a collaboration-friendly environment.
 
+> 🇫🇷 Proudly supported by [SOMA](https://www.soma-smart.com)
+
 ## Table of Contents
 
 - [Application](#application)
