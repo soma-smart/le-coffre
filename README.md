@@ -1,16 +1,18 @@
 # Le Coffre
 
-<img src="frontend/public/img/le-coffre.png" alt="Le Coffre Logo" width="300">
+<p align="center">
+   <img src="frontend/public/img/le-coffre.png" alt="Le Coffre Logo" width="300">
+</p>
 
 Le Coffre is an open-source password manager that allows you to securely store and manage passwords in a collaboration-friendly environment.
 
 ## Table of Contents
 
+- [Application](#application)
+- [Further Documentation](#further-documentation)
 - [License](#license)
 - [Contributing](#contributing)
 - [Security implementation](#security-implementation)
-- [Init](#init)
-- [TODO](#todo)
 - [Library used](#library-used)
 - [Production deployment](#production-deployment)
 - [Security considerations](#security-considerations)
@@ -18,6 +20,23 @@ Le Coffre is an open-source password manager that allows you to securely store a
 - [Development Server](#development-server)
 - [Production](#production)
 - [Security](#security)
+
+## Application
+
+| **Login Page** | **Password View** |
+|:---:|:---:|
+| ![Login Page](frontend/public/img/docs/login_page.png) | ![Password View](frontend/public/img/docs/password_view.png) |
+ | **Create Password**| **Group View** |
+| ![Create Password](frontend/public/img/docs/create_password_view.png)| ![Group View](frontend/public/img/docs/group_view.png) |
+| **Shares Generation** | **Admin Users** |
+| ![Shares Generation](frontend/public/img/docs/shares_generation_page.png) | ![Admin Users](frontend/public/img/docs/admin_users_page.png) |
+
+## Further Documentation
+
+Each sub-service has its own README with more specific details:
+
+- [server/README.md](server/README.md) — backend setup, API, and database migrations
+- [frontend/README.md](frontend/README.md) — frontend setup, development, and testing
 
 ## License
 
@@ -41,13 +60,6 @@ Le Coffre uses the following security measures to ensure the safety of your pass
 1. At initialization, a random 256-byte key is generated, Shamir is then used to split the key into P shares, N of which are needed to reconstruct the key (P, N are configurable).
 2. This master key serve to encrypt the encryption key.
 3. Each password is uniquely salted with a random 256-byte key generated at the time of password creation and encrypted using the encryption key.
-
-## Init
-
-1. Shamir process starts.
-2. User is invited to create an admin account (mail, password, name).
-3. Once completed, user is redirected to the admin panel where the user can setup providers, manage users,
-   password entries...
 
 ## Library used
 
