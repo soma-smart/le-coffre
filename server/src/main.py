@@ -22,9 +22,9 @@ from tenacity import (
 from alembic import command
 from config import (
     get_database_url,
-    get_jwt_access_token_expiration_minutes,
+    get_jwt_access_token_expiration_seconds,
     get_jwt_algorithm,
-    get_jwt_refresh_token_expiration_days,
+    get_jwt_refresh_token_expiration_seconds,
     get_jwt_secret_key,
     get_rate_limit_api_max_requests,
     get_rate_limit_auth_max_requests,
@@ -157,8 +157,8 @@ async def lifespan(app: FastAPI):
     token_gateway = JwtTokenGateway(
         secret_key=get_jwt_secret_key(),
         algorithm=get_jwt_algorithm(),
-        access_token_expiration_minutes=get_jwt_access_token_expiration_minutes(),
-        refresh_token_expiration_days=get_jwt_refresh_token_expiration_days(),
+        access_token_expiration_seconds=get_jwt_access_token_expiration_seconds(),
+        refresh_token_expiration_seconds=get_jwt_refresh_token_expiration_seconds(),
     )
     app.state.token_gateway = token_gateway
 

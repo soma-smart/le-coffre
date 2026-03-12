@@ -31,8 +31,8 @@ uv run fastapi dev src/main.py --host 0.0.0.0
 | `DATABASE_URL` | No | SQLAlchemy database URL | `sqlite:///local_db.sqlite` |
 | `JWT_SECRET_KEY` | **Yes (prod)** | Secret key for signing JWTs (≥ 32 chars) | Random (dev only) |
 | `JWT_ALGORITHM` | No | JWT signing algorithm | `HS256` |
-| `JWT_ACCESS_TOKEN_EXPIRATION_MINUTES` | No | Access token lifetime (minutes) | `15` |
-| `JWT_REFRESH_TOKEN_EXPIRATION_DAYS` | No | Refresh token lifetime (days) | `7` |
+| `JWT_ACCESS_TOKEN_EXPIRATION_MINUTES` | No | Access token lifetime (minutes) | `5` |
+| `JWT_REFRESH_TOKEN_EXPIRATION_HOURS` | No | Refresh token lifetime (hours) | `4` |
 | `ENVIRONMENT` | No | Set to `production` to enable secure cookies and production settings | `development` |
 | `RATE_LIMIT_ENABLED` | No | Enable/disable rate limiting | `true` |
 | `RATE_LIMIT_AUTH_MAX_REQUESTS` | No | Max requests per window on auth routes | `5` |

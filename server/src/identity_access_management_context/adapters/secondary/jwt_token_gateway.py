@@ -12,13 +12,13 @@ class JwtTokenGateway(TokenGateway):
         self,
         secret_key: str,
         algorithm: str,
-        access_token_expiration_minutes: int,
-        refresh_token_expiration_days: int,
+        access_token_expiration_seconds: int,
+        refresh_token_expiration_seconds: int,
     ):
         self._secret_key = secret_key
         self._algorithm = algorithm
-        self._access_token_expiration_minutes = access_token_expiration_minutes
-        self._refresh_token_expiration_days = refresh_token_expiration_days
+        self.access_token_expiration_seconds = access_token_expiration_seconds
+        self._refresh_token_expiration_seconds = refresh_token_expiration_seconds
 
     async def generate_token(
         self,
@@ -37,7 +37,7 @@ class JwtTokenGateway(TokenGateway):
             "user_id": user_id_str,
             "email": email,
             "roles": roles,
-            "exp": datetime.now(UTC) + timedelta(minutes=self._access_token_expiration_minutes),
+            "exp": datetime.now(UTC) + timedelta(seconds=self.access_token_expiration_seconds),
             "iat": datetime.now(UTC),
             **claims,
         }
@@ -65,7 +65,7 @@ class JwtTokenGateway(TokenGateway):
             "email": email,
             "roles": roles,
             "type": "refresh",
-            "exp": datetime.now(UTC) + timedelta(days=self._refresh_token_expiration_days),
+            "exp": datetime.now(UTC) + timedelta(seconds=self._refresh_token_expiration_seconds),
             "iat": datetime.now(UTC),
         }
 

@@ -41,14 +41,14 @@ def get_jwt_expiration_hours() -> int:
     return int(os.environ.get("JWT_EXPIRATION_HOURS", "24"))
 
 
-def get_jwt_access_token_expiration_minutes() -> int:
-    """Get JWT access token expiration time in minutes. Default is 1 minutes."""
-    return int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRATION_MINUTES", "1"))
+def get_jwt_access_token_expiration_seconds() -> int:
+    """Get JWT access token expiration time in seconds. Default is 300 seconds (5 minutes)."""
+    return int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRATION_MINUTES", "5")) * 60
 
 
-def get_jwt_refresh_token_expiration_days() -> int:
-    """Get JWT refresh token expiration time in days. Default is 7 days."""
-    return int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRATION_DAYS", "7"))
+def get_jwt_refresh_token_expiration_seconds() -> int:
+    """Get JWT refresh token expiration time in seconds. Default is 14400 seconds (4 hours)."""
+    return int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRATION_HOURS", "4")) * 3600
 
 
 def is_production() -> bool:
