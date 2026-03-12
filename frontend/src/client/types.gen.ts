@@ -454,6 +454,10 @@ export type GroupItem = {
      * Owners
      */
     owners: Array<string>;
+    /**
+     * Members
+     */
+    members: Array<string>;
 };
 
 /**

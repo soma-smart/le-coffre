@@ -41,6 +41,15 @@ export const useGroupsStore = defineStore('groups', () => {
     ),
   )
 
+  // All groups where the current user is either an owner or a member
+  const userBelongingGroups = computed(() =>
+    groups.value.filter(
+      (group) =>
+        (group.owners && group.owners.includes(currentUserId.value!)) ||
+        (group.members && group.members.includes(currentUserId.value!)),
+    ),
+  )
+
   // Groups available for password creation: user's personal group + owned shared groups
   const groupsForPasswordCreation = computed(() => {
     const result: GroupItem[] = []
@@ -263,6 +272,7 @@ export const useGroupsStore = defineStore('groups', () => {
     // Computed
     groupsCount,
     ownedSharedGroups,
+    userBelongingGroups,
     groupsForPasswordCreation,
 
     // Actions
