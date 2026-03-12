@@ -11,9 +11,9 @@ export function logout(): void {
 
   cookiesToClear.forEach((cookieName) => {
     // Clear cookie with default path
-    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; samesite=lax`
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; samesite=strict`
     // Also try to clear with specific paths in case they were set differently
-    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/api; samesite=lax`
+    document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/api; samesite=strict`
   })
 
   // Clear localStorage

@@ -67,7 +67,7 @@ async def sso_callback(
             value=result.jwt_token,
             httponly=True,
             secure=is_secure,  # HTTPS only in production
-            samesite="lax",  # CSRF protection
+            samesite="strict",  # CSRF protection
             max_age=get_jwt_access_token_expiration_seconds(),
         )
 
@@ -76,7 +76,7 @@ async def sso_callback(
             value=result.refresh_token,
             httponly=True,
             secure=is_secure,  # HTTPS only in production
-            samesite="lax",
+            samesite="strict",
             max_age=get_jwt_refresh_token_expiration_seconds(),
         )
 
@@ -86,7 +86,7 @@ async def sso_callback(
             value="true",
             httponly=False,  # JavaScript can read this
             secure=is_secure,
-            samesite="lax",
+            samesite="strict",
             max_age=get_jwt_access_token_expiration_seconds(),
         )
 

@@ -68,7 +68,7 @@ async def refresh_access_token(
             value=result.access_token,
             httponly=True,
             secure=is_secure,
-            samesite="lax",
+            samesite="strict",
             max_age=access_token_max_age,
         )
         # Renew the non-httpOnly auth flag so the frontend can still detect the
@@ -78,7 +78,7 @@ async def refresh_access_token(
             value="true",
             httponly=False,
             secure=is_secure,
-            samesite="lax",
+            samesite="strict",
             max_age=access_token_max_age,
         )
 
