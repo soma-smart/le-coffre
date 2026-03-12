@@ -1,5 +1,6 @@
 // src/apiConfig.ts
 import { client } from '@/client/client.gen'
+import { refreshAccessTokenAuthRefreshTokenPost } from '@/client/sdk.gen'
 import router from '@/router'
 import { useCsrfStore } from '@/stores/csrf'
 import { logout } from '@/utils/logout'
@@ -43,11 +44,10 @@ async function attemptTokenRefresh(): Promise<boolean> {
 
   isRefreshing = true
   try {
-    const response = await fetch('/api/auth/refresh-token', {
-      method: 'POST',
+    const { error } = await refreshAccessTokenAuthRefreshTokenPost({
       credentials: 'include', // Sends the HTTP-only refresh_token cookie
     })
-    const success = response.ok
+    const success = !error
     notifyTokenRefreshSubscribers(success)
     return success
   } catch {
