@@ -24,7 +24,7 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 
 class UpdatePasswordRequest(BaseModel):
-    name: str | None = None
+    name: str
     password: str | None = None
     folder: str | None = None
     login: str | None = None

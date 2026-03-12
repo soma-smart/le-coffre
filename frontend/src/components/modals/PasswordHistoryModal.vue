@@ -104,6 +104,8 @@
                 <span v-if="slotProps.data.event_data.has_name_changed"> name</span>
                 <span v-if="slotProps.data.event_data.has_password_changed"> password</span>
                 <span v-if="slotProps.data.event_data.has_folder_changed"> folder</span>
+                <span v-if="slotProps.data.event_data.has_login_changed"> login</span>
+                <span v-if="slotProps.data.event_data.has_url_changed"> url</span>
               </span>
               <span v-else-if="slotProps.data.event_type === 'PasswordSharedEvent'">
                 Shared with group:

@@ -10,6 +10,7 @@ class FakePasswordRepository(PasswordRepository):
     def __init__(self):
         self.storage: Dict[UUID, Password] = {}
         self._password_owners: Dict[UUID, UUID] = {}  # password_id -> owner_group_id
+        self.update_count: int = 0
 
     def save(self, password: Password) -> None:
         self.storage[password.id] = password
@@ -46,6 +47,7 @@ class FakePasswordRepository(PasswordRepository):
         if password.id not in self.storage:
             raise PasswordNotFoundError(password.id)
         self.storage[password.id] = password
+        self.update_count += 1
 
     def set_owner_for_password(self, password_id: UUID, owner_group_id: UUID) -> None:
         """Helper method for tests to track ownership"""

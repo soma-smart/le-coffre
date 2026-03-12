@@ -121,23 +121,26 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     print("Step 1.2: Reading password and checking timestamps...")
     get_response = admin_client.get(f"/api/passwords/{password_id}")
     assert get_response.status_code == 200
-    password_data = get_response.json()
-    assert password_data["name"] == "Test Password"
-    assert password_data["password"] == STRONG_PASSWORD
-    assert password_data["folder"] == "Work"
-    assert password_data["login"] == LOGIN
-    assert password_data["url"] == URL
+    assert get_response.json()["password"] == STRONG_PASSWORD
+
+    list_meta_response = admin_client.get("/api/passwords/list")
+    assert list_meta_response.status_code == 200
+    password_meta = next(p for p in list_meta_response.json() if p["id"] == password_id)
+    assert password_meta["name"] == "Test Password"
+    assert password_meta["folder"] == "Work"
+    assert password_meta["login"] == LOGIN
+    assert password_meta["url"] == URL
 
     # Verify timestamps exist and are valid
-    assert "created_at" in password_data
-    assert password_data["created_at"] is not None
-    assert "last_password_updated_at" in password_data
-    assert password_data["last_password_updated_at"] is not None
+    assert "created_at" in password_meta
+    assert password_meta["created_at"] is not None
+    assert "last_updated_at" in password_meta
+    assert password_meta["last_updated_at"] is not None
 
-    original_created_at = password_data["created_at"]
-    original_updated_at = password_data["last_password_updated_at"]
+    original_created_at = password_meta["created_at"]
+    original_updated_at = password_meta["last_updated_at"]
     print(f"✓ Password retrieved with created_at: {original_created_at}")
-    print(f"✓ Password retrieved with last_password_updated_at: {original_updated_at}")
+    print(f"✓ Password retrieved with last_updated_at: {original_updated_at}")
 
     # Small delay to ensure timestamp will be different after update
     time.sleep(0.1)
@@ -161,27 +164,23 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     print("Step 1.4: Verifying update and timestamp changes...")
     get_updated = admin_client.get(f"/api/passwords/{password_id}")
     assert get_updated.status_code == 200
-    updated_data = get_updated.json()
-    assert updated_data["name"] == "Updated Password"
-    assert updated_data["password"] == "NewStrongP@ssw0rd!"
-    assert updated_data["folder"] == "Personal"
-    assert updated_data["login"] == "NEW " + LOGIN
-    assert updated_data["url"] == "NEW " + URL
+    assert get_updated.json()["password"] == "NewStrongP@ssw0rd!"
 
-    # Verify timestamps: created_at should stay same, last_password_updated_at should change
-    assert updated_data["created_at"] == original_created_at, "created_at should not change after update"
-    assert updated_data["last_password_updated_at"] != original_updated_at, ()
-    assert updated_data["last_password_updated_at"] != original_updated_at, (
-        "last_password_updated_at should change after update"
-    )
-    assert updated_data["last_password_updated_at"] > original_updated_at, ()
-    assert updated_data["last_password_updated_at"] > original_updated_at, (
-        "last_password_updated_at should be more recent"
-    )
+    list_updated_response = admin_client.get("/api/passwords/list")
+    assert list_updated_response.status_code == 200
+    updated_meta = next(p for p in list_updated_response.json() if p["id"] == password_id)
+    assert updated_meta["name"] == "Updated Password"
+    assert updated_meta["folder"] == "Personal"
+    assert updated_meta["login"] == "NEW " + LOGIN
+    assert updated_meta["url"] == "NEW " + URL
 
-    print(f"✓ created_at unchanged: {updated_data['created_at']}")
-    print(f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}")
-    print(f"✓ last_password_updated_at changed: {updated_data['last_password_updated_at']}")
+    # Verify timestamps: created_at should stay same, last_updated_at should change
+    assert updated_meta["created_at"] == original_created_at, "created_at should not change after update"
+    assert updated_meta["last_updated_at"] != original_updated_at, "last_updated_at should change after update"
+    assert updated_meta["last_updated_at"] > original_updated_at, "last_updated_at should be more recent"
+
+    print(f"✓ created_at unchanged: {updated_meta['created_at']}")
+    print(f"✓ last_updated_at changed: {updated_meta['last_updated_at']}")
 
     # Step 1.5: CREATE MORE PASSWORDS - Create additional passwords for list testing
     print("Step 1.5: Creating additional passwords for folder listing...")
@@ -357,11 +356,14 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     print("Step 2.7: Verifying SSO user can now access password...")
     get_after_share = sso_client.get(f"/api/passwords/{shared_password_id}")
     assert get_after_share.status_code == 200
-    shared_data = get_after_share.json()
-    assert shared_data["name"] == "Shared Test Password"
-    assert shared_data["password"] == STRONG_PASSWORD
-    assert shared_data["login"] == LOGIN
-    assert shared_data["url"] == URL
+    assert get_after_share.json()["password"] == STRONG_PASSWORD
+
+    sso_list_meta = sso_client.get("/api/passwords/list")
+    assert sso_list_meta.status_code == 200
+    shared_meta = next(p for p in sso_list_meta.json() if p["id"] == shared_password_id)
+    assert shared_meta["name"] == "Shared Test Password"
+    assert shared_meta["login"] == LOGIN
+    assert shared_meta["url"] == URL
     print("✓ SSO user can access shared password")
 
     # Step 2.8: LIST ACCESS AFTER SHARING - Should show owner + shared user
@@ -437,11 +439,14 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     print("Step 3.5: Verifying group member can access password...")
     get_after_group_share = sso_client.get(f"/api/passwords/{shared_password_id}")
     assert get_after_group_share.status_code == 200
-    group_shared_data = get_after_group_share.json()
-    assert group_shared_data["name"] == "Shared Test Password"
-    assert group_shared_data["password"] == STRONG_PASSWORD
-    assert group_shared_data["login"] == LOGIN
-    assert group_shared_data["url"] == URL
+    assert get_after_group_share.json()["password"] == STRONG_PASSWORD
+
+    group_member_list = sso_client.get("/api/passwords/list")
+    assert group_member_list.status_code == 200
+    group_shared_meta = next(p for p in group_member_list.json() if p["id"] == shared_password_id)
+    assert group_shared_meta["name"] == "Shared Test Password"
+    assert group_shared_meta["login"] == LOGIN
+    assert group_shared_meta["url"] == URL
     print("✓ Group member can access shared password")
 
     # ===================================================================

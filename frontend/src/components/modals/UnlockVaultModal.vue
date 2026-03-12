@@ -236,7 +236,7 @@ const handleReset = async () => {
     :closeOnEscape="false"
     :style="{ width: '40rem' }"
   >
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4" @keydown.enter.prevent="isValid && !loading && handleSubmit()">
       <!-- Warning message based on vault status -->
       <Message :severity="isPendingUnlock ? 'info' : 'warn'" :closable="false">
         <div class="flex gap-2">

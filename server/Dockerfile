@@ -50,8 +50,8 @@ ENV PYTHONPATH=/app/backend/src \
 # Expose port
 EXPOSE 8080
 
-# Healthcheck using Python
-HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+# Healthcheck: liveness (process alive, not gated on DB)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD ["/app/backend/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health').read()"]
 
 # Run FastAPI with uvicorn

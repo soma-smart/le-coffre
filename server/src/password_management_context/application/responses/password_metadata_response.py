@@ -13,3 +13,5 @@ class PasswordMetadataResponse:
     last_password_updated_at: datetime
     can_read: bool
     can_write: bool
+    login: str | None = None
+    url: str | None = None

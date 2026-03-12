@@ -32,6 +32,8 @@ class GetPasswordListResponse(BaseModel):
     last_updated_at: datetime
     can_read: bool
     can_write: bool
+    login: str | None
+    url: str | None
 
 
 @router.get(
@@ -69,6 +71,8 @@ def list_passwords(
                 last_updated_at=password.last_password_updated_at,
                 can_read=password.can_read,
                 can_write=password.can_write,
+                login=password.login,
+                url=password.url,
             )
             for password in passwords
         ]
