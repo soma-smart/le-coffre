@@ -6,113 +6,76 @@
 
 Le Coffre is an open-source password manager that allows you to securely store and manage passwords in a collaboration-friendly environment.
 
-> 🇫🇷 Proudly supported by [SOMA](https://www.soma-smart.com)
-
-## Table of Contents
-
-- [Application](#application)
-- [Further Documentation](#further-documentation)
-- [License](#license)
-- [Contributing](#contributing)
-- [Security implementation](#security-implementation)
-- [Library used](#library-used)
-- [Production deployment](#production-deployment)
-- [Security considerations](#security-considerations)
-- [Database Migrations](#database-migrations)
-- [Development Server](#development-server)
-- [Production](#production)
-- [Security](#security)
+> 🇫🇷 Proudly supported by [SOMA 🦊](https://www.soma-smart.com)
 
 ## Application
 
-| **Login Page** | **Password View** |
-|:---:|:---:|
-| ![Login Page](frontend/public/img/docs/login_page.png) | ![Password View](frontend/public/img/docs/password_view.png) |
- | **Create Password**| **Group View** |
-| ![Create Password](frontend/public/img/docs/create_password_view.png)| ![Group View](frontend/public/img/docs/group_view.png) |
-| **Shares Generation** | **Admin Users** |
-| ![Shares Generation](frontend/public/img/docs/shares_generation_page.png) | ![Admin Users](frontend/public/img/docs/admin_users_page.png) |
+### Setup and Encrypt Le Coffre in seconds
+![Setup Vault](media/setup.gif)
 
-## Further Documentation
+### Creation, Update, Sharing of Passwords ultra secure
+![Create password](media/create_password.gif)
 
-Each sub-service has its own README with more specific details:
+### Group system easy to use
+![Group](media/group_view.png)
 
-- [server/README.md](server/README.md) — backend setup, API, and database migrations
-- [frontend/README.md](frontend/README.md) — frontend setup, development, and testing
+### SSO
+![SSO](media/SSO.png)
 
-## License
+### Password audit
+![Audit Password](media/audit_password.png)
 
-This project is licensed under the MIT License. You are free to use, modify, and distribute this project under the terms of the license.
+### Admin view
+![List Users](media/admin_users_page.png)
 
-## Contributing
+## Simple to deploy
 
-We welcome contributions from the community! To contribute:
+### Docker images
+> rg.fr-par.scw.cloud/somait-cr:le-coffre-frontend:tag_version<br>
+> rg.fr-par.scw.cloud/somait-cr:le-coffre-backend:tag_version
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Commit your changes with clear and descriptive messages.
-4. Open a pull request and describe your changes.
+### Docker compose
+```bash
+# Create a .env file from .env.example, add a url to your database
+cp .env.example .env
 
-Please read our CONTRIBUTING.md for detailed guidelines.
+docker compose up --build -d
+```
 
-## Security implementation
+Visit <http://127.0.0.1:8123> and your done
 
-Le Coffre uses the following security measures to ensure the safety of your passwords:
+### In local
 
-1. At initialization, a random 256-byte key is generated, Shamir is then used to split the key into P shares, N of which are needed to reconstruct the key (P, N are configurable).
-2. This master key serve to encrypt the encryption key.
-3. Each password is uniquely salted with a random 256-byte key generated at the time of password creation and encrypted using the encryption key.
+[See here](#Development)
 
-## Library used
 
-**Frontend**
+# Tech
+## Frontend ([README.md](frontend/README.md))
 
 - Vue 3 + Vite
 - PrimeVue 4 (UI components)
 - Tailwind CSS
 - Pinia (state management)
-- Vue Router
 - Zod (schema validation)
 
-**Backend**
+## Backend ([README.md](server/README.md))
 
 - FastAPI
 - SQLModel + Alembic (ORM & migrations)
 - PyCryptodome (AES encryption, Shamir's Secret Sharing)
-- Authlib (SSO / OAuth2 OIDC)
+- Authlib (SSO / OAuth2 OIDC), PyJWT (auth tokens)
 - passlib + bcrypt (password hashing)
-- PyJWT (authentication tokens)
-- Tenacity (retry logic)
 
-## Production deployment
+# Development
 
-1. Behind a reverse proxy (nginx, caddy, etc.) with SSL termination.
-2. Use the hardened Docker image provided.
-
-## Security considerations
-
-Before considering deploying Le Coffre in a production environment, please consider the following security measures:
-
-1. The application is designed to be run in a secure environment, such as a private server or a trusted cloud provider. Any memory access is beyond threat model.
-   See: <https://github.com/hashicorp/vault/issues/1446> for comparable issue.
-2. Limit access to the application to trusted users only. Use strong passwords and two-factor authentication (2FA) where possible.
-3. Regularly update the application and its dependencies to ensure that any security vulnerabilities are patched.
-4. Monitor the application for any suspicious activity, such as unauthorized access attempts or unusual behavior.
-5. Regularly back up the database and other important data to prevent data loss in case of a security breach or other disaster.
-6. Consider using a web application firewall (WAF) to protect the application from common web-based attacks, such as SQL injection and cross-site scripting (XSS).
-7. Limit the number of users who have administrative access to the application, and regularly review user permissions to ensure that only authorized users have access to sensitive data.
-8. Limit access to the application to trusted IP addresses / networks, and use a VPN or other secure connection method to access the application remotely.
-
-## Development Server
-
-### Using Devcontainer (Recommended)
+## Using Devcontainer (Recommended)
 
 Open with VSCode and reopen in the devcontainer when prompted. The unified devcontainer includes both frontend and backend development environments with nginx as a reverse proxy.
 
 **Quick Start:**
 
 1. Open project in VS Code
-2. Click "Reopen in Container" when prompted (VS Code will automatically detect your user's UID/GID and configure the container accordingly)
+2. Click "Reopen in Container" when prompted
 3. Use VS Code tasks to start services:
    - Press `Ctrl+Shift+P` → "Run Task" → "Start All Services"
 
@@ -128,35 +91,12 @@ See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions
 
 > **Why nginx?** The frontend makes API calls to `/api/*` which are proxied to the backend. Always use port 8123 for development.
 
-### Manual Setup
+# Security
 
-Within each `frontend/` or `server/` folder you will find a README.md with more details.
+## Implementation
 
-## Database Migrations
+See [CRYPTOGRAPHIC_ARCHITECTURE.md](CRYPTOGRAPHIC_ARCHITECTURE.md)
 
-The backend uses Alembic for database schema management. Migrations are automatically applied on application startup.
+## Considerations
 
-See [server/README.md](server/README.md) for migration commands.
-
-## Production
-
-The application is deployed using Docker Compose. Each service (frontend, backend, nginx) has its own production-optimised Docker image.
-
-```bash
-# Copy and configure the environment file
-cp .env.example .env
-# Edit .env to set DATABASE_URL, JWT_SECRET_KEY, and other required values
-
-# Build and start all services
-docker compose up --build -d
-```
-
-The application will be available at <http://127.0.0.1:8123> via nginx.
-
-> Always place a TLS-terminating reverse proxy (nginx, Caddy, etc.) in front for production deployments.
-
-## Security
-
-For detailed security policies, threat model, and vulnerability reporting instructions, see [SECURITY.md](SECURITY.md).
-
-For a detailed explanation of the cryptographic design and key management model, see [CRYPTOGRAPHIC_ARCHITECTURE.md](CRYPTOGRAPHIC_ARCHITECTURE.md).
+See [SECURITY.md](SECURITY.md).
