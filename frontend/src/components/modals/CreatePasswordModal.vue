@@ -2,11 +2,7 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import {
-  createPasswordPasswordsPost,
-  updatePasswordPasswordsPasswordIdPut,
-  getPasswordPasswordsPasswordIdGet,
-} from '@/client/sdk.gen'
+import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen'
 import type { GetPasswordListResponse } from '@/client/types.gen'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useGroupsStore } from '@/stores/groups'
@@ -88,16 +84,9 @@ watch(
       isEditMode.value = true
       name.value = newValue.name
       password.value = '' // Don't prefill password for security
-      login.value = ''
-      url.value = ''
+      login.value = newValue.login || ''
+      url.value = newValue.url || ''
       folder.value = newValue.folder || ''
-      // Fetch detail to pre-fill optional fields
-      getPasswordPasswordsPasswordIdGet({ path: { password_id: newValue.id } }).then((response) => {
-        if (response.data) {
-          login.value = response.data.login || ''
-          url.value = response.data.url || ''
-        }
-      })
     } else {
       isEditMode.value = false
       name.value = ''
@@ -167,10 +156,10 @@ const handleSubmit = async () => {
       // Update existing password
       const updateBody: {
         name: string
-        folder: string | null
         password?: string
-        login?: string | null
-        url?: string | null
+        folder: string | null
+        login: string | null
+        url: string | null
       } = {
         name: name.value,
         folder: folder.value || null,
@@ -178,7 +167,6 @@ const handleSubmit = async () => {
         url: url.value || null,
       }
 
-      // Only include password if it was changed
       if (password.value) {
         updateBody.password = password.value
       }
@@ -333,7 +321,7 @@ const handlePasswordBlur = () => {
     :header="isEditMode ? 'Edit Password' : 'Create New Password'"
     :style="{ width: '32rem' }"
   >
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4" @keydown.enter.prevent="!loading && handleSubmit()">
       <div class="flex flex-col gap-2">
         <label for="password-name" class="font-semibold">Name</label>
         <InputText

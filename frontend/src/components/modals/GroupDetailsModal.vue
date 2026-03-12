@@ -395,7 +395,10 @@ watch(visible, async (isVisible) => {
     header="Add Member"
     :style="{ width: '30rem' }"
   >
-    <div class="flex flex-col gap-3">
+    <div
+      class="flex flex-col gap-3"
+      @keydown.enter.prevent="selectedUserId && !loadingAction && addMember()"
+    >
       <Select
         v-model="selectedUserId"
         :options="availableUsers"

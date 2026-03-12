@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -116,10 +117,8 @@ def _build_engine(database_url: str):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Run migrations instead of create_tables
-    logger.info("Starting database migrations...")
-    run_migrations()
-    logger.info("Database migrations completed")
+    app.state.ready = False
+    app.state.migration_failed = False
 
     engine = _build_engine(get_database_url())
 
@@ -189,8 +188,31 @@ async def lifespan(app: FastAPI):
 
     db_url = get_database_url()
     db_type = "postgresql" if db_url.startswith("postgresql") else "sqlite"
+
+    async def _run_migrations_in_background():
+        try:
+            logger.info("Starting database migrations...")
+            await asyncio.to_thread(run_migrations)
+            app.state.ready = True
+            logger.info("Database migrations completed — application is ready")
+        except asyncio.CancelledError:
+            logger.warning("Migration task cancelled during shutdown — migration was in progress")
+            raise
+        except Exception:
+            app.state.migration_failed = True
+            logger.critical(
+                "Database migrations failed — liveness probe will fail to trigger a restart",
+                exc_info=True,
+            )
+
+    app.state.migration_task = asyncio.create_task(_run_migrations_in_background())
     logger.info("Application started — db=%s base_url=%s", db_type, base_url)
     yield
+    app.state.migration_task.cancel()
+    try:
+        await asyncio.wait_for(app.state.migration_task, timeout=5.0)
+    except (asyncio.CancelledError, asyncio.TimeoutError):
+        pass
     logger.info("Application shutting down")
     # Flush and shut down OTel providers to avoid losing buffered spans/metrics/logs
     if _otel_providers is not None:
@@ -237,17 +259,30 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
 
-# Health check endpoint for Kubernetes
+# Liveness probe: process is alive and event loop is responsive.
+# Fails only if migrations have fatally failed, to trigger a Kubernetes restart.
 # Note: With root_path="/api", this will be accessible at /api/health
 @app.get("/health")
 async def health_check(request: Request):
+    if getattr(request.app.state, "migration_failed", False):
+        raise HTTPException(status_code=503, detail="Migrations failed")
+    return {"status": "healthy"}
+
+
+# Readiness probe: process is ready to serve traffic (migrations done + DB reachable)
+# Note: With root_path="/api", this will be accessible at /api/health/ready
+@app.get("/health/ready")
+async def readiness_check(request: Request):
+    if not getattr(request.app.state, "ready", False):
+        raise HTTPException(status_code=503, detail="Migrations in progress")
     try:
         session_maker = request.app.state.session_maker
         with session_maker() as session:
             session.exec(text("SELECT 1"))
-        return {"status": "healthy"}
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Database unhealthy: {e}") from e
+        return {"status": "ready"}
+    except SQLAlchemyOperationalError:
+        logger.error("Readiness probe DB check failed", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unreachable") from None
 
 
 # Include API routers without additional prefix

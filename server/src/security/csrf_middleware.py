@@ -44,6 +44,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         "/api/auth/register-admin",  # Registration happens before token exists
         "/api/vault/setup",  # Vault setup happens before CSRF token exists
         "/api/vault/validate-setup",  # Validate setup happens immediately after
+        "/api/vault/unlock",  # Vault unlock happens before authentication is possible
     ]
 
     # HTTP methods that require CSRF protection
