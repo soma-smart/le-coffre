@@ -128,3 +128,23 @@ def test_given_mixed_groups_when_listing_without_personal_should_return_only_sha
     assert result.groups[0].id == shared_group_id
     assert result.groups[0].is_personal is False
     assert result.groups[0].owners == [owner_id]
+
+
+def test_given_group_with_members_when_listing_groups_should_return_members_not_owners(
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    group_id = uuid4()
+    owner_id = uuid4()
+    member_id = uuid4()
+
+    group_repository.save_group(Group(id=group_id, name="Group 1", is_personal=False, user_id=None))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, member_id, is_owner=False)
+
+    command = ListGroupsCommand()
+    result = use_case.execute(command)
+
+    assert len(result.groups) == 1
+    assert result.groups[0].members == [member_id]

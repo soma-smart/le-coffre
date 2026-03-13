@@ -23,6 +23,7 @@ class GroupItem(BaseModel):
     is_personal: bool
     user_id: UUID | None
     owners: list[UUID]
+    members: list[UUID]
 
 
 class ListGroupsResponse(BaseModel):
@@ -69,6 +70,7 @@ def list_groups(
                 is_personal=group.is_personal,
                 user_id=group.user_id,
                 owners=group.owners,
+                members=group.members,
             )
             for group in groups_with_owners.groups
         ]

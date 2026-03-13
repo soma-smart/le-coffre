@@ -37,6 +37,7 @@ class ListGroupsUseCase(TracedUseCase):
         for group in all_groups:
             members = self.group_member_repository.get_members(group.id)
             owner_ids = [m.user_id for m in members if m.is_owner]
+            members_ids = [m.user_id for m in members if not m.is_owner]
 
             # For personal groups, the user_id is the owner if no members in table
             if group.is_personal and group.user_id and not owner_ids:
@@ -49,6 +50,7 @@ class ListGroupsUseCase(TracedUseCase):
                     is_personal=group.is_personal,
                     user_id=group.user_id,
                     owners=owner_ids,
+                    members=members_ids,
                 )
             )
 

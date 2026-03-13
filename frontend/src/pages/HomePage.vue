@@ -7,12 +7,20 @@ import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
 import PasswordHistoryModal from '@/components/modals/PasswordHistoryModal.vue'
 import PasswordsList from '@/components/passwords/PasswordsList.vue'
+import GroupFilterSelect from '@/components/GroupFilterSelect.vue'
 import type { GetPasswordListResponse } from '@/client/types.gen'
 import { usePasswordsStore } from '@/stores/passwords'
+import { useGroupsStore } from '@/stores/groups'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const passwordsStore = usePasswordsStore()
+const groupsStore = useGroupsStore()
+const userStore = useUserStore()
+
 const { passwords, loading, error } = storeToRefs(passwordsStore)
+const { groups, userBelongingGroups } = storeToRefs(groupsStore)
+const { isAdmin } = storeToRefs(userStore)
 
 const selectedFolder = ref<string | null>(null)
 const showCreateModal = ref(false)
@@ -22,15 +30,27 @@ const editingPassword = ref<GetPasswordListResponse | null>(null)
 const sharingPassword = ref<GetPasswordListResponse | null>(null)
 const historyPassword = ref<GetPasswordListResponse | null>(null)
 
+// Group filter state — null means "all selected"
+const selectedGroupIds = ref<string[] | null>(null)
+
+// Groups visible in the filter selector: all for admins, user's own for others
+const filterableGroups = computed(() => (isAdmin.value ? groups.value : userBelongingGroups.value))
+
+// Passwords filtered by the selected groups (client-side only)
+const filteredPasswords = computed<GetPasswordListResponse[]>(() => {
+  // null = ALL selected, no filtering needed
+  if (selectedGroupIds.value === null) return passwords.value
+  if (selectedGroupIds.value.length === 0) return []
+  return passwords.value.filter((p) => selectedGroupIds.value!.includes(p.group_id))
+})
+
 const folderFilter = computed(() => route.query.folder as string | undefined)
 
 const handlePasswordCreated = async () => {
-  // Reload the passwords list
   await passwordsStore.refresh()
 }
 
 const handlePasswordUpdated = async () => {
-  // Reload the passwords list
   await passwordsStore.refresh()
 }
 
@@ -50,17 +70,14 @@ const handleHistory = (password: GetPasswordListResponse) => {
 }
 
 const handleDeleted = async () => {
-  // Reload the passwords list
   await passwordsStore.refresh()
 }
 
 const handleShared = async () => {
-  // Optionally reload the passwords list
   await passwordsStore.refresh()
 }
 
 const handleUnshared = async () => {
-  // Optionally reload the passwords list
   await passwordsStore.refresh()
 }
 
@@ -71,14 +88,12 @@ watch(showCreateModal, (isVisible) => {
   }
 })
 
-// Watch for share modal visibility changes to reset sharing state
 watch(showShareModal, (isVisible) => {
   if (!isVisible) {
     sharingPassword.value = null
   }
 })
 
-// Watch for history modal visibility changes to reset history state
 watch(showHistoryModal, (isVisible) => {
   if (!isVisible) {
     historyPassword.value = null
@@ -94,14 +109,13 @@ watch(
 )
 
 onMounted(async () => {
-  // Auto-expand folder if filtered
   const folderQuery = route.query.folder as string | undefined
   if (folderQuery) {
     selectedFolder.value = folderQuery
   }
 
-  // Fetch passwords
-  passwordsStore.fetchPasswords()
+  // Fetch passwords and groups in parallel
+  await Promise.all([passwordsStore.fetchPasswords(), groupsStore.fetchAllGroups()])
 })
 </script>
 
@@ -113,8 +127,13 @@ onMounted(async () => {
         <Button label="New Password" icon="pi pi-plus" @click="showCreateModal = true" />
       </div>
 
+      <!-- Group filter -->
+      <div class="mb-4">
+        <GroupFilterSelect :groups="filterableGroups" v-model="selectedGroupIds" />
+      </div>
+
       <PasswordsList
-        :passwords="passwords"
+        :passwords="filteredPasswords"
         :loading="loading"
         :error="error"
         :selectedFolder="selectedFolder"
