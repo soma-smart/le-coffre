@@ -88,23 +88,15 @@ See [server/alembic/README.md](alembic/README.md) for migration full documentati
 
 ## Run the tests
 
-To have the tests run automatically on file changes, you can use the `ptw` command:
-
 ```bash
-uv run ptw .
-```
-
-Or classic pytest:
-
-```bash
-uv run pytest
+uv run pytest -n auto
 ```
 
 Tests that require OpenTelemetry are automatically skipped if the `monitoring` group is not installed.
 
 ## Formatting
 
-To ensure code quality, run these command:
+To ensure code quality, work in the dev container that it is automatically applied, or run these command:
 
 ```bash
 uv run ruff format .
