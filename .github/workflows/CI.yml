@@ -118,7 +118,7 @@ jobs:
       - name: Run Unit Tests
         if: success() || failure()
         working-directory: server/
-        run: uv run pytest -n auto
+        run: uv run pytest .
 
   back-ci-no-monitoring:
     timeout-minutes: 10
@@ -147,7 +147,7 @@ jobs:
 
       - name: Run Unit Tests
         working-directory: server/
-        run: uv run pytest -n auto
+        run: uv run pytest .
 
   openapi-sync-check:
     timeout-minutes: 10
