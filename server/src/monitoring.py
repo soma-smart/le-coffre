@@ -246,6 +246,14 @@ def _configure_otel(app) -> tuple:
     )
     set_logger_provider(logger_provider)
     otel_log_handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+    # Raise the root logger level to INFO so application logs reach this handler.
+    # The root logger defaults to WARNING, silently dropping INFO records before
+    # they reach any handler. This is scoped here so it only applies when the
+    # OTel log bridge is active — no side effects in non-monitoring deployments.
+    # Note: third-party loggers (sqlalchemy, httpx, …) also inherit from root, but
+    # their own propagate=True + NOTSET level means only records that pass the
+    # root level reach handlers. Set per-library levels below if spam is observed.
+    logging.getLogger().setLevel(logging.INFO)
     logging.getLogger().addHandler(otel_log_handler)
 
     FastAPIInstrumentor.instrument_app(
