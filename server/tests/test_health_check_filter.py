@@ -1,6 +1,5 @@
 import logging
 import os
-import secrets
 import tempfile
 import time
 from unittest.mock import MagicMock, patch
@@ -20,13 +19,17 @@ def filter_instance():
 
 
 @pytest.fixture(scope="module")
-def client():
+def database_url():
     db_fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(db_fd)
-    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-    os.environ["JWT_SECRET_KEY"] = secrets.token_urlsafe(32)
-    os.environ["JWT_ALGORITHM"] = "HS256"
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+        yield f"sqlite:///{db_path}"
+    os.unlink(db_path)
 
+
+@pytest.fixture(scope="module")
+def client(env_vars, database_url):
     alembic_cfg = Config("alembic.ini")
     alembic_cfg.set_main_option("script_location", "alembic")
     command.upgrade(alembic_cfg, "head")
@@ -41,11 +44,6 @@ def client():
             time.sleep(0.05)
         assert c.app.state.ready, "Background migration task did not complete in time"
         yield c
-
-    os.unlink(db_path)
-    del os.environ["DATABASE_URL"]
-    del os.environ["JWT_SECRET_KEY"]
-    del os.environ["JWT_ALGORITHM"]
 
 
 def make_uvicorn_record(client: str, method: str, path: str, status: int) -> logging.LogRecord:
