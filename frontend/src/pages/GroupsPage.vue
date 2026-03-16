@@ -240,11 +240,7 @@ onMounted(async () => {
       <div class="mb-4">
         <IconField>
           <InputIcon class="pi pi-search" />
-          <InputText
-            v-model="searchQuery"
-            placeholder="Search groups…"
-            class="w-full md:w-80"
-          />
+          <InputText v-model="searchQuery" placeholder="Search groups…" class="w-full md:w-80" />
         </IconField>
       </div>
 

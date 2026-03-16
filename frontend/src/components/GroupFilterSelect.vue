@@ -68,7 +68,11 @@ const clearAll = () => {
     <Button
       v-if="passwordCounts !== undefined"
       :icon="sortMode === 'name' ? 'pi pi-sort-alpha-down' : 'pi pi-sort-amount-down'"
-      v-tooltip.top="sortMode === 'name' ? 'Sorted by name — click to sort by password count' : 'Sorted by password count — click to sort by name'"
+      v-tooltip.top="
+        sortMode === 'name'
+          ? 'Sorted by name — click to sort by password count'
+          : 'Sorted by password count — click to sort by name'
+      "
       text
       rounded
       size="small"
@@ -97,7 +101,7 @@ const clearAll = () => {
             v-if="passwordCounts !== undefined"
             class="ml-auto text-xs text-surface-400 tabular-nums"
           >
-          <Badge class="ml-auto" :value="passwordCounts[option.id] ?? 0" />
+            <Badge class="ml-auto" :value="passwordCounts[option.id] ?? 0" />
           </span>
         </div>
       </template>

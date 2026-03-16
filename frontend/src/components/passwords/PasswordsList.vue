@@ -174,11 +174,7 @@ onMounted(async () => {
     <div class="flex flex-wrap items-center gap-4 mb-4">
       <IconField>
         <InputIcon class="pi pi-search" />
-        <InputText
-          v-model="searchQuery"
-          placeholder="Filter"
-          class="min-w-64"
-        />
+        <InputText v-model="searchQuery" placeholder="Filter" class="min-w-64" />
       </IconField>
 
       <GroupFilterSelect
