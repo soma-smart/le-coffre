@@ -333,6 +333,7 @@ onMounted(async () => {
               v-model="newGroupName"
               placeholder="Enter group name"
               @keyup.enter="handleSubmit"
+              autofocus
             />
           </div>
         </div>
