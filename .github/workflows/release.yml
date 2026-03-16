@@ -175,11 +175,13 @@ jobs:
 
       - name: Create Release
         uses: actions/github-script@v8
+        env:
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const tag = context.ref.replace('refs/tags/', '');
-            const changelog = `${{ steps.changelog.outputs.changelog }}`;
+            const changelog = process.env.CHANGELOG;
 
             let existingRelease;
             try {
