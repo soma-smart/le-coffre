@@ -82,7 +82,19 @@ jobs:
           OTHER=$(echo "$COMMITS" | grep -iv "^* \(feat\|fix\|refactor\|chore\)" || true)
 
           # Build changelog
-          CHANGELOG="# Release $CURRENT_TAG"
+
+          # Add Docker images section
+          REGISTRY="ghcr.io/${GITHUB_REPOSITORY_OWNER}"
+          CHANGELOG="$CHANGELOG\n## 🐳 Docker Images\n"
+          CHANGELOG="$CHANGELOG\`\`\`\n"
+          CHANGELOG="$CHANGELOG docker pull ${REGISTRY}/le-coffre-backend:${CURRENT_TAG}\n"
+          CHANGELOG="$CHANGELOG docker pull ${REGISTRY}/le-coffre-frontend:${CURRENT_TAG}\n"
+          CHANGELOG="$CHANGELOG\`\`\`\n"
+          CHANGELOG="$CHANGELOG\n| Image | Tag | Link |\n"
+          CHANGELOG="$CHANGELOG|-------|-----|------|\n"
+          CHANGELOG="$CHANGELOG| Backend | \`${CURRENT_TAG}\` | [ghcr.io](https://ghcr.io/${GITHUB_REPOSITORY_OWNER}/le-coffre-backend) |\n"
+          CHANGELOG="$CHANGELOG| Frontend | \`${CURRENT_TAG}\` | [ghcr.io](https://ghcr.io/${GITHUB_REPOSITORY_OWNER}/le-coffre-frontend) |\n"
+
           CHANGELOG="$CHANGELOG\n\n## Changes\n"
 
           if [ -n "$FEATURES" ]; then
@@ -104,7 +116,6 @@ jobs:
           if [ -n "$OTHER" ]; then
             CHANGELOG="$CHANGELOG\n### 📝 Other Changes\n$OTHER\n"
           fi
-
           echo "changelog<<EOF" >> $GITHUB_OUTPUT
           echo -e "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT

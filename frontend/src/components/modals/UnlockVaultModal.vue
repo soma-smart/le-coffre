@@ -208,6 +208,7 @@ const handleReset = async () => {
         })
 
         // Refresh vault status
+        await setupStore.fetchVaultStatus(true)
         emit('statusChanged', 'LOCKED')
       } catch (err: unknown) {
         const error = err as { detail?: string; message?: string }

@@ -163,7 +163,10 @@ const handleSsoLogin = async () => {
 <template>
   <Card class="flex justify-center flex-1 max-w-md w-full mx-auto">
     <template #header>
-      <h1 class="text-3xl font-bold text-center mb-2">Le Coffre</h1>
+      <h1 class="text-3xl font-bold text-center mb-4">Le Coffre</h1>
+      <div class="flex justify-center mb-4">
+        <img src="/img/le-coffre.png" alt="Le Coffre" class="h-32 w-auto" />
+      </div>
       <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
     </template>
     <template #content>
