@@ -120,7 +120,7 @@ jobs:
         run: |
           # Get previous tag
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          CURRENT_TAG=${{ steps.set_outputs.outputs.image_tag }}
 
           # Generate changelog from commits
           if [ -z "$PREVIOUS_TAG" ]; then
@@ -182,7 +182,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const tag = context.ref.replace('refs/tags/', '');
+            const tag = '${{ steps.set_outputs.outputs.image_tag }}';
             const changelog = process.env.CHANGELOG;
 
             let existingRelease;
