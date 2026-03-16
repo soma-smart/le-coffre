@@ -63,6 +63,7 @@ const filteredPasswords = computed<GetPasswordListResponse[]>(() => {
   if (q) {
     result = result.filter(
       (p) =>
+        p.folder.toLowerCase().includes(q) ||
         p.name?.toLowerCase().includes(q) ||
         p.login?.toLowerCase().includes(q) ||
         p.url?.toLowerCase().includes(q),
@@ -175,7 +176,7 @@ onMounted(async () => {
         <InputIcon class="pi pi-search" />
         <InputText
           v-model="searchQuery"
-          placeholder="Filter by name, login or URL…"
+          placeholder="Filter"
           class="min-w-64"
         />
       </IconField>
