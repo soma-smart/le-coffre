@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import {
@@ -83,7 +83,7 @@ const getDisplayedShare = (index: number) => {
 
 const handleShareInput = (event: Event, index: number) => {
   const target = event.target as HTMLInputElement
-  const cursorPosition = target.selectionStart || 0
+  const cursorPosition = target.selectionStart
   const inputValue = target.value
 
   // If the input contains bullets and user is typing
@@ -94,10 +94,13 @@ const handleShareInput = (event: Event, index: number) => {
     shares.value[index] = inputValue
   }
 
-  // Restore cursor position
-  setTimeout(() => {
-    target.setSelectionRange(cursorPosition, cursorPosition)
-  }, 0)
+  // Restore cursor position if available
+  if (cursorPosition !== null) {
+    // Restore cursor position after DOM updates
+    nextTick(() => {
+      target.setSelectionRange(cursorPosition, cursorPosition)
+    })
+  }
 }
 
 const handleShareFocus = (index: number) => {
@@ -237,7 +240,7 @@ const handleReset = async () => {
     :closeOnEscape="false"
     :style="{ width: '40rem' }"
   >
-    <div class="flex flex-col gap-4" @keydown.enter.prevent="isValid && !loading && handleSubmit()">
+    <div class="flex flex-col gap-4">
       <!-- Warning message based on vault status -->
       <Message :severity="isPendingUnlock ? 'info' : 'warn'" :closable="false">
         <div class="flex gap-2">
@@ -357,13 +360,22 @@ const handleReset = async () => {
         />
         <div v-else></div>
         <!-- Spacer to push unlock button to the right when no reset button -->
-        <Button
-          :label="isPendingUnlock ? 'Add Shares' : 'Submit Shares'"
-          @click="handleSubmit"
-          :loading="loading"
-          :disabled="!isValid"
-          icon="pi pi-unlock"
-        />
+        <div class="flex gap-2">
+          <Button
+            type="button"
+            label="Cancel"
+            severity="secondary"
+            class="p-button-text"
+            @click="visible = false"
+          />
+          <Button
+            :label="isPendingUnlock ? 'Add Shares' : 'Submit Shares'"
+            @click="handleSubmit"
+            :loading="loading"
+            :disabled="!isValid"
+            icon="pi pi-unlock"
+          />
+        </div>
       </div>
     </template>
   </Dialog>
