@@ -45,7 +45,7 @@ jobs:
             ${{ env.REGISTRY }}/le-coffre-backend:${{ steps.set_outputs.outputs.image_tag }}
             ${{ env.REGISTRY }}/le-coffre-backend:latest
           cache-from: type=registry,ref=${{ env.REGISTRY }}/le-coffre-backend:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-backend:buildcache,mode=max
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-backend:buildcache,mode=max,ignore-error=true
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6.17.0
@@ -58,7 +58,7 @@ jobs:
             ${{ env.REGISTRY }}/le-coffre-frontend:${{ steps.set_outputs.outputs.image_tag }}
             ${{ env.REGISTRY }}/le-coffre-frontend:latest
           cache-from: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache,mode=max
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache,mode=max,ignore-error=true
 
       - name: Generate changelog
         id: changelog
