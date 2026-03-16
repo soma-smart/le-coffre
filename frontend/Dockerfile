@@ -16,6 +16,9 @@ RUN bun run build
 # =============================================================================
 FROM nginx:1.27-alpine
 
+# Apply latest security patches from Alpine repos
+RUN apk upgrade --no-cache
+
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 

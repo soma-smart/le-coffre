@@ -24,9 +24,10 @@ COPY . ./
 # =============================================================================
 FROM python:3.13-slim
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    libpq5 \
+# Apply latest security patches, then install runtime dependencies
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
