@@ -252,8 +252,14 @@ jobs:
         with:
           languages: ${{ matrix.language }}
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+      - name: Install Bun (javascript-typescript only)
+        if: matrix.language == 'javascript-typescript'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Build (javascript-typescript only)
+        if: matrix.language == 'javascript-typescript'
+        working-directory: frontend/
+        run: bun install --frozen-lockfile
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3
