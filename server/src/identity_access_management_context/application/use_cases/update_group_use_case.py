@@ -45,7 +45,7 @@ class UpdateGroupUseCase(TracedUseCase):
             raise UserNotOwnerOfGroupException(command.requesting_user.user_id, command.group_id)
 
         existing_group = self.group_repository.get_by_name(command.name)
-        if existing_group is not None and existing_group.group_id != command.group_id:
+        if existing_group is not None and existing_group.id != command.group_id:
             raise GroupAlreadyExistsException(command.name)
 
         group.name = command.name
