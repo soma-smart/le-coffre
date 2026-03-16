@@ -82,6 +82,7 @@ jobs:
           fail-build: true
           severity-cutoff: critical
           output-format: sarif
+          only-fixed: true
 
       - name: Scan frontend image (Grype)
         uses: anchore/scan-action@v7.3.1
@@ -91,6 +92,7 @@ jobs:
           fail-build: true
           severity-cutoff: critical
           output-format: sarif
+          only-fixed: true
 
       - name: Upload backend scan results to GitHub Security
         if: always() && steps.grype-backend.outputs.sarif != ''
