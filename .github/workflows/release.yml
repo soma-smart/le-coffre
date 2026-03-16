@@ -35,31 +35,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend image
+      - name: Build backend image
         uses: docker/build-push-action@v6.17.0
         with:
           context: ./server
           file: ./server/Dockerfile
-          push: true
+          push: false
+          load: true
           platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/le-coffre-backend:${{ steps.set_outputs.outputs.image_tag }}
             ${{ env.REGISTRY }}/le-coffre-backend:latest
           cache-from: type=registry,ref=${{ env.REGISTRY }}/le-coffre-backend:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-backend:buildcache,mode=max,ignore-error=true
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6.17.0
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          platforms: linux/amd64
-          tags: |
-            ${{ env.REGISTRY }}/le-coffre-frontend:${{ steps.set_outputs.outputs.image_tag }}
-            ${{ env.REGISTRY }}/le-coffre-frontend:latest
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache,mode=max,ignore-error=true
 
       - name: Scan backend image (Grype)
         uses: anchore/scan-action@v7.3.1
@@ -77,6 +65,25 @@ jobs:
           sarif_file: ${{ steps.grype-backend.outputs.sarif }}
           category: container-backend
 
+      - name: Push backend image
+        run: |
+          docker push ${{ env.REGISTRY }}/le-coffre-backend:${{ steps.set_outputs.outputs.image_tag }}
+          docker push ${{ env.REGISTRY }}/le-coffre-backend:latest
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6.17.0
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          load: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/le-coffre-frontend:${{ steps.set_outputs.outputs.image_tag }}
+            ${{ env.REGISTRY }}/le-coffre-frontend:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/le-coffre-frontend:buildcache,mode=max,ignore-error=true
+
       - name: Scan frontend image (Grype)
         uses: anchore/scan-action@v7.3.1
         id: grype-frontend
@@ -92,6 +99,11 @@ jobs:
         with:
           sarif_file: ${{ steps.grype-frontend.outputs.sarif }}
           category: container-frontend
+
+      - name: Push frontend image
+        run: |
+          docker push ${{ env.REGISTRY }}/le-coffre-frontend:${{ steps.set_outputs.outputs.image_tag }}
+          docker push ${{ env.REGISTRY }}/le-coffre-frontend:latest
 
       - name: Generate changelog
         id: changelog
