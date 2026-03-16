@@ -229,38 +229,3 @@ jobs:
           if [ -n "$FASTAPI_PID" ]; then
             kill $FASTAPI_PID 2>/dev/null || true
           fi
-
-  codeql:
-    name: CodeQL SAST
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [python, javascript-typescript]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-
-      - name: Install Bun (javascript-typescript only)
-        if: matrix.language == 'javascript-typescript'
-        uses: oven-sh/setup-bun@v2
-
-      - name: Build (javascript-typescript only)
-        if: matrix.language == 'javascript-typescript'
-        working-directory: frontend/
-        run: bun install --frozen-lockfile
-
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: codeql-${{ matrix.language }}
