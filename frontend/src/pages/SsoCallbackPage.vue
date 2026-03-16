@@ -39,6 +39,7 @@ onMounted(async () => {
         code,
         ...(state && { state }),
       },
+      credentials: 'include', // Ensures cookies from response are stored (required when API is cross-origin)
     })
 
     if (response.error) {

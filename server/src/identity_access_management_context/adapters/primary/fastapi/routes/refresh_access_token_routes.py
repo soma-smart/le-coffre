@@ -51,13 +51,13 @@ async def refresh_access_token(
     - **400**: Invalid or expired refresh token, or user no longer exists
     - **500**: Internal server error
     """
-    try:
-        if not refresh_token_cookie:
-            raise HTTPException(
-                status_code=400,
-                detail="Refresh token cookie is required",
-            )
+    if not refresh_token_cookie:
+        raise HTTPException(
+            status_code=400,
+            detail="Refresh token cookie is required",
+        )
 
+    try:
         command = RefreshAccessTokenCommand(refresh_token=refresh_token_cookie)
         # Set new access token in HTTP-only secure cookie
         result = await usecase.execute(command)
