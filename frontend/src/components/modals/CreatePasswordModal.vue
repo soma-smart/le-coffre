@@ -30,6 +30,8 @@ const folder = ref('')
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
+const nameInputRef = ref<{ $el: HTMLInputElement } | null>(null)
+const focusNameInput = () => setTimeout(() => nameInputRef.value?.$el?.focus(), 100)
 
 const isEditMode = ref(false)
 
@@ -320,16 +322,17 @@ const handlePasswordBlur = () => {
     modal
     :header="isEditMode ? 'Edit Password' : 'Create New Password'"
     :style="{ width: '32rem' }"
+    @show="focusNameInput"
   >
     <div class="flex flex-col gap-4" @keydown.enter.prevent="!loading && handleSubmit()">
       <div class="flex flex-col gap-2">
         <label for="password-name" class="font-semibold">Name</label>
         <InputText
           id="password-name"
+          ref="nameInputRef"
           v-model="name"
           placeholder="e.g., Gmail Account"
           :disabled="loading"
-          autofocus
         />
       </div>
 

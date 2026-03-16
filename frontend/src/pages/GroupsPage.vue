@@ -27,6 +27,8 @@ const filteredGroups = computed(() => {
 // State
 const showCreateDialog = ref(false)
 const showGroupDetailsModal = ref(false)
+const groupNameInputRef = ref<{ $el: HTMLInputElement } | null>(null)
+const focusGroupNameInput = () => setTimeout(() => groupNameInputRef.value?.$el?.focus(), 100)
 const showDeleteGroupModal = ref(false)
 const newGroupName = ref('')
 const selectedGroup = ref<GroupItem | null>(null)
@@ -324,12 +326,14 @@ onMounted(async () => {
         :header="isEditMode ? 'Edit Group' : 'Create New Group'"
         :modal="true"
         :style="{ width: '30rem' }"
+        @show="focusGroupNameInput"
       >
         <div class="flex flex-col gap-4 py-4">
           <div class="flex flex-col gap-2">
             <label for="group-name" class="font-semibold">Group Name</label>
             <InputText
               id="group-name"
+              ref="groupNameInputRef"
               v-model="newGroupName"
               placeholder="Enter group name"
               @keyup.enter="handleSubmit"
