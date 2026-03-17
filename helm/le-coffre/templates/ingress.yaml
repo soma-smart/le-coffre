@@ -37,10 +37,12 @@ spec:
                 name: {{ include "le-coffre.backend.fullname" $ }}
                 port:
                   number: {{ $.Values.backend.service.port }}
-                {{- else }}
+                {{- else if eq .service "frontend" }}
                 name: {{ include "le-coffre.frontend.fullname" $ }}
                 port:
                   number: {{ $.Values.frontend.service.port }}
+                {{- else }}
+                {{- fail (printf "ingress path service must be 'backend' or 'frontend', got: '%s'" .service) }}
                 {{- end }}
           {{- end }}
     {{- end }}

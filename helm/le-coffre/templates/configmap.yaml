@@ -11,8 +11,8 @@ data:
   JWT_REFRESH_TOKEN_EXPIRATION_HOURS: {{ .Values.config.jwt.refreshTokenExpirationHours | quote }}
   APP_BASE_URL: {{ .Values.config.appBaseUrl | quote }}
   {{- if .Values.config.monitoring.enabled }}
-  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.config.monitoring.otlpEndpoint | quote }}
-  OTEL_SERVICE_NAME: {{ .Values.config.monitoring.serviceName | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ required "config.monitoring.otlpEndpoint is required when config.monitoring.enabled is true" .Values.config.monitoring.otlpEndpoint | quote }}
+  OTEL_SERVICE_NAME: {{ required "config.monitoring.serviceName is required when config.monitoring.enabled is true" .Values.config.monitoring.serviceName | quote }}
   OTEL_SEMCONV_STABILITY_OPT_IN: "http"
   {{- end }}
   {{- if .Values.config.logging.format }}

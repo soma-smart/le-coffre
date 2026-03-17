@@ -1,4 +1,9 @@
 {{- if .Values.persistence.enabled -}}
+{{- $replicas := .Values.backend.replicaCount | int -}}
+{{- $hasMultipleReplicas := or (gt $replicas 1) (and .Values.backend.autoscaling.enabled (gt (.Values.backend.autoscaling.minReplicas | int) 1)) -}}
+{{- if and $hasMultipleReplicas (ne .Values.persistence.accessMode "ReadWriteMany") -}}
+{{- fail "persistence.enabled with replicaCount > 1 requires persistence.accessMode: ReadWriteMany. SQLite does not support multiple writers; use an external PostgreSQL database instead." -}}
+{{- end -}}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

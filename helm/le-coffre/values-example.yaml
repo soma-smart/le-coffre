@@ -169,17 +169,19 @@ networkPolicy:
               matchLabels:
                 name: nginx-ingress   # adjust to match your ingress controller namespace
     egressRules:
-      - to:
-          - ipBlock:
-              cidr: 0.0.0.0/0
-              except:
-                - 169.254.0.0/16
+      # Allow DNS resolution to any destination
       - ports:
           - port: 53
             protocol: UDP
           - port: 53
             protocol: TCP
-      - ports:
+      # Allow PostgreSQL to any destination (adjust CIDR to restrict to your DB host)
+      - to:
+          - ipBlock:
+              cidr: 0.0.0.0/0
+              except:
+                - 169.254.0.0/16
+        ports:
           - port: 5432   # PostgreSQL — adjust if using a non-standard port
             protocol: TCP
 
