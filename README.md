@@ -43,7 +43,7 @@ cp .env.example .env
 echo "JWT_SECRET_KEY=$(openssl rand -base64 32)" >> .env
 ```
 
-**Option A — external PostgreSQL** (recommended): set `DATABASE_URL` in `.env`, then:
+**Option A — external database** (recommended): set `DATABASE_URL` in `.env`, then:
 ```bash
 docker compose up -d
 ```
