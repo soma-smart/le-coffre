@@ -1,0 +1,90 @@
+name: le-coffre
+
+# Production Docker Compose deployment.
+#
+# Uses the same pre-built images as the Helm chart — no local build required.
+# Architecture mirrors the Helm setup:
+#   proxy (nginx) → routes /api → backend, / → frontend
+#
+# Quick start (external PostgreSQL):
+#   cp .env.example .env
+#   # Set DATABASE_URL, JWT_SECRET_KEY, APP_BASE_URL in .env
+#   docker compose up -d
+#
+# Quick start (bundled PostgreSQL):
+#   cp .env.example .env
+#   # Set JWT_SECRET_KEY, APP_BASE_URL in .env — DATABASE_URL is set automatically
+#   docker compose --profile postgres up -d
+
+services:
+  # ---------------------------------------------------------------------------
+  # Reverse proxy — mirrors the Kubernetes ingress (routes /api and /)
+  # ---------------------------------------------------------------------------
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-compose.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Frontend — static SPA served by nginx (no backend knowledge)
+  # ---------------------------------------------------------------------------
+  frontend:
+    image: ghcr.io/soma-smart/le-coffre-frontend:latest
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Backend — FastAPI app
+  # Reads all configuration from .env (see .env.example).
+  # DATABASE_URL must point to a PostgreSQL instance — either external (set in
+  # .env) or the bundled one below (active with --profile postgres).
+  # ---------------------------------------------------------------------------
+  backend:
+    image: ghcr.io/soma-smart/le-coffre-backend:latest
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+        required: false  # ignored when --profile postgres is not active
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Bundled PostgreSQL (optional) — activate with: --profile postgres
+  #
+  # When active, set in .env:
+  #   DATABASE_URL=postgresql://lecoffre:${POSTGRES_PASSWORD}@postgres:5432/lecoffre
+  #
+  # Data is persisted in the named volume 'pg_data'.
+  # ---------------------------------------------------------------------------
+  postgres:
+    profiles: [postgres]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lecoffre
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: lecoffre
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lecoffre -d lecoffre"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  pg_data:

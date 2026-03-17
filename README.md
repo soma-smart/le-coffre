@@ -36,13 +36,24 @@ Le Coffre is an open-source password manager that allows you to securely store a
 
 ### Docker compose
 ```bash
-# Create a .env file from .env.example, add a url to your database
+# 1. Create your env file
 cp .env.example .env
 
-docker compose up --build -d
+# 2. Generate a secret key
+echo "JWT_SECRET_KEY=$(openssl rand -base64 32)" >> .env
 ```
 
-Visit <http://127.0.0.1:8123> and your done
+**Option A — external database** (recommended): set `DATABASE_URL` in `.env`, then:
+```bash
+docker compose up -d
+```
+
+**Option B — bundled PostgreSQL**: set `POSTGRES_PASSWORD` in `.env`, then:
+```bash
+docker compose --profile postgres up -d
+```
+
+Visit <http://localhost> and you're done
 
 ### In local
 
