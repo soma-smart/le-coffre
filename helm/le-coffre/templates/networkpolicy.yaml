@@ -1,0 +1,48 @@
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "le-coffre.frontend.fullname" . }}
+  labels:
+    {{- include "le-coffre.frontend.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "le-coffre.frontend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    {{- if .Values.networkPolicy.frontend.egressRules }}
+    - Egress
+    {{- end }}
+  {{- if .Values.networkPolicy.frontend.ingressRules }}
+  ingress:
+    {{- toYaml .Values.networkPolicy.frontend.ingressRules | nindent 4 }}
+  {{- end }}
+  {{- if .Values.networkPolicy.frontend.egressRules }}
+  egress:
+    {{- toYaml .Values.networkPolicy.frontend.egressRules | nindent 4 }}
+  {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "le-coffre.backend.fullname" . }}
+  labels:
+    {{- include "le-coffre.backend.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "le-coffre.backend.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if .Values.networkPolicy.backend.ingressRules }}
+  ingress:
+    {{- toYaml .Values.networkPolicy.backend.ingressRules | nindent 4 }}
+  {{- end }}
+  {{- if .Values.networkPolicy.backend.egressRules }}
+  egress:
+    {{- toYaml .Values.networkPolicy.backend.egressRules | nindent 4 }}
+  {{- end }}
+{{- end }}
