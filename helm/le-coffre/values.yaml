@@ -1,0 +1,251 @@
+# Default values for le-coffre.
+# Override these values for production deployments (see values-example.yaml).
+
+# =============================================================================
+# Frontend configuration
+# =============================================================================
+frontend:
+  replicaCount: 1
+  image:
+    registry: "ghcr.io/soma-smart"
+    repository: "le-coffre-frontend"
+    pullPolicy: IfNotPresent
+    tag: ""
+  service:
+    port: 80
+    targetPort: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  securityContext:
+    runAsNonRoot: false
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  probes:
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      failureThreshold: 3
+  config:
+    apiBaseUrl: "/api"
+
+# =============================================================================
+# Backend configuration
+# =============================================================================
+backend:
+  replicaCount: 1
+  image:
+    registry: "ghcr.io/soma-smart"
+    repository: "le-coffre-backend"
+    pullPolicy: IfNotPresent
+    tag: ""
+  service:
+    port: 8000
+    targetPort: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+  probes:
+    startupProbe:
+      httpGet:
+        path: /api/health
+        port: 8000
+      initialDelaySeconds: 10
+      failureThreshold: 30
+      periodSeconds: 5
+    livenessProbe:
+      httpGet:
+        path: /api/health
+        port: 8000
+      periodSeconds: 30
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /api/health
+        port: 8000
+      periodSeconds: 10
+      failureThreshold: 3
+
+# =============================================================================
+# Shared configuration
+# =============================================================================
+config:
+  environment: production
+
+  # Application base URL — used for SSO callbacks and CORS.
+  appBaseUrl: "https://le-coffre.example.com"
+
+  # Database configuration
+  # DATABASE_URL must be provided via an external Kubernetes secret.
+  # Set existingSecretName to the name of that secret.
+  # Create it before deploying:
+  #
+  #   kubectl create secret generic le-coffre-db \
+  #     --from-literal=DATABASE_URL="postgresql://user:password@db-host:5432/lecoffre?sslmode=require" \
+  #     -n <namespace>
+  #
+  database:
+    existingSecretName: "le-coffre-db"
+
+  # JWT configuration
+  jwt:
+    algorithm: "HS256"
+    accessTokenExpirationMinutes: 15
+    refreshTokenExpirationDays: 7
+    # Option 1 (recommended): provide an external secret created before deploying.
+    #   kubectl create secret generic le-coffre \
+    #     --from-literal=JWT_SECRET_KEY="$(openssl rand -base64 32)" \
+    #     -n <namespace>
+    # Then set existingSecretName to the name of that secret.
+    existingSecretName: ""
+    # Option 2 (not recommended for production): let Helm manage the secret.
+    # secretKey: ""
+
+  # Logging
+  logging:
+    # Set to "json" to emit structured JSON logs (recommended for log aggregation).
+    # Leave unset for standard text format.
+    format: ""
+
+  # Monitoring — OpenTelemetry OTLP export.
+  monitoring:
+    enabled: false
+    otlpEndpoint: ""
+    serviceName: "le-coffre"
+
+# =============================================================================
+# Image pull secrets
+# =============================================================================
+imagePullSecrets: []
+
+# =============================================================================
+# Ingress configuration
+# =============================================================================
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: le-coffre.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls: []
+
+# =============================================================================
+# Network policies
+# =============================================================================
+networkPolicy:
+  enabled: false
+  frontend:
+    ingressRules: []
+    egressRules: []
+  backend:
+    ingressRules: []
+    egressRules: []
+
+# =============================================================================
+# Pod security context (applies to all pods)
+# =============================================================================
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+# =============================================================================
+# Rolling update strategy
+# =============================================================================
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# =============================================================================
+# Scheduling
+# =============================================================================
+nodeSelector: {}
+tolerations: []
+affinity: {}
+podAnnotations: {}
+podLabels: {}
+
+# =============================================================================
+# Persistence (SQLite only — not recommended for production)
+# =============================================================================
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /data
+
+# =============================================================================
+# Service account
+# =============================================================================
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# =============================================================================
+# Bundled PostgreSQL (not recommended for production)
+# =============================================================================
+postgresql:
+  enabled: false
+  auth:
+    username: lecoffre
+    password: changeme
+    database: lecoffre
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: ""
+
+nameOverride: ""
+fullnameOverride: ""

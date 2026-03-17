@@ -36,7 +36,9 @@ spec:
       {{- include "le-coffre.backend.selectorLabels" . | nindent 6 }}
   policyTypes:
     - Ingress
+    {{- if .Values.networkPolicy.backend.egressRules }}
     - Egress
+    {{- end }}
   {{- if .Values.networkPolicy.backend.ingressRules }}
   ingress:
     {{- toYaml .Values.networkPolicy.backend.ingressRules | nindent 4 }}

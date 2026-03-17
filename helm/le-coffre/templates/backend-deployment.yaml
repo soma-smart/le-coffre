@@ -48,9 +48,9 @@ spec:
             - configMapRef:
                 name: {{ include "le-coffre.fullname" . }}
             - secretRef:
-                name: {{ include "le-coffre.fullname" . }}
+                name: {{ include "le-coffre.jwtSecretName" . }}
             - secretRef:
-                name: le-coffre-db
+                name: {{ required "config.database.existingSecretName is required. Create the secret first: kubectl create secret generic <name> --from-literal=DATABASE_URL=\"postgresql://...\" -n <namespace>" .Values.config.database.existingSecretName }}
           env:
             - name: POD_NAME
               valueFrom:

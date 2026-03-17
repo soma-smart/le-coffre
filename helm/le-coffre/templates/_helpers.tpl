@@ -104,3 +104,16 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Resolve the name of the Kubernetes secret that holds JWT_SECRET_KEY.
+- If config.jwt.secretKey is set, Helm manages the secret (named after the release).
+- Otherwise, config.jwt.existingSecretName must point to a pre-existing secret.
+*/}}
+{{- define "le-coffre.jwtSecretName" -}}
+{{- if .Values.config.jwt.secretKey -}}
+{{- include "le-coffre.fullname" . -}}
+{{- else -}}
+{{- required "config.jwt.existingSecretName is required when config.jwt.secretKey is not set. Create the secret first: kubectl create secret generic <name> --from-literal=JWT_SECRET_KEY=\"$(openssl rand -base64 32)\" -n <namespace>" .Values.config.jwt.existingSecretName -}}
+{{- end -}}
+{{- end }}
