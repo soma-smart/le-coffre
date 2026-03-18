@@ -14,11 +14,11 @@ spec:
     matchLabels:
       {{- include "le-coffre.frontend.selectorLabels" . | nindent 6 }}
 {{- end }}
----
 {{- $backendReplicas := .Values.backend.replicaCount | int }}
 {{- $backendMinReplicas := .Values.backend.autoscaling.minReplicas | int }}
 {{- $backendHasMultiple := or (gt $backendReplicas 1) (and .Values.backend.autoscaling.enabled (gt $backendMinReplicas 1)) }}
 {{- if and .Values.backend.podDisruptionBudget.enabled $backendHasMultiple }}
+---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:

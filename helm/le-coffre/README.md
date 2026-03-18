@@ -4,7 +4,7 @@ This Helm chart deploys Le Coffre password manager on a Kubernetes cluster.
 
 ## Prerequisites
 
-- Kubernetes 1.19+
+- Kubernetes 1.19+ (1.23+ if autoscaling or PodDisruptionBudget is enabled)
 - Helm 3.0+
 - PV provisioner support in the underlying infrastructure (for persistence)
 

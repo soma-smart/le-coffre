@@ -19,6 +19,9 @@ spec:
         - --show-error
         - --max-time
         - "10"
+        - --retry
+        - "3"
+        - --retry-connrefused
         - http://{{ include "le-coffre.backend.fullname" . }}:{{ .Values.backend.service.port }}/api/health
 ---
 apiVersion: v1
@@ -42,4 +45,7 @@ spec:
         - --show-error
         - --max-time
         - "10"
+        - --retry
+        - "3"
+        - --retry-connrefused
         - http://{{ include "le-coffre.frontend.fullname" . }}:{{ .Values.frontend.service.port }}/

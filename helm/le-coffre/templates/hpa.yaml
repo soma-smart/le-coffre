@@ -25,8 +25,8 @@ spec:
           averageUtilization: {{ .Values.frontend.autoscaling.targetCPUUtilizationPercentage }}
     {{- end }}
 {{- end }}
----
 {{- if .Values.backend.autoscaling.enabled }}
+---
 {{- if not (or .Values.backend.autoscaling.targetCPUUtilizationPercentage .Values.backend.autoscaling.targetMemoryUtilizationPercentage) }}
 {{- fail "backend.autoscaling is enabled but no metrics are configured. Set targetCPUUtilizationPercentage or targetMemoryUtilizationPercentage." }}
 {{- end }}
