@@ -20,6 +20,7 @@ import jwt
 STRONG_PASSWORD = "StrongP@ssw0rd123"
 LOGIN = "My Login"
 URL = "http://example.com"
+UPDATED_URL = "http://updated-example.com"
 
 
 def get_user_id_from_token(token: str) -> str:
@@ -61,6 +62,11 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     Phase 5: Authorization Tests
     - Verify authentication is required
     - Verify non-existent resource handling
+
+    Phase 6: URL XSS Security
+    - Reject javascript: / vbscript: / data: URLs on creation
+    - Reject javascript: / vbscript: / data: URLs on update
+    - Accept valid http:// and https:// URLs
     """
     # Create separate clients for admin and SSO user
     admin_client = client_factory()
@@ -154,7 +160,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
             "password": "NewStrongP@ssw0rd!",
             "folder": "Personal",
             "login": "NEW " + LOGIN,
-            "url": "NEW " + URL,
+            "url": UPDATED_URL,
         },
     )
     assert update_response.status_code == 201
@@ -172,7 +178,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     assert updated_meta["name"] == "Updated Password"
     assert updated_meta["folder"] == "Personal"
     assert updated_meta["login"] == "NEW " + LOGIN
-    assert updated_meta["url"] == "NEW " + URL
+    assert updated_meta["url"] == UPDATED_URL
 
     # Verify timestamps: created_at should stay same, last_updated_at should change
     assert updated_meta["created_at"] == original_created_at, "created_at should not change after update"
@@ -560,6 +566,77 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     delete_404 = admin_client.delete(f"/api/passwords/{nonexistent_id}")
     assert delete_404.status_code == 404
     print("✓ Delete non-existent password returns 404")
+
+    # ===================================================================
+    # PHASE 6: URL XSS SECURITY
+    # ===================================================================
+
+    print("\n=== PHASE 6: URL XSS SECURITY ===")
+
+    malicious_urls = [
+        "javascript:alert(document.cookie)",
+        "JAVASCRIPT:alert(1)",
+        "javascript:void(0)",
+        "vbscript:msgbox(1)",
+        "data:text/html,<script>alert(1)</script>",
+    ]
+
+    # Step 6.1: REJECT MALICIOUS URLS ON CREATION
+    print("Step 6.1: Verifying malicious URLs are rejected on creation...")
+    for malicious_url in malicious_urls:
+        response = admin_client.post(
+            "/api/passwords",
+            json={
+                "name": "XSS Test",
+                "password": STRONG_PASSWORD,
+                "group_id": admin_group_id,
+                "url": malicious_url,
+            },
+        )
+        assert response.status_code == 422, f"Expected 422 for URL '{malicious_url}', got {response.status_code}"
+    print("✓ All malicious URLs rejected on create (422)")
+
+    # Step 6.2: REJECT MALICIOUS URLS ON UPDATE
+    print("Step 6.2: Verifying malicious URLs are rejected on update...")
+    xss_password_response = admin_client.post(
+        "/api/passwords",
+        json={
+            "name": "XSS Update Test",
+            "password": STRONG_PASSWORD,
+            "group_id": admin_group_id,
+            "url": "https://example.com",
+        },
+    )
+    assert xss_password_response.status_code == 201
+    xss_password_id = xss_password_response.json()["id"]
+    for malicious_url in malicious_urls:
+        response = admin_client.put(
+            f"/api/passwords/{xss_password_id}",
+            json={"name": "XSS Update Test", "url": malicious_url},
+        )
+        assert response.status_code == 422, f"Expected 422 for URL '{malicious_url}', got {response.status_code}"
+    print("✓ All malicious URLs rejected on update (422)")
+
+    # Step 6.3: ACCEPT VALID HTTP/HTTPS URLS
+    print("Step 6.3: Verifying valid http/https URLs are accepted...")
+    valid_urls = [
+        "https://example.com",
+        "http://example.com",
+        "https://app.example.com/path?query=1#anchor",
+        "HTTP://EXAMPLE.COM",
+    ]
+    for valid_url in valid_urls:
+        response = admin_client.post(
+            "/api/passwords",
+            json={
+                "name": "Valid URL Test",
+                "password": STRONG_PASSWORD,
+                "group_id": admin_group_id,
+                "url": valid_url,
+            },
+        )
+        assert response.status_code == 201, f"Expected 201 for valid URL '{valid_url}', got {response.status_code}"
+    print("✓ All valid http/https URLs accepted (201)")
 
     print("\n" + "=" * 70)
     print("ALL TESTS PASSED SUCCESSFULLY!")
