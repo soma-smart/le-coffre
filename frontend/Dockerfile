@@ -14,7 +14,7 @@ RUN bun run build
 # =============================================================================
 # Stage 2: Production Image (nginx)
 # =============================================================================
-FROM nginx:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 
 # Apply latest security patches from Alpine repos
 RUN apk upgrade --no-cache
@@ -28,6 +28,6 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built frontend files
 COPY --from=builder /frontend/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
