@@ -36,11 +36,6 @@ def get_jwt_algorithm() -> str:
     return os.environ.get("JWT_ALGORITHM", "HS256")
 
 
-def get_jwt_expiration_hours() -> int:
-    """Get JWT expiration time in hours. Default is 24 hours."""
-    return int(os.environ.get("JWT_EXPIRATION_HOURS", "24"))
-
-
 def get_jwt_access_token_expiration_seconds() -> int:
     """Get JWT access token expiration time in seconds. Default is 300 seconds (5 minutes)."""
     return int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRATION_MINUTES", "5")) * 60

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "le-coffre.fullname" . }}-test-backend-health
+  labels:
+    {{- include "le-coffre.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: curlimages/curl:8.11.1
+      command:
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - --max-time
+        - "10"
+        - --retry
+        - "3"
+        - --retry-connrefused
+        - http://{{ include "le-coffre.backend.fullname" . }}:{{ .Values.backend.service.port }}/api/health
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "le-coffre.fullname" . }}-test-frontend-health
+  labels:
+    {{- include "le-coffre.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test
+      image: curlimages/curl:8.11.1
+      command:
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - --max-time
+        - "10"
+        - --retry
+        - "3"
+        - --retry-connrefused
+        - http://{{ include "le-coffre.frontend.fullname" . }}:{{ .Values.frontend.service.port }}/

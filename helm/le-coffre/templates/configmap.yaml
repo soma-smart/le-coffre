@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "le-coffre.fullname" . }}
+  labels:
+    {{- include "le-coffre.labels" . | nindent 4 }}
+data:
+  ENVIRONMENT: {{ .Values.config.environment | quote }}
+  JWT_ALGORITHM: {{ .Values.config.jwt.algorithm | quote }}
+  JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: {{ .Values.config.jwt.accessTokenExpirationMinutes | quote }}
+  JWT_REFRESH_TOKEN_EXPIRATION_HOURS: {{ .Values.config.jwt.refreshTokenExpirationHours | quote }}
+  APP_BASE_URL: {{ required "config.appBaseUrl is required. Set it to your application's public URL (e.g. https://le-coffre.yourdomain.com)" .Values.config.appBaseUrl | quote }}
+  # Rate limiting
+  RATE_LIMIT_ENABLED: {{ .Values.config.rateLimit.enabled | toString | quote }}
+  RATE_LIMIT_AUTH_MAX_REQUESTS: {{ .Values.config.rateLimit.authMaxRequests | quote }}
+  RATE_LIMIT_API_MAX_REQUESTS: {{ .Values.config.rateLimit.apiMaxRequests | quote }}
+  RATE_LIMIT_WINDOW_SECONDS: {{ .Values.config.rateLimit.windowSeconds | quote }}
+  {{- if .Values.config.monitoring.enabled }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ required "config.monitoring.otlpEndpoint is required when config.monitoring.enabled is true" .Values.config.monitoring.otlpEndpoint | quote }}
+  OTEL_SERVICE_NAME: {{ required "config.monitoring.serviceName is required when config.monitoring.enabled is true" .Values.config.monitoring.serviceName | quote }}
+  OTEL_SEMCONV_STABILITY_OPT_IN: "http"
+  {{- if .Values.config.monitoring.tracesSampler }}
+  OTEL_TRACES_SAMPLER: {{ .Values.config.monitoring.tracesSampler | quote }}
+  OTEL_TRACES_SAMPLER_ARG: {{ .Values.config.monitoring.tracesSamplerArg | default "0.05" | quote }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.config.logging.format }}
+  LOG_FORMAT: {{ .Values.config.logging.format | quote }}
+  {{- end }}

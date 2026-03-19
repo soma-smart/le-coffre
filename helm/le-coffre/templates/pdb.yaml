@@ -1,0 +1,33 @@
+{{- $frontendReplicas := .Values.frontend.replicaCount | int }}
+{{- $frontendMinReplicas := .Values.frontend.autoscaling.minReplicas | int }}
+{{- $frontendHasMultiple := or (gt $frontendReplicas 1) (and .Values.frontend.autoscaling.enabled (gt $frontendMinReplicas 1)) }}
+{{- if and .Values.frontend.podDisruptionBudget.enabled $frontendHasMultiple }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "le-coffre.frontend.fullname" . }}
+  labels:
+    {{- include "le-coffre.frontend.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.frontend.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "le-coffre.frontend.selectorLabels" . | nindent 6 }}
+{{- end }}
+{{- $backendReplicas := .Values.backend.replicaCount | int }}
+{{- $backendMinReplicas := .Values.backend.autoscaling.minReplicas | int }}
+{{- $backendHasMultiple := or (gt $backendReplicas 1) (and .Values.backend.autoscaling.enabled (gt $backendMinReplicas 1)) }}
+{{- if and .Values.backend.podDisruptionBudget.enabled $backendHasMultiple }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "le-coffre.backend.fullname" . }}
+  labels:
+    {{- include "le-coffre.backend.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.backend.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "le-coffre.backend.selectorLabels" . | nindent 6 }}
+{{- end }}

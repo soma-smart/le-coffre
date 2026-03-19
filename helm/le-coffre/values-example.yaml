@@ -1,0 +1,252 @@
+# Example production values for Le Coffre
+# Copy this file, rename it (e.g. values-prod.yaml), and customize for your environment.
+# Run: helm upgrade --install le-coffre ./le-coffre -f values-prod.yaml -n le-coffre
+
+# =============================================================================
+# Frontend configuration
+# =============================================================================
+frontend:
+  replicaCount: 2
+  image:
+    registry: "ghcr.io/soma-smart"
+    repository: "le-coffre-frontend"
+    pullPolicy: IfNotPresent
+    # Overrides the chart appVersion when set
+    tag: "v1.0.0"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+  podDisruptionBudget:
+    # Only enable when replicaCount > 1 (or autoscaling.minReplicas > 1).
+    # minAvailable: 1 with replicaCount: 1 blocks node drains and cluster upgrades.
+    enabled: true
+    minAvailable: 1
+
+# =============================================================================
+# Backend configuration
+# =============================================================================
+backend:
+  replicaCount: 2
+  image:
+    registry: "ghcr.io/soma-smart"
+    repository: "le-coffre-backend"
+    pullPolicy: IfNotPresent
+    # Overrides the chart appVersion when set
+    tag: "v1.0.0"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  podDisruptionBudget:
+    # Only enable when replicaCount > 1 (or autoscaling.minReplicas > 1).
+    # minAvailable: 1 with replicaCount: 1 blocks node drains and cluster upgrades.
+    enabled: true
+    minAvailable: 1
+
+# =============================================================================
+# Shared configuration
+# =============================================================================
+config:
+  environment: production
+
+  # Application base URL — used for SSO callbacks and CORS.
+  appBaseUrl: "https://le-coffre.yourdomain.com"
+
+  # Database configuration
+  # DATABASE_URL is managed via an external Kubernetes secret.
+  # Create it before deploying:
+  #
+  #   kubectl create secret generic le-coffre-db \
+  #     --from-literal=DATABASE_URL="postgresql://user:password@db-host:5432/lecoffre?sslmode=require" \
+  #     -n le-coffre
+  #
+  # Tip: URL-encode special characters in the password:
+  #   python3 -c "import urllib.parse; print(urllib.parse.quote('your_password', safe=''))"
+  database:
+    existingSecretName: "le-coffre-db"
+
+  # JWT configuration
+  jwt:
+    algorithm: "HS256"
+    # Access token lifetime in minutes.
+    accessTokenExpirationMinutes: 15
+    refreshTokenExpirationHours: 168
+    # JWT_SECRET_KEY is managed via an external Kubernetes secret.
+    # Generate and create before deploying:
+    #
+    #   JWT_SECRET=$(openssl rand -base64 32)
+    #   kubectl create secret generic le-coffre \
+    #     --from-literal=JWT_SECRET_KEY="$JWT_SECRET" \
+    #     -n le-coffre
+    #
+    existingSecretName: "le-coffre"
+    # Alternatively, pass it at deploy time (not recommended for production):
+    # secretKey: ""
+
+  # Logging
+  logging:
+    # Set to "json" to emit structured JSON logs (recommended for log aggregation).
+    # Leave unset for standard text format.
+    format: "json"
+
+  # Rate limiting (applied per-pod, in-memory sliding window)
+  rateLimit:
+    # Set to false to disable rate limiting entirely (not recommended in production).
+    enabled: true
+    # Max requests per window for auth routes (login, register, SSO).
+    authMaxRequests: 5
+    # Max requests per window for general API routes.
+    apiMaxRequests: 60
+    # Sliding window duration in seconds.
+    windowSeconds: 60
+
+  # Monitoring — OpenTelemetry OTLP export.
+  # To enable, set enabled: true and configure the endpoint and service name.
+  monitoring:
+    enabled: false
+    # otlpEndpoint and serviceName are required when enabled: true.
+    # otlpEndpoint: "http://otel-collector.monitoring.svc.cluster.local:4318"
+    # serviceName: "le-coffre"
+
+# =============================================================================
+# Image pull secrets
+# =============================================================================
+# Required if images are hosted in a private registry.
+# kubectl create secret docker-registry regcred \
+#   --docker-server=<registry> --docker-username=<user> --docker-password=<token> \
+#   -n le-coffre
+imagePullSecrets: []
+# imagePullSecrets:
+#   - name: regcred
+
+# =============================================================================
+# Ingress configuration
+# =============================================================================
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.3 TLSv1.2"
+  hosts:
+    - host: le-coffre.yourdomain.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: le-coffre-tls
+      hosts:
+        - le-coffre.yourdomain.com
+
+# =============================================================================
+# Network policies
+# =============================================================================
+networkPolicy:
+  enabled: true
+  frontend:
+    ingressRules:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: nginx-ingress   # adjust to match your ingress controller namespace
+    egressRules: []
+  backend:
+    ingressRules:
+      - from:
+          - namespaceSelector:
+              matchLabels:
+                name: nginx-ingress   # adjust to match your ingress controller namespace
+    egressRules:
+      # Allow DNS resolution to any destination
+      - ports:
+          - port: 53
+            protocol: UDP
+          - port: 53
+            protocol: TCP
+      # Allow PostgreSQL to any destination (adjust CIDR to restrict to your DB host)
+      - to:
+          - ipBlock:
+              cidr: 0.0.0.0/0
+              except:
+                - 169.254.0.0/16
+        ports:
+          - port: 5432   # PostgreSQL — adjust if using a non-standard port
+            protocol: TCP
+
+# =============================================================================
+# Pod security context (applies to all pods)
+# =============================================================================
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+# =============================================================================
+# Rolling update strategy
+# =============================================================================
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 0
+    maxSurge: 1
+
+# =============================================================================
+# Scheduling
+# =============================================================================
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Example node affinity:
+# affinity:
+#   nodeAffinity:
+#     requiredDuringSchedulingIgnoredDuringExecution:
+#       nodeSelectorTerms:
+#         - matchExpressions:
+#             - key: node.kubernetes.io/instance-type
+#               operator: In
+#               values:
+#                 - m5.large
+
+# Example toleration:
+# tolerations:
+#   - key: "workload"
+#     operator: "Equal"
+#     value: "production"
+#     effect: "NoSchedule"
+
+# =============================================================================
+# Persistence (SQLite only — not recommended for production)
+# =============================================================================
+# Leave disabled and use an external PostgreSQL database instead.
+persistence:
+  enabled: false
+  storageClass: "standard"   # replace with your cluster's storage class
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  mountPath: /data
+

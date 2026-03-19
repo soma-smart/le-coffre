@@ -1,0 +1,36 @@
+Le Coffre has been deployed successfully.
+
+{{- if .Values.ingress.enabled }}
+
+Application URL:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+
+{{- else }}
+
+No ingress is configured. Access the application via port-forward:
+
+  kubectl port-forward svc/{{ include "le-coffre.frontend.fullname" . }} 8080:{{ .Values.frontend.service.port }} -n {{ .Release.Namespace }}
+
+Then open: http://localhost:8080
+
+{{- end }}
+
+---------------------------------------------------------------------
+Check pod status:
+  kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }}
+
+Check logs:
+  kubectl logs -l app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=backend -n {{ .Release.Namespace }}
+
+Run smoke tests:
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+---------------------------------------------------------------------
+{{- if not .Values.config.jwt.secretKey }}
+NOTE: The JWT secret is managed externally.
+      Make sure the secret "{{ include "le-coffre.jwtSecretName" . }}" exists in namespace {{ .Release.Namespace }}.
+{{- end }}
+NOTE: The database secret "{{ .Values.config.database.existingSecretName }}" must exist in namespace {{ .Release.Namespace }}.
+      It must contain a DATABASE_URL key.
