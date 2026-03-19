@@ -16,11 +16,12 @@ RUN bun run build
 # =============================================================================
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 
+USER root
+
 # Apply latest security patches from Alpine repos
 RUN apk upgrade --no-cache
 
-# Remove default nginx config
-RUN rm /etc/nginx/conf.d/default.conf
+USER nginx
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -29,5 +30,3 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /frontend/dist /usr/share/nginx/html
 
 EXPOSE 8080
-
-CMD ["nginx", "-g", "daemon off;"]
