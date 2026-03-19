@@ -167,7 +167,7 @@ async def lifespan(app: FastAPI):
     app.state.csrf_token_manager = csrf_token_manager
 
     # SSO Gateway (stateless)
-    base_url = os.getenv("APP_BASE_URL", "http://localhost:8123")
+    base_url = os.getenv("APP_BASE_URL", "http://localhost:8123").rstrip("/")
     sso_gateway = OAuth2SsoGateway(
         redirect_uri=f"{base_url}/sso/callback",
         scope="openid email profile",
