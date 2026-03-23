@@ -1,8 +1,9 @@
 import logging
+import re
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_update_password_usecase,
@@ -29,6 +30,13 @@ class UpdatePasswordRequest(BaseModel):
     folder: str | None = None
     login: str | None = None
     url: str | None = None
+
+    @field_validator("url")
+    @classmethod
+    def url_must_use_http_scheme(cls, v: str | None) -> str | None:
+        if v is not None and not re.match(r"^https?://", v, re.IGNORECASE):
+            raise ValueError("URL must start with http:// or https://")
+        return v
 
 
 @router.put(
