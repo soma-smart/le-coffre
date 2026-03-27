@@ -22,7 +22,7 @@ const toggleSortMode = () => {
 
 // Groups not yet selected, sorted according to active mode — shown in the dropdown
 const availableGroups = computed(() => {
-  const unselected = props.groups.filter((g) => !selectedGroupIds.value?.includes(g.id))
+  const unselected = props.groups.filter((g) => !selectedGroupIds.value?.includes(g.id) && props.passwordCounts![g.id] > 0)
   return sortGroups(unselected, sortMode.value, props.passwordCounts, props.myPersonalGroupId)
 })
 
@@ -72,42 +72,21 @@ const clearAll = () => {
     </span>
 
     <!-- Sort mode toggle (only when password counts are available) -->
-    <Button
-      v-if="passwordCounts !== undefined"
-      :icon="sortMode === 'name' ? 'pi pi-sort-alpha-down' : 'pi pi-sort-amount-down'"
-      v-tooltip.top="
-        sortMode === 'name'
-          ? 'Sorted by name — click to sort by password count'
-          : 'Sorted by password count — click to sort by name'
-      "
-      text
-      rounded
-      size="small"
-      severity="secondary"
-      aria-label="Toggle sort order"
-      @click="toggleSortMode"
-    />
+    <Button v-if="passwordCounts !== undefined"
+      :icon="sortMode === 'name' ? 'pi pi-sort-alpha-down' : 'pi pi-sort-amount-down'" v-tooltip.top="sortMode === 'name'
+        ? 'Sorted by name — click to sort by password count'
+        : 'Sorted by password count — click to sort by name'
+        " text rounded size="small" severity="secondary" aria-label="Toggle sort order" @click="toggleSortMode" />
 
     <!-- Dropdown for adding a group filter -->
-    <Select
-      :key="selectKey"
-      :options="availableGroups"
-      :optionLabel="groupLabel"
-      placeholder="Select a group…"
-      filter
-      filterPlaceholder="Search groups…"
-      :disabled="availableGroups.length === 0"
-      class="min-w-48"
-      @change="(e) => addGroup(e.value)"
-    >
+    <Select :key="selectKey" :options="availableGroups" :optionLabel="groupLabel" placeholder="Select a group…" filter
+      filterPlaceholder="Search groups…" :disabled="availableGroups.length === 0" class="min-w-48"
+      @change="(e) => addGroup(e.value)">
       <template #option="{ option }">
         <div class="flex items-center gap-2">
           <i :class="option.is_personal ? 'pi pi-user' : 'pi pi-users'" class="text-sm" />
           <span>{{ groupLabel(option) }}</span>
-          <span
-            v-if="passwordCounts !== undefined"
-            class="ml-auto text-xs text-surface-400 tabular-nums"
-          >
+          <span v-if="passwordCounts !== undefined" class="ml-auto text-xs text-surface-400 tabular-nums">
             <Badge class="ml-auto" :value="passwordCounts[option.id] ?? 0" />
           </span>
         </div>
@@ -116,25 +95,12 @@ const clearAll = () => {
 
     <!-- Selected group tags -->
     <div v-if="selectedGroups.length > 0" class="flex flex-wrap items-center gap-1">
-      <Chip
-        v-for="group in selectedGroups"
-        :key="group.id"
-        :label="groupLabel(group)"
-        removable
-        class="bg-primary text-primary-contrast"
-        @remove="removeGroup(group.id)"
-      />
+      <Chip v-for="group in selectedGroups" :key="group.id" :label="groupLabel(group)" removable
+        class="bg-primary text-primary-contrast" @remove="removeGroup(group.id)" />
 
       <!-- Clear-all button -->
-      <Button
-        v-if="selectedGroups.length > 1"
-        icon="pi pi-times"
-        label="Clear all"
-        text
-        size="small"
-        severity="secondary"
-        @click="clearAll"
-      />
+      <Button v-if="selectedGroups.length > 1" icon="pi pi-times" label="Clear all" text size="small"
+        severity="secondary" @click="clearAll" />
     </div>
 
     <!-- "All" indicator when nothing is specifically selected -->
