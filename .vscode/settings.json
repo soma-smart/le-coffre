@@ -20,7 +20,6 @@
     "python.languageServer": "Pylance"
   },
   "eslint.format.enable": true,
-  "editor.codeActionsOnSave": {},
   "eslint.validate": [
     "javascript",
     "vue",

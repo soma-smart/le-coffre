@@ -25,6 +25,10 @@ const filteredGroups = computed(() => {
   return sharedGroups.value.filter((g) => g.name.toLowerCase().includes(q))
 })
 
+const sortedFilteredGroups = computed(() => {
+  return sortGroups(filteredGroups.value, 'name')
+})
+
 // State
 const showCreateDialog = ref(false)
 const showGroupDetailsModal = ref(false)
@@ -260,7 +264,7 @@ onMounted(async () => {
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card
-          v-for="group in sortGroups(filteredGroups, 'name')"
+          v-for="group in sortedFilteredGroups"
           :key="group.id"
           class="hover:shadow-lg transition-shadow"
         >

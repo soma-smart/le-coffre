@@ -22,8 +22,9 @@ const toggleSortMode = () => {
 
 // Groups not yet selected, sorted according to active mode — shown in the dropdown
 const availableGroups = computed(() => {
+  const passwordCounts = props.passwordCounts ?? {}
   const unselected = props.groups.filter(
-    (g) => !selectedGroupIds.value?.includes(g.id) && props.passwordCounts![g.id] > 0,
+    (g) => !selectedGroupIds.value?.includes(g.id) && (passwordCounts[g.id] ?? 0) > 0,
   )
   return sortGroups(unselected, sortMode.value, props.passwordCounts, props.myPersonalGroupId)
 })
