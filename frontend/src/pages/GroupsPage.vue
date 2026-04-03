@@ -8,6 +8,7 @@ import { useUserStore } from '@/stores/user'
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import type { GroupItem } from '@/client/types.gen'
+import { sortGroups } from '../utils/groupSort'
 
 const toast = useToast()
 const groupsStore = useGroupsStore()
@@ -22,6 +23,10 @@ const filteredGroups = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return sharedGroups.value
   return sharedGroups.value.filter((g) => g.name.toLowerCase().includes(q))
+})
+
+const sortedFilteredGroups = computed(() => {
+  return sortGroups(filteredGroups.value, 'name')
 })
 
 // State
@@ -259,7 +264,7 @@ onMounted(async () => {
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card
-          v-for="group in filteredGroups"
+          v-for="group in sortedFilteredGroups"
           :key="group.id"
           class="hover:shadow-lg transition-shadow"
         >

@@ -17,6 +17,7 @@
         "charliermarsh.ruff",
         // Frontend extensions
         "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
         "Vue.volar",
         // General extensions
         "qwtel.sqlite-viewer",
@@ -40,15 +41,15 @@
         "ruff.configuration": "server/pyproject.toml",
         // TypeScript/JavaScript settings
         "[typescript]": {
-          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
           "editor.formatOnSave": true
         },
         "[javascript]": {
-          "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
           "editor.formatOnSave": true
         },
         "[vue]": {
-          "editor.defaultFormatter": "Vue.volar",
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
           "editor.formatOnSave": true
         }
       }

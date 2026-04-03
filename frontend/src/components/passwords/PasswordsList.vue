@@ -18,7 +18,7 @@ const groupsStore = useGroupsStore()
 const userStore = useUserStore()
 
 const { passwords, loading, error } = storeToRefs(passwordsStore)
-const { groups, userBelongingGroups } = storeToRefs(groupsStore)
+const { groups, userBelongingGroups, currentUserPersonalGroupId } = storeToRefs(groupsStore)
 const { isAdmin } = storeToRefs(userStore)
 
 // Folder state
@@ -181,6 +181,7 @@ onMounted(async () => {
         v-if="filterableGroups.length > 0"
         :groups="filterableGroups"
         :passwordCounts="groupPasswordCounts"
+        :myPersonalGroupId="currentUserPersonalGroupId"
         v-model="selectedGroupIds"
       />
     </div>

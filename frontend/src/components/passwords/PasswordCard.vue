@@ -80,11 +80,21 @@
           rounded
           size="small"
           severity="secondary"
-          aria-label="Share"
-          :disabled="!password.can_write"
+          :aria-label="
+            !password.can_read
+              ? 'You don\'t have read access to this password'
+              : password.can_write
+                ? 'Manage sharing'
+                : 'View who has access'
+          "
+          :disabled="!password.can_read"
           @click="handleShare"
           v-tooltip.top="
-            password.can_write ? 'Share password' : 'You don\'t have write access to this password'
+            !password.can_read
+              ? 'You don\'t have read access to this password'
+              : password.can_write
+                ? 'Manage sharing'
+                : 'View who has access'
           "
         />
         <Button
