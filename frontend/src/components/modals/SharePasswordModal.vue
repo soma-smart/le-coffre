@@ -44,9 +44,6 @@ const userAccessList = ref<UserAccessWithName[]>([])
 const groupAccessList = ref<GroupAccessWithName[]>([])
 const canManageSharing = computed(() => !!props.password?.can_write)
 
-// Get current user ID from store
-const currentUserId = computed(() => groupsStore.currentUserId)
-
 // Get groups that can be shared with (excluding groups that already have access), sorted by name
 const availableGroupsForSharing = computed(() => {
   // Filter out groups that already have access
@@ -60,8 +57,6 @@ const userAccessGroupsByUserId = ref<Record<string, { id: string; name: string }
 
 const getAccessGroupsForUser = (userId: string): { id: string; name: string }[] =>
   userAccessGroupsByUserId.value[userId] ?? []
-
-const isCurrentUser = (userId: string): boolean => currentUserId.value === userId
 
 // Fetch user display name by user ID
 const fetchUserDisplayName = async (userId: string): Promise<string> => {
@@ -326,119 +321,123 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Current access list -->
-      <div class="flex flex-col gap-3">
-        <h3 class="font-semibold text-lg">Who has access</h3>
-
-        <div v-if="userAccessList.length === 0" class="text-center py-4 text-muted-color">
-          <p>No users have access yet</p>
-        </div>
-
-        <div v-else class="space-y-2">
-          <Card
-            v-for="accessItem in userAccessList"
-            :key="accessItem.user_id"
-            class="hover:bg-surface-50 transition-colors"
-          >
-            <template #content>
-              <div class="flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                  <i class="pi pi-user text-xl text-primary"></i>
-                  <div>
-                    <p class="font-semibold">
-                      <Skeleton v-if="accessItem.loadingName" width="10rem" height="1rem" />
-                      <span v-else>{{ accessItem.displayName }}</span>
-                    </p>
-                    <div class="flex gap-2 items-center text-sm text-muted-color">
-                      <span v-if="accessItem.is_owner" class="flex items-center gap-1">
-                        <i class="pi pi-crown text-yellow-500"></i>
-                        Owner
-                      </span>
-                      <span v-else class="flex items-center gap-1">
-                        <i class="pi pi-eye"></i>
-                        Can read
-                      </span>
-                    </div>
-                    <div
-                      v-if="
-                        isCurrentUser(accessItem.user_id) &&
-                        getAccessGroupsForUser(accessItem.user_id).length > 0
-                      "
-                      class="flex flex-wrap gap-2 items-center text-sm text-muted-color mt-1"
-                    >
-                      <span class="flex items-center gap-1">
-                        <i class="pi pi-users"></i>
-                        Via groups:
-                      </span>
-                      <span
-                        v-for="group in getAccessGroupsForUser(accessItem.user_id)"
-                        :key="group.id"
-                        class="surface-100 px-2 py-1 rounded"
-                      >
-                        {{ group.name }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+      <Tabs value="users">
+        <TabList>
+          <Tab value="users">User access view</Tab>
+          <Tab value="groups">Group access view</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel value="users">
+            <div class="flex flex-col gap-3 pt-4">
+              <div v-if="userAccessList.length === 0" class="text-center py-4 text-muted-color">
+                <p>No users have access yet</p>
               </div>
-            </template>
-          </Card>
-        </div>
-      </div>
 
-      <!-- Shared groups management -->
-      <div v-if="groupAccessList.length > 0" class="flex flex-col gap-3 pt-4 border-t">
-        <h3 class="font-semibold text-lg">
-          {{ canManageSharing ? 'Shared with Groups' : 'Groups with Access' }}
-        </h3>
-
-        <div class="space-y-2">
-          <Card
-            v-for="group in groupAccessList"
-            :key="group.user_id"
-            class="hover:bg-surface-50 transition-colors"
-          >
-            <template #content>
-              <div class="flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                  <i class="pi pi-users text-xl text-primary"></i>
-                  <div>
-                    <p class="font-semibold">
-                      <Skeleton v-if="group.loadingName" width="10rem" height="1rem" />
-                      <span v-else>{{ group.groupName }}</span>
-                    </p>
-                    <div class="flex gap-2 items-center text-sm text-muted-color">
-                      <span v-if="group.is_owner" class="flex items-center gap-1">
-                        <i class="pi pi-crown text-yellow-500"></i>
-                        Owner Group
-                      </span>
-                      <span v-else class="flex items-center gap-1">
-                        <i class="pi pi-share-alt"></i>
-                        Shared
-                      </span>
+              <div v-else class="space-y-2">
+                <Card
+                  v-for="accessItem in userAccessList"
+                  :key="accessItem.user_id"
+                  class="hover:bg-surface-50 transition-colors"
+                >
+                  <template #content>
+                    <div class="flex justify-between items-center">
+                      <div class="flex items-center gap-3">
+                        <i class="pi pi-user text-xl text-primary"></i>
+                        <div>
+                          <p class="font-semibold">
+                            <Skeleton v-if="accessItem.loadingName" width="10rem" height="1rem" />
+                            <span v-else>{{ accessItem.displayName }}</span>
+                          </p>
+                          <div class="flex gap-2 items-center text-sm text-muted-color">
+                            <span v-if="accessItem.is_owner" class="flex items-center gap-1">
+                              <i class="pi pi-crown text-yellow-500"></i>
+                              Owner
+                            </span>
+                            <span v-else class="flex items-center gap-1">
+                              <i class="pi pi-eye"></i>
+                              Can read
+                            </span>
+                          </div>
+                          <div
+                            v-if="getAccessGroupsForUser(accessItem.user_id).length > 0"
+                            class="flex flex-wrap gap-2 items-center text-sm text-muted-color mt-1"
+                          >
+                            <span class="flex items-center gap-1">
+                              <i class="pi pi-users"></i>
+                              Via groups:
+                            </span>
+                            <span
+                              v-for="group in getAccessGroupsForUser(accessItem.user_id)"
+                              :key="group.id"
+                              class="surface-100 px-2 py-1 rounded"
+                            >
+                              {{ group.name }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                <!-- Unshare button (only for users with write access and non-owner groups) -->
-                <div v-if="canManageSharing && !group.is_owner">
-                  <Button
-                    icon="pi pi-times"
-                    text
-                    rounded
-                    severity="danger"
-                    size="small"
-                    aria-label="Revoke access"
-                    :loading="loading"
-                    @click="unshareFromGroup(group.user_id)"
-                    v-tooltip="'Remove group access'"
-                  />
-                </div>
+                  </template>
+                </Card>
               </div>
-            </template>
-          </Card>
-        </div>
-      </div>
+            </div>
+          </TabPanel>
+
+          <TabPanel value="groups">
+            <div class="flex flex-col gap-3 pt-4">
+              <div v-if="groupAccessList.length === 0" class="text-center py-4 text-muted-color">
+                <p>No groups have access yet</p>
+              </div>
+
+              <div v-else class="space-y-2">
+                <Card
+                  v-for="group in groupAccessList"
+                  :key="group.user_id"
+                  class="hover:bg-surface-50 transition-colors"
+                >
+                  <template #content>
+                    <div class="flex justify-between items-center">
+                      <div class="flex items-center gap-3">
+                        <i class="pi pi-users text-xl text-primary"></i>
+                        <div>
+                          <p class="font-semibold">
+                            <Skeleton v-if="group.loadingName" width="10rem" height="1rem" />
+                            <span v-else>{{ group.groupName }}</span>
+                          </p>
+                          <div class="flex gap-2 items-center text-sm text-muted-color">
+                            <span v-if="group.is_owner" class="flex items-center gap-1">
+                              <i class="pi pi-crown text-yellow-500"></i>
+                              Owner Group
+                            </span>
+                            <span v-else class="flex items-center gap-1">
+                              <i class="pi pi-share-alt"></i>
+                              Shared
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div v-if="canManageSharing && !group.is_owner">
+                        <Button
+                          icon="pi pi-times"
+                          text
+                          rounded
+                          severity="danger"
+                          size="small"
+                          aria-label="Revoke access"
+                          :loading="loading"
+                          @click="unshareFromGroup(group.user_id)"
+                          v-tooltip="'Remove group access'"
+                        />
+                      </div>
+                    </div>
+                  </template>
+                </Card>
+              </div>
+            </div>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </div>
 
     <template #footer>
