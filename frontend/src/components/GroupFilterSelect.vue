@@ -7,6 +7,8 @@ const props = defineProps<{
   groups: GroupItem[]
   /** When provided, enables the "sort by count" mode and shows the sort toggle. */
   passwordCounts?: Record<string, number>
+  /** Loading state while effective group counts are being resolved. */
+  loading?: boolean
   /** The current user's personal group ID — always pinned first in the list. */
   myPersonalGroupId?: string | null
 }>()
@@ -87,9 +89,12 @@ const clearAll = () => {
       rounded
       size="small"
       severity="secondary"
+      :disabled="props.loading"
       aria-label="Toggle sort order"
       @click="toggleSortMode"
     />
+
+    <ProgressSpinner v-if="props.loading" style="width: 1.5rem; height: 1.5rem" strokeWidth="6" />
 
     <!-- Dropdown for adding a group filter -->
     <Select
@@ -99,7 +104,7 @@ const clearAll = () => {
       placeholder="Select a group…"
       filter
       filterPlaceholder="Search groups…"
-      :disabled="availableGroups.length === 0"
+      :disabled="props.loading || availableGroups.length === 0"
       class="min-w-48"
       @change="(e) => addGroup(e.value)"
     >
