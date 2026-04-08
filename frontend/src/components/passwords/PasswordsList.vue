@@ -36,11 +36,21 @@ const historyPassword = ref<GetPasswordListResponse | null>(null)
 
 // Filter state
 const searchQuery = ref('')
+const adminViewEnabled = ref(false)
 const passwordAccessibleGroupIds = ref<Record<string, string[]>>({})
 let accessMapLoadVersion = 0
 
-// Groups visible in the filter selector: all for admins, user's own for others
-const filterableGroups = computed(() => (isAdmin.value ? groups.value : userBelongingGroups.value))
+const filterableGroups = computed(() => {
+  if (!isAdmin.value) {
+    return userBelongingGroups.value
+  }
+
+  if (!adminViewEnabled.value) {
+    return userBelongingGroups.value
+  }
+
+  return groups.value
+})
 
 const getAccessibleGroupIdsForPassword = (password: GetPasswordListResponse): string[] =>
   passwordAccessibleGroupIds.value[password.id] ?? [password.group_id]
@@ -91,7 +101,6 @@ const matchesSearchQuery = (password: GetPasswordListResponse, groupName?: strin
 }
 
 const folderFilter = computed(() => route.query.folder as string | undefined)
-
 type GroupedFolder = {
   name: string
   count: number
@@ -228,6 +237,14 @@ const handleGroupToggle = (groupId: string) => {
   openFolderKey.value = null
 }
 
+const handleAdminView = async () => {
+  if (!isAdmin.value) return
+
+  adminViewEnabled.value = !adminViewEnabled.value
+  openGroupId.value = null
+  openFolderKey.value = null
+}
+
 // Reset editing state when modals close
 watch(showCreateModal, (isVisible) => {
   if (!isVisible) {
@@ -276,6 +293,15 @@ onMounted(async () => {
         <InputIcon class="pi pi-search" />
         <InputText v-model="searchQuery" placeholder="Filter" class="min-w-64" />
       </IconField>
+
+      <Button
+        v-if="isAdmin"
+        label="Admin view"
+        :icon="adminViewEnabled ? 'pi pi-eye' : 'pi pi-eye-slash'"
+        :severity="adminViewEnabled ? 'primary' : 'secondary'"
+        :outlined="!adminViewEnabled"
+        @click="handleAdminView"
+      />
     </div>
 
     <!-- List -->
