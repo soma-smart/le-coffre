@@ -1,11 +1,12 @@
 <template>
   <div class="surface-ground rounded-lg p-4 hover:surface-hover transition-colors">
-    <div class="flex justify-between items-start">
-      <div class="flex-1">
-        <div class="flex items-center gap-2 mb-2">
-          <h4 class="font-semibold">{{ password.name }}</h4>
-        </div>
-        <div class="flex items-center gap-2 mb-2">
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center gap-2 mb-2">
+        <h4 class="font-semibold">{{ password.name }}</h4>
+      </div>
+
+      <div class="flex items-center justify-between gap-4 mb-2">
+        <div class="flex items-center gap-2 min-w-0">
           <code class="text-sm surface-card px-3 py-1 rounded border surface-border font-mono">
             {{ isVisible && passwordValue ? passwordValue : '••••••••' }}
           </code>
@@ -37,23 +38,90 @@
             @click="copyToClipboard"
           />
         </div>
-        <div v-if="password.login || password.url" class="flex items-center gap-4 mb-2 text-sm">
-          <span v-if="password.login" class="flex items-center gap-1 text-color-secondary">
-            <i class="pi pi-user text-xs" />
-            {{ password.login }}
-          </span>
-          <a
-            v-if="password.url"
-            :href="password.url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center gap-1 text-primary hover:underline"
-          >
-            <i class="pi pi-external-link text-xs" />
-            {{ password.url }}
-          </a>
+
+        <div class="flex gap-1 shrink-0">
+          <Button
+            icon="pi pi-history"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            aria-label="History"
+            @click="handleHistory"
+            v-tooltip.top="'View history'"
+          />
+          <Button
+            icon=" pi pi-share-alt"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            :aria-label="
+              !password.can_read
+                ? 'You don\'t have read access to this password'
+                : password.can_write
+                  ? 'Manage sharing'
+                  : 'View who has access'
+            "
+            :disabled="!password.can_read"
+            @click="handleShare"
+            v-tooltip.top="
+              !password.can_read
+                ? 'You don\'t have read access to this password'
+                : password.can_write
+                  ? 'Manage sharing'
+                  : 'View who has access'
+            "
+          />
+          <Button
+            icon="pi pi-pencil"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            aria-label="Edit"
+            :disabled="!password.can_write"
+            v-tooltip.top="
+              !password.can_write ? 'You don\'t have write access to this password' : undefined
+            "
+            @click="handleEdit"
+          />
+          <Button
+            icon="pi pi-trash"
+            text
+            rounded
+            size="small"
+            severity="danger"
+            aria-label="Delete"
+            :loading="isDeleting"
+            :disabled="!password.can_write"
+            v-tooltip.top="
+              !password.can_write ? 'You don\'t have write access to this password' : undefined
+            "
+            @click="handleDelete"
+          />
         </div>
-        <div class="text-xs text-color-secondary flex gap-4">
+      </div>
+
+      <div v-if="password.login || password.url" class="flex items-center gap-4 mb-2 text-sm">
+        <span v-if="password.login" class="flex items-center gap-1 text-color-secondary">
+          <i class="pi pi-user text-xs" />
+          {{ password.login }}
+        </span>
+        <a
+          v-if="password.url"
+          :href="password.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-1 text-primary hover:underline"
+        >
+          <i class="pi pi-external-link text-xs" />
+          {{ password.url }}
+        </a>
+      </div>
+
+      <div class="flex items-center justify-between gap-4 text-xs text-color-secondary">
+        <div class="flex flex-wrap items-center gap-4 min-w-0">
           <i
             v-if="needsUpdate"
             class="pi pi-exclamation-triangle text-orange-500"
@@ -62,72 +130,42 @@
           <span>Created: {{ formatDate(password.created_at) }}</span>
           <span>Updated: {{ formatDate(password.last_updated_at) }}</span>
         </div>
-      </div>
-      <div class="flex gap-1">
-        <Button
-          icon="pi pi-history"
-          text
-          rounded
-          size="small"
-          severity="secondary"
-          aria-label="History"
-          @click="handleHistory"
-          v-tooltip.top="'View history'"
-        />
-        <Button
-          icon=" pi pi-share-alt"
-          text
-          rounded
-          size="small"
-          severity="secondary"
-          aria-label="Share"
-          :disabled="!password.can_write"
-          @click="handleShare"
-          v-tooltip.top="
-            password.can_write ? 'Share password' : 'You don\'t have write access to this password'
-          "
-        />
-        <Button
-          icon="pi pi-pencil"
-          text
-          rounded
-          size="small"
-          severity="secondary"
-          aria-label="Edit"
-          :disabled="!password.can_write"
-          v-tooltip.top="
-            !password.can_write ? 'You don\'t have write access to this password' : undefined
-          "
-          @click="handleEdit"
-        />
-        <Button
-          icon="pi pi-trash"
-          text
-          rounded
-          size="small"
-          severity="danger"
-          aria-label="Delete"
-          :loading="isDeleting"
-          :disabled="!password.can_write"
-          v-tooltip.top="
-            !password.can_write ? 'You don\'t have write access to this password' : undefined
-          "
-          @click="handleDelete"
-        />
+
+        <div v-if="sharedAccessInfo" class="flex items-center gap-2 shrink-0">
+          <span>Shared: {{ formatDate(sharedAccessInfo.occurredOn) }}</span>
+          <i
+            class="pi pi-user"
+            v-tooltip.top="'by ' + sharedAccessInfo.actorUsername"
+            aria-label="Shared by user"
+          />
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import type { GetPasswordListResponse } from '@/client/types.gen'
 import {
+  getUserUsersUserIdGet,
+  listPasswordEventsPasswordsPasswordIdEventsGet,
+} from '@/client/sdk.gen'
+import {
   getPasswordPasswordsPasswordIdGet,
   deletePasswordPasswordsPasswordIdDelete,
 } from '@/client'
+import { useGroupsStore } from '@/stores/groups'
+
+const actorUsernameCache = new Map<string, string>()
+
+type SharedAccessInfo = {
+  occurredOn: string
+  actorUsername: string
+}
 
 const props = defineProps<{
   password: GetPasswordListResponse
@@ -142,14 +180,17 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const confirm = useConfirm()
+const groupsStore = useGroupsStore()
+const { userBelongingGroups } = storeToRefs(groupsStore)
 
 const passwordValue = ref<string | null>(null)
 const detailFetched = ref(false)
 const isVisible = ref(false)
 const isLoading = ref(false)
 const isDeleting = ref(false)
+const sharedAccessInfo = ref<SharedAccessInfo | null>(null)
+let sharedAccessLoadVersion = 0
 
-// Check if password needs update (3 months = 90 days)
 const needsUpdate = computed(() => {
   const lastUpdated = new Date(props.password.last_updated_at)
   const now = new Date()
@@ -158,7 +199,6 @@ const needsUpdate = computed(() => {
   return diffInDays > 90
 })
 
-// Format date to readable format
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString)
   return date.toLocaleDateString('en-US', {
@@ -170,8 +210,81 @@ const formatDate = (dateString: string): string => {
   })
 }
 
+const getEventDataString = (eventData: Record<string, unknown>, key: string): string | null => {
+  const value = eventData[key]
+  return typeof value === 'string' ? value : null
+}
+
+const fetchActorUsername = async (userId: string, fallback?: string | null): Promise<string> => {
+  if (actorUsernameCache.has(userId)) {
+    return actorUsernameCache.get(userId)!
+  }
+
+  try {
+    const response = await getUserUsersUserIdGet({
+      path: { user_id: userId },
+    })
+    const username = response.data?.username || fallback || 'Unknown user'
+    actorUsernameCache.set(userId, username)
+    return username
+  } catch {
+    return fallback || 'Unknown user'
+  }
+}
+
+const loadSharedAccessInfo = async () => {
+  const currentVersion = ++sharedAccessLoadVersion
+  sharedAccessInfo.value = null
+
+  if (props.password.can_write) {
+    return
+  }
+
+  const belongingGroupIds = new Set(userBelongingGroups.value.map((group) => group.id))
+  if (belongingGroupIds.size === 0) {
+    return
+  }
+
+  try {
+    const response = await listPasswordEventsPasswordsPasswordIdEventsGet({
+      path: { password_id: props.password.id },
+      query: {
+        event_type: ['PasswordSharedEvent'],
+      },
+    })
+
+    const matchingEvent = (response.data?.events ?? [])
+      .filter((event) => event.event_type === 'PasswordSharedEvent')
+      .filter((event) => {
+        const sharedWithGroupId = getEventDataString(event.event_data, 'shared_with_group_id')
+        return !!sharedWithGroupId && belongingGroupIds.has(sharedWithGroupId)
+      })
+      .sort((a, b) => new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime())[0]
+
+    if (!matchingEvent || currentVersion !== sharedAccessLoadVersion) {
+      return
+    }
+
+    const actorUsername = await fetchActorUsername(
+      matchingEvent.actor_user_id,
+      matchingEvent.actor_email,
+    )
+
+    if (currentVersion !== sharedAccessLoadVersion) {
+      return
+    }
+
+    sharedAccessInfo.value = {
+      occurredOn: matchingEvent.occurred_on,
+      actorUsername,
+    }
+  } catch (error) {
+    console.error('Error loading shared access info:', error)
+  }
+}
+
 const fetchPassword = async () => {
-  if (detailFetched.value) return // Already fetched
+  if (detailFetched.value) return
 
   isLoading.value = true
   try {
@@ -280,4 +393,12 @@ const handleDelete = () => {
     },
   })
 }
+
+watch(
+  [() => props.password.id, () => props.password.can_write, userBelongingGroups],
+  async () => {
+    await loadSharedAccessInfo()
+  },
+  { immediate: true },
+)
 </script>

@@ -7,6 +7,10 @@ const props = defineProps<{
   groups: GroupItem[]
   /** When provided, enables the "sort by count" mode and shows the sort toggle. */
   passwordCounts?: Record<string, number>
+  /** Loading state while effective group counts are being resolved. */
+  loading?: boolean
+  /** The current user's personal group ID — always pinned first in the list. */
+  myPersonalGroupId?: string | null
 }>()
 
 // null = all (no filter active), string[] = filtered to those ids
@@ -20,16 +24,24 @@ const toggleSortMode = () => {
 
 // Groups not yet selected, sorted according to active mode — shown in the dropdown
 const availableGroups = computed(() => {
-  const unselected = props.groups.filter((g) => !selectedGroupIds.value?.includes(g.id))
-  return sortGroups(unselected, sortMode.value, props.passwordCounts)
+  const passwordCounts = props.passwordCounts ?? {}
+  const unselected = props.groups.filter(
+    (g) => !selectedGroupIds.value?.includes(g.id) && (passwordCounts[g.id] ?? 0) > 0,
+  )
+  return sortGroups(unselected, sortMode.value, props.passwordCounts, props.myPersonalGroupId)
 })
 
-// Groups currently selected — shown as tags, personal group always first
+// Groups currently selected — shown as tags, current user's personal group always first
 const selectedGroups = computed(() => {
   const selected = props.groups.filter((g) => selectedGroupIds.value?.includes(g.id))
   return selected.sort((a, b) => {
-    if (a.is_personal && !b.is_personal) return -1
-    if (!a.is_personal && b.is_personal) return 1
+    if (props.myPersonalGroupId) {
+      if (a.id === props.myPersonalGroupId) return -1
+      if (b.id === props.myPersonalGroupId) return 1
+    } else {
+      if (a.is_personal && !b.is_personal) return -1
+      if (!a.is_personal && b.is_personal) return 1
+    }
     return a.name.localeCompare(b.name)
   })
 })
@@ -77,9 +89,12 @@ const clearAll = () => {
       rounded
       size="small"
       severity="secondary"
+      :disabled="props.loading"
       aria-label="Toggle sort order"
       @click="toggleSortMode"
     />
+
+    <ProgressSpinner v-if="props.loading" style="width: 1.5rem; height: 1.5rem" strokeWidth="6" />
 
     <!-- Dropdown for adding a group filter -->
     <Select
@@ -89,7 +104,7 @@ const clearAll = () => {
       placeholder="Select a group…"
       filter
       filterPlaceholder="Search groups…"
-      :disabled="availableGroups.length === 0"
+      :disabled="props.loading || availableGroups.length === 0"
       class="min-w-48"
       @change="(e) => addGroup(e.value)"
     >
