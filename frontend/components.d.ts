@@ -28,6 +28,7 @@ declare module 'vue' {
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
     Drawer: typeof import('primevue/drawer')['default']
+    Dropdown: typeof import('primevue/dropdown')['default']
     FolderCard: typeof import('./src/components/passwords/FolderCard.vue')['default']
     Form: typeof import('@primevue/forms/form')['default']
     GroupDetailsModal: typeof import('./src/components/modals/GroupDetailsModal.vue')['default']

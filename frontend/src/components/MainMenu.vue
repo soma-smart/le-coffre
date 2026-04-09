@@ -14,7 +14,105 @@
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }"
           >Passwords</span
         >
-        <Badge class="ml-auto" :value="passwordsCount" />
+
+        <Badge :value="passwordsCount" />
+      </div>
+      <div class="pl-8 pb-2">
+        <div
+          v-for="group in myPasswordGroups"
+          :key="group.id"
+          class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis rounded"
+          :class="isActivePasswordGroup(group.id) ? 'bg-primary/10' : ''"
+          @click="goToPasswordsGroup(group.id)"
+        >
+          <span
+            class="pi transition-colors text-sm"
+            :class="[
+              group.is_personal ? 'pi-user' : 'pi-users',
+              isActivePasswordGroup(group.id)
+                ? 'text-primary'
+                : 'text-muted-color group-hover:text-primary',
+            ]"
+          />
+          <span
+            class="ml-2 transition-colors text-sm truncate"
+            :class="{ 'font-semibold': isActivePasswordGroup(group.id) }"
+            >{{ group.name }}</span
+          >
+          <div class="ml-auto flex items-center">
+            <div class="w-6 h-6 flex items-center justify-center">
+              <Button
+                v-if="isOwnerOfGroup(group)"
+                icon="pi pi-plus"
+                text
+                rounded
+                size="small"
+                class="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                @click.stop="goToCreatePasswordForGroup(group.id)"
+              />
+            </div>
+            <Badge class="ml-1" :value="passwordCountByGroupId[group.id] ?? 0" />
+          </div>
+        </div>
+
+        <div v-if="isAdmin" class="px-4 py-2">
+          <div class="border-t border-surface"></div>
+        </div>
+        <div v-if="isAdmin" class="px-4 pb-2">
+          <button
+            type="button"
+            class="w-full flex items-center gap-2 py-1 text-xs transition-colors"
+            :class="
+              adminPasswordViewEnabled
+                ? 'text-primary font-medium'
+                : 'text-surface-500 hover:text-primary'
+            "
+            @click="toggleAdminPasswordView"
+          >
+            <span
+              class="pi text-xs"
+              :class="adminPasswordViewEnabled ? 'pi-eye' : 'pi-eye-slash'"
+            />
+            <span class="uppercase tracking-wide">Show admin groups</span>
+          </button>
+        </div>
+        <div
+          v-for="group in adminExtraPasswordGroups"
+          v-show="isAdmin && adminPasswordViewEnabled"
+          :key="`admin-${group.id}`"
+          class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis rounded"
+          :class="isActivePasswordGroup(group.id) ? 'bg-primary/10' : ''"
+          @click="goToPasswordsGroup(group.id)"
+        >
+          <span
+            class="pi transition-colors text-sm"
+            :class="[
+              group.is_personal ? 'pi-user' : 'pi-users',
+              isActivePasswordGroup(group.id)
+                ? 'text-primary'
+                : 'text-muted-color group-hover:text-primary',
+            ]"
+          />
+          <span
+            class="ml-2 transition-colors text-sm truncate"
+            :class="{ 'font-semibold': isActivePasswordGroup(group.id) }"
+            >{{ group.name }}</span
+          >
+          <div class="ml-auto flex items-center">
+            <div class="w-6 h-6 flex items-center justify-center">
+              <Button
+                v-if="isOwnerOfGroup(group)"
+                icon="pi pi-plus"
+                text
+                rounded
+                size="small"
+                class="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                @click.stop="goToCreatePasswordForGroup(group.id)"
+              />
+            </div>
+            <Badge class="ml-1" :value="passwordCountByGroupId[group.id] ?? 0" />
+          </div>
+        </div>
       </div>
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
@@ -122,32 +220,222 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue'
 import { storeToRefs } from 'pinia'
 import { usePasswordsStore } from '@/stores/passwords'
+import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
+import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { logout } from '@/utils/logout'
+import { sortGroupsByName } from '@/utils/groupSort'
+import { slugifyGroupName, findGroupIdBySlug } from '@/utils/groupSlug'
+import { listPasswordAccessPasswordsPasswordIdAccessGet } from '@/client/sdk.gen'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 
 const passwordsStore = usePasswordsStore()
-const { passwordsCount } = storeToRefs(passwordsStore)
+const { passwordsCount, passwords } = storeToRefs(passwordsStore)
+
+const groupsStore = useGroupsStore()
+const { groups, userBelongingGroups, currentUserPersonalGroupId } = storeToRefs(groupsStore)
 
 const userStore = useUserStore()
+const { currentUser } = storeToRefs(userStore)
 const isAdmin = computed(() => userStore.isAdmin)
+
+const adminPasswordViewStore = useAdminPasswordViewStore()
+const { adminPasswordViewEnabled: adminPasswordViewPreference } =
+  storeToRefs(adminPasswordViewStore)
+
+const passwordAccessibleGroupIds = ref<Record<string, string[]>>({})
+let accessMapLoadVersion = 0
 
 // Admin menu state
 const adminMenuExpanded = ref(false)
 
 // Active state detection
-const isPasswordsActive = computed(() => route.path === '/' || route.path === '/home')
+const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords/'))
 const isGroupsActive = computed(() => route.path === '/groups')
 const isProfileActive = computed(() => route.path === '/profile')
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
 const isAdminConfigActive = computed(() => route.path === '/admin/config')
 const isAdminUsersActive = computed(() => route.path === '/admin/users')
+const selectedGroupSlug = computed(() => (route.params.groupSlug as string | undefined) ?? null)
+const selectedGroupId = computed(() => findGroupIdBySlug(groups.value, selectedGroupSlug.value))
+const adminPasswordViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
+
+const myPasswordGroups = computed(() =>
+  sortGroupsByName(userBelongingGroups.value, currentUserPersonalGroupId.value),
+)
+
+const adminExtraPasswordGroups = computed(() => {
+  if (!isAdmin.value) return []
+
+  const myGroupIds = new Set(myPasswordGroups.value.map((group) => group.id))
+  return sortGroupsByName(
+    groups.value.filter((group) => !myGroupIds.has(group.id)),
+    currentUserPersonalGroupId.value,
+  )
+})
+
+const visiblePasswordGroups = computed(() =>
+  adminPasswordViewEnabled.value
+    ? [...myPasswordGroups.value, ...adminExtraPasswordGroups.value]
+    : myPasswordGroups.value,
+)
+
+const getAccessibleGroupIdsForPassword = (passwordId: string, fallbackGroupId: string): string[] =>
+  passwordAccessibleGroupIds.value[passwordId] ?? [fallbackGroupId]
+
+const loadPasswordAccessibleGroupIds = async () => {
+  const currentVersion = ++accessMapLoadVersion
+
+  if (passwords.value.length === 0) {
+    passwordAccessibleGroupIds.value = {}
+    return
+  }
+
+  const entries = await Promise.all(
+    passwords.value.map(async (password) => {
+      try {
+        const response = await listPasswordAccessPasswordsPasswordIdAccessGet({
+          path: { password_id: password.id },
+        })
+
+        const groupIds = [
+          ...new Set((response.data?.group_access_list ?? []).map((item) => item.user_id)),
+        ]
+
+        return [password.id, groupIds.length > 0 ? groupIds : [password.group_id]] as const
+      } catch {
+        return [password.id, [password.group_id]] as const
+      }
+    }),
+  )
+
+  if (currentVersion !== accessMapLoadVersion) {
+    return
+  }
+
+  passwordAccessibleGroupIds.value = Object.fromEntries(entries)
+}
+
+const passwordCountByGroupId = computed<Record<string, number>>(() => {
+  const counts: Record<string, number> = {}
+
+  for (const password of passwords.value) {
+    for (const groupId of getAccessibleGroupIdsForPassword(password.id, password.group_id)) {
+      counts[groupId] = (counts[groupId] ?? 0) + 1
+    }
+  }
+
+  return counts
+})
+
+const isActivePasswordGroup = (groupId: string) =>
+  isPasswordsActive.value && selectedGroupId.value === groupId
+
+const getDefaultGroupId = (availableGroupIds: string[]): string | null => {
+  if (
+    currentUserPersonalGroupId.value &&
+    availableGroupIds.includes(currentUserPersonalGroupId.value)
+  ) {
+    return currentUserPersonalGroupId.value
+  }
+  return availableGroupIds[0] ?? null
+}
+
+const isOwnerOfGroup = (group: { owners?: string[] }) => {
+  if (!currentUser.value?.id) return false
+  return !!group.owners?.includes(currentUser.value.id)
+}
+
+const buildHomeQuery = (shouldOpenCreate = false) => {
+  const query: Record<string, string> = {}
+  if (shouldOpenCreate) {
+    query.create = '1'
+  }
+  return query
+}
+
+const getGroupSlugById = (groupId: string): string | null => {
+  const group = visiblePasswordGroups.value.find((item) => item.id === groupId)
+  if (!group) return null
+  return slugifyGroupName(group.name)
+}
+
+const goToGroupRoute = (groupId: string | null, shouldOpenCreate = false) => {
+  if (!groupId) {
+    router.push({
+      name: 'Home',
+      query: buildHomeQuery(shouldOpenCreate),
+    })
+    return
+  }
+
+  const slug = getGroupSlugById(groupId)
+  if (!slug) {
+    router.push({
+      name: 'Home',
+      query: buildHomeQuery(shouldOpenCreate),
+    })
+    return
+  }
+
+  router.push({
+    name: 'HomeGroup',
+    params: { groupSlug: slug },
+    query: buildHomeQuery(shouldOpenCreate),
+  })
+}
 
 const goToAllPasswords = () => {
-  router.push({ name: 'Home' })
+  const defaultGroupId = getDefaultGroupId(myPasswordGroups.value.map((g) => g.id))
+  goToGroupRoute(defaultGroupId)
+}
+
+const goToPasswordsGroup = (groupId: string) => {
+  goToGroupRoute(groupId)
+}
+
+const goToCreatePasswordForGroup = (groupId: string) => {
+  goToGroupRoute(groupId, true)
+}
+
+const toggleAdminPasswordView = () => {
+  if (!isAdmin.value) return
+
+  const nextAdminView = !adminPasswordViewEnabled.value
+  adminPasswordViewStore.setAdminPasswordViewEnabled(nextAdminView)
+
+  const myGroupIds = new Set(myPasswordGroups.value.map((group) => group.id))
+  const selectedGroupIsInMyGroups = !!(
+    selectedGroupId.value && myGroupIds.has(selectedGroupId.value)
+  )
+
+  if (!nextAdminView && isPasswordsActive.value && !selectedGroupIsInMyGroups) {
+    const fallbackGroupId = getDefaultGroupId(myPasswordGroups.value.map((group) => group.id))
+
+    if (!fallbackGroupId) {
+      router.replace({ name: 'Home', query: route.query })
+      return
+    }
+
+    const fallbackGroupSlug = slugifyGroupName(
+      myPasswordGroups.value.find((group) => group.id === fallbackGroupId)?.name ?? '',
+    )
+
+    if (!fallbackGroupSlug) {
+      router.replace({ name: 'Home', query: route.query })
+      return
+    }
+
+    router.replace({
+      name: 'HomeGroup',
+      params: { groupSlug: fallbackGroupSlug },
+      query: route.query,
+    })
+    return
+  }
 }
 
 const goToGroups = () => {
@@ -193,8 +481,9 @@ const handleLogout = () => {
 watch(
   () => route.path,
   (newPath) => {
-    if (newPath === '/' || newPath === '/home') {
+    if (newPath === '/' || newPath.startsWith('/passwords/')) {
       passwordsStore.fetchPasswords()
+      groupsStore.fetchAllGroups()
     }
     // Auto-expand admin menu when on admin pages
     if (newPath.startsWith('/admin')) {
@@ -203,8 +492,18 @@ watch(
   },
 )
 
+watch(
+  passwords,
+  async () => {
+    await loadPasswordAccessibleGroupIds()
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
+  adminPasswordViewStore.loadAdminPasswordView()
   passwordsStore.fetchPasswords()
+  groupsStore.fetchAllGroups()
   // Fetch user data to determine admin status
   userStore.fetchCurrentUser()
   // Auto-expand admin menu if on admin page

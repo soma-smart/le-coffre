@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import type { GetPasswordListResponse, GroupItem } from '@/client/types.gen'
 import FolderCard from './FolderCard.vue'
@@ -11,16 +11,22 @@ import { listPasswordAccessPasswordsPasswordIdAccessGet } from '@/client/sdk.gen
 import { usePasswordsStore } from '@/stores/passwords'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
+import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { sortGroupsByName } from '@/utils/groupSort'
+import { findGroupIdBySlug } from '@/utils/groupSlug'
 
 const route = useRoute()
+const router = useRouter()
 const passwordsStore = usePasswordsStore()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
+const adminPasswordViewStore = useAdminPasswordViewStore()
 
 const { passwords, loading, error } = storeToRefs(passwordsStore)
 const { groups, userBelongingGroups, currentUserPersonalGroupId } = storeToRefs(groupsStore)
 const { isAdmin, currentUser } = storeToRefs(userStore)
+const { adminPasswordViewEnabled: adminPasswordViewPreference } =
+  storeToRefs(adminPasswordViewStore)
 
 const openFolderKey = ref<string | null>(null)
 const selectedGroupTabId = ref<string | null>(null)
@@ -36,8 +42,11 @@ const historyPassword = ref<GetPasswordListResponse | null>(null)
 
 // Filter state
 const searchQuery = ref('')
-const adminViewEnabled = ref(false)
+const selectedGroupSlugFromRoute = computed(() => route.params.groupSlug as string | undefined)
+const adminViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
+const shouldOpenCreateFromRoute = computed(() => route.query.create === '1')
 const passwordAccessibleGroupIds = ref<Record<string, string[]>>({})
+const isProcessingCreateGroupQuery = ref(false)
 let accessMapLoadVersion = 0
 
 const filterableGroups = computed(() => {
@@ -51,6 +60,10 @@ const filterableGroups = computed(() => {
 
   return groups.value
 })
+
+const selectedGroupIdFromRoute = computed(() =>
+  findGroupIdBySlug(filterableGroups.value, selectedGroupSlugFromRoute.value),
+)
 
 const getAccessibleGroupIdsForPassword = (password: GetPasswordListResponse): string[] =>
   passwordAccessibleGroupIds.value[password.id] ?? [password.group_id]
@@ -101,6 +114,7 @@ const matchesSearchQuery = (password: GetPasswordListResponse, groupName?: strin
 }
 
 const folderFilter = computed(() => route.query.folder as string | undefined)
+
 type GroupedFolder = {
   name: string
   count: number
@@ -226,29 +240,59 @@ const handleFolderToggle = (folderKey: string) => {
   openFolderKey.value = openFolderKey.value === folderKey ? null : folderKey
 }
 
-const handleSelectGroupTab = (groupId: string) => {
-  if (selectedGroupTabId.value === groupId) {
+const selectedGroupSection = computed(() => {
+  if (!selectedGroupTabId.value) return null
+  const existingSection =
+    groupedByGroupAndFolder.value.find((section) => section.id === selectedGroupTabId.value) ?? null
+  if (existingSection) {
+    return existingSection
+  }
+
+  const selectedGroup = filterableGroups.value.find(
+    (group) => group.id === selectedGroupTabId.value,
+  )
+  if (!selectedGroup) {
+    return null
+  }
+
+  const currentUserId = currentUser.value?.id
+  return {
+    id: selectedGroup.id,
+    name: selectedGroup.name,
+    isPersonal: selectedGroup.is_personal,
+    isOwnedByCurrentUser: !!(currentUserId && selectedGroup.owners?.includes(currentUserId)),
+    count: 0,
+    folders: [],
+  }
+})
+
+const isCurrentUserOwnerOfGroup = (groupId: string) => {
+  if (!currentUser.value?.id) return false
+  const group = groups.value.find((item) => item.id === groupId)
+  return !!group?.owners?.includes(currentUser.value.id)
+}
+
+const setDefaultOpenFolderForSelectedGroup = () => {
+  const section = selectedGroupSection.value
+  if (!section || section.folders.length === 0) {
+    openFolderKey.value = null
     return
   }
 
-  selectedGroupTabId.value = groupId
-  openFolderKey.value = null
-}
-
-const selectedGroupSection = computed(() => {
-  if (!selectedGroupTabId.value) return null
-  return (
-    groupedByGroupAndFolder.value.find((section) => section.id === selectedGroupTabId.value) ?? null
+  const defaultFolder = section.folders.find(
+    (folder) => folder.name.trim().toLowerCase() === 'default',
   )
-})
-
-const handleAdminView = async () => {
-  if (!isAdmin.value) return
-
-  adminViewEnabled.value = !adminViewEnabled.value
-  selectedGroupTabId.value = null
-  openFolderKey.value = null
+  const folderToOpen = defaultFolder ?? section.folders[0]
+  openFolderKey.value = `${section.id}-${folderToOpen.name}`
 }
+
+watch(selectedGroupIdFromRoute, (groupId) => {
+  if (!groupId) return
+  if (selectedGroupTabId.value !== groupId) {
+    selectedGroupTabId.value = groupId
+    setDefaultOpenFolderForSelectedGroup()
+  }
+})
 
 watch(groupedByGroupAndFolder, (sections) => {
   if (sections.length === 0) {
@@ -258,13 +302,51 @@ watch(groupedByGroupAndFolder, (sections) => {
   }
 
   if (
+    selectedGroupIdFromRoute.value &&
+    sections.some((s) => s.id === selectedGroupIdFromRoute.value)
+  ) {
+    if (selectedGroupTabId.value !== selectedGroupIdFromRoute.value) {
+      selectedGroupTabId.value = selectedGroupIdFromRoute.value
+      setDefaultOpenFolderForSelectedGroup()
+    }
+    return
+  }
+
+  if (
     !selectedGroupTabId.value ||
     !sections.some((section) => section.id === selectedGroupTabId.value)
   ) {
-    selectedGroupTabId.value = sections[0].id
-    openFolderKey.value = null
+    const personalGroupSection = sections.find((s) => s.id === currentUserPersonalGroupId.value)
+    selectedGroupTabId.value = personalGroupSection?.id ?? sections[0].id
+    setDefaultOpenFolderForSelectedGroup()
   }
 })
+
+watch(
+  [shouldOpenCreateFromRoute, selectedGroupIdFromRoute],
+  async ([shouldOpenCreate, selectedGroupId]) => {
+    if (isProcessingCreateGroupQuery.value || !shouldOpenCreate || !selectedGroupId) return
+
+    if (!isCurrentUserOwnerOfGroup(selectedGroupId)) return
+
+    isProcessingCreateGroupQuery.value = true
+    try {
+      if (selectedGroupTabId.value !== selectedGroupId) {
+        selectedGroupTabId.value = selectedGroupId
+        setDefaultOpenFolderForSelectedGroup()
+      }
+
+      handleCreateInGroup(selectedGroupId)
+
+      const nextQuery = { ...route.query }
+      delete nextQuery.create
+      await router.replace({ query: nextQuery })
+    } finally {
+      isProcessingCreateGroupQuery.value = false
+    }
+  },
+  { immediate: true },
+)
 
 // Reset editing state when modals close
 watch(showCreateModal, (isVisible) => {
@@ -289,6 +371,7 @@ watch(
 )
 
 onMounted(async () => {
+  adminPasswordViewStore.loadAdminPasswordView()
   await Promise.all([passwordsStore.fetchPasswords(), groupsStore.fetchAllGroups()])
 })
 </script>
@@ -307,15 +390,6 @@ onMounted(async () => {
         <InputIcon class="pi pi-search" />
         <InputText v-model="searchQuery" placeholder="Filter" class="min-w-64" />
       </IconField>
-
-      <Button
-        v-if="isAdmin"
-        label="Admin view"
-        :icon="adminViewEnabled ? 'pi pi-eye' : 'pi pi-eye-slash'"
-        :severity="adminViewEnabled ? 'primary' : 'secondary'"
-        :outlined="!adminViewEnabled"
-        @click="handleAdminView"
-      />
     </div>
 
     <!-- List -->
@@ -335,46 +409,7 @@ onMounted(async () => {
     </div>
 
     <div v-else class="space-y-4">
-      <div
-        class="flex items-end gap-1 overflow-x-auto pt-1 pb-0"
-        role="tablist"
-        aria-label="Groups"
-      >
-        <div
-          v-for="groupSection in groupedByGroupAndFolder"
-          :key="groupSection.id"
-          class="flex items-center gap-1 shrink-0 border border-b-0 rounded-t-md px-2 transition-all"
-          :class="
-            selectedGroupTabId === groupSection.id
-              ? 'bg-primary border-primary text-primary-contrast shadow-sm py-2 min-h-11'
-              : 'bg-surface-100 border-surface-300 cursor-pointer py-1 min-h-8'
-          "
-          role="tab"
-          :aria-selected="selectedGroupTabId === groupSection.id"
-          @click="handleSelectGroupTab(groupSection.id)"
-        >
-          <i :class="['pi', groupSection.isPersonal ? 'pi pi-user' : 'pi pi-users', 'text-sm']" />
-          <span
-            class="font-medium whitespace-nowrap"
-            :class="selectedGroupTabId === groupSection.id ? 'text-sm' : 'text-xs'"
-            >{{ groupSection.name }}</span
-          >
-          <Button
-            v-if="selectedGroupTabId === groupSection.id && groupSection.isOwnedByCurrentUser"
-            icon="pi pi-plus"
-            size="small"
-            class="!bg-white !text-primary !border !border-primary !w-6 !h-6 !p-0 !rounded-sm"
-            @click.stop="
-              (handleSelectGroupTab(groupSection.id), handleCreateInGroup(groupSection.id))
-            "
-          />
-        </div>
-      </div>
-
-      <div
-        v-if="selectedGroupSection"
-        class="border border-surface rounded-b-md rounded-tr-md bg-surface-0 p-4"
-      >
+      <div v-if="selectedGroupSection" class="border border-surface rounded-md bg-surface-0 p-4">
         <div class="flex items-center gap-3 mb-4">
           <i
             :class="[
@@ -405,6 +440,9 @@ onMounted(async () => {
             @history="handleHistory"
             @deleted="handleDeleted"
           />
+          <p v-if="selectedGroupSection.folders.length === 0" class="text-sm text-surface-500">
+            No passwords in this group.
+          </p>
         </div>
       </div>
     </div>

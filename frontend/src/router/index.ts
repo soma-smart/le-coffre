@@ -17,6 +17,11 @@ const router = createRouter({
       component: HomeView,
     },
     {
+      path: '/passwords/:groupSlug',
+      name: 'HomeGroup',
+      component: HomeView,
+    },
+    {
       path: '/setup',
       name: 'Setup',
       component: SetupView,
