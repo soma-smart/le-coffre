@@ -13,6 +13,7 @@ class FakeSsoGateway(SsoGateway):
         self._valid_codes = {}  # code -> SsoUserInfo mapping
         self._discovery_error: Exception | None = None
         self._discovery_result: SsoDiscoveryResult | None = None
+        self.last_redirect_uri: str | None = None
 
     async def get_authorize_url(self, config: SsoConfiguration) -> str:
         return self._authorize_url
@@ -21,6 +22,7 @@ class FakeSsoGateway(SsoGateway):
         self, config: SsoConfiguration, code: str, redirect_uri: str | None = None
     ) -> SsoUserInfo:
         """Validate the SSO callback code and return user info"""
+        self.last_redirect_uri = redirect_uri
         if code not in self._valid_codes:
             raise InvalidSsoCodeException(f"Invalid SSO code: {code}")
         return self._valid_codes[code]

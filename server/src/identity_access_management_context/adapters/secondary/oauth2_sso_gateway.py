@@ -105,13 +105,9 @@ class OAuth2SsoGateway(SsoGateway):
         # Use override redirect_uri if provided (for CLI auth), otherwise use default
         effective_redirect_uri = redirect_uri or self.redirect_uri
 
-        # Create a client with the correct redirect_uri for code exchange
-        client = AsyncOAuth2Client(
-            client_id=config.client_id,
-            client_secret=config.client_secret_decrypted,
-            scope=self.scope,
-            redirect_uri=effective_redirect_uri,
-        )
+        # Reuse the shared client construction logic, overriding redirect_uri if needed
+        client = self._get_oauth_client(config)
+        client.redirect_uri = effective_redirect_uri
 
         try:
             # Exchange authorization code for access token
