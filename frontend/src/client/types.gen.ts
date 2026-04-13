@@ -1670,6 +1670,12 @@ export type SsoCallbackAuthSsoCallbackGetData = {
          * State parameter for CSRF protection
          */
         state?: string;
+        /**
+         * Redirect Uri
+         *
+         * Redirect URI used during authorization (for CLI auth)
+         */
+        redirect_uri?: string;
     };
     url: '/auth/sso/callback';
 };
