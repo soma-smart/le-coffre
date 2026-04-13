@@ -76,7 +76,9 @@ class SsoLoginUseCase(TracedUseCase):
         ).decrypt()
 
         # Step 1: Validate SSO code and get user info from provider
-        sso_user_from_provider = await self._sso_gateway.validate_callback(sso_config, command.code)
+        sso_user_from_provider = await self._sso_gateway.validate_callback(
+            sso_config, command.code, redirect_uri=command.redirect_uri
+        )
 
         # Step 2: Check if user already exists in our system
         existing_sso_user = self._sso_user_repository.get_by_sso_user_id(

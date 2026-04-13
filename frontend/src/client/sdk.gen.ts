@@ -646,6 +646,7 @@ export const getSsoUrlAuthSsoUrlGet = <ThrowOnError extends boolean = false>(opt
  *
  * - **code**: The authorization code provided by the SSO provider
  * - **state**: (Optional) State parameter for CSRF protection
+ * - **redirect_uri**: (Optional) Redirect URI used during authorization, required for CLI auth flows
  *
  * Returns user information and sets HTTP-only secure cookies with JWT tokens.
  */
