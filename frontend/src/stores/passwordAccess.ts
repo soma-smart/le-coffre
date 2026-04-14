@@ -143,8 +143,11 @@ export const usePasswordAccessStore = defineStore('passwordAccess', () => {
       return
     }
 
-    const { [passwordId]: _removedAccess, ...remainingAccess } = accessByPasswordId.value
-    const { [passwordId]: _removedTimestamp, ...remainingTimestamps } = lastFetchByPasswordId.value
+    const remainingAccess = { ...accessByPasswordId.value }
+    delete remainingAccess[passwordId]
+
+    const remainingTimestamps = { ...lastFetchByPasswordId.value }
+    delete remainingTimestamps[passwordId]
 
     accessByPasswordId.value = remainingAccess
     lastFetchByPasswordId.value = remainingTimestamps
