@@ -7,8 +7,8 @@ import FolderCard from './FolderCard.vue'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
 import PasswordHistoryModal from '@/components/modals/PasswordHistoryModal.vue'
-import { listPasswordAccessPasswordsPasswordIdAccessGet } from '@/client/sdk.gen'
 import { usePasswordsStore } from '@/stores/passwords'
+import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
@@ -18,6 +18,7 @@ import { findGroupIdBySlug } from '@/utils/groupSlug'
 const route = useRoute()
 const router = useRouter()
 const passwordsStore = usePasswordsStore()
+const passwordAccessStore = usePasswordAccessStore()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
 const adminPasswordViewStore = useAdminPasswordViewStore()
@@ -45,9 +46,7 @@ const searchQuery = ref('')
 const selectedGroupSlugFromRoute = computed(() => route.params.groupSlug as string | undefined)
 const adminViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
 const shouldOpenCreateFromRoute = computed(() => route.query.create === '1')
-const passwordAccessibleGroupIds = ref<Record<string, string[]>>({})
 const isProcessingCreateGroupQuery = ref(false)
-let accessMapLoadVersion = 0
 
 const filterableGroups = computed(() => {
   if (!isAdmin.value) {
@@ -64,41 +63,6 @@ const filterableGroups = computed(() => {
 const selectedGroupIdFromRoute = computed(() =>
   findGroupIdBySlug(filterableGroups.value, selectedGroupSlugFromRoute.value),
 )
-
-const getAccessibleGroupIdsForPassword = (password: GetPasswordListResponse): string[] =>
-  passwordAccessibleGroupIds.value[password.id] ?? [password.group_id]
-
-const loadPasswordAccessibleGroupIds = async () => {
-  const currentVersion = ++accessMapLoadVersion
-
-  if (passwords.value.length === 0) {
-    passwordAccessibleGroupIds.value = {}
-    return
-  }
-
-  const entries = await Promise.all(
-    passwords.value.map(async (password) => {
-      try {
-        const response = await listPasswordAccessPasswordsPasswordIdAccessGet({
-          path: { password_id: password.id },
-        })
-
-        const groupIds = [
-          ...new Set((response.data?.group_access_list ?? []).map((item) => item.user_id)),
-        ]
-        return [password.id, groupIds.length > 0 ? groupIds : [password.group_id]] as const
-      } catch {
-        return [password.id, [password.group_id]] as const
-      }
-    }),
-  )
-
-  if (currentVersion !== accessMapLoadVersion) {
-    return
-  }
-
-  passwordAccessibleGroupIds.value = Object.fromEntries(entries)
-}
 
 const matchesSearchQuery = (password: GetPasswordListResponse, groupName?: string): boolean => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -142,7 +106,7 @@ const groupedByGroupAndFolder = computed<GroupedSection[]>(() => {
   const groupPasswordMap = new Map<string, GetPasswordListResponse[]>()
 
   for (const password of passwords.value) {
-    const accessibleGroupIds = getAccessibleGroupIdsForPassword(password)
+    const accessibleGroupIds = passwordAccessStore.getAccessibleGroupIdsForPassword(password)
     for (const groupId of accessibleGroupIds) {
       if (!visibleGroupIds.has(groupId)) continue
       const groupName = groupsById.get(groupId)?.name
@@ -361,14 +325,6 @@ watch(showShareModal, (isVisible) => {
 watch(showHistoryModal, (isVisible) => {
   if (!isVisible) historyPassword.value = null
 })
-
-watch(
-  passwords,
-  async () => {
-    await loadPasswordAccessibleGroupIds()
-  },
-  { immediate: true },
-)
 
 onMounted(async () => {
   adminPasswordViewStore.loadAdminPasswordView()

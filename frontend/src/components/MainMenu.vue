@@ -220,20 +220,23 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue'
 import { storeToRefs } from 'pinia'
 import { usePasswordsStore } from '@/stores/passwords'
+import { usePasswordAccessStore } from '../stores/passwordAccess'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { logout } from '@/utils/logout'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { slugifyGroupName, findGroupIdBySlug } from '@/utils/groupSlug'
-import { listPasswordAccessPasswordsPasswordIdAccessGet } from '@/client/sdk.gen'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 
 const passwordsStore = usePasswordsStore()
-const { passwordsCount, passwords } = storeToRefs(passwordsStore)
+const { passwordsCount } = storeToRefs(passwordsStore)
+
+const passwordAccessStore = usePasswordAccessStore()
+const { passwordCountByGroupId } = storeToRefs(passwordAccessStore)
 
 const groupsStore = useGroupsStore()
 const { groups, userBelongingGroups, currentUserPersonalGroupId } = storeToRefs(groupsStore)
@@ -245,9 +248,6 @@ const isAdmin = computed(() => userStore.isAdmin)
 const adminPasswordViewStore = useAdminPasswordViewStore()
 const { adminPasswordViewEnabled: adminPasswordViewPreference } =
   storeToRefs(adminPasswordViewStore)
-
-const passwordAccessibleGroupIds = ref<Record<string, string[]>>({})
-let accessMapLoadVersion = 0
 
 // Admin menu state
 const adminMenuExpanded = ref(false)
@@ -282,54 +282,6 @@ const visiblePasswordGroups = computed(() =>
     ? [...myPasswordGroups.value, ...adminExtraPasswordGroups.value]
     : myPasswordGroups.value,
 )
-
-const getAccessibleGroupIdsForPassword = (passwordId: string, fallbackGroupId: string): string[] =>
-  passwordAccessibleGroupIds.value[passwordId] ?? [fallbackGroupId]
-
-const loadPasswordAccessibleGroupIds = async () => {
-  const currentVersion = ++accessMapLoadVersion
-
-  if (passwords.value.length === 0) {
-    passwordAccessibleGroupIds.value = {}
-    return
-  }
-
-  const entries = await Promise.all(
-    passwords.value.map(async (password) => {
-      try {
-        const response = await listPasswordAccessPasswordsPasswordIdAccessGet({
-          path: { password_id: password.id },
-        })
-
-        const groupIds = [
-          ...new Set((response.data?.group_access_list ?? []).map((item) => item.user_id)),
-        ]
-
-        return [password.id, groupIds.length > 0 ? groupIds : [password.group_id]] as const
-      } catch {
-        return [password.id, [password.group_id]] as const
-      }
-    }),
-  )
-
-  if (currentVersion !== accessMapLoadVersion) {
-    return
-  }
-
-  passwordAccessibleGroupIds.value = Object.fromEntries(entries)
-}
-
-const passwordCountByGroupId = computed<Record<string, number>>(() => {
-  const counts: Record<string, number> = {}
-
-  for (const password of passwords.value) {
-    for (const groupId of getAccessibleGroupIdsForPassword(password.id, password.group_id)) {
-      counts[groupId] = (counts[groupId] ?? 0) + 1
-    }
-  }
-
-  return counts
-})
 
 const isActivePasswordGroup = (groupId: string) =>
   isPasswordsActive.value && selectedGroupId.value === groupId
@@ -490,14 +442,6 @@ watch(
       adminMenuExpanded.value = true
     }
   },
-)
-
-watch(
-  passwords,
-  async () => {
-    await loadPasswordAccessibleGroupIds()
-  },
-  { immediate: true },
 )
 
 onMounted(() => {

@@ -10,6 +10,7 @@ import {
 } from '@/client/sdk.gen'
 import type { GetPasswordListResponse, UserAccessItem, GroupAccessItem } from '@/client/types.gen'
 import { useGroupsStore } from '@/stores/groups'
+import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { sortGroupsByName } from '@/utils/groupSort'
 
 const visible = defineModel<boolean>('visible', { required: true })
@@ -35,6 +36,7 @@ interface GroupAccessWithName extends GroupAccessItem {
 
 const toast = useToast()
 const groupsStore = useGroupsStore()
+const passwordAccessStore = usePasswordAccessStore()
 const { groups: allGroups } = storeToRefs(groupsStore)
 
 const selectedGroupId = ref<string>('')
@@ -207,6 +209,7 @@ const sharePassword = async () => {
     })
 
     selectedGroupId.value = ''
+    passwordAccessStore.invalidatePasswordAccess(props.password.id)
     await loadAccessList()
     emit('shared')
   } catch (error) {
@@ -256,6 +259,7 @@ const unshareFromGroup = async (groupId: string) => {
     await groupsStore.fetchAllGroups(true) // Force refresh
 
     // Then reload the access list
+    passwordAccessStore.invalidatePasswordAccess(props.password.id)
     await loadAccessList()
 
     emit('unshared')
