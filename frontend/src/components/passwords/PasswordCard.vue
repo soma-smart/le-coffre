@@ -1,5 +1,8 @@
 <template>
-  <div class="surface-ground rounded-lg p-4 hover:surface-hover transition-colors">
+  <div
+    class="rounded-lg p-3 border border-surface transition-colors"
+    style="background-color: var(--p-card-background)"
+  >
     <div class="flex flex-col gap-2">
       <div class="flex items-center gap-2 mb-2">
         <h4 class="font-semibold">{{ password.name }}</h4>
@@ -7,7 +10,10 @@
 
       <div class="flex items-center justify-between gap-4 mb-2">
         <div class="flex items-center gap-2 min-w-0">
-          <code class="text-sm surface-card px-3 py-1 rounded border surface-border font-mono">
+          <code
+            class="text-sm px-3 py-1 rounded border border-surface font-mono"
+            style="background-color: var(--p-content-background)"
+          >
             {{ isVisible && passwordValue ? passwordValue : '••••••••' }}
           </code>
           <Button
@@ -104,7 +110,7 @@
       </div>
 
       <div v-if="password.login || password.url" class="flex items-center gap-4 mb-2 text-sm">
-        <span v-if="password.login" class="flex items-center gap-1 text-color-secondary">
+        <span v-if="password.login" class="flex items-center gap-1 text-muted-color">
           <i class="pi pi-user text-xs" />
           {{ password.login }}
         </span>
@@ -120,7 +126,7 @@
         </a>
       </div>
 
-      <div class="flex items-center justify-between gap-4 text-xs text-color-secondary">
+      <div class="flex items-center justify-between gap-4 text-xs text-muted-color">
         <div class="flex flex-wrap items-center gap-4 min-w-0">
           <i
             v-if="needsUpdate"

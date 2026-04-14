@@ -353,10 +353,7 @@ onMounted(async () => {
       <ProgressSpinner />
     </div>
 
-    <div
-      v-else-if="error"
-      class="surface-ground border border-red-500 text-red-700 px-4 py-3 rounded mb-4"
-    >
+    <div v-else-if="error" class="border border-red-400 text-red-400 px-4 py-3 rounded mb-4">
       {{ error }}
     </div>
 
@@ -365,42 +362,44 @@ onMounted(async () => {
     </div>
 
     <div v-else class="space-y-4">
-      <div v-if="selectedGroupSection" class="border border-surface rounded-md bg-surface-0 p-4">
-        <div class="flex items-center gap-3 mb-4">
-          <i
-            :class="[
-              'pi',
-              selectedGroupSection.isPersonal ? 'pi-user' : 'pi-users',
-              'text-xl text-primary',
-            ]"
-          />
-          <div>
-            <h2 class="text-xl font-semibold">{{ selectedGroupSection.name }}</h2>
-            <p class="text-sm text-surface-500">
-              {{ selectedGroupSection.count }}
-              {{ selectedGroupSection.count === 1 ? 'password' : 'passwords' }}
+      <Card v-if="selectedGroupSection">
+        <template #content>
+          <div class="flex items-center gap-3 mb-4">
+            <i
+              :class="[
+                'pi',
+                selectedGroupSection.isPersonal ? 'pi-user' : 'pi-users',
+                'text-xl text-primary',
+              ]"
+            />
+            <div>
+              <h2 class="text-xl font-semibold">{{ selectedGroupSection.name }}</h2>
+              <p class="text-sm text-muted-color">
+                {{ selectedGroupSection.count }}
+                {{ selectedGroupSection.count === 1 ? 'password' : 'passwords' }}
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-2 mt-4 pt-4 border-t border-surface">
+            <FolderCard
+              v-for="folder in selectedGroupSection.folders"
+              :key="`${selectedGroupSection.id}-${folder.name}`"
+              :folder="folder"
+              :contextGroupId="selectedGroupSection.id"
+              :isOpen="openFolderKey === `${selectedGroupSection.id}-${folder.name}`"
+              @toggle="handleFolderToggle(`${selectedGroupSection.id}-${folder.name}`)"
+              @edit="handleEdit"
+              @share="handleShare"
+              @history="handleHistory"
+              @deleted="handleDeleted"
+            />
+            <p v-if="selectedGroupSection.folders.length === 0" class="text-sm text-muted-color">
+              No passwords in this group.
             </p>
           </div>
-        </div>
-
-        <div class="space-y-2 mt-4 pt-4 border-t border-surface">
-          <FolderCard
-            v-for="folder in selectedGroupSection.folders"
-            :key="`${selectedGroupSection.id}-${folder.name}`"
-            :folder="folder"
-            :contextGroupId="selectedGroupSection.id"
-            :isOpen="openFolderKey === `${selectedGroupSection.id}-${folder.name}`"
-            @toggle="handleFolderToggle(`${selectedGroupSection.id}-${folder.name}`)"
-            @edit="handleEdit"
-            @share="handleShare"
-            @history="handleHistory"
-            @deleted="handleDeleted"
-          />
-          <p v-if="selectedGroupSection.folders.length === 0" class="text-sm text-surface-500">
-            No passwords in this group.
-          </p>
-        </div>
-      </div>
+        </template>
+      </Card>
     </div>
 
     <!-- Modals -->
