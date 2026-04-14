@@ -3,17 +3,17 @@
     <template #content>
       <div @click="toggleFolder" class="flex justify-between items-center">
         <div class="flex items-center gap-3">
-          <i class="pi pi-folder text-2xl text-blue-500"></i>
+          <i class="pi pi-folder text-2xl text-primary"></i>
           <div>
             <h3 class="text-xl font-semibold">
               {{ folder.name }}
             </h3>
-            <p class="text-sm text-surface-500">
+            <p class="text-sm text-muted-color">
               {{ folder.count }} {{ folder.count === 1 ? 'password' : 'passwords' }}
             </p>
           </div>
         </div>
-        <i :class="['pi', isOpen ? 'pi-chevron-up' : 'pi-chevron-down', 'text-gray-400']"></i>
+        <i :class="['pi', isOpen ? 'pi-chevron-up' : 'pi-chevron-down', 'text-muted-color']"></i>
       </div>
 
       <!-- Expanded folder content -->
