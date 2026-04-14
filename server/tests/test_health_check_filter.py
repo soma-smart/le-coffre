@@ -150,8 +150,8 @@ def test_readiness_returns_503_when_migrations_in_progress(client):
         client.app.state.ready = True
 
 
-def test_readiness_returns_503_when_db_unreachable(client):
-    """GET /api/health/ready must return 503 when DB is unavailable."""
+def test_readiness_returns_504_when_db_unreachable(client):
+    """GET /api/health/ready must return 504 when DB is unavailable."""
     broken_session = MagicMock()
     broken_session.__enter__ = MagicMock(return_value=broken_session)
     broken_session.__exit__ = MagicMock(return_value=False)
@@ -162,7 +162,7 @@ def test_readiness_returns_503_when_db_unreachable(client):
     with patch.object(client.app.state, "session_maker", broken_session_maker):
         response = client.get("/api/health/ready")
 
-    assert response.status_code == 503
+    assert response.status_code == 504
     assert response.json()["detail"] == "Database unreachable"
 
 
