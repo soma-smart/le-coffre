@@ -3,10 +3,13 @@ import HomeView from '@/pages/HomePage.vue'
 import SetupView from '@/pages/SetupPage.vue'
 import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
+import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
 import { attemptTokenRefresh } from '@/customClient'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
+import { sortGroupsByName } from '@/utils/groupSort'
+import { slugifyGroupName } from '@/utils/groupSlug'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -133,6 +136,26 @@ router.beforeEach(async (to) => {
     if (!userStore.isAdmin) {
       // User is not an admin, redirect to home
       return { name: 'Home' }
+    }
+  }
+
+  if (to.name === 'Home' && isLoggedIn) {
+    const groupsStore = useGroupsStore()
+    await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
+
+    const sortedUserGroups = sortGroupsByName(
+      groupsStore.userBelongingGroups,
+      groupsStore.currentUserPersonalGroupId,
+    )
+    const defaultGroup = sortedUserGroups[0]
+    const groupSlug = defaultGroup ? slugifyGroupName(defaultGroup.name) : null
+
+    if (groupSlug) {
+      return {
+        name: 'HomeGroup',
+        params: { groupSlug },
+        query: to.query,
+      }
     }
   }
 

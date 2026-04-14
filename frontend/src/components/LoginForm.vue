@@ -11,13 +11,16 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import z from 'zod'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useUserStore } from '@/stores/user'
+import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
+import { slugifyGroupName } from '@/utils/groupSlug'
 
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 const passwordsStore = usePasswordsStore()
 const userStore = useUserStore()
+const groupsStore = useGroupsStore()
 const csrfStore = useCsrfStore()
 
 const isSsoConfigured = ref(false)
@@ -37,6 +40,34 @@ const resolver = ref(
 )
 
 const loading = ref(false)
+
+const resolveDefaultGroupRoute = async () => {
+  await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
+
+  const availableGroupIds = groupsStore.userBelongingGroups.map((group) => group.id)
+  const personalGroupId = userStore.currentUser?.personal_group_id ?? null
+
+  const defaultGroupId =
+    personalGroupId && availableGroupIds.includes(personalGroupId)
+      ? personalGroupId
+      : (availableGroupIds[0] ?? null)
+
+  if (!defaultGroupId) {
+    return { name: 'Home' as const }
+  }
+
+  const defaultGroup = groupsStore.userBelongingGroups.find((group) => group.id === defaultGroupId)
+  const defaultGroupSlug = defaultGroup ? slugifyGroupName(defaultGroup.name) : null
+
+  if (!defaultGroupSlug) {
+    return { name: 'Home' as const }
+  }
+
+  return {
+    name: 'HomeGroup' as const,
+    params: { groupSlug: defaultGroupSlug },
+  }
+}
 
 // ── Rate limit countdown ───────────────────────────────────────
 const rateLimitCountdown = ref(0)
@@ -115,9 +146,15 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       // Fetch CSRF token after successful login
       await csrfStore.fetchCsrfToken()
 
-      // Redirect to the page specified in query or to home page
-      const redirectPath = (route.query.redirect as string) || '/'
-      router.push(redirectPath)
+      const redirectPath =
+        typeof route.query.redirect === 'string' ? route.query.redirect.trim() : null
+
+      if (redirectPath && redirectPath !== '/') {
+        await router.push(redirectPath)
+        return
+      }
+
+      await router.push(await resolveDefaultGroupRoute())
     } finally {
       loading.value = false
     }
