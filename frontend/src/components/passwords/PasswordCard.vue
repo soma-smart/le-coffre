@@ -1,6 +1,6 @@
 <template>
   <div
-    class="rounded-lg p-3 border border-surface transition-colors"
+    class="rounded-lg p-3 border border-surface"
     style="background-color: var(--p-card-background)"
   >
     <div class="flex flex-col gap-2">
