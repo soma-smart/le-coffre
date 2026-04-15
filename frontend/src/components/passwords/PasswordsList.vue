@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import type { GetPasswordListResponse, GroupItem } from '@/client/types.gen'
@@ -14,9 +14,11 @@ import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { findGroupIdBySlug } from '@/utils/groupSlug'
+import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 
 const route = useRoute()
 const router = useRouter()
+const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 const passwordsStore = usePasswordsStore()
 const passwordAccessStore = usePasswordAccessStore()
 const groupsStore = useGroupsStore()
@@ -327,6 +329,10 @@ watch(showHistoryModal, (isVisible) => {
 })
 
 onMounted(async () => {
+  // Don't make any backend requests while the vault is locked —
+  // only the unlock modal should be interactive.
+  if (vaultStatus?.isLocked) return
+
   adminPasswordViewStore.loadAdminPasswordView()
   await Promise.all([passwordsStore.fetchPasswords(), groupsStore.fetchAllGroups()])
 })

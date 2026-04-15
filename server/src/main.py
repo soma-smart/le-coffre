@@ -112,6 +112,7 @@ def _build_engine(database_url: str):
         kwargs["pool_size"] = 5
         kwargs["max_overflow"] = 10
         kwargs["connect_args"] = {"connect_timeout": 10}
+        kwargs["pool_timeout"] = 5
     return create_engine(database_url, **kwargs)
 
 
@@ -217,12 +218,12 @@ async def lifespan(app: FastAPI):
     # Flush and shut down OTel providers to avoid losing buffered spans/metrics/logs
     if _otel_providers is not None:
         tracer_provider, meter_provider, logger_provider = _otel_providers
-        tracer_provider.force_flush()
-        tracer_provider.shutdown()
-        meter_provider.force_flush()
-        meter_provider.shutdown()
-        logger_provider.force_flush()
-        logger_provider.shutdown()
+        await asyncio.to_thread(tracer_provider.force_flush)
+        await asyncio.to_thread(tracer_provider.shutdown)
+        await asyncio.to_thread(meter_provider.force_flush)
+        await asyncio.to_thread(meter_provider.shutdown)
+        await asyncio.to_thread(logger_provider.force_flush)
+        await asyncio.to_thread(logger_provider.shutdown)
 
 
 # Create the main app with lifespan

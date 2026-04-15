@@ -10,7 +10,11 @@ from password_management_context.adapters.primary.fastapi.app_dependencies impor
 )
 from password_management_context.application.commands import ShareResourceCommand
 from password_management_context.application.use_cases import ShareAccessUseCase
-from password_management_context.domain.exceptions import PasswordAccessDeniedError
+from password_management_context.domain.exceptions import (
+    GroupNotFoundError,
+    PasswordAccessDeniedError,
+    PasswordNotFoundError,
+)
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
 
@@ -59,6 +63,10 @@ def share_password(
         return SharePasswordResponse(
             message=f"Password {password_id} successfully shared with group {request.group_id}"
         )
+    except PasswordNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Password does not exist") from e
+    except GroupNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Group does not exist") from e
     except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except UserNotFoundException as e:

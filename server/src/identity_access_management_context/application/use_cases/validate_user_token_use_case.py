@@ -1,3 +1,5 @@
+import asyncio
+
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
 )
@@ -33,18 +35,19 @@ class ValidateUserTokenUseCase(TracedUseCase):
         if not token_obj:
             raise InvalidTokenException()
 
-        # Try to find user in UserPassword repository (admin users)
-        user_password = self._user_password_repository.get_by_id(token_obj.user_id)
-        if user_password:
-            email = user_password.email
-            display_name = user_password.display_name
-        else:
-            # Try to find user in SsoUser repository (SSO users)
+        # Run synchronous DB lookups in a thread pool to avoid blocking the event loop.
+        # SQLAlchemy sessions are synchronous; calling them directly in an async context
+        # blocks the uvicorn event loop and starves all other requests (including health probes).
+        def _lookup_user():
+            user_password = self._user_password_repository.get_by_id(token_obj.user_id)
+            if user_password:
+                return user_password.email, user_password.display_name
             sso_user = self._sso_user_repository.get_by_user_id(token_obj.user_id)
             if not sso_user:
                 raise UserNotFoundException("User not found")
-            email = sso_user.email
-            display_name = sso_user.display_name
+            return sso_user.email, sso_user.display_name
+
+        email, display_name = await asyncio.to_thread(_lookup_user)
 
         # Check required roles if specified
         if command.required_roles:

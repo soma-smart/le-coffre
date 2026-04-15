@@ -213,7 +213,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed, ref } from 'vue'
+import { onMounted, watch, computed, ref, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue'
 import { storeToRefs } from 'pinia'
@@ -222,12 +222,14 @@ import { usePasswordAccessStore } from '../stores/passwordAccess'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
+import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { logout } from '@/utils/logout'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { slugifyGroupName, findGroupIdBySlug } from '@/utils/groupSlug'
 
 const router = useRouter()
 const route = useRoute()
+const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 const toast = useToast()
 
 const passwordsStore = usePasswordsStore()
@@ -442,14 +444,18 @@ watch(
 )
 
 onMounted(() => {
-  adminPasswordViewStore.loadAdminPasswordView()
-  passwordsStore.fetchPasswords()
-  groupsStore.fetchAllGroups()
-  // Fetch user data to determine admin status
-  userStore.fetchCurrentUser()
   // Auto-expand admin menu if on admin page
   if (route.path.startsWith('/admin')) {
     adminMenuExpanded.value = true
   }
+
+  // Don't make any backend requests while the vault is locked —
+  // only the unlock modal should be interactive.
+  if (vaultStatus?.isLocked) return
+
+  adminPasswordViewStore.loadAdminPasswordView()
+  passwordsStore.fetchPasswords()
+  groupsStore.fetchAllGroups()
+  userStore.fetchCurrentUser()
 })
 </script>

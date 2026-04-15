@@ -1,0 +1,259 @@
+name: Helm Integration Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: backend
+            path: server
+          - name: frontend
+            path: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.0.0
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v7.1.0
+        with:
+          context: ./${{ matrix.service.path }}
+          file: ./${{ matrix.service.path }}/Dockerfile
+          push: false
+          load: true
+          tags: localhost/le-coffre-${{ matrix.service.name }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save Docker image
+        run: docker save localhost/le-coffre-${{ matrix.service.name }}:ci -o /tmp/le-coffre-${{ matrix.service.name }}.tar
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ matrix.service.name }}
+          path: /tmp/le-coffre-${{ matrix.service.name }}.tar
+          retention-days: 1
+
+  helm-integration:
+    needs: build
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    environment: helm-integration
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # ── Download Docker images ─────────────────────────────────
+      - name: Download backend Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-backend
+          path: /tmp
+
+      - name: Download frontend Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-frontend
+          path: /tmp
+
+      - name: Load Docker images
+        run: |
+          docker load -i /tmp/le-coffre-backend.tar
+          docker load -i /tmp/le-coffre-frontend.tar
+
+      - name: Start Minikube
+        uses: medyagh/setup-minikube@v0.0.19
+        with:
+          minikube-version: latest
+          kubernetes-version: v1.31.0
+          driver: docker
+          cpus: 2
+          memory: 4096
+
+      - name: Load Docker images into Minikube
+        run: |
+          minikube image load localhost/le-coffre-backend:ci
+          minikube image load localhost/le-coffre-frontend:ci
+
+      # ── Helm Deploy ──────────────────────────────────────────
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Enable Minikube ingress addon
+        run: |
+          minikube addons enable ingress
+          # Wait for the ingress controller to be ready
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=ready pod \
+            --selector=app.kubernetes.io/component=controller \
+            --timeout=120s
+
+      - name: Create namespace and secrets
+        run: |
+          kubectl create namespace le-coffre-ci
+
+          # Create the database secret (SQLite, no real DB needed for integration test)
+          # Four slashes = absolute path: sqlite:////data/le-coffre-ci.db → /data/le-coffre-ci.db
+          # The PVC is mounted at /data in the backend container.
+          kubectl create secret generic le-coffre-db \
+            --from-literal=DATABASE_URL="sqlite:////data/le-coffre-ci.db" \
+            -n le-coffre-ci
+
+          # Create the JWT secret
+          JWT_SECRET=$(openssl rand -base64 32)
+          kubectl create secret generic le-coffre \
+            --from-literal=JWT_SECRET_KEY="$JWT_SECRET" \
+            -n le-coffre-ci
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install le-coffre ./helm/le-coffre \
+            -n le-coffre-ci \
+            -f ./helm/le-coffre/values-ci.yaml \
+            --wait \
+            --timeout 5m
+
+      - name: Wait for pods to be ready
+        run: |
+          echo "Waiting for backend pod..."
+          kubectl wait --for=condition=ready pod \
+            -l app.kubernetes.io/component=backend \
+            -n le-coffre-ci \
+            --timeout=300s
+
+          echo "Waiting for frontend pod..."
+          kubectl wait --for=condition=ready pod \
+            -l app.kubernetes.io/component=frontend \
+            -n le-coffre-ci \
+            --timeout=300s
+
+          echo "Pod status:"
+          kubectl get pods -n le-coffre-ci
+
+      - name: Start port-forward
+        run: |
+          # Port-forward the ingress controller to the standard CI preview port
+          kubectl port-forward -n ingress-nginx \
+            service/ingress-nginx-controller 4173:80 &
+          PF_PID=$!
+          echo "PORT_FORWARD_PID=$PF_PID" >> $GITHUB_ENV
+
+          # Wait for port-forward to be ready
+          echo "Waiting for port-forward..."
+          for i in {1..30}; do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:4173/ 2>/dev/null | grep -q "200\|301\|302\|307"; then
+              echo "✅ Port-forward is ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "⚠️ Port-forward may not be ready yet, continuing anyway..."
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+
+      - name: Verify services are running
+        run: |
+          echo "=== Backend health check ==="
+          curl -sf http://localhost:4173/api/health || {
+            echo "❌ Backend health check failed"
+            echo "=== Backend logs ==="
+            kubectl logs -l app.kubernetes.io/component=backend -n le-coffre-ci --tail=50
+            exit 1
+          }
+          echo ""
+          echo "✅ Backend is healthy"
+
+          echo ""
+          echo "=== Frontend check ==="
+          curl -sf http://localhost:4173/ > /dev/null || {
+            echo "❌ Frontend check failed"
+            echo "=== Frontend logs ==="
+            kubectl logs -l app.kubernetes.io/component=frontend -n le-coffre-ci --tail=50
+            exit 1
+          }
+          echo "✅ Frontend is reachable"
+
+      # ── Playwright E2E ────────────────────────────────────────
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        working-directory: frontend/
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: frontend/
+        run: bun x playwright install --with-deps chromium
+
+      - name: Run Playwright integration tests
+        working-directory: frontend/
+        env:
+          # Point Playwright at the Minikube ingress — no local servers are started
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+          PLAYWRIGHT_SKIP_WEB_SERVER: true
+        run: bun run test:e2e
+
+      # ── Cleanup & Artifacts ───────────────────────────────────
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          echo "=== Events ===" 
+          kubectl get events -n le-coffre-ci --sort-by='.lastTimestamp' || true
+          echo ""
+          echo "=== Backend logs ==="
+          kubectl logs -l app.kubernetes.io/component=backend -n le-coffre-ci --tail=100 || true
+          echo ""
+          echo "=== Frontend logs ==="
+          kubectl logs -l app.kubernetes.io/component=frontend -n le-coffre-ci --tail=100 || true
+          echo ""
+          echo "=== Pod descriptions ==="
+          kubectl describe pods -n le-coffre-ci || true
+          echo ""
+          echo "=== Ingress ==="
+          kubectl describe ingress -n le-coffre-ci || true
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-helm-integration-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-helm-integration-traces
+          path: frontend/test-results/
+          retention-days: 7
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Stop port-forward
+          if [ -n "$PORT_FORWARD_PID" ]; then
+            kill $PORT_FORWARD_PID 2>/dev/null || true
+          fi
+          # Remove Helm release
+          helm uninstall le-coffre -n le-coffre-ci 2>/dev/null || true
+          kubectl delete namespace le-coffre-ci 2>/dev/null || true
