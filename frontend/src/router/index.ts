@@ -97,9 +97,14 @@ router.beforeEach(async (to) => {
   // Trigger vault status check (will be deduplicated if already running)
   // This updates the vaultStatus plugin with the data from setupStore
   if (isSetup) {
-    checkVaultStatus().catch((err) => {
-      console.error('Error checking vault status in router guard:', err)
-    })
+    await checkVaultStatus()
+  }
+
+  // If the vault is locked, stop here and let the global UnlockVaultModal handle it.
+  // No other backend requests should be made while the vault is locked — most
+  // endpoints will fail and cause errors / slow down the page.
+  if (setupStore.isLocked && to.name !== 'Login') {
+    return true
   }
 
   // If we are not logged in, attempt a silent token refresh before giving up.
