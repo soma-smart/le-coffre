@@ -209,7 +209,7 @@ const sharePassword = async () => {
     })
 
     selectedGroupId.value = ''
-    passwordAccessStore.invalidatePasswordAccess(props.password.id)
+    passwordAccessStore.invalidatePasswordAccess()
     await loadAccessList()
     emit('shared')
   } catch (error) {
@@ -259,7 +259,7 @@ const unshareFromGroup = async (groupId: string) => {
     await groupsStore.fetchAllGroups(true) // Force refresh
 
     // Then reload the access list
-    passwordAccessStore.invalidatePasswordAccess(props.password.id)
+    passwordAccessStore.invalidatePasswordAccess()
     await loadAccessList()
 
     emit('unshared')

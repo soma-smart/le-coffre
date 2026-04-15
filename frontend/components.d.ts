@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     AppFooter: typeof import('./src/components/AppFooter.vue')['default']
     AuditLogsCard: typeof import('./src/components/admin/AuditLogsCard.vue')['default']
+    AutoComplete: typeof import('primevue/autocomplete')['default']
     Badge: typeof import('primevue/badge')['default']
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']

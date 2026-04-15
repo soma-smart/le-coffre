@@ -17,7 +17,6 @@ const TEST_PASSWORD_NAME = 'CI Test Password'
 const TEST_PASSWORD_VALUE = 'S3cretP@ss!'
 const TEST_PASSWORD_LOGIN = 'ci-user@example.com'
 const TEST_PASSWORD_URL = 'https://example.com'
-const TEST_PASSWORD_FOLDER = 'CI Tests'
 
 const SHARES_COUNT = 2
 const THRESHOLD = 2
@@ -92,7 +91,6 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
   await page.locator('#password-value').fill(TEST_PASSWORD_VALUE)
   await page.locator('#password-login').fill(TEST_PASSWORD_LOGIN)
   await page.locator('#password-url').fill(TEST_PASSWORD_URL)
-  await page.locator('#password-folder').fill(TEST_PASSWORD_FOLDER)
   await page.getByRole('button', { name: 'Create' }).click()
 
   await expect(page.getByText(TEST_PASSWORD_NAME)).toBeVisible({ timeout: 15000 })

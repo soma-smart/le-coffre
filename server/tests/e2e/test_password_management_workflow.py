@@ -61,6 +61,11 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     Phase 5: Authorization Tests
     - Verify authentication is required
     - Verify non-existent resource handling
+
+    Phase 6: Accessible Group IDs in List Response
+    - Owner-only password has only owner group in accessible_group_ids
+    - Password shared with a second group has both groups in accessible_group_ids
+    - Admin viewing a password they don't belong to sees only the owner group
     """
     # Create separate clients for admin and SSO user
     admin_client = client_factory()
@@ -560,6 +565,104 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     delete_404 = admin_client.delete(f"/api/passwords/{nonexistent_id}")
     assert delete_404.status_code == 404
     print("✓ Delete non-existent password returns 404")
+
+    # ===================================================================
+    # PHASE 6: ACCESSIBLE GROUP IDS IN LIST RESPONSE
+    # ===================================================================
+
+    print("\n=== PHASE 6: ACCESSIBLE GROUP IDS IN LIST RESPONSE ===")
+
+    # Step 6.1: CREATE A FRESH PASSWORD OWNED BY ADMIN
+    print("Step 6.1: Creating a fresh password owned exclusively by admin...")
+    create_agid_response = admin_client.post(
+        "/api/passwords",
+        json={
+            "name": "AGID Test Password",
+            "password": STRONG_PASSWORD,
+            "folder": "AGID",
+            "group_id": admin_group_id,
+        },
+    )
+    assert create_agid_response.status_code == 201
+    agid_password_id = create_agid_response.json()["id"]
+    print(f"✓ Password created: {agid_password_id}")
+
+    # Step 6.2: VERIFY OWNER-ONLY accessible_group_ids
+    print("Step 6.2: Verifying accessible_group_ids contains only the owner group...")
+    list_agid_response = admin_client.get("/api/passwords/list?folder=AGID")
+    assert list_agid_response.status_code == 200
+    agid_entries = list_agid_response.json()
+    agid_entry = next(p for p in agid_entries if p["id"] == agid_password_id)
+
+    assert "accessible_group_ids" in agid_entry, "accessible_group_ids must be present in list response"
+    assert agid_entry["group_id"] == admin_group_id
+    assert set(agid_entry["accessible_group_ids"]) == {admin_group_id}, (
+        f"Expected only owner group, got {agid_entry['accessible_group_ids']}"
+    )
+    print(f"✓ accessible_group_ids = {agid_entry['accessible_group_ids']} (owner group only)")
+
+    # Step 6.3: SHARE WITH SSO USER GROUP AND VERIFY BOTH GROUPS APPEAR
+    print("Step 6.3: Sharing password with SSO user's group and re-listing...")
+    share_agid_response = admin_client.post(
+        f"/api/passwords/{agid_password_id}/share",
+        json={"group_id": sso_user_group_id},
+    )
+    assert share_agid_response.status_code == 201
+
+    list_after_share_response = admin_client.get("/api/passwords/list?folder=AGID")
+    assert list_after_share_response.status_code == 200
+    agid_shared_entries = list_after_share_response.json()
+    agid_shared_entry = next(p for p in agid_shared_entries if p["id"] == agid_password_id)
+
+    assert set(agid_shared_entry["accessible_group_ids"]) == {
+        admin_group_id,
+        sso_user_group_id,
+    }, f"Expected owner + shared group, got {agid_shared_entry['accessible_group_ids']}"
+    print(f"✓ accessible_group_ids = {agid_shared_entry['accessible_group_ids']} (owner + shared group)")
+
+    # Step 6.4: SSO USER SEES THE SHARED PASSWORD UNDER THEIR GROUP
+    print("Step 6.4: SSO user lists passwords and sees the shared password with correct accessible_group_ids...")
+    sso_list_agid_response = sso_client.get("/api/passwords/list?folder=AGID")
+    assert sso_list_agid_response.status_code == 200
+    sso_agid_entries = sso_list_agid_response.json()
+    sso_agid_entry = next((p for p in sso_agid_entries if p["id"] == agid_password_id), None)
+    assert sso_agid_entry is not None, "SSO user should see the shared password"
+    assert set(sso_agid_entry["accessible_group_ids"]) == {
+        admin_group_id,
+        sso_user_group_id,
+    }, f"SSO user should see both groups, got {sso_agid_entry['accessible_group_ids']}"
+    assert sso_agid_entry["can_read"] is True
+    assert sso_agid_entry["can_write"] is False
+    print(f"✓ SSO user sees accessible_group_ids = {sso_agid_entry['accessible_group_ids']}")
+
+    # Step 6.5: ADMIN WITH NO GROUP ACCESS SEES ONLY OWNER GROUP
+    print("Step 6.5: Admin (no group membership) sees only owner group in accessible_group_ids...")
+    # Create a second admin-owned password that is NOT shared with admin
+    create_other_response = sso_client.post(
+        "/api/passwords",
+        json={
+            "name": "SSO Exclusive Password",
+            "password": STRONG_PASSWORD,
+            "folder": "AGID",
+            "group_id": sso_user_group_id,
+        },
+    )
+    assert create_other_response.status_code == 201
+    sso_exclusive_id = create_other_response.json()["id"]
+
+    admin_full_list = admin_client.get("/api/passwords/list?folder=AGID")
+    assert admin_full_list.status_code == 200
+    admin_agid_entries = admin_full_list.json()
+    sso_exclusive_entry = next(p for p in admin_agid_entries if p["id"] == sso_exclusive_id)
+
+    assert sso_exclusive_entry["can_read"] is False
+    assert sso_exclusive_entry["can_write"] is False
+    assert set(sso_exclusive_entry["accessible_group_ids"]) == {sso_user_group_id}, (
+        f"Admin should see only owner group for unshared password, got {sso_exclusive_entry['accessible_group_ids']}"
+    )
+    print(
+        f"✓ Admin sees accessible_group_ids = {sso_exclusive_entry['accessible_group_ids']} (owner group only, no personal access)"
+    )
 
     print("\n" + "=" * 70)
     print("ALL TESTS PASSED SUCCESSFULLY!")

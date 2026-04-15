@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
@@ -15,3 +15,4 @@ class PasswordMetadataResponse:
     can_write: bool
     login: str | None = None
     url: str | None = None
+    accessible_group_ids: tuple[UUID, ...] = field(default_factory=tuple)

@@ -6,6 +6,7 @@ import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } fro
 import type { GetPasswordListResponse } from '@/client/types.gen'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useGroupsStore } from '@/stores/groups'
+import { usePasswordsStore } from '@/stores/passwords'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -22,12 +23,15 @@ const emit = defineEmits<{
 const toast = useToast()
 const groupsStore = useGroupsStore()
 const { groupsForPasswordCreation } = storeToRefs(groupsStore)
+const passwordsStore = usePasswordsStore()
+const { passwords } = storeToRefs(passwordsStore)
 
 const name = ref('')
 const password = ref('')
 const login = ref('')
 const url = ref('')
 const folder = ref('')
+const folderSuggestions = ref<string[]>([])
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
@@ -49,6 +53,29 @@ const resolveDefaultGroupId = (): string => {
   }
 
   return ''
+}
+
+// Unique, sorted folder names already used in the relevant group
+const foldersForGroup = computed(() => {
+  const groupId = isEditMode.value ? props.editPassword?.group_id : selectedGroupId.value
+  if (!groupId) return []
+  const folderSet = new Set<string>()
+  passwords.value.forEach((p) => {
+    if (p.group_id === groupId && p.folder) {
+      folderSet.add(p.folder)
+    }
+  })
+  return Array.from(folderSet).sort()
+})
+
+const searchFolders = (event: { query: string }) => {
+  const query = event.query.trim().toLowerCase()
+  const existing = foldersForGroup.value
+  if (!query) {
+    folderSuggestions.value = existing
+  } else {
+    folderSuggestions.value = existing.filter((f) => f.toLowerCase().includes(query))
+  }
 }
 
 const urlError = computed(() => {
@@ -436,12 +463,20 @@ const handlePasswordBlur = () => {
 
       <div class="flex flex-col gap-2">
         <label for="password-folder" class="font-semibold">Folder (optional)</label>
-        <InputText
+        <AutoComplete
           id="password-folder"
           v-model="folder"
-          placeholder="e.g., Personal, Work"
+          :suggestions="folderSuggestions"
+          @complete="searchFolders"
+          dropdown
           :disabled="loading"
+          placeholder="Select or type a folder name"
+          class="w-full"
+          fluid
         />
+        <small class="text-muted-color"
+          >Choose an existing folder or type a new one. Leave empty for no folder.</small
+        >
       </div>
     </div>
 

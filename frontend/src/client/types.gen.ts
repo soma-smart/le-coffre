@@ -340,6 +340,10 @@ export type GetPasswordListResponse = {
      * Url
      */
     url: string | null;
+    /**
+     * Accessible Group Ids
+     */
+    accessible_group_ids: Array<string>;
 };
 
 /**

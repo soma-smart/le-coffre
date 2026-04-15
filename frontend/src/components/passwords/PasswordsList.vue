@@ -174,6 +174,17 @@ const handleCreateInGroup = (groupId: string) => {
   showCreateModal.value = true
 }
 
+const handleCreateButtonClick = () => {
+  const groupId = selectedGroupIdFromRoute.value ?? selectedGroupTabId.value
+  if (groupId && isCurrentUserOwnerOfGroup(groupId)) {
+    handleCreateInGroup(groupId)
+  } else {
+    editingPassword.value = null
+    defaultCreateGroupId.value = null
+    showCreateModal.value = true
+  }
+}
+
 const handleEdit = (password: GetPasswordListResponse) => {
   defaultCreateGroupId.value = null
   editingPassword.value = password
@@ -267,10 +278,7 @@ watch(groupedByGroupAndFolder, (sections) => {
     return
   }
 
-  if (
-    selectedGroupIdFromRoute.value &&
-    sections.some((s) => s.id === selectedGroupIdFromRoute.value)
-  ) {
+  if (selectedGroupIdFromRoute.value) {
     if (selectedGroupTabId.value !== selectedGroupIdFromRoute.value) {
       selectedGroupTabId.value = selectedGroupIdFromRoute.value
       setDefaultOpenFolderForSelectedGroup()
@@ -343,7 +351,7 @@ onMounted(async () => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-3xl font-bold">Password Manager</h1>
-      <Button label="New Password" icon="pi pi-plus" @click="showCreateModal = true" />
+      <Button label="New Password" icon="pi pi-plus" @click="handleCreateButtonClick" />
     </div>
 
     <!-- Filters row -->
