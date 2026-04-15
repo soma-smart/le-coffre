@@ -1,3 +1,5 @@
+import asyncio
+
 from identity_access_management_context.application.commands import (
     RefreshAccessTokenCommand,
 )
@@ -32,7 +34,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         if token_data is None:
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
-        user = self.user_repository.get_by_id(token_data.user_id)
+        user = await asyncio.to_thread(self.user_repository.get_by_id, token_data.user_id)
         if user is None:
             raise InvalidRefreshTokenException("User no longer exists")
 
