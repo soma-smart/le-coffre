@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from identity_access_management_context.application.commands import AdminLoginCommand
@@ -43,35 +44,41 @@ class PasswordLoginUseCase(TracedUseCase):
         self._admin_event_repository = admin_event_repository
 
     async def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
-        user_password = self._user_password_repository.get_by_email(command.email)
-        if not user_password:
-            logger.warning("Login failed for email=%s reason='User not found'", command.email)
-            event = AdminLoginFailedEvent(email=command.email, reason="User not found")
-            self._event_publisher.publish(event)
-            self._admin_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_user_id=None,
-                event_data={"email": command.email, "reason": "User not found"},
-            )
-            raise AdminNotFoundException("User not found")
+        # DB reads and bcrypt verification are synchronous and blocking — run
+        # them in a thread pool to avoid starving the event loop.
+        def _lookup_and_verify():
+            user_password = self._user_password_repository.get_by_email(command.email)
+            if not user_password:
+                logger.warning("Login failed for email=%s reason='User not found'", command.email)
+                event = AdminLoginFailedEvent(email=command.email, reason="User not found")
+                self._event_publisher.publish(event)
+                self._admin_event_repository.append_event(
+                    event_id=event.event_id,
+                    event_type=type(event).__name__,
+                    occurred_on=event.occurred_on,
+                    actor_user_id=None,
+                    event_data={"email": command.email, "reason": "User not found"},
+                )
+                raise AdminNotFoundException("User not found")
 
-        if not self._password_hashing_gateway.verify(command.password, user_password.password_hash):
-            logger.warning("Login failed for email=%s reason='Invalid credentials'", command.email)
-            event = AdminLoginFailedEvent(email=command.email, reason="Invalid credentials")
-            self._event_publisher.publish(event)
-            self._admin_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_user_id=None,
-                event_data={"email": command.email, "reason": "Invalid credentials"},
-            )
-            raise InvalidCredentialsException("Invalid credentials")
+            if not self._password_hashing_gateway.verify(command.password, user_password.password_hash):
+                logger.warning("Login failed for email=%s reason='Invalid credentials'", command.email)
+                event = AdminLoginFailedEvent(email=command.email, reason="Invalid credentials")
+                self._event_publisher.publish(event)
+                self._admin_event_repository.append_event(
+                    event_id=event.event_id,
+                    event_type=type(event).__name__,
+                    occurred_on=event.occurred_on,
+                    actor_user_id=None,
+                    event_data={"email": command.email, "reason": "Invalid credentials"},
+                )
+                raise InvalidCredentialsException("Invalid credentials")
 
-        user = self._user_repository.get_by_id(user_password.id)
-        roles = user.roles if user is not None else []
+            user = self._user_repository.get_by_id(user_password.id)
+            roles = user.roles if user is not None else []
+            return user_password, roles
+
+        user_password, roles = await asyncio.to_thread(_lookup_and_verify)
 
         token = await self._token_gateway.generate_token(
             user_id=user_password.id,
@@ -88,12 +95,14 @@ class PasswordLoginUseCase(TracedUseCase):
 
         event = AdminLoginEvent(admin_id=user_password.id, email=user_password.email)
         self._event_publisher.publish(event)
-        self._admin_event_repository.append_event(
-            event_id=event.event_id,
-            event_type=type(event).__name__,
-            occurred_on=event.occurred_on,
-            actor_user_id=user_password.id,
-            event_data={"email": user_password.email},
+        await asyncio.to_thread(
+            lambda: self._admin_event_repository.append_event(
+                event_id=event.event_id,
+                event_type=type(event).__name__,
+                occurred_on=event.occurred_on,
+                actor_user_id=user_password.id,
+                event_data={"email": user_password.email},
+            )
         )
 
         return AdminLoginResponse(
