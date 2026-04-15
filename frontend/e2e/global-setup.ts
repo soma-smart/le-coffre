@@ -13,6 +13,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
  *    finish, so we pre-run them here to avoid the race condition.
  */
 async function globalSetup() {
+  // When PLAYWRIGHT_SKIP_WEB_SERVER is set the app is served externally (e.g. a
+  // Helm/Minikube deployment). No local database to manage in that case.
+  if (process.env.PLAYWRIGHT_SKIP_WEB_SERVER) {
+    console.log('[global-setup] Skipping DB reset — using external server.')
+    return
+  }
+
   const serverDir = path.resolve(__dirname, '../../server')
   const dbPath = path.join(serverDir, 'playwright_test.sqlite')
 

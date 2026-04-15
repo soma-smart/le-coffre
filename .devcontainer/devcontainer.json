@@ -6,7 +6,7 @@
   "forwardPorts": [8123, 8000, 5173],
   "remoteUser": "devuser",
   "initializeCommand": "echo USER_UID=$(id -u) > ${localWorkspaceFolder}/.env && echo USER_GID=$(id -g) >> ${localWorkspaceFolder}/.env",
-  "postCreateCommand": "cd /app/server && uv sync && cd /app/frontend && bun install",
+  "postCreateCommand": "cd /app/server && uv sync && cd /app/frontend && bun install && bun x playwright install --with-deps chromium",
   "customizations": {
     "vscode": {
       "extensions": [

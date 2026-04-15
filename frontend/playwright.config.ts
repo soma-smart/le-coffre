@@ -24,8 +24,9 @@ export default defineConfig({
   },
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  /* No retries when targeting an external deployment (setup wizard can't be replayed).
+   * On local CI runs without an external server, retry twice to handle flakiness. */
+  retries: process.env.PLAYWRIGHT_SKIP_WEB_SERVER ? 0 : process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
   workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -35,9 +36,10 @@ export default defineConfig({
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL:
-      process.env.PLAYWRIGHT_BASE_URL ??
-      (process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173'),
+    /* PLAYWRIGHT_BASE_URL overrides everything — used when testing against an
+     * external deployment such as the Minikube ingress in CI.
+     * Falls back to the local Vite dev server (proxies /api to FastAPI). */
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -80,8 +82,8 @@ export default defineConfig({
           },
           {
             // Frontend (Vite dev server with /api proxy — no nginx needed for tests)
-            command: process.env.CI ? 'bun run preview' : 'bun run dev',
-            port: process.env.CI ? 4173 : 5173,
+            command: 'bun run dev',
+            port: 5173,
             reuseExistingServer: false,
             timeout: 60000,
           },

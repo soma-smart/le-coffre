@@ -200,19 +200,15 @@ jobs:
 
       - name: Install Playwright browsers
         working-directory: frontend/
-        run: bunx playwright install --with-deps chromium
+        run: bun x playwright install --with-deps chromium
 
       - name: Run Playwright integration tests
         working-directory: frontend/
         env:
-          CI: true
-          # Tell playwright.config.ts to skip starting a local web server
-          # (the app is already served by the Helm deployment via port-forward)
+          # Point Playwright at the Minikube ingress — no local servers are started
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
           PLAYWRIGHT_SKIP_WEB_SERVER: true
-        run: |
-          bunx playwright test e2e/helm-integration.spec.ts \
-            --project=chromium \
-            --reporter=list
+        run: bun run test:e2e
 
       # ── Cleanup & Artifacts ───────────────────────────────────
       - name: Collect logs on failure
