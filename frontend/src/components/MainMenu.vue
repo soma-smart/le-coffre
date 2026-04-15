@@ -271,7 +271,9 @@ const adminExtraPasswordGroups = computed(() => {
 
   const myGroupIds = new Set(myPasswordGroups.value.map((group) => group.id))
   return sortGroupsByName(
-    groups.value.filter((group) => !myGroupIds.has(group.id)),
+    groups.value.filter(
+      (group) => !myGroupIds.has(group.id) && (passwordCountByGroupId.value[group.id] ?? 0) > 0,
+    ),
     currentUserPersonalGroupId.value,
   )
 })
