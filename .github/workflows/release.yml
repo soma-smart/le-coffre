@@ -115,6 +115,28 @@ jobs:
           docker push ${{ env.REGISTRY }}/le-coffre-frontend:${{ steps.set_outputs.outputs.image_tag }}
           docker push ${{ env.REGISTRY }}/le-coffre-frontend:latest
 
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      - name: Package and push Helm chart
+        run: |
+          SEMVER="${{ steps.set_outputs.outputs.image_tag }}"
+          SEMVER="${SEMVER#v}"
+
+          # Pin chart version to the release tag
+          sed -i "s/^version:.*/version: \"${SEMVER}\"/" helm/le-coffre/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${SEMVER}\"/" helm/le-coffre/Chart.yaml
+
+          helm package helm/le-coffre --destination /tmp/helm-charts/
+
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+          helm push /tmp/helm-charts/le-coffre-${SEMVER}.tgz oci://ghcr.io/${{ github.repository_owner }}
+          echo "✅ Helm chart pushed: oci://ghcr.io/${{ github.repository_owner }}/le-coffre:${SEMVER}"
+
       - name: Generate changelog
         id: changelog
         run: |
@@ -140,6 +162,7 @@ jobs:
 
           # Add Docker images section
           REGISTRY="ghcr.io/${GITHUB_REPOSITORY_OWNER}"
+          SEMVER="${CURRENT_TAG#v}"
           CHANGELOG="$CHANGELOG\n## 🐳 Docker Images\n"
           CHANGELOG="$CHANGELOG\`\`\`\n"
           CHANGELOG="$CHANGELOG docker pull ${REGISTRY}/le-coffre-backend:${CURRENT_TAG}\n"
@@ -149,6 +172,11 @@ jobs:
           CHANGELOG="$CHANGELOG|-------|-----|------|\n"
           CHANGELOG="$CHANGELOG| Backend | \`${CURRENT_TAG}\` | [ghcr.io](https://ghcr.io/${GITHUB_REPOSITORY_OWNER}/le-coffre-backend) |\n"
           CHANGELOG="$CHANGELOG| Frontend | \`${CURRENT_TAG}\` | [ghcr.io](https://ghcr.io/${GITHUB_REPOSITORY_OWNER}/le-coffre-frontend) |\n"
+
+          CHANGELOG="$CHANGELOG\n## ⛵ Helm Chart\n"
+          CHANGELOG="$CHANGELOG\`\`\`\n"
+          CHANGELOG="$CHANGELOG helm install le-coffre oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/le-coffre --version ${SEMVER} -f values.yaml\n"
+          CHANGELOG="$CHANGELOG\`\`\`\n"
 
           CHANGELOG="$CHANGELOG\n\n## Changes\n"
 
