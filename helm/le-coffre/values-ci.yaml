@@ -23,7 +23,7 @@ backend:
 
 config:
   appBaseUrl: "http://localhost:4173"
-  environment: ci
+  environment: development
   jwt:
     existingSecretName: "le-coffre"
   database:

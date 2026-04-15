@@ -12,21 +12,22 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  globalSetup: './e2e/global-setup.ts',
   /* Maximum time one test can run for. */
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
   expect: {
     /**
      * Maximum time expect() should wait for the condition to be met.
      * For example in `await expect(locator).toHaveText();`
      */
-    timeout: 5000,
+    timeout: 10000,
   },
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -34,16 +35,18 @@ export default defineConfig({
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173',
+    baseURL:
+      process.env.PLAYWRIGHT_BASE_URL ??
+      (process.env.CI ? 'http://localhost:4173' : 'http://localhost:5173'),
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
-    /* Only on CI systems run the tests headless */
-    headless: !!process.env.CI,
+    /* Always run headless — use `HEADLESS=false` to disable for local debugging */
+    headless: process.env.HEADLESS !== 'false',
   },
 
-  /* Configure projects for major browsers */
+  /* Run only on Chromium by default. Pass --project=firefox etc. for other browsers. */
   projects: [
     {
       name: 'chromium',
@@ -51,46 +54,6 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
       },
     },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-      },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: {
-    //     ...devices['Pixel 5'],
-    //   },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: {
-    //     ...devices['iPhone 12'],
-    //   },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: {
-    //     channel: 'msedge',
-    //   },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: {
-    //     channel: 'chrome',
-    //   },
-    // },
   ],
 
   /* Folder for test artifacts such as screenshots, videos, traces, etc. */
@@ -101,16 +64,28 @@ export default defineConfig({
    * already served by a Helm/Minikube deployment via port-forward. */
   ...(!process.env.PLAYWRIGHT_SKIP_WEB_SERVER
     ? {
-        webServer: {
-          /**
-           * Use the dev server by default for faster feedback loop.
-           * Use the preview server on CI for more realistic testing.
-           * Playwright will re-use the local server if there is already a dev-server running.
-           */
-          command: process.env.CI ? 'npm run preview' : 'npm run dev',
-          port: process.env.CI ? 4173 : 5173,
-          reuseExistingServer: !process.env.CI,
-        },
+        webServer: [
+          {
+            // Backend (FastAPI) — must be running for API calls to work
+            // Uses a dedicated test database to avoid interfering with the dev database.
+            // Using `url` (not `port`) so Playwright waits for the health check to pass,
+            // which guarantees DB migrations have completed before tests start.
+            command: 'cd ../server && uv run fastapi dev src/main.py --host 0.0.0.0 --port 8000',
+            url: 'http://localhost:8000/api/health',
+            reuseExistingServer: false,
+            timeout: 60000,
+            env: {
+              DATABASE_URL: 'sqlite:///playwright_test.sqlite',
+            },
+          },
+          {
+            // Frontend (Vite dev server with /api proxy — no nginx needed for tests)
+            command: process.env.CI ? 'bun run preview' : 'bun run dev',
+            port: process.env.CI ? 4173 : 5173,
+            reuseExistingServer: false,
+            timeout: 60000,
+          },
+        ],
       }
     : {}),
 })

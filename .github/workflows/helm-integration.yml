@@ -11,7 +11,45 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - name: backend
+            path: server
+          - name: frontend
+            path: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4.0.0
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v7.1.0
+        with:
+          context: ./${{ matrix.service.path }}
+          file: ./${{ matrix.service.path }}/Dockerfile
+          push: false
+          load: true
+          tags: localhost/le-coffre-${{ matrix.service.name }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save Docker image
+        run: docker save localhost/le-coffre-${{ matrix.service.name }}:ci -o /tmp/le-coffre-${{ matrix.service.name }}.tar
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ matrix.service.name }}
+          path: /tmp/le-coffre-${{ matrix.service.name }}.tar
+          retention-days: 1
+
   helm-integration:
+    needs: build
     timeout-minutes: 10
     runs-on: ubuntu-latest
     environment: helm-integration
@@ -21,33 +59,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      # ── Docker ────────────────────────────────────────────────
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.0.0
-
-      - name: Build backend Docker image
-        uses: docker/build-push-action@v7.1.0
+      # ── Download Docker images ─────────────────────────────────
+      - name: Download backend Docker image
+        uses: actions/download-artifact@v4
         with:
-          context: ./server
-          file: ./server/Dockerfile
-          push: false
-          load: true
-          tags: localhost/le-coffre-backend:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          name: docker-image-backend
+          path: /tmp
 
-      - name: Build frontend Docker image
-        uses: docker/build-push-action@v7.1.0
+      - name: Download frontend Docker image
+        uses: actions/download-artifact@v4
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: false
-          load: true
-          tags: localhost/le-coffre-frontend:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          name: docker-image-frontend
+          path: /tmp
 
-      # ── Minikube ──────────────────────────────────────────────
+      - name: Load Docker images
+        run: |
+          docker load -i /tmp/le-coffre-backend.tar
+          docker load -i /tmp/le-coffre-frontend.tar
+
       - name: Start Minikube
         uses: medyagh/setup-minikube@v0.0.19
         with:
