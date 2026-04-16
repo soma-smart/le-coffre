@@ -229,7 +229,7 @@ const handleDeleteGroup = async () => {
 
 onMounted(async () => {
   await userStore.fetchCurrentUser()
-  groupsStore.fetchSharedGroupsOnly()
+  groupsStore.fetchAllGroups()
 })
 </script>
 
