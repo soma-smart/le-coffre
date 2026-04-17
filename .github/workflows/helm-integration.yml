@@ -42,7 +42,7 @@ jobs:
         run: docker save localhost/le-coffre-${{ matrix.service.name }}:ci -o /tmp/le-coffre-${{ matrix.service.name }}.tar
 
       - name: Upload Docker image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: docker-image-${{ matrix.service.name }}
           path: /tmp/le-coffre-${{ matrix.service.name }}.tar
@@ -61,13 +61,13 @@ jobs:
 
       # ── Download Docker images ─────────────────────────────────
       - name: Download backend Docker image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: docker-image-backend
           path: /tmp
 
       - name: Download frontend Docker image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: docker-image-frontend
           path: /tmp
@@ -78,7 +78,7 @@ jobs:
           docker load -i /tmp/le-coffre-frontend.tar
 
       - name: Start Minikube
-        uses: medyagh/setup-minikube@v0.0.19
+        uses: medyagh/setup-minikube@v0.0.21
         with:
           minikube-version: latest
           kubernetes-version: v1.31.0
@@ -93,7 +93,7 @@ jobs:
 
       # ── Helm Deploy ──────────────────────────────────────────
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: v3.17.3
 
@@ -197,7 +197,7 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Cache bun dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: frontend/node_modules
           key: bun-${{ hashFiles('frontend/bun.lockb') }}
@@ -205,7 +205,7 @@ jobs:
 
       - name: Cache Playwright browsers
         id: playwright-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('frontend/bun.lockb') }}
@@ -253,7 +253,7 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-helm-integration-report
           path: frontend/playwright-report/
@@ -261,7 +261,7 @@ jobs:
 
       - name: Upload Playwright traces
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-helm-integration-traces
           path: frontend/test-results/
