@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import type { GroupItem } from '@/client/types.gen'
+import type { Group } from '@/domain/group/Group'
 import type { Password } from '@/domain/password/Password'
 import FolderCard from './FolderCard.vue'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
@@ -102,7 +102,7 @@ const groupedByGroupAndFolder = computed<GroupedSection[]>(() => {
     filterableGroups.value,
     currentUserPersonalGroupId.value,
   )
-  const groupsById = new Map<string, GroupItem>(sortedVisibleGroups.map((g) => [g.id, g]))
+  const groupsById = new Map<string, Group>(sortedVisibleGroups.map((g) => [g.id, g]))
   const currentUserId = currentUser.value?.id
   const visibleGroupIds = new Set(sortedVisibleGroups.map((g) => g.id))
 
@@ -150,7 +150,7 @@ const groupedByGroupAndFolder = computed<GroupedSection[]>(() => {
     sections.push({
       id: groupId,
       name: group?.name ?? groupId,
-      isPersonal: group?.is_personal ?? false,
+      isPersonal: group?.isPersonal ?? false,
       isOwnedByCurrentUser,
       count: groupPasswords.length,
       folders,
@@ -237,7 +237,7 @@ const selectedGroupSection = computed(() => {
   return {
     id: selectedGroup.id,
     name: selectedGroup.name,
-    isPersonal: selectedGroup.is_personal,
+    isPersonal: selectedGroup.isPersonal,
     isOwnedByCurrentUser: !!(currentUserId && selectedGroup.owners?.includes(currentUserId)),
     count: 0,
     folders: [],
