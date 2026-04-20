@@ -1,11 +1,12 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import type { Pinia } from 'pinia'
 import PasswordCard from '@/components/passwords/PasswordCard.vue'
-import { buildContainer, type Container } from '@/container'
+import type { Container } from '@/container'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import type { Password } from '@/domain/password/Password'
+import { createTestContext } from '@/test/componentTestHelpers'
 
 const samplePassword: Password = {
   id: 'pwd-1',
@@ -21,32 +22,35 @@ const samplePassword: Password = {
   accessibleGroupIds: ['group-personal'],
 }
 
-function mountCard(container: Container) {
+function mountCard(container: Container, pinia: Pinia) {
   return mount(PasswordCard, {
     props: { password: samplePassword, contextGroupId: 'group-personal' },
-    global: { provide: { [CONTAINER_KEY as symbol]: container } },
+    global: {
+      plugins: [pinia],
+      provide: { [CONTAINER_KEY as symbol]: container },
+    },
   })
 }
 
 describe('PasswordCard', () => {
   let repo: InMemoryPasswordRepository
+  let pinia: Pinia
   let container: Container
 
   beforeEach(() => {
-    setActivePinia(createPinia())
     repo = new InMemoryPasswordRepository().seed(samplePassword, 'super-secret')
-    container = buildContainer({ passwordRepository: repo })
+    ;({ pinia, container } = createTestContext({ passwordRepository: repo }))
   })
 
   it('renders the password name and masked secret by default', () => {
-    const wrapper = mountCard(container)
+    const wrapper = mountCard(container, pinia)
     expect(wrapper.text()).toContain('Gmail')
     expect(wrapper.text()).toContain('••••••••')
     expect(wrapper.text()).not.toContain('super-secret')
   })
 
   it('reveals the decrypted secret through GetPasswordUseCase when the eye button is clicked', async () => {
-    const wrapper = mountCard(container)
+    const wrapper = mountCard(container, pinia)
 
     const revealButton = wrapper.find('button[aria-label="Show password"]')
     expect(revealButton.exists()).toBe(true)
