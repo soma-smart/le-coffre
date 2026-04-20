@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import { useToast } from 'primevue'
 import { z } from 'zod'
 import { zodResolver } from '@primevue/forms/resolvers/zod'
-import { registerAdminAuthRegisterAdminPost } from '@/client'
+import { AuthDomainError } from '@/domain/auth/errors'
 import { VaultDomainError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { useSetupStore } from '@/stores/setup'
@@ -17,7 +17,7 @@ const setupStore = useSetupStore()
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
-const { vault } = useContainer()
+const { vault, auth } = useContainer()
 
 const toast = useToast()
 const loading = ref(false)
@@ -57,15 +57,18 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
 
   try {
     loading.value = true
-    const response = await registerAdminAuthRegisterAdminPost({
-      body: {
+    try {
+      await auth.registerAdmin.execute({
         email: values.email,
         password: values.password,
-        display_name: values.display_name,
-      },
-    })
-    if (response.error) {
-      toast.add({ severity: 'error', summary: 'Error', detail: response.error.detail, life: 5000 })
+        displayName: values.display_name,
+      })
+    } catch (registerError) {
+      const detail =
+        registerError instanceof AuthDomainError
+          ? registerError.message
+          : 'Failed to create admin account'
+      toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 })
       loading.value = false
       return
     }
