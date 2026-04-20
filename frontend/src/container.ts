@@ -7,10 +7,7 @@ import { GetPasswordUseCase } from '@/application/password/GetPassword'
 import { ListPasswordAccessUseCase } from '@/application/password/ListPasswordAccess'
 import { ListPasswordEventsUseCase } from '@/application/password/ListPasswordEvents'
 import { ListPasswordsUseCase } from '@/application/password/ListPasswords'
-import {
-  SharePasswordUseCase,
-  UnsharePasswordUseCase,
-} from '@/application/password/SharePassword'
+import { SharePasswordUseCase, UnsharePasswordUseCase } from '@/application/password/SharePassword'
 import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
 
 /**

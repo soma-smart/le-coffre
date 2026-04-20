@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import {
-  SharePasswordUseCase,
-  UnsharePasswordUseCase,
-} from '@/application/password/SharePassword'
+import { SharePasswordUseCase, UnsharePasswordUseCase } from '@/application/password/SharePassword'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
-import {
-  PasswordGroupRequiredError,
-  PasswordNotFoundError,
-} from '@/domain/password/errors'
+import { PasswordGroupRequiredError, PasswordNotFoundError } from '@/domain/password/errors'
 
 describe('SharePasswordUseCase', () => {
   it('adds the target group to the accessible group ids', async () => {
