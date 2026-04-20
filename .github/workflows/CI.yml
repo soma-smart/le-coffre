@@ -48,12 +48,11 @@ jobs:
         working-directory: frontend/
         run: bunx vitest run
 
-      - name: Type Checking
-        if: success() || failure()
-        working-directory: frontend/
-        run: bun run type-check
-
-      - name: Build Project
+      # `bun run build` already runs vue-tsc via `run-p type-check build-only`,
+      # so a dedicated type-check step is not just redundant — it silently
+      # populates .tsbuildinfo and masks cold-start failures that the
+      # Dockerfile's `bun run build` would hit on a clean filesystem.
+      - name: Type Check + Build Project
         if: success() || failure()
         working-directory: frontend/
         run: bun run build
