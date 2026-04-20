@@ -2,14 +2,10 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import {
-  sharePasswordPasswordsPasswordIdSharePost,
-  listPasswordAccessPasswordsPasswordIdAccessGet,
-  unsharePasswordPasswordsPasswordIdShareGroupIdDelete,
-  getUserUsersUserIdGet,
-} from '@/client/sdk.gen'
-import type { UserAccessItem, GroupAccessItem } from '@/client/types.gen'
-import type { Password } from '@/domain/password/Password'
+import { getUserUsersUserIdGet } from '@/client/sdk.gen'
+import type { Password, PasswordAccessRow } from '@/domain/password/Password'
+import { PasswordDomainError } from '@/domain/password/errors'
+import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { sortGroupsByName } from '@/utils/groupSort'
@@ -25,12 +21,12 @@ const emit = defineEmits<{
   (e: 'unshared'): void
 }>()
 
-interface UserAccessWithName extends UserAccessItem {
+interface UserAccessWithName extends PasswordAccessRow {
   displayName?: string
   loadingName?: boolean
 }
 
-interface GroupAccessWithName extends GroupAccessItem {
+interface GroupAccessWithName extends PasswordAccessRow {
   groupName?: string
   loadingName?: boolean
 }
@@ -49,8 +45,7 @@ const canManageSharing = computed(() => !!props.password?.canWrite)
 
 // Get groups that can be shared with (excluding groups that already have access), sorted by name
 const availableGroupsForSharing = computed(() => {
-  // Filter out groups that already have access
-  const groupsWithAccessIds = new Set(groupAccessList.value.map((g) => g.user_id)) // user_id contains group_id
+  const groupsWithAccessIds = new Set(groupAccessList.value.map((g) => g.userId)) // userId is a groupId
   const filtered = allGroups.value.filter((g) => !groupsWithAccessIds.has(g.id))
   return sortGroupsByName(filtered)
 })
@@ -86,60 +81,41 @@ const loadAccessList = async () => {
 
   loadingAccess.value = true
   try {
-    const response = await listPasswordAccessPasswordsPasswordIdAccessGet({
-      path: { password_id: props.password.id },
+    const access = await useContainer().passwords.listAccess.execute({
+      passwordId: props.password.id,
     })
 
-    if (response.data) {
-      // Process user access list
-      userAccessList.value = response.data.user_access_list.map((item) => ({
-        ...item,
-        loadingName: true,
-      }))
+    userAccessList.value = access.users.map((item) => ({ ...item, loadingName: true }))
+    groupAccessList.value = access.groups.map((item) => ({ ...item, loadingName: true }))
 
-      // Process group access list (note: user_id field contains group_id)
-      groupAccessList.value = response.data.group_access_list.map((item) => ({
-        ...item,
-        loadingName: true,
-      }))
-
-      // Fetch display names for all users
-      for (const item of userAccessList.value) {
-        const displayName = await fetchUserDisplayName(item.user_id)
-        item.displayName = displayName
-        item.loadingName = false
-      }
-
-      // Fetch group names for all groups
-      for (const item of groupAccessList.value) {
-        const groupName = await fetchGroupName(item.user_id) // user_id contains group_id
-        item.groupName = groupName
-        item.loadingName = false
-      }
-
-      // Determine which shared groups grant access for each user
-      const accessGroupsByUser = new Map<string, { id: string; name: string }[]>()
-
-      for (const groupItem of groupAccessList.value) {
-        const groupId = groupItem.user_id // user_id contains group_id
-        const group = allGroups.value.find((g) => g.id === groupId)
-
-        if (!group) {
-          continue
-        }
-
-        const groupName = groupItem.groupName || groupId
-        const memberIds = new Set<string>([...(group.owners ?? []), ...(group.members ?? [])])
-
-        for (const memberId of memberIds) {
-          const existing = accessGroupsByUser.get(memberId) ?? []
-          existing.push({ id: groupId, name: groupName })
-          accessGroupsByUser.set(memberId, existing)
-        }
-      }
-
-      userAccessGroupsByUserId.value = Object.fromEntries(accessGroupsByUser.entries())
+    for (const item of userAccessList.value) {
+      item.displayName = await fetchUserDisplayName(item.userId)
+      item.loadingName = false
     }
+
+    for (const item of groupAccessList.value) {
+      item.groupName = await fetchGroupName(item.userId) // userId is a groupId here
+      item.loadingName = false
+    }
+
+    const accessGroupsByUser = new Map<string, { id: string; name: string }[]>()
+
+    for (const groupItem of groupAccessList.value) {
+      const groupId = groupItem.userId
+      const group = allGroups.value.find((g) => g.id === groupId)
+      if (!group) continue
+
+      const groupName = groupItem.groupName || groupId
+      const memberIds = new Set<string>([...(group.owners ?? []), ...(group.members ?? [])])
+
+      for (const memberId of memberIds) {
+        const existing = accessGroupsByUser.get(memberId) ?? []
+        existing.push({ id: groupId, name: groupName })
+        accessGroupsByUser.set(memberId, existing)
+      }
+    }
+
+    userAccessGroupsByUserId.value = Object.fromEntries(accessGroupsByUser.entries())
   } catch (error) {
     console.log(error)
     toast.add({
@@ -197,9 +173,9 @@ const sharePassword = async () => {
 
   loading.value = true
   try {
-    await sharePasswordPasswordsPasswordIdSharePost({
-      path: { password_id: props.password.id },
-      body: { group_id: selectedGroupId.value },
+    await useContainer().passwords.share.execute({
+      passwordId: props.password.id,
+      groupId: selectedGroupId.value,
     })
 
     toast.add({
@@ -218,7 +194,7 @@ const sharePassword = async () => {
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Failed to share password',
+      detail: error instanceof PasswordDomainError ? error.message : 'Failed to share password',
       life: 5000,
     })
   } finally {
@@ -242,11 +218,9 @@ const unshareFromGroup = async (groupId: string) => {
 
   loading.value = true
   try {
-    await unsharePasswordPasswordsPasswordIdShareGroupIdDelete({
-      path: {
-        password_id: props.password.id,
-        group_id: groupId,
-      },
+    await useContainer().passwords.unshare.execute({
+      passwordId: props.password.id,
+      groupId,
     })
 
     toast.add({
@@ -256,20 +230,18 @@ const unshareFromGroup = async (groupId: string) => {
       life: 5000,
     })
 
-    // Refresh groups data first to ensure we have latest group information
-    await groupsStore.fetchAllGroups(true) // Force refresh
-
-    // Then reload the access list
+    await groupsStore.fetchAllGroups(true)
     passwordAccessStore.invalidatePasswordAccess()
     await loadAccessList()
 
     emit('unshared')
   } catch (error) {
-    const detail = (error as { detail?: string })?.detail || 'Failed to unshare password'
+    const detail =
+      error instanceof PasswordDomainError ? error.message : 'Failed to unshare password'
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: detail,
+      detail,
       life: 5000,
     })
   } finally {
@@ -341,7 +313,7 @@ onMounted(async () => {
               <div v-else class="space-y-2">
                 <Card
                   v-for="accessItem in userAccessList"
-                  :key="accessItem.user_id"
+                  :key="accessItem.userId"
                   class="hover:bg-surface-50 transition-colors"
                 >
                   <template #content>
@@ -354,7 +326,7 @@ onMounted(async () => {
                             <span v-else>{{ accessItem.displayName }}</span>
                           </p>
                           <div class="flex gap-2 items-center text-sm text-muted-color">
-                            <span v-if="accessItem.is_owner" class="flex items-center gap-1">
+                            <span v-if="accessItem.isOwner" class="flex items-center gap-1">
                               <i class="pi pi-crown text-yellow-500"></i>
                               Owner
                             </span>
@@ -364,7 +336,7 @@ onMounted(async () => {
                             </span>
                           </div>
                           <div
-                            v-if="getAccessGroupsForUser(accessItem.user_id).length > 0"
+                            v-if="getAccessGroupsForUser(accessItem.userId).length > 0"
                             class="flex flex-wrap gap-2 items-center text-sm text-muted-color mt-1"
                           >
                             <span class="flex items-center gap-1">
@@ -372,7 +344,7 @@ onMounted(async () => {
                               Via groups:
                             </span>
                             <span
-                              v-for="group in getAccessGroupsForUser(accessItem.user_id)"
+                              v-for="group in getAccessGroupsForUser(accessItem.userId)"
                               :key="group.id"
                               class="surface-100 px-2 py-1 rounded"
                             >
@@ -397,7 +369,7 @@ onMounted(async () => {
               <div v-else class="space-y-2">
                 <Card
                   v-for="group in groupAccessList"
-                  :key="group.user_id"
+                  :key="group.userId"
                   class="hover:bg-surface-50 transition-colors"
                 >
                   <template #content>
@@ -410,7 +382,7 @@ onMounted(async () => {
                             <span v-else>{{ group.groupName }}</span>
                           </p>
                           <div class="flex gap-2 items-center text-sm text-muted-color">
-                            <span v-if="group.is_owner" class="flex items-center gap-1">
+                            <span v-if="group.isOwner" class="flex items-center gap-1">
                               <i class="pi pi-crown text-yellow-500"></i>
                               Owner Group
                             </span>
@@ -422,7 +394,7 @@ onMounted(async () => {
                         </div>
                       </div>
 
-                      <div v-if="canManageSharing && !group.is_owner">
+                      <div v-if="canManageSharing && !group.isOwner">
                         <Button
                           icon="pi pi-times"
                           text
@@ -431,7 +403,7 @@ onMounted(async () => {
                           size="small"
                           aria-label="Revoke access"
                           :loading="loading"
-                          @click="unshareFromGroup(group.user_id)"
+                          @click="unshareFromGroup(group.userId)"
                           v-tooltip="'Remove group access'"
                         />
                       </div>
