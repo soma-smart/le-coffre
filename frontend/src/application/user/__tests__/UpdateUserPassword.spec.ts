@@ -21,18 +21,18 @@ function repoWithCurrent() {
 describe('UpdateUserPasswordUseCase', () => {
   it('updates the stored password when inputs are valid', async () => {
     const repo = repoWithCurrent()
+    const useCase = new UpdateUserPasswordUseCase(repo)
 
-    await new UpdateUserPasswordUseCase(repo).execute({
-      oldPassword: 'old-password',
-      newPassword: 'new-password',
-    })
+    await useCase.execute({ oldPassword: 'old-password', newPassword: 'new-password' })
 
-    // The next update with the new password as "old" should succeed,
-    // confirming it was actually rotated.
-    await new UpdateUserPasswordUseCase(repo).execute({
-      oldPassword: 'new-password',
-      newPassword: 'newer-password',
-    })
+    // After rotation, re-using the OLD password should fail, and
+    // re-using the NEW one as the "old" side should succeed.
+    await expect(
+      useCase.execute({ oldPassword: 'old-password', newPassword: 'newer' }),
+    ).rejects.toThrow(/Old password does not match/)
+    await expect(
+      useCase.execute({ oldPassword: 'new-password', newPassword: 'newer' }),
+    ).resolves.toBeUndefined()
   })
 
   it('rejects empty fields', async () => {
