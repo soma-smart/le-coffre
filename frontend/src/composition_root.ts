@@ -1,3 +1,4 @@
+import { BackendCsrfGateway } from '@/infrastructure/backend/BackendCsrfGateway'
 import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPasswordRepository'
 import { buildContainer, type Container } from '@/container'
 
@@ -7,10 +8,12 @@ import { buildContainer, type Container } from '@/container'
  * `buildContainer`. Tests never call this — they build their own
  * container with in-memory fakes.
  *
- * As features migrate, each one adds its BackendXxxRepository here.
+ * As features migrate, each one adds its BackendXxxRepository /
+ * BackendXxxGateway here.
  */
 export function installProductionContainer(): Container {
   return buildContainer({
     passwordRepository: new BackendPasswordRepository(),
+    csrfGateway: new BackendCsrfGateway(),
   })
 }
