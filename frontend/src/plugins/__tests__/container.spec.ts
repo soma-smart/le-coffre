@@ -30,7 +30,7 @@ describe('container plugin', () => {
     const container = makeTestContainer()
     const wrapper = mountProbe({ global: { plugins: [containerPlugin(container)] } })
 
-    expect(wrapper.vm.container).toBe(container)
+    expect((wrapper.vm as unknown as { container: Container }).container).toBe(container)
   })
 
   it('resolves a container injected directly via global.provide (test-style)', () => {
@@ -39,7 +39,7 @@ describe('container plugin', () => {
       global: { provide: { [CONTAINER_KEY as symbol]: container } },
     })
 
-    expect(wrapper.vm.container).toBe(container)
+    expect((wrapper.vm as unknown as { container: Container }).container).toBe(container)
   })
 
   it('throws a descriptive error when no container was provided', () => {
