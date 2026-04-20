@@ -2,11 +2,9 @@
 import { ref, computed, nextTick } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import {
-  unlockVaultVaultUnlockPost,
-  clearPendingSharesVaultUnlockClearDelete,
-} from '@/client/sdk.gen'
-import type { VaultStatus } from '@/client/types.gen'
+import type { VaultStatus } from '@/domain/vault/Vault'
+import { VaultDomainError } from '@/domain/vault/errors'
+import { useContainer } from '@/plugins/container'
 import { useSetupStore } from '@/stores/setup'
 
 const visible = defineModel<boolean>('visible', { required: true })
@@ -24,6 +22,10 @@ const emit = defineEmits<{
 const toast = useToast()
 const confirm = useConfirm()
 const setupStore = useSetupStore()
+
+// Resolve use cases at setup time — inject() has no component context
+// inside async handlers after an await.
+const { vault } = useContainer()
 
 const shares = ref<string[]>([''])
 
@@ -129,27 +131,10 @@ const handleSubmit = async () => {
   try {
     loading.value = true
 
-    const shareSecrets = shares.value.map((share) => share.trim())
+    await vault.unlock.execute({ shares: shares.value })
 
-    const response = await unlockVaultVaultUnlockPost({
-      body: { shares: shareSecrets },
-    })
-
-    // Check if there's an error (400 or 500)
-    if (response.error) {
-      const errorData = response.error as { detail?: string }
-      const errorMessage = errorData?.detail || 'Failed to unlock vault'
-      toast.add({
-        severity: 'error',
-        summary: 'Unlock Failed',
-        detail: errorMessage,
-        life: 5000,
-      })
-      return
-    }
-
-    // Check vault status after unlock attempt using setup store
-    await setupStore.fetchVaultStatus(true) // Force fresh fetch
+    // Check vault status after unlock attempt via the setup store.
+    await setupStore.fetchVaultStatus(true)
     const newStatus = setupStore.vaultStatus
 
     if (newStatus === 'UNLOCKED') {
@@ -162,27 +147,24 @@ const handleSubmit = async () => {
       visible.value = false
       emit('unlocked')
     } else if (newStatus === 'PENDING_UNLOCK') {
-      // This happens when we get 202 (shares accepted but not enough)
+      // Backend returned 202: shares accepted but not yet enough.
       toast.add({
         severity: 'info',
         summary: 'Shares Added',
         detail: 'Shares added. Waiting for additional shares to unlock.',
         life: 5000,
       })
-      // Emit status change to refresh the modal UI
       emit('statusChanged', newStatus)
-      // Reset the input fields for next shares
       shares.value = ['']
     }
   } catch (err: unknown) {
-    const error = err as { detail?: string; message?: string }
-    const errorMessage = error?.detail || error?.message || 'Failed to unlock vault'
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: errorMessage,
-      life: 5000,
-    })
+    const detail =
+      err instanceof VaultDomainError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'Failed to unlock vault'
+    toast.add({ severity: 'error', summary: 'Unlock Failed', detail, life: 5000 })
     console.error('Failed to unlock vault:', err)
   } finally {
     loading.value = false
@@ -206,7 +188,7 @@ const handleReset = async () => {
       try {
         loading.value = true
 
-        await clearPendingSharesVaultUnlockClearDelete()
+        await vault.clearPendingShares.execute()
 
         toast.add({
           severity: 'success',
@@ -219,14 +201,13 @@ const handleReset = async () => {
         await setupStore.fetchVaultStatus(true)
         emit('statusChanged', 'LOCKED')
       } catch (err: unknown) {
-        const error = err as { detail?: string; message?: string }
-        const errorMessage = error?.detail || error?.message || 'Failed to clear shares'
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000,
-        })
+        const detail =
+          err instanceof VaultDomainError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Failed to clear shares'
+        toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 })
         console.error('Failed to clear shares:', err)
       } finally {
         loading.value = false
