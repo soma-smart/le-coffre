@@ -2,9 +2,10 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen'
 import type { Password } from '@/domain/password/Password'
+import { PasswordDomainError } from '@/domain/password/errors'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
+import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
 
@@ -193,42 +194,17 @@ const handleSubmit = async () => {
 
   try {
     loading.value = true
+    const passwords = useContainer().passwords
 
     if (isEditMode.value && props.editPassword) {
-      // Update existing password
-      const updateBody: {
-        name: string
-        password?: string
-        folder: string | null
-        login: string | null
-        url: string | null
-      } = {
+      await passwords.update.execute({
+        id: props.editPassword.id,
         name: name.value,
+        password: password.value || null,
         folder: folder.value || null,
         login: login.value || null,
         url: url.value || null,
-      }
-
-      if (password.value) {
-        updateBody.password = password.value
-      }
-
-      const response = await updatePasswordPasswordsPasswordIdPut({
-        path: { password_id: props.editPassword.id },
-        body: updateBody,
       })
-
-      if (!response.response.ok) {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to update password'
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000,
-        })
-        return
-      }
 
       toast.add({
         severity: 'success',
@@ -240,29 +216,14 @@ const handleSubmit = async () => {
       visible.value = false
       emit('updated')
     } else {
-      // Create new password
-      const response = await createPasswordPasswordsPost({
-        body: {
-          name: name.value,
-          password: password.value,
-          login: login.value || null,
-          url: url.value || null,
-          folder: folder.value || null,
-          group_id: selectedGroupId.value!,
-        },
+      await passwords.create.execute({
+        name: name.value,
+        password: password.value,
+        login: login.value || null,
+        url: url.value || null,
+        folder: folder.value || null,
+        groupId: selectedGroupId.value!,
       })
-
-      if (!response.response.ok) {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to create password'
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000,
-        })
-        return
-      }
 
       toast.add({
         severity: 'success',
@@ -283,18 +244,20 @@ const handleSubmit = async () => {
     folder.value = ''
     selectedGroupId.value = resolveDefaultGroupId()
   } catch (err: unknown) {
-    const error = err as { detail?: string; message?: string }
+    const fallback = `Failed to ${isEditMode.value ? 'update' : 'create'} password`
     const errorMessage =
-      error?.detail ||
-      error?.message ||
-      `Failed to ${isEditMode.value ? 'update' : 'create'} password`
+      err instanceof PasswordDomainError
+        ? err.message
+        : err instanceof Error && err.message
+          ? err.message
+          : fallback
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: errorMessage,
       life: 5000,
     })
-    console.error(`Failed to ${isEditMode.value ? 'update' : 'create'} password:`, err)
+    console.error(fallback, err)
   } finally {
     loading.value = false
   }
