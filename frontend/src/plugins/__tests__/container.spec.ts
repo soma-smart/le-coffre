@@ -3,10 +3,14 @@ import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import { buildContainer, type Container } from '@/container'
 import { CONTAINER_KEY, containerPlugin, useContainer } from '@/plugins/container'
+import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 
 function makeTestContainer(): Container {
-  return buildContainer({ passwordRepository: new InMemoryPasswordRepository() })
+  return buildContainer({
+    passwordRepository: new InMemoryPasswordRepository(),
+    csrfGateway: new InMemoryCsrfGateway(),
+  })
 }
 
 function mountProbe(options?: Parameters<typeof mount>[1]) {
@@ -49,10 +53,12 @@ describe('container plugin', () => {
     expect(() => mount(Broken)).toThrowError(/Container not provided/)
   })
 
-  it('exposes the passwords feature through the container', () => {
+  it('exposes each migrated feature through the container', () => {
     const container = makeTestContainer()
     expect(container.passwords).toBeDefined()
     expect(container.passwords.list).toBeDefined()
     expect(container.passwords.create).toBeDefined()
+    expect(container.csrf).toBeDefined()
+    expect(container.csrf.fetchToken).toBeDefined()
   })
 })

@@ -1,4 +1,6 @@
+import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
+import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
 import { CreatePasswordUseCase } from '@/application/password/CreatePassword'
 import { DeletePasswordUseCase } from '@/application/password/DeletePassword'
 import { GetPasswordUseCase } from '@/application/password/GetPassword'
@@ -24,6 +26,7 @@ import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
 
 export interface Ports {
   passwordRepository: PasswordRepository
+  csrfGateway: CsrfGateway
 }
 
 export interface Container {
@@ -37,6 +40,9 @@ export interface Container {
     unshare: UnsharePasswordUseCase
     listAccess: ListPasswordAccessUseCase
     listEvents: ListPasswordEventsUseCase
+  }
+  csrf: {
+    fetchToken: FetchCsrfTokenUseCase
   }
 }
 
@@ -52,6 +58,9 @@ export function buildContainer(ports: Ports): Container {
       unshare: new UnsharePasswordUseCase(ports.passwordRepository),
       listAccess: new ListPasswordAccessUseCase(ports.passwordRepository),
       listEvents: new ListPasswordEventsUseCase(ports.passwordRepository),
+    },
+    csrf: {
+      fetchToken: new FetchCsrfTokenUseCase(ports.csrfGateway),
     },
   }
 }
