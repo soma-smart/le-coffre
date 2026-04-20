@@ -1,7 +1,9 @@
+import { afterEach } from 'vitest'
 import { config } from '@vue/test-utils'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
+import { resetContainer } from '@/plugins/container'
 
 // jsdom doesn't implement window.matchMedia, but several PrimeVue
 // overlays (DatePicker, MultiSelect, AutoComplete) call it on mount for
@@ -40,3 +42,9 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 // installs at runtime, so useToast() / useConfirm() don't throw
 // "No PrimeVue Toast provided!" when a component's setup calls them.
 config.global.plugins = [[PrimeVue, { unstyled: true }], ToastService, ConfirmationService]
+
+// Reset the module-level container fallback between tests so a container
+// set by one test's createTestContext doesn't leak into the next one.
+afterEach(() => {
+  resetContainer()
+})
