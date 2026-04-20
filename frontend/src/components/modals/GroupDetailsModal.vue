@@ -4,8 +4,10 @@ import { useToast } from 'primevue'
 import { useConfirm } from 'primevue/useconfirm'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
-import { listUsersUsersGet, getGroupGroupsGroupIdGet } from '@/client/sdk.gen'
-import type { GroupItem, ListUserResponse, GetGroupResponse } from '@/client/types.gen'
+import { getGroupGroupsGroupIdGet } from '@/client/sdk.gen'
+import type { GroupItem, GetGroupResponse } from '@/client/types.gen'
+import type { User } from '@/domain/user/User'
+import { useContainer } from '@/plugins/container'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -23,7 +25,11 @@ const confirm = useConfirm()
 const groupsStore = useGroupsStore()
 const { currentUserId } = storeToRefs(groupsStore)
 
-const users = ref<ListUserResponse[]>([])
+// Resolve use cases at setup time — inject() has no component context
+// inside async handlers after an await.
+const { users: userUseCases } = useContainer()
+
+const users = ref<User[]>([])
 const loadingUsers = ref(false)
 const loadingAction = ref(false)
 const loadingGroupDetails = ref(false)
@@ -32,8 +38,8 @@ const selectedUserId = ref<string>('')
 
 // Group details with owners and members
 const groupDetails = ref<GetGroupResponse | null>(null)
-const ownerUsers = ref<ListUserResponse[]>([])
-const memberUsers = ref<ListUserResponse[]>([])
+const ownerUsers = ref<User[]>([])
+const memberUsers = ref<User[]>([])
 
 // Filter users who are not already in the group
 const availableUsers = computed(() => {
@@ -53,10 +59,7 @@ const isOwner = computed(() => {
 const loadUsers = async () => {
   loadingUsers.value = true
   try {
-    const response = await listUsersUsersGet()
-    if (response.data) {
-      users.value = response.data
-    }
+    users.value = await userUseCases.list.execute()
   } catch (error) {
     console.error('Failed to load users:', error)
     toast.add({
@@ -174,7 +177,7 @@ const removeMember = async (userId: string) => {
 }
 
 // Promote member to owner
-const promoteToOwner = async (user: ListUserResponse) => {
+const promoteToOwner = async (user: User) => {
   if (!props.group) return
 
   confirm.require({
