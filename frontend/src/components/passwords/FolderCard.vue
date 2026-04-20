@@ -35,14 +35,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { GetPasswordListResponse } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
 import PasswordCard from './PasswordCard.vue'
 
 const props = defineProps<{
   folder: {
     name: string
     count: number
-    passwords: GetPasswordListResponse[]
+    passwords: Password[]
   }
   contextGroupId: string
   isOpen?: boolean
@@ -52,9 +52,9 @@ const contextGroupId = computed(() => props.contextGroupId)
 
 const emit = defineEmits<{
   (e: 'toggle'): void
-  (e: 'edit', password: GetPasswordListResponse): void
-  (e: 'share', password: GetPasswordListResponse): void
-  (e: 'history', password: GetPasswordListResponse): void
+  (e: 'edit', password: Password): void
+  (e: 'share', password: Password): void
+  (e: 'history', password: Password): void
   (e: 'deleted'): void
 }>()
 
@@ -64,15 +64,15 @@ const toggleFolder = () => {
   emit('toggle')
 }
 
-const handleEdit = (password: GetPasswordListResponse) => {
+const handleEdit = (password: Password) => {
   emit('edit', password)
 }
 
-const handleShare = (password: GetPasswordListResponse) => {
+const handleShare = (password: Password) => {
   emit('share', password)
 }
 
-const handleHistory = (password: GetPasswordListResponse) => {
+const handleHistory = (password: Password) => {
   emit('history', password)
 }
 

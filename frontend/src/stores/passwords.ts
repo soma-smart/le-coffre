@@ -1,23 +1,21 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { listPasswordsPasswordsListGet } from '@/client/sdk.gen'
-import type { GetPasswordListResponse } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
+import { useContainer } from '@/plugins/container'
 
-// Global pending promise to deduplicate concurrent calls
+// Global pending promise to deduplicate concurrent calls across instances
 let globalPendingPromise: Promise<void> | null = null
 
 export const usePasswordsStore = defineStore('passwords', () => {
-  const passwords = ref<GetPasswordListResponse[]>([])
+  const passwords = ref<Password[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const lastFetch = ref<number | null>(null)
 
-  // Computed
   const passwordsCount = computed(() => passwords.value.length)
 
   const folders = computed(() => {
-    const folderMap = new Map<string, GetPasswordListResponse[]>()
-
+    const folderMap = new Map<string, Password[]>()
     passwords.value.forEach((password) => {
       const folderName = password.folder
       if (!folderMap.has(folderName)) {
@@ -25,7 +23,6 @@ export const usePasswordsStore = defineStore('passwords', () => {
       }
       folderMap.get(folderName)!.push(password)
     })
-
     return Array.from(folderMap.entries()).map(([name, items]) => ({
       name,
       count: items.length,
@@ -33,15 +30,11 @@ export const usePasswordsStore = defineStore('passwords', () => {
     }))
   })
 
-  // Actions
   const fetchPasswords = async (force = false) => {
-    // Cache for 30 seconds unless forced
     const now = Date.now()
     if (!force && lastFetch.value && now - lastFetch.value < 30000) {
       return
     }
-
-    // If already fetching and not forcing, wait for existing request
     if (!force && globalPendingPromise) {
       return globalPendingPromise
     }
@@ -51,8 +44,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
 
     globalPendingPromise = (async () => {
       try {
-        const response = await listPasswordsPasswordsListGet()
-        passwords.value = response.data ?? []
+        passwords.value = await useContainer().passwords.list.execute()
         lastFetch.value = now
       } catch (e) {
         console.error('Error loading passwords:', e)
@@ -82,16 +74,11 @@ export const usePasswordsStore = defineStore('passwords', () => {
   }
 
   return {
-    // State
     passwords,
     loading,
     error,
-
-    // Computed
     passwordsCount,
     folders,
-
-    // Actions
     fetchPasswords,
     invalidateCache,
     clear,
