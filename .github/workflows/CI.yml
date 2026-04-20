@@ -41,36 +41,7 @@ jobs:
 
       - name: Enforce clean-architecture dependency rule
         if: success() || failure()
-        working-directory: frontend/
-        run: |
-          fail=0
-
-          check_forbidden() {
-            local layer="$1"
-            shift
-            local patterns=("$@")
-            for pattern in "${patterns[@]}"; do
-              if grep -rnE "from ['\"]${pattern}" "src/${layer}/" 2>/dev/null; then
-                echo "❌ ${layer}/ imports from ${pattern} (forbidden by dependency rule)"
-                fail=1
-              fi
-            done
-          }
-
-          # domain/: framework-free, zero dependencies
-          check_forbidden "domain" "@/client" "vue" "pinia" "@/application" "@/infrastructure"
-
-          # application/: imports only from domain/
-          check_forbidden "application" "@/client" "vue" "pinia" "@/infrastructure"
-
-          # infrastructure/in_memory/: test fakes, no SDK
-          check_forbidden "infrastructure/in_memory" "@/client" "vue" "pinia"
-
-          if [ "$fail" -eq 0 ]; then
-            echo "✅ Dependency rule respected: domain/application/in_memory stay framework-free"
-          else
-            exit 1
-          fi
+        run: frontend/scripts/check-architecture.sh
 
       - name: Run Unit + Component Tests
         if: success() || failure()
