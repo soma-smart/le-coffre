@@ -7,6 +7,7 @@ import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGate
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
+import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
 
 function makeTestContainer(): Container {
   return buildContainer({
@@ -14,6 +15,7 @@ function makeTestContainer(): Container {
     csrfGateway: new InMemoryCsrfGateway(),
     userRepository: new InMemoryUserRepository(),
     groupRepository: new InMemoryGroupRepository(),
+    vaultRepository: new InMemoryVaultRepository(),
   })
 }
 
@@ -70,5 +72,8 @@ describe('container plugin', () => {
     expect(container.groups).toBeDefined()
     expect(container.groups.list).toBeDefined()
     expect(container.groups.create).toBeDefined()
+    expect(container.vault).toBeDefined()
+    expect(container.vault.getStatus).toBeDefined()
+    expect(container.vault.unlock).toBeDefined()
   })
 })
