@@ -343,11 +343,11 @@ const handlePasswordBlur = () => {
           <template #option="slotProps">
             <div class="flex items-center gap-2">
               <i
-                :class="slotProps.option.is_personal ? 'pi pi-user' : 'pi pi-users'"
+                :class="slotProps.option.isPersonal ? 'pi pi-user' : 'pi pi-users'"
                 class="text-sm"
               ></i>
               <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.is_personal" class="text-xs text-muted-color"
+              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color"
                 >(Personal)</span
               >
             </div>
@@ -356,7 +356,7 @@ const handlePasswordBlur = () => {
             <div v-if="slotProps.value" class="flex items-center gap-2">
               <i
                 :class="
-                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.is_personal
+                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.isPersonal
                     ? 'pi pi-user'
                     : 'pi pi-users'
                 "

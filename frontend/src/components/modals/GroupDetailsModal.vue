@@ -4,15 +4,14 @@ import { useToast } from 'primevue'
 import { useConfirm } from 'primevue/useconfirm'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
-import { getGroupGroupsGroupIdGet } from '@/client/sdk.gen'
-import type { GroupItem, GetGroupResponse } from '@/client/types.gen'
+import type { Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
-  group?: GroupItem | null
+  group?: Group | null
 }>()
 
 const emit = defineEmits<{
@@ -27,7 +26,7 @@ const { currentUserId } = storeToRefs(groupsStore)
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
-const { users: userUseCases } = useContainer()
+const { users: userUseCases, groups: groupUseCases } = useContainer()
 
 const users = ref<User[]>([])
 const loadingUsers = ref(false)
@@ -37,7 +36,7 @@ const showAddMemberDialog = ref(false)
 const selectedUserId = ref<string>('')
 
 // Group details with owners and members
-const groupDetails = ref<GetGroupResponse | null>(null)
+const groupDetails = ref<Group | null>(null)
 const ownerUsers = ref<User[]>([])
 const memberUsers = ref<User[]>([])
 
@@ -79,17 +78,12 @@ const loadGroupDetails = async () => {
 
   loadingGroupDetails.value = true
   try {
-    const response = await getGroupGroupsGroupIdGet({
-      path: { group_id: props.group.id },
-    })
+    const details = await groupUseCases.get.execute({ groupId: props.group.id })
+    groupDetails.value = details
 
-    if (response.data) {
-      groupDetails.value = response.data
-
-      // Map user IDs to user objects
-      ownerUsers.value = users.value.filter((u) => groupDetails.value?.owners.includes(u.id))
-      memberUsers.value = users.value.filter((u) => groupDetails.value?.members.includes(u.id))
-    }
+    // Map user IDs to user objects
+    ownerUsers.value = users.value.filter((u) => details.owners.includes(u.id))
+    memberUsers.value = users.value.filter((u) => details.members.includes(u.id))
   } catch (error) {
     console.error('Failed to load group details:', error)
     toast.add({
@@ -252,7 +246,7 @@ watch(visible, async (isVisible) => {
       <div class="pb-3 border-b">
         <div class="flex items-center gap-2 text-muted-color">
           <i class="pi pi-tag"></i>
-          <span v-if="group.is_personal" class="font-medium">Personal Group</span>
+          <span v-if="group.isPersonal" class="font-medium">Personal Group</span>
           <span v-else class="font-medium">Shared Group</span>
         </div>
       </div>
@@ -315,7 +309,7 @@ watch(visible, async (isVisible) => {
 
             <!-- Add Member Button (only for owners of non-personal groups) -->
             <Button
-              v-if="isOwner && !group.is_personal"
+              v-if="isOwner && !group.isPersonal"
               label="Add Member"
               icon="pi pi-user-plus"
               size="small"
@@ -354,7 +348,7 @@ watch(visible, async (isVisible) => {
                   </div>
 
                   <!-- Action buttons (only for owner of non-personal groups) -->
-                  <div v-if="isOwner && !group.is_personal" class="flex gap-1">
+                  <div v-if="isOwner && !group.isPersonal" class="flex gap-1">
                     <Button
                       icon="pi pi-crown"
                       text

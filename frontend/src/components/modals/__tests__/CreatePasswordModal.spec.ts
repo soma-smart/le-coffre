@@ -21,8 +21,8 @@ const DialogStub = defineComponent({
 const personalGroup = {
   id: 'group-personal',
   name: 'Personal',
-  is_personal: true,
-  user_id: 'user-1',
+  isPersonal: true,
+  userId: 'user-1',
   owners: ['user-1'],
   members: [],
 }
