@@ -26,7 +26,7 @@
           <span
             class="pi transition-colors text-sm"
             :class="[
-              group.is_personal ? 'pi-user' : 'pi-users',
+              group.isPersonal ? 'pi-user' : 'pi-users',
               isActivePasswordGroup(group.id)
                 ? 'text-primary'
                 : 'text-muted-color group-hover:text-primary',
@@ -85,7 +85,7 @@
           <span
             class="pi transition-colors text-sm"
             :class="[
-              group.is_personal ? 'pi-user' : 'pi-users',
+              group.isPersonal ? 'pi-user' : 'pi-users',
               isActivePasswordGroup(group.id)
                 ? 'text-primary'
                 : 'text-muted-color group-hover:text-primary',
