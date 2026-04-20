@@ -156,14 +156,8 @@ import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import type { Password } from '@/domain/password/Password'
-import {
-  getUserUsersUserIdGet,
-  listPasswordEventsPasswordsPasswordIdEventsGet,
-} from '@/client/sdk.gen'
-import {
-  getPasswordPasswordsPasswordIdGet,
-  deletePasswordPasswordsPasswordIdDelete,
-} from '@/client'
+import { getUserUsersUserIdGet } from '@/client/sdk.gen'
+import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 
 const actorUsernameCache = new Map<string, string>()
@@ -280,17 +274,15 @@ const loadSharedAccessInfo = async () => {
   }
 
   try {
-    const response = await listPasswordEventsPasswordsPasswordIdEventsGet({
-      path: { password_id: props.password.id },
-      query: {
-        event_type: ['PasswordSharedEvent'],
-      },
+    const events = await useContainer().passwords.listEvents.execute({
+      passwordId: props.password.id,
+      eventTypes: ['PasswordSharedEvent'],
     })
 
-    const matchingEvent = (response.data?.events ?? [])
-      .filter((event) => event.event_type === 'PasswordSharedEvent')
+    const matchingEvent = events
+      .filter((event) => event.eventType === 'PasswordSharedEvent')
       .filter((event) => {
-        const sharedWithGroupId = getEventDataString(event.event_data, 'shared_with_group_id')
+        const sharedWithGroupId = getEventDataString(event.eventData, 'shared_with_group_id')
         if (!sharedWithGroupId) {
           return false
         }
@@ -301,15 +293,15 @@ const loadSharedAccessInfo = async () => {
 
         return userBelongingGroups.value.some((group) => group.id === sharedWithGroupId)
       })
-      .sort((a, b) => new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime())[0]
+      .sort((a, b) => new Date(b.occurredOn).getTime() - new Date(a.occurredOn).getTime())[0]
 
     if (!matchingEvent || currentVersion !== sharedAccessLoadVersion) {
       return
     }
 
     const actorUsername = await fetchActorUsername(
-      matchingEvent.actor_user_id,
-      matchingEvent.actor_email,
+      matchingEvent.actorUserId,
+      matchingEvent.actorEmail,
     )
 
     if (currentVersion !== sharedAccessLoadVersion) {
@@ -317,7 +309,7 @@ const loadSharedAccessInfo = async () => {
     }
 
     sharedAccessInfo.value = {
-      occurredOn: matchingEvent.occurred_on,
+      occurredOn: matchingEvent.occurredOn,
       actorUsername,
     }
   } catch (error) {
@@ -330,14 +322,10 @@ const fetchPassword = async () => {
 
   isLoading.value = true
   try {
-    const response = await getPasswordPasswordsPasswordIdGet({
-      path: { password_id: props.password.id },
+    passwordValue.value = await useContainer().passwords.get.execute({
+      passwordId: props.password.id,
     })
-
-    if (response.data) {
-      passwordValue.value = response.data.password
-      detailFetched.value = true
-    }
+    detailFetched.value = true
   } catch (error) {
     console.error('Error fetching password:', error)
     toast.add({
@@ -401,26 +389,14 @@ const handleDelete = () => {
     accept: async () => {
       isDeleting.value = true
       try {
-        const response = await deletePasswordPasswordsPasswordIdDelete({
-          path: { password_id: props.password.id },
+        await useContainer().passwords.delete.execute({ passwordId: props.password.id })
+        toast.add({
+          severity: 'success',
+          summary: 'Deleted',
+          detail: 'Password deleted successfully',
+          life: 3000,
         })
-
-        if (response.response.ok) {
-          toast.add({
-            severity: 'success',
-            summary: 'Deleted',
-            detail: 'Password deleted successfully',
-            life: 3000,
-          })
-          emit('deleted')
-        } else {
-          toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to delete password',
-            life: 3000,
-          })
-        }
+        emit('deleted')
       } catch (error) {
         console.error('Error deleting password:', error)
         toast.add({
