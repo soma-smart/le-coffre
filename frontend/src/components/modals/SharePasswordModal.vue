@@ -8,7 +8,8 @@ import {
   unsharePasswordPasswordsPasswordIdShareGroupIdDelete,
   getUserUsersUserIdGet,
 } from '@/client/sdk.gen'
-import type { GetPasswordListResponse, UserAccessItem, GroupAccessItem } from '@/client/types.gen'
+import type { UserAccessItem, GroupAccessItem } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { sortGroupsByName } from '@/utils/groupSort'
@@ -16,7 +17,7 @@ import { sortGroupsByName } from '@/utils/groupSort'
 const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
-  password?: GetPasswordListResponse | null
+  password?: Password | null
 }>()
 
 const emit = defineEmits<{
@@ -44,7 +45,7 @@ const loading = ref(false)
 const loadingAccess = ref(false)
 const userAccessList = ref<UserAccessWithName[]>([])
 const groupAccessList = ref<GroupAccessWithName[]>([])
-const canManageSharing = computed(() => !!props.password?.can_write)
+const canManageSharing = computed(() => !!props.password?.canWrite)
 
 // Get groups that can be shared with (excluding groups that already have access), sorted by name
 const availableGroupsForSharing = computed(() => {

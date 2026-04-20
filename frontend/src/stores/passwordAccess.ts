@@ -1,13 +1,13 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { GetPasswordListResponse } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
 import { usePasswordsStore } from '@/stores/passwords'
 
 export const usePasswordAccessStore = defineStore('passwordAccess', () => {
   const passwordsStore = usePasswordsStore()
 
-  const getAccessibleGroupIdsForPassword = (password: GetPasswordListResponse): string[] =>
-    password.accessible_group_ids.length > 0 ? password.accessible_group_ids : [password.group_id]
+  const getAccessibleGroupIdsForPassword = (password: Password): string[] =>
+    password.accessibleGroupIds.length > 0 ? password.accessibleGroupIds : [password.groupId]
 
   const passwordCountByGroupId = computed<Record<string, number>>(() => {
     const counts: Record<string, number> = {}

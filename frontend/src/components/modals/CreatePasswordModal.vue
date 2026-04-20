@@ -3,7 +3,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
 import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen'
-import type { GetPasswordListResponse } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
@@ -11,7 +11,7 @@ import { usePasswordsStore } from '@/stores/passwords'
 const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
-  editPassword?: GetPasswordListResponse | null
+  editPassword?: Password | null
   defaultGroupId?: string | null
 }>()
 
@@ -57,11 +57,11 @@ const resolveDefaultGroupId = (): string => {
 
 // Unique, sorted folder names already used in the relevant group
 const foldersForGroup = computed(() => {
-  const groupId = isEditMode.value ? props.editPassword?.group_id : selectedGroupId.value
+  const groupId = isEditMode.value ? props.editPassword?.groupId : selectedGroupId.value
   if (!groupId) return []
   const folderSet = new Set<string>()
   passwords.value.forEach((p) => {
-    if (p.group_id === groupId && p.folder) {
+    if (p.groupId === groupId && p.folder) {
       folderSet.add(p.folder)
     }
   })

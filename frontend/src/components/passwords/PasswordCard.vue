@@ -133,8 +133,8 @@
             class="pi pi-exclamation-triangle text-orange-500"
             v-tooltip.top="'Password not updated in 3+ months'"
           />
-          <span>Created: {{ formatDate(password.created_at) }}</span>
-          <span>Updated: {{ formatDate(password.last_updated_at) }}</span>
+          <span>Created: {{ formatDate(password.createdAt) }}</span>
+          <span>Updated: {{ formatDate(password.lastUpdatedAt) }}</span>
         </div>
 
         <div v-if="sharedAccessInfo" class="flex items-center gap-2 shrink-0">
@@ -155,7 +155,7 @@ import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import type { GetPasswordListResponse } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
 import {
   getUserUsersUserIdGet,
   listPasswordEventsPasswordsPasswordIdEventsGet,
@@ -174,14 +174,14 @@ type SharedAccessInfo = {
 }
 
 const props = defineProps<{
-  password: GetPasswordListResponse
+  password: Password
   contextGroupId?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', password: GetPasswordListResponse): void
-  (e: 'share', password: GetPasswordListResponse): void
-  (e: 'history', password: GetPasswordListResponse): void
+  (e: 'edit', password: Password): void
+  (e: 'share', password: Password): void
+  (e: 'history', password: Password): void
   (e: 'deleted'): void
 }>()
 
@@ -199,7 +199,7 @@ const sharedAccessInfo = ref<SharedAccessInfo | null>(null)
 let sharedAccessLoadVersion = 0
 
 const needsUpdate = computed(() => {
-  const lastUpdated = new Date(props.password.last_updated_at)
+  const lastUpdated = new Date(props.password.lastUpdatedAt)
   const now = new Date()
   const diffInMs = now.getTime() - lastUpdated.getTime()
   const diffInDays = diffInMs / (1000 * 60 * 60 * 24)
@@ -207,19 +207,19 @@ const needsUpdate = computed(() => {
 })
 
 const canWriteInContext = computed(() => {
-  if (!props.password.can_write) {
+  if (!props.password.canWrite) {
     return false
   }
 
   if (!props.contextGroupId) {
-    return props.password.can_write
+    return props.password.canWrite
   }
 
-  return props.contextGroupId === props.password.group_id
+  return props.contextGroupId === props.password.groupId
 })
 
 const canReadInContext = computed(() => {
-  if (!props.password.can_read) {
+  if (!props.password.canRead) {
     return false
   }
 
@@ -275,7 +275,7 @@ const loadSharedAccessInfo = async () => {
     }
   }
 
-  if (targetGroupId && targetGroupId === props.password.group_id) {
+  if (targetGroupId && targetGroupId === props.password.groupId) {
     return
   }
 
@@ -439,7 +439,7 @@ const handleDelete = () => {
 watch(
   [
     () => props.password.id,
-    () => props.password.can_write,
+    () => props.password.canWrite,
     () => props.contextGroupId,
     userBelongingGroups,
   ],
