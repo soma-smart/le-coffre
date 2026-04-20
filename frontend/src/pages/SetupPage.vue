@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import BlankLayout from '../layouts/BlankLayout.vue'
-import type { ShareResponse } from '@/client'
 
 import SharesModal from '@/components/setup/shamir/SharesModal.vue'
 import StepWelcome from '@/components/setup/StepWelcome.vue'
@@ -10,10 +9,10 @@ import StepAdminAccountForm from '@/components/setup/StepAdminAccountForm.vue'
 import SetupDone from '@/components/setup/SetupDone.vue'
 
 const showModal = ref(false)
-const shares = ref<ShareResponse[]>([])
+const shares = ref<string[]>([])
 const setupId = ref<string>('')
 
-const handleSharesGenerated = (data: { shares: ShareResponse[]; setupId: string }) => {
+const handleSharesGenerated = (data: { shares: string[]; setupId: string }) => {
   shares.value = data.shares
   setupId.value = data.setupId
   showModal.value = true

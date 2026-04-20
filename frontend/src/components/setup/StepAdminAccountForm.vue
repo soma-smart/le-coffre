@@ -3,10 +3,9 @@ import { reactive, ref } from 'vue'
 import { useToast } from 'primevue'
 import { z } from 'zod'
 import { zodResolver } from '@primevue/forms/resolvers/zod'
-import {
-  registerAdminAuthRegisterAdminPost,
-  validateVaultSetupVaultValidateSetupPost,
-} from '@/client'
+import { registerAdminAuthRegisterAdminPost } from '@/client'
+import { VaultDomainError } from '@/domain/vault/errors'
+import { useContainer } from '@/plugins/container'
 import { useSetupStore } from '@/stores/setup'
 
 const props = defineProps<{
@@ -15,6 +14,10 @@ const props = defineProps<{
 
 const emit = defineEmits(['account-created'])
 const setupStore = useSetupStore()
+
+// Resolve use cases at setup time — inject() has no component context
+// inside async handlers after an await.
+const { vault } = useContainer()
 
 const toast = useToast()
 const loading = ref(false)
@@ -74,17 +77,17 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     })
 
     // Validate vault setup
-    const validateResponse = await validateVaultSetupVaultValidateSetupPost({
-      body: {
-        setup_id: props.setupId,
-      },
-    })
-
-    if (validateResponse.error) {
+    try {
+      await vault.validateSetup.execute({ setupId: props.setupId })
+    } catch (validationError) {
+      const detail =
+        validationError instanceof VaultDomainError
+          ? validationError.message
+          : 'Failed to validate vault setup'
       toast.add({
         severity: 'error',
         summary: 'Vault Validation Error',
-        detail: validateResponse.error.detail,
+        detail,
         life: 5000,
       })
       loading.value = false
