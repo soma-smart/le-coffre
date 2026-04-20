@@ -2,7 +2,8 @@
 import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import type { GetPasswordListResponse, GroupItem } from '@/client/types.gen'
+import type { GroupItem } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
 import FolderCard from './FolderCard.vue'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
@@ -39,9 +40,9 @@ const showCreateModal = ref(false)
 const showShareModal = ref(false)
 const showHistoryModal = ref(false)
 const defaultCreateGroupId = ref<string | null>(null)
-const editingPassword = ref<GetPasswordListResponse | null>(null)
-const sharingPassword = ref<GetPasswordListResponse | null>(null)
-const historyPassword = ref<GetPasswordListResponse | null>(null)
+const editingPassword = ref<Password | null>(null)
+const sharingPassword = ref<Password | null>(null)
+const historyPassword = ref<Password | null>(null)
 
 // Filter state
 const searchQuery = ref('')
@@ -66,7 +67,7 @@ const selectedGroupIdFromRoute = computed(() =>
   findGroupIdBySlug(filterableGroups.value, selectedGroupSlugFromRoute.value),
 )
 
-const matchesSearchQuery = (password: GetPasswordListResponse, groupName?: string): boolean => {
+const matchesSearchQuery = (password: Password, groupName?: string): boolean => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return true
 
@@ -84,7 +85,7 @@ const folderFilter = computed(() => route.query.folder as string | undefined)
 type GroupedFolder = {
   name: string
   count: number
-  passwords: GetPasswordListResponse[]
+  passwords: Password[]
 }
 
 type GroupedSection = {
@@ -105,7 +106,7 @@ const groupedByGroupAndFolder = computed<GroupedSection[]>(() => {
   const currentUserId = currentUser.value?.id
   const visibleGroupIds = new Set(sortedVisibleGroups.map((g) => g.id))
 
-  const groupPasswordMap = new Map<string, GetPasswordListResponse[]>()
+  const groupPasswordMap = new Map<string, Password[]>()
 
   for (const password of passwords.value) {
     const accessibleGroupIds = passwordAccessStore.getAccessibleGroupIdsForPassword(password)
@@ -126,7 +127,7 @@ const groupedByGroupAndFolder = computed<GroupedSection[]>(() => {
     const groupPasswords = groupPasswordMap.get(groupId)
     if (!groupPasswords || groupPasswords.length === 0) continue
 
-    const folderMap = new Map<string, GetPasswordListResponse[]>()
+    const folderMap = new Map<string, Password[]>()
     for (const password of groupPasswords) {
       const folderName = password.folder
       if (!folderMap.has(folderName)) folderMap.set(folderName, [])
@@ -185,18 +186,18 @@ const handleCreateButtonClick = () => {
   }
 }
 
-const handleEdit = (password: GetPasswordListResponse) => {
+const handleEdit = (password: Password) => {
   defaultCreateGroupId.value = null
   editingPassword.value = password
   showCreateModal.value = true
 }
 
-const handleShare = (password: GetPasswordListResponse) => {
+const handleShare = (password: Password) => {
   sharingPassword.value = password
   showShareModal.value = true
 }
 
-const handleHistory = (password: GetPasswordListResponse) => {
+const handleHistory = (password: Password) => {
   historyPassword.value = password
   showHistoryModal.value = true
 }

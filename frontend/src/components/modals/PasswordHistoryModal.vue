@@ -144,10 +144,11 @@
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { listPasswordEventsPasswordsPasswordIdEventsGet } from '@/client/sdk.gen'
-import type { GetPasswordListResponse, PasswordEventResponse } from '@/client/types.gen'
+import type { PasswordEventResponse } from '@/client/types.gen'
+import type { Password } from '@/domain/password/Password'
 
 const props = defineProps<{
-  password: GetPasswordListResponse | null
+  password: Password | null
 }>()
 
 const visible = defineModel<boolean>('visible', { required: true })
