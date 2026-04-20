@@ -4,6 +4,7 @@ import { mount } from '@vue/test-utils'
 import { buildContainer, type Container } from '@/container'
 import { CONTAINER_KEY, containerPlugin, useContainer } from '@/plugins/container'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
+import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 
@@ -12,6 +13,7 @@ function makeTestContainer(): Container {
     passwordRepository: new InMemoryPasswordRepository(),
     csrfGateway: new InMemoryCsrfGateway(),
     userRepository: new InMemoryUserRepository(),
+    groupRepository: new InMemoryGroupRepository(),
   })
 }
 
@@ -65,5 +67,8 @@ describe('container plugin', () => {
     expect(container.users).toBeDefined()
     expect(container.users.getCurrent).toBeDefined()
     expect(container.users.list).toBeDefined()
+    expect(container.groups).toBeDefined()
+    expect(container.groups.list).toBeDefined()
+    expect(container.groups.create).toBeDefined()
   })
 })
