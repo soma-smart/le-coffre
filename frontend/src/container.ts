@@ -2,6 +2,7 @@ import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import type { UserRepository } from '@/application/ports/UserRepository'
+import type { VaultRepository } from '@/application/ports/VaultRepository'
 import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
 import { AddMemberToGroupUseCase } from '@/application/group/AddMemberToGroup'
 import { CreateGroupUseCase } from '@/application/group/CreateGroup'
@@ -19,6 +20,12 @@ import { ListPasswordEventsUseCase } from '@/application/password/ListPasswordEv
 import { ListPasswordsUseCase } from '@/application/password/ListPasswords'
 import { SharePasswordUseCase, UnsharePasswordUseCase } from '@/application/password/SharePassword'
 import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
+import { ClearPendingSharesUseCase } from '@/application/vault/ClearPendingShares'
+import { CreateVaultUseCase } from '@/application/vault/CreateVault'
+import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
+import { LockVaultUseCase } from '@/application/vault/LockVault'
+import { UnlockVaultUseCase } from '@/application/vault/UnlockVault'
+import { ValidateVaultSetupUseCase } from '@/application/vault/ValidateVaultSetup'
 import { CreateUserUseCase } from '@/application/user/CreateUser'
 import { DeleteUserUseCase } from '@/application/user/DeleteUser'
 import { GetCurrentUserUseCase } from '@/application/user/GetCurrentUser'
@@ -44,6 +51,7 @@ export interface Ports {
   csrfGateway: CsrfGateway
   userRepository: UserRepository
   groupRepository: GroupRepository
+  vaultRepository: VaultRepository
 }
 
 export interface Container {
@@ -80,6 +88,14 @@ export interface Container {
     addMember: AddMemberToGroupUseCase
     removeMember: RemoveMemberFromGroupUseCase
     promoteToOwner: PromoteMemberToOwnerUseCase
+  }
+  vault: {
+    getStatus: GetVaultStatusUseCase
+    create: CreateVaultUseCase
+    validateSetup: ValidateVaultSetupUseCase
+    unlock: UnlockVaultUseCase
+    lock: LockVaultUseCase
+    clearPendingShares: ClearPendingSharesUseCase
   }
 }
 
@@ -118,6 +134,14 @@ export function buildContainer(ports: Ports): Container {
       addMember: new AddMemberToGroupUseCase(ports.groupRepository),
       removeMember: new RemoveMemberFromGroupUseCase(ports.groupRepository),
       promoteToOwner: new PromoteMemberToOwnerUseCase(ports.groupRepository),
+    },
+    vault: {
+      getStatus: new GetVaultStatusUseCase(ports.vaultRepository),
+      create: new CreateVaultUseCase(ports.vaultRepository),
+      validateSetup: new ValidateVaultSetupUseCase(ports.vaultRepository),
+      unlock: new UnlockVaultUseCase(ports.vaultRepository),
+      lock: new LockVaultUseCase(ports.vaultRepository),
+      clearPendingShares: new ClearPendingSharesUseCase(ports.vaultRepository),
     },
   }
 }
