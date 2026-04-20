@@ -5,11 +5,13 @@ import { buildContainer, type Container } from '@/container'
 import { CONTAINER_KEY, containerPlugin, useContainer } from '@/plugins/container'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
+import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 
 function makeTestContainer(): Container {
   return buildContainer({
     passwordRepository: new InMemoryPasswordRepository(),
     csrfGateway: new InMemoryCsrfGateway(),
+    userRepository: new InMemoryUserRepository(),
   })
 }
 
@@ -60,5 +62,8 @@ describe('container plugin', () => {
     expect(container.passwords.create).toBeDefined()
     expect(container.csrf).toBeDefined()
     expect(container.csrf.fetchToken).toBeDefined()
+    expect(container.users).toBeDefined()
+    expect(container.users.getCurrent).toBeDefined()
+    expect(container.users.list).toBeDefined()
   })
 })
