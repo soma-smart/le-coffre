@@ -1,8 +1,16 @@
+import type { AuthGateway } from '@/application/ports/AuthGateway'
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
+import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
+import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
+import { HandleSsoCallbackUseCase } from '@/application/auth/HandleSsoCallback'
+import { IsSsoConfiguredUseCase } from '@/application/auth/IsSsoConfigured'
+import { LoginWithPasswordUseCase } from '@/application/auth/LoginWithPassword'
+import { RefreshAccessTokenUseCase } from '@/application/auth/RefreshAccessToken'
+import { RegisterAdminUseCase } from '@/application/auth/RegisterAdmin'
 import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
 import { AddMemberToGroupUseCase } from '@/application/group/AddMemberToGroup'
 import { CreateGroupUseCase } from '@/application/group/CreateGroup'
@@ -52,6 +60,7 @@ export interface Ports {
   userRepository: UserRepository
   groupRepository: GroupRepository
   vaultRepository: VaultRepository
+  authGateway: AuthGateway
 }
 
 export interface Container {
@@ -96,6 +105,15 @@ export interface Container {
     unlock: UnlockVaultUseCase
     lock: LockVaultUseCase
     clearPendingShares: ClearPendingSharesUseCase
+  }
+  auth: {
+    login: LoginWithPasswordUseCase
+    registerAdmin: RegisterAdminUseCase
+    refreshAccessToken: RefreshAccessTokenUseCase
+    configureSso: ConfigureSsoProviderUseCase
+    getSsoUrl: GetSsoUrlUseCase
+    handleSsoCallback: HandleSsoCallbackUseCase
+    isSsoConfigured: IsSsoConfiguredUseCase
   }
 }
 
@@ -142,6 +160,15 @@ export function buildContainer(ports: Ports): Container {
       unlock: new UnlockVaultUseCase(ports.vaultRepository),
       lock: new LockVaultUseCase(ports.vaultRepository),
       clearPendingShares: new ClearPendingSharesUseCase(ports.vaultRepository),
+    },
+    auth: {
+      login: new LoginWithPasswordUseCase(ports.authGateway),
+      registerAdmin: new RegisterAdminUseCase(ports.authGateway),
+      refreshAccessToken: new RefreshAccessTokenUseCase(ports.authGateway),
+      configureSso: new ConfigureSsoProviderUseCase(ports.authGateway),
+      getSsoUrl: new GetSsoUrlUseCase(ports.authGateway),
+      handleSsoCallback: new HandleSsoCallbackUseCase(ports.authGateway),
+      isSsoConfigured: new IsSsoConfiguredUseCase(ports.authGateway),
     },
   }
 }
