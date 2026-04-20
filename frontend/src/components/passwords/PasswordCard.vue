@@ -156,7 +156,6 @@ import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import type { Password } from '@/domain/password/Password'
-import { getUserUsersUserIdGet } from '@/client/sdk.gen'
 import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 
@@ -187,7 +186,7 @@ const { userBelongingGroups } = storeToRefs(groupsStore)
 // Resolve use cases at setup time — inject() has no active instance
 // inside async event handlers after an await, or inside callbacks like
 // confirm.require({ accept: … }).
-const { passwords: passwordUseCases } = useContainer()
+const { passwords: passwordUseCases, users: userUseCases } = useContainer()
 
 const passwordValue = ref<string | null>(null)
 const detailFetched = ref(false)
@@ -247,10 +246,8 @@ const fetchActorUsername = async (userId: string, fallback?: string | null): Pro
   }
 
   try {
-    const response = await getUserUsersUserIdGet({
-      path: { user_id: userId },
-    })
-    const username = response.data?.username || fallback || 'Unknown user'
+    const user = await userUseCases.get.execute({ userId })
+    const username = user.username || fallback || 'Unknown user'
     actorUsernameCache.set(userId, username)
     return username
   } catch {

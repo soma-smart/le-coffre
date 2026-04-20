@@ -2,7 +2,6 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import { getUserUsersUserIdGet } from '@/client/sdk.gen'
 import type { Password, PasswordAccessRow } from '@/domain/password/Password'
 import { PasswordDomainError } from '@/domain/password/errors'
 import { useContainer } from '@/plugins/container'
@@ -38,7 +37,7 @@ const { groups: allGroups } = storeToRefs(groupsStore)
 
 // Resolve use cases at setup time — inject() has no active instance
 // inside async handlers after an await.
-const { passwords: passwordUseCases } = useContainer()
+const { passwords: passwordUseCases, users: userUseCases } = useContainer()
 
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
@@ -63,10 +62,8 @@ const getAccessGroupsForUser = (userId: string): { id: string; name: string }[] 
 // Fetch user display name by user ID
 const fetchUserDisplayName = async (userId: string): Promise<string> => {
   try {
-    const response = await getUserUsersUserIdGet({
-      path: { user_id: userId },
-    })
-    return response.data?.name || userId
+    const user = await userUseCases.get.execute({ userId })
+    return user.name || userId
   } catch (error) {
     console.log(error)
     return userId

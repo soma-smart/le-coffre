@@ -1,95 +1,62 @@
 import { defineStore } from 'pinia'
-import { getUserMeUsersMeGet } from '@/client'
-import type { GetUserMeResponse } from '@/client'
+import { ref, computed } from 'vue'
+import type { User } from '@/domain/user/User'
+import { isUserAdmin } from '@/domain/user/User'
+import { useContainer } from '@/plugins/container'
 
-const ADMIN_ROLE = 'admin'
+// Global pending promise to deduplicate concurrent fetchCurrentUser
+// calls across every place that reads the store.
+let globalPendingPromise: Promise<User | null> | null = null
 
-interface UserState {
-  currentUser: GetUserMeResponse | null
-}
+export const useUserStore = defineStore('user', () => {
+  // Resolve use cases at setup time — inject() has no component
+  // context inside Pinia async actions.
+  const { users } = useContainer()
 
-// Global pending promise to deduplicate concurrent calls across all instances
-let globalPendingPromise: Promise<GetUserMeResponse | null> | null = null
+  const currentUser = ref<User | null>(null)
 
-export const useUserStore = defineStore('user', {
-  state: (): UserState => ({
-    currentUser: null,
-  }),
+  const isAdmin = computed(() => isUserAdmin(currentUser.value))
+  const displayName = computed(() => currentUser.value?.name ?? null)
+  const email = computed(() => currentUser.value?.email ?? null)
+  const isSsoUser = computed(() => currentUser.value?.isSso ?? false)
 
-  getters: {
-    /**
-     * Check if the current user is an admin
-     */
-    isAdmin: (state): boolean => {
-      if (!state.currentUser) return false
-      return state.currentUser.roles.includes(ADMIN_ROLE)
-    },
+  /**
+   * Fetch the current user. Caches the result; subsequent callers get
+   * the cached value unless force=true is passed.
+   */
+  async function fetchCurrentUser(force = false): Promise<User | null> {
+    if (!force && currentUser.value !== null) return currentUser.value
+    if (!force && globalPendingPromise) return globalPendingPromise
 
-    /**
-     * Get user's display name
-     */
-    displayName: (state): string | null => {
-      return state.currentUser?.name ?? null
-    },
-
-    /**
-     * Get user's email
-     */
-    email: (state): string | null => {
-      return state.currentUser?.email ?? null
-    },
-
-    /**
-     * Check if the current user is an SSO user
-     */
-    isSsoUser: (state): boolean => {
-      return state.currentUser?.is_sso ?? false
-    },
-  },
-
-  actions: {
-    /**
-     * Fetch current user information from the backend
-     * Caches the result to avoid redundant API calls
-     * Uses a global pending promise to deduplicate concurrent requests
-     * @param force - If true, bypass cache and fetch fresh data
-     */
-    async fetchCurrentUser(force = false): Promise<GetUserMeResponse | null> {
-      // Return cached value if already loaded and not forcing refresh
-      if (!force && this.currentUser !== null) {
-        return this.currentUser
+    globalPendingPromise = (async () => {
+      try {
+        const user = await users.getCurrent.execute()
+        currentUser.value = user
+        return user
+      } catch (err) {
+        console.error('Error fetching current user:', err)
+        return null
+      } finally {
+        globalPendingPromise = null
       }
+    })()
 
-      // If a request is already in flight, wait for it (unless forcing)
-      if (!force && globalPendingPromise) {
-        return globalPendingPromise
-      }
+    return globalPendingPromise
+  }
 
-      globalPendingPromise = (async () => {
-        try {
-          const response = await getUserMeUsersMeGet()
-          if (response.data) {
-            this.currentUser = response.data
-            return response.data
-          }
-          return null
-        } catch (error) {
-          console.error('Error fetching current user:', error)
-          return null
-        } finally {
-          globalPendingPromise = null
-        }
-      })()
+  /** Clear user data (useful for logout). */
+  function clearUser(): void {
+    currentUser.value = null
+    globalPendingPromise = null
+  }
 
-      return globalPendingPromise
-    },
-
-    /**
-     * Clear user data (useful for logout)
-     */
-    clearUser() {
-      this.currentUser = null
-      globalPendingPromise = null
-    },
-  },
+  return {
+    currentUser,
+    isAdmin,
+    displayName,
+    email,
+    isSsoUser,
+    fetchCurrentUser,
+    clearUser,
+  }
 })
