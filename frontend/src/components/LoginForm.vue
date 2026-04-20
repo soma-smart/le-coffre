@@ -45,7 +45,7 @@ const resolveDefaultGroupRoute = async () => {
   await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
 
   const availableGroupIds = groupsStore.userBelongingGroups.map((group) => group.id)
-  const personalGroupId = userStore.currentUser?.personal_group_id ?? null
+  const personalGroupId = userStore.currentUser?.personalGroupId ?? null
 
   const defaultGroupId =
     personalGroupId && availableGroupIds.includes(personalGroupId)

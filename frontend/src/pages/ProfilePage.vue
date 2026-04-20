@@ -2,12 +2,17 @@
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import MainLayout from '../layouts/MainLayout.vue'
-import { getUserMeUsersMeGet, updateUserPasswordUsersMePasswordPut } from '@/client/sdk.gen'
-import type { GetUserMeResponse } from '@/client'
+import type { User } from '@/domain/user/User'
+import { UserDomainError } from '@/domain/user/errors'
+import { useContainer } from '@/plugins/container'
 
 const toast = useToast()
 
-const user = ref<GetUserMeResponse | null>(null)
+// Resolve use cases at setup time — inject() has no component context
+// inside async event handlers after an await.
+const { users } = useContainer()
+
+const user = ref<User | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 
@@ -24,10 +29,7 @@ const fetchUserInfo = async () => {
   try {
     loading.value = true
     error.value = null
-    const response = await getUserMeUsersMeGet()
-    if (response.data) {
-      user.value = response.data
-    }
+    user.value = await users.getCurrent.execute()
   } catch (err) {
     error.value = 'Error while getting user informations'
     console.error('Error fetching user info:', err)
@@ -82,24 +84,10 @@ const updatePassword = async () => {
 
   try {
     passwordLoading.value = true
-    const response = await updateUserPasswordUsersMePasswordPut({
-      body: {
-        old_password: passwordForm.value.oldPassword,
-        new_password: passwordForm.value.newPassword,
-      },
+    await users.updatePassword.execute({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword,
     })
-
-    if (response.error) {
-      const errorData = response.error as { detail?: string }
-      const errorMessage = errorData?.detail || 'Error while updating password'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: errorMessage,
-        life: 3000,
-      })
-      return
-    }
 
     toast.add({
       severity: 'success',
@@ -112,10 +100,16 @@ const updatePassword = async () => {
     resetPasswordForm()
   } catch (err: unknown) {
     console.error('Error updating password:', err)
+    const detail =
+      err instanceof UserDomainError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred'
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'An unexpected error occurred',
+      detail,
       life: 3000,
     })
   } finally {
@@ -181,7 +175,7 @@ onMounted(() => {
         </div>
 
         <!-- Password Update Section - Only for non-SSO users -->
-        <div v-if="!user.is_sso" class="border-t pt-4 mt-6">
+        <div v-if="!user.isSso" class="border-t pt-4 mt-6">
           <h3 class="text-lg font-semibold mb-4">Sécurité</h3>
           <Button
             label="Change Password"

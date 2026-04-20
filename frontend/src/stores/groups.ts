@@ -27,9 +27,7 @@ export const useGroupsStore = defineStore('groups', () => {
   // Get current user info from user store instead of making duplicate API call
   const userStore = useUserStore()
   const currentUserId = computed(() => userStore.currentUser?.id ?? null)
-  const currentUserPersonalGroupId = computed(
-    () => userStore.currentUser?.personal_group_id ?? null,
-  )
+  const currentUserPersonalGroupId = computed(() => userStore.currentUser?.personalGroupId ?? null)
 
   // Computed
   const groupsCount = computed(() => groups.value.length)

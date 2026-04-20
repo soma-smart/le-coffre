@@ -3,6 +3,7 @@ import { buildContainer, type Container, type Ports } from '@/container'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
+import { setContainer } from '@/plugins/container'
 
 /**
  * Per-test setup shared by every spec that mounts a Vue component or
@@ -31,5 +32,10 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
     ...overrides,
   }
   const container = buildContainer(ports)
+  // Also set the module-level fallback so Pinia stores created in
+  // beforeEach (outside a mounted component) can still resolve the
+  // container via useContainer(). test/setup.ts resets it in afterEach
+  // so tests stay isolated.
+  setContainer(container)
   return { pinia, container }
 }
