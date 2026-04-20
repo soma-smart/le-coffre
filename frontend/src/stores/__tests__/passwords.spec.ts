@@ -1,20 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mount, type VueWrapper } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
-import { buildContainer, type Container } from '@/container'
+import type { Pinia } from 'pinia'
+import type { Container } from '@/container'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { usePasswordsStore } from '@/stores/passwords'
+import { createTestContext } from '@/test/componentTestHelpers'
 
 /**
- * Mount a dummy component so Pinia stores run inside a real Vue app
- * with the test container injected via provide/inject. This is the
- * canonical component-level way to exercise a store — no `useContainer`
- * call outside of a setup context.
+ * Mount a dummy component so the Pinia store runs inside a real Vue app
+ * with both the test container injected via provide/inject and the
+ * Pinia instance installed as a plugin. Setting activePinia alone isn't
+ * enough — mount() creates a fresh app that needs Pinia as a plugin to
+ * wire up the injection chain.
  */
-function mountWithContainer(container: Container): VueWrapper<unknown> {
+function mountWithContext(container: Container, pinia: Pinia): VueWrapper<unknown> {
   const Probe = defineComponent({
     setup() {
       const store = usePasswordsStore()
@@ -25,31 +27,28 @@ function mountWithContainer(container: Container): VueWrapper<unknown> {
     },
   })
   return mount(Probe, {
-    global: { provide: { [CONTAINER_KEY as symbol]: container } },
+    global: {
+      plugins: [pinia],
+      provide: { [CONTAINER_KEY as symbol]: container },
+    },
   })
 }
 
 describe('usePasswordsStore (wired through container)', () => {
   let repo: InMemoryPasswordRepository
+  let pinia: Pinia
   let container: Container
 
   beforeEach(() => {
-    setActivePinia(createPinia())
     repo = new InMemoryPasswordRepository().useIdGenerator(sequentialIds(['pwd-1', 'pwd-2']))
-    container = buildContainer({ passwordRepository: repo })
-  })
-
-  afterEach(() => {
-    // ensure the module-level single-flight promise never leaks between tests
-    const wrapper = mountWithContainer(container)
-    ;(wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store.clear()
+    ;({ pinia, container } = createTestContext({ passwordRepository: repo }))
   })
 
   it('fetches passwords through the use case and groups them by folder', async () => {
     await repo.create({ name: 'Gmail', password: 'x', groupId: 'g', folder: 'Mail' })
     await repo.create({ name: 'GitHub', password: 'y', groupId: 'g', folder: 'Dev' })
 
-    const wrapper = mountWithContainer(container)
+    const wrapper = mountWithContext(container, pinia)
     const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
 
     await store.fetchPasswords()
@@ -62,7 +61,7 @@ describe('usePasswordsStore (wired through container)', () => {
   it('deduplicates concurrent fetches', async () => {
     await repo.create({ name: 'Gmail', password: 'x', groupId: 'g' })
 
-    const wrapper = mountWithContainer(container)
+    const wrapper = mountWithContext(container, pinia)
     const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
 
     await Promise.all([store.fetchPasswords(), store.fetchPasswords()])
@@ -71,20 +70,30 @@ describe('usePasswordsStore (wired through container)', () => {
   })
 
   it('records an error message when the use case throws', async () => {
-    const failing = buildContainer({
-      passwordRepository: {
-        list: async () => {
-          throw new Error('boom')
-        },
-      } as unknown as PasswordRepository,
-    })
-    const wrapper = mountWithContainer(failing)
-    const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
+    // The store's catch branch logs via console.error — expected in prod
+    // but flagged by vitest as a run-level "Error" in the summary when
+    // it fires inside a passing test. Silence it just for this case.
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    await store.fetchPasswords()
+    try {
+      const failingCtx = createTestContext({
+        passwordRepository: {
+          list: async () => {
+            throw new Error('boom')
+          },
+        } as unknown as PasswordRepository,
+      })
+      const wrapper = mountWithContext(failingCtx.container, failingCtx.pinia)
+      const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> })
+        .store
 
-    expect(store.error).toBe('Failed to load passwords')
-    expect(store.passwords).toEqual([])
+      await store.fetchPasswords()
+
+      expect(store.error).toBe('Failed to load passwords')
+      expect(store.passwords).toEqual([])
+    } finally {
+      consoleErrorSpy.mockRestore()
+    }
   })
 })
 

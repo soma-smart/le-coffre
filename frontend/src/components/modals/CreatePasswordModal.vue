@@ -27,6 +27,10 @@ const { groupsForPasswordCreation } = storeToRefs(groupsStore)
 const passwordsStore = usePasswordsStore()
 const { passwords } = storeToRefs(passwordsStore)
 
+// Resolve use cases at setup time — inject() has no active instance
+// inside async event handlers after an await.
+const { passwords: passwordUseCases } = useContainer()
+
 const name = ref('')
 const password = ref('')
 const login = ref('')
@@ -194,10 +198,9 @@ const handleSubmit = async () => {
 
   try {
     loading.value = true
-    const passwords = useContainer().passwords
 
     if (isEditMode.value && props.editPassword) {
-      await passwords.update.execute({
+      await passwordUseCases.update.execute({
         id: props.editPassword.id,
         name: name.value,
         password: password.value || null,
@@ -216,7 +219,7 @@ const handleSubmit = async () => {
       visible.value = false
       emit('updated')
     } else {
-      await passwords.create.execute({
+      await passwordUseCases.create.execute({
         name: name.value,
         password: password.value,
         login: login.value || null,

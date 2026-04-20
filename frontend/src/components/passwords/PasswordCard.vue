@@ -184,6 +184,11 @@ const confirm = useConfirm()
 const groupsStore = useGroupsStore()
 const { userBelongingGroups } = storeToRefs(groupsStore)
 
+// Resolve use cases at setup time — inject() has no active instance
+// inside async event handlers after an await, or inside callbacks like
+// confirm.require({ accept: … }).
+const { passwords: passwordUseCases } = useContainer()
+
 const passwordValue = ref<string | null>(null)
 const detailFetched = ref(false)
 const isVisible = ref(false)
@@ -274,7 +279,7 @@ const loadSharedAccessInfo = async () => {
   }
 
   try {
-    const events = await useContainer().passwords.listEvents.execute({
+    const events = await passwordUseCases.listEvents.execute({
       passwordId: props.password.id,
       eventTypes: ['PasswordSharedEvent'],
     })
@@ -322,7 +327,7 @@ const fetchPassword = async () => {
 
   isLoading.value = true
   try {
-    passwordValue.value = await useContainer().passwords.get.execute({
+    passwordValue.value = await passwordUseCases.get.execute({
       passwordId: props.password.id,
     })
     detailFetched.value = true
@@ -389,7 +394,7 @@ const handleDelete = () => {
     accept: async () => {
       isDeleting.value = true
       try {
-        await useContainer().passwords.delete.execute({ passwordId: props.password.id })
+        await passwordUseCases.delete.execute({ passwordId: props.password.id })
         toast.add({
           severity: 'success',
           summary: 'Deleted',

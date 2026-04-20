@@ -159,6 +159,10 @@ const visible = defineModel<boolean>('visible', { required: true })
 
 const toast = useToast()
 
+// Resolve use cases at setup time — inject() has no active instance
+// inside async handlers after an await.
+const { passwords: passwordUseCases } = useContainer()
+
 const events = ref<PasswordEvent[]>([])
 const loading = ref(false)
 const dateRange = ref<Date[]>([new Date(), new Date()])
@@ -186,7 +190,7 @@ const fetchEvents = async () => {
       endDate = end.toISOString()
     }
 
-    events.value = await useContainer().passwords.listEvents.execute({
+    events.value = await passwordUseCases.listEvents.execute({
       passwordId: props.password.id,
       eventTypes: selectedEventTypes.value.length > 0 ? selectedEventTypes.value : undefined,
       startDate,

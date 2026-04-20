@@ -1,12 +1,13 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import type { Pinia } from 'pinia'
 import PasswordHistoryModal from '@/components/modals/PasswordHistoryModal.vue'
-import { buildContainer, type Container } from '@/container'
+import type { Container } from '@/container'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import type { Password } from '@/domain/password/Password'
+import { createTestContext } from '@/test/componentTestHelpers'
 
 const DialogStub = defineComponent({
   props: ['visible'],
@@ -31,10 +32,10 @@ const samplePassword: Password = {
 
 describe('PasswordHistoryModal', () => {
   let repo: InMemoryPasswordRepository
+  let pinia: Pinia
   let container: Container
 
   beforeEach(() => {
-    setActivePinia(createPinia())
     repo = new InMemoryPasswordRepository().seed(samplePassword)
     // The modal's default date range is "last 30 days" — seed events
     // relative to `now` so they fall inside that window.
@@ -58,13 +59,14 @@ describe('PasswordHistoryModal', () => {
       actorEmail: 'alice@example.com',
       eventData: { has_name_changed: true },
     })
-    container = buildContainer({ passwordRepository: repo })
+    ;({ pinia, container } = createTestContext({ passwordRepository: repo }))
   })
 
   it('renders events fetched through ListPasswordEventsUseCase', async () => {
     const wrapper = mount(PasswordHistoryModal, {
       props: { visible: true, password: samplePassword },
       global: {
+        plugins: [pinia],
         provide: { [CONTAINER_KEY as symbol]: container },
         stubs: { Dialog: DialogStub },
       },
