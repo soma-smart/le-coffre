@@ -84,8 +84,7 @@ describe('usePasswordsStore (wired through container)', () => {
         } as unknown as PasswordRepository,
       })
       const wrapper = mountWithContext(failingCtx.container, failingCtx.pinia)
-      const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> })
-        .store
+      const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
 
       await store.fetchPasswords()
 

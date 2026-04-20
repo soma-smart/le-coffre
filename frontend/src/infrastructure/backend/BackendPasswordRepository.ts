@@ -20,11 +20,7 @@ import type {
   PasswordRepository,
   UpdatePasswordInput,
 } from '@/application/ports/PasswordRepository'
-import type {
-  Password,
-  PasswordAccess,
-  PasswordEvent,
-} from '@/domain/password/Password'
+import type { Password, PasswordAccess, PasswordEvent } from '@/domain/password/Password'
 import {
   PasswordAccessDeniedError,
   PasswordDomainError,

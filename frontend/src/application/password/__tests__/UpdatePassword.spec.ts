@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
-import {
-  PasswordNameRequiredError,
-  PasswordNotFoundError,
-} from '@/domain/password/errors'
+import { PasswordNameRequiredError, PasswordNotFoundError } from '@/domain/password/errors'
 
 describe('UpdatePasswordUseCase', () => {
   it('updates name, secret and folder together', async () => {

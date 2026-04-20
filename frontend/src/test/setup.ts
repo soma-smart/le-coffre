@@ -39,8 +39,4 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 // Installed for every component mount in vitest — matches what main.ts
 // installs at runtime, so useToast() / useConfirm() don't throw
 // "No PrimeVue Toast provided!" when a component's setup calls them.
-config.global.plugins = [
-  [PrimeVue, { unstyled: true }],
-  ToastService,
-  ConfirmationService,
-]
+config.global.plugins = [[PrimeVue, { unstyled: true }], ToastService, ConfirmationService]

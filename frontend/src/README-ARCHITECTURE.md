@@ -43,8 +43,8 @@ Swapping Vue for another UI framework means rewriting only the presentation ring
 
 ## Testing tiers
 
-| Tier | Location | What it proves | Backend? |
-|---|---|---|---|
-| Unit | `src/application/<feat>/__tests__/*.spec.ts` | Use-case rules + domain invariants (with `InMemoryXxxRepository`). | No |
-| Component | `src/components/**/__tests__/*.spec.ts`, `src/stores/__tests__/*.spec.ts` | Vue components/stores render and react correctly when injected with a fake container. | No |
-| E2E | `frontend/e2e/*.spec.ts` (Playwright) | Real user flows through the real stack. | Yes |
+| Tier      | Location                                                                  | What it proves                                                                        | Backend? |
+| --------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------- |
+| Unit      | `src/application/<feat>/__tests__/*.spec.ts`                              | Use-case rules + domain invariants (with `InMemoryXxxRepository`).                    | No       |
+| Component | `src/components/**/__tests__/*.spec.ts`, `src/stores/__tests__/*.spec.ts` | Vue components/stores render and react correctly when injected with a fake container. | No       |
+| E2E       | `frontend/e2e/*.spec.ts` (Playwright)                                     | Real user flows through the real stack.                                               | Yes      |
