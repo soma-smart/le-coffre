@@ -1,5 +1,6 @@
 import { BackendCsrfGateway } from '@/infrastructure/backend/BackendCsrfGateway'
 import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPasswordRepository'
+import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepository'
 import { buildContainer, type Container } from '@/container'
 
 /**
@@ -15,5 +16,6 @@ export function installProductionContainer(): Container {
   return buildContainer({
     passwordRepository: new BackendPasswordRepository(),
     csrfGateway: new BackendCsrfGateway(),
+    userRepository: new BackendUserRepository(),
   })
 }
