@@ -1,3 +1,4 @@
+import { BackendAuthGateway } from '@/infrastructure/backend/BackendAuthGateway'
 import { BackendCsrfGateway } from '@/infrastructure/backend/BackendCsrfGateway'
 import { BackendGroupRepository } from '@/infrastructure/backend/BackendGroupRepository'
 import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPasswordRepository'
@@ -21,5 +22,6 @@ export function installProductionContainer(): Container {
     userRepository: new BackendUserRepository(),
     groupRepository: new BackendGroupRepository(),
     vaultRepository: new BackendVaultRepository(),
+    authGateway: new BackendAuthGateway(),
   })
 }

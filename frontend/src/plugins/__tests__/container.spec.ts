@@ -3,6 +3,7 @@ import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import { buildContainer, type Container } from '@/container'
 import { CONTAINER_KEY, containerPlugin, useContainer } from '@/plugins/container'
+import { InMemoryAuthGateway } from '@/infrastructure/in_memory/InMemoryAuthGateway'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
@@ -16,6 +17,7 @@ function makeTestContainer(): Container {
     userRepository: new InMemoryUserRepository(),
     groupRepository: new InMemoryGroupRepository(),
     vaultRepository: new InMemoryVaultRepository(),
+    authGateway: new InMemoryAuthGateway(),
   })
 }
 
@@ -75,5 +77,8 @@ describe('container plugin', () => {
     expect(container.vault).toBeDefined()
     expect(container.vault.getStatus).toBeDefined()
     expect(container.vault.unlock).toBeDefined()
+    expect(container.auth).toBeDefined()
+    expect(container.auth.login).toBeDefined()
+    expect(container.auth.isSsoConfigured).toBeDefined()
   })
 })
