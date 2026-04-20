@@ -1,15 +1,16 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import type { Pinia } from 'pinia'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
-import { buildContainer, type Container } from '@/container'
+import type { Container } from '@/container'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { useGroupsStore } from '@/stores/groups'
+import { createTestContext } from '@/test/componentTestHelpers'
 
 // Pass-through stub so Dialog doesn't teleport to document.body, which
-// would make findAll() miss the form. The component body still renders.
+// would make findAll() miss the form. The body still renders in place.
 const DialogStub = defineComponent({
   props: ['visible'],
   setup(_, { slots }) {
@@ -17,51 +18,57 @@ const DialogStub = defineComponent({
   },
 })
 
-function mountModal(container: Container) {
-  return mount(CreatePasswordModal, {
-    props: { visible: true, editPassword: null, defaultGroupId: 'group-personal' },
-    global: {
-      provide: { [CONTAINER_KEY as symbol]: container },
-      stubs: { Dialog: DialogStub },
-    },
-  })
+const personalGroup = {
+  id: 'group-personal',
+  name: 'Personal',
+  is_personal: true,
+  user_id: 'user-1',
+  owners: ['user-1'],
+  members: [],
 }
 
 describe('CreatePasswordModal', () => {
   let repo: InMemoryPasswordRepository
+  let pinia: Pinia
   let container: Container
 
   beforeEach(() => {
-    setActivePinia(createPinia())
     repo = new InMemoryPasswordRepository().useIdGenerator(() => 'pwd-new')
-    container = buildContainer({ passwordRepository: repo })
-    // Seed the groups store so `groupsForPasswordCreation` resolves a default.
+    ;({ pinia, container } = createTestContext({ passwordRepository: repo }))
+
+    // Seed BOTH `groups` and `userPersonalGroup` — the modal's
+    // `groupsForPasswordCreation` computed reads the filtered refs, not
+    // the raw `groups` array, so seeding just `groups` isn't enough to
+    // make resolveDefaultGroupId() return a non-empty id.
     const groupsStore = useGroupsStore()
-    groupsStore.groups = [
-      {
-        id: 'group-personal',
-        name: 'Personal',
-        is_personal: true,
-        user_id: 'user-1',
-        owners: ['user-1'],
-        members: [],
-      },
-    ]
+    groupsStore.groups = [personalGroup]
+    groupsStore.userPersonalGroup = personalGroup
+    // Stub the async fetcher — without this, the modal's onMounted +
+    // watch(visible) fire fetchAllGroups(true) against the SDK,
+    // clobbering the seed on failure.
+    groupsStore.fetchAllGroups = vi.fn(async () => {})
   })
 
   it('creates a password through the use case when the form is submitted', async () => {
-    const wrapper = mountModal(container)
+    const wrapper = mount(CreatePasswordModal, {
+      props: { visible: true, editPassword: null, defaultGroupId: 'group-personal' },
+      global: {
+        plugins: [pinia],
+        provide: { [CONTAINER_KEY as symbol]: container },
+        stubs: { Dialog: DialogStub },
+      },
+    })
+    // Let onMounted + watch(visible) callbacks settle before filling the form.
+    await flushPromises()
 
-    // Fill the form via the InputText components' v-model inputs.
-    const inputs = wrapper.findAll('input')
-    expect(inputs.length).toBeGreaterThanOrEqual(3)
-    await inputs[0].setValue('Gmail') // name
-    await inputs[1].setValue('super-secret') // password
+    // Target by id — `findAll('input')` returns the Select's hidden
+    // input + AutoComplete's input in among our InputText fields, so
+    // positional access is fragile.
+    await wrapper.find('input#password-name').setValue('Gmail')
+    await wrapper.find('input#password-value').setValue('super-secret')
 
-    // Find the submit button (labelled "Create") inside the footer.
-    const buttons = wrapper.findAll('button')
-    const submit = buttons.find((b) => b.text().includes('Create'))
-    expect(submit, 'expected a Create button').toBeTruthy()
+    const submit = wrapper.findAll('button').find((b) => b.text().trim() === 'Create')
+    expect(submit, 'expected a Create button in the footer').toBeTruthy()
 
     await submit!.trigger('click')
     await flushPromises()

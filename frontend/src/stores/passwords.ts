@@ -7,6 +7,10 @@ import { useContainer } from '@/plugins/container'
 let globalPendingPromise: Promise<void> | null = null
 
 export const usePasswordsStore = defineStore('passwords', () => {
+  // Resolve the container ONCE at store setup time — inject() has no
+  // component instance when called from inside a Pinia async action.
+  const { passwords: passwordUseCases } = useContainer()
+
   const passwords = ref<Password[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -44,7 +48,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
 
     globalPendingPromise = (async () => {
       try {
-        passwords.value = await useContainer().passwords.list.execute()
+        passwords.value = await passwordUseCases.list.execute()
         lastFetch.value = now
       } catch (e) {
         console.error('Error loading passwords:', e)

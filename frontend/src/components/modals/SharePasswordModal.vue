@@ -36,6 +36,10 @@ const groupsStore = useGroupsStore()
 const passwordAccessStore = usePasswordAccessStore()
 const { groups: allGroups } = storeToRefs(groupsStore)
 
+// Resolve use cases at setup time — inject() has no active instance
+// inside async handlers after an await.
+const { passwords: passwordUseCases } = useContainer()
+
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const loadingAccess = ref(false)
@@ -81,7 +85,7 @@ const loadAccessList = async () => {
 
   loadingAccess.value = true
   try {
-    const access = await useContainer().passwords.listAccess.execute({
+    const access = await passwordUseCases.listAccess.execute({
       passwordId: props.password.id,
     })
 
@@ -173,7 +177,7 @@ const sharePassword = async () => {
 
   loading.value = true
   try {
-    await useContainer().passwords.share.execute({
+    await passwordUseCases.share.execute({
       passwordId: props.password.id,
       groupId: selectedGroupId.value,
     })
@@ -218,7 +222,7 @@ const unshareFromGroup = async (groupId: string) => {
 
   loading.value = true
   try {
-    await useContainer().passwords.unshare.execute({
+    await passwordUseCases.unshare.execute({
       passwordId: props.password.id,
       groupId,
     })

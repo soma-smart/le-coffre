@@ -1,13 +1,14 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
-import { createPinia, setActivePinia } from 'pinia'
+import type { Pinia } from 'pinia'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
-import { buildContainer, type Container } from '@/container'
+import type { Container } from '@/container'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { useGroupsStore } from '@/stores/groups'
 import type { Password } from '@/domain/password/Password'
+import { createTestContext } from '@/test/componentTestHelpers'
 
 const DialogStub = defineComponent({
   props: ['visible'],
@@ -32,12 +33,12 @@ const ownerPassword: Password = {
 
 describe('SharePasswordModal', () => {
   let repo: InMemoryPasswordRepository
+  let pinia: Pinia
   let container: Container
 
   beforeEach(() => {
-    setActivePinia(createPinia())
     repo = new InMemoryPasswordRepository().seed(ownerPassword, 'secret')
-    container = buildContainer({ passwordRepository: repo })
+    ;({ pinia, container } = createTestContext({ passwordRepository: repo }))
 
     const groupsStore = useGroupsStore()
     groupsStore.groups = [
@@ -58,6 +59,10 @@ describe('SharePasswordModal', () => {
         members: ['user-1', 'user-2'],
       },
     ]
+    // The modal's onMounted + watch(visible) both call fetchAllGroups().
+    // Without this stub the SDK call fires into the void and surfaces as
+    // "Errors 1 error" in the vitest summary (unhandled rejection path).
+    groupsStore.fetchAllGroups = vi.fn(async () => {})
   })
 
   it('loads existing access rows through ListPasswordAccessUseCase', async () => {
@@ -66,14 +71,13 @@ describe('SharePasswordModal', () => {
     const wrapper = mount(SharePasswordModal, {
       props: { visible: true, password: ownerPassword },
       global: {
+        plugins: [pinia],
         provide: { [CONTAINER_KEY as symbol]: container },
         stubs: { Dialog: DialogStub },
       },
     })
     await flushPromises()
 
-    // Both groups appear — the owner group and the shared team group, fetched
-    // via the container's listAccess use case (no SDK call).
     expect(wrapper.text()).toContain('Owner')
     expect(wrapper.text()).toContain('Team')
   })
