@@ -1,6 +1,6 @@
 import { reactive, type App } from 'vue'
 import { useSetupStore } from '@/stores/setup'
-import type { VaultStatus as ApiVaultStatus } from '@/client/types.gen'
+import type { VaultStatus as DomainVaultStatus } from '@/domain/vault/Vault'
 
 export const VaultStatusKey = Symbol('vaultStatus')
 
@@ -8,7 +8,7 @@ export type VaultStatus = {
   isLocked: boolean
   isChecking: boolean
   showUnlockModal: boolean
-  status: ApiVaultStatus | null
+  status: DomainVaultStatus | null
   lastShareTimestamp: string | null
 }
 
