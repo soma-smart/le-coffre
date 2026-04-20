@@ -1,7 +1,16 @@
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
+import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
+import { AddMemberToGroupUseCase } from '@/application/group/AddMemberToGroup'
+import { CreateGroupUseCase } from '@/application/group/CreateGroup'
+import { DeleteGroupUseCase } from '@/application/group/DeleteGroup'
+import { GetGroupUseCase } from '@/application/group/GetGroup'
+import { ListGroupsUseCase } from '@/application/group/ListGroups'
+import { PromoteMemberToOwnerUseCase } from '@/application/group/PromoteMemberToOwner'
+import { RemoveMemberFromGroupUseCase } from '@/application/group/RemoveMemberFromGroup'
+import { UpdateGroupUseCase } from '@/application/group/UpdateGroup'
 import { CreatePasswordUseCase } from '@/application/password/CreatePassword'
 import { DeletePasswordUseCase } from '@/application/password/DeletePassword'
 import { GetPasswordUseCase } from '@/application/password/GetPassword'
@@ -34,6 +43,7 @@ export interface Ports {
   passwordRepository: PasswordRepository
   csrfGateway: CsrfGateway
   userRepository: UserRepository
+  groupRepository: GroupRepository
 }
 
 export interface Container {
@@ -60,6 +70,16 @@ export interface Container {
     updatePassword: UpdateUserPasswordUseCase
     delete: DeleteUserUseCase
     promoteToAdmin: PromoteUserToAdminUseCase
+  }
+  groups: {
+    list: ListGroupsUseCase
+    get: GetGroupUseCase
+    create: CreateGroupUseCase
+    update: UpdateGroupUseCase
+    delete: DeleteGroupUseCase
+    addMember: AddMemberToGroupUseCase
+    removeMember: RemoveMemberFromGroupUseCase
+    promoteToOwner: PromoteMemberToOwnerUseCase
   }
 }
 
@@ -88,6 +108,16 @@ export function buildContainer(ports: Ports): Container {
       updatePassword: new UpdateUserPasswordUseCase(ports.userRepository),
       delete: new DeleteUserUseCase(ports.userRepository),
       promoteToAdmin: new PromoteUserToAdminUseCase(ports.userRepository),
+    },
+    groups: {
+      list: new ListGroupsUseCase(ports.groupRepository),
+      get: new GetGroupUseCase(ports.groupRepository),
+      create: new CreateGroupUseCase(ports.groupRepository),
+      update: new UpdateGroupUseCase(ports.groupRepository),
+      delete: new DeleteGroupUseCase(ports.groupRepository),
+      addMember: new AddMemberToGroupUseCase(ports.groupRepository),
+      removeMember: new RemoveMemberFromGroupUseCase(ports.groupRepository),
+      promoteToOwner: new PromoteMemberToOwnerUseCase(ports.groupRepository),
     },
   }
 }

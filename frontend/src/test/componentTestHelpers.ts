@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import { buildContainer, type Container, type Ports } from '@/container'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
+import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { setContainer } from '@/plugins/container'
@@ -29,6 +30,7 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
     passwordRepository: new InMemoryPasswordRepository(),
     csrfGateway: new InMemoryCsrfGateway(),
     userRepository: new InMemoryUserRepository(),
+    groupRepository: new InMemoryGroupRepository(),
     ...overrides,
   }
   const container = buildContainer(ports)
