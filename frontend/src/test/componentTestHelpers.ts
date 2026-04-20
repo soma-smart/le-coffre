@@ -2,6 +2,7 @@ import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import { buildContainer, type Container, type Ports } from '@/container'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
+import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 
 /**
  * Per-test setup shared by every spec that mounts a Vue component or
@@ -26,6 +27,7 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
   const ports: Ports = {
     passwordRepository: new InMemoryPasswordRepository(),
     csrfGateway: new InMemoryCsrfGateway(),
+    userRepository: new InMemoryUserRepository(),
     ...overrides,
   }
   const container = buildContainer(ports)
