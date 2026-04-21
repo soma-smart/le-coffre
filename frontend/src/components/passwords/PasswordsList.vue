@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import type { Group } from '@/domain/group/Group'
-import type { Password } from '@/domain/password/Password'
+import { matchesPasswordQuery, type Password } from '@/domain/password/Password'
 import FolderCard from './FolderCard.vue'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
@@ -67,18 +67,8 @@ const selectedGroupIdFromRoute = computed(() =>
   findGroupIdBySlug(filterableGroups.value, selectedGroupSlugFromRoute.value),
 )
 
-const matchesSearchQuery = (password: Password, groupName?: string): boolean => {
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return true
-
-  return (
-    (groupName?.toLowerCase().includes(q) ?? false) ||
-    password.folder.toLowerCase().includes(q) ||
-    (password.name?.toLowerCase().includes(q) ?? false) ||
-    (password.login?.toLowerCase().includes(q) ?? false) ||
-    (password.url?.toLowerCase().includes(q) ?? false)
-  )
-}
+const matchesSearchQuery = (password: Password, groupName?: string): boolean =>
+  matchesPasswordQuery(password, searchQuery.value, groupName)
 
 const folderFilter = computed(() => route.query.folder as string | undefined)
 

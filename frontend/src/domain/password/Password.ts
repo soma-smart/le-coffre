@@ -44,3 +44,27 @@ export interface PasswordEvent {
   actorEmail: string | null
   eventData: Record<string, unknown>
 }
+
+/**
+ * The fields that participate in a free-text password search, plus the
+ * containing group's name (passed in separately because `Password` itself
+ * only stores `groupId`). Keeping this list in the domain ensures a new
+ * searchable attribute (e.g. a future `tags` field) only needs to be added
+ * in one place.
+ */
+export function matchesPasswordQuery(
+  password: Password,
+  query: string,
+  groupName?: string,
+): boolean {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+
+  return (
+    (groupName?.toLowerCase().includes(needle) ?? false) ||
+    password.folder.toLowerCase().includes(needle) ||
+    password.name.toLowerCase().includes(needle) ||
+    (password.login?.toLowerCase().includes(needle) ?? false) ||
+    (password.url?.toLowerCase().includes(needle) ?? false)
+  )
+}
