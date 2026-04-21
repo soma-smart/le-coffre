@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Enforce the frontend clean-architecture dependency rule.
+# Fast pre-flight guard for the frontend clean-architecture dependency rule.
 #
-# Invoked by both:
-#   - .github/workflows/CI.yml  (front-ci job)
-#   - .pre-commit-config.yaml   (local hook)
+# Invoked by .pre-commit-config.yaml. The authoritative enforcement lives in
+# frontend/eslint.config.ts (no-restricted-imports with per-layer overrides),
+# which CI runs via `bunx eslint .`. This grep-based guard is intentionally
+# redundant — it's kept because it runs in a fraction of a second without
+# needing node_modules, so pre-commit stays fast even on a fresh clone.
+#
+# If the ESLint rules change, keep this in sync.
 #
 # Rules:
 #   domain/                       — zero framework imports
@@ -11,8 +15,7 @@
 #   infrastructure/in_memory/     — test fakes; no SDK, no Vue, no Pinia
 #
 # The script resolves its own directory so it works regardless of where
-# it's invoked from (pre-commit runs from the repo root; CI runs from
-# frontend/).
+# it's invoked from (pre-commit runs from the repo root).
 
 set -euo pipefail
 

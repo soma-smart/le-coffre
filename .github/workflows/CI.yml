@@ -55,10 +55,6 @@ jobs:
           EOF
           node /tmp/check_bun_audit.js
 
-      - name: Enforce clean-architecture dependency rule
-        if: success() || failure()
-        run: frontend/scripts/check-architecture.sh
-
       - name: Run Unit + Component Tests
         if: success() || failure()
         working-directory: frontend/
