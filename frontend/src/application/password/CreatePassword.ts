@@ -1,7 +1,9 @@
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
+import { isValidPasswordUrl } from '@/domain/password/Password'
 import {
   PasswordGroupRequiredError,
   PasswordNameRequiredError,
+  PasswordUrlInvalidError,
   PasswordValueRequiredError,
 } from '@/domain/password/errors'
 
@@ -27,6 +29,7 @@ export class CreatePasswordUseCase {
     if (!command.name.trim()) throw new PasswordNameRequiredError()
     if (!command.password) throw new PasswordValueRequiredError()
     if (!command.groupId) throw new PasswordGroupRequiredError()
+    if (!isValidPasswordUrl(command.url)) throw new PasswordUrlInvalidError()
 
     return this.repository.create({
       name: command.name.trim(),

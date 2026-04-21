@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   accessibleGroupIdsFor,
   isPasswordStale,
+  isValidPasswordUrl,
   matchesPasswordQuery,
   PASSWORD_STALE_AFTER_DAYS,
   type Password,
@@ -53,6 +54,26 @@ describe('matchesPasswordQuery', () => {
     const password = makePassword({ login: null, url: null })
     expect(matchesPasswordQuery(password, 'github')).toBe(true) // name still matches
     expect(matchesPasswordQuery(password, 'alice')).toBe(false)
+  })
+})
+
+describe('isValidPasswordUrl', () => {
+  it('accepts empty / null / undefined (URL is optional)', () => {
+    expect(isValidPasswordUrl(null)).toBe(true)
+    expect(isValidPasswordUrl(undefined)).toBe(true)
+    expect(isValidPasswordUrl('')).toBe(true)
+  })
+
+  it('accepts http:// and https:// regardless of case', () => {
+    expect(isValidPasswordUrl('http://x')).toBe(true)
+    expect(isValidPasswordUrl('https://x')).toBe(true)
+    expect(isValidPasswordUrl('HTTPS://X')).toBe(true)
+  })
+
+  it('rejects other schemes and scheme-less strings', () => {
+    expect(isValidPasswordUrl('ftp://example.com')).toBe(false)
+    expect(isValidPasswordUrl('example.com')).toBe(false)
+    expect(isValidPasswordUrl('javascript:alert(1)')).toBe(false)
   })
 })
 

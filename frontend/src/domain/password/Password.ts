@@ -46,6 +46,17 @@ export interface PasswordEvent {
 }
 
 /**
+ * Password URL rule: must be empty, or start with http:// or https://.
+ * Anything else (ftp://, javascript:, raw text) is rejected at the use-case
+ * boundary. Shared between the CreatePassword use case and the form
+ * components that preview validation inline.
+ */
+export function isValidPasswordUrl(url: string | null | undefined): boolean {
+  if (!url) return true
+  return /^https?:\/\//i.test(url)
+}
+
+/**
  * Passwords older than this are flagged to the user as needing rotation. The
  * threshold is expressed in days because it's compared against wall-clock
  * update timestamps.
