@@ -28,14 +28,17 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run Linting
+        if: success() || failure()
         working-directory: frontend/
         run: bunx eslint .
 
       - name: Check Formatting
+        if: success() || failure()
         working-directory: frontend/
         run: bunx prettier --check src/
 
       - name: Check Dependencies Security
+        if: success() || failure()
         working-directory: frontend/
         run: bun audit --audit-level=moderate
 
@@ -75,14 +78,17 @@ jobs:
         run: uv sync --frozen --group monitoring
 
       - name: Check Formatting
+        if: success() || failure()
         working-directory: server/
         run: uv run ruff format --check .
 
       - name: Run Linting
+        if: success() || failure()
         working-directory: server/
         run: uv run ruff check .
 
       - name: Check Alembic Migrations
+        if: success() || failure()
         working-directory: server/
         run: |
           # First, upgrade the database to the current head
@@ -113,6 +119,7 @@ jobs:
           rm "$MIGRATION_FILE"
 
       - name: Check Dependencies Security
+        if: success() || failure()
         working-directory: server/
         run: |
           uv export --format requirements-txt --no-hashes > /tmp/requirements.txt
@@ -141,14 +148,17 @@ jobs:
         run: uv sync --frozen
 
       - name: Check Formatting
+        if: success() || failure()
         working-directory: server/
         run: uv run ruff format --check .
 
       - name: Run Linting
+        if: success() || failure()
         working-directory: server/
         run: uv run ruff check .
 
       - name: Run Unit Tests
+        if: success() || failure()
         working-directory: server/
         run: uv run pytest .
 
