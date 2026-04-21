@@ -155,7 +155,7 @@ import { ref, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import type { Password } from '@/domain/password/Password'
+import { isPasswordStale, type Password } from '@/domain/password/Password'
 import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 
@@ -196,13 +196,7 @@ const isDeleting = ref(false)
 const sharedAccessInfo = ref<SharedAccessInfo | null>(null)
 let sharedAccessLoadVersion = 0
 
-const needsUpdate = computed(() => {
-  const lastUpdated = new Date(props.password.lastUpdatedAt)
-  const now = new Date()
-  const diffInMs = now.getTime() - lastUpdated.getTime()
-  const diffInDays = diffInMs / (1000 * 60 * 60 * 24)
-  return diffInDays > 90
-})
+const needsUpdate = computed(() => isPasswordStale(props.password))
 
 const canWriteInContext = computed(() => {
   if (!props.password.canWrite) {
