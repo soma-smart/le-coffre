@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   accessibleGroupIdsFor,
+  eventSeverity,
+  humanizeEventType,
   isPasswordStale,
   isValidPasswordUrl,
   matchesPasswordQuery,
@@ -95,6 +97,34 @@ describe('isPasswordStale', () => {
 
   it('returns true once past the threshold', () => {
     expect(isPasswordStale(withLastUpdated(PASSWORD_STALE_AFTER_DAYS + 1), now)).toBe(true)
+  })
+})
+
+describe('humanizeEventType', () => {
+  it.each([
+    ['PasswordCreatedEvent', 'Password Created'],
+    ['PasswordDeletedEvent', 'Password Deleted'],
+    ['PasswordUpdatedEvent', 'Password Updated'],
+    ['PasswordSharedEvent', 'Password Shared'],
+    ['PasswordUnsharedEvent', 'Password Unshared'],
+    ['PasswordAccessedEvent', 'Password Accessed'],
+  ])('humanizes %s to "%s"', (input, expected) => {
+    expect(humanizeEventType(input)).toBe(expected)
+  })
+})
+
+describe('eventSeverity', () => {
+  it('maps each known event type to its severity', () => {
+    expect(eventSeverity('PasswordCreatedEvent')).toBe('success')
+    expect(eventSeverity('PasswordDeletedEvent')).toBe('danger')
+    expect(eventSeverity('PasswordUpdatedEvent')).toBe('warn')
+    expect(eventSeverity('PasswordSharedEvent')).toBe('info')
+    expect(eventSeverity('PasswordUnsharedEvent')).toBe('info')
+    expect(eventSeverity('PasswordAccessedEvent')).toBe('secondary')
+  })
+
+  it('falls back to "secondary" for unknown event types', () => {
+    expect(eventSeverity('PasswordMysteriouslyTeleportedEvent')).toBe('secondary')
   })
 })
 
