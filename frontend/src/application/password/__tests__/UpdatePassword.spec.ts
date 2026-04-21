@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
-import { PasswordNameRequiredError, PasswordNotFoundError } from '@/domain/password/errors'
+import {
+  PasswordNameRequiredError,
+  PasswordNotFoundError,
+  PasswordUrlInvalidError,
+} from '@/domain/password/errors'
 
 describe('UpdatePasswordUseCase', () => {
   it('updates name, secret and folder together', async () => {
@@ -46,5 +50,14 @@ describe('UpdatePasswordUseCase', () => {
         name: 'X',
       }),
     ).rejects.toBeInstanceOf(PasswordNotFoundError)
+  })
+
+  it('rejects a url that does not start with http(s)://', async () => {
+    const repo = new InMemoryPasswordRepository().useIdGenerator(() => 'pwd-1')
+    await repo.create({ name: 'Old', password: 'x', groupId: 'g' })
+
+    await expect(
+      new UpdatePasswordUseCase(repo).execute({ id: 'pwd-1', name: 'Old', url: 'ftp://x' }),
+    ).rejects.toBeInstanceOf(PasswordUrlInvalidError)
   })
 })
