@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { matchesPasswordQuery, type Password } from '@/domain/password/Password'
+import {
+  accessibleGroupIdsFor,
+  matchesPasswordQuery,
+  type Password,
+} from '@/domain/password/Password'
 
 function makePassword(overrides: Partial<Password> = {}): Password {
   return {
@@ -47,5 +51,17 @@ describe('matchesPasswordQuery', () => {
     const password = makePassword({ login: null, url: null })
     expect(matchesPasswordQuery(password, 'github')).toBe(true) // name still matches
     expect(matchesPasswordQuery(password, 'alice')).toBe(false)
+  })
+})
+
+describe('accessibleGroupIdsFor', () => {
+  it('returns the explicit list when at least one group is shared', () => {
+    const password = makePassword({ groupId: 'g1', accessibleGroupIds: ['g1', 'g2'] })
+    expect(accessibleGroupIdsFor(password)).toEqual(['g1', 'g2'])
+  })
+
+  it('falls back to the owning group when no groups are shared', () => {
+    const password = makePassword({ groupId: 'g1', accessibleGroupIds: [] })
+    expect(accessibleGroupIdsFor(password)).toEqual(['g1'])
   })
 })
