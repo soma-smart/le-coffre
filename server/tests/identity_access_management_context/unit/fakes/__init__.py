@@ -3,6 +3,7 @@ from .fake_group_event_repository import FakeGroupEventRepository
 from .fake_group_member_repository import FakeGroupMemberRepository
 from .fake_group_repository import FakeGroupRepository
 from .fake_group_usage_gateway import FakeGroupUsageGateway
+from .fake_login_lockout_gateway import FakeLoginLockoutGateway
 from .fake_password_hashing_gateway import FakePasswordHashingGateway
 from .fake_sso_configuration_repository import FakeSsoConfigurationRepository
 from .fake_sso_encryption_gateway import FakeSsoEncryptionGateway
@@ -26,6 +27,7 @@ __all__ = [
     "FakeSsoUserRepository",
     "FakeSsoEncryptionGateway",
     "FakeGroupUsageGateway",
+    "FakeLoginLockoutGateway",
     "FakeTimeGateway",
     "FakeUserRepository",
     "FakeUserEventRepository",
