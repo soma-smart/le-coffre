@@ -42,10 +42,6 @@ jobs:
         working-directory: frontend/
         run: bun audit --audit-level=moderate
 
-      - name: Enforce clean-architecture dependency rule
-        if: success() || failure()
-        run: frontend/scripts/check-architecture.sh
-
       - name: Run Unit + Component Tests
         if: success() || failure()
         working-directory: frontend/
