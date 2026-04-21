@@ -8,6 +8,7 @@ import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
 import { attemptTokenRefresh } from '@/customClient'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
+import { pickDefaultGroupForUser } from '@/domain/group/Group'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { slugifyGroupName } from '@/utils/groupSlug'
 
@@ -148,17 +149,16 @@ router.beforeEach(async (to) => {
     const groupsStore = useGroupsStore()
     await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
 
-    const sortedUserGroups = sortGroupsByName(
+    const defaultGroup = pickDefaultGroupForUser(
       groupsStore.userBelongingGroups,
       groupsStore.currentUserPersonalGroupId,
+      sortGroupsByName,
     )
-    const defaultGroup = sortedUserGroups[0]
-    const groupSlug = defaultGroup ? slugifyGroupName(defaultGroup.name) : null
 
-    if (groupSlug) {
+    if (defaultGroup) {
       return {
         name: 'HomeGroup',
-        params: { groupSlug },
+        params: { groupSlug: slugifyGroupName(defaultGroup.name) },
         query: to.query,
       }
     }

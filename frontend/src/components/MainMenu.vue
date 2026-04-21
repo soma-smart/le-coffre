@@ -217,6 +217,7 @@ import { onMounted, watch, computed, ref, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue'
 import { storeToRefs } from 'pinia'
+import { pickDefaultGroupForUser, type Group } from '@/domain/group/Group'
 import { usePasswordsStore } from '@/stores/passwords'
 import { usePasswordAccessStore } from '../stores/passwordAccess'
 import { useGroupsStore } from '@/stores/groups'
@@ -287,15 +288,9 @@ const visiblePasswordGroups = computed(() =>
 const isActivePasswordGroup = (groupId: string) =>
   isPasswordsActive.value && selectedGroupId.value === groupId
 
-const getDefaultGroupId = (availableGroupIds: string[]): string | null => {
-  if (
-    currentUserPersonalGroupId.value &&
-    availableGroupIds.includes(currentUserPersonalGroupId.value)
-  ) {
-    return currentUserPersonalGroupId.value
-  }
-  return availableGroupIds[0] ?? null
-}
+const getDefaultGroupId = (candidates: Group[]): string | null =>
+  pickDefaultGroupForUser(candidates, currentUserPersonalGroupId.value, sortGroupsByName)?.id ??
+  null
 
 const isOwnerOfGroup = (group: { owners?: string[] }) => {
   if (!currentUser.value?.id) return false
@@ -342,7 +337,7 @@ const goToGroupRoute = (groupId: string | null, shouldOpenCreate = false) => {
 }
 
 const goToAllPasswords = () => {
-  const defaultGroupId = getDefaultGroupId(myPasswordGroups.value.map((g) => g.id))
+  const defaultGroupId = getDefaultGroupId(myPasswordGroups.value)
   goToGroupRoute(defaultGroupId)
 }
 
@@ -366,7 +361,7 @@ const toggleAdminPasswordView = () => {
   )
 
   if (!nextAdminView && isPasswordsActive.value && !selectedGroupIsInMyGroups) {
-    const fallbackGroupId = getDefaultGroupId(myPasswordGroups.value.map((group) => group.id))
+    const fallbackGroupId = getDefaultGroupId(myPasswordGroups.value)
 
     if (!fallbackGroupId) {
       router.replace({ name: 'Home', query: route.query })
