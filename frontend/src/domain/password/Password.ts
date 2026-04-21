@@ -46,6 +46,25 @@ export interface PasswordEvent {
 }
 
 /**
+ * Passwords older than this are flagged to the user as needing rotation. The
+ * threshold is expressed in days because it's compared against wall-clock
+ * update timestamps.
+ */
+export const PASSWORD_STALE_AFTER_DAYS = 90
+
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24
+
+/**
+ * A password is stale when it hasn't been rotated in `PASSWORD_STALE_AFTER_DAYS`
+ * days. `now` is injectable so unit tests don't depend on wall-clock time.
+ */
+export function isPasswordStale(password: Password, now: Date = new Date()): boolean {
+  const lastUpdated = new Date(password.lastUpdatedAt)
+  const ageDays = (now.getTime() - lastUpdated.getTime()) / MILLISECONDS_PER_DAY
+  return ageDays > PASSWORD_STALE_AFTER_DAYS
+}
+
+/**
  * Every password has an owning `groupId`, and optionally an explicit list of
  * groups it's been shared with. When the list is empty the owning group is
  * the only group that can see the password — callers that want "every group
