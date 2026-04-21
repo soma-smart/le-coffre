@@ -3,13 +3,16 @@ import { ref, computed, watch, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import type { Group } from '@/domain/group/Group'
-import { matchesPasswordQuery, type Password } from '@/domain/password/Password'
+import {
+  accessibleGroupIdsFor,
+  matchesPasswordQuery,
+  type Password,
+} from '@/domain/password/Password'
 import FolderCard from './FolderCard.vue'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
 import PasswordHistoryModal from '@/components/modals/PasswordHistoryModal.vue'
 import { usePasswordsStore } from '@/stores/passwords'
-import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
@@ -21,7 +24,6 @@ const route = useRoute()
 const router = useRouter()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 const passwordsStore = usePasswordsStore()
-const passwordAccessStore = usePasswordAccessStore()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
 const adminPasswordViewStore = useAdminPasswordViewStore()
@@ -99,7 +101,7 @@ const groupedByGroupAndFolder = computed<GroupedSection[]>(() => {
   const groupPasswordMap = new Map<string, Password[]>()
 
   for (const password of passwords.value) {
-    const accessibleGroupIds = passwordAccessStore.getAccessibleGroupIdsForPassword(password)
+    const accessibleGroupIds = accessibleGroupIdsFor(password)
     for (const groupId of accessibleGroupIds) {
       if (!visibleGroupIds.has(groupId)) continue
       const groupName = groupsById.get(groupId)?.name

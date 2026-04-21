@@ -46,6 +46,17 @@ export interface PasswordEvent {
 }
 
 /**
+ * Every password has an owning `groupId`, and optionally an explicit list of
+ * groups it's been shared with. When the list is empty the owning group is
+ * the only group that can see the password — callers that want "every group
+ * that can read this" must go through this helper instead of inlining the
+ * fallback, so the invariant stays in one place.
+ */
+export function accessibleGroupIdsFor(password: Password): string[] {
+  return password.accessibleGroupIds.length > 0 ? password.accessibleGroupIds : [password.groupId]
+}
+
+/**
  * The fields that participate in a free-text password search, plus the
  * containing group's name (passed in separately because `Password` itself
  * only stores `groupId`). Keeping this list in the domain ensures a new
