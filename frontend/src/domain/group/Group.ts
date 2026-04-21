@@ -23,3 +23,30 @@ export function isUserOwnerOf(group: Group, userId: string | null): boolean {
 export function isUserMemberOf(group: Group, userId: string | null): boolean {
   return !!userId && group.members.includes(userId)
 }
+
+/**
+ * Pick the group the user should land on by default when no group is
+ * specified in the route:
+ *   - prefer their personal group, if the personal id is known and the
+ *     personal group is actually in the list,
+ *   - otherwise fall back to the alphabetically-first group from the list
+ *     (with personal groups still pinned first — we delegate that rule to
+ *     the caller's `sortComparator`, which in production is
+ *     `sortGroupsByName`).
+ * Returns null when the list is empty.
+ */
+export function pickDefaultGroupForUser(
+  groups: Group[],
+  personalGroupId: string | null,
+  sortComparator: (groups: Group[], personalGroupId: string | null) => Group[] = (g) => g,
+): Group | null {
+  if (groups.length === 0) return null
+
+  if (personalGroupId) {
+    const personal = groups.find((group) => group.id === personalGroupId)
+    if (personal) return personal
+  }
+
+  const sorted = sortComparator(groups, personalGroupId)
+  return sorted[0] ?? null
+}

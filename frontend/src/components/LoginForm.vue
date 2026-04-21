@@ -10,7 +10,9 @@ import { usePasswordsStore } from '@/stores/passwords'
 import { useUserStore } from '@/stores/user'
 import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
+import { pickDefaultGroupForUser } from '@/domain/group/Group'
 import { slugifyGroupName } from '@/utils/groupSlug'
+import { sortGroupsByName } from '@/utils/groupSort'
 
 const router = useRouter()
 const route = useRoute()
@@ -45,28 +47,20 @@ const loading = ref(false)
 const resolveDefaultGroupRoute = async () => {
   await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
 
-  const availableGroupIds = groupsStore.userBelongingGroups.map((group) => group.id)
   const personalGroupId = userStore.currentUser?.personalGroupId ?? null
+  const defaultGroup = pickDefaultGroupForUser(
+    groupsStore.userBelongingGroups,
+    personalGroupId,
+    sortGroupsByName,
+  )
 
-  const defaultGroupId =
-    personalGroupId && availableGroupIds.includes(personalGroupId)
-      ? personalGroupId
-      : (availableGroupIds[0] ?? null)
-
-  if (!defaultGroupId) {
-    return { name: 'Home' as const }
-  }
-
-  const defaultGroup = groupsStore.userBelongingGroups.find((group) => group.id === defaultGroupId)
-  const defaultGroupSlug = defaultGroup ? slugifyGroupName(defaultGroup.name) : null
-
-  if (!defaultGroupSlug) {
+  if (!defaultGroup) {
     return { name: 'Home' as const }
   }
 
   return {
     name: 'HomeGroup' as const,
-    params: { groupSlug: defaultGroupSlug },
+    params: { groupSlug: slugifyGroupName(defaultGroup.name) },
   }
 }
 
