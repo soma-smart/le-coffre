@@ -1,16 +1,21 @@
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from pydantic import BaseModel
-
 from config import (
     get_cookie_secure_setting,
     get_jwt_access_token_expiration_seconds,
     get_jwt_refresh_token_expiration_seconds,
 )
+from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel
+from security import InMemoryLoginLockout
+
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
+    get_login_lockout,
     get_password_login_usecase,
+)
+from identity_access_management_context.adapters.primary.fastapi.schemas.admin_login_schema import (
+    AdminLoginRequest,
 )
 from identity_access_management_context.application.commands import AdminLoginCommand
 from identity_access_management_context.application.use_cases import (
@@ -24,11 +29,6 @@ from identity_access_management_context.domain.exceptions import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-
-class AdminLoginRequest(BaseModel):
-    email: str
-    password: str
 
 
 class AdminLoginResponse(BaseModel):
@@ -47,6 +47,7 @@ async def admin_login(
     request: AdminLoginRequest,
     response: Response,
     usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),
+    lockout: InMemoryLoginLockout = Depends(get_login_lockout),
 ):
     """
     Login an admin user.
@@ -56,53 +57,58 @@ async def admin_login(
 
     Returns admin information and sets an HTTP-only secure cookie with the JWT token.
     """
+    locked, retry_after = lockout.is_locked(request.email)
+    if locked:
+        raise HTTPException(
+            status_code=401,
+            detail="Account temporarily locked due to too many failed login attempts",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    command = AdminLoginCommand(
+        email=request.email,
+        password=request.password,
+    )
+
     try:
-        command = AdminLoginCommand(
-            email=request.email,
-            password=request.password,
-        )
-
         result = await usecase.execute(command)
-
-        # Set JWT token in HTTP-only secure cookie
-        is_secure = get_cookie_secure_setting()
-        response.set_cookie(
-            key="access_token",
-            value=result.jwt_token,
-            httponly=True,
-            secure=is_secure,  # HTTPS only in production
-            samesite="strict",  # CSRF protection
-            max_age=get_jwt_access_token_expiration_seconds(),
-        )
-
-        # Also set refresh token in cookie
-        response.set_cookie(
-            key="refresh_token",
-            value=result.refresh_token,
-            httponly=True,
-            secure=is_secure,  # HTTPS only in production
-            samesite="strict",
-            max_age=get_jwt_refresh_token_expiration_seconds(),
-        )
-
-        # Set a non-httpOnly cookie that frontend can read to check auth status
-        response.set_cookie(
-            key="logged_in",
-            value="true",
-            httponly=False,  # JavaScript can read this
-            secure=is_secure,
-            samesite="strict",
-            max_age=get_jwt_access_token_expiration_seconds(),
-        )
-
-        return AdminLoginResponse(
-            admin_id=result.admin_id,
-            email=result.email,
-            message="Login successful",
-        )
-
     except (InvalidCredentialsException, AdminNotFoundException) as e:
+        lockout.record_failure(command.email)
         raise HTTPException(status_code=401, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in admin login")
         raise HTTPException(status_code=500, detail="Internal server error") from e
+
+    is_secure = get_cookie_secure_setting()
+    response.set_cookie(
+        key="access_token",
+        value=result.jwt_token,
+        httponly=True,
+        secure=is_secure,
+        samesite="strict",
+        max_age=get_jwt_access_token_expiration_seconds(),
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=result.refresh_token,
+        httponly=True,
+        secure=is_secure,
+        samesite="strict",
+        max_age=get_jwt_refresh_token_expiration_seconds(),
+    )
+    response.set_cookie(
+        key="logged_in",
+        value="true",
+        httponly=False,
+        secure=is_secure,
+        samesite="strict",
+        max_age=get_jwt_access_token_expiration_seconds(),
+    )
+
+    lockout.record_success(command.email)
+
+    return AdminLoginResponse(
+        admin_id=result.admin_id,
+        email=result.email,
+        message="Login successful",
+    )

@@ -64,20 +64,49 @@ def get_cookie_secure_setting() -> bool:
 
 
 def get_rate_limit_enabled() -> bool:
-    """Whether rate limiting is enabled. Default is True."""
+    """Whether rate limiting is enabled. Default True."""
     return os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true"
 
 
-def get_rate_limit_auth_max_requests() -> int:
-    """Max requests per window for authentication routes (login, register, SSO). Default 5."""
-    return int(os.environ.get("RATE_LIMIT_AUTH_MAX_REQUESTS", "5"))
-
-
-def get_rate_limit_api_max_requests() -> int:
-    """Max requests per window for general API routes. Default 60."""
-    return int(os.environ.get("RATE_LIMIT_API_MAX_REQUESTS", "60"))
-
-
 def get_rate_limit_window_seconds() -> int:
-    """Sliding window duration in seconds. Default 60 (1 minute)."""
+    """Shared sliding-window duration in seconds. Default 60."""
     return int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+
+def get_rate_limit_user_max_requests() -> int:
+    """Max requests per window for authenticated users (per-user bucket). Default 300."""
+    return int(os.environ.get("RATE_LIMIT_USER_MAX_REQUESTS", "300"))
+
+
+def get_rate_limit_unauth_max_requests() -> int:
+    """Max requests per window for unauthenticated callers (per-IP bucket). Default 30."""
+    return int(os.environ.get("RATE_LIMIT_UNAUTH_MAX_REQUESTS", "30"))
+
+
+def get_rate_limit_auth_max_requests() -> int:
+    """Max requests per window on credential-accepting auth routes (per-IP floor). Default 100."""
+    return int(os.environ.get("RATE_LIMIT_AUTH_MAX_REQUESTS", "100"))
+
+
+def get_rate_limit_trusted_proxies() -> set[str]:
+    """Direct peer IPs whose X-Forwarded-For header is trusted. Default loopback only."""
+    raw = os.environ.get("RATE_LIMIT_TRUSTED_PROXIES", "127.0.0.1,::1")
+    return {p.strip() for p in raw.split(",") if p.strip()}
+
+
+def get_rate_limit_trusted_proxy_hops() -> int:
+    """Number of trusted proxy hops between client and server (for XFF parsing). Default 1."""
+    return int(os.environ.get("RATE_LIMIT_TRUSTED_PROXY_HOPS", "1"))
+
+
+# ── Login Lockout ────────────────────────────────────────────────
+
+
+def get_login_max_failed_attempts() -> int:
+    """Consecutive failed login attempts before an account is locked. Default 5."""
+    return int(os.environ.get("LOGIN_MAX_FAILED_ATTEMPTS", "5"))
+
+
+def get_login_lockout_seconds() -> int:
+    """Duration in seconds an account is locked after hitting the failure threshold. Default 300 (5 min)."""
+    return int(os.environ.get("LOGIN_LOCKOUT_SECONDS", "300"))
