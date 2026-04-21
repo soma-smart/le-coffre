@@ -148,7 +148,12 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import type { Password, PasswordEvent } from '@/domain/password/Password'
+import {
+  eventSeverity,
+  humanizeEventType,
+  type Password,
+  type PasswordEvent,
+} from '@/domain/password/Password'
 import { useContainer } from '@/plugins/container'
 
 const props = defineProps<{
@@ -220,24 +225,8 @@ const formatDateTime = (dateString: string): string => {
   })
 }
 
-const formatEventType = (eventType: string): string => {
-  // Remove "Event" suffix and add spaces before capitals
-  return eventType
-    .replace('Event', '')
-    .replace(/([A-Z])/g, ' $1')
-    .trim()
-}
-
-const getEventSeverity = (
-  eventType: string,
-): 'success' | 'info' | 'warn' | 'danger' | 'secondary' => {
-  if (eventType === 'PasswordCreatedEvent') return 'success'
-  if (eventType === 'PasswordDeletedEvent') return 'danger'
-  if (eventType === 'PasswordUpdatedEvent') return 'warn'
-  if (eventType === 'PasswordSharedEvent' || eventType === 'PasswordUnsharedEvent') return 'info'
-  if (eventType === 'PasswordAccessedEvent') return 'secondary'
-  return 'secondary'
-}
+const formatEventType = humanizeEventType
+const getEventSeverity = eventSeverity
 
 // Fetch events when modal opens and password changes
 watch(

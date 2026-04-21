@@ -45,6 +45,35 @@ export interface PasswordEvent {
   eventData: Record<string, unknown>
 }
 
+export type PasswordEventSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary'
+
+/**
+ * Strips the "Event" suffix and inserts a space before every capital so
+ * `PasswordSharedEvent` becomes `Password Shared`. Lives in the domain because
+ * it's driven by the backend's event-type enum — any new event must update
+ * this table in lockstep.
+ */
+export function humanizeEventType(eventType: string): string {
+  return eventType
+    .replace('Event', '')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+}
+
+/**
+ * Business-level importance of an audit event, used to pick the PrimeVue
+ * tag colour. The severity strings happen to be PrimeVue's palette, but
+ * they are also the semantic categories we'd pick in any UI library.
+ */
+export function eventSeverity(eventType: string): PasswordEventSeverity {
+  if (eventType === 'PasswordCreatedEvent') return 'success'
+  if (eventType === 'PasswordDeletedEvent') return 'danger'
+  if (eventType === 'PasswordUpdatedEvent') return 'warn'
+  if (eventType === 'PasswordSharedEvent' || eventType === 'PasswordUnsharedEvent') return 'info'
+  if (eventType === 'PasswordAccessedEvent') return 'secondary'
+  return 'secondary'
+}
+
 /**
  * Password URL rule: must be empty, or start with http:// or https://.
  * Anything else (ftp://, javascript:, raw text) is rejected at the use-case
