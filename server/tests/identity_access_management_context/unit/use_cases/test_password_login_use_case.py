@@ -1,7 +1,6 @@
 from uuid import UUID
 
 import pytest
-
 from identity_access_management_context.application.commands import AdminLoginCommand
 from identity_access_management_context.application.use_cases import (
     PasswordLoginUseCase,
@@ -16,12 +15,15 @@ from identity_access_management_context.domain.events import (
     AdminLoginFailedEvent,
 )
 from identity_access_management_context.domain.exceptions import (
+    AccountLockedException,
     AdminNotFoundException,
     InvalidCredentialsException,
 )
+
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
 from ..fakes import (
+    FakeLoginLockoutGateway,
     FakePasswordHashingGateway,
     FakeTimeGateway,
     FakeTokenGateway,
@@ -39,6 +41,7 @@ def use_case(
     time_provider: FakeTimeGateway,
     event_publisher,
     admin_event_repository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     return PasswordLoginUseCase(
         user_password_repository,
@@ -48,6 +51,7 @@ def use_case(
         time_provider,
         event_publisher,
         admin_event_repository,
+        login_lockout_gateway,
     )
 
 
@@ -318,3 +322,144 @@ async def test_given_regular_user_when_logging_in_should_receive_token_with_empt
     assert token_gateway.last_generated_token is not None
     assert token_gateway.last_generated_token.roles == []
     assert ADMIN_ROLE not in token_gateway.last_generated_token.roles
+
+
+@pytest.mark.asyncio
+async def test_given_locked_email_when_login_should_raise_account_locked_and_not_verify_password(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    )
+    login_lockout_gateway.force_lock(email, retry_after=42)
+
+    command = AdminLoginCommand(email=email, password="secure123!")
+
+    with pytest.raises(AccountLockedException) as excinfo:
+        await use_case.execute(command)
+
+    assert excinfo.value.retry_after_seconds == 42
+    assert login_lockout_gateway.failed_login_calls == []
+    assert login_lockout_gateway.successful_login_calls == []
+
+
+@pytest.mark.asyncio
+async def test_given_locked_email_when_login_should_short_circuit_before_password_verification(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+):
+    """Regression: timing-enumeration property — a locked login must not run bcrypt.
+
+    If this test fails, the use case is calling ``verify`` before consulting
+    the lockout gateway, exposing an oracle where a locked account's response
+    time differs from an unlocked one."""
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    )
+    login_lockout_gateway.force_lock(email, retry_after=10)
+
+    # Spy on the hashing gateway: mark any invocation.
+    verify_calls: list[tuple[str, bytes]] = []
+    original_verify = password_hashing_gateway.verify
+
+    def _spy_verify(password: str, hashed_password: bytes) -> bool:
+        verify_calls.append((password, hashed_password))
+        return original_verify(password, hashed_password)
+
+    password_hashing_gateway.verify = _spy_verify  # type: ignore[assignment]
+
+    with pytest.raises(AccountLockedException):
+        await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
+
+    assert verify_calls == [], "verify() was called while the account was locked"
+
+
+@pytest.mark.asyncio
+async def test_given_unknown_email_when_login_should_record_failed_login(
+    use_case: PasswordLoginUseCase,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+):
+    command = AdminLoginCommand(email="nobody@lecoffre.com", password="any")
+
+    with pytest.raises(AdminNotFoundException):
+        await use_case.execute(command)
+
+    assert login_lockout_gateway.failed_login_calls == ["nobody@lecoffre.com"]
+    assert login_lockout_gateway.successful_login_calls == []
+
+
+@pytest.mark.asyncio
+async def test_given_wrong_password_when_login_should_record_failed_login(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed(correct)", display_name="Admin User"),
+    )
+
+    command = AdminLoginCommand(email=email, password="wrong")
+
+    with pytest.raises(InvalidCredentialsException):
+        await use_case.execute(command)
+
+    assert login_lockout_gateway.failed_login_calls == [email]
+    assert login_lockout_gateway.successful_login_calls == []
+
+
+@pytest.mark.asyncio
+async def test_given_correct_credentials_when_login_should_record_successful_login(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    )
+    user_repository.save(User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE]))
+    token_gateway.set_unique_jwt_part("x")
+
+    await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
+
+    assert login_lockout_gateway.failed_login_calls == []
+    assert login_lockout_gateway.successful_login_calls == [email]
+
+
+@pytest.mark.asyncio
+async def test_given_successful_login_when_account_was_previously_locked_should_clear_state(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+):
+    """A successful login clears any stale failure state — record_successful_login
+    is what the FakeLoginLockoutGateway uses to forget prior locks/failures."""
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    )
+    user_repository.save(User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE]))
+    # Expired lock — is_locked returns None already, so execute should proceed
+    # and clear the state via record_successful_login.
+    token_gateway.set_unique_jwt_part("x")
+
+    await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
+
+    # After a successful login, the gateway has no lock for this email.
+    assert login_lockout_gateway.is_locked(email) is None
