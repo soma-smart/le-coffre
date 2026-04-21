@@ -25,6 +25,22 @@ export function isUserMemberOf(group: Group, userId: string | null): boolean {
 }
 
 /**
+ * Groups where the user is either an owner or a member.
+ */
+export function filterGroupsForUser(groups: Group[], userId: string | null): Group[] {
+  if (!userId) return []
+  return groups.filter((group) => isUserOwnerOf(group, userId) || isUserMemberOf(group, userId))
+}
+
+/**
+ * Groups where the user is an owner.
+ */
+export function filterOwnedGroupsForUser(groups: Group[], userId: string | null): Group[] {
+  if (!userId) return []
+  return groups.filter((group) => isUserOwnerOf(group, userId))
+}
+
+/**
  * Pick the group the user should land on by default when no group is
  * specified in the route:
  *   - prefer their personal group, if the personal id is known and the
