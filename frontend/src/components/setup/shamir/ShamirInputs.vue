@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
-import * as z from 'zod'
+import {
+  clampThresholdToShares,
+  isValidShamirConfig,
+  SHAMIR_MAX_SHARES,
+  SHAMIR_MIN_SHARES,
+  type ShamirConfig,
+} from '@/domain/vault/ShamirConfig'
 
-const schema = z.object({
-  shares: z.number().min(2, 'Must be at least 2').max(16, 'Must be at most 16'),
-  threshold: z.number().min(2, 'Must be at least 2').max(16, 'Must be at most 16'),
-})
-
-type Schema = z.output<typeof schema>
-
-const state = reactive<Schema>({
+const state = reactive<ShamirConfig>({
   shares: 5,
   threshold: 3,
 })
@@ -18,7 +17,10 @@ watch(
   () => state.shares,
   (newShares) => {
     if (state.threshold && newShares && state.threshold > newShares) {
-      state.threshold = newShares
+      state.threshold = clampThresholdToShares({
+        shares: newShares,
+        threshold: state.threshold,
+      }).threshold
     }
   },
 )
@@ -26,16 +28,15 @@ watch(
 watch(
   () => state.threshold,
   (newThreshold) => {
+    // If the user types a threshold above the current shares, grow shares to
+    // match — SSS invariant: threshold ≤ shares.
     if (state.shares && newThreshold && newThreshold > state.shares) {
       state.shares = newThreshold
     }
   },
 )
 
-const isValidSSSConfig = computed(() => {
-  const result = schema.safeParse(state)
-  return result.success && state.shares >= state.threshold
-})
+const isValidSSSConfig = computed(() => isValidShamirConfig(state))
 
 defineExpose({
   isValidSSSConfig,
@@ -50,7 +51,13 @@ defineExpose({
         <div class="flex gap-4">
           <div class="flex flex-col gap-2 flex-1">
             <label for="shares">Number of shares</label>
-            <InputNumber showButtons v-model="state.shares" input-id="shares" :min="2" :max="16" />
+            <InputNumber
+              showButtons
+              v-model="state.shares"
+              input-id="shares"
+              :min="SHAMIR_MIN_SHARES"
+              :max="SHAMIR_MAX_SHARES"
+            />
           </div>
 
           <div class="flex flex-col gap-2 flex-1">
@@ -59,8 +66,8 @@ defineExpose({
               showButtons
               v-model="state.threshold"
               input-id="threshold"
-              :min="2"
-              :max="16"
+              :min="SHAMIR_MIN_SHARES"
+              :max="SHAMIR_MAX_SHARES"
             />
           </div>
         </div>

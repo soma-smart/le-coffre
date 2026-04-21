@@ -21,4 +21,13 @@ describe('CreateVaultUseCase', () => {
       new CreateVaultUseCase(new InMemoryVaultRepository()).execute({ nbShares: 2, threshold: 3 }),
     ).rejects.toBeInstanceOf(VaultThresholdInvalidError)
   })
+
+  it('rejects shares above the SSS ceiling', async () => {
+    await expect(
+      new CreateVaultUseCase(new InMemoryVaultRepository()).execute({
+        nbShares: 17,
+        threshold: 5,
+      }),
+    ).rejects.toBeInstanceOf(VaultThresholdInvalidError)
+  })
 })
