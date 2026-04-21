@@ -45,3 +45,10 @@ export class PasswordGroupRequiredError extends PasswordDomainError {
     this.name = 'PasswordGroupRequiredError'
   }
 }
+
+export class PasswordUrlInvalidError extends PasswordDomainError {
+  constructor() {
+    super('URL must start with http:// or https://')
+    this.name = 'PasswordUrlInvalidError'
+  }
+}

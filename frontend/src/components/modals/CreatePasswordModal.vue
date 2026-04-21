@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import type { Password } from '@/domain/password/Password'
+import { isValidPasswordUrl, type Password } from '@/domain/password/Password'
 import { PasswordDomainError } from '@/domain/password/errors'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useContainer } from '@/plugins/container'
@@ -83,12 +83,9 @@ const searchFolders = (event: { query: string }) => {
   }
 }
 
-const urlError = computed(() => {
-  if (url.value && !/^https?:\/\//i.test(url.value)) {
-    return 'URL must start with http:// or https://'
-  }
-  return ''
-})
+const urlError = computed(() =>
+  isValidPasswordUrl(url.value) ? '' : 'URL must start with http:// or https://',
+)
 
 // Display bullets when password field is not focused
 const displayedPassword = computed(() => {
