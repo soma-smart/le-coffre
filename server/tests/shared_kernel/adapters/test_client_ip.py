@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from security.client_ip import resolve_client_ip
+from shared_kernel.adapters.primary.client_ip import resolve_client_ip
 
 
 def _request(peer: str | None, xff: str | None = None):

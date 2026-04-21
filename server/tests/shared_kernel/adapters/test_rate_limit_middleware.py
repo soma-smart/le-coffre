@@ -1,27 +1,31 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Iterator
-from uuid import UUID
 
 import pytest
 from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
-from identity_access_management_context.application.gateways import Token
-from security.rate_limit_middleware import RateLimitMiddleware
-from security.rate_limiter import InMemoryRateLimiter
+from shared_kernel.adapters.primary.rate_limit_middleware import RateLimitMiddleware
+from shared_kernel.adapters.secondary.in_memory_rate_limiter import InMemoryRateLimiter
+from shared_kernel.application.gateways import Principal
 from starlette.testclient import TestClient
 
 
-class _FakeTokenGateway:
-    """Minimal token gateway for middleware unit tests."""
+class _FakePrincipalResolver:
+    """Minimal PrincipalResolver for middleware unit tests."""
 
     def __init__(self) -> None:
-        self._tokens: dict[str, Token] = {}
+        self._tokens: dict[str, str] = {}  # token -> user_id
 
     def register(self, token: str, user_id: str) -> None:
-        self._tokens[token] = Token(value=token, user_id=UUID(user_id), email="", roles=[], claims={})
+        self._tokens[token] = user_id
 
-    async def validate_token(self, token: str) -> Token | None:
-        return self._tokens.get(token)
+    async def resolve(self, access_token: str | None, fallback_ip: str) -> Principal:
+        if not access_token:
+            return Principal(kind="ip", id=fallback_ip)
+        user_id = self._tokens.get(access_token)
+        if user_id is None:
+            return Principal(kind="ip", id=fallback_ip)
+        return Principal(kind="user", id=user_id)
 
 
 def _create_app(
@@ -31,7 +35,7 @@ def _create_app(
     auth_max: int = 100,
     window: int = 60,
     login_status_code: int = 401,
-    token_gateway: _FakeTokenGateway | None = None,
+    principal_resolver: _FakePrincipalResolver | None = None,
     trusted_proxies: set[str] | None = None,
     trusted_proxy_hops: int = 1,
 ) -> FastAPI:
@@ -44,7 +48,7 @@ def _create_app(
     app.state.rate_limit_window_seconds = window
     app.state.rate_limit_trusted_proxies = trusted_proxies if trusted_proxies is not None else {"127.0.0.1", "::1"}
     app.state.rate_limit_trusted_proxy_hops = trusted_proxy_hops
-    app.state.token_gateway = token_gateway
+    app.state.principal_resolver = principal_resolver if principal_resolver is not None else _FakePrincipalResolver()
 
     app.add_middleware(RateLimitMiddleware)
 
@@ -142,12 +146,12 @@ class TestAuthenticatedUserBucket:
         """NAT scenario: two users on the same IP each get their own bucket."""
         user_a = "00000000-0000-0000-0000-000000000001"
         user_b = "00000000-0000-0000-0000-000000000002"
-        gateway = _FakeTokenGateway()
-        gateway.register("token-a", user_a)
-        gateway.register("token-b", user_b)
+        resolver = _FakePrincipalResolver()
+        resolver.register("token-a", user_a)
+        resolver.register("token-b", user_b)
 
         # unauth_max=2 would break this test if the IP bucket were consulted for authed users
-        app = _create_app(user_max=3, unauth_max=2, auth_max=100, token_gateway=gateway)
+        app = _create_app(user_max=3, unauth_max=2, auth_max=100, principal_resolver=resolver)
 
         with TestClient(app) as c_a, TestClient(app) as c_b:
             c_a.cookies.set("access_token", "token-a")
@@ -163,24 +167,16 @@ class TestAuthenticatedUserBucket:
             assert c_b.get("/api/passwords").status_code == 429
 
     def test_unauthenticated_requests_use_ip_bucket(self):
-        app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=_FakeTokenGateway())
+        app = _create_app(user_max=100, unauth_max=3, auth_max=100, principal_resolver=_FakePrincipalResolver())
         with TestClient(app) as c:
             for _ in range(3):
                 assert c.get("/api/passwords").status_code == 200
             assert c.get("/api/passwords").status_code == 429
 
     def test_invalid_token_falls_back_to_ip_bucket(self):
-        app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=_FakeTokenGateway())
+        app = _create_app(user_max=100, unauth_max=3, auth_max=100, principal_resolver=_FakePrincipalResolver())
         with TestClient(app) as c:
             c.cookies.set("access_token", "not-a-real-token")
-            for _ in range(3):
-                assert c.get("/api/passwords").status_code == 200
-            assert c.get("/api/passwords").status_code == 429
-
-    def test_no_token_gateway_means_all_requests_use_ip_bucket(self):
-        app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=None)
-        with TestClient(app) as c:
-            c.cookies.set("access_token", "anything")
             for _ in range(3):
                 assert c.get("/api/passwords").status_code == 200
             assert c.get("/api/passwords").status_code == 429

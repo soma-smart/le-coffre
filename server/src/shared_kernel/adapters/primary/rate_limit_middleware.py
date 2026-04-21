@@ -10,6 +10,10 @@ In addition, credential-accepting auth routes consume a loose per-IP
 state.  This floor is pure DoS protection; brute-force defense lives in the
 InMemoryLoginLockoutGateway service, not here.
 
+Principal resolution (who is this caller?) is delegated to a
+:class:`PrincipalResolver` stashed on ``app.state.principal_resolver`` so this
+middleware does not need to import IAM-specific token machinery directly.
+
 See docs/superpowers/specs/2026-04-21-rate-limiter-design.md for the full
 design rationale, including the XFF trust fix (§3.4).
 
@@ -23,25 +27,18 @@ should expect this difference between endpoint classes.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
-from typing import Literal
 
 from fastapi import Request
+from shared_kernel.adapters.primary.client_ip import resolve_client_ip
+from shared_kernel.adapters.secondary.in_memory_rate_limiter import (
+    InMemoryRateLimiter,
+    RateLimitResult,
+)
+from shared_kernel.application.gateways import PrincipalResolver
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from security.client_ip import resolve_client_ip
-from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
-
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class Principal:
-    """The identity we'll key rate-limiting against for this request."""
-
-    kind: Literal["user", "ip"]
-    id: str
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -101,7 +98,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Principal resolution (only after the auth-floor check, to avoid decoding tokens on
         # requests we've already decided to reject).
-        principal = await self._resolve_principal(request, client_ip)
+        principal_resolver: PrincipalResolver = request.app.state.principal_resolver
+        access_token = request.cookies.get("access_token")
+        principal = await principal_resolver.resolve(access_token, client_ip)
 
         # Principal bucket (exactly one of the two).
         if principal.kind == "user":
@@ -130,24 +129,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _is_exempt(self, path: str) -> bool:
         return any(path.startswith(p) for p in self.EXEMPT_PREFIXES)
-
-    @staticmethod
-    async def _resolve_principal(request: Request, client_ip: str) -> Principal:
-        """Return Principal('user', user_id) if the access token decodes, else Principal('ip', client_ip)."""
-        access_token = request.cookies.get("access_token")
-        if not access_token:
-            return Principal(kind="ip", id=client_ip)
-        token_gateway = getattr(request.app.state, "token_gateway", None)
-        if token_gateway is None:
-            return Principal(kind="ip", id=client_ip)
-        try:
-            token = await token_gateway.validate_token(access_token)
-        except Exception:  # noqa: BLE001 - unexpected token-layer errors fall back to IP keying
-            logger.debug("Token validation raised in rate-limiter principal resolution", exc_info=True)
-            token = None
-        if token:
-            return Principal(kind="user", id=str(token.user_id))
-        return Principal(kind="ip", id=client_ip)
 
     @staticmethod
     def _build_429_response(result: RateLimitResult) -> JSONResponse:

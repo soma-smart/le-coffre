@@ -29,6 +29,9 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_group_management_router,
     get_user_management_router,
 )
+from identity_access_management_context.adapters.primary.private_api.principal import (
+    PrincipalApi,
+)
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
     InMemoryLoginLockoutGateway,
@@ -46,17 +49,20 @@ from password_management_context.adapters.secondary import (
 from security import (
     CsrfMiddleware,
     CsrfTokenManager,
-    InMemoryRateLimiter,
-    RateLimitMiddleware,
     csrf_router,
 )
+from shared_kernel.adapters.primary.rate_limit_middleware import RateLimitMiddleware
 from shared_kernel.adapters.primary.request_id_middleware import (
     RequestIdFilter,
     RequestIdMiddleware,
 )
 from shared_kernel.adapters.secondary import (
     InMemoryDomainEventPublisher,
+    InMemoryRateLimiter,
     UtcTimeGateway,
+)
+from shared_kernel.adapters.secondary.private_api.iam_principal_resolver import (
+    IamPrincipalResolver,
 )
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError as SQLAlchemyOperationalError
@@ -167,6 +173,9 @@ async def lifespan(app: FastAPI):
         refresh_token_expiration_seconds=get_jwt_refresh_token_expiration_seconds(),
     )
     app.state.token_gateway = token_gateway
+
+    principal_api = PrincipalApi(token_gateway)
+    app.state.principal_resolver = IamPrincipalResolver(principal_api)
 
     # CSRF token manager (tokens valid for entire session)
     csrf_token_manager = CsrfTokenManager()
