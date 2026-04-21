@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   accessibleGroupIdsFor,
+  isPasswordStale,
   matchesPasswordQuery,
+  PASSWORD_STALE_AFTER_DAYS,
   type Password,
 } from '@/domain/password/Password'
 
@@ -51,6 +53,27 @@ describe('matchesPasswordQuery', () => {
     const password = makePassword({ login: null, url: null })
     expect(matchesPasswordQuery(password, 'github')).toBe(true) // name still matches
     expect(matchesPasswordQuery(password, 'alice')).toBe(false)
+  })
+})
+
+describe('isPasswordStale', () => {
+  const now = new Date('2026-04-21T00:00:00Z')
+
+  const withLastUpdated = (daysAgo: number): Password =>
+    makePassword({
+      lastUpdatedAt: new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
+    })
+
+  it('returns false for a fresh password', () => {
+    expect(isPasswordStale(withLastUpdated(1), now)).toBe(false)
+  })
+
+  it('returns false exactly at the threshold boundary', () => {
+    expect(isPasswordStale(withLastUpdated(PASSWORD_STALE_AFTER_DAYS), now)).toBe(false)
+  })
+
+  it('returns true once past the threshold', () => {
+    expect(isPasswordStale(withLastUpdated(PASSWORD_STALE_AFTER_DAYS + 1), now)).toBe(true)
   })
 })
 
