@@ -135,6 +135,29 @@ export default defineConfigWithVueTs(
     },
   },
 
+  // composables/: reusable reactive logic. May reach for the domain, the
+  // application ring, the container, and other composables — but must not
+  // reach into infrastructure, the SDK, or individual components.
+  {
+    name: 'app/composables-layer',
+    files: ['src/composables/**/*.{ts,mts,tsx,vue}'],
+    ignores: ['src/composables/**/__tests__/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/client', '@/client/*', '@/infrastructure', '@/infrastructure/*'],
+              message:
+                'src/composables/ is presentation-ring reuse — use cases and domain types only, no SDK or infrastructure.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // infrastructure/in_memory/: test fakes — no SDK, no Vue, no Pinia.
   {
     name: 'app/in-memory-fakes',
