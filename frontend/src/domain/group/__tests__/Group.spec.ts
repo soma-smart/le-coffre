@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  filterGroupsForUser,
+  filterOwnedGroupsForUser,
   isUserMemberOf,
   isUserOwnerOf,
   pickDefaultGroupForUser,
@@ -31,6 +33,38 @@ describe('isUserOwnerOf / isUserMemberOf', () => {
     expect(isUserOwnerOf(group, 'u2')).toBe(false)
     expect(isUserMemberOf(group, 'u1')).toBe(false)
     expect(isUserMemberOf(group, 'u2')).toBe(true)
+  })
+})
+
+describe('filterGroupsForUser', () => {
+  const groups = [
+    makeGroup({ id: 'g1', owners: ['u1'] }),
+    makeGroup({ id: 'g2', members: ['u1'] }),
+    makeGroup({ id: 'g3', owners: ['u2'], members: ['u3'] }),
+  ]
+
+  it('returns an empty array for a null user id', () => {
+    expect(filterGroupsForUser(groups, null)).toEqual([])
+  })
+
+  it('includes groups where the user is owner or member', () => {
+    expect(filterGroupsForUser(groups, 'u1').map((g) => g.id)).toEqual(['g1', 'g2'])
+  })
+
+  it('returns empty when the user is in no group', () => {
+    expect(filterGroupsForUser(groups, 'nobody')).toEqual([])
+  })
+})
+
+describe('filterOwnedGroupsForUser', () => {
+  const groups = [makeGroup({ id: 'g1', owners: ['u1'] }), makeGroup({ id: 'g2', members: ['u1'] })]
+
+  it('returns an empty array for a null user id', () => {
+    expect(filterOwnedGroupsForUser(groups, null)).toEqual([])
+  })
+
+  it('only keeps groups where the user is an owner', () => {
+    expect(filterOwnedGroupsForUser(groups, 'u1').map((g) => g.id)).toEqual(['g1'])
   })
 })
 
