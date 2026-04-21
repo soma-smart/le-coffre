@@ -4,14 +4,12 @@ from .client_ip import resolve_client_ip
 from .csrf_middleware import CsrfMiddleware
 from .csrf_routes import router as csrf_router
 from .csrf_tokens import CsrfTokenManager
-from .login_lockout import InMemoryLoginLockout
 from .rate_limit_middleware import Principal, RateLimitMiddleware
 from .rate_limiter import InMemoryRateLimiter, RateLimitResult
 
 __all__ = [
     "CsrfMiddleware",
     "CsrfTokenManager",
-    "InMemoryLoginLockout",
     "InMemoryRateLimiter",
     "Principal",
     "RateLimitMiddleware",

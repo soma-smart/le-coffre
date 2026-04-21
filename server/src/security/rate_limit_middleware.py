@@ -8,7 +8,7 @@ Two mutually exclusive "principal" buckets govern all non-exempt /api traffic:
 In addition, credential-accepting auth routes consume a loose per-IP
 "auth-route volume floor" (``ip:<ip>:auth``) regardless of authentication
 state.  This floor is pure DoS protection; brute-force defense lives in the
-InMemoryLoginLockout service, not here.
+InMemoryLoginLockoutGateway service, not here.
 
 See docs/superpowers/specs/2026-04-21-rate-limiter-design.md for the full
 design rationale, including the XFF trust fix (§3.4).

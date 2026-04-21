@@ -8,10 +8,8 @@ from config import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
-from security import InMemoryLoginLockout
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
-    get_login_lockout,
     get_password_login_usecase,
 )
 from identity_access_management_context.adapters.primary.fastapi.schemas.admin_login_schema import (
@@ -22,6 +20,7 @@ from identity_access_management_context.application.use_cases import (
     PasswordLoginUseCase,
 )
 from identity_access_management_context.domain.exceptions import (
+    AccountLockedException,
     AdminNotFoundException,
     InvalidCredentialsException,
 )
@@ -47,7 +46,6 @@ async def admin_login(
     request: AdminLoginRequest,
     response: Response,
     usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),
-    lockout: InMemoryLoginLockout = Depends(get_login_lockout),
 ):
     """
     Login an admin user.
@@ -57,14 +55,6 @@ async def admin_login(
 
     Returns admin information and sets an HTTP-only secure cookie with the JWT token.
     """
-    locked, retry_after = lockout.is_locked(request.email)
-    if locked:
-        raise HTTPException(
-            status_code=401,
-            detail="Account temporarily locked due to too many failed login attempts",
-            headers={"Retry-After": str(retry_after)},
-        )
-
     command = AdminLoginCommand(
         email=request.email,
         password=request.password,
@@ -72,8 +62,13 @@ async def admin_login(
 
     try:
         result = await usecase.execute(command)
+    except AccountLockedException as e:
+        raise HTTPException(
+            status_code=401,
+            detail=str(e),
+            headers={"Retry-After": str(e.retry_after_seconds)},
+        ) from e
     except (InvalidCredentialsException, AdminNotFoundException) as e:
-        lockout.record_failure(command.email)
         raise HTTPException(status_code=401, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in admin login")
@@ -104,8 +99,6 @@ async def admin_login(
         samesite="strict",
         max_age=get_jwt_access_token_expiration_seconds(),
     )
-
-    lockout.record_success(command.email)
 
     return AdminLoginResponse(
         admin_id=result.admin_id,

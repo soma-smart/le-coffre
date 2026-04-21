@@ -1,7 +1,9 @@
 import pytest
 from conftest import CsrfTestClient
+from identity_access_management_context.adapters.secondary import (
+    InMemoryLoginLockoutGateway,
+)
 from main import app
-from security import InMemoryLoginLockout
 
 
 @pytest.fixture
@@ -14,7 +16,7 @@ def rate_limited_client(database, env_vars):
         app.state.rate_limit_window_seconds = 60
         # Reset singleton state between tests.
         app.state.rate_limiter.reset()
-        app.state.login_lockout.reset()
+        app.state.login_lockout_gateway.reset()
         yield client
 
 
@@ -93,7 +95,7 @@ class TestLoginLockoutWorkflow:
         app.state.rate_limit_unauth_max_requests = 100
 
         # Reinstall a lockout with the spec values (the fixture may override them).
-        app.state.login_lockout = InMemoryLoginLockout(max_failures=5, lockout_seconds=300)
+        app.state.login_lockout_gateway = InMemoryLoginLockoutGateway(max_failures=5, lockout_seconds=300)
 
         email = "locked-target@example.com"
         for i in range(5):
@@ -120,7 +122,7 @@ class TestLoginLockoutWorkflow:
         app.state.rate_limit_auth_max_requests = 100
         app.state.rate_limit_unauth_max_requests = 100
 
-        app.state.login_lockout = InMemoryLoginLockout(max_failures=3, lockout_seconds=300)
+        app.state.login_lockout_gateway = InMemoryLoginLockoutGateway(max_failures=3, lockout_seconds=300)
 
         # Lock account A
         for _ in range(3):

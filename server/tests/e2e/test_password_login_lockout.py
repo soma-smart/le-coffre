@@ -1,9 +1,10 @@
-"""Integration test: login route short-circuits bcrypt during active lockout.
+"""Integration test: login use case short-circuits bcrypt during active lockout.
 
-The inline lockout check in the login route must fire BEFORE the use case runs,
-so a locked account's 401 response has the same latency as any other 401 (no
-bcrypt verification). This test proves that invariant by observing
-``password_hashing_gateway.verify`` is never called on a locked attempt.
+The lockout check inside :class:`PasswordLoginUseCase` must fire BEFORE the
+repository lookup + bcrypt verification, so a locked account's 401 response has
+the same latency as any other 401.  This test proves that invariant by
+observing ``password_hashing_gateway.verify`` is never called on a locked
+attempt.
 """
 
 from __future__ import annotations
@@ -12,18 +13,20 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from identity_access_management_context.adapters.secondary import (
+    InMemoryLoginLockoutGateway,
+)
 from main import app
-from security import InMemoryLoginLockout
 
 
 @pytest.fixture
 def client(database, env_vars):
     # TestClient's ``with`` block triggers the FastAPI lifespan, which is
-    # where ``app.state.login_lockout`` gets installed. We must swap it
-    # AFTER lifespan has run, otherwise the attribute doesn't exist yet.
+    # where ``app.state.login_lockout_gateway`` gets installed. We must swap
+    # it AFTER lifespan has run, otherwise the attribute doesn't exist yet.
     with TestClient(app) as c:
-        original_lockout = app.state.login_lockout
-        app.state.login_lockout = InMemoryLoginLockout(max_failures=3, lockout_seconds=300)
+        original_lockout = app.state.login_lockout_gateway
+        app.state.login_lockout_gateway = InMemoryLoginLockoutGateway(max_failures=3, lockout_seconds=300)
         # Relax middleware so we never see middleware 429s interfering with 401s.
         app.state.rate_limit_auth_max_requests = 10000
         app.state.rate_limit_unauth_max_requests = 10000
@@ -32,7 +35,7 @@ def client(database, env_vars):
         try:
             yield c
         finally:
-            app.state.login_lockout = original_lockout
+            app.state.login_lockout_gateway = original_lockout
 
 
 class TestLoginRouteLockout:
@@ -62,7 +65,7 @@ class TestLoginRouteLockout:
         r = client.post("/api/auth/login", json={"email": email, "password": "wrong"})
         assert r.status_code == 401
         assert "locked" in r.json()["detail"].lower()
-        assert verify_mock.call_count == 0, "Use case ran during lockout — inline check missed"
+        assert verify_mock.call_count == 0, "bcrypt ran during lockout — use-case lockout check missed"
 
     def test_failures_on_different_emails_do_not_share_counter(self, client: TestClient):
         # 2 failures on each of two emails; neither should lock (threshold=3)

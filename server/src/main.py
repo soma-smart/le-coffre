@@ -31,6 +31,7 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
 )
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
+    InMemoryLoginLockoutGateway,
     JwtTokenGateway,
     OAuth2SsoGateway,
     PrivateApiSsoEncryptionGateway,
@@ -45,7 +46,6 @@ from password_management_context.adapters.secondary import (
 from security import (
     CsrfMiddleware,
     CsrfTokenManager,
-    InMemoryLoginLockout,
     InMemoryRateLimiter,
     RateLimitMiddleware,
     csrf_router,
@@ -196,11 +196,11 @@ async def lifespan(app: FastAPI):
     app.state.rate_limit_trusted_proxy_hops = get_rate_limit_trusted_proxy_hops()
 
     # Login lockout (per-email, in-memory)
-    login_lockout = InMemoryLoginLockout(
+    login_lockout_gateway = InMemoryLoginLockoutGateway(
         max_failures=get_login_max_failed_attempts(),
         lockout_seconds=get_login_lockout_seconds(),
     )
-    app.state.login_lockout = login_lockout
+    app.state.login_lockout_gateway = login_lockout_gateway
 
     db_url = get_database_url()
     db_type = "postgresql" if db_url.startswith("postgresql") else "sqlite"

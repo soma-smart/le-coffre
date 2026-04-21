@@ -1,11 +1,11 @@
-"""In-memory per-email login lockout.
+"""In-memory per-email login lockout gateway.
 
-Pairs with the rate limiter but lives on a different key — the *identity*
-being attacked (email), not the *connection* making the attempts (IP).  This
-is what defends against brute force; the rate limiter is a pure volume cap.
+Pairs with the rate limiter but keys on the *identity* being attacked (email),
+not the *connection* making the attempts (IP).  This is what defends against
+brute force; the rate limiter is a pure volume cap.
 
-State is process-local and not persisted.  See docs/superpowers/specs/
-2026-04-21-rate-limiter-design.md §3.1 for the persistence tradeoff.
+State is process-local and not persisted.  For a multi-replica deployment
+swap this for a Redis-backed implementation behind the same Protocol.
 """
 
 from __future__ import annotations
@@ -14,6 +14,10 @@ import math
 import threading
 import time
 from dataclasses import dataclass
+
+from identity_access_management_context.application.gateways import (
+    LoginLockoutGateway,
+)
 
 
 @dataclass
@@ -27,7 +31,7 @@ def _normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
-class InMemoryLoginLockout:
+class InMemoryLoginLockoutGateway(LoginLockoutGateway):
     """Thread-safe per-email failure counter with automatic lockout."""
 
     def __init__(self, max_failures: int, lockout_seconds: int) -> None:
@@ -40,33 +44,27 @@ class InMemoryLoginLockout:
         self._entries: dict[str, _LockoutEntry] = {}
         self._lock = threading.Lock()
 
-    def is_locked(self, email: str) -> tuple[bool, int]:
-        """Return ``(locked, retry_after_seconds)`` for this email.
-
-        ``retry_after_seconds`` is the integer ceiling of remaining lockout
-        time; 0 when not locked.
-        """
+    def is_locked(self, email: str) -> int | None:
+        """Return the remaining lockout seconds if active, else None."""
         key = _normalize_email(email)
         now = time.monotonic()
         with self._lock:
             entry = self._entries.get(key)
             if entry is None or entry.lockout_until is None:
-                return False, 0
+                return None
             remaining = entry.lockout_until - now
             if remaining <= 0:
                 entry.lockout_until = None
-                return False, 0
-            return True, math.ceil(remaining)
+                return None
+            return math.ceil(remaining)
 
-    def record_failure(self, email: str) -> None:
-        """Record one failed login attempt; lock the account if threshold reached."""
+    def record_failed_login(self, email: str) -> None:
         key = _normalize_email(email)
         now = time.monotonic()
         with self._lock:
             entry = self._entries.setdefault(key, _LockoutEntry())
             entry.last_touched = now
 
-            # If a previous lockout has expired, clear it so a fresh sequence can run.
             if entry.lockout_until is not None and entry.lockout_until <= now:
                 entry.lockout_until = None
                 entry.consecutive_failed_logins = 0
@@ -76,11 +74,12 @@ class InMemoryLoginLockout:
                 entry.lockout_until = now + self._lockout_seconds
                 entry.consecutive_failed_logins = 0
 
-    def record_success(self, email: str) -> None:
-        """Clear all lockout state for this email."""
+    def record_successful_login(self, email: str) -> None:
         key = _normalize_email(email)
         with self._lock:
             self._entries.pop(key, None)
+
+    # ── Maintenance / testing helpers ─────────────────────────────
 
     def cleanup(self, max_age_seconds: float = 3600.0) -> int:
         """Evict entries that haven't been touched in ``max_age_seconds``.

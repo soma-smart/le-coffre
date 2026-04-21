@@ -4,7 +4,6 @@ from password_management_context.adapters.secondary import (
     SqlPasswordPermissionsRepository,
 )
 from password_management_context.application.use_cases import IsGroupUsedUseCase
-from security import InMemoryLoginLockout
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from sqlmodel import Session
@@ -31,6 +30,7 @@ from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
     GroupRepository,
     GroupUsageGateway,
+    LoginLockoutGateway,
     PasswordHashingGateway,
     SsoConfigurationRepository,
     SsoEncryptionGateway,
@@ -162,6 +162,10 @@ def get_sso_encryption_gateway(request: Request) -> SsoEncryptionGateway:
     return request.app.state.sso_encryption_gateway
 
 
+def get_login_lockout_gateway(request: Request) -> LoginLockoutGateway:
+    return request.app.state.login_lockout_gateway
+
+
 # User Management Use Cases
 def get_get_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
@@ -253,6 +257,7 @@ def get_password_login_usecase(
     time_provider: TimeGateway = Depends(get_time_provider),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    login_lockout_gateway: LoginLockoutGateway = Depends(get_login_lockout_gateway),
 ):
     return PasswordLoginUseCase(
         user_password_repository,
@@ -262,6 +267,7 @@ def get_password_login_usecase(
         time_provider,
         event_publisher,
         admin_event_repository,
+        login_lockout_gateway,
     )
 
 
@@ -480,7 +486,3 @@ def get_delete_group_usecase(
         event_publisher,
         group_event_repository,
     )
-
-
-def get_login_lockout(request: Request) -> InMemoryLoginLockout:
-    return request.app.state.login_lockout
