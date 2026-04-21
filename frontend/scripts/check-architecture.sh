@@ -12,6 +12,7 @@
 # Rules:
 #   domain/                       — zero framework imports
 #   application/                  — imports only from domain/
+#   composables/                  — presentation reuse: no SDK, no infrastructure
 #   infrastructure/in_memory/     — test fakes; no SDK, no Vue, no Pinia
 #
 # The script resolves its own directory so it works regardless of where
@@ -44,6 +45,9 @@ check_forbidden "domain" "@/client" "vue" "pinia" "@/application" "@/infrastruct
 
 # application/: only domain/
 check_forbidden "application" "@/client" "vue" "pinia" "@/infrastructure"
+
+# composables/: no SDK, no infrastructure (Vue + Pinia are allowed here)
+check_forbidden "composables" "@/client" "@/infrastructure"
 
 # infrastructure/in_memory/: test fakes only
 check_forbidden "infrastructure/in_memory" "@/client" "vue" "pinia"
