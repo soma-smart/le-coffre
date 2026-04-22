@@ -8,6 +8,7 @@ from .delete_group_command import DeleteGroupCommand
 from .delete_user_command import DeleteUserCommand
 from .get_group_command import GetGroupCommand
 from .get_sso_authorize_url_command import GetSsoAuthorizeUrlCommand
+from .get_stat_admin_command import GetAdminStatCommand
 from .get_user_command import GetUserCommand
 from .get_user_me_command import GetUserMeCommand
 from .is_sso_config_set_command import IsSsoConfigSetCommand
@@ -48,4 +49,5 @@ __all__ = [
     "GetSsoAuthorizeUrlCommand",
     "ConfigureSsoProviderCommand",
     "PromoteAdminCommand",
+    "GetAdminStatCommand",
 ]

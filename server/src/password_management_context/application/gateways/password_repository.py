@@ -28,7 +28,3 @@ class PasswordRepository(Protocol):
     def update(self, password: Password) -> None:
         """Update password"""
         ...
-
-    def count(self) -> int:
-        """Return total number of passwords"""
-        ...

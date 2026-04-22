@@ -4,6 +4,7 @@ from .create_group_use_case import CreateGroupUseCase
 from .create_user_use_case import CreateUserUseCase
 from .delete_group_use_case import DeleteGroupUseCase
 from .delete_user_use_case import DeleteUserUseCase
+from .get_admin_stat_use_case import GetAdminStatUseCase
 from .get_group_use_case import GetGroupUseCase
 from .get_user_me_use_case import GetUserMeUseCase
 from .get_user_use_case import GetUserUseCase
