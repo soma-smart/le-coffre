@@ -11,7 +11,7 @@ from security.rate_limit_middleware import RateLimitMiddleware
 from security.rate_limiter import InMemoryRateLimiter
 from starlette.testclient import TestClient
 
-from tests.fakes import FakeTimeGateway
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 
 class _FakeTokenGateway:

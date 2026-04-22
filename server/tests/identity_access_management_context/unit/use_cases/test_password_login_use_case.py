@@ -21,11 +21,11 @@ from identity_access_management_context.domain.exceptions import (
 )
 
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import (
     FakeLoginLockoutGateway,
     FakePasswordHashingGateway,
-    FakeTimeGateway,
     FakeTokenGateway,
     FakeUserPasswordRepository,
     FakeUserRepository,

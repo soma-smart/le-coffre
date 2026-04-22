@@ -2,7 +2,6 @@ from datetime import datetime
 from uuid import UUID
 
 import pytest
-
 from identity_access_management_context.application.commands import (
     SsoLoginCommand,
 )
@@ -12,11 +11,13 @@ from identity_access_management_context.application.use_cases import (
 from identity_access_management_context.domain.entities import SsoConfiguration, User
 from identity_access_management_context.domain.events import SsoLoginEvent
 from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
+
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.identity_access_management_context.unit.conftest import (
     create_existing_sso_user,
     create_sso_user_from_provider,
 )
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import (
     FakeGroupMemberRepository,
@@ -26,7 +27,6 @@ from ..fakes import (
     FakeSsoEncryptionGateway,
     FakeSsoGateway,
     FakeSsoUserRepository,
-    FakeTimeGateway,
     FakeTokenGateway,
     FakeUserRepository,
 )

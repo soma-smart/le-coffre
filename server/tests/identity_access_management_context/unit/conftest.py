@@ -5,6 +5,7 @@ from identity_access_management_context.application.gateways import SsoUserInfo
 from identity_access_management_context.domain.entities import SsoUser
 
 from tests.fakes import FakeDomainEventPublisher
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 from .fakes import (
     FakeAdminEventRepository,
@@ -19,7 +20,6 @@ from .fakes import (
     FakeSsoEventRepository,
     FakeSsoGateway,
     FakeSsoUserRepository,
-    FakeTimeGateway,
     FakeTokenGateway,
     FakeUserEventRepository,
     FakeUserPasswordRepository,
