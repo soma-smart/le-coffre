@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from password_management_context.application.gateways import PasswordRepository
@@ -78,3 +79,8 @@ class SqlPasswordRepository(SQLBaseRepository, PasswordRepository):
                 setattr(db_obj, field, value)
             self._session.add(db_obj)
             self.commit_and_refresh(db_obj)
+
+    def count(self) -> int:
+        """Return total number of passwords"""
+        statement = select(func.count()).select_from(PasswordTable)
+        return self._session.exec(statement).one()

@@ -1,6 +1,7 @@
 import json
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -94,6 +95,10 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             setattr(db_obj, key, value)
         self._session.add(db_obj)
         self.commit_and_refresh(db_obj)
+
+    def count(self) -> int:
+        statement = select(func.count()).select_from(UserTable)
+        return self._session.exec(statement).one()
 
     def get_admin(self) -> User | None:
         statement = select(UserTable).where(UserTable.roles.like(f'%"{ADMIN_ROLE}"%'))
