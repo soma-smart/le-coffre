@@ -19,6 +19,7 @@ from identity_access_management_context.domain.events import (
     AdminLoginFailedEvent,
 )
 from identity_access_management_context.domain.exceptions import (
+    AccountLockedException,
     AdminNotFoundException,
     InvalidCredentialsException,
 )
@@ -48,6 +49,23 @@ class PasswordLoginUseCase(TracedUseCase):
         self._login_lockout_gateway = login_lockout_gateway
 
     async def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
+        # Gate on lockout BEFORE touching the repository or bcrypt — a locked
+        # account's latency must match any other 401 so the response time does
+        # not leak account state.
+        retry_after = self._login_lockout_gateway.is_locked(command.email)
+        if retry_after is not None:
+            logger.warning("Login blocked for email=%s reason='Account locked'", command.email)
+            event = AdminLoginFailedEvent(email=command.email, reason="Account locked")
+            self._event_publisher.publish(event)
+            self._admin_event_repository.append_event(
+                event_id=event.event_id,
+                event_type=type(event).__name__,
+                occurred_on=event.occurred_on,
+                actor_user_id=None,
+                event_data={"email": command.email, "reason": "Account locked"},
+            )
+            raise AccountLockedException(retry_after_seconds=retry_after)
+
         # DB reads and bcrypt verification are synchronous and blocking — run
         # them in a thread pool to avoid starving the event loop.
         def _lookup_and_verify():
