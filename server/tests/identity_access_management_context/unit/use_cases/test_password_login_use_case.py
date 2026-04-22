@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -522,5 +523,5 @@ async def test_given_successful_login_when_previously_locked_state_exists_should
 
     await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
 
-    assert login_lockout_gateway.is_locked(email) is None
+    assert login_lockout_gateway.is_locked(email, datetime.now(UTC)) is None
     assert login_lockout_gateway.successful_login_calls == [email]

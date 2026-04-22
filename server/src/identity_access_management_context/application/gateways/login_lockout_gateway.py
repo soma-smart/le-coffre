@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Protocol
 
 
@@ -8,13 +9,17 @@ class LoginLockoutGateway(Protocol):
     drives the counter via :meth:`record_failed_login` / :meth:`record_successful_login`.
     Method names are chosen for business intent (per ``gateway_implementation.prompt.md``)
     rather than CRUD: the rest of the system does not manipulate counters directly.
+
+    Time is passed in by the caller (typically via the shared-kernel ``TimeGateway``)
+    so this gateway never reads the clock itself — implementations stay trivially
+    testable without monkeypatching.
     """
 
-    def is_locked(self, email: str) -> int | None:
+    def is_locked(self, email: str, now: datetime) -> int | None:
         """Return remaining lockout seconds if the account is currently locked, else None."""
         ...
 
-    def record_failed_login(self, email: str) -> None:
+    def record_failed_login(self, email: str, now: datetime) -> None:
         """Account for a failed login attempt against this email."""
         ...
 

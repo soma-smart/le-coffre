@@ -49,10 +49,12 @@ class PasswordLoginUseCase(TracedUseCase):
         self._login_lockout_gateway = login_lockout_gateway
 
     async def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
+        now = self._time_provider.get_current_time()
+
         # Gate on lockout BEFORE touching the repository or bcrypt — a locked
         # account's latency must match any other 401 so the response time does
         # not leak account state.
-        retry_after = self._login_lockout_gateway.is_locked(command.email)
+        retry_after = self._login_lockout_gateway.is_locked(command.email, now)
         if retry_after is not None:
             logger.warning("Login blocked for email=%s reason='Account locked'", command.email)
             event = AdminLoginFailedEvent(email=command.email, reason="Account locked")
@@ -81,7 +83,7 @@ class PasswordLoginUseCase(TracedUseCase):
                     actor_user_id=None,
                     event_data={"email": command.email, "reason": "User not found"},
                 )
-                self._login_lockout_gateway.record_failed_login(command.email)
+                self._login_lockout_gateway.record_failed_login(command.email, now)
                 raise AdminNotFoundException("User not found")
 
             if not self._password_hashing_gateway.verify(command.password, user_password.password_hash):
@@ -95,7 +97,7 @@ class PasswordLoginUseCase(TracedUseCase):
                     actor_user_id=None,
                     event_data={"email": command.email, "reason": "Invalid credentials"},
                 )
-                self._login_lockout_gateway.record_failed_login(command.email)
+                self._login_lockout_gateway.record_failed_login(command.email, now)
                 raise InvalidCredentialsException("Invalid credentials")
 
             user = self._user_repository.get_by_id(user_password.id)
