@@ -64,14 +64,6 @@ class InMemoryRateLimiter:
                 retry_after=0,
             )
 
-    def reset_key(self, key: str) -> bool:
-        """Remove a single key's tracked state."""
-        with self._lock:
-            if key in self._requests:
-                del self._requests[key]
-                return True
-            return False
-
     def reset(self) -> None:
         """Clear all tracked state. Testing helper."""
         with self._lock:
