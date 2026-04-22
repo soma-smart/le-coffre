@@ -1,6 +1,7 @@
 """Rate limiting middleware for FastAPI."""
 
 import logging
+from datetime import UTC, datetime
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -63,9 +64,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         is_auth_route = self._is_auth_route(request.url.path)
         api_key = f"ip:{client_ip}:api"
         auth_key = f"ip:{client_ip}:auth"
+        now = datetime.now(UTC)
 
         # ── General API check (all /api routes) ────────────────
-        api_result = rate_limiter.check(api_key, api_max, window)
+        api_result = rate_limiter.check(api_key, api_max, window, now=now)
         if api_result.is_limited:
             logger.warning(
                 "Rate limit exceeded for IP %s on %s %s",
@@ -78,7 +80,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # ── Additional auth check (auth routes only) ────────────
         auth_result = None
         if is_auth_route:
-            auth_result = rate_limiter.check(auth_key, auth_max, window)
+            auth_result = rate_limiter.check(auth_key, auth_max, window, now=now)
             if auth_result.is_limited:
                 logger.warning(
                     "Rate limit exceeded for IP %s on %s %s",
@@ -93,7 +95,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             user_id = await self._try_extract_user_id(request)
             if user_id:
                 user_key = f"user:{user_id}:api"
-                user_result = rate_limiter.check(user_key, api_max, window)
+                user_result = rate_limiter.check(user_key, api_max, window, now=now)
                 if user_result.is_limited:
                     logger.warning(
                         "Rate limit exceeded for user %s on %s %s",
