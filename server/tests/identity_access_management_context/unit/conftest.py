@@ -1,9 +1,9 @@
 from uuid import UUID
 
 import pytest
-
 from identity_access_management_context.application.gateways import SsoUserInfo
 from identity_access_management_context.domain.entities import SsoUser
+
 from tests.fakes import FakeDomainEventPublisher
 
 from .fakes import (
@@ -12,6 +12,7 @@ from .fakes import (
     FakeGroupMemberRepository,
     FakeGroupRepository,
     FakeGroupUsageGateway,
+    FakeLoginLockoutGateway,
     FakePasswordHashingGateway,
     FakeSsoConfigurationRepository,
     FakeSsoEncryptionGateway,
@@ -39,6 +40,11 @@ def user_password_repository():
 @pytest.fixture
 def password_hashing_gateway():
     return FakePasswordHashingGateway()
+
+
+@pytest.fixture
+def login_lockout_gateway():
+    return FakeLoginLockoutGateway()
 
 
 @pytest.fixture

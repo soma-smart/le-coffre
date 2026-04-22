@@ -1,7 +1,6 @@
 from uuid import UUID
 
 import pytest
-
 from identity_access_management_context.application.commands import AdminLoginCommand
 from identity_access_management_context.application.use_cases import (
     PasswordLoginUseCase,
@@ -19,9 +18,11 @@ from identity_access_management_context.domain.exceptions import (
     AdminNotFoundException,
     InvalidCredentialsException,
 )
+
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
 from ..fakes import (
+    FakeLoginLockoutGateway,
     FakePasswordHashingGateway,
     FakeTimeGateway,
     FakeTokenGateway,
@@ -39,6 +40,7 @@ def use_case(
     time_provider: FakeTimeGateway,
     event_publisher,
     admin_event_repository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     return PasswordLoginUseCase(
         user_password_repository,
@@ -48,6 +50,7 @@ def use_case(
         time_provider,
         event_publisher,
         admin_event_repository,
+        login_lockout_gateway,
     )
 
 

@@ -46,6 +46,14 @@ class InvalidRefreshTokenException(AuthenticationDomainError):
     pass
 
 
+class AccountLockedException(AuthenticationDomainError):
+    """Raised when a login is attempted against an account that is temporarily locked."""
+
+    def __init__(self, retry_after_seconds: int):
+        super().__init__(f"Account temporarily locked. Retry after {retry_after_seconds}s.")
+        self.retry_after_seconds = retry_after_seconds
+
+
 # User-related exceptions
 class UserNotFoundException(IdentityAccessManagementDomainError):
     """Raised when attempting to get a user that doesn't exist"""
