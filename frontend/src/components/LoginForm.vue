@@ -103,6 +103,17 @@ const onRateLimited = (event: Event) => {
   }, 1000)
 }
 
+// Account lockout is per-email on the server; a global per-IP rate limit
+// is not. When the user edits the email field we clear the countdown only
+// on the account-locked path — the new email might not be locked at all.
+// If it is, the next submission will re-arm the countdown from the response.
+const onEmailInput = () => {
+  if (rateLimitReason.value === 'account-locked' && rateLimitCountdown.value > 0) {
+    rateLimitCountdown.value = 0
+    if (countdownTimer) clearInterval(countdownTimer)
+  }
+}
+
 onMounted(() => {
   window.addEventListener('rate-limited', onRateLimited)
 })
@@ -236,6 +247,7 @@ const handleSsoLogin = async () => {
             :placeholder="formValues.email"
             fluid
             :disabled="loading"
+            @input="onEmailInput"
           />
           <Message v-if="$form.email?.invalid" severity="error" size="small" variant="simple">
             {{ $form.email.error?.message }}
