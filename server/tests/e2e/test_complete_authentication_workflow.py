@@ -481,6 +481,58 @@ async def test_complete_authentication_workflow(
     print(f"✅ New access token validated successfully for {validated_user['email']}")
 
     # =========================================================================
+    # PHASE 7: ACCOUNT LOCKOUT
+    # =========================================================================
+    print("\n" + "=" * 80)
+    print("🔒 PHASE 7: ACCOUNT LOCKOUT")
+    print("=" * 80)
+
+    # A dedicated client + unique email keep this phase isolated: the lockout
+    # gateway is process-wide singleton state, so using a fresh never-used
+    # address means no prior phase could have seeded the counter and no later
+    # test re-uses the address while the lock is active.
+    lockout_client = client_factory()
+    lockout_client.disable_auto_csrf()  # CSRF fetch is auth-gated; skip it for the 401 path.
+    lockout_email = "lockout-probe@example.com"
+    lockout_payload = {"email": lockout_email, "password": "irrelevant"}
+
+    # Step 7.1: five failed logins accumulate toward the lockout threshold (default 5)
+    # without tripping it; every response is a plain "credentials wrong" 401.
+    print("\n🔒 Step 7.1: Exhausting the failure counter with five failed logins...")
+    for attempt in range(1, 6):
+        response = lockout_client.post("/api/auth/login", json=lockout_payload)
+        assert response.status_code == 401, f"Attempt {attempt} status={response.status_code}"
+        assert "locked" not in response.json()["detail"].lower(), (
+            f"Attempt {attempt} unexpectedly reported locked state"
+        )
+        assert "Retry-After" not in response.headers, f"Attempt {attempt} unexpectedly carried Retry-After"
+    print("✅ Five failed logins accepted as plain 'invalid credentials' 401s")
+
+    # Step 7.2: the sixth attempt flips to the locked-401 shape — same status,
+    # distinct detail substring, and a Retry-After header. The status code stays
+    # 401 to avoid leaking account existence via status alone.
+    print("\n🔒 Step 7.2: Sixth attempt should hit the lockout and carry Retry-After...")
+    locked_response = lockout_client.post("/api/auth/login", json=lockout_payload)
+    assert locked_response.status_code == 401
+    assert "locked" in locked_response.json()["detail"].lower()
+    assert "Retry-After" in locked_response.headers
+    assert int(locked_response.headers["Retry-After"]) > 0
+    print(f"✅ Lockout observed: detail='{locked_response.json()['detail']}'")
+    print(f"   Retry-After={locked_response.headers['Retry-After']}s")
+
+    # Step 7.3: the lockout is per-email — a different address from the same
+    # client is still free to authenticate against the invalid-credentials path.
+    print("\n🔒 Step 7.3: A different email from the same client is unaffected...")
+    other_response = lockout_client.post(
+        "/api/auth/login",
+        json={"email": "different-user@example.com", "password": "irrelevant"},
+    )
+    assert other_response.status_code == 401
+    assert "locked" not in other_response.json()["detail"].lower()
+    assert "Retry-After" not in other_response.headers
+    print("✅ Per-email isolation confirmed at the HTTP layer")
+
+    # =========================================================================
     # FINAL VALIDATION
     # =========================================================================
     print("\n" + "=" * 80)
@@ -492,6 +544,7 @@ async def test_complete_authentication_workflow(
     print("✅ Phase 4: CSRF protection")
     print("✅ Phase 5: SSO authentication")
     print("✅ Phase 6: Refresh token workflow")
+    print("✅ Phase 7: Account lockout")
     print("\n" + "=" * 80)
     print("🎊 COMPLETE AUTHENTICATION WORKFLOW TEST PASSED!")
     print("=" * 80 + "\n")

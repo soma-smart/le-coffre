@@ -266,7 +266,11 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
             request.url.path,
             exc.detail,
         )
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers,
+    )
 
 
 # Liveness probe: process is alive and event loop is responsive.
