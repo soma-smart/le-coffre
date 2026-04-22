@@ -12,9 +12,15 @@ data:
   APP_BASE_URL: {{ required "config.appBaseUrl is required. Set it to your application's public URL (e.g. https://le-coffre.yourdomain.com)" .Values.config.appBaseUrl | quote }}
   # Rate limiting
   RATE_LIMIT_ENABLED: {{ .Values.config.rateLimit.enabled | toString | quote }}
-  RATE_LIMIT_AUTH_MAX_REQUESTS: {{ .Values.config.rateLimit.authMaxRequests | quote }}
-  RATE_LIMIT_API_MAX_REQUESTS: {{ .Values.config.rateLimit.apiMaxRequests | quote }}
   RATE_LIMIT_WINDOW_SECONDS: {{ .Values.config.rateLimit.windowSeconds | quote }}
+  RATE_LIMIT_USER_MAX_REQUESTS: {{ .Values.config.rateLimit.userMaxRequests | quote }}
+  RATE_LIMIT_UNAUTH_MAX_REQUESTS: {{ .Values.config.rateLimit.unauthMaxRequests | quote }}
+  RATE_LIMIT_AUTH_MAX_REQUESTS: {{ .Values.config.rateLimit.authMaxRequests | quote }}
+  RATE_LIMIT_TRUSTED_PROXIES: {{ .Values.config.rateLimit.trustedProxies | quote }}
+  RATE_LIMIT_TRUSTED_PROXY_HOPS: {{ .Values.config.rateLimit.trustedProxyHops | quote }}
+  # Login lockout
+  LOGIN_MAX_FAILED_ATTEMPTS: {{ .Values.config.loginLockout.maxFailedAttempts | quote }}
+  LOGIN_LOCKOUT_SECONDS: {{ .Values.config.loginLockout.lockoutSeconds | quote }}
   {{- if .Values.config.monitoring.enabled }}
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ required "config.monitoring.otlpEndpoint is required when config.monitoring.enabled is true" .Values.config.monitoring.otlpEndpoint | quote }}
   OTEL_SERVICE_NAME: {{ required "config.monitoring.serviceName is required when config.monitoring.enabled is true" .Values.config.monitoring.serviceName | quote }}
