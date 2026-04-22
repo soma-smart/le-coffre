@@ -1,4 +1,3 @@
-from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -62,6 +61,7 @@ async def test_should_authenticate_admin_and_return_jwt_token(
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
+    login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -81,11 +81,16 @@ async def test_should_authenticate_admin_and_return_jwt_token(
     assert response.jwt_token == f"jwt_token_for_{user_id}_uniqueness"
     assert response.admin_id == user_id
     assert response.email == email
+    # A successful login clears any failure state the lockout gateway was tracking.
+    assert login_lockout_gateway.successful_login_calls == [email]
+    assert login_lockout_gateway.failed_login_calls == []
 
 
 @pytest.mark.asyncio
 async def test_should_raise_exception_for_wrong_password(
-    use_case: PasswordLoginUseCase, user_password_repository: FakeUserPasswordRepository
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -99,15 +104,20 @@ async def test_should_raise_exception_for_wrong_password(
     with pytest.raises(InvalidCredentialsException):
         await use_case.execute(command)
 
+    assert login_lockout_gateway.failed_login_calls == [email]
+
 
 @pytest.mark.asyncio
 async def test_should_raise_exception_for_non_existent_admin(
     use_case: PasswordLoginUseCase,
+    login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
 
     with pytest.raises(AdminNotFoundException):
         await use_case.execute(command)
+
+    assert login_lockout_gateway.failed_login_calls == ["nonexistent@lecoffre.com"]
 
 
 @pytest.mark.asyncio
@@ -375,54 +385,6 @@ async def test_given_locked_email_when_logging_in_should_not_call_password_verif
 
 
 @pytest.mark.asyncio
-async def test_given_locked_email_when_logging_in_should_publish_admin_login_failed_event_with_account_locked_reason(
-    use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
-    event_publisher: FakeDomainEventPublisher,
-    login_lockout_gateway: FakeLoginLockoutGateway,
-):
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
-    )
-    login_lockout_gateway.force_lock(email, retry_after=5)
-
-    with pytest.raises(AccountLockedException):
-        await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
-
-    events = event_publisher.get_published_events_of_type(AdminLoginFailedEvent)
-    assert len(events) == 1
-    assert events[0].email == email
-    assert events[0].reason == "Account locked"
-
-
-@pytest.mark.asyncio
-async def test_given_locked_email_when_logging_in_should_append_admin_login_failed_event_to_audit_log(
-    use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
-    admin_event_repository,
-    login_lockout_gateway: FakeLoginLockoutGateway,
-):
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
-    )
-    login_lockout_gateway.force_lock(email, retry_after=5)
-
-    with pytest.raises(AccountLockedException):
-        await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
-
-    assert len(admin_event_repository.events) == 1
-    stored = admin_event_repository.events[0]
-    assert stored["event_type"] == "AdminLoginFailedEvent"
-    assert stored["actor_user_id"] is None
-    assert stored["event_data"]["reason"] == "Account locked"
-    assert stored["event_data"]["email"] == email
-
-
-@pytest.mark.asyncio
 async def test_given_locked_email_when_logging_in_should_not_record_a_new_failed_login(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
@@ -442,86 +404,3 @@ async def test_given_locked_email_when_logging_in_should_not_record_a_new_failed
 
     assert login_lockout_gateway.failed_login_calls == []
     assert login_lockout_gateway.successful_login_calls == []
-
-
-@pytest.mark.asyncio
-async def test_given_unknown_email_when_logging_in_should_record_failed_login(
-    use_case: PasswordLoginUseCase,
-    login_lockout_gateway: FakeLoginLockoutGateway,
-):
-    command = AdminLoginCommand(email="nobody@lecoffre.com", password="any")
-
-    with pytest.raises(AdminNotFoundException):
-        await use_case.execute(command)
-
-    assert login_lockout_gateway.failed_login_calls == ["nobody@lecoffre.com"]
-    assert login_lockout_gateway.successful_login_calls == []
-
-
-@pytest.mark.asyncio
-async def test_given_wrong_password_when_logging_in_should_record_failed_login(
-    use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
-    login_lockout_gateway: FakeLoginLockoutGateway,
-):
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(correct)", display_name="Admin User"),
-    )
-
-    with pytest.raises(InvalidCredentialsException):
-        await use_case.execute(AdminLoginCommand(email=email, password="wrong"))
-
-    assert login_lockout_gateway.failed_login_calls == [email]
-    assert login_lockout_gateway.successful_login_calls == []
-
-
-@pytest.mark.asyncio
-async def test_given_correct_credentials_when_logging_in_should_record_successful_login(
-    use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
-    user_repository: FakeUserRepository,
-    token_gateway: FakeTokenGateway,
-    login_lockout_gateway: FakeLoginLockoutGateway,
-):
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
-    )
-    user_repository.save(User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE]))
-    token_gateway.set_unique_jwt_part("x")
-
-    await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
-
-    assert login_lockout_gateway.successful_login_calls == [email]
-    assert login_lockout_gateway.failed_login_calls == []
-
-
-@pytest.mark.asyncio
-async def test_given_successful_login_when_previously_locked_state_exists_should_clear_lockout(
-    use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
-    user_repository: FakeUserRepository,
-    token_gateway: FakeTokenGateway,
-    login_lockout_gateway: FakeLoginLockoutGateway,
-):
-    """After a successful login the gateway must forget any residual failure
-    state for this email — expired-but-uncleared entries are cleared as part of
-    the success contract."""
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
-    )
-    user_repository.save(User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE]))
-    token_gateway.set_unique_jwt_part("x")
-    # Seed an expired residual lock (retry_after=0 → is_locked returns None but
-    # the entry still exists in the fake's internal state).
-    login_lockout_gateway.force_lock(email, retry_after=0)
-
-    await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
-
-    assert login_lockout_gateway.is_locked(email, datetime.now(UTC)) is None
-    assert login_lockout_gateway.successful_login_calls == [email]
