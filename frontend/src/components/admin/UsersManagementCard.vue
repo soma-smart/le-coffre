@@ -3,27 +3,29 @@ import { ref, onMounted, computed } from 'vue'
 import { useToast } from 'primevue'
 import CreateUserModal from '@/components/modals/CreateUserModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
-import {
-  listUsersUsersGet,
-  promoteUserToAdminUsersUserIdPromoteAdminPost,
-  deleteUserUsersUserIdDelete,
-} from '@/client/sdk.gen'
-import type { ListUserResponse } from '@/client/types.gen'
+import type { User } from '@/domain/user/User'
+import { isUserAdmin as isUserAdminFromDomain } from '@/domain/user/User'
+import { UserDomainError } from '@/domain/user/errors'
+import { useContainer } from '@/plugins/container'
 
 const toast = useToast()
 
+// Resolve use cases at setup time — inject() has no component context
+// inside async event handlers after an await.
+const { users: userUseCases } = useContainer()
+
 // State
-const users = ref<ListUserResponse[]>([])
+const users = ref<User[]>([])
 const loading = ref(false)
 const showCreateUserModal = ref(false)
 const showPromoteAdminModal = ref(false)
 const promotingUserId = ref<string | null>(null)
-const userToPromote = ref<ListUserResponse | null>(null)
+const userToPromote = ref<User | null>(null)
 
 // Delete user state
 const showDeleteUserModal = ref(false)
 const deletingUserId = ref<string | null>(null)
-const userToDelete = ref<ListUserResponse | null>(null)
+const userToDelete = ref<User | null>(null)
 
 const promoteModalQuestion = computed(() => {
   return `Are you sure you want to promote "${userToPromote.value?.username}" to ADMIN?`
@@ -45,24 +47,14 @@ const deleteModalDescription = computed(() => {
 const fetchUsers = async () => {
   loading.value = true
   try {
-    const response = await listUsersUsersGet()
-
-    if (response.response.ok && response.data) {
-      users.value = response.data
-    } else {
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to fetch users',
-        life: 5000,
-      })
-    }
+    users.value = await userUseCases.list.execute()
   } catch (error) {
     console.error('Failed to fetch users:', error)
+    const detail = error instanceof UserDomainError ? error.message : 'Failed to fetch users'
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'Failed to fetch users',
+      detail,
       life: 5000,
     })
   } finally {
@@ -71,7 +63,7 @@ const fetchUsers = async () => {
 }
 
 // Promote user to admin
-const showPromoteModal = (user: ListUserResponse) => {
+const showPromoteModal = (user: User) => {
   userToPromote.value = user
   showPromoteAdminModal.value = true
 }
@@ -84,45 +76,21 @@ const handlePromoteConfirmed = async () => {
 
   promotingUserId.value = userId
   try {
-    const response = await promoteUserToAdminUsersUserIdPromoteAdminPost({
-      path: { user_id: userId },
+    await userUseCases.promoteToAdmin.execute({ userId })
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `User ${username} has been promoted to ADMIN`,
+      life: 5000,
     })
-
-    if (response.response.ok) {
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `User ${username} has been promoted to ADMIN`,
-        life: 5000,
-      })
-      // Refresh the user list
-      await fetchUsers()
-    } else {
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to promote user',
-        life: 5000,
-      })
-    }
+    await fetchUsers()
   } catch (error: unknown) {
     console.error('Failed to promote user:', error)
-    const errorDetail =
-      error &&
-      typeof error === 'object' &&
-      'response' in error &&
-      error.response &&
-      typeof error.response === 'object' &&
-      'data' in error.response &&
-      error.response.data &&
-      typeof error.response.data === 'object' &&
-      'detail' in error.response.data
-        ? String(error.response.data.detail)
-        : 'Failed to promote user'
+    const detail = error instanceof UserDomainError ? error.message : 'Failed to promote user'
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: errorDetail,
+      detail,
       life: 5000,
     })
   } finally {
@@ -132,7 +100,7 @@ const handlePromoteConfirmed = async () => {
 }
 
 // Delete user
-const showDeleteModal = (user: ListUserResponse) => {
+const showDeleteModal = (user: User) => {
   userToDelete.value = user
   showDeleteUserModal.value = true
 }
@@ -145,45 +113,21 @@ const handleDeleteConfirmed = async () => {
 
   deletingUserId.value = userId
   try {
-    const response = await deleteUserUsersUserIdDelete({
-      path: { user_id: userId },
+    await userUseCases.delete.execute({ userId })
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: `User ${username} has been deleted`,
+      life: 5000,
     })
-
-    if (response.response.ok) {
-      toast.add({
-        severity: 'success',
-        summary: 'Success',
-        detail: `User ${username} has been deleted`,
-        life: 5000,
-      })
-      // Refresh the user list
-      await fetchUsers()
-    } else {
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to delete user',
-        life: 5000,
-      })
-    }
+    await fetchUsers()
   } catch (error: unknown) {
     console.error('Failed to delete user:', error)
-    const errorDetail =
-      error &&
-      typeof error === 'object' &&
-      'response' in error &&
-      error.response &&
-      typeof error.response === 'object' &&
-      'data' in error.response &&
-      error.response.data &&
-      typeof error.response.data === 'object' &&
-      'detail' in error.response.data
-        ? String(error.response.data.detail)
-        : 'Failed to delete user'
+    const detail = error instanceof UserDomainError ? error.message : 'Failed to delete user'
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: errorDetail,
+      detail,
       life: 5000,
     })
   } finally {
@@ -193,9 +137,7 @@ const handleDeleteConfirmed = async () => {
 }
 
 // Check if user is already an admin
-const isAdmin = (user: ListUserResponse) => {
-  return user.roles?.includes('admin') || false
-}
+const isAdmin = (user: User) => isUserAdminFromDomain(user)
 
 // Handle user created
 const handleUserCreated = () => {

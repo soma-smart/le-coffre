@@ -12,8 +12,11 @@ import App from './App.vue'
 import router from './router'
 import AppState from './plugins/appState'
 import VaultStatus from './plugins/vaultStatus'
+import { containerPlugin } from './plugins/container'
+import { installProductionContainer } from './composition_root'
 
 const app = createApp(App)
+app.use(containerPlugin(installProductionContainer()))
 app.use(PrimeVue, {
   theme: {
     preset: Aura,

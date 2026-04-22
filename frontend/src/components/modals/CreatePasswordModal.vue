@@ -2,16 +2,17 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen'
-import type { GetPasswordListResponse } from '@/client/types.gen'
+import { isValidPasswordUrl, type Password } from '@/domain/password/Password'
+import { PasswordDomainError } from '@/domain/password/errors'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
+import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
-  editPassword?: GetPasswordListResponse | null
+  editPassword?: Password | null
   defaultGroupId?: string | null
 }>()
 
@@ -25,6 +26,10 @@ const groupsStore = useGroupsStore()
 const { groupsForPasswordCreation } = storeToRefs(groupsStore)
 const passwordsStore = usePasswordsStore()
 const { passwords } = storeToRefs(passwordsStore)
+
+// Resolve use cases at setup time — inject() has no active instance
+// inside async event handlers after an await.
+const { passwords: passwordUseCases } = useContainer()
 
 const name = ref('')
 const password = ref('')
@@ -57,11 +62,11 @@ const resolveDefaultGroupId = (): string => {
 
 // Unique, sorted folder names already used in the relevant group
 const foldersForGroup = computed(() => {
-  const groupId = isEditMode.value ? props.editPassword?.group_id : selectedGroupId.value
+  const groupId = isEditMode.value ? props.editPassword?.groupId : selectedGroupId.value
   if (!groupId) return []
   const folderSet = new Set<string>()
   passwords.value.forEach((p) => {
-    if (p.group_id === groupId && p.folder) {
+    if (p.groupId === groupId && p.folder) {
       folderSet.add(p.folder)
     }
   })
@@ -78,12 +83,9 @@ const searchFolders = (event: { query: string }) => {
   }
 }
 
-const urlError = computed(() => {
-  if (url.value && !/^https?:\/\//i.test(url.value)) {
-    return 'URL must start with http:// or https://'
-  }
-  return ''
-})
+const urlError = computed(() =>
+  isValidPasswordUrl(url.value) ? '' : 'URL must start with http:// or https://',
+)
 
 // Display bullets when password field is not focused
 const displayedPassword = computed(() => {
@@ -195,40 +197,14 @@ const handleSubmit = async () => {
     loading.value = true
 
     if (isEditMode.value && props.editPassword) {
-      // Update existing password
-      const updateBody: {
-        name: string
-        password?: string
-        folder: string | null
-        login: string | null
-        url: string | null
-      } = {
+      await passwordUseCases.update.execute({
+        id: props.editPassword.id,
         name: name.value,
+        password: password.value || null,
         folder: folder.value || null,
         login: login.value || null,
         url: url.value || null,
-      }
-
-      if (password.value) {
-        updateBody.password = password.value
-      }
-
-      const response = await updatePasswordPasswordsPasswordIdPut({
-        path: { password_id: props.editPassword.id },
-        body: updateBody,
       })
-
-      if (!response.response.ok) {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to update password'
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000,
-        })
-        return
-      }
 
       toast.add({
         severity: 'success',
@@ -240,29 +216,14 @@ const handleSubmit = async () => {
       visible.value = false
       emit('updated')
     } else {
-      // Create new password
-      const response = await createPasswordPasswordsPost({
-        body: {
-          name: name.value,
-          password: password.value,
-          login: login.value || null,
-          url: url.value || null,
-          folder: folder.value || null,
-          group_id: selectedGroupId.value!,
-        },
+      await passwordUseCases.create.execute({
+        name: name.value,
+        password: password.value,
+        login: login.value || null,
+        url: url.value || null,
+        folder: folder.value || null,
+        groupId: selectedGroupId.value!,
       })
-
-      if (!response.response.ok) {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to create password'
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000,
-        })
-        return
-      }
 
       toast.add({
         severity: 'success',
@@ -283,18 +244,20 @@ const handleSubmit = async () => {
     folder.value = ''
     selectedGroupId.value = resolveDefaultGroupId()
   } catch (err: unknown) {
-    const error = err as { detail?: string; message?: string }
+    const fallback = `Failed to ${isEditMode.value ? 'update' : 'create'} password`
     const errorMessage =
-      error?.detail ||
-      error?.message ||
-      `Failed to ${isEditMode.value ? 'update' : 'create'} password`
+      err instanceof PasswordDomainError
+        ? err.message
+        : err instanceof Error && err.message
+          ? err.message
+          : fallback
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: errorMessage,
       life: 5000,
     })
-    console.error(`Failed to ${isEditMode.value ? 'update' : 'create'} password:`, err)
+    console.error(fallback, err)
   } finally {
     loading.value = false
   }
@@ -377,11 +340,11 @@ const handlePasswordBlur = () => {
           <template #option="slotProps">
             <div class="flex items-center gap-2">
               <i
-                :class="slotProps.option.is_personal ? 'pi pi-user' : 'pi pi-users'"
+                :class="slotProps.option.isPersonal ? 'pi pi-user' : 'pi pi-users'"
                 class="text-sm"
               ></i>
               <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.is_personal" class="text-xs text-muted-color"
+              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color"
                 >(Personal)</span
               >
             </div>
@@ -390,7 +353,7 @@ const handlePasswordBlur = () => {
             <div v-if="slotProps.value" class="flex items-center gap-2">
               <i
                 :class="
-                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.is_personal
+                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.isPersonal
                     ? 'pi pi-user'
                     : 'pi pi-users'
                 "

@@ -19,6 +19,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Install pre-commit into the system Python so every shell sees it on PATH.
+# Used by .pre-commit-config.yaml for repo-wide lint/format/architecture hooks.
+RUN uv pip install --system --break-system-packages pre-commit
+
 # Create non-root user first
 ARG USER_UID=1000
 ARG USER_GID=1000

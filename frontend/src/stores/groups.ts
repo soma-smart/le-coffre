@@ -1,110 +1,80 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import {
-  listGroupsGroupsGet,
-  createGroupGroupsPost,
-  updateGroupGroupsGroupIdPut,
-  deleteGroupGroupsGroupIdDelete,
-  addMemberToGroupGroupsGroupIdMembersPost,
-  addOwnerToGroupGroupsGroupIdOwnersPost,
-  removeMemberFromGroupGroupsGroupIdMembersUserIdDelete,
-} from '@/client/sdk.gen'
-import type { GroupItem } from '@/client/types.gen'
+import type { Group } from '@/domain/group/Group'
+import { filterGroupsForUser, filterOwnedGroupsForUser } from '@/domain/group/Group'
+import { useContainer } from '@/plugins/container'
 import { useUserStore } from './user'
 
 // Global pending promise to deduplicate concurrent calls
 let globalPendingPromise: Promise<void> | null = null
 
 export const useGroupsStore = defineStore('groups', () => {
-  const groups = ref<GroupItem[]>([])
-  const sharedGroups = ref<GroupItem[]>([])
-  const personalGroups = ref<GroupItem[]>([])
-  const userPersonalGroup = ref<GroupItem | null>(null)
+  // Resolve use cases at setup time — inject() has no component context
+  // inside Pinia async actions.
+  const { groups: groupUseCases } = useContainer()
+
+  const groups = ref<Group[]>([])
+  const sharedGroups = ref<Group[]>([])
+  const personalGroups = ref<Group[]>([])
+  const userPersonalGroup = ref<Group | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const lastFetch = ref<number | null>(null)
 
-  // Get current user info from user store instead of making duplicate API call
+  // Current user context comes from the user store so we don't double-fetch.
   const userStore = useUserStore()
   const currentUserId = computed(() => userStore.currentUser?.id ?? null)
-  const currentUserPersonalGroupId = computed(
-    () => userStore.currentUser?.personal_group_id ?? null,
-  )
+  const currentUserPersonalGroupId = computed(() => userStore.currentUser?.personalGroupId ?? null)
 
-  // Computed
   const groupsCount = computed(() => groups.value.length)
 
-  // Shared groups where the current user is an owner
+  // Shared groups where the current user is an owner.
   const ownedSharedGroups = computed(() =>
-    sharedGroups.value.filter(
-      (group) => group.owners && group.owners.includes(currentUserId.value!),
-    ),
+    filterOwnedGroupsForUser(sharedGroups.value, currentUserId.value),
   )
 
-  // All groups where the current user is either an owner or a member
-  const userBelongingGroups = computed(() =>
-    groups.value.filter(
-      (group) =>
-        (group.owners && group.owners.includes(currentUserId.value!)) ||
-        (group.members && group.members.includes(currentUserId.value!)),
-    ),
-  )
+  // All groups the current user is in (owner or member).
+  const userBelongingGroups = computed(() => filterGroupsForUser(groups.value, currentUserId.value))
 
-  // Groups available for password creation: user's personal group + owned shared groups
+  // Groups available when creating a password: user's personal group + owned shared groups.
   const groupsForPasswordCreation = computed(() => {
-    const result: GroupItem[] = []
-    if (userPersonalGroup.value) {
-      result.push(userPersonalGroup.value)
-    }
+    const result: Group[] = []
+    if (userPersonalGroup.value) result.push(userPersonalGroup.value)
     result.push(...ownedSharedGroups.value)
     return result
   })
 
-  // Actions
-  const fetchGroups = async (includePersonal = true, force = false) => {
-    // Cache for 30 seconds unless forced
+  async function fetchGroups(includePersonal = true, force = false) {
     const now = Date.now()
-    if (!force && lastFetch.value && now - lastFetch.value < 30000) {
-      return
-    }
-
-    // If already fetching and not forcing, wait for existing request
-    if (!force && globalPendingPromise) {
-      return globalPendingPromise
-    }
+    if (!force && lastFetch.value && now - lastFetch.value < 30000) return
+    if (!force && globalPendingPromise) return globalPendingPromise
 
     loading.value = true
     error.value = null
 
     globalPendingPromise = (async () => {
       try {
-        // Ensure we have current user info from user store
+        // Ensure we have the current user loaded — currentUserPersonalGroupId
+        // depends on it.
         if (!currentUserId.value) {
           await userStore.fetchCurrentUser()
         }
 
-        const response = await listGroupsGroupsGet({
-          query: { include_personal: includePersonal },
-        })
+        const fetched = await groupUseCases.list.execute({ includePersonal })
 
-        if (response.data) {
-          groups.value = response.data.groups
+        groups.value = fetched
+        sharedGroups.value = fetched.filter((g) => !g.isPersonal)
+        personalGroups.value = fetched.filter((g) => g.isPersonal)
 
-          // Separate shared and personal groups
-          sharedGroups.value = response.data.groups.filter((g) => !g.is_personal)
-          personalGroups.value = response.data.groups.filter((g) => g.is_personal)
-
-          // Set user's personal group (the one with matching personal_group_id)
-          if (currentUserPersonalGroupId.value) {
-            userPersonalGroup.value =
-              response.data.groups.find((g) => g.id === currentUserPersonalGroupId.value) || null
-          }
-
-          lastFetch.value = now
+        if (currentUserPersonalGroupId.value) {
+          userPersonalGroup.value =
+            fetched.find((g) => g.id === currentUserPersonalGroupId.value) ?? null
         }
+
+        lastFetch.value = now
       } catch (e) {
         console.error('Error loading groups:', e)
-        error.value = 'Failed to load groups'
+        error.value = e instanceof Error ? e.message : 'Failed to load groups'
       } finally {
         loading.value = false
         globalPendingPromise = null
@@ -114,149 +84,46 @@ export const useGroupsStore = defineStore('groups', () => {
     return globalPendingPromise
   }
 
-  const fetchAllGroups = async (force = false) => {
-    await fetchGroups(true, force)
+  const fetchAllGroups = (force = false) => fetchGroups(true, force)
+  const fetchSharedGroupsOnly = (force = false) => fetchGroups(false, force)
+
+  async function createGroup(name: string): Promise<string> {
+    const id = await groupUseCases.create.execute({ name })
+    invalidateCache()
+    await fetchAllGroups(true)
+    return id
   }
 
-  const fetchSharedGroupsOnly = async (force = false) => {
-    await fetchGroups(false, force)
+  async function updateGroup(groupId: string, name: string): Promise<void> {
+    await groupUseCases.update.execute({ groupId, name })
+    invalidateCache()
+    await fetchAllGroups(true)
   }
 
-  const createGroup = async (name: string) => {
-    try {
-      const response = await createGroupGroupsPost({
-        body: { name },
-      })
-
-      if (response.response.ok && response.data) {
-        // Invalidate cache to force refresh
-        invalidateCache()
-        await fetchAllGroups(true)
-        return response.data
-      } else {
-        // If response is not ok, throw an error
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to create group'
-        throw new Error(errorMessage)
-      }
-    } catch (e) {
-      console.error('Error creating group:', e)
-      throw e
-    }
+  async function addMemberToGroup(groupId: string, userId: string): Promise<void> {
+    await groupUseCases.addMember.execute({ groupId, userId })
   }
 
-  const updateGroup = async (groupId: string, name: string) => {
-    try {
-      const response = await updateGroupGroupsGroupIdPut({
-        path: { group_id: groupId },
-        body: { name },
-      })
-
-      if (response.response.ok && response.data) {
-        // Invalidate cache to force refresh
-        invalidateCache()
-        await fetchAllGroups(true)
-        return response.data
-      } else {
-        // If response is not ok, throw an error
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to update group'
-        throw new Error(errorMessage)
-      }
-    } catch (e) {
-      console.error('Error updating group:', e)
-      throw e
-    }
+  async function removeMemberFromGroup(groupId: string, userId: string): Promise<void> {
+    await groupUseCases.removeMember.execute({ groupId, userId })
   }
 
-  const addMemberToGroup = async (groupId: string, userId: string) => {
-    try {
-      const response = await addMemberToGroupGroupsGroupIdMembersPost({
-        path: { group_id: groupId },
-        body: { user_id: userId },
-      })
-
-      if (response.response.ok && response.data) {
-        return response.data
-      } else {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to add member to group'
-        throw new Error(errorMessage)
-      }
-    } catch (e) {
-      console.error('Error adding member to group:', e)
-      throw e
-    }
+  async function promoteToOwner(groupId: string, userId: string): Promise<void> {
+    await groupUseCases.promoteToOwner.execute({ groupId, userId })
   }
 
-  const removeMemberFromGroup = async (groupId: string, userId: string) => {
-    try {
-      const response = await removeMemberFromGroupGroupsGroupIdMembersUserIdDelete({
-        path: { group_id: groupId, user_id: userId },
-      })
-
-      if (response.response.ok) {
-        return response.data
-      } else {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to remove member from group'
-        throw new Error(errorMessage)
-      }
-    } catch (e) {
-      console.error('Error removing member from group:', e)
-      throw e
-    }
+  async function deleteGroup(groupId: string): Promise<void> {
+    await groupUseCases.delete.execute({ groupId })
+    invalidateCache()
+    await fetchAllGroups(true)
   }
 
-  const promoteToOwner = async (groupId: string, userId: string) => {
-    try {
-      const response = await addOwnerToGroupGroupsGroupIdOwnersPost({
-        path: { group_id: groupId },
-        body: { user_id: userId },
-      })
-
-      if (response.response.ok && response.data) {
-        return response.data
-      } else {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to promote member to owner'
-        throw new Error(errorMessage)
-      }
-    } catch (e) {
-      console.error('Error promoting member to owner:', e)
-      throw e
-    }
-  }
-
-  const deleteGroup = async (groupId: string) => {
-    try {
-      const response = await deleteGroupGroupsGroupIdDelete({
-        path: { group_id: groupId },
-      })
-
-      if (response.response.ok) {
-        // Invalidate cache to force refresh
-        invalidateCache()
-        await fetchAllGroups(true)
-      } else {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to delete group'
-        throw new Error(errorMessage)
-      }
-    } catch (e) {
-      console.error('Error deleting group:', e)
-      throw e
-    }
-  }
-
-  const invalidateCache = () => {
+  function invalidateCache() {
     lastFetch.value = null
     globalPendingPromise = null
   }
 
-  const refresh = async () => {
-    await fetchAllGroups(true)
-  }
+  const refresh = () => fetchAllGroups(true)
 
   return {
     // State
