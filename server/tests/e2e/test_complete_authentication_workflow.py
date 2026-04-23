@@ -545,6 +545,54 @@ async def test_complete_authentication_workflow(
     assert "Retry-After" not in other_response.headers
     print("✅ Per-email isolation confirmed at the HTTP layer")
 
+    # Step 7.4: the lockout eventually releases. Trip a lockout on the session
+    # admin (registered in PHASE 1), wait past LOGIN_LOCKOUT_SECONDS (set to 1
+    # in tests/conftest.py), then confirm the correct password logs in again
+    # with 200 + cookies. Reusing the session admin avoids /auth/register-admin
+    # conflicts (it's first-admin-only); nothing after this phase depends on
+    # admin@example.com so locking it transiently is safe.
+    #
+    # This is the only step that proves the gateway's expiry path reaches the
+    # HTTP layer end-to-end. The integration test exercises the gateway in
+    # isolation, but a regression in the use case's ordering (e.g. forgetting
+    # to call is_locked before _lookup_and_verify after a refactor) would
+    # only surface here.
+    print("\n🔒 Step 7.4: Lockout must release after LOGIN_LOCKOUT_SECONDS elapses...")
+    import time
+
+    release_probe_email = "admin@example.com"
+    release_probe_password = "securepassword123"
+
+    release_lockout_client = client_factory()
+    release_lockout_client.disable_auto_csrf()
+    for _attempt in range(1, 7):
+        r = release_lockout_client.post(
+            "/api/auth/login",
+            json={"email": release_probe_email, "password": "wrong"},
+        )
+        assert r.status_code == 401
+    assert "Retry-After" in r.headers, "Sixth failed login must trip the lockout"
+    print(f"   Locked: Retry-After={r.headers['Retry-After']}s — sleeping past the window...")
+
+    # 1-second window + buffer to absorb scheduling jitter.
+    time.sleep(1.2)
+
+    # Correct password on a fresh client (so no prior 401 cookies interfere)
+    # must now succeed end-to-end: 200, access_token + refresh_token cookies set.
+    unlock_client = client_factory()
+    unlock_response = unlock_client.post(
+        "/api/auth/login",
+        json={"email": release_probe_email, "password": release_probe_password},
+    )
+    assert unlock_response.status_code == 200, (
+        f"Post-expiry login failed: status={unlock_response.status_code} "
+        f"body={unlock_response.json()!r} — the lockout did not release"
+    )
+    assert unlock_response.cookies.get("access_token") is not None
+    assert unlock_response.cookies.get("refresh_token") is not None
+    assert "Retry-After" not in unlock_response.headers
+    print("✅ Lockout released after window elapsed — correct password succeeds end-to-end")
+
     # =========================================================================
     # FINAL VALIDATION
     # =========================================================================
