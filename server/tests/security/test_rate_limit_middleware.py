@@ -9,6 +9,7 @@ from fastapi.responses import PlainTextResponse
 from starlette.testclient import TestClient
 
 from identity_access_management_context.application.gateways import Token
+from identity_access_management_context.domain.exceptions import InvalidTokenException
 from security.rate_limit_middleware import RateLimitMiddleware
 from security.rate_limiter import InMemoryRateLimiter
 from tests.shared_kernel.fakes import FakeTimeGateway
@@ -19,11 +20,19 @@ class _FakeTokenGateway:
 
     def __init__(self) -> None:
         self._tokens: dict[str, Token] = {}
+        self._raises: dict[str, Exception] = {}
 
     def register(self, token: str, user_id: str) -> None:
         self._tokens[token] = Token(value=token, user_id=UUID(user_id), email="", roles=[], claims={})
 
+    def register_raising(self, token: str, exc: Exception) -> None:
+        """Wire ``token`` so ``validate_token`` raises ``exc`` — lets us simulate
+        both the domain InvalidTokenException path and arbitrary library errors."""
+        self._raises[token] = exc
+
     async def validate_token(self, token: str) -> Token | None:
+        if token in self._raises:
+            raise self._raises[token]
         return self._tokens.get(token)
 
 
@@ -221,6 +230,53 @@ def test_given_unknown_token_when_dispatching_should_fall_back_to_ip_bucket():
         r = c.get("/api/passwords")
 
     assert r.status_code == 429
+
+
+def test_given_access_token_raises_invalid_token_when_dispatching_should_fall_back_silently(
+    caplog: pytest.LogCaptureFixture,
+):
+    """Domain-level InvalidTokenException is the *expected* bad-token signal.
+    The middleware must bucket as anonymous without logging at WARNING — otherwise
+    every expired-cookie user generates an alert."""
+    gateway = _FakeTokenGateway()
+    gateway.register_raising("expired-token", InvalidTokenException())
+    app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=gateway)
+
+    with caplog.at_level("WARNING", logger="security.rate_limit_middleware"):
+        with TestClient(app) as c:
+            c.cookies.set("access_token", "expired-token")
+            for _ in range(3):
+                assert c.get("/api/passwords").status_code == 200
+            r = c.get("/api/passwords")
+
+    assert r.status_code == 429
+    assert not any("Token gateway" in rec.message for rec in caplog.records), (
+        "InvalidTokenException must be treated as expected and MUST NOT log at WARNING"
+    )
+
+
+def test_given_access_token_raises_unexpected_error_when_dispatching_should_fall_back_and_log_warning(
+    caplog: pytest.LogCaptureFixture,
+):
+    """A non-InvalidTokenException (library bug, JWT secret rotation mishap, UUID
+    parse failure) is an operational signal. The middleware must still fail
+    closed to IP keying so the request isn't served unauthenticated at the
+    user-bucket rate, AND must log at WARNING so SRE sees the regression."""
+    gateway = _FakeTokenGateway()
+    gateway.register_raising("buggy-token", RuntimeError("jwt library blew up"))
+    app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=gateway)
+
+    with caplog.at_level("WARNING", logger="security.rate_limit_middleware"):
+        with TestClient(app) as c:
+            c.cookies.set("access_token", "buggy-token")
+            for _ in range(3):
+                assert c.get("/api/passwords").status_code == 200
+            r = c.get("/api/passwords")
+
+    assert r.status_code == 429, "Must still fall back to the IP bucket, not 500"
+    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING" and "Token gateway" in rec.message]
+    assert warnings, "Unexpected token-gateway errors must surface at WARNING"
+    assert warnings[0].exc_info is not None, "WARNING must include exc_info for Sentry grouping"
 
 
 # ── Auth-route floor (login only) ─────────────────────────────────────

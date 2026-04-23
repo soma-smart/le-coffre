@@ -31,6 +31,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from identity_access_management_context.domain.exceptions import InvalidTokenException
 from security.client_ip import resolve_client_ip
 from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
 
@@ -144,8 +145,22 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return Principal(kind="ip", id=client_ip)
         try:
             token = await token_gateway.validate_token(access_token)
-        except Exception:  # noqa: BLE001 - unexpected token-layer errors fall back to IP keying
-            logger.debug("Token validation raised in rate-limiter principal resolution", exc_info=True)
+        except InvalidTokenException:
+            # Expected path: domain-level "expired/tampered/unknown-issuer" signal.
+            # Bucket as anonymous silently — every user with an expired cookie
+            # traverses this code and we don't want to alert on normal traffic.
+            token = None
+        except Exception:  # noqa: BLE001 - see below: we fail-closed to IP keying but must surface
+            # Unexpected: JWT library bug, UUID parse failure, secret-rotation
+            # mismatch, network error on a future remote gateway. Fail-closed to
+            # IP keying so the request is not served at the looser user-bucket
+            # rate, AND log at WARNING (with exc_info) so Sentry groups them —
+            # DEBUG-level swallowing hides key-rotation incidents that only
+            # manifest as "every authenticated user mysteriously rate-limited".
+            logger.warning(
+                "Token gateway raised non-validation error during rate-limit keying; bucketing as anonymous",
+                exc_info=True,
+            )
             token = None
         if token:
             return Principal(kind="user", id=str(token.user_id))
