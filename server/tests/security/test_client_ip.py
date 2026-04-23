@@ -20,10 +20,21 @@ def test_given_no_xff_header_when_resolving_should_return_peer_host():
     assert resolve_client_ip(request, trusted_proxies={"127.0.0.1"}, hops=1) == "10.0.0.5"
 
 
-def test_given_no_client_and_no_xff_when_resolving_should_return_unknown():
+def test_given_no_client_and_no_xff_when_resolving_should_return_unknown_and_log_warning(
+    caplog: pytest.LogCaptureFixture,
+):
+    """When the TCP peer cannot be determined every such request keys on the
+    same `unknown` bucket. That's a small blast radius on its own, but the
+    condition must surface at WARNING so an operator can spot a misconfigured
+    proxy — silent fallback hides the signal entirely."""
     request = _request(peer=None)
 
-    assert resolve_client_ip(request, trusted_proxies={"127.0.0.1"}, hops=1) == "unknown"
+    with caplog.at_level("WARNING", logger="security.client_ip"):
+        assert resolve_client_ip(request, trusted_proxies={"127.0.0.1"}, hops=1) == "unknown"
+
+    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING"]
+    assert warnings, "Missing TCP peer must log a WARNING so misconfigured proxies are visible to SRE"
+    assert "unknown" in warnings[0].message.lower() or "peer" in warnings[0].message.lower()
 
 
 def test_given_untrusted_peer_when_resolving_should_ignore_xff_header():

@@ -13,7 +13,10 @@ nearest hop we trust to have written an authentic value.
 
 from __future__ import annotations
 
+import logging
 from typing import Mapping, Protocol
+
+logger = logging.getLogger(__name__)
 
 
 class _HasClientAndHeaders(Protocol):
@@ -33,7 +36,14 @@ def resolve_client_ip(
 ) -> str:
     """Return the caller's client IP, honoring XFF only for trusted peers."""
     client = getattr(request, "client", None)
-    peer = getattr(client, "host", None) or "unknown"
+    peer = getattr(client, "host", None)
+    if peer is None:
+        # Every request without a resolvable TCP peer converges on the same
+        # `unknown` bucket. The blast radius is small (30/min shared), but the
+        # condition usually indicates a misconfigured reverse proxy or an ASGI
+        # server quirk — surface it at WARNING so SRE sees the signal.
+        logger.warning("resolve_client_ip: request has no TCP peer; keying to the shared 'unknown' bucket")
+        peer = "unknown"
 
     if hops <= 0 or peer not in trusted_proxies:
         return peer
