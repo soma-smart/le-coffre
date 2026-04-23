@@ -59,6 +59,12 @@ const router = createRouter({
       component: () => import('@/pages/admin/AdminUsersPage.vue'),
       meta: { requiresAdmin: true },
     },
+    {
+      path: '/admin/stats',
+      name: 'AdminStats',
+      component: () => import('@/pages/admin/AdminStatsPage.vue'),
+      meta: { requiresAdmin: true },
+},
   ],
 })
 
