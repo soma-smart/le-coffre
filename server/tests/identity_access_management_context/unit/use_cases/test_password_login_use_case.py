@@ -404,3 +404,102 @@ async def test_given_locked_email_when_logging_in_should_not_record_a_new_failed
 
     assert login_lockout_gateway.failed_login_calls == []
     assert login_lockout_gateway.successful_login_calls == []
+
+
+# ── Lockout-gateway outage resilience ──────────────────────────────────
+#
+# These tests guard against a fail-open brute-force window when the lockout
+# gateway can't record writes (SQL/Redis outage on a future adapter). The
+# in-memory impl can't realistically raise, but the Protocol must be resilient
+# the day a networked adapter lands — without these tests, a silent migration
+# that breaks counter writes would let an attacker retry indefinitely because
+# the counter never increments. The contract: a broken counter write does NOT
+# change the user-visible 401 response (no enumeration oracle), does NOT
+# swallow the original credential failure, and DOES surface an operator-visible
+# log so SRE can correlate the lockout-store outage.
+
+
+@pytest.mark.asyncio
+async def test_given_record_failed_login_raises_when_credentials_are_wrong_should_still_raise_invalid_credentials(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+    event_publisher: FakeDomainEventPublisher,
+    admin_event_repository,
+    caplog: pytest.LogCaptureFixture,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    )
+    login_lockout_gateway.make_record_failed_raise(RuntimeError("lockout store unreachable"))
+
+    with caplog.at_level(
+        "ERROR", logger="identity_access_management_context.application.use_cases.password_login_use_case"
+    ):
+        with pytest.raises(InvalidCredentialsException):
+            await use_case.execute(AdminLoginCommand(email=email, password="wrong_password"))
+
+    # Audit trail must still be intact — event publishing happens before the
+    # counter write, so a store outage doesn't cost forensic visibility.
+    events = event_publisher.get_published_events_of_type(AdminLoginFailedEvent)
+    assert len(events) == 1
+    assert events[0].reason == "Invalid credentials"
+    assert len(admin_event_repository.events) == 1
+    # SRE signal: the counter outage surfaced at ERROR with exc_info so Sentry groups them.
+    errors = [rec for rec in caplog.records if rec.levelname == "ERROR" and "lockout" in rec.message.lower()]
+    assert errors, "counter-write failure must log at ERROR so operators can see the outage"
+    assert errors[0].exc_info is not None
+
+
+@pytest.mark.asyncio
+async def test_given_record_failed_login_raises_when_email_is_unknown_should_still_raise_admin_not_found(
+    use_case: PasswordLoginUseCase,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+    caplog: pytest.LogCaptureFixture,
+):
+    login_lockout_gateway.make_record_failed_raise(RuntimeError("lockout store unreachable"))
+
+    with caplog.at_level(
+        "ERROR", logger="identity_access_management_context.application.use_cases.password_login_use_case"
+    ):
+        with pytest.raises(AdminNotFoundException):
+            await use_case.execute(AdminLoginCommand(email="nobody@lecoffre.com", password="any"))
+
+    errors = [rec for rec in caplog.records if rec.levelname == "ERROR" and "lockout" in rec.message.lower()]
+    assert errors, "counter-write failure must log at ERROR"
+
+
+@pytest.mark.asyncio
+async def test_given_record_successful_login_raises_when_credentials_are_correct_should_still_issue_tokens(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+    caplog: pytest.LogCaptureFixture,
+):
+    """A counter-reset outage on a valid login must not deny the user access.
+    The worst case is that a stale failure count carries over — future logins
+    for this user will hit the lockout sooner than expected, which is the
+    conservative direction. Denying tokens here would turn a counter-store
+    outage into a full login outage for users with correct credentials."""
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    )
+    user_repository.save(User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE]))
+    token_gateway.set_unique_jwt_part("uniqueness")
+    login_lockout_gateway.make_record_successful_raise(RuntimeError("lockout store unreachable"))
+
+    with caplog.at_level(
+        "ERROR", logger="identity_access_management_context.application.use_cases.password_login_use_case"
+    ):
+        response = await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
+
+    assert response.admin_id == user_id
+    assert response.jwt_token
+    errors = [rec for rec in caplog.records if rec.levelname == "ERROR" and "lockout" in rec.message.lower()]
+    assert errors, "counter-reset failure must log at ERROR"

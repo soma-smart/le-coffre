@@ -82,7 +82,7 @@ class PasswordLoginUseCase(TracedUseCase):
                     actor_user_id=None,
                     event_data={"email": command.email, "reason": "User not found"},
                 )
-                self._login_lockout_gateway.record_failed_login(command.email, now)
+                self._try_record_failed_login(command.email, now)
                 raise AdminNotFoundException("User not found")
 
             if not self._password_hashing_gateway.verify(command.password, user_password.password_hash):
@@ -96,7 +96,7 @@ class PasswordLoginUseCase(TracedUseCase):
                     actor_user_id=None,
                     event_data={"email": command.email, "reason": "Invalid credentials"},
                 )
-                self._login_lockout_gateway.record_failed_login(command.email, now)
+                self._try_record_failed_login(command.email, now)
                 raise InvalidCredentialsException("Invalid credentials")
 
             user = self._user_repository.get_by_id(user_password.id)
@@ -105,7 +105,7 @@ class PasswordLoginUseCase(TracedUseCase):
 
         user_password, roles = await asyncio.to_thread(_lookup_and_verify)
 
-        self._login_lockout_gateway.record_successful_login(user_password.email)
+        self._try_record_successful_login(user_password.email)
 
         token = await self._token_gateway.generate_token(
             user_id=user_password.id,
@@ -138,3 +138,44 @@ class PasswordLoginUseCase(TracedUseCase):
             admin_id=user_password.id,
             email=user_password.email,
         )
+
+    def _try_record_failed_login(self, email: str, now) -> None:
+        """Increment the lockout counter, swallowing gateway outages.
+
+        A broken counter write (future SQL/Redis adapter under load) must not
+        replace the InvalidCredentialsException/AdminNotFoundException the
+        route maps to 401: otherwise the attacker sees a 500 that leaks
+        "brute-force defense is down", and the counter outage would become an
+        enumeration oracle. The per-IP auth-route floor in RateLimitMiddleware
+        still caps total attempts per IP even when this counter is unavailable.
+        """
+        try:
+            self._login_lockout_gateway.record_failed_login(email, now)
+        except Exception:  # noqa: BLE001 - fail-closed to the route's 401 mapping, alert ops via ERROR
+            logger.error(
+                "Lockout counter write failed on record_failed_login for email=%s; "
+                "brute-force defense is degraded for this request. The /auth/login "
+                "auth-route floor (per-IP) still caps attempts.",
+                email,
+                exc_info=True,
+            )
+
+    def _try_record_successful_login(self, email: str) -> None:
+        """Clear the lockout counter, swallowing gateway outages.
+
+        Denying tokens on a counter-reset outage would convert a lockout-store
+        blip into a full login outage for users who just typed the right
+        password. The worst case from swallowing is a stale failure count —
+        the user may hit the lockout a few attempts sooner on their next wrong
+        password, which is the conservative direction.
+        """
+        try:
+            self._login_lockout_gateway.record_successful_login(email)
+        except Exception:  # noqa: BLE001 - availability over strict counter consistency here
+            logger.error(
+                "Lockout counter reset failed on record_successful_login for email=%s; "
+                "proceeding with token issuance to avoid turning a counter-store outage "
+                "into a full login outage.",
+                email,
+                exc_info=True,
+            )
