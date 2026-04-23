@@ -1,4 +1,4 @@
-import asyncio
+from shared_kernel.application.tracing import TracedUseCase
 
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
@@ -16,7 +16,6 @@ from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
     UserNotFoundException,
 )
-from shared_kernel.application.tracing import TracedUseCase
 
 
 class ValidateUserTokenUseCase(TracedUseCase):
@@ -30,8 +29,8 @@ class ValidateUserTokenUseCase(TracedUseCase):
         self._token_gateway = token_gateway
         self._sso_user_repository = sso_user_repository
 
-    async def execute(self, command: ValidateUserTokenCommand) -> ValidateUserTokenResponse:
-        token_obj = await self._token_gateway.validate_token(command.jwt_token)
+    def execute(self, command: ValidateUserTokenCommand) -> ValidateUserTokenResponse:
+        token_obj = self._token_gateway.validate_token(command.jwt_token)
         if not token_obj:
             raise InvalidTokenException()
 
@@ -47,7 +46,7 @@ class ValidateUserTokenUseCase(TracedUseCase):
                 raise UserNotFoundException("User not found")
             return sso_user.email, sso_user.display_name
 
-        email, display_name = await asyncio.to_thread(_lookup_user)
+        email, display_name = _lookup_user()
 
         # Check required roles if specified
         if command.required_roles:

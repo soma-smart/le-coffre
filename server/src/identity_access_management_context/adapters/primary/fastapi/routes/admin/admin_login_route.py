@@ -44,7 +44,7 @@ class AdminLoginResponse(BaseModel):
     response_model=AdminLoginResponse,
     summary="Login admin user",
 )
-async def admin_login(
+def admin_login(
     request: AdminLoginRequest,
     response: Response,
     usecase: PasswordLoginUseCase = Depends(get_password_login_usecase),
@@ -63,7 +63,7 @@ async def admin_login(
             password=request.password,
         )
 
-        result = await usecase.execute(command)
+        result = usecase.execute(command)
 
         # Set JWT token in HTTP-only secure cookie
         is_secure = get_cookie_secure_setting()

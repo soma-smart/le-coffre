@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime
 
@@ -48,7 +47,7 @@ class PasswordLoginUseCase(TracedUseCase):
         self._admin_event_repository = admin_event_repository
         self._login_lockout_gateway = login_lockout_gateway
 
-    async def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
+    def execute(self, command: AdminLoginCommand) -> AdminLoginResponse:
         now = self._time_provider.get_current_time()
 
         # Gate on lockout BEFORE touching the repository or bcrypt — a locked
@@ -104,18 +103,18 @@ class PasswordLoginUseCase(TracedUseCase):
             roles = user.roles if user is not None else []
             return user_password, roles
 
-        user_password, roles = await asyncio.to_thread(_lookup_and_verify)
+        user_password, roles = _lookup_and_verify()
 
         self._try_record_successful_login(user_password.email)
 
-        token = await self._token_gateway.generate_token(
+        token = self._token_gateway.generate_token(
             user_id=user_password.id,
             email=user_password.email,
             roles=roles,
             claims={"display_name": user_password.display_name},
         )
 
-        refresh_token = await self._token_gateway.generate_refresh_token(
+        refresh_token = self._token_gateway.generate_refresh_token(
             user_id=user_password.id,
             email=user_password.email,
             roles=roles,
@@ -123,14 +122,12 @@ class PasswordLoginUseCase(TracedUseCase):
 
         event = AdminLoginEvent(admin_id=user_password.id, email=user_password.email)
         self._event_publisher.publish(event)
-        await asyncio.to_thread(
-            lambda: self._admin_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_user_id=user_password.id,
-                event_data={"email": user_password.email},
-            )
+        self._admin_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=user_password.id,
+            event_data={"email": user_password.email},
         )
 
         return AdminLoginResponse(

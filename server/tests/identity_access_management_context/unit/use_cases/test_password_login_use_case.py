@@ -55,8 +55,7 @@ def use_case(
     )
 
 
-@pytest.mark.asyncio
-async def test_should_authenticate_admin_and_return_jwt_token(
+def test_should_authenticate_admin_and_return_jwt_token(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -76,7 +75,7 @@ async def test_should_authenticate_admin_and_return_jwt_token(
 
     command = AdminLoginCommand(email=email, password="secure123!")
 
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     assert response.jwt_token == f"jwt_token_for_{user_id}_uniqueness"
     assert response.admin_id == user_id
@@ -86,8 +85,7 @@ async def test_should_authenticate_admin_and_return_jwt_token(
     assert login_lockout_gateway.failed_login_calls == []
 
 
-@pytest.mark.asyncio
-async def test_should_raise_exception_for_wrong_password(
+def test_should_raise_exception_for_wrong_password(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
@@ -102,26 +100,24 @@ async def test_should_raise_exception_for_wrong_password(
     command = AdminLoginCommand(email=email, password="wrong_password")
 
     with pytest.raises(InvalidCredentialsException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
     assert login_lockout_gateway.failed_login_calls == [email]
 
 
-@pytest.mark.asyncio
-async def test_should_raise_exception_for_non_existent_admin(
+def test_should_raise_exception_for_non_existent_admin(
     use_case: PasswordLoginUseCase,
     login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
 
     with pytest.raises(AdminNotFoundException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
     assert login_lockout_gateway.failed_login_calls == ["nonexistent@lecoffre.com"]
 
 
-@pytest.mark.asyncio
-async def test_should_return_refresh_token_on_successful_login(
+def test_should_return_refresh_token_on_successful_login(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -140,14 +136,13 @@ async def test_should_return_refresh_token_on_successful_login(
 
     command = AdminLoginCommand(email=email, password="secure123!")
 
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     assert response.refresh_token == f"refresh_token_for_{user_id}_uniqueness"
     assert response.refresh_token != response.jwt_token
 
 
-@pytest.mark.asyncio
-async def test_should_publish_admin_login_event_on_successful_login(
+def test_should_publish_admin_login_event_on_successful_login(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -165,7 +160,7 @@ async def test_should_publish_admin_login_event_on_successful_login(
     token_gateway.set_unique_jwt_part("uniqueness")
 
     command = AdminLoginCommand(email=email, password="secure123!")
-    await use_case.execute(command)
+    use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(AdminLoginEvent)
     assert len(events) == 1
@@ -173,8 +168,7 @@ async def test_should_publish_admin_login_event_on_successful_login(
     assert events[0].email == email
 
 
-@pytest.mark.asyncio
-async def test_should_publish_admin_login_failed_event_on_wrong_password(
+def test_should_publish_admin_login_failed_event_on_wrong_password(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     event_publisher: FakeDomainEventPublisher,
@@ -188,7 +182,7 @@ async def test_should_publish_admin_login_failed_event_on_wrong_password(
 
     command = AdminLoginCommand(email=email, password="wrong_password")
     with pytest.raises(InvalidCredentialsException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(AdminLoginFailedEvent)
     assert len(events) == 1
@@ -196,14 +190,13 @@ async def test_should_publish_admin_login_failed_event_on_wrong_password(
     assert events[0].reason == "Invalid credentials"
 
 
-@pytest.mark.asyncio
-async def test_should_publish_admin_login_failed_event_on_non_existent_admin(
+def test_should_publish_admin_login_failed_event_on_non_existent_admin(
     use_case: PasswordLoginUseCase,
     event_publisher: FakeDomainEventPublisher,
 ):
     command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
     with pytest.raises(AdminNotFoundException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(AdminLoginFailedEvent)
     assert len(events) == 1
@@ -211,8 +204,7 @@ async def test_should_publish_admin_login_failed_event_on_non_existent_admin(
     assert events[0].reason == "User not found"
 
 
-@pytest.mark.asyncio
-async def test_should_store_admin_login_event_on_successful_login(
+def test_should_store_admin_login_event_on_successful_login(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -230,7 +222,7 @@ async def test_should_store_admin_login_event_on_successful_login(
     token_gateway.set_unique_jwt_part("uniqueness")
 
     command = AdminLoginCommand(email=email, password="secure123!")
-    await use_case.execute(command)
+    use_case.execute(command)
 
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
@@ -238,8 +230,7 @@ async def test_should_store_admin_login_event_on_successful_login(
     assert stored["actor_user_id"] == user_id
 
 
-@pytest.mark.asyncio
-async def test_should_store_admin_login_failed_event_on_wrong_password(
+def test_should_store_admin_login_failed_event_on_wrong_password(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     admin_event_repository,
@@ -253,7 +244,7 @@ async def test_should_store_admin_login_failed_event_on_wrong_password(
 
     command = AdminLoginCommand(email=email, password="wrong_password")
     with pytest.raises(InvalidCredentialsException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
@@ -261,14 +252,13 @@ async def test_should_store_admin_login_failed_event_on_wrong_password(
     assert stored["actor_user_id"] is None
 
 
-@pytest.mark.asyncio
-async def test_should_store_admin_login_failed_event_on_non_existent_admin(
+def test_should_store_admin_login_failed_event_on_non_existent_admin(
     use_case: PasswordLoginUseCase,
     admin_event_repository,
 ):
     command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
     with pytest.raises(AdminNotFoundException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
@@ -276,8 +266,7 @@ async def test_should_store_admin_login_failed_event_on_non_existent_admin(
     assert stored["actor_user_id"] is None
 
 
-@pytest.mark.asyncio
-async def test_given_admin_user_when_logging_in_should_receive_token_with_admin_role(
+def test_given_admin_user_when_logging_in_should_receive_token_with_admin_role(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -294,14 +283,13 @@ async def test_given_admin_user_when_logging_in_should_receive_token_with_admin_
 
     token_gateway.set_unique_jwt_part("uniqueness")
     command = AdminLoginCommand(email=email, password="adminpass!")
-    await use_case.execute(command)
+    use_case.execute(command)
 
     assert token_gateway.last_generated_token is not None
     assert token_gateway.last_generated_token.roles == [ADMIN_ROLE]
 
 
-@pytest.mark.asyncio
-async def test_given_regular_user_when_logging_in_should_receive_token_with_empty_roles(
+def test_given_regular_user_when_logging_in_should_receive_token_with_empty_roles(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -328,7 +316,7 @@ async def test_given_regular_user_when_logging_in_should_receive_token_with_empt
 
     token_gateway.set_unique_jwt_part("uniqueness")
     command = AdminLoginCommand(email=email, password="userpass!")
-    await use_case.execute(command)
+    use_case.execute(command)
 
     assert token_gateway.last_generated_token is not None
     assert token_gateway.last_generated_token.roles == []
@@ -338,8 +326,7 @@ async def test_given_regular_user_when_logging_in_should_receive_token_with_empt
 # ── Login-lockout behavior ────────────────────────────────────────────
 
 
-@pytest.mark.asyncio
-async def test_given_locked_email_when_logging_in_should_raise_account_locked_exception(
+def test_given_locked_email_when_logging_in_should_raise_account_locked_exception(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
@@ -354,13 +341,12 @@ async def test_given_locked_email_when_logging_in_should_raise_account_locked_ex
     command = AdminLoginCommand(email=email, password="secure123!")
 
     with pytest.raises(AccountLockedException) as excinfo:
-        await use_case.execute(command)
+        use_case.execute(command)
 
     assert excinfo.value.retry_after_seconds == 42
 
 
-@pytest.mark.asyncio
-async def test_given_locked_email_when_logging_in_should_not_call_password_verification(
+def test_given_locked_email_when_logging_in_should_not_call_password_verification(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
@@ -379,13 +365,12 @@ async def test_given_locked_email_when_logging_in_should_not_call_password_verif
     assert password_hashing_gateway.verify_calls == []
 
     with pytest.raises(AccountLockedException):
-        await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
+        use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
 
     assert password_hashing_gateway.verify_calls == []
 
 
-@pytest.mark.asyncio
-async def test_given_locked_email_when_logging_in_should_not_record_a_new_failed_login(
+def test_given_locked_email_when_logging_in_should_not_record_a_new_failed_login(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
@@ -400,7 +385,7 @@ async def test_given_locked_email_when_logging_in_should_not_record_a_new_failed
     login_lockout_gateway.force_lock(email, retry_after=30)
 
     with pytest.raises(AccountLockedException):
-        await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
+        use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
 
     assert login_lockout_gateway.failed_login_calls == []
     assert login_lockout_gateway.successful_login_calls == []

@@ -169,7 +169,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "Token gateway raised non-validation error during rate-limit keying; bucketing as anonymous",
                 exc_info=True,
             )
-            token = None
+            token = token_gateway.validate_token(access_token)
         if token:
             return Principal(kind="user", id=str(token.user_id))
         return Principal(kind="ip", id=client_ip)

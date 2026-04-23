@@ -2,9 +2,6 @@ from typing import Generator
 
 from fastapi import Depends, HTTPException
 from fastapi.security.api_key import APIKeyCookie
-from sqlmodel import Session
-from starlette.requests import Request
-
 from identity_access_management_context.adapters.secondary.sql import (
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
@@ -24,6 +21,8 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
 from shared_kernel.domain.entities import ValidatedUser
+from sqlmodel import Session
+from starlette.requests import Request
 
 from .exceptions import (
     MissingTokenError,
@@ -58,7 +57,7 @@ def get_validate_token_usecase(
     )
 
 
-async def get_current_user(
+def get_current_user(
     access_token: str | None = Depends(cookie_scheme),
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
 ) -> ValidatedUser:
@@ -73,7 +72,7 @@ async def get_current_user(
             raise MissingTokenError("No authentication token provided")
 
         command = ValidateUserTokenCommand(jwt_token=access_token)
-        response = await validate_usecase.execute(command)
+        response = validate_usecase.execute(command)
 
         return ValidatedUser(
             user_id=response.user_id,
