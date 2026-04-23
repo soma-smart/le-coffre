@@ -61,6 +61,13 @@ class InMemoryLoginLockoutGateway(LoginLockoutGateway):
         with self._lock:
             entry = self._entries.setdefault(key, _LockoutEntry())
 
+            # Active lockout: the use case is supposed to gate on is_locked and
+            # never reach this path, but the Protocol makes no such guarantee.
+            # Ignore mid-lockout failures so repeated misuse can't silently
+            # extend a fixed-duration lock into an open-ended one.
+            if entry.lockout_until is not None and entry.lockout_until > now:
+                return
+
             if entry.lockout_until is not None and entry.lockout_until <= now:
                 entry.lockout_until = None
                 entry.consecutive_failed_logins = 0

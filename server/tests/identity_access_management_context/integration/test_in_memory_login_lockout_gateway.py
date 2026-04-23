@@ -65,6 +65,35 @@ def test_given_expired_lockout_when_recording_failure_should_start_fresh_sequenc
     assert gateway.is_locked("alice@lecoffre.com", T0 + timedelta(seconds=61)) is None
 
 
+def test_given_active_lockout_when_recording_more_failures_should_not_extend_the_window(
+    gateway: InMemoryLoginLockoutGateway,
+):
+    """The use case gates on is_locked before calling record_failed_login, but
+    the Protocol makes no such guarantee — a misbehaving caller that records
+    failures during an active lockout must NOT extend the window. Otherwise
+    repeated misuse silently turns a 60s lock into an indefinite one."""
+    for _ in range(3):
+        gateway.record_failed_login("alice@lecoffre.com", T0)
+
+    # Baseline: locked until T0+60. At T0+10 there should be 50 seconds left.
+    assert gateway.is_locked("alice@lecoffre.com", T0 + timedelta(seconds=10)) == 50
+
+    # Caller-contract violation: record max_failures more failures during the
+    # active lockout. A naive impl would re-arm the lock at T0+10+60=T0+70,
+    # extending the original T0+60 window by 10 seconds.
+    for offset in (10, 11, 12):
+        gateway.record_failed_login("alice@lecoffre.com", T0 + timedelta(seconds=offset))
+
+    # The lock must still expire at the ORIGINAL T0+60. At T0+12 the remaining
+    # window is 48 seconds, not 58 (which would be the extended-lock result).
+    assert gateway.is_locked("alice@lecoffre.com", T0 + timedelta(seconds=12)) == 48, (
+        "Recording failures during an active lockout extended the window — "
+        "repeated calls would silently turn a fixed-duration lock into an open-ended one"
+    )
+    # And the lock releases at the original time.
+    assert gateway.is_locked("alice@lecoffre.com", T0 + timedelta(seconds=61)) is None
+
+
 def test_given_successful_login_recorded_when_checking_should_clear_failure_state(
     gateway: InMemoryLoginLockoutGateway,
 ):
