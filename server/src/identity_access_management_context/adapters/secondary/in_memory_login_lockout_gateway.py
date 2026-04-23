@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from identity_access_management_context.application.gateways import (
+    LockoutStatus,
     LoginLockoutGateway,
 )
 
@@ -44,7 +45,7 @@ class InMemoryLoginLockoutGateway(LoginLockoutGateway):
         self._entries: dict[str, _LockoutEntry] = {}
         self._lock = threading.Lock()
 
-    def is_locked(self, email: str, now: datetime) -> int | None:
+    def is_locked(self, email: str, now: datetime) -> LockoutStatus | None:
         key = _normalize_email(email)
         with self._lock:
             entry = self._entries.get(key)
@@ -54,7 +55,7 @@ class InMemoryLoginLockoutGateway(LoginLockoutGateway):
             if remaining <= 0:
                 entry.lockout_until = None
                 return None
-            return math.ceil(remaining)
+            return LockoutStatus(retry_after_seconds=math.ceil(remaining))
 
     def record_failed_login(self, email: str, now: datetime) -> None:
         key = _normalize_email(email)

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from identity_access_management_context.application.gateways import (
+    LockoutStatus,
     LoginLockoutGateway,
 )
 
@@ -25,11 +26,11 @@ class FakeLoginLockoutGateway(LoginLockoutGateway):
         self._record_failed_raises: Exception | None = None
         self._record_successful_raises: Exception | None = None
 
-    def is_locked(self, email: str, now: datetime) -> int | None:
+    def is_locked(self, email: str, now: datetime) -> LockoutStatus | None:
         retry_after = self._locks.get(_normalize_email(email))
         if retry_after is None or retry_after <= 0:
             return None
-        return retry_after
+        return LockoutStatus(retry_after_seconds=retry_after)
 
     def record_failed_login(self, email: str, now: datetime) -> None:
         if self._record_failed_raises is not None:

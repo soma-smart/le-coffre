@@ -1,5 +1,28 @@
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
+
+
+@dataclass(frozen=True)
+class LockoutStatus:
+    """Represents an active lockout — not-locked is encoded as ``None`` at the
+    call site rather than a zero-valued status, so the positivity invariant
+    lives in exactly one place (this value object) and callers never juggle
+    "is it zero because unlocked, or zero because just-unlocked".
+
+    ``retry_after_seconds`` is the ceiling-rounded remaining window and is
+    always ``>= 1``: an adapter whose math produces 0 must return ``None``
+    instead.
+    """
+
+    retry_after_seconds: int
+
+    def __post_init__(self) -> None:
+        if self.retry_after_seconds < 1:
+            raise ValueError(
+                f"LockoutStatus.retry_after_seconds must be >= 1; got {self.retry_after_seconds}. "
+                "Use None to signal an unlocked / just-expired state."
+            )
 
 
 class LoginLockoutGateway(Protocol):
@@ -15,8 +38,8 @@ class LoginLockoutGateway(Protocol):
     testable without monkeypatching.
     """
 
-    def is_locked(self, email: str, now: datetime) -> int | None:
-        """Return remaining lockout seconds if the account is currently locked, else None."""
+    def is_locked(self, email: str, now: datetime) -> LockoutStatus | None:
+        """Return a LockoutStatus if the account is currently locked, else None."""
         ...
 
     def record_failed_login(self, email: str, now: datetime) -> None:

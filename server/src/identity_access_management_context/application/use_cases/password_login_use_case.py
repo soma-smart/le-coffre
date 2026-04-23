@@ -53,8 +53,8 @@ class PasswordLoginUseCase(TracedUseCase):
         # Gate on lockout BEFORE touching the repository or bcrypt — a locked
         # account's latency must match any other 401 so the response time does
         # not leak account state.
-        retry_after = self._login_lockout_gateway.is_locked(command.email, now)
-        if retry_after is not None:
+        lockout_status = self._login_lockout_gateway.is_locked(command.email, now)
+        if lockout_status is not None:
             logger.warning("Login blocked for email=%s reason='Account locked'", command.email)
             event = AdminLoginFailedEvent(email=command.email, reason="Account locked")
             self._event_publisher.publish(event)
@@ -65,7 +65,7 @@ class PasswordLoginUseCase(TracedUseCase):
                 actor_user_id=None,
                 event_data={"email": command.email, "reason": "Account locked"},
             )
-            raise AccountLockedException(retry_after_seconds=retry_after)
+            raise AccountLockedException(retry_after_seconds=lockout_status.retry_after_seconds)
 
         # DB reads and bcrypt verification are synchronous and blocking — run
         # them in a thread pool to avoid starving the event loop.
