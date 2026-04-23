@@ -82,15 +82,29 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not path.startswith("/api"):
             return await call_next(request)
 
-        rate_limiter: InMemoryRateLimiter = request.app.state.rate_limiter
-        user_max = request.app.state.rate_limit_user_max_requests
-        unauth_max = request.app.state.rate_limit_unauth_max_requests
-        auth_max = request.app.state.rate_limit_auth_max_requests
-        window = request.app.state.rate_limit_window_seconds
-        trusted_proxies = request.app.state.rate_limit_trusted_proxies
-        proxy_hops = request.app.state.rate_limit_trusted_proxy_hops
+        # Defensive read: if a lifespan-wiring refactor ever drops one of these
+        # attrs, the resulting AttributeError would otherwise surface as an
+        # anonymous 500 indistinguishable from any other server error. Wrap the
+        # read so the failure mode has its own alertable signature and fails
+        # closed (re-raise → Starlette's ExceptionMiddleware returns 500).
+        try:
+            rate_limiter: InMemoryRateLimiter = request.app.state.rate_limiter
+            user_max = request.app.state.rate_limit_user_max_requests
+            unauth_max = request.app.state.rate_limit_unauth_max_requests
+            auth_max = request.app.state.rate_limit_auth_max_requests
+            window = request.app.state.rate_limit_window_seconds
+            trusted_proxies = request.app.state.rate_limit_trusted_proxies
+            proxy_hops = request.app.state.rate_limit_trusted_proxy_hops
+            time_provider = request.app.state.time_provider
+        except AttributeError:
+            logger.critical(
+                "RateLimitMiddleware misconfigured: app.state missing required rate_limit_* keys; "
+                "failing request closed with 500 — check lifespan wiring",
+                exc_info=True,
+            )
+            raise
 
-        now = request.app.state.time_provider.get_current_time()
+        now = time_provider.get_current_time()
         client_ip = resolve_client_ip(request, trusted_proxies=trusted_proxies, hops=proxy_hops)
         is_auth_route = path in self.AUTH_ROUTES
 
