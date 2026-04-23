@@ -5,24 +5,14 @@ from typing import Protocol
 
 @dataclass(frozen=True)
 class LockoutStatus:
-    """Represents an active lockout — not-locked is encoded as ``None`` at the
-    call site rather than a zero-valued status, so the positivity invariant
-    lives in exactly one place (this value object) and callers never juggle
-    "is it zero because unlocked, or zero because just-unlocked".
-
-    ``retry_after_seconds`` is the ceiling-rounded remaining window and is
-    always ``>= 1``: an adapter whose math produces 0 must return ``None``
-    instead.
-    """
+    """Active lockout; ``retry_after_seconds`` is the ceiling-rounded remaining
+    window and is always ``>= 1``. Not-locked is signaled as ``None``."""
 
     retry_after_seconds: int
 
     def __post_init__(self) -> None:
         if self.retry_after_seconds < 1:
-            raise ValueError(
-                f"LockoutStatus.retry_after_seconds must be >= 1; got {self.retry_after_seconds}. "
-                "Use None to signal an unlocked / just-expired state."
-            )
+            raise ValueError(f"LockoutStatus.retry_after_seconds must be >= 1; got {self.retry_after_seconds}")
 
 
 class LoginLockoutGateway(Protocol):

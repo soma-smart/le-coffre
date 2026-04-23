@@ -82,11 +82,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not path.startswith("/api"):
             return await call_next(request)
 
-        # Defensive read: if a lifespan-wiring refactor ever drops one of these
-        # attrs, the resulting AttributeError would otherwise surface as an
-        # anonymous 500 indistinguishable from any other server error. Wrap the
-        # read so the failure mode has its own alertable signature and fails
-        # closed (re-raise → Starlette's ExceptionMiddleware returns 500).
+        # app.state attrs are wired in lifespan; if that regresses we want a
+        # CRITICAL with exc_info rather than an anonymous 500.
         try:
             rate_limiter: InMemoryRateLimiter = request.app.state.rate_limiter
             user_max = request.app.state.rate_limit_user_max_requests
@@ -164,13 +161,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # Bucket as anonymous silently — every user with an expired cookie
             # traverses this code and we don't want to alert on normal traffic.
             token = None
-        except Exception:  # noqa: BLE001 - see below: we fail-closed to IP keying but must surface
-            # Unexpected: JWT library bug, UUID parse failure, secret-rotation
-            # mismatch, network error on a future remote gateway. Fail-closed to
-            # IP keying so the request is not served at the looser user-bucket
-            # rate, AND log at WARNING (with exc_info) so Sentry groups them —
-            # DEBUG-level swallowing hides key-rotation incidents that only
-            # manifest as "every authenticated user mysteriously rate-limited".
+        except Exception:  # noqa: BLE001 - fail-closed to IP keying; surface at WARNING
+            # Unexpected (JWT lib bug, secret rotation, future remote gateway).
+            # Silent swallowing hides key-rotation incidents that only manifest
+            # as "every authenticated user mysteriously rate-limited".
             logger.warning(
                 "Token gateway raised non-validation error during rate-limit keying; bucketing as anonymous",
                 exc_info=True,
