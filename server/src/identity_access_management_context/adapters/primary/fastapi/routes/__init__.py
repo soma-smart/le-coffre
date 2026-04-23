@@ -37,12 +37,12 @@ from .user import (
 def get_user_management_router():
     user_management_router = APIRouter()
 
+    user_management_router.include_router(admin_stat_routes.router)
     user_management_router.include_router(user_me_routes.router)
     user_management_router.include_router(user_update_password_routes.router)
     user_management_router.include_router(user_get_routes.router)
     user_management_router.include_router(user_create_routes.router)
     user_management_router.include_router(user_promote_admin_routes.router)
-    user_management_router.include_router(admin_stat_routes.router)
     user_management_router.include_router(user_delete_routes.router)
     user_management_router.include_router(user_update_routes.router)
     user_management_router.include_router(user_list_routes.router)

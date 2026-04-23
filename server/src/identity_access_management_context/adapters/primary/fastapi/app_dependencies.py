@@ -42,6 +42,7 @@ from identity_access_management_context.application.use_cases import (
     CreateUserUseCase,
     DeleteGroupUseCase,
     DeleteUserUseCase,
+    GetAdminStatUseCase,
     GetGroupUseCase,
     GetSsoAuthorizeUrlUseCase,
     GetUserMeUseCase,
@@ -190,6 +191,14 @@ def get_promote_admin_usecase(
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
 ):
     return PromoteAdminUseCase(user_repository, event_publisher, user_event_repository)
+
+
+def get_admin_stat_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+):
+    return GetAdminStatUseCase(group_repository, user_repository, user_password_repository)
 
 
 def get_update_user_usecase(

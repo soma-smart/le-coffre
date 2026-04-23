@@ -1,7 +1,8 @@
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from identity_access_management_context.adapters.primary.fastapi.app_dependencies import get_admin_stat_usecase
 from identity_access_management_context.application.commands import GetAdminStatCommand
 from identity_access_management_context.application.use_cases.get_admin_stat_use_case import GetAdminStatUseCase
 
@@ -9,12 +10,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
+
 @router.get(
     "/stats",
     status_code=200,
     summary="Get admin statistics",
 )
-def get_admin_stats(usecase: GetAdminStatUseCase ):
+def get_admin_stats(usecase: GetAdminStatUseCase = Depends(get_admin_stat_usecase)):
     """
     Retrieve administrative statistics about the system.
 

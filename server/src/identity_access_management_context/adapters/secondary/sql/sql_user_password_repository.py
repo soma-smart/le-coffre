@@ -57,8 +57,7 @@ class SqlUserPasswordRepository(SQLBaseRepository):
             )
         return None
 
-
-def count(self) -> int:
-    """Return total number of passwords"""
-    statement = select(func.count()).select_from(UserPasswordTable)
-    return self._session.exec(statement).one()
+    def count(self) -> int:
+        """Return total number of passwords"""
+        statement = select(func.count()).select_from(UserPasswordTable)
+        return self._session.exec(statement).one()

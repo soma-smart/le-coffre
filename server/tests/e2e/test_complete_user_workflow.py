@@ -303,6 +303,17 @@ def test_complete_user_workflow(
         f"Promoted admin (user2) should list users: {users_list_by_user2.text}"
     )
 
+    # Step 6.11: Verify User2 can see statistics endpoint
+    stats_response = user2_client.get("/api/users/stats")
+    assert stats_response.status_code == 200, f"Promoted admin (user2) should access stats: {stats_response.text}"
+    stats_data = stats_response.json()
+    assert "groupCount" in stats_data
+    assert "userCount" in stats_data
+    assert "passwordCount" in stats_data
+    assert isinstance(stats_data["groupCount"], int)
+    assert isinstance(stats_data["userCount"], int)
+    assert isinstance(stats_data["passwordCount"], int)
+    assert stats_data["userCount"] >= 1
     # =========================================================================
     # PHASE 7: USER DELETION (auth guards)
     # =========================================================================
