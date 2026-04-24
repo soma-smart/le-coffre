@@ -12,11 +12,6 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.10
     hooks:
-      # No --config: ruff auto-discovers server/pyproject.toml by walking up
-      # from each file. With --config, ruff anchors project_root to the cwd
-      # (here /app, the repo root) and src/known-first-party detection breaks,
-      # so identical files produce different I001 verdicts depending on whether
-      # ruff was invoked from /app/server (devcontainer) or /app (pre-commit).
       - id: ruff
         files: ^server/
       - id: ruff-format
