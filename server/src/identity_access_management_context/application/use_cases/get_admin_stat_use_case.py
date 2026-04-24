@@ -1,12 +1,12 @@
 from identity_access_management_context.application.commands import GetAdminStatCommand
 from identity_access_management_context.application.gateways import (
     GroupRepository,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.responses.admin_stat_responce import (
     AdminStatResponse,
 )
+from password_management_context.application.gateways import PasswordRepository
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -15,11 +15,11 @@ class GetAdminStatUseCase(TracedUseCase):
         self,
         GroupRepository: GroupRepository,
         UserRepository: UserRepository,
-        UserPasswordRepository: UserPasswordRepository,
+        PasswordRepository: PasswordRepository,
     ):
         self.group_repository = GroupRepository
         self.user_repository = UserRepository
-        self.password_repository = UserPasswordRepository
+        self.password_repository = PasswordRepository
 
     def execute(self, command: GetAdminStatCommand) -> AdminStatResponse:
         number_of_users = self.user_repository.count()

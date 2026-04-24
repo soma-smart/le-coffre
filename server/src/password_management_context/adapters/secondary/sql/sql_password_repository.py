@@ -78,3 +78,9 @@ class SqlPasswordRepository(SQLBaseRepository, PasswordRepository):
                 setattr(db_obj, field, value)
             self._session.add(db_obj)
             self.commit_and_refresh(db_obj)
+
+    def count(self) -> int:
+        """Count total number of passwords"""
+        statement = select(PasswordTable)
+        result = self._session.exec(statement).all()
+        return len(result)

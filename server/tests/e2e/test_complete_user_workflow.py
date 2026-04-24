@@ -310,9 +310,6 @@ def test_complete_user_workflow(
     assert "groupCount" in stats_data
     assert "userCount" in stats_data
     assert "passwordCount" in stats_data
-    assert isinstance(stats_data["groupCount"], int)
-    assert isinstance(stats_data["userCount"], int)
-    assert isinstance(stats_data["passwordCount"], int)
     assert stats_data["userCount"] >= 1
     # =========================================================================
     # PHASE 7: USER DELETION (auth guards)

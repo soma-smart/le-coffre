@@ -63,7 +63,9 @@ from identity_access_management_context.application.use_cases import (
 from password_management_context.adapters.primary.private_api import GroupUsageApi
 from password_management_context.adapters.secondary import (
     SqlPasswordPermissionsRepository,
+    SqlPasswordRepository,
 )
+from password_management_context.application.gateways import PasswordRepository
 from password_management_context.application.use_cases import IsGroupUsedUseCase
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
@@ -193,12 +195,16 @@ def get_promote_admin_usecase(
     return PromoteAdminUseCase(user_repository, event_publisher, user_event_repository)
 
 
+def get_password_repository(session: Session = Depends(get_session)) -> PasswordRepository:
+    return SqlPasswordRepository(session)
+
+
 def get_admin_stat_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
     group_repository: GroupRepository = Depends(get_group_repository),
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+    password_repository: PasswordRepository = Depends(get_password_repository),
 ):
-    return GetAdminStatUseCase(group_repository, user_repository, user_password_repository)
+    return GetAdminStatUseCase(group_repository, user_repository, password_repository)
 
 
 def get_update_user_usecase(

@@ -20,7 +20,3 @@ class UserPasswordRepository(Protocol):
     def get_by_email(self, email: str) -> UserPassword | None:
         """Get user password by email"""
         ...
-
-    def count(self) -> int:
-        """Return total number of user passwords"""
-        ...
