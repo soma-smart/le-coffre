@@ -26,9 +26,14 @@ from config import (
     get_jwt_algorithm,
     get_jwt_refresh_token_expiration_seconds,
     get_jwt_secret_key,
-    get_rate_limit_api_max_requests,
+    get_login_lockout_seconds,
+    get_login_max_failed_attempts,
     get_rate_limit_auth_max_requests,
     get_rate_limit_enabled,
+    get_rate_limit_trusted_proxies,
+    get_rate_limit_trusted_proxy_hops,
+    get_rate_limit_unauth_max_requests,
+    get_rate_limit_user_max_requests,
     get_rate_limit_window_seconds,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
@@ -38,6 +43,7 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
 )
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
+    InMemoryLoginLockoutGateway,
     JwtTokenGateway,
     OAuth2SsoGateway,
     PrivateApiSsoEncryptionGateway,
@@ -112,6 +118,7 @@ def _build_engine(database_url: str):
         kwargs["pool_size"] = 5
         kwargs["max_overflow"] = 10
         kwargs["connect_args"] = {"connect_timeout": 10}
+        kwargs["pool_timeout"] = 5
     return create_engine(database_url, **kwargs)
 
 
@@ -182,9 +189,19 @@ async def lifespan(app: FastAPI):
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()
     app.state.rate_limiter = rate_limiter
+    app.state.rate_limit_user_max_requests = get_rate_limit_user_max_requests()
+    app.state.rate_limit_unauth_max_requests = get_rate_limit_unauth_max_requests()
     app.state.rate_limit_auth_max_requests = get_rate_limit_auth_max_requests()
-    app.state.rate_limit_api_max_requests = get_rate_limit_api_max_requests()
     app.state.rate_limit_window_seconds = get_rate_limit_window_seconds()
+    app.state.rate_limit_trusted_proxies = get_rate_limit_trusted_proxies()
+    app.state.rate_limit_trusted_proxy_hops = get_rate_limit_trusted_proxy_hops()
+
+    # Login lockout (per-email, in-memory)
+    login_lockout_gateway = InMemoryLoginLockoutGateway(
+        max_failures=get_login_max_failed_attempts(),
+        lockout_seconds=get_login_lockout_seconds(),
+    )
+    app.state.login_lockout_gateway = login_lockout_gateway
 
     db_url = get_database_url()
     db_type = "postgresql" if db_url.startswith("postgresql") else "sqlite"
@@ -217,12 +234,12 @@ async def lifespan(app: FastAPI):
     # Flush and shut down OTel providers to avoid losing buffered spans/metrics/logs
     if _otel_providers is not None:
         tracer_provider, meter_provider, logger_provider = _otel_providers
-        tracer_provider.force_flush()
-        tracer_provider.shutdown()
-        meter_provider.force_flush()
-        meter_provider.shutdown()
-        logger_provider.force_flush()
-        logger_provider.shutdown()
+        await asyncio.to_thread(tracer_provider.force_flush)
+        await asyncio.to_thread(tracer_provider.shutdown)
+        await asyncio.to_thread(meter_provider.force_flush)
+        await asyncio.to_thread(meter_provider.shutdown)
+        await asyncio.to_thread(logger_provider.force_flush)
+        await asyncio.to_thread(logger_provider.shutdown)
 
 
 # Create the main app with lifespan
@@ -256,7 +273,11 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
             request.url.path,
             exc.detail,
         )
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers,
+    )
 
 
 # Liveness probe: process is alive and event loop is responsive.
@@ -277,10 +298,20 @@ async def readiness_check(request: Request):
         raise HTTPException(status_code=503, detail="Migrations in progress")
     try:
         session_maker = request.app.state.session_maker
-        with session_maker() as session:
-            session.exec(text("SELECT 1"))
+
+        def _db_check():
+            with session_maker() as session:
+                session.exec(text("SELECT 1"))
+
+        await asyncio.wait_for(asyncio.to_thread(_db_check), timeout=5.0)
         return {"status": "ready"}
+    except asyncio.TimeoutError:
+        logger.error("Readiness probe DB check timed out")
+        raise HTTPException(status_code=503, detail="Database check timed out") from None
     except SQLAlchemyOperationalError:
+        logger.error("Readiness probe DB check failed", exc_info=True)
+        raise HTTPException(status_code=503, detail="Database unreachable") from None
+    except Exception:
         logger.error("Readiness probe DB check failed", exc_info=True)
         raise HTTPException(status_code=503, detail="Database unreachable") from None
 

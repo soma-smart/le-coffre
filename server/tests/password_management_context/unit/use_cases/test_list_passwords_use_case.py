@@ -731,3 +731,168 @@ def test_given_passwords_without_login_and_url_when_listing_passwords_should_ret
     assert len(result) == 1
     assert result[0].login is None
     assert result[0].url is None
+
+
+def test_given_password_owned_by_group_when_listing_should_return_accessible_group_ids_with_owner_only(
+    use_case: ListPasswordsUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    owner_group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+
+    password = Password(
+        id=password_id,
+        name="Gmail",
+        encrypted_value="encrypted(secret)",
+        folder="default",
+    )
+    password_repository.save(password)
+    password_permissions_repository.set_owner(owner_group_id, password_id)
+    group_access_gateway.set_group_owner(owner_group_id, requester_id)
+
+    password_event_repository.append_event(
+        event_id=UUID("10e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordCreatedEvent",
+        occurred_on=datetime(2025, 1, 1, 10, 0, 0),
+        password_id=password_id,
+        actor_user_id=requester_id,
+        event_data={},
+    )
+
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
+    result = use_case.execute(command)
+
+    assert len(result) == 1
+    assert result[0].can_write is True
+    assert result[0].can_read is True
+    assert set(result[0].accessible_group_ids) == {owner_group_id}
+
+
+def test_given_password_shared_with_read_group_when_listing_as_owner_group_member_should_return_all_accessible_group_ids(
+    use_case: ListPasswordsUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    owner_group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    read_group_id = UUID("3d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+
+    password = Password(
+        id=password_id,
+        name="Gmail",
+        encrypted_value="encrypted(secret)",
+        folder="default",
+    )
+    password_repository.save(password)
+    password_permissions_repository.set_owner(owner_group_id, password_id)
+    password_permissions_repository.grant_access(read_group_id, password_id, PasswordPermission.READ)
+    group_access_gateway.set_group_owner(owner_group_id, requester_id)
+    # requester belongs to owner_group — should see ALL groups to manage sharing
+
+    password_event_repository.append_event(
+        event_id=UUID("10e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordCreatedEvent",
+        occurred_on=datetime(2025, 1, 1, 10, 0, 0),
+        password_id=password_id,
+        actor_user_id=requester_id,
+        event_data={},
+    )
+
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
+    result = use_case.execute(command)
+
+    assert len(result) == 1
+    assert result[0].can_write is True
+    assert result[0].can_read is True
+    assert set(result[0].accessible_group_ids) == {owner_group_id, read_group_id}
+
+
+def test_given_password_shared_with_read_group_when_listing_as_shared_member_should_return_owner_and_shared_group_ids(
+    use_case: ListPasswordsUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    other_user_id = UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    owner_group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    read_group_id = UUID("3d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+
+    password = Password(
+        id=password_id,
+        name="Gmail",
+        encrypted_value="encrypted(secret)",
+        folder="default",
+    )
+    password_repository.save(password)
+    password_permissions_repository.set_owner(owner_group_id, password_id)
+    password_permissions_repository.grant_access(read_group_id, password_id, PasswordPermission.READ)
+    group_access_gateway.set_group_owner(owner_group_id, other_user_id)
+    group_access_gateway.add_group_member(read_group_id, requester_id)
+    # requester belongs to read_group only — should see owner group + their own group
+
+    password_event_repository.append_event(
+        event_id=UUID("10e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordCreatedEvent",
+        occurred_on=datetime(2025, 1, 1, 10, 0, 0),
+        password_id=password_id,
+        actor_user_id=other_user_id,
+        event_data={},
+    )
+
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=requester_id, roles=[]))
+    result = use_case.execute(command)
+
+    assert len(result) == 1
+    assert result[0].can_read is True
+    assert result[0].can_write is False
+    assert set(result[0].accessible_group_ids) == {owner_group_id, read_group_id}
+
+
+def test_given_admin_with_no_group_access_when_listing_should_return_accessible_group_ids_with_owner_only(
+    use_case: ListPasswordsUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+):
+    admin_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    other_user_id = UUID("9d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    owner_group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+
+    password = Password(
+        id=password_id,
+        name="Gmail",
+        encrypted_value="encrypted(secret)",
+        folder="default",
+    )
+    password_repository.save(password)
+    password_permissions_repository.set_owner(owner_group_id, password_id)
+    group_access_gateway.set_group_owner(owner_group_id, other_user_id)
+
+    password_event_repository.append_event(
+        event_id=UUID("10e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        event_type="PasswordCreatedEvent",
+        occurred_on=datetime(2025, 1, 1, 10, 0, 0),
+        password_id=password_id,
+        actor_user_id=other_user_id,
+        event_data={},
+    )
+
+    command = ListPasswordsCommand(requester=AuthenticatedUser(user_id=admin_id, roles=["admin"]))
+    result = use_case.execute(command)
+
+    assert len(result) == 1
+    assert result[0].can_write is False
+    assert result[0].can_read is False
+    assert set(result[0].accessible_group_ids) == {owner_group_id}

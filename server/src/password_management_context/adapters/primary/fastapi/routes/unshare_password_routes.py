@@ -10,7 +10,10 @@ from password_management_context.application.commands import UnshareResourceComm
 from password_management_context.application.use_cases import UnshareAccessUseCase
 from password_management_context.domain.exceptions import (
     CannotUnshareWithOwnerError,
+    GroupNotFoundError,
     PasswordAccessDeniedError,
+    PasswordNotFoundError,
+    UserNotOwnerOfGroupError,
 )
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
@@ -51,6 +54,12 @@ def unshare_password(
         usecase.execute(command)
 
         return
+    except PasswordNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Password does not exist") from e
+    except GroupNotFoundError as e:
+        raise HTTPException(status_code=404, detail="Group does not exist") from e
+    except UserNotOwnerOfGroupError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except CannotUnshareWithOwnerError as e:

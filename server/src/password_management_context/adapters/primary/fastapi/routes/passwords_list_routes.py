@@ -34,6 +34,7 @@ class GetPasswordListResponse(BaseModel):
     can_write: bool
     login: str | None
     url: str | None
+    accessible_group_ids: list[UUID]
 
 
 @router.get(
@@ -73,6 +74,7 @@ def list_passwords(
                 can_write=password.can_write,
                 login=password.login,
                 url=password.url,
+                accessible_group_ids=list(password.accessible_group_ids),
             )
             for password in passwords
         ]

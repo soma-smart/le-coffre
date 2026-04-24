@@ -42,6 +42,7 @@ async def sso_callback(
     response: Response,
     code: str = Query(..., description="Authorization code from SSO provider"),
     state: str = Query(None, description="State parameter for CSRF protection"),
+    redirect_uri: str = Query(None, description="Redirect URI used during authorization (for CLI auth)"),
     usecase: SsoLoginUseCase = Depends(get_sso_login_usecase),
 ):
     """
@@ -52,11 +53,12 @@ async def sso_callback(
 
     - **code**: The authorization code provided by the SSO provider
     - **state**: (Optional) State parameter for CSRF protection
+    - **redirect_uri**: (Optional) Redirect URI used during authorization, required for CLI auth flows
 
     Returns user information and sets HTTP-only secure cookies with JWT tokens.
     """
     try:
-        command = SsoLoginCommand(code=code)
+        command = SsoLoginCommand(code=code, redirect_uri=redirect_uri)
         result = await usecase.execute(command)
 
         # Set JWT tokens in HTTP-only cookies (not accessible by JavaScript)

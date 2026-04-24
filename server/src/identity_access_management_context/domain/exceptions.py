@@ -46,6 +46,22 @@ class InvalidRefreshTokenException(AuthenticationDomainError):
     pass
 
 
+class AccountLockedException(AuthenticationDomainError):
+    """Raised when a login is attempted against an account that is temporarily locked.
+
+    Carries ``retry_after_seconds`` as a typed attribute so the route can emit
+    the ``Retry-After`` header. Domain layer stays import-pure — the caller
+    (use case) bridges from the application-layer ``LockoutStatus`` value
+    object, which owns the positivity invariant.
+    """
+
+    def __init__(self, retry_after_seconds: int):
+        if retry_after_seconds < 1:
+            raise ValueError(f"AccountLockedException.retry_after_seconds must be >= 1; got {retry_after_seconds}")
+        super().__init__(f"Account temporarily locked. Retry after {retry_after_seconds}s.")
+        self.retry_after_seconds = retry_after_seconds
+
+
 # User-related exceptions
 class UserNotFoundException(IdentityAccessManagementDomainError):
     """Raised when attempting to get a user that doesn't exist"""

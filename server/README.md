@@ -35,9 +35,14 @@ uv run fastapi dev src/main.py --host 0.0.0.0
 | `JWT_REFRESH_TOKEN_EXPIRATION_HOURS` | No | Refresh token lifetime (hours) | `4` |
 | `ENVIRONMENT` | No | Set to `production` to enable secure cookies and production settings | `development` |
 | `RATE_LIMIT_ENABLED` | No | Enable/disable rate limiting | `true` |
-| `RATE_LIMIT_AUTH_MAX_REQUESTS` | No | Max requests per window on auth routes | `5` |
-| `RATE_LIMIT_API_MAX_REQUESTS` | No | Max requests per window on API routes | `60` |
-| `RATE_LIMIT_WINDOW_SECONDS` | No | Rate limit sliding window duration (seconds) | `60` |
+| `RATE_LIMIT_WINDOW_SECONDS` | No | Sliding window duration (seconds) | `60` |
+| `RATE_LIMIT_USER_MAX_REQUESTS` | No | Per-authenticated-user bucket | `300` |
+| `RATE_LIMIT_UNAUTH_MAX_REQUESTS` | No | Per-IP bucket for unauthenticated callers | `30` |
+| `RATE_LIMIT_AUTH_MAX_REQUESTS` | No | Per-IP volume floor on `/api/auth/login` only | `100` |
+| `RATE_LIMIT_TRUSTED_PROXIES` | No | Comma-separated TCP peer IPs whose `X-Forwarded-For` is trusted | `127.0.0.1,::1` |
+| `RATE_LIMIT_TRUSTED_PROXY_HOPS` | No | Number of trusted proxy hops between client and backend | `1` |
+| `LOGIN_MAX_FAILED_ATTEMPTS` | No | Consecutive failed logins before an account is locked | `5` |
+| `LOGIN_LOCKOUT_SECONDS` | No | Duration in seconds an account stays locked | `300` |
 
 ## Optional: monitoring (OpenTelemetry)
 

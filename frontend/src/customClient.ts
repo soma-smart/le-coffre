@@ -96,6 +96,20 @@ client.interceptors.response.use(async (response: Response, request: Request, op
   // Never retry auth calls themselves — prevents infinite refresh loops
   const url = request.url
   if (url.includes('/auth/refresh-token') || url.includes('/auth/login')) {
+    // Per-email lockout: login returns 401 with Retry-After when the account
+    // is temporarily locked after too many failed attempts. Dispatch the same
+    // rate-limited event as a 429 so the LoginForm countdown kicks in.
+    if (url.includes('/auth/login')) {
+      const retryAfter = response.headers.get('Retry-After')
+      const seconds = retryAfter ? parseInt(retryAfter, 10) : 0
+      if (seconds > 0) {
+        window.dispatchEvent(
+          new CustomEvent('rate-limited', {
+            detail: { retryAfter: seconds, reason: 'account-locked' },
+          }),
+        )
+      }
+    }
     return response
   }
 
@@ -143,8 +157,14 @@ client.interceptors.error.use(async (error: unknown, response: Response | undefi
         ? `Too many requests. Please try again in ${seconds} seconds.`
         : 'Too many requests. Please try again later.'
 
-    // Dispatch a custom event so components can react (e.g. LoginForm countdown)
-    window.dispatchEvent(new CustomEvent('rate-limited', { detail: { retryAfter: seconds } }))
+    // Dispatch a custom event so components can react (e.g. LoginForm countdown).
+    // reason=rate-limited signals the global per-IP quota was hit, distinct
+    // from reason=account-locked which is per-email after repeated failed logins.
+    window.dispatchEvent(
+      new CustomEvent('rate-limited', {
+        detail: { retryAfter: seconds, reason: 'rate-limited' },
+      }),
+    )
 
     // Show a global toast via PrimeVue's event bus
     import('primevue').then(({ useToast }) => {

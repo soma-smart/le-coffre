@@ -1,4 +1,5 @@
 from .bcrypt_hashing_gateway import BcryptHashingGateway
+from .in_memory_login_lockout_gateway import InMemoryLoginLockoutGateway
 from .jwt_token_gateway import JwtTokenGateway
 from .oauth2_sso_gateway import OAuth2SsoGateway
 from .private_api.private_api_sso_encryption_gateway import (
@@ -11,6 +12,7 @@ from .sql.sql_user_repository import SqlUserRepository
 
 __all__ = [
     "BcryptHashingGateway",
+    "InMemoryLoginLockoutGateway",
     "JwtTokenGateway",
     "OAuth2SsoGateway",
     "SqlSsoUserRepository",

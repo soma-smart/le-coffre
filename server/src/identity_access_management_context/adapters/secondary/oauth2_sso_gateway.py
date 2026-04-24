@@ -84,7 +84,9 @@ class OAuth2SsoGateway(SsoGateway):
 
         return authorization_url
 
-    async def validate_callback(self, config: SsoConfiguration, code: str) -> SsoUserInfo:
+    async def validate_callback(
+        self, config: SsoConfiguration, code: str, redirect_uri: str | None = None
+    ) -> SsoUserInfo:
         """
         Validate OAuth2 authorization code and return user information.
 
@@ -92,13 +94,24 @@ class OAuth2SsoGateway(SsoGateway):
         1. Exchanges the authorization code for access token
         2. Fetches user information from the provider
         3. Returns a standardized SsoUserInfo object (provider data only)
+
+        Args:
+            config: SSO configuration with client credentials and endpoints
+            code: The authorization code from the SSO provider
+            redirect_uri: Override redirect URI (for CLI auth flows using localhost).
+                          If None, uses the server's default redirect_uri.
         """
 
+        # Use override redirect_uri if provided (for CLI auth), otherwise use default
+        effective_redirect_uri = redirect_uri or self.redirect_uri
+
+        # Reuse the shared client construction logic, overriding redirect_uri if needed
         client = self._get_oauth_client(config)
+        client.redirect_uri = effective_redirect_uri
 
         try:
             # Exchange authorization code for access token
-            auth_response = f"{self.redirect_uri}?{urlencode({'code': code})}"
+            auth_response = f"{effective_redirect_uri}?{urlencode({'code': code})}"
 
             token = await client.fetch_token(
                 config.token_endpoint,

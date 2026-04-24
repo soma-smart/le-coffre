@@ -3,10 +3,13 @@ import HomeView from '@/pages/HomePage.vue'
 import SetupView from '@/pages/SetupPage.vue'
 import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
+import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
 import { attemptTokenRefresh } from '@/customClient'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
+import { sortGroupsByName } from '@/utils/groupSort'
+import { slugifyGroupName } from '@/utils/groupSlug'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,6 +17,11 @@ const router = createRouter({
     {
       path: '/',
       name: 'Home',
+      component: HomeView,
+    },
+    {
+      path: '/passwords/:groupSlug',
+      name: 'HomeGroup',
       component: HomeView,
     },
     {
@@ -95,9 +103,14 @@ router.beforeEach(async (to) => {
   // Trigger vault status check (will be deduplicated if already running)
   // This updates the vaultStatus plugin with the data from setupStore
   if (isSetup) {
-    checkVaultStatus().catch((err) => {
-      console.error('Error checking vault status in router guard:', err)
-    })
+    await checkVaultStatus()
+  }
+
+  // If the vault is locked, stop here and let the global UnlockVaultModal handle it.
+  // No other backend requests should be made while the vault is locked — most
+  // endpoints will fail and cause errors / slow down the page.
+  if (setupStore.isLocked && to.name !== 'Login') {
+    return true
   }
 
   // If we are not logged in, attempt a silent token refresh before giving up.
@@ -134,6 +147,26 @@ router.beforeEach(async (to) => {
     if (!userStore.isAdmin) {
       // User is not an admin, redirect to home
       return { name: 'Home' }
+    }
+  }
+
+  if (to.name === 'Home' && isLoggedIn) {
+    const groupsStore = useGroupsStore()
+    await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
+
+    const sortedUserGroups = sortGroupsByName(
+      groupsStore.userBelongingGroups,
+      groupsStore.currentUserPersonalGroupId,
+    )
+    const defaultGroup = sortedUserGroups[0]
+    const groupSlug = defaultGroup ? slugifyGroupName(defaultGroup.name) : null
+
+    if (groupSlug) {
+      return {
+        name: 'HomeGroup',
+        params: { groupSlug },
+        query: to.query,
+      }
     }
   }
 

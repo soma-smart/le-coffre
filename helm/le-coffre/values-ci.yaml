@@ -1,0 +1,55 @@
+# Used by the helm-integration GitHub Actions workflow.
+
+frontend:
+  image:
+    registry: "localhost"
+    repository: "le-coffre-frontend"
+    tag: "ci"
+    pullPolicy: Never
+
+backend:
+  image:
+    registry: "localhost"
+    repository: "le-coffre-backend"
+    tag: "ci"
+    pullPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop: [ALL]
+
+config:
+  appBaseUrl: "http://localhost:4173"
+  environment: development
+  jwt:
+    existingSecretName: "le-coffre"
+  database:
+    existingSecretName: "le-coffre-db"
+  rateLimit:
+    enabled: false
+
+persistence:
+  enabled: true
+  size: 32Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: ""
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls: []
+
+podSecurityContext:
+  seccompProfile:
+    type: Unconfined

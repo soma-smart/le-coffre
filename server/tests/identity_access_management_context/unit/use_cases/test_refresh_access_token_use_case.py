@@ -12,8 +12,9 @@ from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
+from tests.shared_kernel.fakes import FakeTimeGateway
 
-from ..fakes import FakeTimeGateway, FakeTokenGateway, FakeUserRepository
+from ..fakes import FakeTokenGateway, FakeUserRepository
 
 
 @pytest.fixture

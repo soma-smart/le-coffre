@@ -17,6 +17,7 @@ from tests.identity_access_management_context.unit.conftest import (
     create_existing_sso_user,
     create_sso_user_from_provider,
 )
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import (
     FakeGroupMemberRepository,
@@ -26,7 +27,6 @@ from ..fakes import (
     FakeSsoEncryptionGateway,
     FakeSsoGateway,
     FakeSsoUserRepository,
-    FakeTimeGateway,
     FakeTokenGateway,
     FakeUserRepository,
 )
@@ -502,3 +502,96 @@ async def test_should_return_admin_role_in_token_when_sso_user_has_been_promoted
     generated_token = token_gateway.get_last_generated_token()
     assert generated_token is not None
     assert generated_token.roles == ["admin"]
+
+
+@pytest.mark.asyncio
+async def test_should_propagate_redirect_uri_to_gateway_when_provided_in_command(
+    use_case: SsoLoginUseCase,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    token_gateway: FakeTokenGateway,
+):
+    # Arrange
+    sso_code = "valid_sso_code_cli"
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "cli_user@example.com"
+    display_name = "CLI User"
+    sso_provider = "azure"
+    sso_user_id = "azure_cli_123"
+    cli_redirect_uri = "http://localhost:9876/callback"
+
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
+        )
+    )
+
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
+    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+
+    sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
+    sso_user_repository.create(existing_sso_user)
+    user_repository.save(User(id=user_id, username="cliuser", email=email, name=display_name, roles=[]))
+    token_gateway.set_unique_jwt_part("cli_token_part")
+
+    command = SsoLoginCommand(code=sso_code, redirect_uri=cli_redirect_uri)
+
+    # Act
+    await use_case.execute(command)
+
+    # Assert: the gateway received the redirect_uri from the command
+    assert sso_gateway.last_redirect_uri == cli_redirect_uri
+
+
+@pytest.mark.asyncio
+async def test_should_not_pass_redirect_uri_to_gateway_when_not_provided(
+    use_case: SsoLoginUseCase,
+    sso_gateway: FakeSsoGateway,
+    sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    token_gateway: FakeTokenGateway,
+):
+    # Arrange
+    sso_code = "valid_sso_code_browser"
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "browser_user@example.com"
+    display_name = "Browser User"
+    sso_provider = "azure"
+    sso_user_id = "azure_browser_456"
+
+    sso_configuration_repository.save(
+        SsoConfiguration(
+            "client_id",
+            "encrypted(client_secret)",
+            "url",
+            "auth",
+            "token",
+            "userinfo",
+            None,
+        )
+    )
+
+    sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
+    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+
+    sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
+    sso_user_repository.create(existing_sso_user)
+    user_repository.save(User(id=user_id, username="browseruser", email=email, name=display_name, roles=[]))
+    token_gateway.set_unique_jwt_part("browser_token_part")
+
+    command = SsoLoginCommand(code=sso_code)
+
+    # Act
+    await use_case.execute(command)
+
+    # Assert: the gateway received None (no redirect_uri override)
+    assert sso_gateway.last_redirect_uri is None

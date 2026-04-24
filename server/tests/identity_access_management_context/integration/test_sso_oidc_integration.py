@@ -283,3 +283,67 @@ async def test_multiple_users_authentication(oidc_server, sso_gateway):
 
     # Verify they're different users
     assert sso_user1.email != sso_user2.email
+
+
+@pytest.mark.asyncio
+async def test_complete_oauth2_flow_with_redirect_uri_override(oidc_test_user):
+    """Test complete OAuth2 flow using an explicit redirect_uri override (CLI auth flow)."""
+
+    oidc_server = oidc_test_user["oidc_server"]
+    cli_redirect_uri = "http://localhost:9876/callback"
+
+    # The gateway is configured with the server's default redirect_uri,
+    # but the CLI flow provides its own redirect_uri at callback time.
+    gateway = OAuth2SsoGateway(
+        redirect_uri=oidc_server["redirect_uri"],
+    )
+
+    sso_discovery_result = await gateway.validate_discovery(
+        client_id=oidc_server["client_id"],
+        client_secret=oidc_server["client_secret"],
+        discovery_url=oidc_server["discovery_url"],
+    )
+
+    config = SsoConfiguration(
+        client_id=oidc_server["client_id"],
+        client_secret=f"encrypted({oidc_server['client_secret']})",
+        discovery_url=oidc_server["discovery_url"],
+        authorization_endpoint=sso_discovery_result.authorization_endpoint,
+        token_endpoint=sso_discovery_result.token_endpoint,
+        userinfo_endpoint=sso_discovery_result.userinfo_endpoint,
+        jwks_uri=sso_discovery_result.jwks_uri,
+        updated_at=datetime.fromtimestamp(0),
+        client_secret_decrypted=oidc_server["client_secret"],
+    )
+
+    # Simulate the authorization request using the CLI redirect_uri
+    # (the OIDC mock accepts any redirect_uri for the authorization step)
+    from urllib.parse import urlencode
+
+    auth_url = (
+        f"{sso_discovery_result.authorization_endpoint}"
+        f"?{urlencode({'client_id': oidc_server['client_id'], 'redirect_uri': cli_redirect_uri, 'response_type': 'code', 'scope': 'openid email profile'})}"
+    )
+
+    response = httpx.post(
+        auth_url,
+        data={"sub": oidc_test_user["sub"]},
+        follow_redirects=False,
+    )
+
+    assert response.status_code in [302, 303], f"Expected redirect, got {response.status_code}"
+    callback_url = response.headers.get("location")
+    assert callback_url, "Should have a redirect location"
+
+    parsed = urlparse(callback_url)
+    query_params = parse_qs(parsed.query)
+    auth_code = query_params.get("code", [None])[0]
+
+    assert auth_code, f"Authorization code not found in callback URL: {callback_url}"
+
+    # Exchange the code using the CLI redirect_uri override
+    sso_user = await gateway.validate_callback(config, auth_code, redirect_uri=cli_redirect_uri)
+
+    assert sso_user.email == oidc_test_user["email"]
+    assert sso_user.display_name is not None
+    assert sso_user.sso_user_id is not None

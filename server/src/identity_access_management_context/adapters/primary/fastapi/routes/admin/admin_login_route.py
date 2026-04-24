@@ -17,6 +17,7 @@ from identity_access_management_context.application.use_cases import (
     PasswordLoginUseCase,
 )
 from identity_access_management_context.domain.exceptions import (
+    AccountLockedException,
     AdminNotFoundException,
     InvalidCredentialsException,
 )
@@ -101,8 +102,19 @@ async def admin_login(
             message="Login successful",
         )
 
+    # Every authentication-failure path returns the exact same 401 body so an
+    # attacker cannot enumerate valid emails by reading response text. The
+    # lockout signal is carried exclusively by the Retry-After header, which is
+    # not itself an oracle: the lockout gateway records failures for any email
+    # (valid or not), so the header appears after N attempts regardless.
+    except AccountLockedException as e:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+            headers={"Retry-After": str(e.retry_after_seconds)},
+        ) from e
     except (InvalidCredentialsException, AdminNotFoundException) as e:
-        raise HTTPException(status_code=401, detail=str(e)) from e
+        raise HTTPException(status_code=401, detail="Invalid credentials") from e
     except Exception as e:
         logger.exception("Unexpected error in admin login")
         raise HTTPException(status_code=500, detail="Internal server error") from e

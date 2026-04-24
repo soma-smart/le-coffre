@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from uuid import uuid4
 
@@ -70,76 +71,75 @@ class SsoLoginUseCase(TracedUseCase):
         self._sso_event_repository = sso_event_repository
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
-        # Step 0: Retrieve SSO and decrypt secret key
-        sso_config = SsoConfigurationDecryptingService(
-            self._sso_configuration_repository, self._sso_encryption_gateway
-        ).decrypt()
-
-        # Step 1: Validate SSO code and get user info from provider
-        sso_user_from_provider = await self._sso_gateway.validate_callback(sso_config, command.code)
-
-        # Step 2: Check if user already exists in our system
-        existing_sso_user = self._sso_user_repository.get_by_sso_user_id(
-            sso_user_from_provider.sso_user_id, sso_user_from_provider.sso_provider
+        # Step 0: Retrieve SSO config — synchronous DB read + crypto, run in thread.
+        sso_config = await asyncio.to_thread(
+            lambda: SsoConfigurationDecryptingService(
+                self._sso_configuration_repository, self._sso_encryption_gateway
+            ).decrypt()
         )
 
-        if existing_sso_user:
-            # User exists, use existing data
-            user_id = existing_sso_user.internal_user_id
-            email = existing_sso_user.email
-            display_name = existing_sso_user.display_name
-            is_new_user = False
+        # Step 1: Validate SSO code with the provider — truly async network call.
+        sso_user_from_provider = await self._sso_gateway.validate_callback(
+            sso_config, command.code, redirect_uri=command.redirect_uri
+        )
 
-            # Update last login time
-            self._sso_user_repository.update_last_login(
-                sso_user_from_provider.sso_user_id,
-                sso_user_from_provider.sso_provider,
-                datetime.now(),
-            )
-        else:
-            # Step 3: Create new user
-            user_id = uuid4()
-            email = sso_user_from_provider.email
-            display_name = sso_user_from_provider.display_name
-            is_new_user = True
-
-            # Create user in User Management context via service
-            user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
-            user = user_management_service.create_user(
-                user_id=user_id,
-                email=email,
-                username=email.split("@")[0],
-                name=display_name,
+        # Steps 2-4: All remaining DB reads/writes are synchronous — batch them
+        # in a single thread to avoid blocking the event loop between token calls.
+        def _resolve_user():
+            existing_sso_user = self._sso_user_repository.get_by_sso_user_id(
+                sso_user_from_provider.sso_user_id, sso_user_from_provider.sso_provider
             )
 
-            # Create personal group for the new user
-            UserCreationService.create_personal_group_and_set_ownership(
-                user_id=user.id,
-                username=user.username,
-                group_repository=self._group_repository,
-                group_member_repository=self._group_member_repository,
-            )
+            if existing_sso_user:
+                user_id = existing_sso_user.internal_user_id
+                email = existing_sso_user.email
+                display_name = existing_sso_user.display_name
+                is_new_user = False
+                self._sso_user_repository.update_last_login(
+                    sso_user_from_provider.sso_user_id,
+                    sso_user_from_provider.sso_provider,
+                    datetime.now(),
+                )
+            else:
+                user_id = uuid4()
+                email = sso_user_from_provider.email
+                display_name = sso_user_from_provider.display_name
+                is_new_user = True
 
-            # Save SSO user mapping in Auth context
-            sso_user = SsoUser(
-                internal_user_id=user_id,
-                email=email,
-                display_name=display_name,
-                sso_user_id=sso_user_from_provider.sso_user_id,
-                sso_provider=sso_user_from_provider.sso_provider,
-                created_at=datetime.now(),
-                last_login=datetime.now(),
-            )
-            self._sso_user_repository.create(sso_user)
+                user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
+                user = user_management_service.create_user(
+                    user_id=user_id,
+                    email=email,
+                    username=email.split("@")[0],
+                    name=display_name,
+                )
+                UserCreationService.create_personal_group_and_set_ownership(
+                    user_id=user.id,
+                    username=user.username,
+                    group_repository=self._group_repository,
+                    group_member_repository=self._group_member_repository,
+                )
+                sso_user = SsoUser(
+                    internal_user_id=user_id,
+                    email=email,
+                    display_name=display_name,
+                    sso_user_id=sso_user_from_provider.sso_user_id,
+                    sso_provider=sso_user_from_provider.sso_provider,
+                    created_at=datetime.now(),
+                    last_login=datetime.now(),
+                )
+                self._sso_user_repository.create(sso_user)
 
-        # Step 4: Fetch current roles from the User repository so that promotions
-        # (e.g. to admin) are reflected immediately in the new token.
-        user = self._user_repository.get_by_id(user_id)
-        if not user:
-            raise RuntimeError("User should exist at this point, but was not found in UserRepository")
-        roles = user.roles
+            # Fetch current roles so that any promotions are reflected in the token.
+            user = self._user_repository.get_by_id(user_id)
+            if not user:
+                raise RuntimeError("User should exist at this point, but was not found in UserRepository")
 
-        # Step 5: Generate JWT token
+            return user_id, email, display_name, is_new_user, user.roles
+
+        user_id, email, display_name, is_new_user, roles = await asyncio.to_thread(_resolve_user)
+
+        # Step 5: Generate JWT tokens — truly async.
         token = await self._token_gateway.generate_token(
             user_id=user_id,
             email=email,
@@ -155,12 +155,14 @@ class SsoLoginUseCase(TracedUseCase):
 
         event = SsoLoginEvent(user_id=user_id, email=email, is_new_user=is_new_user)
         self._event_publisher.publish(event)
-        self._sso_event_repository.append_event(
-            event_id=event.event_id,
-            event_type=type(event).__name__,
-            occurred_on=event.occurred_on,
-            actor_user_id=user_id,
-            event_data={"email": email, "is_new_user": is_new_user},
+        await asyncio.to_thread(
+            lambda: self._sso_event_repository.append_event(
+                event_id=event.event_id,
+                event_type=type(event).__name__,
+                occurred_on=event.occurred_on,
+                actor_user_id=user_id,
+                event_data={"email": email, "is_new_user": is_new_user},
+            )
         )
 
         return SsoLoginResponse(

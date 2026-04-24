@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import UTC, datetime
 from typing import Iterator
 from uuid import UUID
 
@@ -8,8 +9,10 @@ from fastapi.responses import PlainTextResponse
 from starlette.testclient import TestClient
 
 from identity_access_management_context.application.gateways import Token
+from identity_access_management_context.domain.exceptions import InvalidTokenException
 from security.rate_limit_middleware import RateLimitMiddleware
 from security.rate_limiter import InMemoryRateLimiter
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 
 class _FakeTokenGateway:
@@ -17,40 +20,45 @@ class _FakeTokenGateway:
 
     def __init__(self) -> None:
         self._tokens: dict[str, Token] = {}
+        self._raises: dict[str, Exception] = {}
 
     def register(self, token: str, user_id: str) -> None:
         self._tokens[token] = Token(value=token, user_id=UUID(user_id), email="", roles=[], claims={})
 
+    def register_raising(self, token: str, exc: Exception) -> None:
+        """Wire ``token`` so ``validate_token`` raises ``exc`` — lets us simulate
+        both the domain InvalidTokenException path and arbitrary library errors."""
+        self._raises[token] = exc
+
     async def validate_token(self, token: str) -> Token | None:
+        if token in self._raises:
+            raise self._raises[token]
         return self._tokens.get(token)
 
 
 def _create_app(
-    auth_max: int = 5,
-    api_max: int = 60,
+    *,
+    user_max: int = 300,
+    unauth_max: int = 30,
+    auth_max: int = 100,
     window: int = 60,
     login_status_code: int = 401,
     token_gateway: _FakeTokenGateway | None = None,
+    trusted_proxies: set[str] | None = None,
+    trusted_proxy_hops: int = 1,
+    time_provider: FakeTimeGateway | None = None,
 ) -> FastAPI:
-    """
-    Build a minimal FastAPI app with the rate-limit middleware.
-
-    ``login_status_code`` controls what the ``/auth/login`` endpoint returns.
-    Defaults to 401 (failed login) so tests can exhaust the auth bucket without
-    the success-reset kicking in.  Pass 200 to test the reset path.
-
-    ``token_gateway`` is used for per-user rate limiting on non-auth routes.
-    Pass a ``_FakeTokenGateway`` instance with pre-registered tokens to enable
-    user-based checks.  Defaults to ``None`` (user check skipped).
-    """
     app = FastAPI(root_path="/api")
 
-    rate_limiter = InMemoryRateLimiter()
-    app.state.rate_limiter = rate_limiter
-    app.state.rate_limit_auth_max_requests = auth_max
-    app.state.rate_limit_api_max_requests = api_max
-    app.state.rate_limit_window_seconds = window
+    app.state.rate_limiter = InMemoryRateLimiter()
+    app.state.time_provider = time_provider or FakeTimeGateway(datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC))
     app.state.token_gateway = token_gateway
+    app.state.rate_limit_user_max_requests = user_max
+    app.state.rate_limit_unauth_max_requests = unauth_max
+    app.state.rate_limit_auth_max_requests = auth_max
+    app.state.rate_limit_window_seconds = window
+    app.state.rate_limit_trusted_proxies = trusted_proxies if trusted_proxies is not None else {"127.0.0.1", "::1"}
+    app.state.rate_limit_trusted_proxy_hops = trusted_proxy_hops
 
     app.add_middleware(RateLimitMiddleware)
 
@@ -66,6 +74,30 @@ def _create_app(
     async def login():
         return PlainTextResponse("login", status_code=login_status_code)
 
+    @app.post("/auth/register-admin")
+    async def register_admin():
+        return PlainTextResponse("registered", status_code=200)
+
+    @app.post("/auth/refresh-token")
+    async def refresh_token():
+        return PlainTextResponse("refreshed", status_code=200)
+
+    @app.get("/auth/sso/callback")
+    async def sso_callback():
+        return PlainTextResponse("sso-ok", status_code=200)
+
+    @app.get("/auth/sso/url")
+    async def sso_url():
+        return PlainTextResponse("sso-url", status_code=200)
+
+    @app.get("/auth/sso/is-configured")
+    async def sso_is_configured():
+        return PlainTextResponse("configured", status_code=200)
+
+    @app.get("/vault/status")
+    async def vault_status():
+        return PlainTextResponse("status", status_code=200)
+
     @app.get("/other")
     async def other():
         return PlainTextResponse("other")
@@ -75,8 +107,7 @@ def _create_app(
 
 @pytest.fixture
 def app() -> FastAPI:
-    # api_max=5, auth_max=3; login_status_code=401 so auth resets don't interfere
-    return _create_app(auth_max=3, api_max=5, window=60, login_status_code=401)
+    return _create_app(user_max=10, unauth_max=5, auth_max=3, window=60)
 
 
 @pytest.fixture
@@ -85,286 +116,309 @@ def client(app: FastAPI) -> Iterator[TestClient]:
         yield c
 
 
-class TestRateLimitMiddleware:
-    def test_should_exempt_health_check(self, client: TestClient):
-        for _ in range(10):
-            r = client.get("/api/health")
-            assert r.status_code == 200
+# ── Exempt paths ──────────────────────────────────────────────────────
 
-    def test_should_exempt_docs(self, client: TestClient):
-        for _ in range(10):
-            r = client.get("/docs")
-            assert r.status_code in (200, 404)  # may not exist, but not 429
 
-    def test_should_block_api_routes_over_limit(self, client: TestClient):
-        # api_max=5; 6th request must be blocked
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/health",
+        "/api/vault/status",
+        "/api/auth/sso/url",
+        "/api/auth/sso/is-configured",
+    ],
+)
+def test_given_exempt_api_path_when_dispatching_should_pass_through(client: TestClient, path: str):
+    """Frequently-polled endpoints must never trip a bucket, even under the
+    tight fixture limits (unauth_max=5): the whole point of exempting them is
+    that a normal UI can call them on every page without running out."""
+    for _ in range(20):
+        assert client.get(path).status_code != 429
+
+
+def test_given_docs_or_openapi_path_when_dispatching_should_pass_through(client: TestClient):
+    # Deployed paths are /api/docs and /api/openapi.json because FastAPI runs
+    # with root_path="/api" and nginx preserves the prefix on proxy.
+    for _ in range(20):
+        assert client.get("/api/docs").status_code != 429
+        assert client.get("/api/openapi.json").status_code != 429
+
+
+def test_given_non_api_path_when_dispatching_should_pass_through():
+    app = _create_app(user_max=1, unauth_max=1, auth_max=1, window=60)
+    with TestClient(app) as c:
         for _ in range(5):
-            r = client.get("/api/passwords")
-            assert r.status_code == 200
+            assert c.get("/other").status_code == 200
 
-        r = client.get("/api/passwords")
-        assert r.status_code == 429
-        assert "Too many requests" in r.json()["detail"]
 
-    def test_should_include_rate_limit_headers_on_api_success(self, client: TestClient):
-        r = client.get("/api/passwords")
-        assert r.status_code == 200
-        assert "X-RateLimit-Limit" in r.headers
-        assert "X-RateLimit-Remaining" in r.headers
+# ── Unauthenticated IP bucket ─────────────────────────────────────────
 
-    def test_should_block_auth_routes_over_limit(self, client: TestClient):
-        # login returns 401 (failed creds) → no reset → bucket exhausts normally
+
+def test_given_unauth_limit_reached_when_dispatching_should_block_caller(client: TestClient):
+    for _ in range(5):
+        assert client.get("/api/passwords").status_code == 200
+
+    r = client.get("/api/passwords")
+
+    assert r.status_code == 429
+    assert "Too many requests" in r.json()["detail"]
+
+
+def test_given_request_succeeds_when_dispatching_should_emit_ratelimit_headers(client: TestClient):
+    r = client.get("/api/passwords")
+
+    assert r.status_code == 200
+    assert r.headers["X-RateLimit-Limit"] == "5"
+    assert "X-RateLimit-Remaining" in r.headers
+
+
+def test_given_request_blocked_when_dispatching_should_emit_retry_after(client: TestClient):
+    for _ in range(5):
+        client.get("/api/passwords")
+
+    r = client.get("/api/passwords")
+
+    assert r.status_code == 429
+    assert int(r.headers["Retry-After"]) > 0
+
+
+# ── Authenticated user bucket ─────────────────────────────────────────
+
+
+def test_given_valid_access_token_when_dispatching_should_use_per_user_bucket():
+    user_id = "00000000-0000-0000-0000-000000000001"
+    gateway = _FakeTokenGateway()
+    gateway.register("token-a", user_id)
+    app = _create_app(user_max=3, unauth_max=100, auth_max=100, token_gateway=gateway)
+
+    with TestClient(app) as c:
+        c.cookies.set("access_token", "token-a")
         for _ in range(3):
-            r = client.post("/api/auth/login")
-            assert r.status_code == 401
+            assert c.get("/api/passwords").status_code == 200
+        r = c.get("/api/passwords")
 
-        r = client.post("/api/auth/login")
-        assert r.status_code == 429
-        assert "Too many requests" in r.json()["detail"]
+    assert r.status_code == 429
 
-    def test_should_include_rate_limit_headers_on_auth_success(self, client: TestClient):
-        # Auth routes expose the auth-bucket limit in headers (the stricter one)
-        r = client.post("/api/auth/login")
-        assert r.status_code == 401  # failed creds, not yet rate-limited
-        assert "X-RateLimit-Limit" in r.headers
-        assert int(r.headers["X-RateLimit-Limit"]) == 3  # auth_max, not api_max
-        assert "X-RateLimit-Remaining" in r.headers
 
-    def test_should_include_retry_after_header_on_auth_429(self, client: TestClient):
+def test_given_shared_ip_when_dispatching_should_isolate_user_buckets():
+    """NAT regression: two users on the same IP each get their own bucket."""
+    user_a = "00000000-0000-0000-0000-000000000001"
+    user_b = "00000000-0000-0000-0000-000000000002"
+    gateway = _FakeTokenGateway()
+    gateway.register("token-a", user_a)
+    gateway.register("token-b", user_b)
+    app = _create_app(user_max=3, unauth_max=2, auth_max=100, token_gateway=gateway)
+
+    with TestClient(app) as c_a, TestClient(app) as c_b:
+        c_a.cookies.set("access_token", "token-a")
+        c_b.cookies.set("access_token", "token-b")
         for _ in range(3):
-            client.post("/api/auth/login")
+            assert c_a.get("/api/passwords").status_code == 200
+        assert c_a.get("/api/passwords").status_code == 429
 
-        r = client.post("/api/auth/login")
-        assert r.status_code == 429
-        assert "Retry-After" in r.headers
-        assert int(r.headers["Retry-After"]) > 0
+        for _ in range(3):
+            assert c_b.get("/api/passwords").status_code == 200
+        assert c_b.get("/api/passwords").status_code == 429
 
-    def test_should_include_retry_after_header_on_api_429(self, client: TestClient):
-        for _ in range(5):
-            client.get("/api/passwords")
 
-        r = client.get("/api/passwords")
-        assert r.status_code == 429
-        assert "Retry-After" in r.headers
-        assert int(r.headers["Retry-After"]) > 0
+def test_given_unknown_token_when_dispatching_should_fall_back_to_ip_bucket():
+    app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=_FakeTokenGateway())
+    with TestClient(app) as c:
+        c.cookies.set("access_token", "not-a-real-token")
+        for _ in range(3):
+            assert c.get("/api/passwords").status_code == 200
+        r = c.get("/api/passwords")
 
-    def test_auth_and_api_buckets_are_independent(self):
-        """Auth bucket exhaustion only blocks auth routes; API routes use a separate bucket."""
-        # Use a high api_max so the small number of auth requests never saturates it
-        app = _create_app(auth_max=3, api_max=20, window=60, login_status_code=401)
+    assert r.status_code == 429
 
+
+def test_given_access_token_raises_invalid_token_when_dispatching_should_fall_back_silently(
+    caplog: pytest.LogCaptureFixture,
+):
+    """Domain-level InvalidTokenException is the *expected* bad-token signal.
+    The middleware must bucket as anonymous without logging at WARNING — otherwise
+    every expired-cookie user generates an alert."""
+    gateway = _FakeTokenGateway()
+    gateway.register_raising("expired-token", InvalidTokenException())
+    app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=gateway)
+
+    with caplog.at_level("WARNING", logger="security.rate_limit_middleware"):
         with TestClient(app) as c:
-            # Exhaust the auth bucket (3 pass + 1 blocked = 4 total, all counted by API bucket)
+            c.cookies.set("access_token", "expired-token")
             for _ in range(3):
-                c.post("/api/auth/login")
-            assert c.post("/api/auth/login").status_code == 429
-
-            # API bucket has 4 of 20 slots used — password endpoint is unaffected
-            for _ in range(10):
                 assert c.get("/api/passwords").status_code == 200
+            r = c.get("/api/passwords")
 
-    def test_should_not_rate_limit_non_api_routes(self):
-        app = FastAPI()
-        app.state.rate_limiter = InMemoryRateLimiter()
-        app.state.rate_limit_auth_max_requests = 1
-        app.state.rate_limit_api_max_requests = 1
-        app.state.rate_limit_window_seconds = 60
-        app.state.token_gateway = None
-        app.add_middleware(RateLimitMiddleware)
+    assert r.status_code == 429
+    assert not any("Token gateway" in rec.message for rec in caplog.records), (
+        "InvalidTokenException must be treated as expected and MUST NOT log at WARNING"
+    )
 
-        @app.get("/something")
-        async def something():
-            return PlainTextResponse("ok")
 
+def test_given_access_token_raises_unexpected_error_when_dispatching_should_fall_back_and_log_warning(
+    caplog: pytest.LogCaptureFixture,
+):
+    """A non-InvalidTokenException (library bug, JWT secret rotation mishap, UUID
+    parse failure) is an operational signal. The middleware must still fail
+    closed to IP keying so the request isn't served unauthenticated at the
+    user-bucket rate, AND must log at WARNING so SRE sees the regression."""
+    gateway = _FakeTokenGateway()
+    gateway.register_raising("buggy-token", RuntimeError("jwt library blew up"))
+    app = _create_app(user_max=100, unauth_max=3, auth_max=100, token_gateway=gateway)
+
+    with caplog.at_level("WARNING", logger="security.rate_limit_middleware"):
         with TestClient(app) as c:
-            for _ in range(5):
-                r = c.get("/something")
-                assert r.status_code == 200
+            c.cookies.set("access_token", "buggy-token")
+            for _ in range(3):
+                assert c.get("/api/passwords").status_code == 200
+            r = c.get("/api/passwords")
 
-    def test_should_handle_concurrent_requests_safely(self, client: TestClient):
-        """Verify rate limiter is thread-safe under concurrent load on auth routes."""
+    assert r.status_code == 429, "Must still fall back to the IP bucket, not 500"
+    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING" and "Token gateway" in rec.message]
+    assert warnings, "Unexpected token-gateway errors must surface at WARNING"
+    assert warnings[0].exc_info is not None, "WARNING must include exc_info for Sentry grouping"
 
-        def make_request():
-            return client.post("/api/auth/login")
 
-        # Launch 10 concurrent requests against auth limit of 3
+# ── Auth-route floor (login only) ─────────────────────────────────────
+
+
+def test_given_login_path_when_dispatching_should_apply_auth_floor(client: TestClient):
+    for _ in range(3):
+        r = client.post("/api/auth/login")
+        assert r.status_code == 401  # stub returns 401
+
+    r = client.post("/api/auth/login")
+
+    assert r.status_code == 429
+
+
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("post", "/api/auth/register-admin"),
+        ("post", "/api/auth/refresh-token"),
+        ("get", "/api/auth/sso/callback"),
+    ],
+)
+def test_given_non_login_auth_path_when_dispatching_should_not_consume_auth_floor(method: str, path: str):
+    """The auth-route floor is narrow by design: only /api/auth/login trips it."""
+    app = _create_app(user_max=100, unauth_max=100, auth_max=2, window=60)
+    with TestClient(app) as c:
+        for _ in range(5):
+            r = getattr(c, method)(path)
+            assert r.status_code != 429, f"{method.upper()} {path} unexpectedly hit the auth floor"
+
+        for _ in range(2):
+            assert c.post("/api/auth/login").status_code == 401
+        assert c.post("/api/auth/login").status_code == 429
+
+
+def test_given_principal_bucket_exhausted_when_logging_in_should_429_even_when_auth_floor_has_capacity():
+    """Login requests consume the principal (unauth/IP) bucket in addition to
+    the auth floor. With a tight unauth bucket and a roomy auth floor, the
+    principal bucket must still catch the third request — otherwise a flood on
+    /auth/login could starve every other /api/* call from the same IP."""
+    app = _create_app(user_max=100, unauth_max=2, auth_max=100, login_status_code=401)
+    with TestClient(app) as c:
+        for _ in range(2):
+            assert c.post("/api/auth/login").status_code == 401
+        r = c.post("/api/auth/login")
+
+    assert r.status_code == 429
+
+
+def test_given_successful_login_when_auth_floor_exhausted_should_429_even_when_principal_bucket_has_capacity():
+    """The counterpart to the test above: a genuinely successful login
+    (status 200) still consumes the auth floor. With a tight auth_max and a
+    roomy unauth bucket, the third successful login must be refused by the
+    floor — proving the floor is not bypassed when the endpoint returns 2xx."""
+    app = _create_app(user_max=100, unauth_max=100, auth_max=2, login_status_code=200)
+    with TestClient(app) as c:
+        for _ in range(2):
+            assert c.post("/api/auth/login").status_code == 200
+        r = c.post("/api/auth/login")
+
+    assert r.status_code == 429
+    assert int(r.headers["Retry-After"]) > 0
+
+
+# ── X-Forwarded-For ───────────────────────────────────────────────────
+
+
+def test_given_trusted_peer_when_dispatching_should_honor_xff():
+    """TestClient connects as 'testclient', so mark it as a trusted proxy."""
+    app = _create_app(user_max=100, unauth_max=2, auth_max=100, trusted_proxies={"testclient"})
+    with TestClient(app) as c:
+        for _ in range(2):
+            assert c.get("/api/passwords", headers={"X-Forwarded-For": "203.0.113.9"}).status_code == 200
+        assert c.get("/api/passwords", headers={"X-Forwarded-For": "203.0.113.9"}).status_code == 429
+        assert c.get("/api/passwords", headers={"X-Forwarded-For": "203.0.113.10"}).status_code == 200
+
+
+def test_given_untrusted_peer_when_dispatching_should_ignore_xff():
+    """With no trusted proxies, XFF is discarded and all traffic keys on the TCP peer."""
+    app = _create_app(user_max=100, unauth_max=2, auth_max=100, trusted_proxies=set())
+    with TestClient(app) as c:
+        for _ in range(2):
+            assert c.get("/api/passwords", headers={"X-Forwarded-For": "203.0.113.9"}).status_code == 200
+        r = c.get("/api/passwords", headers={"X-Forwarded-For": "203.0.113.10"})
+
+    assert r.status_code == 429
+
+
+# ── Concurrency ───────────────────────────────────────────────────────
+
+
+# ── Defensive app.state validation ────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "missing_key",
+    [
+        "rate_limiter",
+        "rate_limit_user_max_requests",
+        "rate_limit_unauth_max_requests",
+        "rate_limit_auth_max_requests",
+        "rate_limit_window_seconds",
+        "rate_limit_trusted_proxies",
+        "rate_limit_trusted_proxy_hops",
+        "time_provider",
+    ],
+)
+def test_given_app_state_missing_required_key_when_dispatching_should_log_critical_and_500(
+    caplog: pytest.LogCaptureFixture, missing_key: str
+):
+    """If a future refactor renames an app.state attr and forgets one call site,
+    EVERY /api/* request would generate a generic 500 — no dedicated signal
+    distinguishes "rate limiter misconfigured" from "some other 500". Pin the
+    CRITICAL log for every required key so a refactor that moves one read
+    outside the try/except is caught here rather than at runtime."""
+    app = _create_app(user_max=10, unauth_max=5, auth_max=3, window=60)
+    delattr(app.state, missing_key)
+
+    with caplog.at_level("CRITICAL", logger="security.rate_limit_middleware"):
+        with TestClient(app, raise_server_exceptions=False) as c:
+            r = c.get("/api/passwords")
+
+    assert r.status_code >= 500, f"Missing {missing_key} must fail-closed, not silently pass traffic"
+    critical = [rec for rec in caplog.records if rec.levelname == "CRITICAL"]
+    assert critical, f"Missing {missing_key} must log at CRITICAL so ops can alert specifically on it"
+    assert "misconfigured" in critical[0].message.lower() or "rate_limit" in critical[0].message.lower()
+
+
+def test_given_concurrent_requests_on_shared_bucket_when_dispatching_should_serialize_correctly():
+    app = _create_app(user_max=100, unauth_max=100, auth_max=3, login_status_code=401)
+    with TestClient(app) as c:
+
+        def _post():
+            return c.post("/api/auth/login")
+
         with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [executor.submit(make_request) for _ in range(10)]
+            futures = [executor.submit(_post) for _ in range(10)]
             results = [f.result() for f in as_completed(futures)]
 
-        allowed = [r for r in results if r.status_code != 429]
-        limited = [r for r in results if r.status_code == 429]
+    allowed = [r for r in results if r.status_code != 429]
+    limited = [r for r in results if r.status_code == 429]
 
-        # Exactly auth_max=3 should pass, the rest must be rate-limited
-        assert len(allowed) == 3, f"Expected 3 allowed, got {len(allowed)}"
-        assert len(limited) == 7, f"Expected 7 rate-limited, got {len(limited)}"
-
-    def test_should_rate_limit_authenticated_user_on_api_routes(self):
-        """
-        When a valid access_token cookie is present, the per-user bucket is
-        checked independently of the IP bucket.  Exceeding api_max requests
-        from the same user blocks that user even if the IP bucket still has
-        capacity.
-        """
-        user_id = "00000000-0000-0000-0000-000000000001"
-        token = "user-token"
-        gateway = _FakeTokenGateway()
-        gateway.register(token, user_id)
-
-        # api_max=3; a high IP max ensures IP bucket never blocks before user bucket
-        app = _create_app(auth_max=100, api_max=3, window=60, token_gateway=gateway)
-
-        with TestClient(app) as c:
-            c.cookies.set("access_token", token)
-
-            for i in range(3):
-                r = c.get("/api/passwords")
-                assert r.status_code == 200, f"Request {i + 1} should not be limited"
-
-            # 4th request: user bucket exhausted
-            r = c.get("/api/passwords")
-            assert r.status_code == 429
-            assert "Too many requests" in r.json()["detail"]
-
-    def test_user_buckets_are_independent_of_each_other(self):
-        """
-        Two authenticated users on different IPs have independent user buckets;
-        one user being rate-limited must not affect the other.
-        """
-        user_a = "00000000-0000-0000-0000-000000000001"
-        user_b = "00000000-0000-0000-0000-000000000002"
-        token_a, token_b = "token-a", "token-b"
-        gateway = _FakeTokenGateway()
-        gateway.register(token_a, user_a)
-        gateway.register(token_b, user_b)
-
-        # api_max=2; users come from separate IPs so the shared IP bucket
-        # of one cannot bleed into the other
-        app = _create_app(auth_max=100, api_max=2, window=60, token_gateway=gateway)
-
-        with TestClient(app) as c_a, TestClient(app) as c_b:
-            c_a.cookies.set("access_token", token_a)
-            c_b.cookies.set("access_token", token_b)
-            ip_a = {"X-Forwarded-For": "10.0.0.1"}
-            ip_b = {"X-Forwarded-For": "10.0.0.2"}
-
-            # Exhaust user A's bucket from IP-A
-            for _ in range(2):
-                c_a.get("/api/passwords", headers=ip_a)
-            assert c_a.get("/api/passwords", headers=ip_a).status_code == 429
-
-            # User B (from IP-B) is unaffected — their user bucket is still empty
-            for _ in range(2):
-                r = c_b.get("/api/passwords", headers=ip_b)
-                assert r.status_code == 200
-
-    def test_unauthenticated_requests_skip_user_check(self):
-        """
-        Requests without an access_token cookie are not checked against a user
-        bucket — only the IP bucket applies.
-        """
-        app = _create_app(auth_max=100, api_max=3, window=60, token_gateway=_FakeTokenGateway())
-
-        with TestClient(app) as c:
-            for _ in range(3):
-                r = c.get("/api/passwords")  # no cookie
-                assert r.status_code == 200
-
-            # IP bucket exhausted
-            r = c.get("/api/passwords")
-            assert r.status_code == 429
-
-    def test_user_check_does_not_apply_to_auth_routes(self):
-        """
-        Auth routes are NOT subject to the per-user check.  Even if the user
-        bucket is exhausted, the user can still reach the login endpoint and
-        will only be blocked once the auth bucket is exhausted.
-
-        Two different IPs are used so that exhausting the user bucket (from
-        IP-A) does not also exhaust the IP bucket seen by the auth request
-        (from IP-B).
-        """
-        user_id = "00000000-0000-0000-0000-000000000001"
-        token = "user-token"
-        gateway = _FakeTokenGateway()
-        gateway.register(token, user_id)
-
-        # api_max=3 (tight user bucket); auth_max=5 (won't interfere)
-        app = _create_app(
-            auth_max=5,
-            api_max=3,
-            window=60,
-            login_status_code=401,
-            token_gateway=gateway,
-        )
-
-        ip_a = {"X-Forwarded-For": "10.0.0.1"}
-        ip_b = {"X-Forwarded-For": "10.0.0.2"}
-
-        with TestClient(app) as c:
-            c.cookies.set("access_token", token)
-
-            # Exhaust the user bucket from IP-A
-            for _ in range(3):
-                c.get("/api/passwords", headers=ip_a)
-            # Confirm user bucket is gone
-            assert c.get("/api/passwords", headers=ip_a).status_code == 429
-
-            # From a fresh IP (IP-B), the auth route must still work — the user
-            # bucket exhaustion must not bleed into auth route checks.
-            r = c.post("/api/auth/login", headers=ip_b)
-            assert r.status_code == 401, (
-                "Auth route should not be blocked by user bucket; expected 401 (wrong creds), got 429"
-            )
-
-    def test_should_reset_auth_limit_but_not_api_limit_on_successful_login(self):
-        """
-        A successful login resets the **auth** bucket only.  The API bucket
-        keeps accumulating so that a client cannot bypass the general API limit
-        by logging in repeatedly.
-        """
-        # auth_max=2, api_max=3; login returns 200 (success)
-        app = _create_app(auth_max=2, api_max=3, window=60, login_status_code=200)
-
-        with TestClient(app) as c:
-            # Three successful logins; auth bucket fills then resets after each.
-            # The API bucket counts every login but is never reset.
-            for i in range(3):
-                r = c.post("/api/auth/login")
-                assert r.status_code == 200, f"Login {i + 1} should not be rate-limited"
-
-            # api_max=3 was incremented by all 3 logins without ever being reset.
-            # The API bucket is now exhausted — next request to any /api route is blocked.
-            r = c.get("/api/passwords")
-            assert r.status_code == 429, "API bucket should be exhausted after 3 logins counted against it"
-
-    def test_should_reset_rate_limit_after_successful_login(self):
-        """
-        A successful login (2xx) resets the auth IP bucket so that legitimate
-        users on shared IPs (e.g. office NAT) are never permanently locked out
-        of the login page.
-        """
-        # auth_max=2; login returns 200 (success); api_max is high so it never blocks
-        app = _create_app(auth_max=2, api_max=100, window=60, login_status_code=200)
-
-        with TestClient(app) as c:
-            # Without the reset, the 3rd request would exceed auth_max=2 and return 429.
-            # With the reset, each successful login clears the bucket — all succeed.
-            for i in range(6):
-                r = c.post("/api/auth/login")
-                assert r.status_code == 200, f"Request {i + 1} should not be rate-limited"
-
-    def test_should_not_reset_rate_limit_on_failed_login(self):
-        """
-        A failed login (non-2xx) does NOT reset the bucket; successive failures
-        accumulate until the IP is blocked.
-        """
-        app = _create_app(auth_max=3, api_max=100, window=60, login_status_code=401)
-
-        with TestClient(app) as c:
-            for _ in range(3):
-                r = c.post("/api/auth/login")
-                assert r.status_code == 401  # failed credentials, bucket fills
-
-            r = c.post("/api/auth/login")
-            assert r.status_code == 429  # bucket exhausted, IP blocked
+    assert len(allowed) == 3
+    assert len(limited) == 7
