@@ -282,3 +282,69 @@ def test_should_do_nothing_when_deleting_by_owner_group_with_no_passwords(
 
     # When / Then - should not raise any exception
     sql_password_repository.delete_by_owner_group(group_id)
+
+
+# Method: count
+def test_should_return_zero_when_no_passwords_exist(sql_password_repository):
+    count = sql_password_repository.count()
+    assert count == 0
+
+
+def test_should_return_correct_count_when_one_password_exists(sql_password_repository):
+    password = Password(
+        id=uuid4(),
+        name="Test",
+        encrypted_value="enc",
+        folder="default",
+        url="http://example.com",
+        login="user1",
+    )
+    sql_password_repository.save(password)
+
+    count = sql_password_repository.count()
+
+    assert count == 1
+
+
+def test_should_return_correct_count_when_multiple_passwords_exist(sql_password_repository):
+    for i in range(3):
+        sql_password_repository.save(
+            Password(
+                id=uuid4(),
+                name=f"Pwd{i}",
+                encrypted_value="enc",
+                folder="default",
+                url=f"http://example_{i}.com",
+                login=f"user{i}",
+            )
+        )
+
+    count = sql_password_repository.count()
+
+    assert count == 3
+
+
+def test_should_return_updated_count_after_deletion(sql_password_repository):
+    password1 = Password(
+        id=uuid4(),
+        name="Pwd1",
+        encrypted_value="enc",
+        folder="default",
+        url="http://example1.com",
+        login="user1",
+    )
+    password2 = Password(
+        id=uuid4(),
+        name="Pwd2",
+        encrypted_value="enc",
+        folder="default",
+        url="http://example2.com",
+        login="user2",
+    )
+    sql_password_repository.save(password1)
+    sql_password_repository.save(password2)
+
+    sql_password_repository.delete(password1.id)
+    count = sql_password_repository.count()
+
+    assert count == 1

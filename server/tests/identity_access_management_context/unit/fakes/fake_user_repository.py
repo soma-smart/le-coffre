@@ -41,6 +41,9 @@ class FakeUserRepository(UserRepository):
             raise UserNotFoundError(user.id)
         self.storage[user.id] = user
 
+    def count(self) -> int:
+        return len(self.storage)
+
     def get_admin(self) -> Optional[User]:
         for user in self.storage.values():
             if ADMIN_ROLE in user.roles:

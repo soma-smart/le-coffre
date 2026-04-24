@@ -229,3 +229,72 @@ def test_given_existent_group_when_get_by_name_then_group_is_retrieved(
     assert retrieved_group is not None
     assert retrieved_group.id == group_id
     assert retrieved_group.name == group_name
+
+
+def test_given_no_groups_when_getting_number_of_groups_not_personal_then_returns_zero(
+    sql_group_repository,
+):
+    # Given: Empty repository (or at least we know the starting count)
+    # When
+    count = sql_group_repository.get_number_of_groups_not_personal()
+
+    # Then
+    assert count == 0
+
+
+def test_given_only_personal_groups_when_getting_number_of_groups_not_personal_then_returns_zero(
+    sql_group_repository,
+):
+    # Given
+    user1_id = uuid4()
+    user2_id = uuid4()
+    personal_group1 = Group(id=uuid4(), name="User1's Personal Group", is_personal=True, user_id=user1_id)
+    personal_group2 = Group(id=uuid4(), name="User2's Personal Group", is_personal=True, user_id=user2_id)
+    sql_group_repository.save_group(personal_group1)
+    sql_group_repository.save_group(personal_group2)
+
+    # When
+    count = sql_group_repository.get_number_of_groups_not_personal()
+
+    # Then
+    assert count == 0
+
+
+def test_given_only_non_personal_groups_when_getting_number_of_groups_not_personal_then_returns_correct_count(
+    sql_group_repository,
+):
+    # Given
+    group1 = Group(id=uuid4(), name="Development Team", is_personal=False)
+    group2 = Group(id=uuid4(), name="Marketing Team", is_personal=False)
+    group3 = Group(id=uuid4(), name="Sales Team", is_personal=False)
+    sql_group_repository.save_group(group1)
+    sql_group_repository.save_group(group2)
+    sql_group_repository.save_group(group3)
+
+    # When
+    count = sql_group_repository.get_number_of_groups_not_personal()
+
+    # Then
+    assert count == 3
+
+
+def test_given_mixed_personal_and_non_personal_groups_when_getting_number_of_groups_not_personal_then_returns_only_non_personal_count(
+    sql_group_repository,
+):
+    # Given
+    user_id = uuid4()
+    personal_group = Group(id=uuid4(), name="User's Personal Group", is_personal=True, user_id=user_id)
+    non_personal_group1 = Group(id=uuid4(), name="Team A", is_personal=False)
+    non_personal_group2 = Group(id=uuid4(), name="Team B", is_personal=False)
+    non_personal_group3 = Group(id=uuid4(), name="Team C", is_personal=False)
+
+    sql_group_repository.save_group(personal_group)
+    sql_group_repository.save_group(non_personal_group1)
+    sql_group_repository.save_group(non_personal_group2)
+    sql_group_repository.save_group(non_personal_group3)
+
+    # When
+    count = sql_group_repository.get_number_of_groups_not_personal()
+
+    # Then
+    assert count == 3

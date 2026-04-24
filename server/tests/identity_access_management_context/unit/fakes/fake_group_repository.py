@@ -48,3 +48,6 @@ class FakeGroupRepository:
 
     def clear(self) -> None:
         self._groups.clear()
+
+    def get_number_of_groups_not_personal(self) -> int:
+        return len([group for group in self._groups.values() if not group.is_personal])
