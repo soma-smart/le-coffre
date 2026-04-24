@@ -94,7 +94,11 @@ See [server/alembic/README.md](alembic/README.md) for migration full documentati
 ## Run the tests
 
 ```bash
-uv run pytest .
+uv run pytest -n auto
+
+uv run pytest -m "unit"
+uv run pytest -m "integration"
+uv run pytest -m "e2e"
 ```
 
 Tests that require OpenTelemetry are automatically skipped if the `monitoring` group is not installed.

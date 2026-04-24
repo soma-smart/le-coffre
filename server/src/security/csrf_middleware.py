@@ -102,7 +102,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
 
                 # Validate JWT and get user ID
                 command = ValidateUserTokenCommand(jwt_token=access_token)
-                response = await validate_usecase.execute(command)
+                response = validate_usecase.execute(command)
                 user_id = response.user_id
 
                 # Validate CSRF token

@@ -40,9 +40,20 @@ postgres = ["psycopg2==2.9.11", "psycopg[binary]==3.3.3"]
 pythonpath = "src"
 addopts = "-ra --strict-markers --strict-config"
 testpaths = ["tests"]
+# Three "profiles" applied automatically by `tests/conftest.py::pytest_collection_modifyitems`
+# based on file path. Run a profile with `uv run pytest -m <profile>`:
+#   unit         — tests/<context>/unit/**          (Fakes only, no FastAPI, no DB)
+#   integration  — tests/<context>/integration/**, tests/alembic/**, tests/security/**,
+#                  tests/shared_kernel/** (excluding /unit/), and top-level tests/test_*.py
+#                  (real adapters, in-memory SQLite, middleware via TestClient)
+#   e2e          — tests/e2e/**                     (full FastAPI app, real workflows)
+markers = [
+  "unit: fast in-process tests using Fakes only — no FastAPI, no DB.",
+  "integration: real adapters / middleware / migrations — in-memory SQLite, TestClient.",
+  "e2e: end-to-end workflows against the full FastAPI app.",
+]
 
 [tool.ruff]
-fix = true
 line-length = 120
 target-version = "py313"
 exclude = [

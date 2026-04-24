@@ -39,7 +39,7 @@ class RegisterAdminResponse(BaseModel):
     response_model=RegisterAdminResponse,
     summary="Register the first admin user",
 )
-async def register_admin(
+def register_admin(
     request: RegisterAdminRequest,
     usecase: RegisterAdminWithPasswordUseCase = Depends(get_register_admin_usecase),
 ):
@@ -62,7 +62,7 @@ async def register_admin(
             display_name=request.display_name,
         )
 
-        created_admin_id = await usecase.execute(command)
+        created_admin_id = usecase.execute(command)
 
         return RegisterAdminResponse(
             id=created_admin_id,

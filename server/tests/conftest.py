@@ -1,7 +1,34 @@
 import os
 import secrets
+from pathlib import Path
 
 import pytest
+
+_TESTS_ROOT = Path(__file__).parent
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Auto-apply the `unit` / `integration` / `e2e` markers based on each test's
+    path so `pytest -m <profile>` partitions the suite without per-file annotations.
+
+    Rules (first match wins):
+      `<context>/unit/`        → unit
+      `e2e/`                   → e2e
+      anything else under tests/ → integration
+
+    The "anything else" catch-all covers `<context>/integration/`, `tests/alembic/`,
+    `tests/security/`, `tests/shared_kernel/**` (excluding /unit/), and the
+    top-level middleware tests (`tests/test_*.py`) — all of which spin up real
+    adapters, in-memory SQLite, or a TestClient.
+    """
+    for item in items:
+        rel = Path(item.fspath).relative_to(_TESTS_ROOT).as_posix()
+        if "/unit/" in f"/{rel}":
+            item.add_marker(pytest.mark.unit)
+        elif rel.startswith("e2e/"):
+            item.add_marker(pytest.mark.e2e)
+        else:
+            item.add_marker(pytest.mark.integration)
 
 
 @pytest.fixture(scope="session")

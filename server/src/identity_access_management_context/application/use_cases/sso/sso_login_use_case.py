@@ -139,15 +139,15 @@ class SsoLoginUseCase(TracedUseCase):
 
         user_id, email, display_name, is_new_user, roles = await asyncio.to_thread(_resolve_user)
 
-        # Step 5: Generate JWT tokens — truly async.
-        token = await self._token_gateway.generate_token(
+        # Step 5: Generate JWT tokens.
+        token = self._token_gateway.generate_token(
             user_id=user_id,
             email=email,
             roles=roles,
             claims={"display_name": display_name},
         )
 
-        refresh_token = await self._token_gateway.generate_refresh_token(
+        refresh_token = self._token_gateway.generate_refresh_token(
             user_id=user_id,
             email=email,
             roles=roles,

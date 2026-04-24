@@ -45,8 +45,7 @@ def use_case(
     )
 
 
-@pytest.mark.asyncio
-async def test_should_register_first_admin_with_password_and_return_user_id(
+def test_should_register_first_admin_with_password_and_return_user_id(
     use_case: RegisterAdminWithPasswordUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -58,7 +57,7 @@ async def test_should_register_first_admin_with_password_and_return_user_id(
 
     command = RegisterAdminWithPasswordCommand(id=user_id, email=email, password=password, display_name=display_name)
 
-    result = await use_case.execute(command)
+    result = use_case.execute(command)
 
     assert result == user_id
 
@@ -76,8 +75,7 @@ async def test_should_register_first_admin_with_password_and_return_user_id(
     assert "admin" in saved_user.roles
 
 
-@pytest.mark.asyncio
-async def test_should_raise_exception_when_admin_already_exists(
+def test_should_raise_exception_when_admin_already_exists(
     use_case: RegisterAdminWithPasswordUseCase, user_repository: FakeUserRepository
 ):
     # First create an admin
@@ -100,11 +98,10 @@ async def test_should_raise_exception_when_admin_already_exists(
     )
 
     with pytest.raises(AdminAlreadyExistsException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_should_hash_password_before_storing_credentials(
+def test_should_hash_password_before_storing_credentials(
     use_case: RegisterAdminWithPasswordUseCase,
     user_password_repository: FakeUserPasswordRepository,
 ):
@@ -117,7 +114,7 @@ async def test_should_hash_password_before_storing_credentials(
         id=user_id, email=email, password=plain_password, display_name=display_name
     )
 
-    await use_case.execute(command)
+    use_case.execute(command)
 
     saved_user_password = user_password_repository.get_by_id(user_id)
 
@@ -126,8 +123,7 @@ async def test_should_hash_password_before_storing_credentials(
     assert saved_user_password.password_hash != plain_password
 
 
-@pytest.mark.asyncio
-async def test_should_delegate_admin_creation_to_user_management_context(
+def test_should_delegate_admin_creation_to_user_management_context(
     use_case: RegisterAdminWithPasswordUseCase, user_repository: FakeUserRepository
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -138,7 +134,7 @@ async def test_should_delegate_admin_creation_to_user_management_context(
         id=user_id, email=email, password="password123", display_name=display_name
     )
 
-    await use_case.execute(command)
+    use_case.execute(command)
 
     # Verify user was created in user repository
     created_user = user_repository.get_by_id(user_id)
@@ -149,8 +145,7 @@ async def test_should_delegate_admin_creation_to_user_management_context(
     assert "admin" in created_user.roles
 
 
-@pytest.mark.asyncio
-async def test_should_publish_admin_registered_event_on_successful_registration(
+def test_should_publish_admin_registered_event_on_successful_registration(
     use_case: RegisterAdminWithPasswordUseCase,
     event_publisher: FakeDomainEventPublisher,
 ):
@@ -161,7 +156,7 @@ async def test_should_publish_admin_registered_event_on_successful_registration(
         id=user_id, email=email, password="secure123!", display_name="Admin User"
     )
 
-    await use_case.execute(command)
+    use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(AdminRegisteredEvent)
     assert len(events) == 1
@@ -169,8 +164,7 @@ async def test_should_publish_admin_registered_event_on_successful_registration(
     assert events[0].email == email
 
 
-@pytest.mark.asyncio
-async def test_should_store_admin_registered_event_on_successful_registration(
+def test_should_store_admin_registered_event_on_successful_registration(
     use_case: RegisterAdminWithPasswordUseCase,
     admin_event_repository,
 ):
@@ -181,7 +175,7 @@ async def test_should_store_admin_registered_event_on_successful_registration(
         id=user_id, email=email, password="secure123!", display_name="Admin User"
     )
 
-    await use_case.execute(command)
+    use_case.execute(command)
 
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]

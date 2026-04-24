@@ -120,7 +120,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
                 return self._build_429_response(auth_result)
 
-        principal = await self._resolve_principal(request, client_ip)
+        principal = self._resolve_principal(request, client_ip)
         if principal.kind == "user":
             principal_key = f"user:{principal.id}:api"
             principal_limit = user_max
@@ -147,7 +147,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return any(path.startswith(p) for p in self.EXEMPT_PREFIXES)
 
     @staticmethod
-    async def _resolve_principal(request: Request, client_ip: str) -> Principal:
+    def _resolve_principal(request: Request, client_ip: str) -> Principal:
         access_token = request.cookies.get("access_token")
         if not access_token:
             return Principal(kind="ip", id=client_ip)
@@ -155,7 +155,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if token_gateway is None:
             return Principal(kind="ip", id=client_ip)
         try:
-            token = await token_gateway.validate_token(access_token)
+            token = token_gateway.validate_token(access_token)
         except InvalidTokenException:
             # Expected path: domain-level "expired/tampered/unknown-issuer" signal.
             # Bucket as anonymous silently — every user with an expired cookie

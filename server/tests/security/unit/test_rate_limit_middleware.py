@@ -30,7 +30,7 @@ class _FakeTokenGateway:
         both the domain InvalidTokenException path and arbitrary library errors."""
         self._raises[token] = exc
 
-    async def validate_token(self, token: str) -> Token | None:
+    def validate_token(self, token: str) -> Token | None:
         if token in self._raises:
             raise self._raises[token]
         return self._tokens.get(token)
@@ -250,7 +250,7 @@ def test_given_access_token_raises_invalid_token_when_dispatching_should_fall_ba
             r = c.get("/api/passwords")
 
     assert r.status_code == 429
-    assert not any("Token gateway" in rec.message for rec in caplog.records), (
+    assert not any("Token gateway" in rec.getMessage() for rec in caplog.records), (
         "InvalidTokenException must be treated as expected and MUST NOT log at WARNING"
     )
 
@@ -274,7 +274,7 @@ def test_given_access_token_raises_unexpected_error_when_dispatching_should_fall
             r = c.get("/api/passwords")
 
     assert r.status_code == 429, "Must still fall back to the IP bucket, not 500"
-    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING" and "Token gateway" in rec.message]
+    warnings = [rec for rec in caplog.records if rec.levelname == "WARNING" and "Token gateway" in rec.getMessage()]
     assert warnings, "Unexpected token-gateway errors must surface at WARNING"
     assert warnings[0].exc_info is not None, "WARNING must include exc_info for Sentry grouping"
 
@@ -403,7 +403,8 @@ def test_given_app_state_missing_required_key_when_dispatching_should_log_critic
     assert r.status_code >= 500, f"Missing {missing_key} must fail-closed, not silently pass traffic"
     critical = [rec for rec in caplog.records if rec.levelname == "CRITICAL"]
     assert critical, f"Missing {missing_key} must log at CRITICAL so ops can alert specifically on it"
-    assert "misconfigured" in critical[0].message.lower() or "rate_limit" in critical[0].message.lower()
+    msg = critical[0].getMessage().lower()
+    assert "misconfigured" in msg or "rate_limit" in msg
 
 
 def test_given_concurrent_requests_on_shared_bucket_when_dispatching_should_serialize_correctly():

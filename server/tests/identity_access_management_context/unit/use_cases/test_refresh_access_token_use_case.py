@@ -30,8 +30,7 @@ def use_case(
     )
 
 
-@pytest.mark.asyncio
-async def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
+def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
@@ -51,15 +50,14 @@ async def test_given_valid_refresh_token_when_execute_then_returns_new_access_to
     command = RefreshAccessTokenCommand(refresh_token=refresh_token)
 
     # Act
-    result = await use_case.execute(command)
+    result = use_case.execute(command)
 
     # Assert
     assert result.access_token == f"jwt_token_for_{user_id}_new_access_token"
     assert result.user_id == user_id
 
 
-@pytest.mark.asyncio
-async def test_given_invalid_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(
+def test_given_invalid_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(
     use_case: RefreshAccessTokenUseCase,
 ):
     # Arrange
@@ -68,11 +66,10 @@ async def test_given_invalid_refresh_token_when_execute_then_raises_invalid_refr
 
     # Act & Assert
     with pytest.raises(InvalidRefreshTokenException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_given_expired_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(
+def test_given_expired_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(
     use_case: RefreshAccessTokenUseCase,
 ):
     # Arrange
@@ -81,11 +78,10 @@ async def test_given_expired_refresh_token_when_execute_then_raises_invalid_refr
 
     # Act & Assert
     with pytest.raises(InvalidRefreshTokenException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_given_refresh_token_for_nonexistent_user_when_execute_then_raises_invalid_refresh_token_exception(
+def test_given_refresh_token_for_nonexistent_user_when_execute_then_raises_invalid_refresh_token_exception(
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
 ):
@@ -102,11 +98,10 @@ async def test_given_refresh_token_for_nonexistent_user_when_execute_then_raises
 
     # Act & Assert
     with pytest.raises(InvalidRefreshTokenException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_updated_roles(
+def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_updated_roles(
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
@@ -145,7 +140,7 @@ async def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_ha
     command = RefreshAccessTokenCommand(refresh_token=refresh_token)
 
     # Act
-    result = await use_case.execute(command)
+    result = use_case.execute(command)
 
     # Assert
     assert result.access_token == f"jwt_token_for_{user_id}_new_token_after_promotion"

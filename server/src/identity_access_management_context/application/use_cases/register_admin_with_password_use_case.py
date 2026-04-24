@@ -1,4 +1,3 @@
-import asyncio
 from uuid import UUID
 
 from identity_access_management_context.application.commands import (
@@ -44,7 +43,7 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
         self._event_publisher = event_publisher
         self._admin_event_repository = admin_event_repository
 
-    async def execute(self, command: RegisterAdminWithPasswordCommand) -> UUID:
+    def execute(self, command: RegisterAdminWithPasswordCommand) -> UUID:
         # All operations are synchronous DB/CPU work — run in a thread pool to
         # avoid blocking the event loop.
         def _run() -> UUID:
@@ -88,4 +87,4 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
 
             return user_password.id
 
-        return await asyncio.to_thread(_run)
+        return _run()

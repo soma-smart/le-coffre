@@ -10,13 +10,11 @@ repos:
       - id: check-added-large-files
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.0
+    rev: v0.15.10
     hooks:
       - id: ruff
-        args: [--config, server/pyproject.toml]
         files: ^server/
       - id: ruff-format
-        args: [--config, server/pyproject.toml]
         files: ^server/
 
   - repo: https://github.com/zricethezav/gitleaks

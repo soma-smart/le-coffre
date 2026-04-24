@@ -34,6 +34,18 @@ RUN curl -fsSL https://bun.sh/install | bash
 RUN mv /root/.bun/bin/bun /usr/local/bin/bun \
     && chmod +x /usr/local/bin/bun
 
+# pre-commit baked into the image (not declared in server/pyproject.toml because
+# it's a workspace-wide dev tool, not a backend dep). Installed via uv tool so
+# it lives on PATH without venv activation. Both the launcher (UV_TOOL_BIN_DIR)
+# and the backing venv (UV_TOOL_DIR) must be world-readable: by default uv
+# installs into root's home (mode 700), so devuser hits "permission denied" when
+# the launcher tries to exec the venv's python. Pinning UV_TOOL_DIR to /opt and
+# chmod a+rX makes it usable for any UID compose remaps the runtime user to.
+ENV UV_TOOL_BIN_DIR=/usr/local/bin \
+    UV_TOOL_DIR=/opt/uv-tools
+RUN uv tool install pre-commit --no-cache \
+    && chmod -R a+rX /opt/uv-tools
+
 # Set up workspace
 WORKDIR /app
 
@@ -46,7 +58,18 @@ COPY --chown=$USERNAME:$USERNAME frontend/package.json frontend/bun.lockb /app/f
 WORKDIR /app/frontend
 USER $USERNAME
 RUN bun install
+
+# Install Playwright + chromium at image-build time so a fresh container is
+# usable immediately. PLAYWRIGHT_BROWSERS_PATH is set to a system-wide path so
+# the browser cache survives the anonymous volume that compose mounts over
+# /app/frontend/node_modules at runtime (which would otherwise hide the default
+# ~/.cache/ms-playwright). --with-deps requires root for apt installs.
 USER root
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN mkdir -p $PLAYWRIGHT_BROWSERS_PATH \
+    && cd /app/frontend && bun x playwright install --with-deps chromium \
+    && chmod -R a+rX $PLAYWRIGHT_BROWSERS_PATH
+
 WORKDIR /app
 
 # Copy the rest of the application
