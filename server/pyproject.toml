@@ -42,7 +42,6 @@ addopts = "-ra --strict-markers --strict-config"
 testpaths = ["tests"]
 
 [tool.ruff]
-fix = true
 line-length = 120
 target-version = "py313"
 exclude = [

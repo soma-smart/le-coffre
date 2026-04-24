@@ -1,6 +1,7 @@
 from uuid import UUID
 
 import pytest
+
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
 )

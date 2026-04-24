@@ -1,5 +1,3 @@
-from shared_kernel.application.tracing import TracedUseCase
-
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
 )
@@ -16,6 +14,7 @@ from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
     UserNotFoundException,
 )
+from shared_kernel.application.tracing import TracedUseCase
 
 
 class ValidateUserTokenUseCase(TracedUseCase):

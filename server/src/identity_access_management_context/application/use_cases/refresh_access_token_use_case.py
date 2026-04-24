@@ -1,6 +1,3 @@
-from shared_kernel.application.gateways import TimeGateway
-from shared_kernel.application.tracing import TracedUseCase
-
 from identity_access_management_context.application.commands import (
     RefreshAccessTokenCommand,
 )
@@ -14,6 +11,8 @@ from identity_access_management_context.application.responses import (
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
+from shared_kernel.application.gateways import TimeGateway
+from shared_kernel.application.tracing import TracedUseCase
 
 
 class RefreshAccessTokenUseCase(TracedUseCase):

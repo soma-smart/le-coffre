@@ -3,6 +3,9 @@
 import logging
 
 from fastapi import Request
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
 from identity_access_management_context.adapters.secondary.sql import (
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
@@ -13,8 +16,6 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     ValidateUserTokenUseCase,
 )
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 

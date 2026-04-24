@@ -404,8 +404,7 @@ def test_given_locked_email_when_logging_in_should_not_record_a_new_failed_login
 # log so SRE can correlate the lockout-store outage.
 
 
-@pytest.mark.asyncio
-async def test_given_record_failed_login_raises_when_credentials_are_wrong_should_still_raise_invalid_credentials(
+def test_given_record_failed_login_raises_when_credentials_are_wrong_should_still_raise_invalid_credentials(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
@@ -424,7 +423,7 @@ async def test_given_record_failed_login_raises_when_credentials_are_wrong_shoul
         "ERROR", logger="identity_access_management_context.application.use_cases.password_login_use_case"
     ):
         with pytest.raises(InvalidCredentialsException):
-            await use_case.execute(AdminLoginCommand(email=email, password="wrong_password"))
+            use_case.execute(AdminLoginCommand(email=email, password="wrong_password"))
 
     # Audit trail must still be intact — event publishing happens before the
     # counter write, so a store outage doesn't cost forensic visibility.
@@ -438,8 +437,7 @@ async def test_given_record_failed_login_raises_when_credentials_are_wrong_shoul
     assert errors[0].exc_info is not None
 
 
-@pytest.mark.asyncio
-async def test_given_record_failed_login_raises_when_email_is_unknown_should_still_raise_admin_not_found(
+def test_given_record_failed_login_raises_when_email_is_unknown_should_still_raise_admin_not_found(
     use_case: PasswordLoginUseCase,
     login_lockout_gateway: FakeLoginLockoutGateway,
     caplog: pytest.LogCaptureFixture,
@@ -450,14 +448,13 @@ async def test_given_record_failed_login_raises_when_email_is_unknown_should_sti
         "ERROR", logger="identity_access_management_context.application.use_cases.password_login_use_case"
     ):
         with pytest.raises(AdminNotFoundException):
-            await use_case.execute(AdminLoginCommand(email="nobody@lecoffre.com", password="any"))
+            use_case.execute(AdminLoginCommand(email="nobody@lecoffre.com", password="any"))
 
     errors = [rec for rec in caplog.records if rec.levelname == "ERROR" and "lockout" in rec.message.lower()]
     assert errors, "counter-write failure must log at ERROR"
 
 
-@pytest.mark.asyncio
-async def test_given_record_successful_login_raises_when_credentials_are_correct_should_still_issue_tokens(
+def test_given_record_successful_login_raises_when_credentials_are_correct_should_still_issue_tokens(
     use_case: PasswordLoginUseCase,
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
@@ -482,7 +479,7 @@ async def test_given_record_successful_login_raises_when_credentials_are_correct
     with caplog.at_level(
         "ERROR", logger="identity_access_management_context.application.use_cases.password_login_use_case"
     ):
-        response = await use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
+        response = use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
 
     assert response.admin_id == user_id
     assert response.jwt_token

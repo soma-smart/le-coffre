@@ -30,7 +30,7 @@ class _FakeTokenGateway:
         both the domain InvalidTokenException path and arbitrary library errors."""
         self._raises[token] = exc
 
-    async def validate_token(self, token: str) -> Token | None:
+    def validate_token(self, token: str) -> Token | None:
         if token in self._raises:
             raise self._raises[token]
         return self._tokens.get(token)

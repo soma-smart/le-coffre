@@ -1,8 +1,5 @@
 from uuid import UUID
 
-from shared_kernel.application.gateways import DomainEventPublisher
-from shared_kernel.application.tracing import TracedUseCase
-
 from identity_access_management_context.application.commands import (
     RegisterAdminWithPasswordCommand,
 )
@@ -23,6 +20,8 @@ from identity_access_management_context.domain.events import AdminRegisteredEven
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
+from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.application.tracing import TracedUseCase
 
 
 class RegisterAdminWithPasswordUseCase(TracedUseCase):
