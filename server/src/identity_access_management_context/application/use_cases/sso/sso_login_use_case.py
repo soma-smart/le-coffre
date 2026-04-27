@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 from uuid import uuid4
 
@@ -71,20 +70,17 @@ class SsoLoginUseCase(TracedUseCase):
         self._sso_event_repository = sso_event_repository
 
     async def execute(self, command: SsoLoginCommand) -> SsoLoginResponse:
-        # Step 0: Retrieve SSO config — synchronous DB read + crypto, run in thread.
-        sso_config = await asyncio.to_thread(
-            lambda: SsoConfigurationDecryptingService(
-                self._sso_configuration_repository, self._sso_encryption_gateway
-            ).decrypt()
-        )
+        sso_config = SsoConfigurationDecryptingService(
+            self._sso_configuration_repository, self._sso_encryption_gateway
+        ).decrypt()
 
         # Step 1: Validate SSO code with the provider — truly async network call.
         sso_user_from_provider = await self._sso_gateway.validate_callback(
             sso_config, command.code, redirect_uri=command.redirect_uri
         )
 
-        # Steps 2-4: All remaining DB reads/writes are synchronous — batch them
-        # in a single thread to avoid blocking the event loop between token calls.
+        # Steps 2-4: All remaining DB reads/writes are synchronous.
+        # Called directly (no asyncio.to_thread) for the same thread-safety reason.
         def _resolve_user():
             existing_sso_user = self._sso_user_repository.get_by_sso_user_id(
                 sso_user_from_provider.sso_user_id, sso_user_from_provider.sso_provider
@@ -137,7 +133,7 @@ class SsoLoginUseCase(TracedUseCase):
 
             return user_id, email, display_name, is_new_user, user.roles
 
-        user_id, email, display_name, is_new_user, roles = await asyncio.to_thread(_resolve_user)
+        user_id, email, display_name, is_new_user, roles = _resolve_user()
 
         # Step 5: Generate JWT tokens.
         token = self._token_gateway.generate_token(
@@ -155,14 +151,12 @@ class SsoLoginUseCase(TracedUseCase):
 
         event = SsoLoginEvent(user_id=user_id, email=email, is_new_user=is_new_user)
         self._event_publisher.publish(event)
-        await asyncio.to_thread(
-            lambda: self._sso_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_user_id=user_id,
-                event_data={"email": email, "is_new_user": is_new_user},
-            )
+        self._sso_event_repository.append_event(
+            event_id=event.event_id,
+            event_type=type(event).__name__,
+            occurred_on=event.occurred_on,
+            actor_user_id=user_id,
+            event_data={"email": email, "is_new_user": is_new_user},
         )
 
         return SsoLoginResponse(
