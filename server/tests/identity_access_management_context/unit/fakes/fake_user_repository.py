@@ -26,6 +26,9 @@ class FakeUserRepository(UserRepository):
     def list_all(self) -> list[User]:
         return list(self.storage.values())
 
+    def count(self) -> int:
+        return len(self.storage)
+
     def save(self, user: User) -> None:
         if any(u.username == user.username for u in self.storage.values()):
             raise UserAlreadyExistsError(user.username)

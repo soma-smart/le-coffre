@@ -8,6 +8,7 @@ from .delete_passwords_for_deleted_user_use_case import (
     DeletePasswordsForDeletedUserUseCase,
 )
 from .get_password_use_case import GetPasswordUseCase
+from .get_password_statistic_for_admin_use_case import GetPasswordStatisticForAdminUseCase
 from .is_group_used_use_case import IsGroupUsedUseCase
 from .list_password_events_use_case import ListPasswordEventsUseCase
 from .list_passwords_use_case import ListPasswordsUseCase
@@ -26,4 +27,5 @@ __all__ = [
     "UnshareAccessUseCase",
     "ListAccessUseCase",
     "IsGroupUsedUseCase",
+    "GetPasswordStatisticForAdminUseCase",
 ]

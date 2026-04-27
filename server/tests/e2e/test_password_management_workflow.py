@@ -66,6 +66,11 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     - Owner-only password has only owner group in accessible_group_ids
     - Password shared with a second group has both groups in accessible_group_ids
     - Admin viewing a password they don't belong to sees only the owner group
+
+    Phase 7: Admin Password Statistics
+    - Admin gets password_count via GET /passwords/admin/statistics
+    - Count increments on password creation
+    - Non-admin gets 403, unauthenticated gets 401
     """
     # Create separate clients for admin and SSO user
     admin_client = client_factory()
@@ -663,6 +668,51 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     print(
         f"✓ Admin sees accessible_group_ids = {sso_exclusive_entry['accessible_group_ids']} (owner group only, no personal access)"
     )
+
+    # ===================================================================
+    # PHASE 7: ADMIN PASSWORD STATISTICS
+    # ===================================================================
+
+    print("\n=== PHASE 7: ADMIN PASSWORD STATISTICS ===")
+
+    # Step 7.1: Admin gets password statistics
+    print("Step 7.1: Getting password statistics as admin...")
+    stats_response = admin_client.get("/api/passwords/admin/statistics")
+    assert stats_response.status_code == 200
+    stats_data = stats_response.json()
+    assert "password_count" in stats_data
+    initial_password_count = stats_data["password_count"]
+    assert isinstance(initial_password_count, int) and initial_password_count >= 0
+    print(f"✓ Admin statistics returned: password_count={initial_password_count}")
+
+    # Step 7.2: Creating a new password increments password_count by 1
+    print("Step 7.2: Verifying password_count increments on creation...")
+    create_stat_password_response = admin_client.post(
+        "/api/passwords",
+        json={
+            "name": "Stats Test Password",
+            "password": STRONG_PASSWORD,
+            "folder": "Stats",
+            "group_id": admin_group_id,
+        },
+    )
+    assert create_stat_password_response.status_code == 201
+    stats_after_create = admin_client.get("/api/passwords/admin/statistics")
+    assert stats_after_create.status_code == 200
+    assert stats_after_create.json()["password_count"] == initial_password_count + 1
+    print(f"✓ password_count incremented to {initial_password_count + 1}")
+
+    # Step 7.3: Non-admin (SSO user) gets 403
+    print("Step 7.3: Verifying non-admin gets 403...")
+    non_admin_stats = sso_client.get("/api/passwords/admin/statistics")
+    assert non_admin_stats.status_code == 403
+    print("✓ Non-admin correctly rejected (403)")
+
+    # Step 7.4: Unauthenticated user gets 401
+    print("Step 7.4: Verifying unauthenticated gets 401...")
+    unauth_stats = unauthenticated_client.get("/api/passwords/admin/statistics")
+    assert unauth_stats.status_code == 401
+    print("✓ Unauthenticated correctly rejected (401)")
 
     print("\n" + "=" * 70)
     print("ALL TESTS PASSED SUCCESSFULLY!")

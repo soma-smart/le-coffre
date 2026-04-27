@@ -36,6 +36,7 @@ from password_management_context.application.gateways.password_permissions_repos
 from password_management_context.application.use_cases import (
     CreatePasswordUseCase,
     DeletePasswordUseCase,
+    GetPasswordStatisticForAdminUseCase,
     GetPasswordUseCase,
     ListAccessUseCase,
     ListPasswordEventsUseCase,
@@ -226,3 +227,9 @@ def get_list_password_events_usecase(
         password_event_repository,
         user_info_gateway,
     )
+
+
+def get_password_statistic_for_admin_usecase(
+    password_repository: PasswordRepository = Depends(get_password_repository),
+):
+    return GetPasswordStatisticForAdminUseCase(password_repository)

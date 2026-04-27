@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlalchemy import func
+from sqlmodel import Session, col, select
 
 from identity_access_management_context.application.gateways import GroupRepository
 from identity_access_management_context.domain.entities import Group, PersonalGroup
@@ -23,6 +24,11 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
         )
         self._session.add(group_table)
         self.commit()
+
+    def count_non_personal(self) -> int:
+        """Count non-personal groups."""
+        statement = select(func.count()).select_from(GroupTable).where(col(GroupTable.is_personal).is_(False))
+        return self._session.exec(statement).one()
 
     def get_all(self) -> list[Group]:
         """Get all groups."""

@@ -5,6 +5,7 @@ from .delete_passwords_for_deleted_user_command import (
     DeletePasswordsForDeletedUserCommand,
 )
 from .get_password_command import GetPasswordCommand
+from .get_password_statistic_for_admin_command import GetPasswordStatisticForAdminCommand
 from .is_group_used_command import IsGroupUsedCommand
 from .list_access_command import ListAccessCommand
 from .list_password_events_command import ListPasswordEventsCommand
@@ -26,4 +27,5 @@ __all__ = [
     "CheckAccessCommand",
     "ListAccessCommand",
     "IsGroupUsedCommand",
+    "GetPasswordStatisticForAdminCommand",
 ]

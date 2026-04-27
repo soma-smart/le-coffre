@@ -194,6 +194,25 @@
               >Users</span
             >
           </div>
+          <div
+            class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminStatisticsActive ? 'bg-primary/10' : ''"
+            @click="goToAdminStatistics()"
+          >
+            <span
+              class="pi pi-chart-bar transition-colors text-sm"
+              :class="
+                isAdminStatisticsActive
+                  ? 'text-primary'
+                  : 'text-muted-color group-hover:text-primary'
+              "
+            />
+            <span
+              class="ml-2 transition-colors text-sm"
+              :class="{ 'font-semibold': isAdminStatisticsActive }"
+              >Statistics</span
+            >
+          </div>
         </div>
       </div>
     </div>
@@ -258,6 +277,7 @@ const isProfileActive = computed(() => route.path === '/profile')
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
 const isAdminConfigActive = computed(() => route.path === '/admin/config')
 const isAdminUsersActive = computed(() => route.path === '/admin/users')
+const isAdminStatisticsActive = computed(() => route.path === '/admin/statistics')
 const selectedGroupSlug = computed(() => (route.params.groupSlug as string | undefined) ?? null)
 const selectedGroupId = computed(() => findGroupIdBySlug(groups.value, selectedGroupSlug.value))
 const adminPasswordViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
@@ -413,6 +433,10 @@ const goToAdminConfig = () => {
 
 const goToAdminUsers = () => {
   router.push('/admin/users')
+}
+
+const goToAdminStatistics = () => {
+  router.push('/admin/statistics')
 }
 
 const handleLogout = () => {

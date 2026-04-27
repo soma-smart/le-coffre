@@ -229,3 +229,35 @@ def test_given_existent_group_when_get_by_name_then_group_is_retrieved(
     assert retrieved_group is not None
     assert retrieved_group.id == group_id
     assert retrieved_group.name == group_name
+
+
+def test_given_no_groups_when_counting_non_personal_then_returns_zero(sql_group_repository):
+    # When
+    count = sql_group_repository.count_non_personal()
+
+    # Then
+    assert count == 0
+
+
+def test_given_only_non_personal_groups_when_counting_then_returns_all(sql_group_repository):
+    # Given
+    sql_group_repository.save_group(Group(id=uuid4(), name="Team A", is_personal=False))
+    sql_group_repository.save_group(Group(id=uuid4(), name="Team B", is_personal=False))
+
+    # When
+    count = sql_group_repository.count_non_personal()
+
+    # Then
+    assert count == 2
+
+
+def test_given_personal_groups_when_counting_non_personal_then_excludes_them(sql_group_repository):
+    # Given
+    sql_group_repository.save_group(Group(id=uuid4(), name="Team A", is_personal=False))
+    sql_group_repository.save_personal_group(PersonalGroup(id=uuid4(), name="Personal Group", user_id=uuid4()))
+
+    # When
+    count = sql_group_repository.count_non_personal()
+
+    # Then
+    assert count == 1

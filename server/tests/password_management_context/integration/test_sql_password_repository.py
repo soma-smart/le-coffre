@@ -282,3 +282,17 @@ def test_should_do_nothing_when_deleting_by_owner_group_with_no_passwords(
 
     # When / Then - should not raise any exception
     sql_password_repository.delete_by_owner_group(group_id)
+
+
+def test_should_return_zero_when_no_passwords_exist_for_count(sql_password_repository):
+    count = sql_password_repository.count()
+    assert count == 0
+
+
+def test_should_return_correct_count_when_passwords_exist(sql_password_repository):
+    for i in range(3):
+        sql_password_repository.save(
+            Password(id=uuid4(), name=f"Pwd{i}", encrypted_value="enc", folder="default")
+        )
+    count = sql_password_repository.count()
+    assert count == 3
