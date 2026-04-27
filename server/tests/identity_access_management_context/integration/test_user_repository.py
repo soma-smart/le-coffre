@@ -78,6 +78,45 @@ def test_should_raise_error_when_saving_existing_user(sql_user_repository):
         sql_user_repository.save(existing_user)
 
 
+def test_should_return_zero_when_no_users_exist(sql_user_repository):
+    count = sql_user_repository.count()
+    assert count == 0
+
+
+def test_should_return_correct_count_when_one_user_exists(sql_user_repository):
+    user = User(id=uuid4(), username="user1", email="user1@test.fr", name="User One", roles=[])
+    sql_user_repository.save(user)
+
+    count = sql_user_repository.count()
+
+    assert count == 1
+
+
+def test_should_return_correct_count_when_multiple_users_exist(sql_user_repository):
+    user1 = User(id=uuid4(), username="user1", email="user1@test.fr", name="User One", roles=[])
+    user2 = User(id=uuid4(), username="user2", email="user2@test.fr", name="User Two", roles=[])
+    user3 = User(id=uuid4(), username="user3", email="user3@test.fr", name="User Three", roles=[])
+    sql_user_repository.save(user1)
+    sql_user_repository.save(user2)
+    sql_user_repository.save(user3)
+
+    count = sql_user_repository.count()
+
+    assert count == 3
+
+
+def test_should_return_updated_count_after_deletion(sql_user_repository):
+    user1 = User(id=uuid4(), username="user1", email="user1@test.fr", name="User One", roles=[])
+    user2 = User(id=uuid4(), username="user2", email="user2@test.fr", name="User Two", roles=[])
+    sql_user_repository.save(user1)
+    sql_user_repository.save(user2)
+
+    sql_user_repository.delete(user1.id)
+    count = sql_user_repository.count()
+
+    assert count == 1
+
+
 def test_should_update_user_when_user_exists(sql_user_repository):
     user_to_update = User(
         id=uuid4(),

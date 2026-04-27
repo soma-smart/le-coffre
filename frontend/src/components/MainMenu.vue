@@ -2,6 +2,12 @@
   <div class="flex flex-col w-full h-full">
     <!-- Menu -->
     <div class="flex-1">
+      <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isPasswordsActive ? 'bg-primary/10' : ''" @click="goToAllPasswords">
+        <span class="pi pi-key transition-colors"
+          :class="isPasswordsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }">Passwords</span>
+        <Badge class="ml-auto" :value="passwordsCount" />
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
         :class="isPasswordsActive ? 'bg-primary/10' : ''"
@@ -112,101 +118,56 @@
           </div>
         </div>
       </div>
-      <div
-        class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
-        :class="isGroupsActive ? 'bg-primary/10' : ''"
-        @click="goToGroups()"
-      >
-        <span
-          class="pi pi-users transition-colors"
-          :class="isGroupsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
-        />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }"
-          >Groups</span
-        >
+      <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isGroupsActive ? 'bg-primary/10' : ''" @click="goToGroups()">
+        <span class="pi pi-users transition-colors"
+          :class="isGroupsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }">Groups</span>
       </div>
-      <div
-        class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
-        :class="isProfileActive ? 'bg-primary/10' : ''"
-        @click="goToProfile()"
-      >
-        <span
-          class="pi pi-user transition-colors"
-          :class="isProfileActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
-        />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }"
-          >Profile</span
-        >
-        <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1"
-          >⌘+W</span
-        >
+      <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isProfileActive ? 'bg-primary/10' : ''" @click="goToProfile()">
+        <span class="pi pi-user transition-colors"
+          :class="isProfileActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }">Profile</span>
+        <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1">⌘+W</span>
       </div>
       <div v-if="isAdmin">
-        <div
-          class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
-          :class="isAdminActive ? 'bg-primary/10' : ''"
-          @click="toggleAdminMenu"
-        >
-          <span
-            class="pi pi-shield transition-colors"
-            :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
-          />
-          <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }"
-            >Admin</span
-          >
-          <span
-            class="ml-auto pi transition-transform"
-            :class="adminMenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'"
-          />
+        <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+          :class="isAdminActive ? 'bg-primary/10' : ''" @click="toggleAdminMenu">
+          <span class="pi pi-shield transition-colors"
+            :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+          <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }">Admin</span>
+          <span class="ml-auto pi transition-transform"
+            :class="adminMenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'" />
         </div>
         <div v-if="adminMenuExpanded" class="pl-8">
-          <div
-            class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
-            :class="isAdminConfigActive ? 'bg-primary/10' : ''"
-            @click="goToAdminConfig()"
-          >
-            <span
-              class="pi pi-cog transition-colors text-sm"
-              :class="
-                isAdminConfigActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'
-              "
-            />
-            <span
-              class="ml-2 transition-colors text-sm"
-              :class="{ 'font-semibold': isAdminConfigActive }"
-              >Config</span
-            >
+          <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminConfigActive ? 'bg-primary/10' : ''" @click="goToAdminConfig()">
+            <span class="pi pi-cog transition-colors text-sm" :class="isAdminConfigActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'
+              " />
+            <span class="ml-2 transition-colors text-sm" :class="{ 'font-semibold': isAdminConfigActive }">Config</span>
+
           </div>
-          <div
-            class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
-            :class="isAdminUsersActive ? 'bg-primary/10' : ''"
-            @click="goToAdminUsers()"
-          >
-            <span
-              class="pi pi-users transition-colors text-sm"
-              :class="
-                isAdminUsersActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'
-              "
-            />
-            <span
-              class="ml-2 transition-colors text-sm"
-              :class="{ 'font-semibold': isAdminUsersActive }"
-              >Users</span
-            >
+
+          <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminStatsActive ? 'bg-primary/10' : ''" @click="goToAdminStats()">
+            <span class="pi pi-chart-bar transition-colors text-sm"
+              :class="isAdminStatsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'" />
+            <span class="ml-2 transition-colors text-sm"
+              :class="{ 'font-semibold': isAdminStatsActive }">Statistics</span>
+          </div>
+          <div class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminUsersActive ? 'bg-primary/10' : ''" @click="goToAdminUsers()">
+            <span class="pi pi-users transition-colors text-sm" :class="isAdminUsersActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'
+              " />
+            <span class="ml-2 transition-colors text-sm" :class="{ 'font-semibold': isAdminUsersActive }">Users</span>
           </div>
         </div>
       </div>
     </div>
     <!-- Logout Button and Theme Switcher at bottom -->
     <div class="p-4 border-t border-surface flex flex-col gap-3">
-      <Button
-        label="Logout"
-        icon="pi pi-sign-out"
-        @click="handleLogout"
-        severity="secondary"
-        outlined
-        class="w-full"
-      />
+      <Button label="Logout" icon="pi pi-sign-out" @click="handleLogout" severity="secondary" outlined class="w-full" />
       <ThemeSwitcher />
     </div>
   </div>
@@ -258,6 +219,7 @@ const isProfileActive = computed(() => route.path === '/profile')
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
 const isAdminConfigActive = computed(() => route.path === '/admin/config')
 const isAdminUsersActive = computed(() => route.path === '/admin/users')
+const isAdminStatsActive = computed(() => route.path === '/admin/stats')
 const selectedGroupSlug = computed(() => (route.params.groupSlug as string | undefined) ?? null)
 const selectedGroupId = computed(() => findGroupIdBySlug(groups.value, selectedGroupSlug.value))
 const adminPasswordViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
@@ -413,6 +375,10 @@ const goToAdminConfig = () => {
 
 const goToAdminUsers = () => {
   router.push('/admin/users')
+}
+
+const goToAdminStats = () => {
+  router.push('/admin/stats')
 }
 
 const handleLogout = () => {

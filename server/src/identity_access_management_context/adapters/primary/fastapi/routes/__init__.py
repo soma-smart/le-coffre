@@ -22,6 +22,7 @@ from .sso import (
     sso_callback_route,
 )
 from .user import (
+    admin_stat_routes,
     user_create_routes,
     user_delete_routes,
     user_get_routes,
@@ -36,6 +37,7 @@ from .user import (
 def get_user_management_router():
     user_management_router = APIRouter()
 
+    user_management_router.include_router(admin_stat_routes.router)
     user_management_router.include_router(user_me_routes.router)
     user_management_router.include_router(user_update_password_routes.router)
     user_management_router.include_router(user_get_routes.router)

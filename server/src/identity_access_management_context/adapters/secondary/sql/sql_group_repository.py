@@ -94,3 +94,11 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
             is_personal=result.is_personal,
             user_id=result.user_id,
         )
+
+    def get_number_of_groups_not_personal(self) -> int:
+        """Get the total number of non-personal groups."""
+        statement = select(GroupTable).where(GroupTable.is_personal == False)
+        results = self._session.exec(statement).all()
+        if results is None:
+            return 0
+        return len(results)
