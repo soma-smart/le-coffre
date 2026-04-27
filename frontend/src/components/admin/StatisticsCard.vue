@@ -71,7 +71,9 @@ onMounted(() => {
     </div>
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-      <div class="rounded-xl border border-surface bg-surface-0 dark:bg-surface-900 p-6 flex items-center gap-4 shadow-sm">
+      <div
+        class="rounded-xl border border-surface bg-surface-0 dark:bg-surface-900 p-6 flex items-center gap-4 shadow-sm"
+      >
         <div class="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
           <span class="pi pi-users text-primary text-2xl" />
         </div>
@@ -81,7 +83,9 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="rounded-xl border border-surface bg-surface-0 dark:bg-surface-900 p-6 flex items-center gap-4 shadow-sm">
+      <div
+        class="rounded-xl border border-surface bg-surface-0 dark:bg-surface-900 p-6 flex items-center gap-4 shadow-sm"
+      >
         <div class="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
           <span class="pi pi-th-large text-primary text-2xl" />
         </div>
@@ -91,7 +95,9 @@ onMounted(() => {
         </div>
       </div>
 
-      <div class="rounded-xl border border-surface bg-surface-0 dark:bg-surface-900 p-6 flex items-center gap-4 shadow-sm">
+      <div
+        class="rounded-xl border border-surface bg-surface-0 dark:bg-surface-900 p-6 flex items-center gap-4 shadow-sm"
+      >
         <div class="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
           <span class="pi pi-key text-primary text-2xl" />
         </div>
