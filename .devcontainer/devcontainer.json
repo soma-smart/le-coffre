@@ -5,8 +5,8 @@
   "workspaceFolder": "/app",
   "forwardPorts": [8123, 8000, 5173],
   "remoteUser": "devuser",
-  "initializeCommand": "echo USER_UID=$(id -u) > ${localWorkspaceFolder}/.env && echo USER_GID=$(id -g) >> ${localWorkspaceFolder}/.env",
-  "postCreateCommand": "cd /app/server && uv sync && cd /app/frontend && bun install && cd /app && pre-commit install",
+  "initializeCommand": "U=$(id -u); G=$(id -g); [ \"$U\" = \"0\" ] && U=1000; [ \"$G\" = \"0\" ] && G=1000; echo USER_UID=$U > ${localWorkspaceFolder}/.env && echo USER_GID=$G >> ${localWorkspaceFolder}/.env",
+  "postCreateCommand": "sudo chown -R devuser:devuser /app/frontend/node_modules /app/server/.venv 2>/dev/null || true && cd /app/server && uv sync && cd /app/frontend && bun install && cd /app && pre-commit install",
   "customizations": {
     "vscode": {
       "extensions": [
