@@ -5,7 +5,7 @@ import type {
   UserRepository,
 } from '@/application/ports/UserRepository'
 import { ADMIN_ROLE, type User } from '@/domain/user/User'
-import { UserNotFoundError } from '@/domain/user/errors'
+import { IncorrectOldPasswordError, UserNotFoundError } from '@/domain/user/errors'
 
 /**
  * Test-only implementation of UserRepository. Mirrors the fake pattern
@@ -86,7 +86,7 @@ export class InMemoryUserRepository implements UserRepository {
     if (!this.current) throw new UserNotFoundError('(no current user)')
     const stored = this.passwords.get(this.current.id)
     if (stored !== input.oldPassword) {
-      throw new Error('Old password does not match')
+      throw new IncorrectOldPasswordError()
     }
     this.passwords.set(this.current.id, input.newPassword)
   }

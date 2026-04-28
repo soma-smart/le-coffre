@@ -16,7 +16,7 @@ import type {
   UserRepository,
 } from '@/application/ports/UserRepository'
 import type { User } from '@/domain/user/User'
-import { UserDomainError, UserNotFoundError } from '@/domain/user/errors'
+import { IncorrectOldPasswordError, UserDomainError, UserNotFoundError } from '@/domain/user/errors'
 
 /**
  * Backend adapter for UserRepository. The only file outside the other
@@ -75,6 +75,18 @@ export class BackendUserRepository implements UserRepository {
     const response = await updateUserPasswordUsersMePasswordPut({
       body: { old_password: input.oldPassword, new_password: input.newPassword },
     })
+    if (response.error) {
+      // The backend returns 400 with a specific detail when the supplied
+      // current password does not match. Map that to a typed domain error so
+      // the UI can show it inline on the form rather than as a generic toast.
+      const detail = extractDetail(response.error) ?? ''
+      if (
+        response.response?.status === 400 &&
+        /current password|old password|incorrect/i.test(detail)
+      ) {
+        throw new IncorrectOldPasswordError()
+      }
+    }
     this.throwIfError(response.error, response.response?.status)
   }
 

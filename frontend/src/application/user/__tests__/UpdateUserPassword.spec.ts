@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { UpdateUserPasswordUseCase } from '@/application/user/UpdateUserPassword'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
-import { UserPasswordMustBeDifferentError, UserPasswordRequiredError } from '@/domain/user/errors'
+import {
+  IncorrectOldPasswordError,
+  UserPasswordMustBeDifferentError,
+  UserPasswordRequiredError,
+} from '@/domain/user/errors'
 
 function repoWithCurrent() {
   const repo = new InMemoryUserRepository()
@@ -25,11 +29,12 @@ describe('UpdateUserPasswordUseCase', () => {
 
     await useCase.execute({ oldPassword: 'old-password', newPassword: 'new-password' })
 
-    // After rotation, re-using the OLD password should fail, and
-    // re-using the NEW one as the "old" side should succeed.
+    // After rotation, re-using the OLD password should fail with the typed
+    // IncorrectOldPasswordError, and re-using the NEW one as the "old" side
+    // should succeed.
     await expect(
       useCase.execute({ oldPassword: 'old-password', newPassword: 'newer' }),
-    ).rejects.toThrow(/Old password does not match/)
+    ).rejects.toBeInstanceOf(IncorrectOldPasswordError)
     await expect(
       useCase.execute({ oldPassword: 'new-password', newPassword: 'newer' }),
     ).resolves.toBeUndefined()
