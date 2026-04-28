@@ -80,7 +80,8 @@ class SsoLoginUseCase(TracedUseCase):
         )
 
         # Steps 2-4: All remaining DB reads/writes are synchronous.
-        # Called directly (no asyncio.to_thread) for the same thread-safety reason.
+        # Called directly (no asyncio.to_thread) because the underlying synchronous
+        # repository/session dependencies are not safe to use across threads.
         def _resolve_user():
             existing_sso_user = self._sso_user_repository.get_by_sso_user_id(
                 sso_user_from_provider.sso_user_id, sso_user_from_provider.sso_provider
