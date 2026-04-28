@@ -1,5 +1,6 @@
 import { getCsrfTokenAuthCsrfTokenGet } from '@/client/sdk.gen'
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
+import { CsrfTokenEmptyError, CsrfTokenUnavailableError } from '@/domain/csrf/errors'
 
 /**
  * Backend adapter for CsrfGateway. Wraps the SDK's
@@ -12,12 +13,12 @@ export class BackendCsrfGateway implements CsrfGateway {
     const response = await getCsrfTokenAuthCsrfTokenGet()
 
     if (response.error) {
-      const detail = extractDetail(response.error) ?? 'Failed to fetch CSRF token'
-      throw new Error(detail)
+      const detail = extractDetail(response.error)
+      throw new CsrfTokenUnavailableError(detail ?? undefined)
     }
 
     if (!response.data?.csrf_token) {
-      throw new Error('Empty response from CSRF token endpoint')
+      throw new CsrfTokenEmptyError()
     }
 
     return response.data.csrf_token

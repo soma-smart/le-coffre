@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useContainer } from '@/plugins/container'
+import { CsrfDomainError } from '@/domain/csrf/errors'
 
 /**
  * CSRF Token Store
@@ -31,7 +32,12 @@ export const useCsrfStore = defineStore('csrf', () => {
       return true
     } catch (err) {
       console.error('Failed to fetch CSRF token:', err)
-      error.value = err instanceof Error ? err.message : 'Failed to fetch CSRF token'
+      error.value =
+        err instanceof CsrfDomainError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Failed to fetch CSRF token'
       return false
     } finally {
       loading.value = false
