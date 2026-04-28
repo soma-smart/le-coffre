@@ -76,7 +76,10 @@ WORKDIR /app
 COPY --chown=$USERNAME:$USERNAME . .
 
 # Change ownership of the entire app directory
-RUN chown -R $USERNAME:$USERNAME /app
+# Make node_modules and .venv world-writable so any container user (root in
+# Codespaces, devuser locally) can install packages without sudo.
+RUN chown -R $USERNAME:$USERNAME /app \
+    && chmod -R a+w /app/frontend/node_modules /app/server/.venv
 
 USER $USERNAME
 
