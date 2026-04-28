@@ -135,6 +135,36 @@ export default defineConfigWithVueTs(
     },
   },
 
+  // localStorage / sessionStorage: only infrastructure adapters and the
+  // legitimate session-teardown helper (utils/logout.ts) may touch
+  // browser-storage globals directly. Everything else routes through
+  // PreferencesGateway via useContainer().preferences.
+  {
+    name: 'app/no-direct-browser-storage',
+    files: ['src/**/*.{ts,mts,tsx,vue}'],
+    ignores: [
+      'src/infrastructure/**',
+      'src/utils/logout.ts',
+      'src/utils/auth.ts',
+      'src/customClient.ts',
+      'src/**/__tests__/**',
+    ],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'localStorage',
+          message:
+            'Use useContainer().preferences.{read,write,remove} via PreferencesGateway. The only legitimate localStorage call sites are infrastructure adapters and utils/logout.ts.',
+        },
+        {
+          name: 'sessionStorage',
+          message: 'Wrap sessionStorage behind a port; presentation must not call it directly.',
+        },
+      ],
+    },
+  },
+
   // composables/: reusable reactive logic. May reach for the domain, the
   // application ring, the container, and other composables — but must not
   // reach into infrastructure, the SDK, or individual components.

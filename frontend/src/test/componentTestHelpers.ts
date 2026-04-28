@@ -4,6 +4,7 @@ import { InMemoryAuthGateway } from '@/infrastructure/in_memory/InMemoryAuthGate
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
+import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
 import { setContainer } from '@/plugins/container'
@@ -35,6 +36,7 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
     groupRepository: new InMemoryGroupRepository(),
     vaultRepository: new InMemoryVaultRepository(),
     authGateway: new InMemoryAuthGateway(),
+    preferencesGateway: new InMemoryPreferencesGateway(),
     ...overrides,
   }
   const container = buildContainer(ports)

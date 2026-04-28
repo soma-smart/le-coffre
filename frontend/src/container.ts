@@ -2,6 +2,7 @@ import type { AuthGateway } from '@/application/ports/AuthGateway'
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
+import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
 import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
@@ -34,6 +35,9 @@ import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
 import { LockVaultUseCase } from '@/application/vault/LockVault'
 import { UnlockVaultUseCase } from '@/application/vault/UnlockVault'
 import { ValidateVaultSetupUseCase } from '@/application/vault/ValidateVaultSetup'
+import { ReadPreferenceUseCase } from '@/application/preferences/ReadPreference'
+import { RemovePreferenceUseCase } from '@/application/preferences/RemovePreference'
+import { WritePreferenceUseCase } from '@/application/preferences/WritePreference'
 import { CreateUserUseCase } from '@/application/user/CreateUser'
 import { DeleteUserUseCase } from '@/application/user/DeleteUser'
 import { GetCurrentUserUseCase } from '@/application/user/GetCurrentUser'
@@ -61,6 +65,7 @@ export interface Ports {
   groupRepository: GroupRepository
   vaultRepository: VaultRepository
   authGateway: AuthGateway
+  preferencesGateway: PreferencesGateway
 }
 
 export interface Container {
@@ -114,6 +119,11 @@ export interface Container {
     getSsoUrl: GetSsoUrlUseCase
     handleSsoCallback: HandleSsoCallbackUseCase
     isSsoConfigured: IsSsoConfiguredUseCase
+  }
+  preferences: {
+    read: ReadPreferenceUseCase
+    write: WritePreferenceUseCase
+    remove: RemovePreferenceUseCase
   }
 }
 
@@ -169,6 +179,11 @@ export function buildContainer(ports: Ports): Container {
       getSsoUrl: new GetSsoUrlUseCase(ports.authGateway),
       handleSsoCallback: new HandleSsoCallbackUseCase(ports.authGateway),
       isSsoConfigured: new IsSsoConfiguredUseCase(ports.authGateway),
+    },
+    preferences: {
+      read: new ReadPreferenceUseCase(ports.preferencesGateway),
+      write: new WritePreferenceUseCase(ports.preferencesGateway),
+      remove: new RemovePreferenceUseCase(ports.preferencesGateway),
     },
   }
 }

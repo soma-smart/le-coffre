@@ -3,6 +3,8 @@ import { mount } from '@vue/test-utils'
 import { reactive } from 'vue'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { AppStateKey, type AppState } from '@/plugins/appState'
+import { CONTAINER_KEY } from '@/plugins/container'
+import { createTestContext } from '@/test/componentTestHelpers'
 
 // PrimeVue theming mutates document styles via @primeuix/themes — stub the
 // side-effecting helpers so the test environment doesn't need a real stylesheet.
@@ -20,15 +22,19 @@ vi.mock('@primeuix/themes', () => ({
 
 describe('ThemeSwitcher', () => {
   beforeEach(() => {
-    localStorage.clear()
     document.documentElement.classList.remove('p-dark')
   })
 
   function mountSwitcher() {
+    const { pinia, container } = createTestContext()
     const appState: AppState = reactive({ theme: 'Aura', darkTheme: false })
     return mount(ThemeSwitcher, {
       global: {
-        provide: { [AppStateKey as symbol]: appState },
+        plugins: [pinia],
+        provide: {
+          [AppStateKey as symbol]: appState,
+          [CONTAINER_KEY as symbol]: container,
+        },
       },
     })
   }

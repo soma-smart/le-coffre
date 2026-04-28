@@ -7,6 +7,7 @@ import { InMemoryAuthGateway } from '@/infrastructure/in_memory/InMemoryAuthGate
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
+import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
 
@@ -18,6 +19,7 @@ function makeTestContainer(): Container {
     groupRepository: new InMemoryGroupRepository(),
     vaultRepository: new InMemoryVaultRepository(),
     authGateway: new InMemoryAuthGateway(),
+    preferencesGateway: new InMemoryPreferencesGateway(),
   })
 }
 
@@ -80,5 +82,9 @@ describe('container plugin', () => {
     expect(container.auth).toBeDefined()
     expect(container.auth.login).toBeDefined()
     expect(container.auth.isSsoConfigured).toBeDefined()
+    expect(container.preferences).toBeDefined()
+    expect(container.preferences.read).toBeDefined()
+    expect(container.preferences.write).toBeDefined()
+    expect(container.preferences.remove).toBeDefined()
   })
 })

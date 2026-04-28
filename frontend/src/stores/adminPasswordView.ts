@@ -1,33 +1,34 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-
-const ADMIN_PASSWORD_VIEW_KEY = 'lecoffre.admin-password-view'
+import { useContainer } from '@/plugins/container'
+import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
 
 export const useAdminPasswordViewStore = defineStore('adminPasswordView', () => {
+  // Resolve use cases at setup time — inject() has no component context
+  // inside Pinia async actions.
+  const { preferences } = useContainer()
+
   const adminPasswordViewEnabled = ref(false)
   const loaded = ref(false)
 
   const loadAdminPasswordView = () => {
     if (loaded.value) return
-
-    if (typeof window === 'undefined') {
-      loaded.value = true
-      return
-    }
-
-    adminPasswordViewEnabled.value = localStorage.getItem(ADMIN_PASSWORD_VIEW_KEY) === '1'
+    const stored = preferences.read.execute<boolean>({
+      key: PREFERENCE_KEYS.ADMIN_PASSWORD_VIEW_ENABLED,
+    })
+    adminPasswordViewEnabled.value = stored === true
     loaded.value = true
   }
 
   const setAdminPasswordViewEnabled = (enabled: boolean) => {
     adminPasswordViewEnabled.value = enabled
-
-    if (typeof window === 'undefined') return
-
     if (enabled) {
-      localStorage.setItem(ADMIN_PASSWORD_VIEW_KEY, '1')
+      preferences.write.execute({
+        key: PREFERENCE_KEYS.ADMIN_PASSWORD_VIEW_ENABLED,
+        value: true,
+      })
     } else {
-      localStorage.removeItem(ADMIN_PASSWORD_VIEW_KEY)
+      preferences.remove.execute({ key: PREFERENCE_KEYS.ADMIN_PASSWORD_VIEW_ENABLED })
     }
   }
 

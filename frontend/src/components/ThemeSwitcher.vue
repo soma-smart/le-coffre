@@ -100,6 +100,20 @@ import type { PaletteDesignToken } from '@primeuix/themes/types'
 import { usePrimeVue } from 'primevue/config'
 import { AppStateKey, type AppState } from '@/plugins/appState'
 import { primaryColors, surfaces } from '@/config/colorThemes'
+import { useContainer } from '@/plugins/container'
+import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
+
+type ThemePresetName = keyof typeof themePresetsData
+
+interface ThemeSettings {
+  primaryColor: string
+  surfaceColor: string | null
+  theme: ThemePresetName
+  ripple: boolean
+  dark: boolean
+}
+
+const { preferences } = useContainer()
 
 // Access global properties
 const $primevue = usePrimeVue()
@@ -116,6 +130,9 @@ const themeModel = computed({
 const themePresetsData = { Aura, Lara, Nora, Material }
 const presets = Object.keys(themePresetsData)
 
+const isThemePresetName = (name: string): name is ThemePresetName =>
+  Object.prototype.hasOwnProperty.call(themePresetsData, name)
+
 // Reactive state
 const iconClass = ref('pi-moon')
 const selectedPrimaryColor = ref('noir')
@@ -124,26 +141,24 @@ const drawerVisible = ref(false)
 
 const rippleActive = computed(() => $primevue.config.ripple)
 
-const storageKey = 'app-settings'
-
 const saveSettings = () => {
-  const settings = {
+  const themeName =
+    $appState?.theme && isThemePresetName($appState.theme) ? $appState.theme : 'Aura'
+  const settings: ThemeSettings = {
     primaryColor: selectedPrimaryColor.value,
     surfaceColor: selectedSurfaceColor.value,
-    theme: $appState?.theme,
-    ripple: $primevue.config.ripple,
+    theme: themeName,
+    ripple: !!$primevue.config.ripple,
     dark: document.documentElement.classList.contains('p-dark'),
   }
-  localStorage.setItem(storageKey, JSON.stringify(settings))
+  preferences.write.execute({ key: PREFERENCE_KEYS.THEME_SETTINGS, value: settings })
 }
 
 const loadSettings = () => {
-  const savedSettings = localStorage.getItem(storageKey)
-
-  if (savedSettings) {
-    const settings = JSON.parse(savedSettings)
-
-    // Set reactive state from saved values
+  const settings = preferences.read.execute<ThemeSettings>({
+    key: PREFERENCE_KEYS.THEME_SETTINGS,
+  })
+  if (settings) {
     selectedPrimaryColor.value = settings.primaryColor
     selectedSurfaceColor.value = settings.surfaceColor
     if ($appState) {
@@ -151,7 +166,6 @@ const loadSettings = () => {
     }
     $primevue.config.ripple = settings.ripple
 
-    // Apply or remove dark mode based on saved setting
     if (settings.dark) {
       document.documentElement.classList.add('p-dark')
       iconClass.value = 'pi-sun'
