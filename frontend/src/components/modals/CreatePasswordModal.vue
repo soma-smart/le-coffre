@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, toRef, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
 import { isValidPasswordUrl, type Password } from '@/domain/password/Password'
 import { PasswordDomainError } from '@/domain/password/errors'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useContainer } from '@/plugins/container'
+import { useModelFromEntity } from '@/composables/useModelFromEntity'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
 
@@ -31,17 +32,29 @@ const { passwords } = storeToRefs(passwordsStore)
 // inside async event handlers after an await.
 const { passwords: passwordUseCases } = useContainer()
 
-const name = ref('')
-const password = ref('')
-const login = ref('')
-const url = ref('')
-const folder = ref('')
+// Form sync: every field except `password` is mirrored from `editPassword`
+// when it's provided; `password` always starts blank (we never prefill the
+// secret for security reasons).
+const {
+  form,
+  isEditing,
+  reset: resetForm,
+} = useModelFromEntity({
+  entity: toRef(props, 'editPassword'),
+  initial: () => ({ name: '', password: '', login: '', url: '', folder: '' }),
+  fromEntity: (p) => ({
+    name: p.name,
+    password: '',
+    login: p.login || '',
+    url: p.url || '',
+    folder: p.folder || '',
+  }),
+})
+const isEditMode = isEditing
 const folderSuggestions = ref<string[]>([])
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
-
-const isEditMode = ref(false)
 
 const resolveDefaultGroupId = (): string => {
   const preferredGroupId = props.defaultGroupId
@@ -84,16 +97,15 @@ const searchFolders = (event: { query: string }) => {
 }
 
 const urlError = computed(() =>
-  isValidPasswordUrl(url.value) ? '' : 'URL must start with http:// or https://',
+  isValidPasswordUrl(form.url) ? '' : 'URL must start with http:// or https://',
 )
 
 // Display bullets when password field is not focused
 const displayedPassword = computed(() => {
   if (passwordFieldFocused.value) {
-    return password.value
+    return form.password
   }
-  // Show bullets if there's a password
-  return password.value ? '•'.repeat(password.value.length) : ''
+  return form.password ? '•'.repeat(form.password.length) : ''
 })
 
 // Initialize groups on mount
@@ -116,28 +128,15 @@ watch(visible, async (isVisible) => {
   }
 })
 
-// Watch for edit password prop changes
+// When the entity is cleared (back to "create" mode), the form composable
+// already wipes the fields; we just need to re-pick the default group.
 watch(
   () => props.editPassword,
   (newValue) => {
-    if (newValue) {
-      isEditMode.value = true
-      name.value = newValue.name
-      password.value = '' // Don't prefill password for security
-      login.value = newValue.login || ''
-      url.value = newValue.url || ''
-      folder.value = newValue.folder || ''
-    } else {
-      isEditMode.value = false
-      name.value = ''
-      password.value = ''
-      login.value = ''
-      url.value = ''
-      folder.value = ''
+    if (!newValue) {
       selectedGroupId.value = resolveDefaultGroupId()
     }
   },
-  { immediate: true },
 )
 
 watch(
@@ -150,7 +149,7 @@ watch(
 )
 
 const handleSubmit = async () => {
-  if (!name.value) {
+  if (!form.name) {
     toast.add({
       severity: 'error',
       summary: 'Validation Error',
@@ -160,7 +159,6 @@ const handleSubmit = async () => {
     return
   }
 
-  // URL must start with http:// or https:// if provided
   if (urlError.value) {
     toast.add({
       severity: 'error',
@@ -171,8 +169,7 @@ const handleSubmit = async () => {
     return
   }
 
-  // Password is required only for create mode
-  if (!isEditMode.value && !password.value) {
+  if (!isEditMode.value && !form.password) {
     toast.add({
       severity: 'error',
       summary: 'Validation Error',
@@ -182,7 +179,6 @@ const handleSubmit = async () => {
     return
   }
 
-  // Group is required for create mode
   if (!isEditMode.value && !selectedGroupId.value) {
     toast.add({
       severity: 'error',
@@ -199,11 +195,11 @@ const handleSubmit = async () => {
     if (isEditMode.value && props.editPassword) {
       await passwordUseCases.update.execute({
         id: props.editPassword.id,
-        name: name.value,
-        password: password.value || null,
-        folder: folder.value || null,
-        login: login.value || null,
-        url: url.value || null,
+        name: form.name,
+        password: form.password || null,
+        folder: form.folder || null,
+        login: form.login || null,
+        url: form.url || null,
       })
 
       toast.add({
@@ -217,11 +213,11 @@ const handleSubmit = async () => {
       emit('updated')
     } else {
       await passwordUseCases.create.execute({
-        name: name.value,
-        password: password.value,
-        login: login.value || null,
-        url: url.value || null,
-        folder: folder.value || null,
+        name: form.name,
+        password: form.password,
+        login: form.login || null,
+        url: form.url || null,
+        folder: form.folder || null,
         groupId: selectedGroupId.value!,
       })
 
@@ -236,12 +232,7 @@ const handleSubmit = async () => {
       emit('created')
     }
 
-    // Reset form
-    name.value = ''
-    password.value = ''
-    login.value = ''
-    url.value = ''
-    folder.value = ''
+    resetForm()
     selectedGroupId.value = resolveDefaultGroupId()
   } catch (err: unknown) {
     const fallback = `Failed to ${isEditMode.value ? 'update' : 'create'} password`
@@ -264,17 +255,13 @@ const handleSubmit = async () => {
 }
 
 const handleCancel = () => {
-  name.value = ''
-  password.value = ''
-  login.value = ''
-  url.value = ''
-  folder.value = ''
+  resetForm()
   selectedGroupId.value = resolveDefaultGroupId()
   visible.value = false
 }
 
 const handleGenerate = (generatedPassword: string) => {
-  password.value = generatedPassword
+  form.password = generatedPassword
 }
 
 const handlePasswordInput = (event: Event) => {
@@ -282,15 +269,12 @@ const handlePasswordInput = (event: Event) => {
   const cursorPosition = target.selectionStart || 0
   const inputValue = target.value
 
-  // If the input contains bullets and user is typing
   if (inputValue.includes('•')) {
-    // User is trying to edit, clear the field
-    password.value = inputValue.replace(/•/g, '')
+    form.password = inputValue.replace(/•/g, '')
   } else {
-    password.value = inputValue
+    form.password = inputValue
   }
 
-  // Restore cursor position
   setTimeout(() => {
     target.setSelectionRange(cursorPosition, cursorPosition)
   }, 0)
@@ -317,7 +301,7 @@ const handlePasswordBlur = () => {
         <label for="password-name" class="font-semibold">Name</label>
         <InputText
           id="password-name"
-          v-model="name"
+          v-model="form.name"
           placeholder="e.g., Gmail Account"
           :disabled="loading"
           autofocus
@@ -404,7 +388,7 @@ const handlePasswordBlur = () => {
         <label for="password-login" class="font-semibold">Login (optional)</label>
         <InputText
           id="password-login"
-          v-model="login"
+          v-model="form.login"
           placeholder="e.g., user@example.com"
           :disabled="loading"
           autocomplete="off"
@@ -415,7 +399,7 @@ const handlePasswordBlur = () => {
         <label for="password-url" class="font-semibold">URL (optional)</label>
         <InputText
           id="password-url"
-          v-model="url"
+          v-model="form.url"
           placeholder="e.g., https://example.com"
           :disabled="loading"
           :invalid="!!urlError"
@@ -428,7 +412,7 @@ const handlePasswordBlur = () => {
         <label for="password-folder" class="font-semibold">Folder (optional)</label>
         <AutoComplete
           id="password-folder"
-          v-model="folder"
+          v-model="form.folder"
           :suggestions="folderSuggestions"
           @complete="searchFolders"
           dropdown
