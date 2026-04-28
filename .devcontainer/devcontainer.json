@@ -5,7 +5,7 @@
   "workspaceFolder": "/app",
   "forwardPorts": [8123, 8000, 5173],
   "remoteUser": "devuser",
-  "initializeCommand": "U=$(id -u); G=$(id -g); [ \"$U\" = \"0\" ] && U=1000; [ \"$G\" = \"0\" ] && G=1000; echo USER_UID=$U > ${localWorkspaceFolder}/.env && echo USER_GID=$G >> ${localWorkspaceFolder}/.env",
+  "initializeCommand": "U=$(id -u); G=$(id -g); [ \"$U\" = \"0\" ] && U=1000; [ \"$G\" = \"0\" ] && G=1000; echo USER_UID=$U > \"${localWorkspaceFolder}/.env\" && echo USER_GID=$G >> \"${localWorkspaceFolder}/.env\"",
   "postCreateCommand": "cd /app/server && uv sync && cd /app/frontend && bun install && cd /app && pre-commit install",
   "customizations": {
     "vscode": {
