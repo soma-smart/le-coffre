@@ -19,7 +19,7 @@ function seedWithEvents() {
       occurredOn: '2024-01-05T00:00:00Z',
       actorUserId: 'u',
       actorEmail: 'u@example.com',
-      eventData: { shared_with_group_id: 'g2' },
+      eventData: { sharedWithGroupId: 'g2' },
     })
     repo.addEvent('pwd-1', {
       eventId: 'e3',
@@ -27,7 +27,7 @@ function seedWithEvents() {
       occurredOn: '2024-02-01T00:00:00Z',
       actorUserId: 'u',
       actorEmail: 'u@example.com',
-      eventData: { has_name_changed: true },
+      eventData: { hasNameChanged: true },
     })
     return repo
   })

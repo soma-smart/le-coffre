@@ -40,7 +40,7 @@ function makeShareEvent(overrides: Partial<PasswordEvent> = {}): PasswordEvent {
     occurredOn: '2026-04-01T10:00:00Z',
     actorUserId: 'admin',
     actorEmail: 'admin@example.com',
-    eventData: { shared_with_group_id: 'g1' },
+    eventData: { sharedWithGroupId: 'g1' },
     ...overrides,
   }
 }
@@ -83,17 +83,17 @@ describe('usePasswordSharedAccess', () => {
       makeShareEvent({
         eventId: 'old',
         occurredOn: '2026-03-01T00:00:00Z',
-        eventData: { shared_with_group_id: 'g1' },
+        eventData: { sharedWithGroupId: 'g1' },
       }),
       makeShareEvent({
         eventId: 'newer',
         occurredOn: '2026-04-01T00:00:00Z',
-        eventData: { shared_with_group_id: 'g1' },
+        eventData: { sharedWithGroupId: 'g1' },
       }),
       makeShareEvent({
         eventId: 'other-group',
         occurredOn: '2026-04-15T00:00:00Z',
-        eventData: { shared_with_group_id: 'g-other' },
+        eventData: { sharedWithGroupId: 'g-other' },
       }),
     ]
 
@@ -136,8 +136,8 @@ describe('usePasswordSharedAccess', () => {
 
   it('without a context group, only matches shares with one of the user belonging groups', async () => {
     const events = [
-      makeShareEvent({ eventData: { shared_with_group_id: 'visible' } }),
-      makeShareEvent({ eventId: 'invisible', eventData: { shared_with_group_id: 'hidden' } }),
+      makeShareEvent({ eventData: { sharedWithGroupId: 'visible' } }),
+      makeShareEvent({ eventId: 'invisible', eventData: { sharedWithGroupId: 'hidden' } }),
     ]
     const { sharedAccessInfo } = usePasswordSharedAccess({
       password: ref(makePassword()),

@@ -101,17 +101,17 @@
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordUpdatedEvent'">
                 Updated:
-                <span v-if="slotProps.data.eventData.has_name_changed"> name</span>
-                <span v-if="slotProps.data.eventData.has_password_changed"> password</span>
-                <span v-if="slotProps.data.eventData.has_folder_changed"> folder</span>
-                <span v-if="slotProps.data.eventData.has_login_changed"> login</span>
-                <span v-if="slotProps.data.eventData.has_url_changed"> url</span>
+                <span v-if="slotProps.data.eventData.hasNameChanged"> name</span>
+                <span v-if="slotProps.data.eventData.hasPasswordChanged"> password</span>
+                <span v-if="slotProps.data.eventData.hasFolderChanged"> folder</span>
+                <span v-if="slotProps.data.eventData.hasLoginChanged"> login</span>
+                <span v-if="slotProps.data.eventData.hasUrlChanged"> url</span>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordSharedEvent'">
                 Shared with group:
                 <strong>{{
-                  slotProps.data.eventData.shared_with_group_name ||
-                  (slotProps.data.eventData.shared_with_group_id as string | undefined)?.substring(
+                  slotProps.data.eventData.sharedWithGroupName ||
+                  (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
                     0,
                     8,
                   ) + '...' ||
@@ -121,10 +121,11 @@
               <span v-else-if="slotProps.data.eventType === 'PasswordUnsharedEvent'">
                 Unshared from group:
                 <strong>{{
-                  slotProps.data.eventData.unshared_with_group_name ||
-                  (
-                    slotProps.data.eventData.unshared_with_group_id as string | undefined
-                  )?.substring(0, 8) + '...' ||
+                  slotProps.data.eventData.unsharedWithGroupName ||
+                  (slotProps.data.eventData.unsharedWithGroupId as string | undefined)?.substring(
+                    0,
+                    8,
+                  ) + '...' ||
                   'Unknown'
                 }}</strong>
               </span>
