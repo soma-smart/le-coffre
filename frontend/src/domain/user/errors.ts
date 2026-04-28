@@ -52,3 +52,15 @@ export class UserPasswordMustBeDifferentError extends UserDomainError {
     this.name = 'UserPasswordMustBeDifferentError'
   }
 }
+
+/**
+ * The user submitted a wrong "current password" when trying to change
+ * their password. Distinct from generic auth failures because it surfaces
+ * inline on the change-password form, not via the global 401 handler.
+ */
+export class IncorrectOldPasswordError extends UserDomainError {
+  constructor() {
+    super('Current password is incorrect')
+    this.name = 'IncorrectOldPasswordError'
+  }
+}
