@@ -57,7 +57,7 @@ describe('PasswordHistoryModal', () => {
       occurredOn: yesterday.toISOString(),
       actorUserId: 'u',
       actorEmail: 'alice@example.com',
-      eventData: { has_name_changed: true },
+      eventData: { hasNameChanged: true },
     })
     ;({ pinia, container } = createTestContext({ passwordRepository: repo }))
   })

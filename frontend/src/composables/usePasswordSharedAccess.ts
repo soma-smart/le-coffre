@@ -46,7 +46,7 @@ function getEventDataString(eventData: Record<string, unknown>, key: string): st
 }
 
 /**
- * Resolves the most recent `PasswordSharedEvent` whose `shared_with_group_id`
+ * Resolves the most recent `PasswordSharedEvent` whose `sharedWithGroupId`
  * matches the rendering context (a specific group, or any group the user
  * belongs to), then attaches the actor's username for display.
  *
@@ -96,7 +96,7 @@ export function usePasswordSharedAccess(options: UsePasswordSharedAccessOptions)
       const matching = events
         .filter((e) => e.eventType === 'PasswordSharedEvent')
         .filter((e) => {
-          const sharedWithGroupId = getEventDataString(e.eventData, 'shared_with_group_id')
+          const sharedWithGroupId = getEventDataString(e.eventData, 'sharedWithGroupId')
           if (!sharedWithGroupId) return false
           if (targetGroupId) return sharedWithGroupId === targetGroupId
           return options.userBelongingGroups.value.some((g) => g.id === sharedWithGroupId)

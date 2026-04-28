@@ -175,8 +175,33 @@ function toPasswordEvent(dto: PasswordEventResponse): PasswordEvent {
     occurredOn: dto.occurred_on,
     actorUserId: dto.actor_user_id,
     actorEmail: dto.actor_email,
-    eventData: dto.event_data,
+    eventData: toPasswordEventData(dto.event_data),
   }
+}
+
+/**
+ * Map every snake_case key inside the event payload to camelCase before it
+ * crosses the infrastructure boundary. Keeping this in the adapter lets the
+ * presentation layer talk only camelCase — the backend's wire format never
+ * leaks past this file.
+ *
+ * Unknown keys are still forwarded (camelCased) so a new event-data field
+ * shipped on the server appears in the UI without code change; rendering
+ * still requires a code change, but it won't crash.
+ *
+ * Exported for unit testing only — production code should never import it.
+ */
+export function toPasswordEventData(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    out[snakeToCamel(key)] = value
+  }
+  return out
+}
+
+function snakeToCamel(key: string): string {
+  return key.replace(/_([a-z0-9])/g, (_, ch) => ch.toUpperCase())
 }
 
 function extractDetail(error: unknown): string | null {
