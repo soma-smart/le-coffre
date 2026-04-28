@@ -217,15 +217,14 @@ import { onMounted, watch, computed, ref, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue'
 import { storeToRefs } from 'pinia'
-import { pickDefaultGroupForUser, type Group } from '@/domain/group/Group'
 import { usePasswordsStore } from '@/stores/passwords'
 import { usePasswordAccessStore } from '../stores/passwordAccess'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
+import { useAdminNavigation } from '@/composables/useAdminNavigation'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { logout } from '@/utils/logout'
-import { sortGroupsByName } from '@/utils/groupSort'
 import { slugifyGroupName, findGroupIdBySlug } from '@/utils/groupSlug'
 
 const router = useRouter()
@@ -262,40 +261,28 @@ const isAdminUsersActive = computed(() => route.path === '/admin/users')
 const selectedGroupSlug = computed(() => (route.params.groupSlug as string | undefined) ?? null)
 const selectedGroupId = computed(() => findGroupIdBySlug(groups.value, selectedGroupSlug.value))
 const adminPasswordViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
+const currentUserId = computed(() => currentUser.value?.id ?? null)
 
-const myPasswordGroups = computed(() =>
-  sortGroupsByName(userBelongingGroups.value, currentUserPersonalGroupId.value),
-)
-
-const adminExtraPasswordGroups = computed(() => {
-  if (!isAdmin.value) return []
-
-  const myGroupIds = new Set(myPasswordGroups.value.map((group) => group.id))
-  return sortGroupsByName(
-    groups.value.filter(
-      (group) => !myGroupIds.has(group.id) && (passwordCountByGroupId.value[group.id] ?? 0) > 0,
-    ),
-    currentUserPersonalGroupId.value,
-  )
-})
-
-const visiblePasswordGroups = computed(() =>
-  adminPasswordViewEnabled.value
-    ? [...myPasswordGroups.value, ...adminExtraPasswordGroups.value]
-    : myPasswordGroups.value,
+const {
+  myPasswordGroups,
+  adminExtraPasswordGroups,
+  visiblePasswordGroups,
+  getDefaultGroupId,
+  isOwnerOfGroup,
+} = useAdminNavigation(
+  {
+    allGroups: groups,
+    userBelongingGroups,
+    currentUserPersonalGroupId,
+    isAdmin,
+    adminPasswordViewEnabled,
+    passwordCountByGroupId,
+  },
+  currentUserId,
 )
 
 const isActivePasswordGroup = (groupId: string) =>
   isPasswordsActive.value && selectedGroupId.value === groupId
-
-const getDefaultGroupId = (candidates: Group[]): string | null =>
-  pickDefaultGroupForUser(candidates, currentUserPersonalGroupId.value, sortGroupsByName)?.id ??
-  null
-
-const isOwnerOfGroup = (group: { owners?: string[] }) => {
-  if (!currentUser.value?.id) return false
-  return !!group.owners?.includes(currentUser.value.id)
-}
 
 const buildHomeQuery = (shouldOpenCreate = false) => {
   const query: Record<string, string> = {}
