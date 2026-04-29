@@ -1,17 +1,23 @@
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
   title: string
   question: string
-  description: string
+  /**
+   * Multi-line description rendered as the modal body. Lines split on `\n`
+   * become separate paragraphs. For richer content (links, inline icons),
+   * use the `#description` slot instead.
+   */
+  description?: string
   confirmLabel?: string
   cancelLabel?: string
   severity?: 'danger' | 'warning' | 'info' | 'success'
   icon?: string
   countdownSeconds?: number
+  /** Yellow callout under the description. Use `#warning` slot for rich content. */
   warningMessage?: string
 }>()
 
@@ -22,14 +28,10 @@ const emit = defineEmits<{
 
 const countdown = ref(props.countdownSeconds || 0)
 const isProcessing = ref(false)
-const countdownTimer = ref<number | null>(null)
+let countdownTimer: number | null = null
 
-const canConfirm = computed(() => {
-  const countdownComplete = countdown.value === 0
-  return countdownComplete
-})
+const canConfirm = computed(() => countdown.value === 0)
 
-// Compute button label based on countdown
 const confirmButtonLabel = computed(() => {
   if (countdown.value > 0) {
     return `${props.confirmLabel || 'Confirm'} in ${countdown.value}s`
@@ -37,10 +39,8 @@ const confirmButtonLabel = computed(() => {
   return props.confirmLabel || 'Confirm'
 })
 
-// Get icon based on severity
 const iconClass = computed(() => {
   if (props.icon) return props.icon
-
   switch (props.severity) {
     case 'danger':
       return 'pi pi-exclamation-triangle'
@@ -70,42 +70,38 @@ const iconColor = computed(() => {
   }
 })
 
-// Start countdown when modal opens
-watch(visible, async (newVisible) => {
-  if (newVisible) {
-    // Reset countdown when modal opens
-    countdown.value = props.countdownSeconds || 0
-    isProcessing.value = false // Reset processing state
+const descriptionLines = computed(() => (props.description ?? '').split('\n'))
 
-    // Use nextTick to ensure reactivity is complete
-    await nextTick()
-
-    if (countdown.value > 0) {
-      startCountdown()
-    }
-  } else {
-    stopCountdown()
-    isProcessing.value = false // Reset when modal closes
-  }
-})
-
-const startCountdown = () => {
-  stopCountdown() // Clear any existing timer
-  countdownTimer.value = window.setInterval(() => {
-    if (countdown.value > 0) {
-      countdown.value--
-    } else {
-      stopCountdown()
-    }
+function startCountdown() {
+  stopCountdown()
+  countdownTimer = window.setInterval(() => {
+    if (countdown.value > 0) countdown.value--
+    else stopCountdown()
   }, 1000)
 }
 
-const stopCountdown = () => {
-  if (countdownTimer.value !== null) {
-    clearInterval(countdownTimer.value)
-    countdownTimer.value = null
+function stopCountdown() {
+  if (countdownTimer !== null) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
   }
 }
+
+watch(visible, async (newVisible) => {
+  if (newVisible) {
+    countdown.value = props.countdownSeconds || 0
+    isProcessing.value = false
+    await nextTick()
+    if (countdown.value > 0) startCountdown()
+  } else {
+    stopCountdown()
+    isProcessing.value = false
+  }
+})
+
+// Belt-and-braces: even if the modal is unmounted while the countdown is
+// running (e.g. the parent route changes), the interval gets cleared.
+onUnmounted(() => stopCountdown())
 
 const handleConfirm = () => {
   emit('confirm')
@@ -116,16 +112,6 @@ const handleCancel = () => {
   emit('cancel')
   visible.value = false
 }
-
-// Clean up timer when component unmounts
-watch(
-  () => visible.value,
-  (newVal) => {
-    if (!newVal) {
-      stopCountdown()
-    }
-  },
-)
 </script>
 
 <template>
@@ -148,22 +134,27 @@ watch(
             {{ question }}
           </p>
 
-          <!-- Description (multiple lines) -->
+          <!-- Description: opt into rich content via the slot, fall back to the
+               existing line-split string prop otherwise. -->
           <div class="text-sm text-muted-color mb-3 space-y-1">
-            <p v-for="(line, index) in description.split('\n')" :key="index">
-              {{ line }}
-            </p>
+            <slot name="description">
+              <p v-for="(line, index) in descriptionLines" :key="index">
+                {{ line }}
+              </p>
+            </slot>
           </div>
 
-          <!-- Warning message -->
+          <!-- Warning callout. Same pattern: slot for rich content, prop for plain. -->
           <div
-            v-if="warningMessage"
+            v-if="warningMessage || $slots.warning"
             class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mb-3"
           >
-            <p class="text-sm text-yellow-800 dark:text-yellow-200">
-              <i class="pi pi-exclamation-triangle mr-2"></i>
-              {{ warningMessage }}
-            </p>
+            <slot name="warning">
+              <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                <i class="pi pi-exclamation-triangle mr-2"></i>
+                {{ warningMessage }}
+              </p>
+            </slot>
           </div>
         </div>
       </div>

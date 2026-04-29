@@ -12,13 +12,11 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppFooter: typeof import('./src/components/AppFooter.vue')['default']
-    AuditLogsCard: typeof import('./src/components/admin/AuditLogsCard.vue')['default']
     AutoComplete: typeof import('primevue/autocomplete')['default']
     Badge: typeof import('primevue/badge')['default']
     Button: typeof import('primevue/button')['default']
     Card: typeof import('primevue/card')['default']
     Checkbox: typeof import('primevue/checkbox')['default']
-    Chip: typeof import('primevue/chip')['default']
     Column: typeof import('primevue/column')['default']
     ConfirmationModal: typeof import('./src/components/modals/ConfirmationModal.vue')['default']
     ConfirmDialog: typeof import('primevue/confirmdialog')['default']
@@ -29,11 +27,9 @@ declare module 'vue' {
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
     Drawer: typeof import('primevue/drawer')['default']
-    Dropdown: typeof import('primevue/dropdown')['default']
     FolderCard: typeof import('./src/components/passwords/FolderCard.vue')['default']
     Form: typeof import('@primevue/forms/form')['default']
     GroupDetailsModal: typeof import('./src/components/modals/GroupDetailsModal.vue')['default']
-    GroupFilterSelect: typeof import('./src/components/GroupFilterSelect.vue')['default']
     IconField: typeof import('primevue/iconfield')['default']
     InputIcon: typeof import('primevue/inputicon')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']
@@ -79,7 +75,6 @@ declare module 'vue' {
     UnlockVaultModal: typeof import('./src/components/modals/UnlockVaultModal.vue')['default']
     UsersManagementCard: typeof import('./src/components/admin/UsersManagementCard.vue')['default']
     VaultManagementCard: typeof import('./src/components/admin/VaultManagementCard.vue')['default']
-    WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
   export interface GlobalDirectives {
     Tooltip: typeof import('primevue/tooltip')['default']

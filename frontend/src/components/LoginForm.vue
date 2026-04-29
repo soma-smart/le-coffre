@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import {
-  adminLoginAuthLoginPost,
-  getSsoUrlAuthSsoUrlGet,
-  isSsoConfigSetAuthSsoIsConfiguredGet,
-} from '@/client'
 import { zodResolver } from '@primevue/forms/resolvers/zod'
 import { useToast } from 'primevue'
 import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import z from 'zod'
+import { AuthDomainError, InvalidCredentialsError } from '@/domain/auth/errors'
+import { useContainer } from '@/plugins/container'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useUserStore } from '@/stores/user'
 import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
+import { pickDefaultGroupForUser } from '@/domain/group/Group'
 import { slugifyGroupName } from '@/utils/groupSlug'
+import { sortGroupsByName } from '@/utils/groupSort'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,6 +21,10 @@ const passwordsStore = usePasswordsStore()
 const userStore = useUserStore()
 const groupsStore = useGroupsStore()
 const csrfStore = useCsrfStore()
+
+// Resolve use cases at setup time — inject() has no component context
+// inside async handlers after an await.
+const { auth } = useContainer()
 
 const isSsoConfigured = ref(false)
 
@@ -44,28 +47,20 @@ const loading = ref(false)
 const resolveDefaultGroupRoute = async () => {
   await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
 
-  const availableGroupIds = groupsStore.userBelongingGroups.map((group) => group.id)
-  const personalGroupId = userStore.currentUser?.personal_group_id ?? null
+  const personalGroupId = userStore.currentUser?.personalGroupId ?? null
+  const defaultGroup = pickDefaultGroupForUser(
+    groupsStore.userBelongingGroups,
+    personalGroupId,
+    sortGroupsByName,
+  )
 
-  const defaultGroupId =
-    personalGroupId && availableGroupIds.includes(personalGroupId)
-      ? personalGroupId
-      : (availableGroupIds[0] ?? null)
-
-  if (!defaultGroupId) {
-    return { name: 'Home' as const }
-  }
-
-  const defaultGroup = groupsStore.userBelongingGroups.find((group) => group.id === defaultGroupId)
-  const defaultGroupSlug = defaultGroup ? slugifyGroupName(defaultGroup.name) : null
-
-  if (!defaultGroupSlug) {
+  if (!defaultGroup) {
     return { name: 'Home' as const }
   }
 
   return {
     name: 'HomeGroup' as const,
-    params: { groupSlug: defaultGroupSlug },
+    params: { groupSlug: slugifyGroupName(defaultGroup.name) },
   }
 }
 
@@ -126,10 +121,7 @@ onUnmounted(() => {
 // Check if SSO is configured on component mount
 onMounted(async () => {
   try {
-    const response = await isSsoConfigSetAuthSsoIsConfiguredGet()
-    if (response.data) {
-      isSsoConfigured.value = response.data.is_set
-    }
+    isSsoConfigured.value = await auth.isSsoConfigured.execute()
   } catch (error) {
     // SSO check failed, keep SSO button hidden
     console.error('Failed to check SSO configuration:', error)
@@ -137,56 +129,48 @@ onMounted(async () => {
 })
 
 const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof formValues }) => {
-  if (valid) {
-    loading.value = true
-    try {
-      const response = await adminLoginAuthLoginPost({
-        body: {
-          email: values.email,
-          password: values.password,
-        },
-      })
+  if (!valid) return
 
-      if (response.error) {
-        console.error('Login error:', response.error)
-        // The countdown Message (isRateLimited) already communicates the
-        // lockout / rate-limit state; a second toast would just be noise.
-        if (!isRateLimited.value) {
-          toast.add({
-            severity: 'error',
-            summary: 'Login Failed',
-            detail: response.error.detail,
-            life: 5000,
-          })
-        }
-        return
-      }
-      toast.add({
-        severity: 'success',
-        summary: 'Login Successful',
-        detail: 'You have logged in successfully.',
-        life: 5000,
-      })
+  loading.value = true
+  try {
+    await auth.login.execute({ email: values.email, password: values.password })
 
-      // Invalidate caches to force refetch after login
-      passwordsStore.invalidateCache()
-      userStore.clearUser()
+    toast.add({
+      severity: 'success',
+      summary: 'Login Successful',
+      detail: 'You have logged in successfully.',
+      life: 5000,
+    })
 
-      // Fetch CSRF token after successful login
-      await csrfStore.fetchCsrfToken()
+    passwordsStore.invalidateCache()
+    userStore.clearUser()
+    await csrfStore.fetchCsrfToken()
 
-      const redirectPath =
-        typeof route.query.redirect === 'string' ? route.query.redirect.trim() : null
+    const redirectPath =
+      typeof route.query.redirect === 'string' ? route.query.redirect.trim() : null
 
-      if (redirectPath && redirectPath !== '/') {
-        await router.push(redirectPath)
-        return
-      }
-
-      await router.push(await resolveDefaultGroupRoute())
-    } finally {
-      loading.value = false
+    if (redirectPath && redirectPath !== '/') {
+      await router.push(redirectPath)
+      return
     }
+
+    await router.push(await resolveDefaultGroupRoute())
+  } catch (err) {
+    console.error('Login error:', err)
+    // The countdown Message (isRateLimited) already communicates the
+    // lockout / rate-limit state; a second toast would just be noise.
+    if (isRateLimited.value) return
+    const detail =
+      err instanceof InvalidCredentialsError
+        ? err.message
+        : err instanceof AuthDomainError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Login failed'
+    toast.add({ severity: 'error', summary: 'Login Failed', detail, life: 5000 })
+  } finally {
+    loading.value = false
   }
 }
 
@@ -195,31 +179,15 @@ const ssoLoading = ref(false)
 const handleSsoLogin = async () => {
   ssoLoading.value = true
   try {
-    const response = await getSsoUrlAuthSsoUrlGet()
-
-    if (response.error) {
-      console.error('SSO URL error:', response.error)
-      toast.add({
-        severity: 'error',
-        summary: 'SSO Error',
-        detail: 'Failed to get SSO login URL. SSO may not be configured.',
-        life: 5000,
-      })
-      return
-    }
-
-    if (response.data) {
-      // Redirect to SSO provider
-      window.location.href = response.data as string
-    }
+    const url = await auth.getSsoUrl.execute()
+    window.location.href = url
   } catch (error) {
-    console.error('Unexpected error during SSO login:', error)
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: 'An unexpected error occurred',
-      life: 5000,
-    })
+    console.error('SSO URL error:', error)
+    const detail =
+      error instanceof AuthDomainError
+        ? error.message
+        : 'Failed to get SSO login URL. SSO may not be configured.'
+    toast.add({ severity: 'error', summary: 'SSO Error', detail, life: 5000 })
   } finally {
     ssoLoading.value = false
   }

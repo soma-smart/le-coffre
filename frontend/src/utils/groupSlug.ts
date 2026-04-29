@@ -1,11 +1,11 @@
-import type { GroupItem } from '@/client/types.gen'
+import type { Group } from '@/domain/group/Group'
 
 export const slugifyGroupName = (name: string): string => {
   return name
 }
 
 export const findGroupIdBySlug = (
-  groupList: GroupItem[],
+  groupList: Group[],
   slug: string | null | undefined,
 ): string | null => {
   if (!slug) return null

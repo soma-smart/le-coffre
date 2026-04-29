@@ -26,7 +26,7 @@
           <span
             class="pi transition-colors text-sm"
             :class="[
-              group.is_personal ? 'pi-user' : 'pi-users',
+              group.isPersonal ? 'pi-user' : 'pi-users',
               isActivePasswordGroup(group.id)
                 ? 'text-primary'
                 : 'text-muted-color group-hover:text-primary',
@@ -85,7 +85,7 @@
           <span
             class="pi transition-colors text-sm"
             :class="[
-              group.is_personal ? 'pi-user' : 'pi-users',
+              group.isPersonal ? 'pi-user' : 'pi-users',
               isActivePasswordGroup(group.id)
                 ? 'text-primary'
                 : 'text-muted-color group-hover:text-primary',
@@ -222,9 +222,9 @@ import { usePasswordAccessStore } from '../stores/passwordAccess'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
+import { useAdminNavigation } from '@/composables/useAdminNavigation'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { logout } from '@/utils/logout'
-import { sortGroupsByName } from '@/utils/groupSort'
 import { slugifyGroupName, findGroupIdBySlug } from '@/utils/groupSlug'
 
 const router = useRouter()
@@ -261,46 +261,28 @@ const isAdminUsersActive = computed(() => route.path === '/admin/users')
 const selectedGroupSlug = computed(() => (route.params.groupSlug as string | undefined) ?? null)
 const selectedGroupId = computed(() => findGroupIdBySlug(groups.value, selectedGroupSlug.value))
 const adminPasswordViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
+const currentUserId = computed(() => currentUser.value?.id ?? null)
 
-const myPasswordGroups = computed(() =>
-  sortGroupsByName(userBelongingGroups.value, currentUserPersonalGroupId.value),
-)
-
-const adminExtraPasswordGroups = computed(() => {
-  if (!isAdmin.value) return []
-
-  const myGroupIds = new Set(myPasswordGroups.value.map((group) => group.id))
-  return sortGroupsByName(
-    groups.value.filter(
-      (group) => !myGroupIds.has(group.id) && (passwordCountByGroupId.value[group.id] ?? 0) > 0,
-    ),
-    currentUserPersonalGroupId.value,
-  )
-})
-
-const visiblePasswordGroups = computed(() =>
-  adminPasswordViewEnabled.value
-    ? [...myPasswordGroups.value, ...adminExtraPasswordGroups.value]
-    : myPasswordGroups.value,
+const {
+  myPasswordGroups,
+  adminExtraPasswordGroups,
+  visiblePasswordGroups,
+  getDefaultGroupId,
+  isOwnerOfGroup,
+} = useAdminNavigation(
+  {
+    allGroups: groups,
+    userBelongingGroups,
+    currentUserPersonalGroupId,
+    isAdmin,
+    adminPasswordViewEnabled,
+    passwordCountByGroupId,
+  },
+  currentUserId,
 )
 
 const isActivePasswordGroup = (groupId: string) =>
   isPasswordsActive.value && selectedGroupId.value === groupId
-
-const getDefaultGroupId = (availableGroupIds: string[]): string | null => {
-  if (
-    currentUserPersonalGroupId.value &&
-    availableGroupIds.includes(currentUserPersonalGroupId.value)
-  ) {
-    return currentUserPersonalGroupId.value
-  }
-  return availableGroupIds[0] ?? null
-}
-
-const isOwnerOfGroup = (group: { owners?: string[] }) => {
-  if (!currentUser.value?.id) return false
-  return !!group.owners?.includes(currentUser.value.id)
-}
 
 const buildHomeQuery = (shouldOpenCreate = false) => {
   const query: Record<string, string> = {}
@@ -342,7 +324,7 @@ const goToGroupRoute = (groupId: string | null, shouldOpenCreate = false) => {
 }
 
 const goToAllPasswords = () => {
-  const defaultGroupId = getDefaultGroupId(myPasswordGroups.value.map((g) => g.id))
+  const defaultGroupId = getDefaultGroupId(myPasswordGroups.value)
   goToGroupRoute(defaultGroupId)
 }
 
@@ -366,7 +348,7 @@ const toggleAdminPasswordView = () => {
   )
 
   if (!nextAdminView && isPasswordsActive.value && !selectedGroupIsInMyGroups) {
-    const fallbackGroupId = getDefaultGroupId(myPasswordGroups.value.map((group) => group.id))
+    const fallbackGroupId = getDefaultGroupId(myPasswordGroups.value)
 
     if (!fallbackGroupId) {
       router.replace({ name: 'Home', query: route.query })

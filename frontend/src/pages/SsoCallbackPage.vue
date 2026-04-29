@@ -2,7 +2,8 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue'
-import { ssoCallbackAuthSsoCallbackGet } from '@/client'
+import { AuthDomainError } from '@/domain/auth/errors'
+import { useContainer } from '@/plugins/container'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useUserStore } from '@/stores/user'
 import { useCsrfStore } from '@/stores/csrf'
@@ -16,6 +17,10 @@ const userStore = useUserStore()
 const csrfStore = useCsrfStore()
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
+
+// Resolve use cases at setup time — inject() has no component context
+// inside async handlers after an await.
+const { auth } = useContainer()
 
 onMounted(async () => {
   const code = route.query.code as string
@@ -34,68 +39,33 @@ onMounted(async () => {
   }
 
   try {
-    const response = await ssoCallbackAuthSsoCallbackGet({
-      query: {
-        code,
-        ...(state && { state }),
-      },
-      credentials: 'include', // Ensures cookies from response are stored (required when API is cross-origin)
-    })
+    const result = await auth.handleSsoCallback.execute({ code, state })
+    const welcomeMessage = result.user.isNewUser
+      ? `Welcome ${result.user.displayName}! Your account has been created.`
+      : `Welcome back, ${result.user.displayName}!`
 
-    if (response.error) {
-      console.error('SSO callback error:', response.error)
-
-      let detail = 'SSO authentication failed'
-      if (
-        response.error.detail &&
-        Array.isArray(response.error.detail) &&
-        response.error.detail.length > 0
-      ) {
-        detail = response.error.detail.map((e) => e.msg).join(', ')
-      }
-
-      errorMessage.value = detail
-      toast.add({
-        severity: 'error',
-        summary: 'SSO Authentication Failed',
-        detail,
-        life: 5000,
-      })
-      loading.value = false
-      return
-    }
-
-    if (response.data) {
-      const welcomeMessage = response.data.user.is_new_user
-        ? `Welcome ${response.data.user.display_name}! Your account has been created.`
-        : `Welcome back, ${response.data.user.display_name}!`
-
-      toast.add({
-        severity: 'success',
-        summary: 'Login Successful',
-        detail: welcomeMessage,
-        life: 3000,
-      })
-
-      // Invalidate caches to force refetch after SSO login
-      passwordsStore.invalidateCache()
-      userStore.clearUser() // Clear cached user data to fetch fresh data on navigation
-
-      // Fetch CSRF token after successful SSO login
-      await csrfStore.fetchCsrfToken()
-
-      // Redirect to home page
-      await router.push('/')
-    }
-  } catch (error) {
-    console.error('Unexpected error during SSO callback:', error)
-    errorMessage.value = 'An unexpected error occurred during authentication'
     toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: errorMessage.value,
-      life: 5000,
+      severity: 'success',
+      summary: 'Login Successful',
+      detail: welcomeMessage,
+      life: 3000,
     })
+
+    passwordsStore.invalidateCache()
+    userStore.clearUser()
+    await csrfStore.fetchCsrfToken()
+
+    await router.push('/')
+  } catch (error) {
+    console.error('SSO callback error:', error)
+    const detail =
+      error instanceof AuthDomainError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : 'SSO authentication failed'
+    errorMessage.value = detail
+    toast.add({ severity: 'error', summary: 'SSO Authentication Failed', detail, life: 5000 })
     loading.value = false
   }
 })
