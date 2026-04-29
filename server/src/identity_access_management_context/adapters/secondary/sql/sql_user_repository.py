@@ -1,9 +1,9 @@
 import json
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 
 from identity_access_management_context.application.gateways import UserRepository
 from identity_access_management_context.domain.entities import User
@@ -49,7 +49,7 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             )
             for row in results
         ]
-    
+
     def count(self) -> int:
         """Count users."""
         statement = select(func.count()).select_from(UserTable)

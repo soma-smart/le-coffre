@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue'
-import { client } from '@/client/client.gen'
+import {
+  getPasswordStatisticForAdminPasswordsAdminStatisticsGet,
+  getStatisticForAdminAdminStatisticsGet,
+} from '@/client/sdk.gen'
 
 const toast = useToast()
 
@@ -14,12 +17,8 @@ const fetchStatistics = async () => {
   loading.value = true
   try {
     const [iamResponse, passwordResponse] = await Promise.all([
-      client.get<{ 200: { user_count: number; group_count: number } }, unknown, false>({
-        url: '/admin/statistics',
-      }),
-      client.get<{ 200: { password_count: number } }, unknown, false>({
-        url: '/passwords/admin/statistics',
-      }),
+      getStatisticForAdminAdminStatisticsGet(),
+      getPasswordStatisticForAdminPasswordsAdminStatisticsGet(),
     ])
 
     if (iamResponse.response.ok && iamResponse.data) {

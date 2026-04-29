@@ -2,7 +2,7 @@ from identity_access_management_context.application.commands import GetStatistic
 from identity_access_management_context.application.gateways import GroupRepository, UserRepository
 from identity_access_management_context.application.responses import GetStatisticForAdminResponse
 from shared_kernel.application.tracing import TracedUseCase
-from shared_kernel.domain.services.admin_permission_checker import AdminPermissionChecker
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class GetStatisticForAdminUseCase(TracedUseCase):
