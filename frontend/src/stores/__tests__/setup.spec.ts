@@ -79,4 +79,23 @@ describe('useSetupStore', () => {
     expect(store.lastShareTimestamp).toBe('2026-04-29T10:00:00Z')
     expect(store.error).toBeNull()
   })
+
+  it('clears the error and reads vaultStatus on a successful retry', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      repo.failGetStatusOnce(new Error('temporary blip'))
+      const wrapper = mountWithContext(container, pinia)
+      const store = (wrapper.vm as unknown as { store: ReturnType<typeof useSetupStore> }).store
+
+      await store.fetchVaultStatus(true)
+      expect(store.error).toBe('temporary blip')
+
+      // Next call succeeds — error must clear, status must populate.
+      await store.fetchVaultStatus(true)
+      expect(store.error).toBeNull()
+      expect(store.vaultStatus).toBe('UNLOCKED')
+    } finally {
+      consoleErrorSpy.mockRestore()
+    }
+  })
 })
