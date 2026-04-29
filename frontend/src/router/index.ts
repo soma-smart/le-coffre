@@ -71,7 +71,7 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
   const setupStore = useSetupStore()
   const userStore = useUserStore()
 
@@ -136,11 +136,19 @@ router.beforeEach(async (to) => {
 
   // Check if route requires admin privileges
   if (to.meta.requiresAdmin && isLoggedIn) {
-    // Fetch user data to check admin status (will use cache if already loaded)
     await userStore.fetchCurrentUser()
 
+    // If the user fetch failed (backend down, not "no session"), keep the
+    // user on whatever they were viewing. Silently redirecting to Home on a
+    // transient 5xx would mask the real problem and look like a permission
+    // demotion. The user store's `error` ref discriminates the cases:
+    // currentUser=null + error=null  → not authenticated
+    // currentUser=null + error=str   → fetch failed; treat as "verdict unknown"
+    if (userStore.error) {
+      return from?.name ? false : { name: 'Home' }
+    }
+
     if (!userStore.isAdmin) {
-      // User is not an admin, redirect to home
       return { name: 'Home' }
     }
   }

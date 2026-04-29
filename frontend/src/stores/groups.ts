@@ -119,6 +119,10 @@ export const useGroupsStore = defineStore('groups', () => {
     globalPendingPromise = null
   }
 
+  /**
+   * Reset on logout — prevents user A's group sidebar from leaking into
+   * user B's session when they log in on the same SPA tab.
+   */
   function clear(): void {
     groups.value = []
     sharedGroups.value = []

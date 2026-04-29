@@ -28,9 +28,10 @@ export const useSetupStore = defineStore('setup', () => {
    * consumer that cares about vault status reads through this store.
    *
    * On failure, `error` carries the message and `vaultStatus` is left
-   * untouched (keeps the previous answer). Coercing to NOT_SETUP on
-   * failure was wrong: a transient backend hiccup would redirect a
-   * configured admin straight into the bootstrap wizard.
+   * untouched (the previous answer, or null if this is the first call).
+   * Coercing to NOT_SETUP on failure was wrong: a transient backend
+   * hiccup would redirect a configured admin straight into the
+   * bootstrap wizard.
    */
   async function fetchVaultStatus(force = false): Promise<void> {
     if (!force && vaultStatus.value !== null) return
