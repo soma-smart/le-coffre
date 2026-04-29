@@ -70,6 +70,9 @@ export const useSetupStore = defineStore('setup', () => {
     globalPendingPromise = null
   }
 
+  /** Alias used by logout — same effect as invalidateCache, clearer name. */
+  const clear = invalidateCache
+
   return {
     vaultStatus,
     lastShareTimestamp,
@@ -78,5 +81,6 @@ export const useSetupStore = defineStore('setup', () => {
     fetchVaultStatus,
     isSetup,
     invalidateCache,
+    clear,
   }
 })
