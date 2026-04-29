@@ -168,7 +168,6 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
     openFolderKey.value = `${section.id}-${folderToOpen.name}`
   }
 
-  // Sync the tab selection with the route slug.
   watch(
     selectedGroupIdFromRoute,
     (groupId) => {

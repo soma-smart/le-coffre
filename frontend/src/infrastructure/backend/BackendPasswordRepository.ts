@@ -28,12 +28,14 @@ import {
 } from '@/domain/password/errors'
 
 /**
- * Backend adapter for PasswordRepository. The only file outside of
- * `@/customClient` and `@/composition_root` allowed to import from
- * `@/client/*`. Two jobs:
+ * Backend adapter for PasswordRepository. Two jobs:
  *   1. Wrap every password-related SDK call.
  *   2. Translate between snake_case SDK DTOs and camelCase domain types,
  *      and between HTTP error codes and domain errors.
+ *
+ * The dependency rule (enforced by ESLint) is that only the Backend*
+ * adapters and `@/customClient` may import `@/client/*`; presentation
+ * code goes through use cases via useContainer().
  */
 export class BackendPasswordRepository implements PasswordRepository {
   async list(): Promise<Password[]> {

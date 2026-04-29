@@ -56,7 +56,6 @@ const {
   routeFolderFilter,
 })
 
-// Modal state lives in the container — it's coupled to the router + stores.
 const showCreateModal = ref(false)
 const showShareModal = ref(false)
 const showHistoryModal = ref(false)

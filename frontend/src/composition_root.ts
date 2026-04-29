@@ -12,9 +12,6 @@ import { buildContainer, type Container } from '@/container'
  * mounted. It instantiates every backend adapter and feeds them to
  * `buildContainer`. Tests never call this — they build their own
  * container with in-memory fakes.
- *
- * As features migrate, each one adds its BackendXxxRepository /
- * BackendXxxGateway here.
  */
 export function installProductionContainer(): Container {
   return buildContainer({

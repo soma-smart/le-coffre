@@ -53,9 +53,6 @@ import { UpdateUserPasswordUseCase } from '@/application/user/UpdateUserPassword
  * is the only Vue-aware bridge. Tests build their own container with
  * in-memory fakes; production wires backend adapters via
  * `composition_root.ts`.
- *
- * Features are added one bounded context at a time, each extending
- * `Ports` and `Container`.
  */
 
 export interface Ports {
