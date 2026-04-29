@@ -46,5 +46,8 @@ class FakeGroupRepository:
                 return group
         return None
 
+    def count_non_personal(self) -> int:
+        return sum(1 for g in self._groups.values() if not g.is_personal)
+
     def clear(self) -> None:
         self._groups.clear()

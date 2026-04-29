@@ -1,6 +1,7 @@
 import json
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -48,6 +49,11 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             )
             for row in results
         ]
+
+    def count(self) -> int:
+        """Count users."""
+        statement = select(func.count()).select_from(UserTable)
+        return self._session.exec(statement).one()
 
     def list_all(self) -> list[User]:
         statement = select(UserTable)

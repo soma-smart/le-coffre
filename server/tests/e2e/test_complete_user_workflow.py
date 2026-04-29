@@ -10,6 +10,7 @@ This test covers the entire user management system in one comprehensive workflow
 6. Promoted admin can promote others (chain promotion, token refresh, admin actions)
 7. User deletion (auth guards: no cookie, invalid cookie, valid admin)
 8. Password update (new password, old invalidated, successive updates)
+9. Admin statistics (user count, group count, auth guards)
 """
 
 
@@ -403,3 +404,56 @@ def test_complete_user_workflow(
     final_me_response = final_client.get("/api/users/me")
     assert final_me_response.status_code == 200
     assert final_me_response.json()["email"] == admin_email
+
+    # =========================================================================
+    # PHASE 9: ADMIN STATISTICS (USERS AND GROUPS)
+    # =========================================================================
+
+    # Refresh CSRF token after Phase 8 password change operations
+    authenticated_admin_client.refresh_csrf_token()
+
+    # Step 9.1: Admin gets statistics - response contains user_count and group_count
+    stats_response = authenticated_admin_client.get("/api/admin/statistics")
+    assert stats_response.status_code == 200
+    stats_data = stats_response.json()
+    assert "user_count" in stats_data
+    assert "group_count" in stats_data
+    initial_user_count = stats_data["user_count"]
+    initial_group_count = stats_data["group_count"]
+    assert isinstance(initial_user_count, int) and initial_user_count >= 1
+    assert isinstance(initial_group_count, int) and initial_group_count >= 0
+
+    # Step 9.2: Creating a new user increments user_count by 1
+    # Personal group created for the new user must NOT be counted in group_count
+    create_stats_user_response = authenticated_admin_client.post(
+        "/api/users/",
+        json={
+            "username": "statsuser",
+            "email": "statsuser@example.com",
+            "name": "Stats User",
+            "password": "SecureStats123!",
+        },
+    )
+    assert create_stats_user_response.status_code == 201
+    stats_after_user_response = authenticated_admin_client.get("/api/admin/statistics")
+    assert stats_after_user_response.status_code == 200
+    stats_after_user = stats_after_user_response.json()
+    assert stats_after_user["user_count"] == initial_user_count + 1
+    assert stats_after_user["group_count"] == initial_group_count  # personal group not counted
+
+    # Step 9.3: Creating a non-personal group increments group_count by 1
+    create_stats_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Stats Group"})
+    assert create_stats_group_response.status_code == 201
+    stats_after_group_response = authenticated_admin_client.get("/api/admin/statistics")
+    assert stats_after_group_response.status_code == 200
+    assert stats_after_group_response.json()["user_count"] == initial_user_count + 1
+    assert stats_after_group_response.json()["group_count"] == initial_group_count + 1
+
+    # Step 9.4: Non-admin cannot access statistics (403)
+    non_admin_stats_response = new_user_client.get("/api/admin/statistics")
+    assert non_admin_stats_response.status_code == 403
+
+    # Step 9.5: Unauthenticated user gets 401
+    fresh_unauth_client = client_factory()
+    unauth_stats_response = fresh_unauth_client.get("/api/admin/statistics")
+    assert unauth_stats_response.status_code == 401

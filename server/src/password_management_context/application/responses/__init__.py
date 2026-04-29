@@ -1,3 +1,4 @@
+from .get_password_statistic_for_admin_response import GetPasswordStatisticForAdminResponse
 from .list_access_response import (
     GroupAccessResponse,
     ListAccessResponse,
@@ -18,4 +19,5 @@ __all__ = [
     "GroupAccessResponse",
     "ListPasswordEventsResponse",
     "PasswordEventItem",
+    "GetPasswordStatisticForAdminResponse",
 ]

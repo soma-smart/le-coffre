@@ -59,6 +59,7 @@ declare module 'vue' {
     Skeleton: typeof import('primevue/skeleton')['default']
     Slider: typeof import('primevue/slider')['default']
     SsoConfigurationCard: typeof import('./src/components/admin/SsoConfigurationCard.vue')['default']
+    StatisticsCard: typeof import('./src/components/admin/StatisticsCard.vue')['default']
     Step: typeof import('primevue/step')['default']
     StepAdminAccountForm: typeof import('./src/components/setup/StepAdminAccountForm.vue')['default']
     StepGenerateMasterKey: typeof import('./src/components/setup/StepGenerateMasterKey.vue')['default']
