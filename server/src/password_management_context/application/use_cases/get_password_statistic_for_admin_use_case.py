@@ -9,9 +9,7 @@ class GetPasswordStatisticForAdminUseCase(TracedUseCase):
     def __init__(self, password_repository: PasswordRepository):
         self.password_repository = password_repository
 
-    def execute(
-        self, command: GetPasswordStatisticForAdminCommand
-    ) -> GetPasswordStatisticForAdminResponse:
+    def execute(self, command: GetPasswordStatisticForAdminCommand) -> GetPasswordStatisticForAdminResponse:
         AdminPermissionChecker.ensure_admin(command.requesting_user, "get password statistics")
 
         return GetPasswordStatisticForAdminResponse(

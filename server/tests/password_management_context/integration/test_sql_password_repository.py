@@ -291,8 +291,6 @@ def test_should_return_zero_when_no_passwords_exist_for_count(sql_password_repos
 
 def test_should_return_correct_count_when_passwords_exist(sql_password_repository):
     for i in range(3):
-        sql_password_repository.save(
-            Password(id=uuid4(), name=f"Pwd{i}", encrypted_value="enc", folder="default")
-        )
+        sql_password_repository.save(Password(id=uuid4(), name=f"Pwd{i}", encrypted_value="enc", folder="default"))
     count = sql_password_repository.count()
     assert count == 3
