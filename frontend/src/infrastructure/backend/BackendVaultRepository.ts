@@ -21,8 +21,11 @@ export class BackendVaultRepository implements VaultRepository {
   async getStatus(): Promise<VaultState> {
     const response = await getVaultStatusVaultStatusGet()
     this.throwIfError(response.error)
+    // An empty body on a 200 response is a server bug, not "vault not
+    // configured" — coercing to NOT_SETUP would redirect a configured
+    // admin into the bootstrap wizard.
     if (!response.data) {
-      return { status: 'NOT_SETUP', lastShareTimestamp: null }
+      throw new VaultDomainError('Empty response from /vault/status')
     }
     return {
       status: response.data.status,

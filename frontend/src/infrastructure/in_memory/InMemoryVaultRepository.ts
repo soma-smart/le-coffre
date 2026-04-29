@@ -25,6 +25,7 @@ export class InMemoryVaultRepository implements VaultRepository {
   private threshold = 2
   private submittedShares = new Set<string>()
   private now: () => Date = () => new Date()
+  private getStatusError: Error | null = null
 
   useClock(now: () => Date): this {
     this.now = now
@@ -42,7 +43,18 @@ export class InMemoryVaultRepository implements VaultRepository {
     return this
   }
 
+  /** Force the next getStatus() call to throw — for testing error paths. */
+  failGetStatusOnce(error: Error): this {
+    this.getStatusError = error
+    return this
+  }
+
   async getStatus(): Promise<VaultState> {
+    if (this.getStatusError) {
+      const e = this.getStatusError
+      this.getStatusError = null
+      throw e
+    }
     return { ...this.state }
   }
 
