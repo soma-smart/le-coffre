@@ -14,6 +14,7 @@ export const useUserStore = defineStore('user', () => {
   const { users } = useContainer()
 
   const currentUser = ref<User | null>(null)
+  const error = ref<string | null>(null)
 
   const isAdmin = computed(() => isUserAdmin(currentUser.value))
   const displayName = computed(() => currentUser.value?.name ?? null)
@@ -23,6 +24,13 @@ export const useUserStore = defineStore('user', () => {
   /**
    * Fetch the current user. Caches the result; subsequent callers get
    * the cached value unless force=true is passed.
+   *
+   * Returns `null` when there is no logged-in session (the use case
+   * resolves to null on 401). Network/backend failures populate
+   * `error` and also resolve to null — the caller distinguishes the
+   * two by inspecting `error.value`. Without that, the router guard
+   * couldn't tell "not authenticated" from "backend down" and would
+   * silently treat both as "not admin".
    */
   async function fetchCurrentUser(force = false): Promise<User | null> {
     if (!force && currentUser.value !== null) return currentUser.value
@@ -32,9 +40,11 @@ export const useUserStore = defineStore('user', () => {
       try {
         const user = await users.getCurrent.execute()
         currentUser.value = user
+        error.value = null
         return user
       } catch (err) {
         console.error('Error fetching current user:', err)
+        error.value = err instanceof Error ? err.message : 'Failed to fetch current user'
         return null
       } finally {
         globalPendingPromise = null
@@ -47,11 +57,13 @@ export const useUserStore = defineStore('user', () => {
   /** Clear user data (useful for logout). */
   function clearUser(): void {
     currentUser.value = null
+    error.value = null
     globalPendingPromise = null
   }
 
   return {
     currentUser,
+    error,
     isAdmin,
     displayName,
     email,
