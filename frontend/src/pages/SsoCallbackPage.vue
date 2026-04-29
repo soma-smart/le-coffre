@@ -51,11 +51,8 @@ onMounted(async () => {
       life: 3000,
     })
 
-    // Invalidate caches so the next navigation pulls fresh data.
     passwordsStore.invalidateCache()
     userStore.clearUser()
-
-    // Fetch CSRF token after successful SSO login.
     await csrfStore.fetchCsrfToken()
 
     await router.push('/')

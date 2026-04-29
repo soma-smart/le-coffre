@@ -28,15 +28,12 @@ export const useGroupsStore = defineStore('groups', () => {
 
   const groupsCount = computed(() => groups.value.length)
 
-  // Shared groups where the current user is an owner.
   const ownedSharedGroups = computed(() =>
     filterOwnedGroupsForUser(sharedGroups.value, currentUserId.value),
   )
 
-  // All groups the current user is in (owner or member).
   const userBelongingGroups = computed(() => filterGroupsForUser(groups.value, currentUserId.value))
 
-  // Groups available when creating a password: user's personal group + owned shared groups.
   const groupsForPasswordCreation = computed(() => {
     const result: Group[] = []
     if (userPersonalGroup.value) result.push(userPersonalGroup.value)
@@ -85,7 +82,6 @@ export const useGroupsStore = defineStore('groups', () => {
   }
 
   const fetchAllGroups = (force = false) => fetchGroups(true, force)
-  const fetchSharedGroupsOnly = (force = false) => fetchGroups(false, force)
 
   async function createGroup(name: string): Promise<string> {
     const id = await groupUseCases.create.execute({ name })
@@ -154,7 +150,6 @@ export const useGroupsStore = defineStore('groups', () => {
     // Actions
     fetchGroups,
     fetchAllGroups,
-    fetchSharedGroupsOnly,
     createGroup,
     updateGroup,
     addMemberToGroup,

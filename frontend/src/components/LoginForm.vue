@@ -142,11 +142,8 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       life: 5000,
     })
 
-    // Invalidate caches to force refetch after login
     passwordsStore.invalidateCache()
     userStore.clearUser()
-
-    // Fetch CSRF token after successful login
     await csrfStore.fetchCsrfToken()
 
     const redirectPath =
@@ -183,7 +180,6 @@ const handleSsoLogin = async () => {
   ssoLoading.value = true
   try {
     const url = await auth.getSsoUrl.execute()
-    // Redirect to the SSO provider.
     window.location.href = url
   } catch (error) {
     console.error('SSO URL error:', error)

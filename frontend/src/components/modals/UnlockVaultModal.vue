@@ -133,7 +133,6 @@ const handleSubmit = async () => {
 
     await vault.unlock.execute({ shares: shares.value })
 
-    // Check vault status after unlock attempt via the setup store.
     await setupStore.fetchVaultStatus(true)
     const newStatus = setupStore.vaultStatus
 
