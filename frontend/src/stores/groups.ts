@@ -123,6 +123,15 @@ export const useGroupsStore = defineStore('groups', () => {
     globalPendingPromise = null
   }
 
+  function clear(): void {
+    groups.value = []
+    sharedGroups.value = []
+    personalGroups.value = []
+    userPersonalGroup.value = null
+    error.value = null
+    invalidateCache()
+  }
+
   const refresh = () => fetchAllGroups(true)
 
   return {
@@ -153,6 +162,7 @@ export const useGroupsStore = defineStore('groups', () => {
     promoteToOwner,
     deleteGroup,
     invalidateCache,
+    clear,
     refresh,
   }
 })

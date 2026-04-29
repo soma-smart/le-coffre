@@ -32,9 +32,21 @@ export const useAdminPasswordViewStore = defineStore('adminPasswordView', () => 
     }
   }
 
+  /**
+   * Reset in-memory + persisted state on logout. Same SPA tab can host
+   * multiple sessions; user A's admin-view toggle must not stick around
+   * for user B.
+   */
+  const clear = () => {
+    preferences.remove.execute({ key: PREFERENCE_KEYS.ADMIN_PASSWORD_VIEW_ENABLED })
+    adminPasswordViewEnabled.value = false
+    loaded.value = false
+  }
+
   return {
     adminPasswordViewEnabled,
     loadAdminPasswordView,
     setAdminPasswordViewEnabled,
+    clear,
   }
 })
