@@ -12,6 +12,32 @@ import { pickDefaultGroupForUser } from '@/domain/group/Group'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { slugifyGroupName } from '@/utils/groupSlug'
 
+export type AdminGuardDecision = { kind: 'allow' } | { kind: 'redirectHome' } | { kind: 'block' }
+
+/**
+ * Pure decision function for the admin guard branch in `beforeEach`.
+ * Exported for unit testing — the router itself imports nothing from this
+ * helper at runtime; it's just a way to make the discrimination between
+ * "not authenticated", "backend down", and "not admin" testable in
+ * isolation.
+ *
+ *   currentUser=null + error=null  → not authenticated  → redirectHome
+ *   currentUser=null + error=str   → fetch failed       → block (stay put)
+ *   isAdmin=false                  → genuinely not admin → redirectHome
+ *   isAdmin=true                   → allow
+ */
+export function decideAdminGuard(input: {
+  error: string | null
+  isAdmin: boolean
+  hasFromRoute: boolean
+}): AdminGuardDecision {
+  if (input.error) {
+    return input.hasFromRoute ? { kind: 'block' } : { kind: 'redirectHome' }
+  }
+  if (!input.isAdmin) return { kind: 'redirectHome' }
+  return { kind: 'allow' }
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -138,19 +164,13 @@ router.beforeEach(async (to, from) => {
   if (to.meta.requiresAdmin && isLoggedIn) {
     await userStore.fetchCurrentUser()
 
-    // If the user fetch failed (backend down, not "no session"), keep the
-    // user on whatever they were viewing. Silently redirecting to Home on a
-    // transient 5xx would mask the real problem and look like a permission
-    // demotion. The user store's `error` ref discriminates the cases:
-    // currentUser=null + error=null  → not authenticated
-    // currentUser=null + error=str   → fetch failed; treat as "verdict unknown"
-    if (userStore.error) {
-      return from?.name ? false : { name: 'Home' }
-    }
-
-    if (!userStore.isAdmin) {
-      return { name: 'Home' }
-    }
+    const decision = decideAdminGuard({
+      error: userStore.error,
+      isAdmin: userStore.isAdmin,
+      hasFromRoute: !!from?.name,
+    })
+    if (decision.kind === 'block') return false
+    if (decision.kind === 'redirectHome') return { name: 'Home' }
   }
 
   if (to.name === 'Home' && isLoggedIn) {

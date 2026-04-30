@@ -156,4 +156,60 @@ describe('useGroupMembers', () => {
     expect(await m.removeMember('u3')).toBe(false)
     expect(await m.promoteToOwner('u3')).toBe(false)
   })
+
+  it('removeMember calls the store action and reloads the group', async () => {
+    const removeMemberFromGroup = vi.fn(async () => {})
+    const get = vi
+      .fn<() => Promise<Group>>()
+      .mockResolvedValueOnce(makeGroup({ members: ['u2'] }))
+      .mockResolvedValueOnce(makeGroup({ members: [] }))
+    const useCases = makeUseCases({
+      groups: { get: { execute: get } },
+      store: {
+        addMemberToGroup: vi.fn(async () => {}),
+        removeMemberFromGroup,
+        promoteToOwner: vi.fn(async () => {}),
+      },
+    })
+
+    const m = useGroupMembers({
+      group: ref(makeGroup()),
+      currentUserId: ref('u1'),
+      useCases,
+    })
+    await m.loadAll()
+
+    const ok = await m.removeMember('u2')
+    expect(ok).toBe(true)
+    expect(removeMemberFromGroup).toHaveBeenCalledWith('g1', 'u2')
+    expect(get).toHaveBeenCalledTimes(2)
+  })
+
+  it('promoteToOwner calls the store action and reloads the group', async () => {
+    const promoteToOwner = vi.fn(async () => {})
+    const get = vi
+      .fn<() => Promise<Group>>()
+      .mockResolvedValueOnce(makeGroup({ owners: ['u1'], members: ['u2'] }))
+      .mockResolvedValueOnce(makeGroup({ owners: ['u1', 'u2'], members: [] }))
+    const useCases = makeUseCases({
+      groups: { get: { execute: get } },
+      store: {
+        addMemberToGroup: vi.fn(async () => {}),
+        removeMemberFromGroup: vi.fn(async () => {}),
+        promoteToOwner,
+      },
+    })
+
+    const m = useGroupMembers({
+      group: ref(makeGroup()),
+      currentUserId: ref('u1'),
+      useCases,
+    })
+    await m.loadAll()
+
+    const ok = await m.promoteToOwner('u2')
+    expect(ok).toBe(true)
+    expect(promoteToOwner).toHaveBeenCalledWith('g1', 'u2')
+    expect(get).toHaveBeenCalledTimes(2)
+  })
 })
