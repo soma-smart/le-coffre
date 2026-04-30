@@ -91,4 +91,13 @@ describe('useCsrfStore (wired through container)', () => {
 
     expect(await store.getToken()).toBe('csrf-abc-123')
   })
+
+  it('clearCsrfToken is safe to call when no token is set', async () => {
+    const wrapper = mountWithContext(container, pinia)
+    const store = (wrapper.vm as unknown as { store: ReturnType<typeof useCsrfStore> }).store
+
+    expect(() => store.clearCsrfToken()).not.toThrow()
+    expect(store.csrfToken).toBeNull()
+    expect(store.error).toBeNull()
+  })
 })

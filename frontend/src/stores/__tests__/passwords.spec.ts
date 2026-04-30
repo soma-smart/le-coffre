@@ -69,6 +69,31 @@ describe('usePasswordsStore (wired through container)', () => {
     expect(store.passwords).toHaveLength(1)
   })
 
+  it('passwordsCount is 0 and folders is empty before any fetch', () => {
+    const wrapper = mountWithContext(container, pinia)
+    const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
+    expect(store.passwordsCount).toBe(0)
+    expect(store.folders).toEqual([])
+  })
+
+  it('a second fetch returns the cached list even when the underlying state changed', async () => {
+    // Behavioural cache check: write a password, fetch (cached as [Gmail]).
+    // Add a second password to the repo. A second fetch (without force)
+    // should still see only Gmail, because the store served from cache.
+    await repo.create({ name: 'Gmail', password: 'x', groupId: 'g' })
+    const wrapper = mountWithContext(container, pinia)
+    const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
+    await store.fetchPasswords()
+    expect(store.passwords.map((p) => p.name)).toEqual(['Gmail'])
+
+    await repo.create({ name: 'GitHub', password: 'y', groupId: 'g' })
+    await store.fetchPasswords()
+    expect(store.passwords.map((p) => p.name)).toEqual(['Gmail'])
+
+    await store.fetchPasswords(true)
+    expect(store.passwords.map((p) => p.name).sort()).toEqual(['GitHub', 'Gmail'])
+  })
+
   it('records an error message when the use case throws', async () => {
     // The store's catch branch logs via console.error — expected in prod
     // but flagged by vitest as a run-level "Error" in the summary when

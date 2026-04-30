@@ -8,25 +8,29 @@ function makeUseCases(value: string | (() => Promise<string> | string)) {
 }
 
 describe('usePasswordReveal', () => {
-  it('fetches once and caches across reveal → hide → reveal', async () => {
-    const { useCases, execute } = makeUseCases('s3cret')
+  it('caches the secret across reveal → hide → reveal', async () => {
+    // Behavioural: the use case returns a different value on every call.
+    // If the composable refetched after hide+reveal, we'd see 'second';
+    // because it caches, we still see 'first'.
+    let counter = 0
+    const useCases = {
+      get: { execute: async () => `secret-${++counter}` },
+    }
     const { passwordValue, isVisible, toggleVisibility } = usePasswordReveal({
       passwordId: ref('p1'),
       useCases,
     })
 
-    expect(passwordValue.value).toBeNull()
-    await toggleVisibility()
-    expect(passwordValue.value).toBe('s3cret')
+    await toggleVisibility() // reveal — secret-1
+    expect(passwordValue.value).toBe('secret-1')
     expect(isVisible.value).toBe(true)
 
     await toggleVisibility() // hide
     expect(isVisible.value).toBe(false)
-    expect(execute).toHaveBeenCalledTimes(1)
 
-    await toggleVisibility() // reveal again — uses cache
+    await toggleVisibility() // reveal again — still secret-1
+    expect(passwordValue.value).toBe('secret-1')
     expect(isVisible.value).toBe(true)
-    expect(execute).toHaveBeenCalledTimes(1)
   })
 
   it('exposes loading state during the fetch', async () => {
@@ -67,18 +71,40 @@ describe('usePasswordReveal', () => {
     expect(onError).toHaveBeenCalledTimes(1)
   })
 
-  it('reset() clears the cache so the next toggle re-fetches', async () => {
-    const { useCases, execute } = makeUseCases('first')
-    const { toggleVisibility, reset } = usePasswordReveal({
+  it('revealAndCopy resolves to null when the fetch fails', async () => {
+    const onError = vi.fn()
+    const useCases = {
+      get: {
+        execute: vi.fn(async () => {
+          throw new Error('boom')
+        }),
+      },
+    }
+    const { revealAndCopy } = usePasswordReveal({
+      passwordId: ref('p1'),
+      useCases,
+      onError,
+    })
+
+    expect(await revealAndCopy()).toBeNull()
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('reset() clears the cache so the next reveal sees a fresh value', async () => {
+    let counter = 0
+    const useCases = {
+      get: { execute: async () => `secret-${++counter}` },
+    }
+    const { passwordValue, toggleVisibility, reset } = usePasswordReveal({
       passwordId: ref('p1'),
       useCases,
     })
 
     await toggleVisibility()
-    expect(execute).toHaveBeenCalledTimes(1)
+    expect(passwordValue.value).toBe('secret-1')
 
     reset()
     await toggleVisibility()
-    expect(execute).toHaveBeenCalledTimes(2)
+    expect(passwordValue.value).toBe('secret-2')
   })
 })

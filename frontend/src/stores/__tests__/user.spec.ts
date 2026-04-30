@@ -143,25 +143,36 @@ describe('useUserStore', () => {
     expect(store.isAdmin).toBe(false)
   })
 
-  it('dedupes concurrent fetchCurrentUser calls into a single request', async () => {
-    const executeSpy = vi.fn(async () => makeUser())
+  it('three concurrent fetchCurrentUser calls all see the same user', async () => {
+    // Behavioural: each invocation of getCurrent returns a different user.
+    // If the store didn't dedupe, three concurrent fetches would each
+    // resolve with their own answer and the last writer would win, leaving
+    // currentUser pointing at user-3. With dedupe, all three callers share
+    // the first response and currentUser stays user-1.
+    let counter = 0
+    const evolvingExecute = async () => makeUser({ id: `u-${++counter}`, name: `User ${counter}` })
     const customContainer: Container = {
       ...container,
       users: {
         ...container.users,
-        getCurrent: { execute: executeSpy } as unknown as typeof container.users.getCurrent,
+        getCurrent: {
+          execute: evolvingExecute,
+        } as unknown as typeof container.users.getCurrent,
       },
     }
     const wrapper = mountWithContext(customContainer, pinia)
     const store = (wrapper.vm as unknown as { store: ReturnType<typeof useUserStore> }).store
 
-    await Promise.all([
+    const [a, b, c] = await Promise.all([
       store.fetchCurrentUser(),
       store.fetchCurrentUser(),
       store.fetchCurrentUser(),
     ])
 
-    expect(executeSpy).toHaveBeenCalledTimes(1)
+    expect(a?.id).toBe('u-1')
+    expect(b?.id).toBe('u-1')
+    expect(c?.id).toBe('u-1')
+    expect(store.currentUser?.id).toBe('u-1')
   })
 
   it('clearUser wipes currentUser and error', async () => {
