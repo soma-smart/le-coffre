@@ -123,32 +123,42 @@ describe('useGroupsStore', () => {
     ])
   })
 
-  it('caches groups for 30 seconds and refetches when force=true', async () => {
-    const listSpy = vi.fn(async () => [makeGroup({ id: 'g1' })])
+  it('keeps the cached groups across cheap calls and refreshes on force=true', async () => {
+    // Behavioural: the underlying repository returns a different group on
+    // every call. If the store fetched fresh every time, the second call
+    // would see g2; with the cache, it sees g1. force=true bypasses.
+    let counter = 0
+    const evolvingExecute = async () => [makeGroup({ id: `g${++counter}` })]
     const customContainer: Container = {
       ...container,
       groups: {
         ...container.groups,
-        list: { execute: listSpy } as unknown as typeof container.groups.list,
+        list: { execute: evolvingExecute } as unknown as typeof container.groups.list,
       },
     }
 
     const { stores } = mountWithContext(customContainer, pinia)
     await stores.groups.fetchAllGroups()
+    expect(stores.groups.groups.map((g) => g.id)).toEqual(['g1'])
+
     await stores.groups.fetchAllGroups()
-    expect(listSpy).toHaveBeenCalledTimes(1)
+    expect(stores.groups.groups.map((g) => g.id)).toEqual(['g1']) // still cached
 
     await stores.groups.fetchAllGroups(true)
-    expect(listSpy).toHaveBeenCalledTimes(2)
+    expect(stores.groups.groups.map((g) => g.id)).toEqual(['g2']) // forced refresh
   })
 
-  it('dedupes concurrent fetchAllGroups into a single request', async () => {
-    const listSpy = vi.fn(async () => [makeGroup({ id: 'g1' })])
+  it('three concurrent fetchAllGroups all settle on the same list', async () => {
+    // If the store didn't dedupe, three concurrent fetches would each see a
+    // different counter value and the last writer would set groups to ['g3'].
+    // With dedupe, all callers share the first response.
+    let counter = 0
+    const evolvingExecute = async () => [makeGroup({ id: `g${++counter}` })]
     const customContainer: Container = {
       ...container,
       groups: {
         ...container.groups,
-        list: { execute: listSpy } as unknown as typeof container.groups.list,
+        list: { execute: evolvingExecute } as unknown as typeof container.groups.list,
       },
     }
 
@@ -158,10 +168,10 @@ describe('useGroupsStore', () => {
       stores.groups.fetchAllGroups(),
       stores.groups.fetchAllGroups(),
     ])
-    expect(listSpy).toHaveBeenCalledTimes(1)
+    expect(stores.groups.groups.map((g) => g.id)).toEqual(['g1'])
   })
 
-  it('createGroup invalidates cache and refetches with the new id present', async () => {
+  it('createGroup makes the new group visible without an explicit refetch', async () => {
     groupRepo.useIdGenerator(() => 'new-group')
     const { stores } = mountWithContext(container, pinia)
     await stores.groups.fetchAllGroups()
@@ -170,6 +180,62 @@ describe('useGroupsStore', () => {
     const id = await stores.groups.createGroup('Fresh')
     expect(id).toBe('new-group')
     expect(stores.groups.groups.map((g) => g.id)).toContain('new-group')
+  })
+
+  it('updateGroup reflects the renamed group in store state', async () => {
+    groupRepo.seed(makeGroup({ id: 'g1', name: 'Old Name' }))
+    const { stores } = mountWithContext(container, pinia)
+    await stores.groups.fetchAllGroups()
+
+    await stores.groups.updateGroup('g1', 'Renamed')
+
+    expect(stores.groups.groups.find((g) => g.id === 'g1')?.name).toBe('Renamed')
+  })
+
+  it('addMemberToGroup adds the user to the in-store group members list', async () => {
+    groupRepo.seed(makeGroup({ id: 'g1', owners: ['u1'], members: [] }))
+    const { stores } = mountWithContext(container, pinia)
+    await stores.groups.fetchAllGroups()
+
+    await stores.groups.addMemberToGroup('g1', 'u3')
+    // The store's mutating actions don't auto-refetch (only create/update/
+    // delete do); members live on the server until the next fetch. The
+    // behavioural assertion: a fresh fetch sees the new member.
+    await stores.groups.fetchAllGroups(true)
+    expect(stores.groups.groups.find((g) => g.id === 'g1')?.members).toContain('u3')
+  })
+
+  it('removeMemberFromGroup drops the member after the next fetch', async () => {
+    groupRepo.seed(makeGroup({ id: 'g1', owners: ['u1'], members: ['u3'] }))
+    const { stores } = mountWithContext(container, pinia)
+    await stores.groups.fetchAllGroups()
+
+    await stores.groups.removeMemberFromGroup('g1', 'u3')
+    await stores.groups.fetchAllGroups(true)
+    expect(stores.groups.groups.find((g) => g.id === 'g1')?.members).not.toContain('u3')
+  })
+
+  it('promoteToOwner adds the user to the owners list', async () => {
+    groupRepo.seed(makeGroup({ id: 'g1', owners: ['u1'], members: ['u3'] }))
+    const { stores } = mountWithContext(container, pinia)
+    await stores.groups.fetchAllGroups()
+
+    await stores.groups.promoteToOwner('g1', 'u3')
+    await stores.groups.fetchAllGroups(true)
+    const group = stores.groups.groups.find((g) => g.id === 'g1')
+    expect(group?.owners).toContain('u3')
+  })
+
+  it('deleteGroup removes the group from the in-store list', async () => {
+    groupRepo.seed(makeGroup({ id: 'g1', name: 'Doomed' }))
+    groupRepo.seed(makeGroup({ id: 'g2', name: 'Survivor' }))
+    const { stores } = mountWithContext(container, pinia)
+    await stores.groups.fetchAllGroups()
+    expect(stores.groups.groups.length).toBe(2)
+
+    await stores.groups.deleteGroup('g1')
+
+    expect(stores.groups.groups.map((g) => g.id)).toEqual(['g2'])
   })
 
   it('clear() wipes every state ref and the cache', async () => {

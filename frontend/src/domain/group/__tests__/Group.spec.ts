@@ -100,4 +100,11 @@ describe('pickDefaultGroupForUser', () => {
     const groups = [makeGroup({ id: 'g2' }), makeGroup({ id: 'g1' })]
     expect(pickDefaultGroupForUser(groups, null)?.id).toBe('g2')
   })
+
+  it('returns null when the comparator filters every group out', () => {
+    // Defensive: a custom comparator that returns an empty list is treated
+    // as "no candidate" rather than crashing on `sorted[0]`.
+    const groups = [makeGroup({ id: 'g1' })]
+    expect(pickDefaultGroupForUser(groups, null, () => [])).toBeNull()
+  })
 })

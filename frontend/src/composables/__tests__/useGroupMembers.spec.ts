@@ -69,6 +69,41 @@ describe('useGroupMembers', () => {
     expect(m.isOwner.value).toBe(true)
   })
 
+  it('isOwner is false before any group has been loaded', () => {
+    const m = useGroupMembers({
+      group: ref<Group | null>(null),
+      currentUserId: ref('u1'),
+      useCases: makeUseCases(),
+    })
+    expect(m.isOwner.value).toBe(false)
+  })
+
+  it('marks fetchStatus as error when listing users fails', async () => {
+    const useCases = makeUseCases({
+      users: {
+        list: {
+          execute: vi.fn(async () => {
+            throw new Error('users-list-failed')
+          }),
+        },
+      },
+    })
+    const m = useGroupMembers({
+      group: ref(makeGroup()),
+      currentUserId: ref('u1'),
+      useCases,
+    })
+
+    await m.loadAll()
+
+    // The Promise.all rejects; ownerUsers / memberUsers stay empty;
+    // fetchStatus reflects the failure.
+    expect(m.fetchStatus.value).toBe('error')
+    expect(m.fetchError.value).toBeInstanceOf(Error)
+    expect(m.ownerUsers.value).toEqual([])
+    expect(m.memberUsers.value).toEqual([])
+  })
+
   it('isOwner is false when the current user is not in owners[]', async () => {
     const useCases = makeUseCases({
       users: { list: { execute: vi.fn(async () => []) } },
