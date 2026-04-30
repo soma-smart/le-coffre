@@ -18,6 +18,7 @@ export class InMemoryUserRepository implements UserRepository {
   private readonly passwords = new Map<string, string>()
   private current: User | null = null
   private idGenerator: () => string = randomUuid
+  private getCurrentError: Error | null = null
 
   useIdGenerator(generator: () => string): this {
     this.idGenerator = generator
@@ -41,7 +42,18 @@ export class InMemoryUserRepository implements UserRepository {
     return this
   }
 
+  /** Force the next getCurrent() call to throw — for testing error paths. */
+  failGetCurrentOnce(error: Error): this {
+    this.getCurrentError = error
+    return this
+  }
+
   async getCurrent(): Promise<User | null> {
+    if (this.getCurrentError) {
+      const e = this.getCurrentError
+      this.getCurrentError = null
+      throw e
+    }
     return this.current
   }
 
