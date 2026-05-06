@@ -14,7 +14,7 @@ from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/admin", tags=["Admin"])
+router = APIRouter(prefix="/iam", tags=["Admin"])
 
 
 class StatisticForAdminResponse(BaseModel):

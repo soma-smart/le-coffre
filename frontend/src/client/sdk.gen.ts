@@ -174,7 +174,7 @@ export const getPasswordStatisticForAdminPasswordsAdminStatisticsGet = <ThrowOnE
             name: 'access_token',
             type: 'apiKey'
         }],
-    url: '/passwords/admin/statistics',
+    url: '/passwords/statistics',
     ...options
 });
 
@@ -926,6 +926,6 @@ export const getStatisticForAdminAdminStatisticsGet = <ThrowOnError extends bool
             name: 'access_token',
             type: 'apiKey'
         }],
-    url: '/admin/statistics',
+    url: '/iam/statistics',
     ...options
 });

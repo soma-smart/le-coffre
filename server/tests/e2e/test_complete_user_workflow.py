@@ -413,7 +413,7 @@ def test_complete_user_workflow(
     authenticated_admin_client.refresh_csrf_token()
 
     # Step 9.1: Admin gets statistics - response contains user_count and group_count
-    stats_response = authenticated_admin_client.get("/api/admin/statistics")
+    stats_response = authenticated_admin_client.get("/api/iam/statistics")
     assert stats_response.status_code == 200
     stats_data = stats_response.json()
     assert "user_count" in stats_data
@@ -435,7 +435,7 @@ def test_complete_user_workflow(
         },
     )
     assert create_stats_user_response.status_code == 201
-    stats_after_user_response = authenticated_admin_client.get("/api/admin/statistics")
+    stats_after_user_response = authenticated_admin_client.get("/api/iam/statistics")
     assert stats_after_user_response.status_code == 200
     stats_after_user = stats_after_user_response.json()
     assert stats_after_user["user_count"] == initial_user_count + 1
@@ -444,16 +444,16 @@ def test_complete_user_workflow(
     # Step 9.3: Creating a non-personal group increments group_count by 1
     create_stats_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Stats Group"})
     assert create_stats_group_response.status_code == 201
-    stats_after_group_response = authenticated_admin_client.get("/api/admin/statistics")
+    stats_after_group_response = authenticated_admin_client.get("/api/iam/statistics")
     assert stats_after_group_response.status_code == 200
     assert stats_after_group_response.json()["user_count"] == initial_user_count + 1
     assert stats_after_group_response.json()["group_count"] == initial_group_count + 1
 
     # Step 9.4: Non-admin cannot access statistics (403)
-    non_admin_stats_response = new_user_client.get("/api/admin/statistics")
+    non_admin_stats_response = new_user_client.get("/api/iam/statistics")
     assert non_admin_stats_response.status_code == 403
 
     # Step 9.5: Unauthenticated user gets 401
     fresh_unauth_client = client_factory()
-    unauth_stats_response = fresh_unauth_client.get("/api/admin/statistics")
+    unauth_stats_response = fresh_unauth_client.get("/api/iam/statistics")
     assert unauth_stats_response.status_code == 401

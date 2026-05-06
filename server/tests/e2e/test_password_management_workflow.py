@@ -68,7 +68,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     - Admin viewing a password they don't belong to sees only the owner group
 
     Phase 7: Admin Password Statistics
-    - Admin gets password_count via GET /passwords/admin/statistics
+    - Admin gets password_count via GET /passwords/statistics
     - Count increments on password creation
     - Non-admin gets 403, unauthenticated gets 401
     """
@@ -677,7 +677,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
 
     # Step 7.1: Admin gets password statistics
     print("Step 7.1: Getting password statistics as admin...")
-    stats_response = admin_client.get("/api/passwords/admin/statistics")
+    stats_response = admin_client.get("/api/passwords/statistics")
     assert stats_response.status_code == 200
     stats_data = stats_response.json()
     assert "password_count" in stats_data
@@ -697,20 +697,20 @@ def test_complete_password_management_workflow(client_factory, setup, configured
         },
     )
     assert create_stat_password_response.status_code == 201
-    stats_after_create = admin_client.get("/api/passwords/admin/statistics")
+    stats_after_create = admin_client.get("/api/passwords/statistics")
     assert stats_after_create.status_code == 200
     assert stats_after_create.json()["password_count"] == initial_password_count + 1
     print(f"✓ password_count incremented to {initial_password_count + 1}")
 
     # Step 7.3: Non-admin (SSO user) gets 403
     print("Step 7.3: Verifying non-admin gets 403...")
-    non_admin_stats = sso_client.get("/api/passwords/admin/statistics")
+    non_admin_stats = sso_client.get("/api/passwords/statistics")
     assert non_admin_stats.status_code == 403
     print("✓ Non-admin correctly rejected (403)")
 
     # Step 7.4: Unauthenticated user gets 401
     print("Step 7.4: Verifying unauthenticated gets 401...")
-    unauth_stats = unauthenticated_client.get("/api/passwords/admin/statistics")
+    unauth_stats = unauthenticated_client.get("/api/passwords/statistics")
     assert unauth_stats.status_code == 401
     print("✓ Unauthenticated correctly rejected (401)")
 

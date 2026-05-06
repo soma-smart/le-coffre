@@ -1109,7 +1109,7 @@ export type GetPasswordStatisticForAdminPasswordsAdminStatisticsGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/passwords/admin/statistics';
+    url: '/passwords/statistics';
 };
 
 export type GetPasswordStatisticForAdminPasswordsAdminStatisticsGetResponses = {
@@ -2028,7 +2028,7 @@ export type GetStatisticForAdminAdminStatisticsGetData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/admin/statistics';
+    url: '/iam/statistics';
 };
 
 export type GetStatisticForAdminAdminStatisticsGetResponses = {

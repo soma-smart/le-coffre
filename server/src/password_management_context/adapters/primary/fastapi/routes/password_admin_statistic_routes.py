@@ -22,7 +22,7 @@ class PasswordStatisticForAdminResponse(BaseModel):
 
 
 @router.get(
-    "/admin/statistics",
+    "/statistics",
     response_model=PasswordStatisticForAdminResponse,
     status_code=200,
     summary="Get password statistics for admin",
