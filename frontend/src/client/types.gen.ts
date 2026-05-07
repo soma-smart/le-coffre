@@ -1105,21 +1105,21 @@ export type GetVaultStatusVaultStatusGetResponses = {
 
 export type GetVaultStatusVaultStatusGetResponse = GetVaultStatusVaultStatusGetResponses[keyof GetVaultStatusVaultStatusGetResponses];
 
-export type GetPasswordStatisticForAdminPasswordsAdminStatisticsGetData = {
+export type GetPasswordStatisticForAdminPasswordsStatisticsGetData = {
     body?: never;
     path?: never;
     query?: never;
     url: '/passwords/statistics';
 };
 
-export type GetPasswordStatisticForAdminPasswordsAdminStatisticsGetResponses = {
+export type GetPasswordStatisticForAdminPasswordsStatisticsGetResponses = {
     /**
      * Successful Response
      */
     200: PasswordStatisticForAdminResponse;
 };
 
-export type GetPasswordStatisticForAdminPasswordsAdminStatisticsGetResponse = GetPasswordStatisticForAdminPasswordsAdminStatisticsGetResponses[keyof GetPasswordStatisticForAdminPasswordsAdminStatisticsGetResponses];
+export type GetPasswordStatisticForAdminPasswordsStatisticsGetResponse = GetPasswordStatisticForAdminPasswordsStatisticsGetResponses[keyof GetPasswordStatisticForAdminPasswordsStatisticsGetResponses];
 
 export type CreatePasswordPasswordsPostData = {
     body: CreatePasswordRequest;
@@ -2024,18 +2024,18 @@ export type ListGroupsGroupsGetResponses = {
 
 export type ListGroupsGroupsGetResponse = ListGroupsGroupsGetResponses[keyof ListGroupsGroupsGetResponses];
 
-export type GetStatisticForAdminAdminStatisticsGetData = {
+export type GetStatisticForAdminIamStatisticsGetData = {
     body?: never;
     path?: never;
     query?: never;
     url: '/iam/statistics';
 };
 
-export type GetStatisticForAdminAdminStatisticsGetResponses = {
+export type GetStatisticForAdminIamStatisticsGetResponses = {
     /**
      * Successful Response
      */
     200: StatisticForAdminResponse;
 };
 
-export type GetStatisticForAdminAdminStatisticsGetResponse = GetStatisticForAdminAdminStatisticsGetResponses[keyof GetStatisticForAdminAdminStatisticsGetResponses];
+export type GetStatisticForAdminIamStatisticsGetResponse = GetStatisticForAdminIamStatisticsGetResponses[keyof GetStatisticForAdminIamStatisticsGetResponses];

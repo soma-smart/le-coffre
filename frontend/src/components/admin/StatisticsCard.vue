@@ -2,8 +2,8 @@
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue'
 import {
-  getPasswordStatisticForAdminPasswordsAdminStatisticsGet,
-  getStatisticForAdminAdminStatisticsGet,
+  getStatisticForAdminIamStatisticsGet,
+  getPasswordStatisticForAdminPasswordsStatisticsGet,
 } from '@/client/sdk.gen'
 
 const toast = useToast()
@@ -17,8 +17,8 @@ const fetchStatistics = async () => {
   loading.value = true
   try {
     const [iamResponse, passwordResponse] = await Promise.all([
-      getStatisticForAdminAdminStatisticsGet(),
-      getPasswordStatisticForAdminPasswordsAdminStatisticsGet(),
+      getStatisticForAdminIamStatisticsGet(),
+      getPasswordStatisticForAdminPasswordsStatisticsGet(),
     ])
 
     if (iamResponse.response.ok && iamResponse.data) {
