@@ -60,7 +60,7 @@ async def refresh_access_token(
     try:
         command = RefreshAccessTokenCommand(refresh_token=refresh_token_cookie)
         # Set new access token in HTTP-only secure cookie
-        result = await usecase.execute(command)
+        result = usecase.execute(command)
         is_secure = get_cookie_secure_setting()
         access_token_max_age = get_jwt_access_token_expiration_seconds()
         response.set_cookie(

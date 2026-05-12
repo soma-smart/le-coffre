@@ -3,6 +3,7 @@ from .group_event_repository import GroupEventRepository
 from .group_member_repository import GroupMemberRepository
 from .group_repository import GroupRepository
 from .group_usage_gateway import GroupUsageGateway
+from .login_lockout_gateway import LockoutStatus, LoginLockoutGateway
 from .password_hashing_gateway import PasswordHashingGateway
 from .sso_configuration_repository import SsoConfigurationRepository
 from .sso_encryption_gateway import SsoEncryptionGateway
@@ -29,6 +30,8 @@ __all__ = [
     "GroupRepository",
     "GroupMemberRepository",
     "GroupUsageGateway",
+    "LoginLockoutGateway",
+    "LockoutStatus",
     "UserEventRepository",
     "GroupEventRepository",
     "SsoEventRepository",

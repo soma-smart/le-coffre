@@ -146,12 +146,30 @@ config:
     # Option 2 (not recommended for production): let Helm manage the secret.
     # secretKey: ""
 
-  # Rate limiting
+  # Rate limiting — three-bucket sliding window.
+  # See server/src/security/rate_limit_middleware.py for the exact semantics.
   rateLimit:
     enabled: true
-    authMaxRequests: 5
-    apiMaxRequests: 60
     windowSeconds: 60
+    # Per-authenticated-user bucket. Covers normal UI + CLI automation.
+    userMaxRequests: 300
+    # Per-IP bucket for unauthenticated callers.
+    unauthMaxRequests: 30
+    # Per-IP volume floor applied ONLY to /api/auth/login.
+    authMaxRequests: 100
+    # Comma-separated TCP peer IPs whose X-Forwarded-For header is trusted.
+    # Default covers the standard nginx-on-same-host setup; expand for
+    # multi-hop proxy chains (CDN → nginx → backend, K8s ingress).
+    trustedProxies: "127.0.0.1,::1"
+    # Number of trusted proxy hops between the client and the backend.
+    trustedProxyHops: 1
+
+  # Login lockout — per-email failure counter.
+  loginLockout:
+    # Consecutive failed logins before the account is temporarily locked.
+    maxFailedAttempts: 5
+    # Duration in seconds the account stays locked once the threshold is hit.
+    lockoutSeconds: 300
 
   # Logging
   logging:

@@ -17,6 +17,7 @@ from tests.identity_access_management_context.unit.conftest import (
     create_existing_sso_user,
     create_sso_user_from_provider,
 )
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import (
     FakeGroupMemberRepository,
@@ -26,7 +27,6 @@ from ..fakes import (
     FakeSsoEncryptionGateway,
     FakeSsoGateway,
     FakeSsoUserRepository,
-    FakeTimeGateway,
     FakeTokenGateway,
     FakeUserRepository,
 )

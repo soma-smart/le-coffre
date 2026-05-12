@@ -1,7 +1,5 @@
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import Mock
 from uuid import UUID
-
-import pytest
 
 from identity_access_management_context.application.responses import (
     ValidateUserTokenResponse,
@@ -12,8 +10,7 @@ from identity_access_management_context.application.use_cases import (
 from shared_kernel.adapters.primary.dependencies import get_current_user
 
 
-@pytest.mark.asyncio
-async def test_get_current_user_should_use_roles_from_token_response():
+def test_get_current_user_should_use_roles_from_token_response():
     # Given a valid JWT token with ["user"] role in cookie
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "sso_user@lecoffre.com"
@@ -21,7 +18,7 @@ async def test_get_current_user_should_use_roles_from_token_response():
     jwt_token = "valid_jwt_token_for_sso_user"
 
     mock_usecase = Mock(spec=ValidateUserTokenUseCase)
-    mock_usecase.execute = AsyncMock(
+    mock_usecase.execute = Mock(
         return_value=ValidateUserTokenResponse(
             is_valid=True,
             user_id=user_id,
@@ -32,7 +29,7 @@ async def test_get_current_user_should_use_roles_from_token_response():
     )
 
     # When get_current_user() is called with cookie
-    validated_user = await get_current_user(access_token=jwt_token, validate_usecase=mock_usecase)
+    validated_user = get_current_user(access_token=jwt_token, validate_usecase=mock_usecase)
 
     # Then ValidatedUser should have roles=["user"]
     assert validated_user.roles == ["user"]
@@ -41,8 +38,7 @@ async def test_get_current_user_should_use_roles_from_token_response():
     assert validated_user.display_name == display_name
 
 
-@pytest.mark.asyncio
-async def test_get_current_user_should_preserve_admin_role_for_admin_users():
+def test_get_current_user_should_preserve_admin_role_for_admin_users():
     # Given a valid JWT token with ["admin"] role in cookie
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -50,7 +46,7 @@ async def test_get_current_user_should_preserve_admin_role_for_admin_users():
     jwt_token = "valid_jwt_token_for_admin"
 
     mock_usecase = Mock(spec=ValidateUserTokenUseCase)
-    mock_usecase.execute = AsyncMock(
+    mock_usecase.execute = Mock(
         return_value=ValidateUserTokenResponse(
             is_valid=True,
             user_id=user_id,
@@ -61,7 +57,7 @@ async def test_get_current_user_should_preserve_admin_role_for_admin_users():
     )
 
     # When get_current_user() is called with cookie
-    validated_user = await get_current_user(access_token=jwt_token, validate_usecase=mock_usecase)
+    validated_user = get_current_user(access_token=jwt_token, validate_usecase=mock_usecase)
 
     # Then ValidatedUser should have roles=["admin"]
     assert validated_user.roles == ["admin"]

@@ -107,16 +107,37 @@ config:
     # Leave unset for standard text format.
     format: "json"
 
-  # Rate limiting (applied per-pod, in-memory sliding window)
+  # Rate limiting (applied per-pod, in-memory sliding window).
+  # Three mutually-exclusive buckets + a login-only floor.  See
+  # server/src/security/rate_limit_middleware.py for the exact dispatch.
   rateLimit:
     # Set to false to disable rate limiting entirely (not recommended in production).
     enabled: true
-    # Max requests per window for auth routes (login, register, SSO).
-    authMaxRequests: 5
-    # Max requests per window for general API routes.
-    apiMaxRequests: 60
     # Sliding window duration in seconds.
     windowSeconds: 60
+    # Per-authenticated-user bucket. Covers normal UI + CLI automation.
+    userMaxRequests: 300
+    # Per-IP bucket for unauthenticated callers (pre-login traffic).
+    unauthMaxRequests: 30
+    # Per-IP volume floor applied ONLY to /api/auth/login. Not a brute-force
+    # defense — that lives in the per-email lockout gateway below.
+    authMaxRequests: 100
+    # Comma-separated TCP peer IPs whose X-Forwarded-For header is trusted.
+    # In K8s with an ingress controller in front of the pod, set this to the
+    # ingress controller's pod IP range — otherwise XFF is ignored and every
+    # request keys on the ingress IP.
+    trustedProxies: "127.0.0.1,::1"
+    # Number of trusted proxy hops between the client and the backend.
+    trustedProxyHops: 1
+
+  # Login lockout — per-email failure counter. Gates /api/auth/login before
+  # password verification runs, so the locked-response latency matches any
+  # other 401 (timing-enumeration protection).
+  loginLockout:
+    # Consecutive failed logins before the account is locked.
+    maxFailedAttempts: 5
+    # Duration in seconds the account stays locked.
+    lockoutSeconds: 300
 
   # Monitoring — OpenTelemetry OTLP export.
   # To enable, set enabled: true and configure the endpoint and service name.
@@ -249,4 +270,3 @@ persistence:
   accessMode: ReadWriteOnce
   size: 1Gi
   mountPath: /data
-

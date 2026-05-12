@@ -30,8 +30,7 @@ def use_case(
     return ValidateUserTokenUseCase(user_password_repository, token_gateway, sso_user_repository)
 
 
-@pytest.mark.asyncio
-async def test_should_validate_token_and_return_user_details(
+def test_should_validate_token_and_return_user_details(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
     token_gateway: FakeTokenGateway,
@@ -54,7 +53,7 @@ async def test_should_validate_token_and_return_user_details(
     token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": display_name})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     assert response.is_valid is True
     assert response.user_id == user_id
@@ -62,19 +61,17 @@ async def test_should_validate_token_and_return_user_details(
     assert response.display_name == display_name
 
 
-@pytest.mark.asyncio
-async def test_should_raise_exception_for_invalid_jwt_token(
+def test_should_raise_exception_for_invalid_jwt_token(
     use_case: ValidateUserTokenUseCase,
 ):
     invalid_jwt_token = "invalid_jwt_token_xyz789"
     command = ValidateUserTokenCommand(jwt_token=invalid_jwt_token)
 
     with pytest.raises(InvalidTokenException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_should_raise_exception_when_user_no_longer_exists(
+def test_should_raise_exception_when_user_no_longer_exists(
     use_case: ValidateUserTokenUseCase,
     token_gateway: FakeTokenGateway,
 ):
@@ -86,11 +83,10 @@ async def test_should_raise_exception_when_user_no_longer_exists(
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
     with pytest.raises(UserNotFoundException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_should_validate_token_with_admin_role(
+def test_should_validate_token_with_admin_role(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
     token_gateway: FakeTokenGateway,
@@ -113,7 +109,7 @@ async def test_should_validate_token_with_admin_role(
     token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": display_name})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token, required_roles=["admin"])
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     assert response.is_valid is True
     assert response.user_id == user_id
@@ -121,8 +117,7 @@ async def test_should_validate_token_with_admin_role(
     assert response.display_name == display_name
 
 
-@pytest.mark.asyncio
-async def test_should_raise_exception_when_required_role_not_in_token(
+def test_should_raise_exception_when_required_role_not_in_token(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
     token_gateway: FakeTokenGateway,
@@ -147,11 +142,10 @@ async def test_should_raise_exception_when_required_role_not_in_token(
     command = ValidateUserTokenCommand(jwt_token=jwt_token, required_roles=["admin"])
 
     with pytest.raises(InsufficientRoleException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_should_validate_token_for_sso_user(
+def test_should_validate_token_for_sso_user(
     use_case: ValidateUserTokenUseCase,
     sso_user_repository: FakeSsoUserRepository,
     token_gateway: FakeTokenGateway,
@@ -175,7 +169,7 @@ async def test_should_validate_token_for_sso_user(
     token_gateway.set_valid_token(jwt_token, user_id, email, ["user"], {"display_name": display_name})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     assert response.is_valid is True
     assert response.user_id == user_id
@@ -183,8 +177,7 @@ async def test_should_validate_token_for_sso_user(
     assert response.display_name == display_name
 
 
-@pytest.mark.asyncio
-async def test_should_raise_exception_when_sso_user_not_found(
+def test_should_raise_exception_when_sso_user_not_found(
     use_case: ValidateUserTokenUseCase,
     token_gateway: FakeTokenGateway,
 ):
@@ -197,11 +190,10 @@ async def test_should_raise_exception_when_sso_user_not_found(
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
     with pytest.raises(UserNotFoundException):
-        await use_case.execute(command)
+        use_case.execute(command)
 
 
-@pytest.mark.asyncio
-async def test_should_return_admin_roles_for_admin_user_token(
+def test_should_return_admin_roles_for_admin_user_token(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
     token_gateway: FakeTokenGateway,
@@ -224,14 +216,13 @@ async def test_should_return_admin_roles_for_admin_user_token(
 
     # When validating the token
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     # Then response should include roles=["admin"]
     assert response.roles == ["admin"]
 
 
-@pytest.mark.asyncio
-async def test_should_return_multiple_roles_when_token_has_multiple_roles(
+def test_should_return_multiple_roles_when_token_has_multiple_roles(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
     token_gateway: FakeTokenGateway,
@@ -255,14 +246,13 @@ async def test_should_return_multiple_roles_when_token_has_multiple_roles(
 
     # When validating the token
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     # Then response should include roles=["user", "editor", "viewer"]
     assert response.roles == roles
 
 
-@pytest.mark.asyncio
-async def test_should_return_empty_roles_when_token_has_no_roles(
+def test_should_return_empty_roles_when_token_has_no_roles(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
     token_gateway: FakeTokenGateway,
@@ -285,7 +275,7 @@ async def test_should_return_empty_roles_when_token_has_no_roles(
 
     # When validating the token
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = await use_case.execute(command)
+    response = use_case.execute(command)
 
     # Then response should include roles=[]
     assert response.roles == []

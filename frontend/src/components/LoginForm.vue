@@ -69,15 +69,29 @@ const resolveDefaultGroupRoute = async () => {
   }
 }
 
-// ── Rate limit countdown ───────────────────────────────────────
+// ── Rate limit / lockout countdown ─────────────────────────────
+// Two reasons share the same countdown machinery:
+//   - 'rate-limited'   → the global per-IP quota was hit (429).
+//   - 'account-locked' → per-email lockout after too many failed logins (401 + Retry-After).
+type CountdownReason = 'rate-limited' | 'account-locked'
+
 const rateLimitCountdown = ref(0)
+const rateLimitReason = ref<CountdownReason>('rate-limited')
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 const isRateLimited = computed(() => rateLimitCountdown.value > 0)
+const countdownMessage = computed(() => {
+  const seconds = rateLimitCountdown.value
+  if (rateLimitReason.value === 'account-locked') {
+    return `Account temporarily locked after too many failed logins. Try again in ${seconds} seconds.`
+  }
+  return `Too many login attempts. Please try again in ${seconds} seconds.`
+})
 
 const onRateLimited = (event: Event) => {
-  const { retryAfter } = (event as CustomEvent).detail
+  const { retryAfter, reason } = (event as CustomEvent).detail
   rateLimitCountdown.value = retryAfter || 60
+  rateLimitReason.value = reason === 'account-locked' ? 'account-locked' : 'rate-limited'
 
   if (countdownTimer) clearInterval(countdownTimer)
   countdownTimer = setInterval(() => {
@@ -87,6 +101,17 @@ const onRateLimited = (event: Event) => {
       if (countdownTimer) clearInterval(countdownTimer)
     }
   }, 1000)
+}
+
+// Account lockout is per-email on the server; a global per-IP rate limit
+// is not. When the user edits the email field we clear the countdown only
+// on the account-locked path — the new email might not be locked at all.
+// If it is, the next submission will re-arm the countdown from the response.
+const onEmailInput = () => {
+  if (rateLimitReason.value === 'account-locked' && rateLimitCountdown.value > 0) {
+    rateLimitCountdown.value = 0
+    if (countdownTimer) clearInterval(countdownTimer)
+  }
 }
 
 onMounted(() => {
@@ -124,12 +149,16 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
 
       if (response.error) {
         console.error('Login error:', response.error)
-        toast.add({
-          severity: 'error',
-          summary: 'Login Failed',
-          detail: response.error.detail,
-          life: 5000,
-        })
+        // The countdown Message (isRateLimited) already communicates the
+        // lockout / rate-limit state; a second toast would just be noise.
+        if (!isRateLimited.value) {
+          toast.add({
+            severity: 'error',
+            summary: 'Login Failed',
+            detail: response.error.detail,
+            life: 5000,
+          })
+        }
         return
       }
       toast.add({
@@ -218,6 +247,7 @@ const handleSsoLogin = async () => {
             :placeholder="formValues.email"
             fluid
             :disabled="loading"
+            @input="onEmailInput"
           />
           <Message v-if="$form.email?.invalid" severity="error" size="small" variant="simple">
             {{ $form.email.error?.message }}
@@ -248,7 +278,7 @@ const handleSsoLogin = async () => {
           :loading="loading"
         />
         <Message v-if="isRateLimited" severity="warn" class="mt-3">
-          Too many login attempts. Please try again in {{ rateLimitCountdown }} seconds.
+          {{ countdownMessage }}
         </Message>
       </Form>
 

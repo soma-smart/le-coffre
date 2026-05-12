@@ -20,7 +20,7 @@ class JwtTokenGateway(TokenGateway):
         self.access_token_expiration_seconds = access_token_expiration_seconds
         self._refresh_token_expiration_seconds = refresh_token_expiration_seconds
 
-    async def generate_token(
+    def generate_token(
         self,
         user_id: UUID,
         email: str,
@@ -52,7 +52,7 @@ class JwtTokenGateway(TokenGateway):
             claims=claims,
         )
 
-    async def generate_refresh_token(
+    def generate_refresh_token(
         self,
         user_id: UUID,
         email: str,
@@ -72,7 +72,7 @@ class JwtTokenGateway(TokenGateway):
         refresh_token_value = jwt.encode(payload, self._secret_key, algorithm=self._algorithm)
         return refresh_token_value
 
-    async def validate_token(self, token: str) -> Token | None:
+    def validate_token(self, token: str) -> Token | None:
         try:
             payload = jwt.decode(token, self._secret_key, algorithms=[self._algorithm])
 
@@ -95,7 +95,7 @@ class JwtTokenGateway(TokenGateway):
         except jwt.InvalidTokenError:
             return None
 
-    async def validate_refresh_token(self, refresh_token: str) -> Token | None:
+    def validate_refresh_token(self, refresh_token: str) -> Token | None:
         try:
             payload = jwt.decode(refresh_token, self._secret_key, algorithms=[self._algorithm])
 
