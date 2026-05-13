@@ -164,7 +164,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
             "password": "NewStrongP@ssw0rd!",
             "folder": "Personal",
             "login": "NEW " + LOGIN,
-            "url": "NEW " + URL,
+            "url": "http://new.example.com",
         },
     )
     assert update_response.status_code == 201
@@ -182,7 +182,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     assert updated_meta["name"] == "Updated Password"
     assert updated_meta["folder"] == "Personal"
     assert updated_meta["login"] == "NEW " + LOGIN
-    assert updated_meta["url"] == "NEW " + URL
+    assert updated_meta["url"] == "http://new.example.com"
 
     # Verify timestamps: created_at should stay same, last_updated_at should change
     assert updated_meta["created_at"] == original_created_at, "created_at should not change after update"

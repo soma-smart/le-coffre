@@ -2,13 +2,14 @@
 import { ref, toRef, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import { isValidPasswordUrl, type Password } from '@/domain/password/Password'
+import { type Password } from '@/domain/password/Password'
 import { PasswordDomainError } from '@/domain/password/errors'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useContainer } from '@/plugins/container'
 import { useModelFromEntity } from '@/composables/useModelFromEntity'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
+import { isSafeHttpUrl, normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -97,7 +98,7 @@ const searchFolders = (event: { query: string }) => {
 }
 
 const urlError = computed(() =>
-  isValidPasswordUrl(form.url) ? '' : 'URL must start with http:// or https://',
+  !form.url || isSafeHttpUrl(form.url) ? '' : 'URL must start with http:// or https://',
 )
 
 // Display bullets when password field is not focused
@@ -191,6 +192,7 @@ const handleSubmit = async () => {
 
   try {
     loading.value = true
+    const normalizedUrl = normalizeExternalHttpUrl(form.url)
 
     if (isEditMode.value && props.editPassword) {
       await passwordUseCases.update.execute({
@@ -199,7 +201,7 @@ const handleSubmit = async () => {
         password: form.password || null,
         folder: form.folder || null,
         login: form.login || null,
-        url: form.url || null,
+        url: normalizedUrl,
       })
 
       toast.add({
@@ -216,7 +218,7 @@ const handleSubmit = async () => {
         name: form.name,
         password: form.password,
         login: form.login || null,
-        url: form.url || null,
+        url: normalizedUrl,
         folder: form.folder || null,
         groupId: selectedGroupId.value!,
       })
