@@ -23,13 +23,19 @@ CONTENT_SECURITY_POLICY = (
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Attach conservative browser security headers to every response."""
 
+    @staticmethod
+    def _is_docs_or_openapi_path(path: str) -> bool:
+        """Return True for FastAPI documentation and OpenAPI schema endpoints."""
+        return path == "/api/docs" or path.startswith("/api/openapi")
+
     async def dispatch(
         self,
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         response = await call_next(request)
-        response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+        if not self._is_docs_or_openapi_path(request.url.path):
+            response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
