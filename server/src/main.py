@@ -60,6 +60,7 @@ from security import (
     CsrfTokenManager,
     InMemoryRateLimiter,
     RateLimitMiddleware,
+    SecurityHeadersMiddleware,
     csrf_router,
 )
 from shared_kernel.adapters.primary.request_id_middleware import (
@@ -248,6 +249,7 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 
 
 # Add CSRF protection middleware
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CsrfMiddleware)
 app.add_middleware(RequestIdMiddleware)
 
