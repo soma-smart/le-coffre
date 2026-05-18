@@ -1,0 +1,140 @@
+/**
+ * Password domain types. Pure TypeScript — no Vue, no fetch, no SDK.
+ *
+ * Mirrors the fields the frontend actually consumes from the backend's
+ * GetPasswordListResponse / ListPasswordAccessResponse / PasswordEventResponse,
+ * in camelCase. BackendPasswordRepository is the single place that maps
+ * between these domain types and the snake_case wire DTOs.
+ */
+
+export type PasswordPermission = 'read'
+
+export interface Password {
+  id: string
+  name: string
+  folder: string
+  groupId: string
+  createdAt: string
+  lastUpdatedAt: string
+  canRead: boolean
+  canWrite: boolean
+  login: string | null
+  url: string | null
+  accessibleGroupIds: string[]
+}
+
+export interface PasswordAccessRow {
+  /** For user-access rows this is a userId; for group-access rows this is a groupId. */
+  userId: string
+  permissions: PasswordPermission[]
+  isOwner: boolean
+}
+
+export interface PasswordAccess {
+  resourceId: string
+  users: PasswordAccessRow[]
+  groups: PasswordAccessRow[]
+}
+
+export interface PasswordEvent {
+  eventId: string
+  eventType: string
+  occurredOn: string
+  actorUserId: string
+  actorEmail: string | null
+  eventData: Record<string, unknown>
+}
+
+export type PasswordEventSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary'
+
+/**
+ * Strips the "Event" suffix and inserts a space before every capital so
+ * `PasswordSharedEvent` becomes `Password Shared`. Lives in the domain because
+ * it's driven by the backend's event-type enum — any new event must update
+ * this table in lockstep.
+ */
+export function humanizeEventType(eventType: string): string {
+  return eventType
+    .replace('Event', '')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+}
+
+/**
+ * Business-level importance of an audit event, used to pick the PrimeVue
+ * tag colour. The severity strings happen to be PrimeVue's palette, but
+ * they are also the semantic categories we'd pick in any UI library.
+ */
+export function eventSeverity(eventType: string): PasswordEventSeverity {
+  if (eventType === 'PasswordCreatedEvent') return 'success'
+  if (eventType === 'PasswordDeletedEvent') return 'danger'
+  if (eventType === 'PasswordUpdatedEvent') return 'warn'
+  if (eventType === 'PasswordSharedEvent' || eventType === 'PasswordUnsharedEvent') return 'info'
+  if (eventType === 'PasswordAccessedEvent') return 'secondary'
+  return 'secondary'
+}
+
+/**
+ * Password URL rule: must be empty, or start with http:// or https://.
+ * Anything else (ftp://, javascript:, raw text) is rejected at the use-case
+ * boundary. Shared between the CreatePassword use case and the form
+ * components that preview validation inline.
+ */
+export function isValidPasswordUrl(url: string | null | undefined): boolean {
+  if (!url) return true
+  return /^https?:\/\//i.test(url)
+}
+
+/**
+ * Passwords older than this are flagged to the user as needing rotation. The
+ * threshold is expressed in days because it's compared against wall-clock
+ * update timestamps.
+ */
+export const PASSWORD_STALE_AFTER_DAYS = 90
+
+const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24
+
+/**
+ * A password is stale when it hasn't been rotated in `PASSWORD_STALE_AFTER_DAYS`
+ * days. `now` is injectable so unit tests don't depend on wall-clock time.
+ */
+export function isPasswordStale(password: Password, now: Date = new Date()): boolean {
+  const lastUpdated = new Date(password.lastUpdatedAt)
+  const ageDays = (now.getTime() - lastUpdated.getTime()) / MILLISECONDS_PER_DAY
+  return ageDays > PASSWORD_STALE_AFTER_DAYS
+}
+
+/**
+ * Every password has an owning `groupId`, and optionally an explicit list of
+ * groups it's been shared with. When the list is empty the owning group is
+ * the only group that can see the password — callers that want "every group
+ * that can read this" must go through this helper instead of inlining the
+ * fallback, so the invariant stays in one place.
+ */
+export function accessibleGroupIdsFor(password: Password): string[] {
+  return password.accessibleGroupIds.length > 0 ? password.accessibleGroupIds : [password.groupId]
+}
+
+/**
+ * The fields that participate in a free-text password search, plus the
+ * containing group's name (passed in separately because `Password` itself
+ * only stores `groupId`). Keeping this list in the domain ensures a new
+ * searchable attribute (e.g. a future `tags` field) only needs to be added
+ * in one place.
+ */
+export function matchesPasswordQuery(
+  password: Password,
+  query: string,
+  groupName?: string,
+): boolean {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+
+  return (
+    (groupName?.toLowerCase().includes(needle) ?? false) ||
+    password.folder.toLowerCase().includes(needle) ||
+    password.name.toLowerCase().includes(needle) ||
+    (password.login?.toLowerCase().includes(needle) ?? false) ||
+    (password.url?.toLowerCase().includes(needle) ?? false)
+  )
+}

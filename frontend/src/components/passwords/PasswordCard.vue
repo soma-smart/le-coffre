@@ -133,8 +133,8 @@
             class="pi pi-exclamation-triangle text-orange-500"
             v-tooltip.top="'Password not updated in 3+ months'"
           />
-          <span>Created: {{ formatDate(password.created_at) }}</span>
-          <span>Updated: {{ formatDate(password.last_updated_at) }}</span>
+          <span>Created: {{ formatDate(password.createdAt) }}</span>
+          <span>Updated: {{ formatDate(password.lastUpdatedAt) }}</span>
         </div>
 
         <div v-if="sharedAccessInfo" class="flex items-center gap-2 shrink-0">
@@ -151,37 +151,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, toRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import type { GetPasswordListResponse } from '@/client/types.gen'
-import {
-  getUserUsersUserIdGet,
-  listPasswordEventsPasswordsPasswordIdEventsGet,
-} from '@/client/sdk.gen'
-import {
-  getPasswordPasswordsPasswordIdGet,
-  deletePasswordPasswordsPasswordIdDelete,
-} from '@/client'
+import { isPasswordStale, type Password } from '@/domain/password/Password'
+import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
+import { usePasswordReveal } from '@/composables/usePasswordReveal'
+import { usePasswordSharedAccess } from '@/composables/usePasswordSharedAccess'
 
 const actorUsernameCache = new Map<string, string>()
 
-type SharedAccessInfo = {
-  occurredOn: string
-  actorUsername: string
-}
-
 const props = defineProps<{
-  password: GetPasswordListResponse
+  password: Password
   contextGroupId?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', password: GetPasswordListResponse): void
-  (e: 'share', password: GetPasswordListResponse): void
-  (e: 'history', password: GetPasswordListResponse): void
+  (e: 'edit', password: Password): void
+  (e: 'share', password: Password): void
+  (e: 'history', password: Password): void
   (e: 'deleted'): void
 }>()
 
@@ -190,36 +180,28 @@ const confirm = useConfirm()
 const groupsStore = useGroupsStore()
 const { userBelongingGroups } = storeToRefs(groupsStore)
 
-const passwordValue = ref<string | null>(null)
-const detailFetched = ref(false)
-const isVisible = ref(false)
-const isLoading = ref(false)
-const isDeleting = ref(false)
-const sharedAccessInfo = ref<SharedAccessInfo | null>(null)
-let sharedAccessLoadVersion = 0
+// Resolve use cases at setup time — inject() has no active instance
+// inside async event handlers after an await, or inside callbacks like
+// confirm.require({ accept: … }).
+const { passwords: passwordUseCases, users: userUseCases } = useContainer()
 
-const needsUpdate = computed(() => {
-  const lastUpdated = new Date(props.password.last_updated_at)
-  const now = new Date()
-  const diffInMs = now.getTime() - lastUpdated.getTime()
-  const diffInDays = diffInMs / (1000 * 60 * 60 * 24)
-  return diffInDays > 90
-})
+const isDeleting = ref(false)
+const needsUpdate = computed(() => isPasswordStale(props.password))
 
 const canWriteInContext = computed(() => {
-  if (!props.password.can_write) {
+  if (!props.password.canWrite) {
     return false
   }
 
   if (!props.contextGroupId) {
-    return props.password.can_write
+    return props.password.canWrite
   }
 
-  return props.contextGroupId === props.password.group_id
+  return props.contextGroupId === props.password.groupId
 })
 
 const canReadInContext = computed(() => {
-  if (!props.password.can_read) {
+  if (!props.password.canRead) {
     return false
   }
 
@@ -237,108 +219,11 @@ const formatDate = (dateString: string): string => {
   })
 }
 
-const getEventDataString = (eventData: Record<string, unknown>, key: string): string | null => {
-  const value = eventData[key]
-  return typeof value === 'string' ? value : null
-}
-
-const fetchActorUsername = async (userId: string, fallback?: string | null): Promise<string> => {
-  if (actorUsernameCache.has(userId)) {
-    return actorUsernameCache.get(userId)!
-  }
-
-  try {
-    const response = await getUserUsersUserIdGet({
-      path: { user_id: userId },
-    })
-    const username = response.data?.username || fallback || 'Unknown user'
-    actorUsernameCache.set(userId, username)
-    return username
-  } catch {
-    return fallback || 'Unknown user'
-  }
-}
-
-const loadSharedAccessInfo = async () => {
-  const currentVersion = ++sharedAccessLoadVersion
-  sharedAccessInfo.value = null
-
-  if (canWriteInContext.value) {
-    return
-  }
-
-  const targetGroupId = props.contextGroupId
-  if (!targetGroupId) {
-    const belongingGroupIds = new Set(userBelongingGroups.value.map((group) => group.id))
-    if (belongingGroupIds.size === 0) {
-      return
-    }
-  }
-
-  if (targetGroupId && targetGroupId === props.password.group_id) {
-    return
-  }
-
-  try {
-    const response = await listPasswordEventsPasswordsPasswordIdEventsGet({
-      path: { password_id: props.password.id },
-      query: {
-        event_type: ['PasswordSharedEvent'],
-      },
-    })
-
-    const matchingEvent = (response.data?.events ?? [])
-      .filter((event) => event.event_type === 'PasswordSharedEvent')
-      .filter((event) => {
-        const sharedWithGroupId = getEventDataString(event.event_data, 'shared_with_group_id')
-        if (!sharedWithGroupId) {
-          return false
-        }
-
-        if (targetGroupId) {
-          return sharedWithGroupId === targetGroupId
-        }
-
-        return userBelongingGroups.value.some((group) => group.id === sharedWithGroupId)
-      })
-      .sort((a, b) => new Date(b.occurred_on).getTime() - new Date(a.occurred_on).getTime())[0]
-
-    if (!matchingEvent || currentVersion !== sharedAccessLoadVersion) {
-      return
-    }
-
-    const actorUsername = await fetchActorUsername(
-      matchingEvent.actor_user_id,
-      matchingEvent.actor_email,
-    )
-
-    if (currentVersion !== sharedAccessLoadVersion) {
-      return
-    }
-
-    sharedAccessInfo.value = {
-      occurredOn: matchingEvent.occurred_on,
-      actorUsername,
-    }
-  } catch (error) {
-    console.error('Error loading shared access info:', error)
-  }
-}
-
-const fetchPassword = async () => {
-  if (detailFetched.value) return
-
-  isLoading.value = true
-  try {
-    const response = await getPasswordPasswordsPasswordIdGet({
-      path: { password_id: props.password.id },
-    })
-
-    if (response.data) {
-      passwordValue.value = response.data.password
-      detailFetched.value = true
-    }
-  } catch (error) {
+const passwordIdRef = computed(() => props.password.id)
+const { passwordValue, isVisible, isLoading, toggleVisibility, revealAndCopy } = usePasswordReveal({
+  passwordId: passwordIdRef,
+  useCases: passwordUseCases,
+  onError: (error) => {
     console.error('Error fetching password:', error)
     toast.add({
       severity: 'error',
@@ -346,21 +231,25 @@ const fetchPassword = async () => {
       detail: 'Failed to fetch password',
       life: 3000,
     })
-  } finally {
-    isLoading.value = false
-  }
-}
+  },
+})
 
-const toggleVisibility = async () => {
-  await fetchPassword()
-  isVisible.value = !isVisible.value
-}
+const { sharedAccessInfo } = usePasswordSharedAccess({
+  password: toRef(props, 'password'),
+  contextGroupId: toRef(props, 'contextGroupId'),
+  canWriteInContext,
+  userBelongingGroups,
+  passwords: passwordUseCases,
+  users: userUseCases,
+  actorUsernameCache,
+})
 
 const copyToClipboard = async () => {
-  await fetchPassword()
+  const value = await revealAndCopy()
+  if (value === null) return
 
   try {
-    await navigator.clipboard.writeText(passwordValue.value || '')
+    await navigator.clipboard.writeText(value)
     toast.add({
       severity: 'success',
       summary: 'Copied',
@@ -401,26 +290,14 @@ const handleDelete = () => {
     accept: async () => {
       isDeleting.value = true
       try {
-        const response = await deletePasswordPasswordsPasswordIdDelete({
-          path: { password_id: props.password.id },
+        await passwordUseCases.delete.execute({ passwordId: props.password.id })
+        toast.add({
+          severity: 'success',
+          summary: 'Deleted',
+          detail: 'Password deleted successfully',
+          life: 3000,
         })
-
-        if (response.response.ok) {
-          toast.add({
-            severity: 'success',
-            summary: 'Deleted',
-            detail: 'Password deleted successfully',
-            life: 3000,
-          })
-          emit('deleted')
-        } else {
-          toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'Failed to delete password',
-            life: 3000,
-          })
-        }
+        emit('deleted')
       } catch (error) {
         console.error('Error deleting password:', error)
         toast.add({
@@ -435,17 +312,4 @@ const handleDelete = () => {
     },
   })
 }
-
-watch(
-  [
-    () => props.password.id,
-    () => props.password.can_write,
-    () => props.contextGroupId,
-    userBelongingGroups,
-  ],
-  async () => {
-    await loadSharedAccessInfo()
-  },
-  { immediate: true },
-)
 </script>

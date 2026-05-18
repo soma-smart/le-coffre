@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import type { ShareResponse } from '@/client'
 
 defineProps<{
-  shares: ShareResponse[]
+  shares: string[]
 }>()
 const emit = defineEmits<{
   (e: 'confirmed'): void
@@ -58,7 +57,7 @@ const handleConfirm = () => {
       <label class="font-semibold shrink-0" :for="`share-secret-${idx}`">Share {{ idx + 1 }}</label>
       <Password
         :inputId="`share-secret-${idx}`"
-        :model-value="share.secret"
+        :model-value="share"
         fluid
         :feedback="false"
         toggleMask
@@ -71,7 +70,7 @@ const handleConfirm = () => {
         text
         rounded
         aria-label="Copy share secret"
-        @click="copyShare(share.secret, idx)"
+        @click="copyShare(share, idx)"
       />
     </div>
     <Divider />

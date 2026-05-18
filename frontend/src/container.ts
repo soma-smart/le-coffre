@@ -1,0 +1,186 @@
+import type { AuthGateway } from '@/application/ports/AuthGateway'
+import type { CsrfGateway } from '@/application/ports/CsrfGateway'
+import type { GroupRepository } from '@/application/ports/GroupRepository'
+import type { PasswordRepository } from '@/application/ports/PasswordRepository'
+import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
+import type { UserRepository } from '@/application/ports/UserRepository'
+import type { VaultRepository } from '@/application/ports/VaultRepository'
+import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
+import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
+import { HandleSsoCallbackUseCase } from '@/application/auth/HandleSsoCallback'
+import { IsSsoConfiguredUseCase } from '@/application/auth/IsSsoConfigured'
+import { LoginWithPasswordUseCase } from '@/application/auth/LoginWithPassword'
+import { RefreshAccessTokenUseCase } from '@/application/auth/RefreshAccessToken'
+import { RegisterAdminUseCase } from '@/application/auth/RegisterAdmin'
+import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
+import { AddMemberToGroupUseCase } from '@/application/group/AddMemberToGroup'
+import { CreateGroupUseCase } from '@/application/group/CreateGroup'
+import { DeleteGroupUseCase } from '@/application/group/DeleteGroup'
+import { GetGroupUseCase } from '@/application/group/GetGroup'
+import { ListGroupsUseCase } from '@/application/group/ListGroups'
+import { PromoteMemberToOwnerUseCase } from '@/application/group/PromoteMemberToOwner'
+import { RemoveMemberFromGroupUseCase } from '@/application/group/RemoveMemberFromGroup'
+import { UpdateGroupUseCase } from '@/application/group/UpdateGroup'
+import { CreatePasswordUseCase } from '@/application/password/CreatePassword'
+import { DeletePasswordUseCase } from '@/application/password/DeletePassword'
+import { GetPasswordUseCase } from '@/application/password/GetPassword'
+import { ListPasswordAccessUseCase } from '@/application/password/ListPasswordAccess'
+import { ListPasswordEventsUseCase } from '@/application/password/ListPasswordEvents'
+import { ListPasswordsUseCase } from '@/application/password/ListPasswords'
+import { SharePasswordUseCase, UnsharePasswordUseCase } from '@/application/password/SharePassword'
+import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
+import { ClearPendingSharesUseCase } from '@/application/vault/ClearPendingShares'
+import { CreateVaultUseCase } from '@/application/vault/CreateVault'
+import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
+import { LockVaultUseCase } from '@/application/vault/LockVault'
+import { UnlockVaultUseCase } from '@/application/vault/UnlockVault'
+import { ValidateVaultSetupUseCase } from '@/application/vault/ValidateVaultSetup'
+import { ReadPreferenceUseCase } from '@/application/preferences/ReadPreference'
+import { RemovePreferenceUseCase } from '@/application/preferences/RemovePreference'
+import { WritePreferenceUseCase } from '@/application/preferences/WritePreference'
+import { CreateUserUseCase } from '@/application/user/CreateUser'
+import { DeleteUserUseCase } from '@/application/user/DeleteUser'
+import { GetCurrentUserUseCase } from '@/application/user/GetCurrentUser'
+import { GetUserUseCase } from '@/application/user/GetUser'
+import { ListUsersUseCase } from '@/application/user/ListUsers'
+import { PromoteUserToAdminUseCase } from '@/application/user/PromoteUserToAdmin'
+import { UpdateUserUseCase } from '@/application/user/UpdateUser'
+import { UpdateUserPasswordUseCase } from '@/application/user/UpdateUserPassword'
+
+/**
+ * Framework-free container — holds every use case the presentation
+ * layer needs. Vue imports nothing from this file; `plugins/container.ts`
+ * is the only Vue-aware bridge. Tests build their own container with
+ * in-memory fakes; production wires backend adapters via
+ * `composition_root.ts`.
+ */
+
+export interface Ports {
+  passwordRepository: PasswordRepository
+  csrfGateway: CsrfGateway
+  userRepository: UserRepository
+  groupRepository: GroupRepository
+  vaultRepository: VaultRepository
+  authGateway: AuthGateway
+  preferencesGateway: PreferencesGateway
+}
+
+export interface Container {
+  passwords: {
+    list: ListPasswordsUseCase
+    get: GetPasswordUseCase
+    create: CreatePasswordUseCase
+    update: UpdatePasswordUseCase
+    delete: DeletePasswordUseCase
+    share: SharePasswordUseCase
+    unshare: UnsharePasswordUseCase
+    listAccess: ListPasswordAccessUseCase
+    listEvents: ListPasswordEventsUseCase
+  }
+  csrf: {
+    fetchToken: FetchCsrfTokenUseCase
+  }
+  users: {
+    getCurrent: GetCurrentUserUseCase
+    get: GetUserUseCase
+    list: ListUsersUseCase
+    create: CreateUserUseCase
+    update: UpdateUserUseCase
+    updatePassword: UpdateUserPasswordUseCase
+    delete: DeleteUserUseCase
+    promoteToAdmin: PromoteUserToAdminUseCase
+  }
+  groups: {
+    list: ListGroupsUseCase
+    get: GetGroupUseCase
+    create: CreateGroupUseCase
+    update: UpdateGroupUseCase
+    delete: DeleteGroupUseCase
+    addMember: AddMemberToGroupUseCase
+    removeMember: RemoveMemberFromGroupUseCase
+    promoteToOwner: PromoteMemberToOwnerUseCase
+  }
+  vault: {
+    getStatus: GetVaultStatusUseCase
+    create: CreateVaultUseCase
+    validateSetup: ValidateVaultSetupUseCase
+    unlock: UnlockVaultUseCase
+    lock: LockVaultUseCase
+    clearPendingShares: ClearPendingSharesUseCase
+  }
+  auth: {
+    login: LoginWithPasswordUseCase
+    registerAdmin: RegisterAdminUseCase
+    refreshAccessToken: RefreshAccessTokenUseCase
+    configureSso: ConfigureSsoProviderUseCase
+    getSsoUrl: GetSsoUrlUseCase
+    handleSsoCallback: HandleSsoCallbackUseCase
+    isSsoConfigured: IsSsoConfiguredUseCase
+  }
+  preferences: {
+    read: ReadPreferenceUseCase
+    write: WritePreferenceUseCase
+    remove: RemovePreferenceUseCase
+  }
+}
+
+export function buildContainer(ports: Ports): Container {
+  return {
+    passwords: {
+      list: new ListPasswordsUseCase(ports.passwordRepository),
+      get: new GetPasswordUseCase(ports.passwordRepository),
+      create: new CreatePasswordUseCase(ports.passwordRepository),
+      update: new UpdatePasswordUseCase(ports.passwordRepository),
+      delete: new DeletePasswordUseCase(ports.passwordRepository),
+      share: new SharePasswordUseCase(ports.passwordRepository),
+      unshare: new UnsharePasswordUseCase(ports.passwordRepository),
+      listAccess: new ListPasswordAccessUseCase(ports.passwordRepository),
+      listEvents: new ListPasswordEventsUseCase(ports.passwordRepository),
+    },
+    csrf: {
+      fetchToken: new FetchCsrfTokenUseCase(ports.csrfGateway),
+    },
+    users: {
+      getCurrent: new GetCurrentUserUseCase(ports.userRepository),
+      get: new GetUserUseCase(ports.userRepository),
+      list: new ListUsersUseCase(ports.userRepository),
+      create: new CreateUserUseCase(ports.userRepository),
+      update: new UpdateUserUseCase(ports.userRepository),
+      updatePassword: new UpdateUserPasswordUseCase(ports.userRepository),
+      delete: new DeleteUserUseCase(ports.userRepository),
+      promoteToAdmin: new PromoteUserToAdminUseCase(ports.userRepository),
+    },
+    groups: {
+      list: new ListGroupsUseCase(ports.groupRepository),
+      get: new GetGroupUseCase(ports.groupRepository),
+      create: new CreateGroupUseCase(ports.groupRepository),
+      update: new UpdateGroupUseCase(ports.groupRepository),
+      delete: new DeleteGroupUseCase(ports.groupRepository),
+      addMember: new AddMemberToGroupUseCase(ports.groupRepository),
+      removeMember: new RemoveMemberFromGroupUseCase(ports.groupRepository),
+      promoteToOwner: new PromoteMemberToOwnerUseCase(ports.groupRepository),
+    },
+    vault: {
+      getStatus: new GetVaultStatusUseCase(ports.vaultRepository),
+      create: new CreateVaultUseCase(ports.vaultRepository),
+      validateSetup: new ValidateVaultSetupUseCase(ports.vaultRepository),
+      unlock: new UnlockVaultUseCase(ports.vaultRepository),
+      lock: new LockVaultUseCase(ports.vaultRepository),
+      clearPendingShares: new ClearPendingSharesUseCase(ports.vaultRepository),
+    },
+    auth: {
+      login: new LoginWithPasswordUseCase(ports.authGateway),
+      registerAdmin: new RegisterAdminUseCase(ports.authGateway),
+      refreshAccessToken: new RefreshAccessTokenUseCase(ports.authGateway),
+      configureSso: new ConfigureSsoProviderUseCase(ports.authGateway),
+      getSsoUrl: new GetSsoUrlUseCase(ports.authGateway),
+      handleSsoCallback: new HandleSsoCallbackUseCase(ports.authGateway),
+      isSsoConfigured: new IsSsoConfiguredUseCase(ports.authGateway),
+    },
+    preferences: {
+      read: new ReadPreferenceUseCase(ports.preferencesGateway),
+      write: new WritePreferenceUseCase(ports.preferencesGateway),
+      remove: new RemovePreferenceUseCase(ports.preferencesGateway),
+    },
+  }
+}
