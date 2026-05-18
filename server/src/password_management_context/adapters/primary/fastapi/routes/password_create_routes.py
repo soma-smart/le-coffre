@@ -2,10 +2,13 @@ import logging
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_create_password_usecase,
+)
+from password_management_context.adapters.primary.fastapi.request_validation import (
+    normalize_optional_http_url,
 )
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.use_cases import CreatePasswordUseCase
@@ -26,6 +29,11 @@ class CreatePasswordRequest(BaseModel):
     login: str | None = None
     url: str | None = None
     group_id: str
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str | None) -> str | None:
+        return normalize_optional_http_url(value)
 
 
 class CreatePasswordResponse(BaseModel):

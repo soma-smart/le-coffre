@@ -14,6 +14,7 @@ import { useUserStore } from '@/stores/user'
 import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
 import { slugifyGroupName } from '@/utils/groupSlug'
+import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const router = useRouter()
 const route = useRoute()
@@ -209,8 +210,19 @@ const handleSsoLogin = async () => {
     }
 
     if (response.data) {
+      const ssoUrl = normalizeExternalHttpUrl(response.data as string)
+      if (!ssoUrl) {
+        toast.add({
+          severity: 'error',
+          summary: 'SSO Error',
+          detail: 'SSO provider returned an invalid login URL.',
+          life: 5000,
+        })
+        return
+      }
+
       // Redirect to SSO provider
-      window.location.href = response.data as string
+      window.location.assign(ssoUrl)
     }
   } catch (error) {
     console.error('Unexpected error during SSO login:', error)

@@ -7,6 +7,7 @@ import type { GetPasswordListResponse } from '@/client/types.gen'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
+import { isSafeHttpUrl, normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -79,7 +80,7 @@ const searchFolders = (event: { query: string }) => {
 }
 
 const urlError = computed(() => {
-  if (url.value && !/^https?:\/\//i.test(url.value)) {
+  if (url.value && !isSafeHttpUrl(url.value)) {
     return 'URL must start with http:// or https://'
   }
   return ''
@@ -193,6 +194,7 @@ const handleSubmit = async () => {
 
   try {
     loading.value = true
+    const normalizedUrl = normalizeExternalHttpUrl(url.value)
 
     if (isEditMode.value && props.editPassword) {
       // Update existing password
@@ -206,7 +208,7 @@ const handleSubmit = async () => {
         name: name.value,
         folder: folder.value || null,
         login: login.value || null,
-        url: url.value || null,
+        url: normalizedUrl,
       }
 
       if (password.value) {
@@ -246,7 +248,7 @@ const handleSubmit = async () => {
           name: name.value,
           password: password.value,
           login: login.value || null,
-          url: url.value || null,
+          url: normalizedUrl,
           folder: folder.value || null,
           group_id: selectedGroupId.value!,
         },

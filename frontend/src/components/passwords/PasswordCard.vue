@@ -115,8 +115,8 @@
           {{ password.login }}
         </span>
         <a
-          v-if="password.url"
-          :href="password.url"
+          v-if="safePasswordUrl"
+          :href="safePasswordUrl"
           target="_blank"
           rel="noopener noreferrer"
           class="flex items-center gap-1 text-primary hover:underline"
@@ -124,6 +124,14 @@
           <i class="pi pi-external-link text-xs" />
           {{ password.url }}
         </a>
+        <span
+          v-else-if="password.url"
+          class="flex items-center gap-1 text-muted-color"
+          v-tooltip.top="'URL is not opened because it is not http(s)'"
+        >
+          <i class="pi pi-exclamation-triangle text-xs" />
+          {{ password.url }}
+        </span>
       </div>
 
       <div class="flex items-center justify-between gap-4 text-xs text-muted-color">
@@ -165,6 +173,7 @@ import {
   deletePasswordPasswordsPasswordIdDelete,
 } from '@/client'
 import { useGroupsStore } from '@/stores/groups'
+import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const actorUsernameCache = new Map<string, string>()
 
@@ -197,6 +206,8 @@ const isLoading = ref(false)
 const isDeleting = ref(false)
 const sharedAccessInfo = ref<SharedAccessInfo | null>(null)
 let sharedAccessLoadVersion = 0
+
+const safePasswordUrl = computed(() => normalizeExternalHttpUrl(props.password.url))
 
 const needsUpdate = computed(() => {
   const lastUpdated = new Date(props.password.last_updated_at)
