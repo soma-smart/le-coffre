@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from . import (
     list_password_access_routes,
+    password_admin_statistic_routes,
     password_create_routes,
     password_delete_routes,
     password_events_list_routes,
@@ -16,6 +17,7 @@ from . import (
 def get_password_management_router():
     password_management_router = APIRouter()
 
+    password_management_router.include_router(password_admin_statistic_routes.router)
     password_management_router.include_router(password_create_routes.router)
     password_management_router.include_router(passwords_list_routes.router)  # Must come before password_get_routes
     password_management_router.include_router(password_events_list_routes.router)

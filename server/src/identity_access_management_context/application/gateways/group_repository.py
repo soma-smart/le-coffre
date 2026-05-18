@@ -32,3 +32,7 @@ class GroupRepository(Protocol):
     def get_by_name(self, group_name: str) -> Group | None:
         """Get a group by name."""
         ...
+
+    def count_non_personal(self) -> int:
+        """Count non-personal groups."""
+        ...

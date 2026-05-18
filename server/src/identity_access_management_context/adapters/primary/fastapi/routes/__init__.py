@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from . import refresh_access_token_routes
 from .admin import (
     admin_login_route,
+    admin_statistic_route,
     register_admin_with_password_route,
 )
 from .group import (
@@ -75,3 +76,11 @@ def get_group_management_router():
     group_management_router.include_router(group_delete_router)
 
     return group_management_router
+
+
+def get_admin_management_router():
+    admin_management_router = APIRouter()
+
+    admin_management_router.include_router(admin_statistic_route.router)
+
+    return admin_management_router

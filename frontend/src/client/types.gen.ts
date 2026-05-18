@@ -597,6 +597,16 @@ export type PasswordEventResponse = {
 };
 
 /**
+ * PasswordStatisticForAdminResponse
+ */
+export type PasswordStatisticForAdminResponse = {
+    /**
+     * Password Count
+     */
+    password_count: number;
+};
+
+/**
  * PermissionEnum
  */
 export type PermissionEnum = 'read';
@@ -722,6 +732,20 @@ export type SsoUserInfo = {
      * Is New User
      */
     is_new_user: boolean;
+};
+
+/**
+ * StatisticForAdminResponse
+ */
+export type StatisticForAdminResponse = {
+    /**
+     * User Count
+     */
+    user_count: number;
+    /**
+     * Group Count
+     */
+    group_count: number;
 };
 
 /**
@@ -1080,6 +1104,22 @@ export type GetVaultStatusVaultStatusGetResponses = {
 };
 
 export type GetVaultStatusVaultStatusGetResponse = GetVaultStatusVaultStatusGetResponses[keyof GetVaultStatusVaultStatusGetResponses];
+
+export type GetPasswordStatisticForAdminPasswordsStatisticsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/passwords/statistics';
+};
+
+export type GetPasswordStatisticForAdminPasswordsStatisticsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: PasswordStatisticForAdminResponse;
+};
+
+export type GetPasswordStatisticForAdminPasswordsStatisticsGetResponse = GetPasswordStatisticForAdminPasswordsStatisticsGetResponses[keyof GetPasswordStatisticForAdminPasswordsStatisticsGetResponses];
 
 export type CreatePasswordPasswordsPostData = {
     body: CreatePasswordRequest;
@@ -1983,3 +2023,19 @@ export type ListGroupsGroupsGetResponses = {
 };
 
 export type ListGroupsGroupsGetResponse = ListGroupsGroupsGetResponses[keyof ListGroupsGroupsGetResponses];
+
+export type GetStatisticForAdminIamStatisticsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/iam/statistics';
+};
+
+export type GetStatisticForAdminIamStatisticsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: StatisticForAdminResponse;
+};
+
+export type GetStatisticForAdminIamStatisticsGetResponse = GetStatisticForAdminIamStatisticsGetResponses[keyof GetStatisticForAdminIamStatisticsGetResponses];

@@ -78,6 +78,19 @@ def test_should_raise_error_when_saving_existing_user(sql_user_repository):
         sql_user_repository.save(existing_user)
 
 
+def test_should_return_zero_when_no_users_exist(sql_user_repository):
+    count = sql_user_repository.count()
+    assert count == 0
+
+
+def test_should_return_correct_count_when_users_exist(sql_user_repository):
+    sql_user_repository.save(User(id=uuid4(), username="u1", email="u1@test.fr", name="U1", roles=[]))
+    sql_user_repository.save(User(id=uuid4(), username="u2", email="u2@test.fr", name="U2", roles=[]))
+    sql_user_repository.save(User(id=uuid4(), username="u3", email="u3@test.fr", name="U3", roles=[]))
+    count = sql_user_repository.count()
+    assert count == 3
+
+
 def test_should_update_user_when_user_exists(sql_user_repository):
     user_to_update = User(
         id=uuid4(),
