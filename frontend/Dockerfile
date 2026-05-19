@@ -23,8 +23,9 @@ RUN apk upgrade --no-cache
 
 USER nginx
 
-# Copy custom nginx config
+# Copy custom nginx config and security headers snippet
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security_headers.conf /etc/nginx/security_headers.conf
 
 # Copy built frontend files
 COPY --from=builder /frontend/dist /usr/share/nginx/html
