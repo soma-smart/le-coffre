@@ -5,6 +5,7 @@ from .create_user_use_case import CreateUserUseCase
 from .delete_group_use_case import DeleteGroupUseCase
 from .delete_user_use_case import DeleteUserUseCase
 from .get_group_use_case import GetGroupUseCase
+from .get_statistic_for_admin_use_case import GetStatisticForAdminUseCase
 from .get_user_me_use_case import GetUserMeUseCase
 from .get_user_use_case import GetUserUseCase
 from .list_groups_use_case import ListGroupsUseCase
@@ -50,4 +51,5 @@ __all__ = [
     "GetSsoAuthorizeUrlUseCase",
     "ConfigureSsoProviderUseCase",
     "SsoLoginUseCase",
+    "GetStatisticForAdminUseCase",
 ]

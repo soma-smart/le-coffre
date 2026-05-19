@@ -45,6 +45,7 @@ from identity_access_management_context.application.use_cases import (
     DeleteUserUseCase,
     GetGroupUseCase,
     GetSsoAuthorizeUrlUseCase,
+    GetStatisticForAdminUseCase,
     GetUserMeUseCase,
     GetUserUseCase,
     IsSsoConfigSetUseCase,
@@ -486,3 +487,10 @@ def get_delete_group_usecase(
         event_publisher,
         group_event_repository,
     )
+
+
+def get_statistic_for_admin_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+):
+    return GetStatisticForAdminUseCase(user_repository, group_repository)
