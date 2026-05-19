@@ -53,6 +53,7 @@ jobs:
           file: ./server/Dockerfile
           push: false
           load: true
+          pull: true
           platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/le-coffre-backend:${{ steps.set_outputs.outputs.image_tag }}
@@ -67,6 +68,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: false
           load: true
+          pull: true
           platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/le-coffre-frontend:${{ steps.set_outputs.outputs.image_tag }}

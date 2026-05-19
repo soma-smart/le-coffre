@@ -14,7 +14,7 @@ RUN bun run build
 # =============================================================================
 # Stage 2: Production Image (nginx)
 # =============================================================================
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:alpine
 
 USER root
 
