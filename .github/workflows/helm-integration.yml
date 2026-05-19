@@ -38,6 +38,26 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Scan Docker image (Grype)
+        uses: anchore/scan-action@v7.4.0
+        id: grype-scan
+        with:
+          image: localhost/le-coffre-${{ matrix.service.name }}:ci
+          fail-build: true
+          severity-cutoff: critical
+          output-format: sarif
+          only-fixed: true
+
+      - name: Show scan results
+        if: always()
+        run: |
+          sarif="${{ steps.grype-scan.outputs.sarif }}"
+          if [[ -f "$sarif" ]]; then
+            count=$(jq '.runs[0].results | length' "$sarif")
+            echo "${{ matrix.service.name }}: $count critical vulnerability(ies) found"
+            jq -r '.runs[0].results[] | "  \(.ruleId)  \(.locations[0].logicalLocations[0].fullyQualifiedName // "unknown")  \(.message.text)"' "$sarif"
+          fi
+
       - name: Save Docker image
         run: docker save localhost/le-coffre-${{ matrix.service.name }}:ci -o /tmp/le-coffre-${{ matrix.service.name }}.tar
 
@@ -236,7 +256,7 @@ jobs:
       - name: Collect logs on failure
         if: failure()
         run: |
-          echo "=== Events ===" 
+          echo "=== Events ==="
           kubectl get events -n le-coffre-ci --sort-by='.lastTimestamp' || true
           echo ""
           echo "=== Backend logs ==="
