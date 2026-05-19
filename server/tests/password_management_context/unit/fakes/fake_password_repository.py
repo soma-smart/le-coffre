@@ -49,6 +49,9 @@ class FakePasswordRepository(PasswordRepository):
         self.storage[password.id] = password
         self.update_count += 1
 
+    def count(self) -> int:
+        return len(self.storage)
+
     def set_owner_for_password(self, password_id: UUID, owner_group_id: UUID) -> None:
         """Helper method for tests to track ownership"""
         self._password_owners[password_id] = owner_group_id
