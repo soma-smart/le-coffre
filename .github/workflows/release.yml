@@ -113,7 +113,7 @@ jobs:
           if [[ -f "$sarif" ]]; then
             count=$(jq '.runs[0].results | length' "$sarif")
             echo "Frontend: $count critical vulnerability(ies) found"
-            jq -r '.runs[0].results[] | "  \(.ruleId)  \(.locations[0].logicalLocations[0].fullyQualifiedName // \"unknown\")  \(.message.text)"' "$sarif"
+            jq -r '.runs[0].results[] | "  \(.ruleId)  \(.locations[0].logicalLocations[0].fullyQualifiedName // "unknown")  \(.message.text)"' "$sarif"
           fi
 
       - name: Upload backend scan results to GitHub Security
