@@ -84,6 +84,16 @@ jobs:
           output-format: sarif
           only-fixed: true
 
+      - name: Show backend scan results
+        if: always()
+        run: |
+          sarif="${{ steps.grype-backend.outputs.sarif }}"
+          if [[ -f "$sarif" ]]; then
+            count=$(jq '.runs[0].results | length' "$sarif")
+            echo "Backend: $count critical vulnerability(ies) found"
+            jq -r '.runs[0].results[] | "  \(.ruleId)  \(.locations[0].logicalLocations[0].fullyQualifiedName // "unknown")  \(.message.text)"' "$sarif"
+          fi
+
       - name: Scan frontend image (Grype)
         uses: anchore/scan-action@v7.4.0
         id: grype-frontend
@@ -93,6 +103,16 @@ jobs:
           severity-cutoff: critical
           output-format: sarif
           only-fixed: true
+
+      - name: Show frontend scan results
+        if: always()
+        run: |
+          sarif="${{ steps.grype-frontend.outputs.sarif }}"
+          if [[ -f "$sarif" ]]; then
+            count=$(jq '.runs[0].results | length' "$sarif")
+            echo "Frontend: $count critical vulnerability(ies) found"
+            jq -r '.runs[0].results[] | "  \(.ruleId)  \(.locations[0].logicalLocations[0].fullyQualifiedName // \"unknown\")  \(.message.text)"' "$sarif"
+          fi
 
       - name: Upload backend scan results to GitHub Security
         if: always() && steps.grype-backend.outputs.sarif != ''
