@@ -126,11 +126,36 @@ jobs:
         working-directory: server/
         run: |
           uv export --format requirements-txt --no-hashes > /tmp/requirements.txt
-          uvx pip-audit -r /tmp/requirements.txt --format=json --output /tmp/pip_audit.json || true
+
+          set +e
+          uvx pip-audit -r /tmp/requirements.txt --format=json --output /tmp/pip_audit.json
+          pip_audit_status=$?
+          set -e
+
+          if [ "$pip_audit_status" -ne 0 ] && [ "$pip_audit_status" -ne 1 ]; then
+            echo "❌ pip-audit failed with unexpected exit code: $pip_audit_status"
+            exit "$pip_audit_status"
+          fi
+
           cat > /tmp/check_pip_audit.py << 'EOF'
-          import json, sys
-          with open('/tmp/pip_audit.json') as f:
-              data = json.load(f)
+          import json, os, sys
+
+          report_path = '/tmp/pip_audit.json'
+
+          if not os.path.exists(report_path):
+              print(f'❌ pip-audit did not produce the expected report: {report_path}', file=sys.stderr)
+              sys.exit(1)
+
+          try:
+              with open(report_path) as f:
+                  data = json.load(f)
+          except json.JSONDecodeError as exc:
+              print(f'❌ pip-audit report is not valid JSON: {exc}', file=sys.stderr)
+              sys.exit(1)
+          except OSError as exc:
+              print(f'❌ Failed to read pip-audit report {report_path}: {exc}', file=sys.stderr)
+              sys.exit(1)
+
           fixable = [
               (d['name'], d['version'], v['id'], v['fix_versions'])
               for d in data.get('dependencies', [])
