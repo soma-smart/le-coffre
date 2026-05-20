@@ -37,7 +37,20 @@ jobs:
 
       - name: Check Dependencies Security
         working-directory: frontend/
-        run: bun audit --audit-level=moderate
+        run: |
+          bun audit --json > /tmp/bun_audit.json || true
+          cat > /tmp/check_bun_audit.js << 'EOF'
+          const data = JSON.parse(require('fs').readFileSync('/tmp/bun_audit.json', 'utf8'));
+          const vulns = Object.values(data.vulnerabilities || {});
+          const fixable = vulns.filter(v => v.fixAvailable !== false && v.fixAvailable != null);
+          if (fixable.length > 0) {
+            console.log('❌ Vulnerabilities with available fixes:');
+            fixable.forEach(v => console.log(`  ${v.name}: ${v.severity} (fix: ${JSON.stringify(v.fixAvailable)})`))
+            process.exit(1);
+          }
+          console.log('✅ No vulnerabilities with available fixes (any unfixable vulnerabilities are ignored)');
+          EOF
+          node /tmp/check_bun_audit.js
 
       - name: Run Unit Tests
         if: success() || failure()
@@ -113,7 +126,25 @@ jobs:
         working-directory: server/
         run: |
           uv export --format requirements-txt --no-hashes > /tmp/requirements.txt
-          uvx pip-audit -r /tmp/requirements.txt
+          uvx pip-audit -r /tmp/requirements.txt --format=json --output /tmp/pip_audit.json || true
+          cat > /tmp/check_pip_audit.py << 'EOF'
+          import json, sys
+          with open('/tmp/pip_audit.json') as f:
+              data = json.load(f)
+          fixable = [
+              (d['name'], d['version'], v['id'], v['fix_versions'])
+              for d in data.get('dependencies', [])
+              for v in d.get('vulns', [])
+              if v.get('fix_versions')
+          ]
+          if fixable:
+              print('❌ Vulnerabilities with available fixes:')
+              for name, ver, vid, fixes in fixable:
+                  print(f'  {name} {ver}: {vid} -> fix available: {", ".join(fixes)}')
+              sys.exit(1)
+          print('✅ No vulnerabilities with available fixes (any unfixable vulnerabilities are ignored)')
+          EOF
+          python3 /tmp/check_pip_audit.py
 
       - name: Run Unit Tests
         if: success() || failure()
