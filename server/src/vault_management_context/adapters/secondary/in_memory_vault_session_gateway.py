@@ -1,5 +1,5 @@
 from vault_management_context.application.gateways import VaultSessionGateway
-from vault_management_context.domain.exceptions import VaultUnlockedError
+from vault_management_context.domain.exceptions import VaultIsLockedError, VaultUnlockedError
 
 
 class InMemoryVaultSessionGateway(VaultSessionGateway):
@@ -13,7 +13,7 @@ class InMemoryVaultSessionGateway(VaultSessionGateway):
 
     def get_decrypted_key(self) -> str:
         if self._decrypted_key is None:
-            raise ValueError("No decrypted key stored in memory")
+            raise VaultIsLockedError()
         return self._decrypted_key
 
     def clear_decrypted_key(self) -> None:
