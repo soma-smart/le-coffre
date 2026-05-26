@@ -1218,6 +1218,10 @@ export type ListPasswordEventsPasswordsPasswordIdEventsGetErrors = {
      * Validation Error
      */
     422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
 };
 
 export type ListPasswordEventsPasswordsPasswordIdEventsGetError = ListPasswordEventsPasswordsPasswordIdEventsGetErrors[keyof ListPasswordEventsPasswordsPasswordIdEventsGetErrors];

@@ -4,6 +4,7 @@ from starlette.requests import Request
 
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.application.gateways import DomainEventPublisher
+from vault_management_context.adapters.primary.private_api import VaultStatusApi
 from vault_management_context.adapters.secondary import (
     SqlVaultEventRepository,
     SqlVaultRepository,
@@ -106,6 +107,12 @@ def get_vault_status_usecase(
     share_repository: ShareRepository = Depends(get_share_repository),
 ):
     return GetVaultStatusUseCase(vault_repository, vault_session_gateway, share_repository)
+
+
+def get_vault_status_api(
+    get_vault_status_usecase: GetVaultStatusUseCase = Depends(get_vault_status_usecase),
+) -> VaultStatusApi:
+    return VaultStatusApi(get_vault_status_usecase)
 
 
 def get_validate_vault_setup_usecase(

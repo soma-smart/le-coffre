@@ -12,6 +12,7 @@ from password_management_context.application.use_cases import (
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
+    PasswordEncryptionUnavailableError,
     PasswordNotFoundError,
 )
 from password_management_context.domain.value_objects import PasswordPermission
@@ -22,6 +23,7 @@ from ..fakes import (
     FakePasswordEventRepository,
     FakePasswordPermissionsRepository,
     FakePasswordRepository,
+    FakePasswordVaultAccessGateway,
     FakeUserInfoGateway,
 )
 
@@ -41,6 +43,7 @@ def use_case(
     password_permissions_repository: FakePasswordPermissionsRepository,
     group_access_gateway: FakeGroupAccessGateway,
     password_event_repository: FakePasswordEventRepository,
+    password_vault_access_gateway: FakePasswordVaultAccessGateway,
     user_info_gateway: FakeUserInfoGateway,
 ):
     return ListPasswordEventsUseCase(
@@ -48,6 +51,7 @@ def use_case(
         password_permissions_repository,
         group_access_gateway,
         password_event_repository,
+        password_vault_access_gateway,
         user_info_gateway,
     )
 
@@ -296,3 +300,28 @@ def test_given_non_admin_user_when_listing_events_should_raise_not_admin_error(
             requesting_user=REGULAR_USER,
         )
         use_case.execute(command)
+
+
+def test_given_locked_vault_when_listing_password_events_should_raise_encryption_unavailable_error(
+    use_case: ListPasswordEventsUseCase,
+    password_repository: FakePasswordRepository,
+    password_vault_access_gateway: FakePasswordVaultAccessGateway,
+):
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+    password_repository.save(
+        Password(
+            id=password_id,
+            name="Gmail",
+            encrypted_value="encrypted(secret)",
+            folder="default",
+        )
+    )
+    password_vault_access_gateway.lock()
+
+    with pytest.raises(PasswordEncryptionUnavailableError):
+        use_case.execute(
+            ListPasswordEventsCommand(
+                password_id=password_id,
+                requesting_user=ADMIN_USER,
+            )
+        )

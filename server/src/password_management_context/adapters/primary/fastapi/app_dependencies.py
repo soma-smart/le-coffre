@@ -16,6 +16,7 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
 )
 from password_management_context.adapters.secondary import (
+    PrivateApiPasswordVaultAccessGateway,
     SqlPasswordEventRepository,
     SqlPasswordPermissionsRepository,
     SqlPasswordRepository,
@@ -28,6 +29,7 @@ from password_management_context.application.gateways import (
     PasswordEncryptionGateway,
     PasswordEventRepository,
     PasswordRepository,
+    PasswordVaultAccessGateway,
     UserInfoGateway,
 )
 from password_management_context.application.gateways.password_permissions_repository import (
@@ -47,6 +49,10 @@ from password_management_context.application.use_cases import (
 )
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.application.gateways import DomainEventPublisher
+from vault_management_context.adapters.primary.fastapi.app_dependencies import (
+    get_vault_status_api,
+)
+from vault_management_context.adapters.primary.private_api import VaultStatusApi
 
 
 def get_password_repository(
@@ -83,6 +89,12 @@ def get_user_info_gateway(
     user_info_api: UserInfoApi = Depends(get_user_info_api),
 ) -> UserInfoGateway:
     return IamUserInfoGateway(user_info_api)
+
+
+def get_password_vault_access_gateway(
+    vault_status_api: VaultStatusApi = Depends(get_vault_status_api),
+) -> PasswordVaultAccessGateway:
+    return PrivateApiPasswordVaultAccessGateway(vault_status_api)
 
 
 def get_event_publisher(request: Request) -> DomainEventPublisher:
@@ -218,6 +230,7 @@ def get_list_password_events_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(get_password_permissions_repository),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    password_vault_access_gateway: PasswordVaultAccessGateway = Depends(get_password_vault_access_gateway),
     user_info_gateway: UserInfoGateway = Depends(get_user_info_gateway),
 ):
     return ListPasswordEventsUseCase(
@@ -225,6 +238,7 @@ def get_list_password_events_usecase(
         password_permissions_repository,
         group_access_gateway,
         password_event_repository,
+        password_vault_access_gateway,
         user_info_gateway,
     )
 
