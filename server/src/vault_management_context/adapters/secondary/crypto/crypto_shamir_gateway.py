@@ -5,6 +5,7 @@ from vault_management_context.application.gateways import (
     ShamirGateway,
 )
 from vault_management_context.domain.entities.share import Share
+from vault_management_context.domain.exceptions import ShareReconstructionError
 from vault_management_context.domain.value_objects import (
     ShamirResult,
     VaultConfiguration,
@@ -39,4 +40,4 @@ class CryptoShamirGateway(ShamirGateway):
         except Exception:
             # Do not propagate the original exception — it may contain share data
             # (e.g. hex decoding errors that echo the share value).
-            raise ValueError("Failed to reconstruct secret") from None
+            raise ShareReconstructionError() from None

@@ -32,6 +32,13 @@ class VaultIsLockedError(VaultManagementDomainError):
         super().__init__("Vault is locked: unlock the vault before performing cryptographic operations")
 
 
+class VaultDecryptionError(VaultManagementDomainError):
+    """Raised when AES-GCM decryption fails (bad key, tampered ciphertext, or corrupted data)"""
+
+    def __init__(self):
+        super().__init__("Vault decryption failed: the data may be corrupted or the key is incorrect")
+
+
 class VaultUnlockedError(VaultManagementDomainError):
     """Raised when attempting to unlock a vault already unlocked"""
 

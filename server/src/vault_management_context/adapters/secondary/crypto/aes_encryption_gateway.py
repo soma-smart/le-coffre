@@ -3,6 +3,7 @@ from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 
 from vault_management_context.application.gateways import EncryptionGateway
+from vault_management_context.domain.exceptions import VaultDecryptionError
 
 
 class AesEncryptionGateway(EncryptionGateway):
@@ -43,7 +44,7 @@ class AesEncryptionGateway(EncryptionGateway):
             decrypted_data = cipher.decrypt_and_verify(ciphertext, auth_tag)
             return decrypted_data.decode("utf-8")
         except ValueError as e:
-            raise ValueError(f"Failed to decrypt vault key: {e}") from e
+            raise VaultDecryptionError() from e
 
     def _get_cipher(self, master_key, salt, nonce: bytes | None = None):
         # Derive the same key using PBKDF2
