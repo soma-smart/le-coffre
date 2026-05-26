@@ -80,6 +80,13 @@ class PasswordMissingSpecialCharError(PasswordComplexityError):
         super().__init__("Password must contain at least one special character")
 
 
+class PasswordEncryptionUnavailableError(PasswordManagementDomainError):
+    """Raised when the vault is locked and encryption/decryption cannot be performed"""
+
+    def __init__(self):
+        super().__init__("Vault is locked: unlock the vault to perform this operation")
+
+
 class PasswordContainsForbiddenPatternError(PasswordComplexityError):
     """Raised when password contains forbidden patterns"""
 

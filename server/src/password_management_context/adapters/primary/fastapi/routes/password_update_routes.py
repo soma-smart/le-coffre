@@ -11,6 +11,7 @@ from password_management_context.application.commands import UpdatePasswordComma
 from password_management_context.application.use_cases import UpdatePasswordUseCase
 from password_management_context.domain.exceptions import (
     NotPasswordOwnerError,
+    PasswordEncryptionUnavailableError,
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
@@ -69,6 +70,8 @@ def update_password(
     except (PasswordNotFoundError, NotPasswordOwnerError) as e:
         # For security, treat both not found and not owner as 404
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except PasswordEncryptionUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except AccessDeniedError as e:

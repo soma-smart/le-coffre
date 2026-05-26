@@ -11,6 +11,7 @@ from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.use_cases import GetPasswordUseCase
 from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
+    PasswordEncryptionUnavailableError,
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
@@ -52,6 +53,8 @@ def get_password(
     except (PasswordNotFoundError, PasswordAccessDeniedError) as e:
         # For security, treat both not found and access denied as 404
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except PasswordEncryptionUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except AccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except PasswordManagementDomainError as e:

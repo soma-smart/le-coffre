@@ -9,7 +9,10 @@ from password_management_context.adapters.primary.fastapi.app_dependencies impor
 )
 from password_management_context.application.commands import CreatePasswordCommand
 from password_management_context.application.use_cases import CreatePasswordUseCase
-from password_management_context.domain.exceptions import PasswordManagementDomainError
+from password_management_context.domain.exceptions import (
+    PasswordEncryptionUnavailableError,
+    PasswordManagementDomainError,
+)
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
 from shared_kernel.domain.exceptions import AccessDeniedError
@@ -71,6 +74,8 @@ def create_password(
         created_password_id = usecase.execute(command)
 
         return CreatePasswordResponse(id=created_password_id)
+    except PasswordEncryptionUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except AccessDeniedError as e:

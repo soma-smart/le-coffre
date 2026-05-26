@@ -25,6 +25,13 @@ class VaultLockedException(VaultManagementDomainError):
         super().__init__("Vault is already locked")
 
 
+class VaultIsLockedError(VaultManagementDomainError):
+    """Raised when a crypto operation is attempted while the vault is locked"""
+
+    def __init__(self):
+        super().__init__("Vault is locked: unlock the vault before performing cryptographic operations")
+
+
 class VaultUnlockedError(VaultManagementDomainError):
     """Raised when attempting to unlock a vault already unlocked"""
 
