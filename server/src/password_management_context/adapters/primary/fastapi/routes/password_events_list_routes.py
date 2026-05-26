@@ -16,6 +16,7 @@ from password_management_context.application.use_cases import (
 )
 from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
+    PasswordEncryptionUnavailableError,
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
@@ -43,6 +44,7 @@ class ListPasswordEventsResponse(BaseModel):
     response_model=ListPasswordEventsResponse,
     status_code=200,
     summary="List events for a password",
+    responses={503: {"description": "Vault is locked"}},
 )
 def list_password_events(
     password_id: UUID,
@@ -91,6 +93,8 @@ def list_password_events(
         raise HTTPException(status_code=404, detail=str(e)) from e
     except PasswordAccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except PasswordEncryptionUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except PasswordManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:

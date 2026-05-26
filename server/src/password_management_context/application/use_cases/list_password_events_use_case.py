@@ -8,6 +8,7 @@ from password_management_context.application.gateways import (
     PasswordEventRepository,
     PasswordPermissionsRepository,
     PasswordRepository,
+    PasswordVaultAccessGateway,
     UserInfoGateway,
 )
 from password_management_context.application.responses import (
@@ -29,12 +30,14 @@ class ListPasswordEventsUseCase(TracedUseCase):
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
         password_event_repository: PasswordEventRepository,
+        password_vault_access_gateway: PasswordVaultAccessGateway,
         user_info_gateway: UserInfoGateway,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
         self.password_event_repository = password_event_repository
+        self.password_vault_access_gateway = password_vault_access_gateway
         self.user_info_gateway = user_info_gateway
 
     def execute(self, command: ListPasswordEventsCommand) -> ListPasswordEventsResponse:
@@ -45,6 +48,8 @@ class ListPasswordEventsUseCase(TracedUseCase):
         if not AdminPermissionChecker.is_admin(command.requesting_user):
             if not self._user_has_access_through_groups(command.requesting_user.user_id, command.password_id):
                 raise PasswordAccessDeniedError(command.requesting_user.user_id, command.password_id)
+
+        self.password_vault_access_gateway.ensure_vault_is_unlocked()
 
         events = self.password_event_repository.list_events(
             password_id=command.password_id,
