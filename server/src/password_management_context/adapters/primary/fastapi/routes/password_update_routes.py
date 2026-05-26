@@ -36,6 +36,7 @@ class UpdatePasswordRequest(BaseModel):
     "/{password_id}",
     status_code=201,
     summary="Update an existing password",
+    responses={503: {"description": "Vault is locked"}},
 )
 def update_password(
     password_id: UUID,

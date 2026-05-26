@@ -73,6 +73,13 @@ export const markVaultUnlocked = () => {
   vaultStatus.lastShareTimestamp = null
 }
 
+// Function to signal that the vault is locked and the unlock modal should appear.
+// Called by the global HTTP interceptor when a 503 is received mid-session.
+export const triggerVaultUnlock = () => {
+  vaultStatus.isLocked = true
+  vaultStatus.showUnlockModal = true
+}
+
 export default {
   install: (app: App) => {
     app.provide(VaultStatusKey, vaultStatus)

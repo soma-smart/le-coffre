@@ -337,6 +337,12 @@ const fetchPassword = async () => {
     if (response.data) {
       passwordValue.value = response.data.password
       detailFetched.value = true
+    } else if (response.error) {
+      // 503 is handled globally (vault unlock modal + toast); skip a duplicate toast.
+      if (response.response?.status !== 503) {
+        const detail = (response.error as { detail?: string }).detail ?? 'Failed to fetch password'
+        toast.add({ severity: 'error', summary: 'Error', detail, life: 3000 })
+      }
     }
   } catch (error) {
     console.error('Error fetching password:', error)

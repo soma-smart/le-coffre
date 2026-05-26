@@ -45,6 +45,7 @@ class ConfigureSsoProviderRequest(BaseModel):
     "/sso/configure",
     status_code=200,
     summary="Configure SSO provider with OpenID Connect Discovery",
+    responses={503: {"description": "Vault is locked"}},
 )
 async def configure_sso_provider(
     request: ConfigureSsoProviderRequest,

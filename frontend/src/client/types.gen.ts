@@ -1133,6 +1133,10 @@ export type CreatePasswordPasswordsPostErrors = {
      * Validation Error
      */
     422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
 };
 
 export type CreatePasswordPasswordsPostError = CreatePasswordPasswordsPostErrors[keyof CreatePasswordPasswordsPostErrors];
@@ -1274,6 +1278,10 @@ export type GetPasswordPasswordsPasswordIdGetErrors = {
      * Validation Error
      */
     422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
 };
 
 export type GetPasswordPasswordsPasswordIdGetError = GetPasswordPasswordsPasswordIdGetErrors[keyof GetPasswordPasswordsPasswordIdGetErrors];
@@ -1304,6 +1312,10 @@ export type UpdatePasswordPasswordsPasswordIdPutErrors = {
      * Validation Error
      */
     422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
 };
 
 export type UpdatePasswordPasswordsPasswordIdPutError = UpdatePasswordPasswordsPasswordIdPutErrors[keyof UpdatePasswordPasswordsPasswordIdPutErrors];
@@ -1673,6 +1685,10 @@ export type ConfigureSsoProviderAuthSsoConfigurePostErrors = {
      * Validation Error
      */
     422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
 };
 
 export type ConfigureSsoProviderAuthSsoConfigurePostError = ConfigureSsoProviderAuthSsoConfigurePostErrors[keyof ConfigureSsoProviderAuthSsoConfigurePostErrors];
@@ -1689,6 +1705,17 @@ export type GetSsoUrlAuthSsoUrlGetData = {
     path?: never;
     query?: never;
     url: '/auth/sso/url';
+};
+
+export type GetSsoUrlAuthSsoUrlGetErrors = {
+    /**
+     * SSO not configured
+     */
+    404: unknown;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
 };
 
 export type GetSsoUrlAuthSsoUrlGetResponses = {
@@ -1729,6 +1756,10 @@ export type SsoCallbackAuthSsoCallbackGetErrors = {
      * Validation Error
      */
     422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
 };
 
 export type SsoCallbackAuthSsoCallbackGetError = SsoCallbackAuthSsoCallbackGetErrors[keyof SsoCallbackAuthSsoCallbackGetErrors];

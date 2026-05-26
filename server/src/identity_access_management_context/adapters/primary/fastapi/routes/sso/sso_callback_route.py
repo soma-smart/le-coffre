@@ -44,6 +44,7 @@ class SsoCallbackResponse(BaseModel):
     status_code=200,
     response_model=SsoCallbackResponse,
     summary="SSO callback endpoint",
+    responses={503: {"description": "Vault is locked"}},
 )
 async def sso_callback(
     response: Response,
