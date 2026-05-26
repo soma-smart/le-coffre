@@ -10,7 +10,10 @@ from identity_access_management_context.application.gateways import (
     SsoUserInfo,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
-from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
+from identity_access_management_context.domain.exceptions import (
+    InvalidSsoCodeException,
+    InvalidSsoSettingsException,
+)
 
 
 class OAuth2SsoGateway(SsoGateway):
@@ -47,7 +50,7 @@ class OAuth2SsoGateway(SsoGateway):
                 required_fields = ["authorization_endpoint", "token_endpoint"]
                 missing_fields = [field for field in required_fields if field not in config]
                 if missing_fields:
-                    raise ValueError(f"Missing fields in discovery: {missing_fields}")
+                    raise InvalidSsoSettingsException(f"Missing fields in discovery: {missing_fields}")
 
                 return SsoDiscoveryResult(
                     authorization_endpoint=config["authorization_endpoint"],
@@ -55,12 +58,14 @@ class OAuth2SsoGateway(SsoGateway):
                     userinfo_endpoint=config.get("userinfo_endpoint", ""),
                     jwks_uri=config.get("jwks_uri", ""),
                 )
+        except InvalidSsoSettingsException:
+            raise
         except httpx.TimeoutException as e:
-            raise ValueError("Timeout in discovering endpoints") from e
+            raise InvalidSsoSettingsException("Timeout in discovering endpoints") from e
         except httpx.HTTPStatusError as e:
-            raise ValueError(f"HTTP error during discovery: {e.response.status_code}") from e
+            raise InvalidSsoSettingsException(f"HTTP error during discovery: {e.response.status_code}") from e
         except Exception as e:
-            raise ValueError(f"Error during discovery of endpoints: {str(e)}") from e
+            raise InvalidSsoSettingsException(f"Error during discovery of endpoints: {str(e)}") from e
 
     def _get_oauth_client(self, config: SsoConfiguration) -> AsyncOAuth2Client:
         """Get or create the OAuth2 client from stored configuration."""

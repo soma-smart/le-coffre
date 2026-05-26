@@ -3,6 +3,7 @@ import { client } from '@/client/client.gen'
 import { refreshAccessTokenAuthRefreshTokenPost } from '@/client/sdk.gen'
 import router from '@/router'
 import { useCsrfStore } from '@/stores/csrf'
+import { triggerVaultUnlock } from '@/plugins/vaultStatus'
 import { logout } from '@/utils/logout'
 
 // Apply runtime configuration (injected via /config.js before app load)
@@ -90,6 +91,26 @@ client.interceptors.request.use((request, options) => {
 // redirected to the login page.
 client.interceptors.response.use(async (response: Response, request: Request, opts: unknown) => {
   if (response.status !== 401) {
+    // ── Vault Locked (503) ────────────────────────────────────
+    // The backend returns 503 when a crypto operation is attempted while the
+    // vault is locked (e.g. reading/writing a password mid-session after the
+    // vault key was evicted). Show the unlock modal so the user can unlock and
+    // retry — no need to tear down the session.
+    if (response.status === 503) {
+      triggerVaultUnlock()
+      import('primevue').then(({ useToast }) => {
+        try {
+          useToast().add({
+            severity: 'warn',
+            summary: 'Vault Locked',
+            detail: 'The vault is locked. Please unlock it to continue.',
+            life: 6000,
+          })
+        } catch {
+          // Toast not available outside component context — silently ignore
+        }
+      })
+    }
     return response
   }
 

@@ -168,6 +168,8 @@ const fetchEvents = async () => {
   if (!props.password) return
 
   loading.value = true
+  events.value = []
+
   try {
     let startDate: string | undefined
     let endDate: string | undefined
@@ -196,6 +198,17 @@ const fetchEvents = async () => {
 
     if (response.data) {
       events.value = response.data.events
+    } else if (response.error) {
+      if (response.response?.status !== 503) {
+        const detail =
+          (response.error as { detail?: string }).detail ?? 'Failed to load password history.'
+        toast.add({
+          severity: 'error',
+          summary: 'Load Failed',
+          detail,
+          life: 5000,
+        })
+      }
     }
   } catch (error) {
     console.error('Failed to fetch password events:', error)
@@ -244,6 +257,11 @@ const getEventSeverity = (
 watch(
   () => [visible.value, props.password],
   ([isVisible, password]) => {
+    if (!isVisible) {
+      events.value = []
+      return
+    }
+
     if (isVisible && password) {
       // Set default date range to last 30 days
       const now = new Date()

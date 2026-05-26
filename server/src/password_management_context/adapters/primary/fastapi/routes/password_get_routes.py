@@ -11,6 +11,7 @@ from password_management_context.application.commands import GetPasswordCommand
 from password_management_context.application.use_cases import GetPasswordUseCase
 from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
+    PasswordEncryptionUnavailableError,
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
@@ -32,6 +33,7 @@ class GetPasswordResponse(BaseModel):
     response_model=GetPasswordResponse,
     status_code=200,
     summary="Get a password by ID",
+    responses={503: {"description": "Vault is locked"}},
 )
 def get_password(
     password_id: UUID,
@@ -52,6 +54,8 @@ def get_password(
     except (PasswordNotFoundError, PasswordAccessDeniedError) as e:
         # For security, treat both not found and access denied as 404
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except PasswordEncryptionUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     except AccessDeniedError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except PasswordManagementDomainError as e:
