@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.get("/sso/url", status_code=200, summary="Get SSO authorization URL")
+@router.get(
+    "/sso/url",
+    status_code=200,
+    summary="Get SSO authorization URL",
+    responses={404: {"description": "SSO not configured"}, 503: {"description": "Vault is locked"}},
+)
 async def get_sso_url(
     usecase: GetSsoAuthorizeUrlUseCase = Depends(get_sso_url_usecase),
 ):

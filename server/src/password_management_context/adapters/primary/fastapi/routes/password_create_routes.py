@@ -40,6 +40,7 @@ class CreatePasswordResponse(BaseModel):
     response_model=CreatePasswordResponse,
     status_code=201,
     summary="Create a new password",
+    responses={503: {"description": "Vault is locked"}},
 )
 def create_password(
     request_body: CreatePasswordRequest,

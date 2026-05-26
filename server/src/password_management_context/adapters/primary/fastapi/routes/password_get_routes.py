@@ -33,6 +33,7 @@ class GetPasswordResponse(BaseModel):
     response_model=GetPasswordResponse,
     status_code=200,
     summary="Get a password by ID",
+    responses={503: {"description": "Vault is locked"}},
 )
 def get_password(
     password_id: UUID,
