@@ -17,6 +17,32 @@ const csrfStore = useCsrfStore()
 const loading = ref(true)
 const errorMessage = ref<string | null>(null)
 
+type ValidationErrorItem = {
+  msg?: string
+}
+
+type ErrorWithDetail = {
+  detail?: ValidationErrorItem[] | string
+}
+
+const extractErrorDetail = (error: unknown): string => {
+  const typedError = error as ErrorWithDetail
+  const detail = typedError?.detail
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    return detail
+      .map((item) => item.msg)
+      .filter((msg): msg is string => Boolean(msg))
+      .join(', ')
+  }
+
+  if (typeof detail === 'string' && detail.length > 0) {
+    return detail
+  }
+
+  return 'SSO authentication failed'
+}
+
 onMounted(async () => {
   const code = route.query.code as string
   const state = route.query.state as string | undefined
@@ -45,14 +71,7 @@ onMounted(async () => {
     if (response.error) {
       console.error('SSO callback error:', response.error)
 
-      let detail = 'SSO authentication failed'
-      if (
-        response.error.detail &&
-        Array.isArray(response.error.detail) &&
-        response.error.detail.length > 0
-      ) {
-        detail = response.error.detail.map((e) => e.msg).join(', ')
-      }
+      const detail = extractErrorDetail(response.error)
 
       errorMessage.value = detail
       toast.add({
