@@ -7,6 +7,7 @@ from identity_access_management_context.application.use_cases import (
     GetSsoAuthorizeUrlUseCase,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
+from identity_access_management_context.domain.exceptions import SsoConfigurationNotFoundError
 
 from ..fakes import (
     FakeSsoConfigurationRepository,
@@ -60,5 +61,5 @@ async def test_should_raise_exception_when_no_sso_config(
 ):
     # Act & Assert
     command = GetSsoAuthorizeUrlCommand()
-    with pytest.raises(ValueError):
+    with pytest.raises(SsoConfigurationNotFoundError):
         await use_case.execute(command)

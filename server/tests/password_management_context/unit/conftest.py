@@ -8,6 +8,7 @@ from .fakes import (
     FakePasswordEventRepository,
     FakePasswordPermissionsRepository,
     FakePasswordRepository,
+    FakePasswordVaultAccessGateway,
 )
 
 
@@ -39,6 +40,11 @@ def password_encryption_gateway():
 @pytest.fixture
 def password_event_repository():
     return FakePasswordEventRepository()
+
+
+@pytest.fixture
+def password_vault_access_gateway():
+    return FakePasswordVaultAccessGateway()
 
 
 @pytest.fixture

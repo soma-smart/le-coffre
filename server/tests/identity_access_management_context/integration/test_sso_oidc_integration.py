@@ -8,6 +8,7 @@ import pytest
 from identity_access_management_context.adapters.secondary import OAuth2SsoGateway
 from identity_access_management_context.application.gateways import SsoGateway
 from identity_access_management_context.domain.entities import SsoConfiguration
+from identity_access_management_context.domain.exceptions import InvalidSsoSettingsException
 
 
 @pytest.fixture
@@ -210,7 +211,7 @@ async def test_oauth2_flow_with_invalid_code(sso_gateway: SsoGateway, oidc_serve
 @pytest.mark.asyncio
 async def test_oidc_discovery_with_invalid_url(sso_gateway: SsoGateway):
     """Test that invalid discovery URL fails gracefully."""
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidSsoSettingsException):
         await sso_gateway.validate_discovery(
             client_id="test-client",
             client_secret="test-secret",
