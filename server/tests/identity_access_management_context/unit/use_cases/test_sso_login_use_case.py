@@ -11,7 +11,7 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.entities import SsoConfiguration, User
 from identity_access_management_context.domain.events import SsoLoginEvent
-from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
+from identity_access_management_context.domain.exceptions import InvalidSsoCodeException, SsoConfigurationNotFoundError
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.identity_access_management_context.unit.conftest import (
     create_existing_sso_user,
@@ -314,7 +314,7 @@ async def test_should_return_refresh_token_on_successful_sso_login(
 
 @pytest.mark.asyncio
 async def test_when_no_sso_config_when_login_should_fail(use_case: SsoLoginUseCase):
-    with pytest.raises(ValueError):
+    with pytest.raises(SsoConfigurationNotFoundError):
         await use_case.execute(SsoLoginCommand(code="invalid_code"))
 
 

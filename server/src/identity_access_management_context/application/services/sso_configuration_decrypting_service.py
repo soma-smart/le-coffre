@@ -3,6 +3,7 @@ from identity_access_management_context.application.gateways import (
     SsoEncryptionGateway,
 )
 from identity_access_management_context.domain.entities import SsoConfiguration
+from identity_access_management_context.domain.exceptions import SsoConfigurationNotFoundError
 
 
 class SsoConfigurationDecryptingService:
@@ -17,7 +18,7 @@ class SsoConfigurationDecryptingService:
     def decrypt(self) -> SsoConfiguration:
         sso_config = self._sso_configuration_repository.get()
         if not sso_config:
-            raise ValueError("SSO configuration not found")
+            raise SsoConfigurationNotFoundError()
 
         sso_config.client_secret_decrypted = self._sso_encryption_gateway.decrypt(sso_config.client_secret)
         return sso_config

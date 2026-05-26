@@ -1,3 +1,4 @@
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -15,7 +16,13 @@ from identity_access_management_context.application.commands.sso_login_command i
     SsoLoginCommand,
 )
 from identity_access_management_context.application.use_cases import SsoLoginUseCase
-from identity_access_management_context.domain.exceptions import InvalidSsoCodeException
+from identity_access_management_context.domain.exceptions import (
+    IdentityAccessManagementDomainError,
+    InvalidSsoCodeException,
+    SsoEncryptionUnavailableError,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -103,3 +110,10 @@ async def sso_callback(
         )
     except InvalidSsoCodeException as e:
         raise HTTPException(status_code=400, detail=f"SSO authentication failed: {str(e)}") from e
+    except SsoEncryptionUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except IdentityAccessManagementDomainError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Unexpected error in SSO callback")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

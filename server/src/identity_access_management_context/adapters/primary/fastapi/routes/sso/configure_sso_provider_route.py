@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -11,10 +13,14 @@ from identity_access_management_context.application.use_cases import (
     ConfigureSsoProviderUseCase,
 )
 from identity_access_management_context.domain.exceptions import (
+    IdentityAccessManagementDomainError,
     InvalidSsoSettingsException,
+    SsoEncryptionUnavailableError,
 )
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -80,3 +86,10 @@ async def configure_sso_provider(
 
     except InvalidSsoSettingsException as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except SsoEncryptionUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except IdentityAccessManagementDomainError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Unexpected error in configure SSO provider")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

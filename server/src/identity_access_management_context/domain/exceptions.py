@@ -156,6 +156,20 @@ class UserAlreadyAdminException(IdentityAccessManagementDomainError):
         super().__init__(f"User '{user_id}' is already an admin")
 
 
+class SsoConfigurationNotFoundError(IdentityAccessManagementDomainError):
+    """Raised when SSO is not configured and an SSO operation is attempted"""
+
+    def __init__(self):
+        super().__init__("SSO is not configured")
+
+
+class SsoEncryptionUnavailableError(IdentityAccessManagementDomainError):
+    """Raised when the vault is locked and SSO encryption/decryption cannot be performed"""
+
+    def __init__(self):
+        super().__init__("Vault is locked: unlock the vault to perform this operation")
+
+
 # Legacy aliases for backward compatibility during migration
 UserNotFoundError = UserNotFoundException
 UserAlreadyExistsError = UserAlreadyExistsException
