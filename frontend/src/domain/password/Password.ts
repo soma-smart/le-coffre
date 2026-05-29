@@ -23,17 +23,34 @@ export interface Password {
   accessibleGroupIds: string[]
 }
 
-export interface PasswordAccessRow {
-  /** For user-access rows this is a userId; for group-access rows this is a groupId. */
+/** OWNER vs MEMBER — used both for a user within a group and for a group on a password. */
+export type AccessRole = 'owner' | 'member'
+
+/**
+ * One access link: a user reaches the password through a single group.
+ * A user who reaches it through several groups produces several links.
+ */
+export interface UserAccessLink {
   userId: string
+  groupId: string
+  /** Whether the user is an owner or a plain member of `groupId`. */
+  roleInGroup: AccessRole
+  /** Whether `groupId` owns the password or is merely shared with it. */
+  groupRole: AccessRole
   permissions: PasswordPermission[]
-  isOwner: boolean
+}
+
+export interface GroupAccessEntry {
+  groupId: string
+  /** Whether this group owns the password or is shared with it. */
+  role: AccessRole
+  permissions: PasswordPermission[]
 }
 
 export interface PasswordAccess {
   resourceId: string
-  users: PasswordAccessRow[]
-  groups: PasswordAccessRow[]
+  users: UserAccessLink[]
+  groups: GroupAccessEntry[]
 }
 
 export interface PasswordEvent {

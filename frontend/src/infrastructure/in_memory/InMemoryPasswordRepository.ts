@@ -127,11 +127,14 @@ export class InMemoryPasswordRepository implements PasswordRepository {
     if (!entry) throw new PasswordNotFoundError(passwordId)
     return {
       resourceId: passwordId,
+      // The fake doesn't model group membership, so it can't expand groups
+      // into individual users — component specs that need user links inject a
+      // custom listAccess. Group-level access is derived from the share set.
       users: [],
       groups: Array.from(entry.sharedWithGroups, (groupId) => ({
-        userId: groupId,
+        groupId,
+        role: groupId === entry.entity.groupId ? ('owner' as const) : ('member' as const),
         permissions: ['read'] as Array<'read'>,
-        isOwner: groupId === entry.entity.groupId,
       })),
     }
   }

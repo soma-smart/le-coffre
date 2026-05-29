@@ -12,11 +12,11 @@ describe('ListPasswordAccessUseCase', () => {
     const access = await new ListPasswordAccessUseCase(repo).execute({ passwordId: 'pwd-1' })
 
     expect(access.resourceId).toBe('pwd-1')
-    expect(access.groups.map((g) => g.userId).sort()).toEqual(['owner-group', 'shared-group'])
-    const owner = access.groups.find((g) => g.userId === 'owner-group')!
-    const shared = access.groups.find((g) => g.userId === 'shared-group')!
-    expect(owner.isOwner).toBe(true)
-    expect(shared.isOwner).toBe(false)
+    expect(access.groups.map((g) => g.groupId).sort()).toEqual(['owner-group', 'shared-group'])
+    const owner = access.groups.find((g) => g.groupId === 'owner-group')!
+    const shared = access.groups.find((g) => g.groupId === 'shared-group')!
+    expect(owner.role).toBe('owner')
+    expect(shared.role).toBe('member')
   })
 
   it('propagates PasswordNotFoundError for an unknown id', async () => {

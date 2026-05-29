@@ -163,13 +163,15 @@ function toPasswordAccess(dto: ListPasswordAccessResponse): PasswordAccess {
     resourceId: dto.resource_id,
     users: dto.user_access_list.map((item) => ({
       userId: item.user_id,
+      groupId: item.group_id,
+      roleInGroup: item.role_in_group,
+      groupRole: item.group_role,
       permissions: item.permissions,
-      isOwner: item.is_owner,
     })),
     groups: dto.group_access_list.map((item) => ({
-      userId: item.user_id,
+      groupId: item.group_id,
+      role: item.role,
       permissions: item.permissions,
-      isOwner: item.is_owner,
     })),
   }
 }
