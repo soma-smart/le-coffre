@@ -155,6 +155,7 @@ import {
   type Password,
   type PasswordEvent,
 } from '@/domain/password/Password'
+import { VaultLockedError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 
 const props = defineProps<{
@@ -183,6 +184,8 @@ const fetchEvents = async () => {
   if (!props.password) return
 
   loading.value = true
+  // Drop any rows from a previous password/range so stale history never flashes.
+  events.value = []
   try {
     let startDate: string | undefined
     let endDate: string | undefined
@@ -204,6 +207,8 @@ const fetchEvents = async () => {
     })
   } catch (error) {
     console.error('Failed to fetch password events:', error)
+    // A locked vault (503) is handled globally — skip the duplicate toast.
+    if (error instanceof VaultLockedError) return
     toast.add({
       severity: 'error',
       summary: 'Load Failed',
@@ -233,6 +238,12 @@ const getEventSeverity = eventSeverity
 watch(
   () => [visible.value, props.password],
   ([isVisible, password]) => {
+    if (!isVisible) {
+      // Closing the modal: drop the rows so the next open starts clean.
+      events.value = []
+      return
+    }
+
     if (isVisible && password) {
       // Set default date range to last 30 days
       const now = new Date()

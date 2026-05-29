@@ -26,6 +26,7 @@ import {
   PasswordDomainError,
   PasswordNotFoundError,
 } from '@/domain/password/errors'
+import { VaultLockedError } from '@/domain/vault/errors'
 
 /**
  * Backend adapter for PasswordRepository. Two jobs:
@@ -132,6 +133,9 @@ export class BackendPasswordRepository implements PasswordRepository {
 
   private throwIfError(error: unknown, status: number | undefined, passwordId?: string): void {
     if (!error) return
+    // 503 = vault locked mid-session. The global interceptor already shows the
+    // unlock modal + toast; surface a typed error so callers skip a duplicate.
+    if (status === 503) throw new VaultLockedError()
     if (status === 404 && passwordId) throw new PasswordNotFoundError(passwordId)
     if (status === 403 && passwordId) throw new PasswordAccessDeniedError(passwordId)
     throw new PasswordDomainError(extractDetail(error) ?? 'Password operation failed')

@@ -5,6 +5,19 @@ export class VaultDomainError extends Error {
   }
 }
 
+/**
+ * Raised when a crypto operation is attempted while the vault is locked
+ * (the backend returns 503). The global HTTP interceptor already surfaces the
+ * unlock modal + a "Vault Locked" toast, so callers that catch this should
+ * NOT show their own duplicate error toast.
+ */
+export class VaultLockedError extends VaultDomainError {
+  constructor() {
+    super('The vault is locked')
+    this.name = 'VaultLockedError'
+  }
+}
+
 export class VaultSharesRequiredError extends VaultDomainError {
   constructor() {
     super('At least one share is required to unlock the vault')

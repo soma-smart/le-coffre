@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import type { Pinia } from 'pinia'
@@ -7,7 +7,13 @@ import type { Container } from '@/container'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import type { Password } from '@/domain/password/Password'
+import { VaultLockedError } from '@/domain/vault/errors'
 import { createTestContext } from '@/test/componentTestHelpers'
+
+// Whether a load failure surfaces a toast is the behaviour under test for the
+// vault-locked case, so we capture toast.add() through a module mock.
+const { toastAdd } = vi.hoisted(() => ({ toastAdd: vi.fn() }))
+vi.mock('primevue/usetoast', () => ({ useToast: () => ({ add: toastAdd }) }))
 
 const DialogStub = defineComponent({
   props: ['visible'],
@@ -36,6 +42,7 @@ describe('PasswordHistoryModal', () => {
   let container: Container
 
   beforeEach(() => {
+    toastAdd.mockClear()
     repo = new InMemoryPasswordRepository().seed(samplePassword)
     // The modal's default date range is "last 30 days" — seed events
     // relative to `now` so they fall inside that window.
@@ -77,5 +84,69 @@ describe('PasswordHistoryModal', () => {
     expect(text).toContain('alice@example.com')
     expect(text).toContain('Created')
     expect(text).toContain('Updated')
+  })
+
+  it('clears the rendered events when the modal closes', async () => {
+    const wrapper = mount(PasswordHistoryModal, {
+      props: { visible: true, password: samplePassword },
+      global: {
+        plugins: [pinia],
+        provide: { [CONTAINER_KEY as symbol]: container },
+        stubs: { Dialog: DialogStub },
+      },
+    })
+    await flushPromises()
+    expect(wrapper.text()).toContain('alice@example.com')
+
+    await wrapper.setProps({ visible: false })
+    await flushPromises()
+
+    // Closing drops the rows so the next open never flashes stale history.
+    expect(wrapper.text()).not.toContain('alice@example.com')
+  })
+
+  it('suppresses the duplicate toast when the vault is locked (503 → VaultLockedError)', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      repo.listEvents = async () => {
+        throw new VaultLockedError()
+      }
+      mount(PasswordHistoryModal, {
+        props: { visible: true, password: samplePassword },
+        global: {
+          plugins: [pinia],
+          provide: { [CONTAINER_KEY as symbol]: container },
+          stubs: { Dialog: DialogStub },
+        },
+      })
+      await flushPromises()
+
+      // The global interceptor owns the vault-locked UX; the modal stays quiet.
+      expect(toastAdd).not.toHaveBeenCalled()
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
+  it('shows a load-failed toast on a non-vault error', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      repo.listEvents = async () => {
+        throw new Error('network down')
+      }
+      mount(PasswordHistoryModal, {
+        props: { visible: true, password: samplePassword },
+        global: {
+          plugins: [pinia],
+          provide: { [CONTAINER_KEY as symbol]: container },
+          stubs: { Dialog: DialogStub },
+        },
+      })
+      await flushPromises()
+
+      expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'error' }))
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 })

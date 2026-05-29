@@ -156,6 +156,7 @@ import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
 import { isPasswordStale, type Password } from '@/domain/password/Password'
+import { VaultLockedError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordReveal } from '@/composables/usePasswordReveal'
@@ -225,6 +226,8 @@ const { passwordValue, isVisible, isLoading, toggleVisibility, revealAndCopy } =
   useCases: passwordUseCases,
   onError: (error) => {
     console.error('Error fetching password:', error)
+    // A locked vault (503) is handled globally — skip the duplicate toast.
+    if (error instanceof VaultLockedError) return
     toast.add({
       severity: 'error',
       summary: 'Error',
