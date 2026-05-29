@@ -44,26 +44,34 @@ const handleModalConfirmed = () => {
         </StepList>
         <StepPanels>
           <StepPanel v-slot="{ activateCallback }" value="1">
-            <StepWelcome @next="activateCallback('2')" />
+            <div class="p-6 sm:p-8">
+              <StepWelcome @next="activateCallback('2')" />
+            </div>
           </StepPanel>
 
           <StepPanel v-slot="{ activateCallback }" value="2">
-            <StepGenerateMasterKey
-              @shares-generated="
-                (s) => {
-                  handleSharesGenerated(s)
-                  activateCallback('3')
-                }
-              "
-            />
+            <div class="p-6 sm:p-8">
+              <StepGenerateMasterKey
+                @shares-generated="
+                  (s) => {
+                    handleSharesGenerated(s)
+                    activateCallback('3')
+                  }
+                "
+              />
+            </div>
           </StepPanel>
 
           <StepPanel v-slot="{ activateCallback }" value="3">
-            <StepAdminAccountForm :setup-id="setupId" @account-created="activateCallback('4')" />
+            <div class="p-6 sm:p-8">
+              <StepAdminAccountForm :setup-id="setupId" @account-created="activateCallback('4')" />
+            </div>
           </StepPanel>
 
           <StepPanel value="4">
-            <SetupDone />
+            <div class="p-6 sm:p-8">
+              <SetupDone />
+            </div>
           </StepPanel>
         </StepPanels>
       </Stepper>
