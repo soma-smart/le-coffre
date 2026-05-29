@@ -8,6 +8,7 @@ import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGate
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
+import { InMemoryStatisticsGateway } from '@/infrastructure/in_memory/InMemoryStatisticsGateway'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
 
@@ -20,6 +21,7 @@ function makeTestContainer(): Container {
     vaultRepository: new InMemoryVaultRepository(),
     authGateway: new InMemoryAuthGateway(),
     preferencesGateway: new InMemoryPreferencesGateway(),
+    statisticsGateway: new InMemoryStatisticsGateway(),
   })
 }
 
@@ -86,5 +88,7 @@ describe('container plugin', () => {
     expect(container.preferences.read).toBeDefined()
     expect(container.preferences.write).toBeDefined()
     expect(container.preferences.remove).toBeDefined()
+    expect(container.statistics).toBeDefined()
+    expect(container.statistics.get).toBeDefined()
   })
 })

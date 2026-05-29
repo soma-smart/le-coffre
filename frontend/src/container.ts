@@ -3,8 +3,10 @@ import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
+import type { StatisticsGateway } from '@/application/ports/StatisticsGateway'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
+import { GetAdminStatisticsUseCase } from '@/application/statistics/GetAdminStatistics'
 import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
 import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
 import { HandleSsoCallbackUseCase } from '@/application/auth/HandleSsoCallback'
@@ -63,6 +65,7 @@ export interface Ports {
   vaultRepository: VaultRepository
   authGateway: AuthGateway
   preferencesGateway: PreferencesGateway
+  statisticsGateway: StatisticsGateway
 }
 
 export interface Container {
@@ -121,6 +124,9 @@ export interface Container {
     read: ReadPreferenceUseCase
     write: WritePreferenceUseCase
     remove: RemovePreferenceUseCase
+  }
+  statistics: {
+    get: GetAdminStatisticsUseCase
   }
 }
 
@@ -181,6 +187,9 @@ export function buildContainer(ports: Ports): Container {
       read: new ReadPreferenceUseCase(ports.preferencesGateway),
       write: new WritePreferenceUseCase(ports.preferencesGateway),
       remove: new RemovePreferenceUseCase(ports.preferencesGateway),
+    },
+    statistics: {
+      get: new GetAdminStatisticsUseCase(ports.statisticsGateway),
     },
   }
 }
