@@ -36,7 +36,8 @@ services:
   # keeps the issuer/authorization at localhost:8180 while dynamic backchannel
   # lets the backend's token/JWKS calls resolve via keycloak:8080.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.0
+    build: ./dev/keycloak
+    image: lecoffre-keycloak-dev
     profiles: ["sso"]
     command:
       - start-dev
@@ -48,5 +49,3 @@ services:
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
     ports:
       - "8180:8080"
-    volumes:
-      - ./dev/keycloak:/opt/keycloak/data/import:ro

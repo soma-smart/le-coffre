@@ -89,7 +89,7 @@ Open with VSCode and reopen in the devcontainer when prompted. The unified devco
 2. Click "Reopen in Container" when prompted
 3. Use VS Code tasks to start services (`Ctrl+Shift+P` → "Tasks: Run Task"):
    - **Start All Services** — nginx + backend + frontend (runs inside the dev container)
-   - **Run Keycloak (local SSO)** — starts a local Keycloak for testing the SSO flow. It runs on the **host** via Docker Compose, so it does **not** require being attached to the dev container, and prints the credentials to use on every run.
+   - **Run Keycloak (local SSO)** — starts a local Keycloak for testing the SSO flow and prints the credentials on every run. Works from inside the dev container (the `docker-outside-of-docker` feature gives it the Docker CLI + host socket) or from a host terminal.
 
 See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions.
 
