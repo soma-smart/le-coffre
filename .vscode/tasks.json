@@ -52,6 +52,24 @@
       "label": "Start All Services",
       "dependsOn": ["Start Nginx", "Start Backend", "Start Frontend"],
       "problemMatcher": [],
+    },
+    {
+      "label": "Run Keycloak (local SSO)",
+      "detail": "Start the local Keycloak SSO provider and print its credentials. Runs on the host via docker compose — does NOT need the dev container.",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml --profile sso up -d keycloak && echo '' && echo '==================== Le Coffre local SSO (Keycloak) ====================' && echo ' Admin console : http://localhost:8180   (admin / admin)' && echo '' && echo ' Configure in Le Coffre (Admin -> SSO; unlock the vault first):' && echo '   Client ID     : lecoffre-client' && echo '   Client secret : lecoffre-dev-secret' && echo '   Discovery URL : http://keycloak:8080/realms/lecoffre/.well-known/openid-configuration' && echo '' && echo ' SSO test login : testuser / password   (testuser@example.com)' && echo '' && echo ' Note: the discovery URL uses keycloak:8080 (the backend reaches it over the' && echo '       docker network); the browser is still sent to http://localhost:8180 to log in.' && echo '========================================================================'",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      }
     }
   ]
 }

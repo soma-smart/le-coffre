@@ -1,3 +1,9 @@
+# Distinct project name so the dev stack never collides with the production-like
+# stack in docker-compose.yml (which is project "le-coffre"). Without this they
+# share one project and each other's containers show up as orphans, which breaks
+# the VS Code dev-container rebuild.
+name: le-coffre-dev
+
 services:
   devcontainer:
     build:
@@ -22,3 +28,25 @@ services:
       - USER_GID=${USER_GID:-1000}
       - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8123}
     command: tail -f /dev/null
+
+  # Local SSO provider for testing the OIDC flow. Opt-in: only starts with the
+  # "sso" profile, e.g. `docker compose -f docker-compose.dev.yml --profile sso up -d keycloak`.
+  # The browser reaches it at http://localhost:8180; the backend (same compose
+  # network) reaches it at http://keycloak:8080. Pinning the frontend hostname
+  # keeps the issuer/authorization at localhost:8180 while dynamic backchannel
+  # lets the backend's token/JWKS calls resolve via keycloak:8080.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    profiles: ["sso"]
+    command:
+      - start-dev
+      - --import-realm
+      - --hostname=http://localhost:8180
+      - --hostname-backchannel-dynamic=true
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./dev/keycloak:/opt/keycloak/data/import:ro

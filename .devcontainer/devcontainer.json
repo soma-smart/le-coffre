@@ -3,7 +3,13 @@
   "dockerComposeFile": "../docker-compose.dev.yml",
   "service": "devcontainer",
   "workspaceFolder": "/app",
-  "forwardPorts": [8123, 8000, 5173],
+  "forwardPorts": [8123, 8000, 5173, 8180],
+  "portsAttributes": {
+    "8123": { "label": "Le Coffre (nginx)" },
+    "8000": { "label": "Backend API" },
+    "5173": { "label": "Frontend (Vite)" },
+    "8180": { "label": "Keycloak (local SSO)", "onAutoForward": "silent" }
+  },
   "remoteUser": "devuser",
   "initializeCommand": "U=$(id -u); G=$(id -g); [ \"$U\" = \"0\" ] && U=1000; [ \"$G\" = \"0\" ] && G=1000; echo USER_UID=$U > ${localWorkspaceFolder}/.env && echo USER_GID=$G >> ${localWorkspaceFolder}/.env",
   "postCreateCommand": "sudo chown -R devuser:devuser /app/frontend/node_modules /app/server/.venv 2>/dev/null || true && cd /app/server && uv sync && cd /app/frontend && bun install && cd /app && pre-commit install",
