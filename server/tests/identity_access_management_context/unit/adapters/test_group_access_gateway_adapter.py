@@ -77,3 +77,48 @@ def test_should_return_false_when_group_does_not_exist_for_exists_check(adapter)
     result = adapter.group_exists(nonexistent_group_id)
 
     assert result is False
+
+
+def test_should_return_only_owners_when_getting_group_owner_users(
+    adapter: GroupAccessGatewayAdapter,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    owner_id = uuid4()
+    member_id = uuid4()
+    group_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="Test Group", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, member_id, is_owner=False)
+
+    result = adapter.get_group_owner_users(group_id)
+
+    assert result == [owner_id]
+
+
+def test_should_return_only_non_owner_members_when_getting_group_member_users(
+    adapter: GroupAccessGatewayAdapter,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    owner_id = uuid4()
+    member_id = uuid4()
+    group_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="Test Group", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, member_id, is_owner=False)
+
+    result = adapter.get_group_member_users(group_id)
+
+    assert result == [member_id]
+
+
+def test_should_return_empty_member_list_for_personal_group(
+    adapter: GroupAccessGatewayAdapter,
+    group_repository: FakeGroupRepository,
+):
+    user_id = uuid4()
+    group_id = uuid4()
+    group_repository.save_personal_group(PersonalGroup(id=group_id, name="Personal", user_id=user_id))
+
+    assert adapter.get_group_member_users(group_id) == []

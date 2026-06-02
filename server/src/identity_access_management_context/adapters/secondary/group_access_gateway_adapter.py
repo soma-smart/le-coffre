@@ -85,3 +85,23 @@ class GroupAccessGatewayAdapter:
         # For shared groups, get all owner members
         members = self._group_member_repository.get_members(group_id)
         return [member.user_id for member in members if member.is_owner]
+
+    def get_group_member_users(self, group_id: UUID) -> list[UUID]:
+        """Get the users who belong to this group as members (not owners).
+
+        Args:
+            group_id: The ID of the group
+
+        Returns:
+            List of user IDs who are non-owner members of this group
+        """
+        group = self._group_repository.get_by_id(group_id)
+        if group is None:
+            return []
+
+        # Personal groups have a single owner and no separate members.
+        if group.is_personal:
+            return []
+
+        members = self._group_member_repository.get_members(group_id)
+        return [member.user_id for member in members if not member.is_owner]

@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useToast } from 'primevue'
-import { configureSsoProviderAuthSsoConfigurePost } from '@/client/sdk.gen'
+import { AuthDomainError } from '@/domain/auth/errors'
+import { useContainer } from '@/plugins/container'
 
 const toast = useToast()
+
+// Resolve use cases at setup time — inject() has no component context
+// inside async handlers after an await.
+const { auth } = useContainer()
 
 const formData = reactive({
   client_id: '',
@@ -31,12 +36,10 @@ const handleSubmit = async () => {
   loading.value = true
 
   try {
-    await configureSsoProviderAuthSsoConfigurePost({
-      body: {
-        client_id: formData.client_id,
-        client_secret: formData.client_secret,
-        discovery_url: formData.discovery_url,
-      },
+    await auth.configureSso.execute({
+      clientId: formData.client_id,
+      clientSecret: formData.client_secret,
+      discoveryUrl: formData.discovery_url,
     })
 
     toast.add({
@@ -50,10 +53,14 @@ const handleSubmit = async () => {
     resetForm()
   } catch (error) {
     console.error('Failed to configure SSO:', error)
+    const detail =
+      error instanceof AuthDomainError
+        ? error.message
+        : 'Failed to configure SSO provider. Please check your settings and try again.'
     toast.add({
       severity: 'error',
       summary: 'Configuration Failed',
-      detail: 'Failed to configure SSO provider. Please check your settings and try again.',
+      detail,
       life: 5000,
     })
   } finally {

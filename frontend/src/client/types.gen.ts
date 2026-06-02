@@ -5,6 +5,11 @@ export type ClientOptions = {
 };
 
 /**
+ * AccessRoleEnum
+ */
+export type AccessRoleEnum = 'owner' | 'member';
+
+/**
  * AddMemberToGroupRequest
  */
 export type AddMemberToGroupRequest = {
@@ -421,17 +426,14 @@ export type GetUserResponse = {
  */
 export type GroupAccessItem = {
     /**
-     * User Id
+     * Group Id
      */
-    user_id: string;
+    group_id: string;
+    role: AccessRoleEnum;
     /**
      * Permissions
      */
     permissions: Array<PermissionEnum>;
-    /**
-     * Is Owner
-     */
-    is_owner: boolean;
 };
 
 /**
@@ -858,6 +860,8 @@ export type UpdateUserRequest = {
 
 /**
  * UserAccessItem
+ *
+ * A single access link: a user reaches the password through one group.
  */
 export type UserAccessItem = {
     /**
@@ -865,13 +869,15 @@ export type UserAccessItem = {
      */
     user_id: string;
     /**
+     * Group Id
+     */
+    group_id: string;
+    role_in_group: AccessRoleEnum;
+    group_role: AccessRoleEnum;
+    /**
      * Permissions
      */
     permissions: Array<PermissionEnum>;
-    /**
-     * Is Owner
-     */
-    is_owner: boolean;
 };
 
 /**

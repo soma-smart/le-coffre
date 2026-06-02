@@ -7,7 +7,7 @@ import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
-import type { GroupItem } from '@/client/types.gen'
+import type { Group } from '@/domain/group/Group'
 import { sortGroups } from '../utils/groupSort'
 
 const toast = useToast()
@@ -34,12 +34,12 @@ const showCreateDialog = ref(false)
 const showGroupDetailsModal = ref(false)
 const showDeleteGroupModal = ref(false)
 const newGroupName = ref('')
-const selectedGroup = ref<GroupItem | null>(null)
+const selectedGroup = ref<Group | null>(null)
 const isEditMode = ref(false)
 const editingGroupId = ref<string | null>(null)
 
 // Check if user can edit a group (admin or owner)
-const canEditGroup = (group: GroupItem) => {
+const canEditGroup = (group: Group) => {
   if (isAdmin.value) return true
   if (!groupsStore.currentUserId) return false
   return group.owners.includes(groupsStore.currentUserId)
@@ -73,13 +73,13 @@ const canDeleteGroup = computed(() => {
 })
 
 // Open group details modal
-const openGroupDetails = (group: GroupItem) => {
+const openGroupDetails = (group: Group) => {
   selectedGroup.value = group
   showGroupDetailsModal.value = true
 }
 
 // Open edit group dialog
-const openEditDialog = (group: GroupItem) => {
+const openEditDialog = (group: Group) => {
   isEditMode.value = true
   editingGroupId.value = group.id
   newGroupName.value = group.name
@@ -164,7 +164,7 @@ const handleMemberChanged = async () => {
 }
 
 // Open delete group dialog
-const openDeleteGroupDialog = (group: GroupItem) => {
+const openDeleteGroupDialog = (group: Group) => {
   selectedGroup.value = group
   groupHasPasswords.value = false // Reset - we'll get the actual error from API if there are passwords
   showDeleteGroupModal.value = true
@@ -302,7 +302,7 @@ onMounted(async () => {
             <div class="flex flex-col gap-2">
               <div class="flex items-center gap-2 text-sm text-muted-color">
                 <i class="pi pi-tag"></i>
-                <span v-if="group.is_personal">Personal Group</span>
+                <span v-if="group.isPersonal">Personal Group</span>
                 <span v-else>Shared Group</span>
               </div>
               <div class="flex gap-2 mt-4">

@@ -1,0 +1,38 @@
+{
+  "realm": "lecoffre",
+  "enabled": true,
+  "sslRequired": "none",
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "lecoffre-client",
+      "name": "Le Coffre (local dev)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "lecoffre-dev-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8123/*"],
+      "webOrigins": ["http://localhost:8123"],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:8123/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "testuser@example.com",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "password", "temporary": false }]
+    }
+  ]
+}

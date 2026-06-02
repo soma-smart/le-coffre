@@ -2,12 +2,17 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue'
 import { useConfirm } from 'primevue/useconfirm'
-import { lockVaultVaultLockPost } from '@/client/sdk.gen'
+import { VaultDomainError } from '@/domain/vault/errors'
+import { useContainer } from '@/plugins/container'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
 
 const toast = useToast()
 const confirm = useConfirm()
 const lockingVault = ref(false)
+
+// Resolve use cases at setup time — inject() has no component context
+// inside async handlers after an await.
+const { vault } = useContainer()
 
 const handleLockVault = () => {
   confirm.require({
@@ -21,7 +26,7 @@ const handleLockVault = () => {
     accept: async () => {
       lockingVault.value = true
       try {
-        await lockVaultVaultLockPost()
+        await vault.lock.execute()
 
         toast.add({
           severity: 'success',
@@ -34,10 +39,14 @@ const handleLockVault = () => {
         await checkVaultStatus()
       } catch (error) {
         console.error('Failed to lock vault:', error)
+        const detail =
+          error instanceof VaultDomainError
+            ? error.message
+            : 'Failed to lock the vault. Please try again.'
         toast.add({
           severity: 'error',
           summary: 'Lock Failed',
-          detail: 'Failed to lock the vault. Please try again.',
+          detail,
           life: 5000,
         })
       } finally {

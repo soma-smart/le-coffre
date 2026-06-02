@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import { createUserUsersPost } from '@/client/sdk.gen'
+import { UserDomainError } from '@/domain/user/errors'
+import { useContainer } from '@/plugins/container'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
 
 const visible = defineModel<boolean>('visible', { required: true })
@@ -11,6 +12,10 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+
+// Resolve use cases at setup time — inject() has no component context
+// inside async event handlers after an await.
+const { users } = useContainer()
 
 const username = ref('')
 const email = ref('')
@@ -81,26 +86,12 @@ const handleSubmit = async () => {
   try {
     loading.value = true
 
-    const response = await createUserUsersPost({
-      body: {
-        username: username.value,
-        email: email.value,
-        name: name.value,
-        password: password.value,
-      },
+    await users.create.execute({
+      username: username.value,
+      email: email.value,
+      name: name.value,
+      password: password.value,
     })
-
-    if (!response.response.ok) {
-      const errorData = response.error as { detail?: string }
-      const errorMessage = errorData?.detail || 'Failed to create user'
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: errorMessage,
-        life: 5000,
-      })
-      return
-    }
 
     toast.add({
       severity: 'success',
@@ -113,10 +104,16 @@ const handleSubmit = async () => {
     emit('created')
   } catch (error) {
     console.error('Error creating user:', error)
+    const detail =
+      error instanceof UserDomainError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred'
     toast.add({
       severity: 'error',
       summary: 'Error',
-      detail: 'An unexpected error occurred',
+      detail,
       life: 5000,
     })
   } finally {

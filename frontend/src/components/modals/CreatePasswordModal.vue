@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, toRef, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import { createPasswordPasswordsPost, updatePasswordPasswordsPasswordIdPut } from '@/client/sdk.gen'
-import type { GetPasswordListResponse } from '@/client/types.gen'
+import { isValidPasswordUrl, type Password } from '@/domain/password/Password'
+import { PasswordDomainError } from '@/domain/password/errors'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
+import { useContainer } from '@/plugins/container'
+import { useModelFromEntity } from '@/composables/useModelFromEntity'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
 const props = defineProps<{
-  editPassword?: GetPasswordListResponse | null
+  editPassword?: Password | null
   defaultGroupId?: string | null
 }>()
 
@@ -26,17 +28,33 @@ const { groupsForPasswordCreation } = storeToRefs(groupsStore)
 const passwordsStore = usePasswordsStore()
 const { passwords } = storeToRefs(passwordsStore)
 
-const name = ref('')
-const password = ref('')
-const login = ref('')
-const url = ref('')
-const folder = ref('')
+// Resolve use cases at setup time — inject() has no active instance
+// inside async event handlers after an await.
+const { passwords: passwordUseCases } = useContainer()
+
+// Form sync: every field except `password` is mirrored from `editPassword`
+// when it's provided; `password` always starts blank (we never prefill the
+// secret for security reasons).
+const {
+  form,
+  isEditing,
+  reset: resetForm,
+} = useModelFromEntity({
+  entity: toRef(props, 'editPassword'),
+  initial: () => ({ name: '', password: '', login: '', url: '', folder: '' }),
+  fromEntity: (p) => ({
+    name: p.name,
+    password: '',
+    login: p.login || '',
+    url: p.url || '',
+    folder: p.folder || '',
+  }),
+})
+const isEditMode = isEditing
 const folderSuggestions = ref<string[]>([])
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
-
-const isEditMode = ref(false)
 
 const resolveDefaultGroupId = (): string => {
   const preferredGroupId = props.defaultGroupId
@@ -57,11 +75,11 @@ const resolveDefaultGroupId = (): string => {
 
 // Unique, sorted folder names already used in the relevant group
 const foldersForGroup = computed(() => {
-  const groupId = isEditMode.value ? props.editPassword?.group_id : selectedGroupId.value
+  const groupId = isEditMode.value ? props.editPassword?.groupId : selectedGroupId.value
   if (!groupId) return []
   const folderSet = new Set<string>()
   passwords.value.forEach((p) => {
-    if (p.group_id === groupId && p.folder) {
+    if (p.groupId === groupId && p.folder) {
       folderSet.add(p.folder)
     }
   })
@@ -78,20 +96,16 @@ const searchFolders = (event: { query: string }) => {
   }
 }
 
-const urlError = computed(() => {
-  if (url.value && !/^https?:\/\//i.test(url.value)) {
-    return 'URL must start with http:// or https://'
-  }
-  return ''
-})
+const urlError = computed(() =>
+  isValidPasswordUrl(form.url) ? '' : 'URL must start with http:// or https://',
+)
 
 // Display bullets when password field is not focused
 const displayedPassword = computed(() => {
   if (passwordFieldFocused.value) {
-    return password.value
+    return form.password
   }
-  // Show bullets if there's a password
-  return password.value ? '•'.repeat(password.value.length) : ''
+  return form.password ? '•'.repeat(form.password.length) : ''
 })
 
 // Initialize groups on mount
@@ -114,28 +128,15 @@ watch(visible, async (isVisible) => {
   }
 })
 
-// Watch for edit password prop changes
+// When the entity is cleared (back to "create" mode), the form composable
+// already wipes the fields; we just need to re-pick the default group.
 watch(
   () => props.editPassword,
   (newValue) => {
-    if (newValue) {
-      isEditMode.value = true
-      name.value = newValue.name
-      password.value = '' // Don't prefill password for security
-      login.value = newValue.login || ''
-      url.value = newValue.url || ''
-      folder.value = newValue.folder || ''
-    } else {
-      isEditMode.value = false
-      name.value = ''
-      password.value = ''
-      login.value = ''
-      url.value = ''
-      folder.value = ''
+    if (!newValue) {
       selectedGroupId.value = resolveDefaultGroupId()
     }
   },
-  { immediate: true },
 )
 
 watch(
@@ -148,7 +149,7 @@ watch(
 )
 
 const handleSubmit = async () => {
-  if (!name.value) {
+  if (!form.name) {
     toast.add({
       severity: 'error',
       summary: 'Validation Error',
@@ -158,7 +159,6 @@ const handleSubmit = async () => {
     return
   }
 
-  // URL must start with http:// or https:// if provided
   if (urlError.value) {
     toast.add({
       severity: 'error',
@@ -169,8 +169,7 @@ const handleSubmit = async () => {
     return
   }
 
-  // Password is required only for create mode
-  if (!isEditMode.value && !password.value) {
+  if (!isEditMode.value && !form.password) {
     toast.add({
       severity: 'error',
       summary: 'Validation Error',
@@ -180,7 +179,6 @@ const handleSubmit = async () => {
     return
   }
 
-  // Group is required for create mode
   if (!isEditMode.value && !selectedGroupId.value) {
     toast.add({
       severity: 'error',
@@ -195,40 +193,14 @@ const handleSubmit = async () => {
     loading.value = true
 
     if (isEditMode.value && props.editPassword) {
-      // Update existing password
-      const updateBody: {
-        name: string
-        password?: string
-        folder: string | null
-        login: string | null
-        url: string | null
-      } = {
-        name: name.value,
-        folder: folder.value || null,
-        login: login.value || null,
-        url: url.value || null,
-      }
-
-      if (password.value) {
-        updateBody.password = password.value
-      }
-
-      const response = await updatePasswordPasswordsPasswordIdPut({
-        path: { password_id: props.editPassword.id },
-        body: updateBody,
+      await passwordUseCases.update.execute({
+        id: props.editPassword.id,
+        name: form.name,
+        password: form.password || null,
+        folder: form.folder || null,
+        login: form.login || null,
+        url: form.url || null,
       })
-
-      if (!response.response.ok) {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to update password'
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000,
-        })
-        return
-      }
 
       toast.add({
         severity: 'success',
@@ -240,29 +212,14 @@ const handleSubmit = async () => {
       visible.value = false
       emit('updated')
     } else {
-      // Create new password
-      const response = await createPasswordPasswordsPost({
-        body: {
-          name: name.value,
-          password: password.value,
-          login: login.value || null,
-          url: url.value || null,
-          folder: folder.value || null,
-          group_id: selectedGroupId.value!,
-        },
+      await passwordUseCases.create.execute({
+        name: form.name,
+        password: form.password,
+        login: form.login || null,
+        url: form.url || null,
+        folder: form.folder || null,
+        groupId: selectedGroupId.value!,
       })
-
-      if (!response.response.ok) {
-        const errorData = response.error as { detail?: string }
-        const errorMessage = errorData?.detail || 'Failed to create password'
-        toast.add({
-          severity: 'error',
-          summary: 'Error',
-          detail: errorMessage,
-          life: 5000,
-        })
-        return
-      }
 
       toast.add({
         severity: 'success',
@@ -275,43 +232,36 @@ const handleSubmit = async () => {
       emit('created')
     }
 
-    // Reset form
-    name.value = ''
-    password.value = ''
-    login.value = ''
-    url.value = ''
-    folder.value = ''
+    resetForm()
     selectedGroupId.value = resolveDefaultGroupId()
   } catch (err: unknown) {
-    const error = err as { detail?: string; message?: string }
+    const fallback = `Failed to ${isEditMode.value ? 'update' : 'create'} password`
     const errorMessage =
-      error?.detail ||
-      error?.message ||
-      `Failed to ${isEditMode.value ? 'update' : 'create'} password`
+      err instanceof PasswordDomainError
+        ? err.message
+        : err instanceof Error && err.message
+          ? err.message
+          : fallback
     toast.add({
       severity: 'error',
       summary: 'Error',
       detail: errorMessage,
       life: 5000,
     })
-    console.error(`Failed to ${isEditMode.value ? 'update' : 'create'} password:`, err)
+    console.error(fallback, err)
   } finally {
     loading.value = false
   }
 }
 
 const handleCancel = () => {
-  name.value = ''
-  password.value = ''
-  login.value = ''
-  url.value = ''
-  folder.value = ''
+  resetForm()
   selectedGroupId.value = resolveDefaultGroupId()
   visible.value = false
 }
 
 const handleGenerate = (generatedPassword: string) => {
-  password.value = generatedPassword
+  form.password = generatedPassword
 }
 
 const handlePasswordInput = (event: Event) => {
@@ -319,15 +269,12 @@ const handlePasswordInput = (event: Event) => {
   const cursorPosition = target.selectionStart || 0
   const inputValue = target.value
 
-  // If the input contains bullets and user is typing
   if (inputValue.includes('•')) {
-    // User is trying to edit, clear the field
-    password.value = inputValue.replace(/•/g, '')
+    form.password = inputValue.replace(/•/g, '')
   } else {
-    password.value = inputValue
+    form.password = inputValue
   }
 
-  // Restore cursor position
   setTimeout(() => {
     target.setSelectionRange(cursorPosition, cursorPosition)
   }, 0)
@@ -354,7 +301,7 @@ const handlePasswordBlur = () => {
         <label for="password-name" class="font-semibold">Name</label>
         <InputText
           id="password-name"
-          v-model="name"
+          v-model="form.name"
           placeholder="e.g., Gmail Account"
           :disabled="loading"
           autofocus
@@ -377,11 +324,11 @@ const handlePasswordBlur = () => {
           <template #option="slotProps">
             <div class="flex items-center gap-2">
               <i
-                :class="slotProps.option.is_personal ? 'pi pi-user' : 'pi pi-users'"
+                :class="slotProps.option.isPersonal ? 'pi pi-user' : 'pi pi-users'"
                 class="text-sm"
               ></i>
               <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.is_personal" class="text-xs text-muted-color"
+              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color"
                 >(Personal)</span
               >
             </div>
@@ -390,7 +337,7 @@ const handlePasswordBlur = () => {
             <div v-if="slotProps.value" class="flex items-center gap-2">
               <i
                 :class="
-                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.is_personal
+                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.isPersonal
                     ? 'pi pi-user'
                     : 'pi pi-users'
                 "
@@ -441,7 +388,7 @@ const handlePasswordBlur = () => {
         <label for="password-login" class="font-semibold">Login (optional)</label>
         <InputText
           id="password-login"
-          v-model="login"
+          v-model="form.login"
           placeholder="e.g., user@example.com"
           :disabled="loading"
           autocomplete="off"
@@ -452,7 +399,7 @@ const handlePasswordBlur = () => {
         <label for="password-url" class="font-semibold">URL (optional)</label>
         <InputText
           id="password-url"
-          v-model="url"
+          v-model="form.url"
           placeholder="e.g., https://example.com"
           :disabled="loading"
           :invalid="!!urlError"
@@ -465,7 +412,7 @@ const handlePasswordBlur = () => {
         <label for="password-folder" class="font-semibold">Folder (optional)</label>
         <AutoComplete
           id="password-folder"
-          v-model="folder"
+          v-model="form.folder"
           :suggestions="folderSuggestions"
           @complete="searchFolders"
           dropdown

@@ -341,9 +341,14 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     assert len(access_data["user_access_list"]) == 1
     assert len(access_data["group_access_list"]) == 1
 
+    owner_group_access = access_data["group_access_list"][0]
+    assert owner_group_access["role"] == "owner"
+
     user_access = access_data["user_access_list"][0]
     assert user_access["user_id"] == admin_user_id
-    assert user_access["is_owner"] is True
+    assert user_access["role_in_group"] == "owner"
+    assert user_access["group_role"] == "owner"
+    assert user_access["group_id"] == owner_group_access["group_id"]
     print("✓ Only owner in access list")
 
     # Step 2.5: NON-OWNER CANNOT LIST ACCESS
@@ -384,11 +389,17 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     assert len(access_data_shared["user_access_list"]) == 2
     assert len(access_data_shared["group_access_list"]) == 2
 
-    # Verify both users are in the list
-    user_ids = [u["user_id"] for u in access_data_shared["user_access_list"]]
-    assert admin_user_id in user_ids
-    assert sso_user_id in user_ids
-    print("✓ Both owner and shared user in access list")
+    # One group owns the password, the other is shared (member).
+    group_roles = sorted(g["role"] for g in access_data_shared["group_access_list"])
+    assert group_roles == ["member", "owner"]
+
+    # Both users appear, each linked to the group that grants them access.
+    links_by_user = {u["user_id"]: u for u in access_data_shared["user_access_list"]}
+    assert admin_user_id in links_by_user
+    assert sso_user_id in links_by_user
+    assert links_by_user[admin_user_id]["group_role"] == "owner"
+    assert links_by_user[sso_user_id]["group_role"] == "member"
+    print("✓ Both owner (via owner group) and shared user (via member group) in access list")
 
     # Step 2.9: UNSHARE PASSWORD
     print("Step 2.9: Unsharing password from SSO user...")

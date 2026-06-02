@@ -1,44 +1,43 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getCsrfTokenAuthCsrfTokenGet } from '@/client'
+import { useContainer } from '@/plugins/container'
+import { CsrfDomainError } from '@/domain/csrf/errors'
 
 /**
  * CSRF Token Store
  *
- * Manages CSRF tokens for protecting against Cross-Site Request Forgery attacks.
- * The token is fetched after login and remains valid for the entire session.
+ * Manages CSRF tokens for protecting against Cross-Site Request Forgery
+ * attacks. The token is fetched after login and remains valid for the
+ * entire session.
  */
 export const useCsrfStore = defineStore('csrf', () => {
+  // Resolve the use case at setup time — inject() has no component
+  // context inside async Pinia actions.
+  const { csrf } = useContainer()
+
   const csrfToken = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
   /**
-   * Fetch a new CSRF token from the backend
-   * Should be called after successful login
+   * Fetch a new CSRF token from the backend. Should be called after a
+   * successful login.
    */
-  const fetchCsrfToken = async () => {
+  const fetchCsrfToken = async (): Promise<boolean> => {
     loading.value = true
     error.value = null
 
     try {
-      const response = await getCsrfTokenAuthCsrfTokenGet()
-
-      if (response.error) {
-        console.error('Failed to fetch CSRF token:', response.error)
-        error.value = 'Failed to fetch CSRF token'
-        return false
-      }
-
-      if (response.data) {
-        csrfToken.value = response.data.csrf_token
-        return true
-      }
-
-      return false
+      csrfToken.value = await csrf.fetchToken.execute()
+      return true
     } catch (err) {
-      console.error('Unexpected error fetching CSRF token:', err)
-      error.value = 'Unexpected error'
+      console.error('Failed to fetch CSRF token:', err)
+      error.value =
+        err instanceof CsrfDomainError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : 'Failed to fetch CSRF token'
       return false
     } finally {
       loading.value = false
@@ -46,8 +45,7 @@ export const useCsrfStore = defineStore('csrf', () => {
   }
 
   /**
-   * Clear the CSRF token
-   * Should be called on logout
+   * Clear the CSRF token. Should be called on logout.
    */
   const clearCsrfToken = () => {
     csrfToken.value = null
@@ -55,15 +53,11 @@ export const useCsrfStore = defineStore('csrf', () => {
   }
 
   /**
-   * Get the current CSRF token
-   * If no token exists, attempts to fetch one
+   * Get the current CSRF token. If no token exists, attempts to fetch
+   * one.
    */
   const getToken = async (): Promise<string | null> => {
-    if (csrfToken.value) {
-      return csrfToken.value
-    }
-
-    // Try to fetch token if not present
+    if (csrfToken.value) return csrfToken.value
     const success = await fetchCsrfToken()
     return success ? csrfToken.value : null
   }

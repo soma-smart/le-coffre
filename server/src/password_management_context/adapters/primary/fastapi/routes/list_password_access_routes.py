@@ -26,16 +26,25 @@ class PermissionEnum(str, Enum):
     READ = "read"
 
 
+class AccessRoleEnum(str, Enum):
+    OWNER = "owner"
+    MEMBER = "member"
+
+
 class UserAccessItem(BaseModel):
+    """A single access link: a user reaches the password through one group."""
+
     user_id: UUID
+    group_id: UUID
+    role_in_group: AccessRoleEnum
+    group_role: AccessRoleEnum
     permissions: list[PermissionEnum]
-    is_owner: bool
 
 
 class GroupAccessItem(BaseModel):
-    user_id: UUID
+    group_id: UUID
+    role: AccessRoleEnum
     permissions: list[PermissionEnum]
-    is_owner: bool
 
 
 class ListPasswordAccessResponse(BaseModel):
@@ -76,15 +85,17 @@ def list_password_access(
             ret.user_access_list.append(
                 UserAccessItem(
                     user_id=user_access.user_id,
-                    is_owner=user_access.is_owner,
+                    group_id=user_access.group_id,
+                    role_in_group=AccessRoleEnum(user_access.role_in_group.value),
+                    group_role=AccessRoleEnum(user_access.group_role.value),
                     permissions=[PermissionEnum(perm.value) for perm in user_access.permissions],
                 )
             )
         for group_access in result.group_accesses:
             ret.group_access_list.append(
                 GroupAccessItem(
-                    user_id=group_access.group_id,
-                    is_owner=group_access.is_owner,
+                    group_id=group_access.group_id,
+                    role=AccessRoleEnum(group_access.role.value),
                     permissions=[PermissionEnum(perm.value) for perm in group_access.permissions],
                 )
             )
