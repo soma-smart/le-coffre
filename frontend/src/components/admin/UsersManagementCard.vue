@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useToast } from 'primevue'
 import CreateUserModal from '@/components/modals/CreateUserModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
+import UserHistoryModal from '@/components/modals/UserHistoryModal.vue'
 import {
   listUsersUsersGet,
   promoteUserToAdminUsersUserIdPromoteAdminPost,
@@ -24,6 +25,15 @@ const userToPromote = ref<ListUserResponse | null>(null)
 const showDeleteUserModal = ref(false)
 const deletingUserId = ref<string | null>(null)
 const userToDelete = ref<ListUserResponse | null>(null)
+
+// User history state
+const showUserHistoryModal = ref(false)
+const userToShowHistory = ref<ListUserResponse | null>(null)
+
+const openUserHistory = (user: ListUserResponse) => {
+  userToShowHistory.value = user
+  showUserHistoryModal.value = true
+}
 
 const promoteModalQuestion = computed(() => {
   return `Are you sure you want to promote "${userToPromote.value?.username}" to ADMIN?`
@@ -307,6 +317,14 @@ onMounted(() => {
                 @click="showPromoteModal(slotProps.data)"
               />
               <Button
+                icon="pi pi-history"
+                label="Historique"
+                size="small"
+                severity="info"
+                outlined
+                @click="openUserHistory(slotProps.data)"
+              />
+              <Button
                 icon="pi pi-trash"
                 label="Delete"
                 size="small"
@@ -351,6 +369,9 @@ onMounted(() => {
         :countdown-seconds="3"
         @confirm="handleDeleteConfirmed"
       />
+
+      <!-- User History Modal -->
+      <UserHistoryModal v-model:visible="showUserHistoryModal" :user="userToShowHistory" />
     </template>
   </Card>
 </template>
