@@ -1,31 +1,35 @@
-import { useUserStore } from '@/stores/user'
-import { usePasswordsStore } from '@/stores/passwords'
+import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { useCsrfStore } from '@/stores/csrf'
+import { useGroupsStore } from '@/stores/groups'
+import { usePasswordsStore } from '@/stores/passwords'
+import { useSetupStore } from '@/stores/setup'
+import { useUserStore } from '@/stores/user'
 
 /**
- * Logout utility - clears all authentication cookies and localStorage
+ * Logout utility — clears auth cookies, the legacy `login` localStorage
+ * key (kept for back-compat with any old client storage), and every
+ * Pinia store that holds user-scoped data. Without the store wipe a
+ * second user logging in on the same SPA tab would briefly see the
+ * previous user's groups / passwords / vault state before the next
+ * fetch resolves.
+ *
+ * `localStorage.removeItem('login')` is the single legitimate direct
+ * `localStorage` call in presentation code (called out in
+ * eslint.config.ts's `app/no-direct-browser-storage` allowlist).
  */
 export function logout(): void {
-  // Clear all auth-related cookies by setting them to expire in the past
   const cookiesToClear = ['logged_in', 'access_token', 'refresh_token']
-
   cookiesToClear.forEach((cookieName) => {
-    // Clear cookie with default path
     document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; samesite=strict`
-    // Also try to clear with specific paths in case they were set differently
     document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/api; samesite=strict`
   })
 
-  // Clear localStorage
   localStorage.removeItem('login')
 
-  // Clear all stores to prevent data leaking between users
-  const userStore = useUserStore()
-  userStore.clearUser()
-
-  const passwordsStore = usePasswordsStore()
-  passwordsStore.clear()
-
-  const csrfStore = useCsrfStore()
-  csrfStore.clearCsrfToken()
+  useUserStore().clearUser()
+  usePasswordsStore().clear()
+  useGroupsStore().clear()
+  useSetupStore().clear()
+  useCsrfStore().clearCsrfToken()
+  useAdminPasswordViewStore().clear()
 }

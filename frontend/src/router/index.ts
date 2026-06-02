@@ -8,8 +8,35 @@ import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
 import { attemptTokenRefresh } from '@/customClient'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
+import { pickDefaultGroupForUser } from '@/domain/group/Group'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { slugifyGroupName } from '@/utils/groupSlug'
+
+export type AdminGuardDecision = { kind: 'allow' } | { kind: 'redirectHome' } | { kind: 'block' }
+
+/**
+ * Pure decision function for the admin guard branch in `beforeEach`.
+ * Exported for unit testing — the router itself imports nothing from this
+ * helper at runtime; it's just a way to make the discrimination between
+ * "not authenticated", "backend down", and "not admin" testable in
+ * isolation.
+ *
+ *   currentUser=null + error=null  → not authenticated  → redirectHome
+ *   currentUser=null + error=str   → fetch failed       → block (stay put)
+ *   isAdmin=false                  → genuinely not admin → redirectHome
+ *   isAdmin=true                   → allow
+ */
+export function decideAdminGuard(input: {
+  error: string | null
+  isAdmin: boolean
+  hasFromRoute: boolean
+}): AdminGuardDecision {
+  if (input.error) {
+    return input.hasFromRoute ? { kind: 'block' } : { kind: 'redirectHome' }
+  }
+  if (!input.isAdmin) return { kind: 'redirectHome' }
+  return { kind: 'allow' }
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -76,7 +103,7 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
   const setupStore = useSetupStore()
   const userStore = useUserStore()
 
@@ -141,30 +168,31 @@ router.beforeEach(async (to) => {
 
   // Check if route requires admin privileges
   if (to.meta.requiresAdmin && isLoggedIn) {
-    // Fetch user data to check admin status (will use cache if already loaded)
     await userStore.fetchCurrentUser()
 
-    if (!userStore.isAdmin) {
-      // User is not an admin, redirect to home
-      return { name: 'Home' }
-    }
+    const decision = decideAdminGuard({
+      error: userStore.error,
+      isAdmin: userStore.isAdmin,
+      hasFromRoute: !!from?.name,
+    })
+    if (decision.kind === 'block') return false
+    if (decision.kind === 'redirectHome') return { name: 'Home' }
   }
 
   if (to.name === 'Home' && isLoggedIn) {
     const groupsStore = useGroupsStore()
     await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
 
-    const sortedUserGroups = sortGroupsByName(
+    const defaultGroup = pickDefaultGroupForUser(
       groupsStore.userBelongingGroups,
       groupsStore.currentUserPersonalGroupId,
+      sortGroupsByName,
     )
-    const defaultGroup = sortedUserGroups[0]
-    const groupSlug = defaultGroup ? slugifyGroupName(defaultGroup.name) : null
 
-    if (groupSlug) {
+    if (defaultGroup) {
       return {
         name: 'HomeGroup',
-        params: { groupSlug },
+        params: { groupSlug: slugifyGroupName(defaultGroup.name) },
         query: to.query,
       }
     }

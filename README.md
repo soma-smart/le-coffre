@@ -87,10 +87,24 @@ Open with VSCode and reopen in the devcontainer when prompted. The unified devco
 
 1. Open project in VS Code
 2. Click "Reopen in Container" when prompted
-3. Use VS Code tasks to start services:
-   - Press `Ctrl+Shift+P` → "Run Task" → "Start All Services"
+3. Use VS Code tasks to start services (`Ctrl+Shift+P` → "Tasks: Run Task"):
+   - **Start All Services** — nginx + backend + frontend (runs inside the dev container)
+   - **Run Keycloak (local SSO)** — starts a local Keycloak for testing the SSO flow and prints the credentials on every run. Works from inside the dev container (the `docker-outside-of-docker` feature gives it the Docker CLI + host socket) or from a host terminal.
 
 See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions.
+
+### Testing SSO locally (Keycloak)
+
+Run the **Run Keycloak (local SSO)** VS Code task — or, from the host, `docker compose -f docker-compose.dev.yml --profile sso up -d keycloak`. It boots Keycloak with a preconfigured `lecoffre` realm (a client + a test user) and prints everything you need:
+
+- Keycloak admin console: <http://localhost:8180> (`admin` / `admin`)
+- In Le Coffre, open **Admin → SSO** (unlock the vault first) and enter:
+  - **Client ID:** `lecoffre-client`
+  - **Client secret:** `lecoffre-dev-secret`
+  - **Discovery URL:** `http://keycloak:8080/realms/lecoffre/.well-known/openid-configuration`
+- Then "Login with SSO" using the seeded user: `testuser` / `password`
+
+> The discovery URL uses `keycloak:8080` because the **backend** reaches Keycloak over the Docker network, while the **browser** is redirected to `http://localhost:8180` to log in — Keycloak is configured to keep the issuer consistent across both. It runs in-memory (`start-dev`), so the realm re-imports on each start. The realm lives in `dev/keycloak/lecoffre-realm.json` and the `keycloak` service in `docker-compose.dev.yml` (behind the `sso` compose profile). Stop it with `docker compose -f docker-compose.dev.yml --profile sso down`.
 
 **Access Points:**
 

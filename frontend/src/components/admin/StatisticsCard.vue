@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue'
-import {
-  getStatisticForAdminIamStatisticsGet,
-  getPasswordStatisticForAdminPasswordsStatisticsGet,
-} from '@/client/sdk.gen'
+import { useContainer } from '@/plugins/container'
 
 const toast = useToast()
+
+// Resolve the use case at setup time — inject() has no component context
+// inside async handlers after an await.
+const { statistics } = useContainer()
 
 const userCount = ref<number | null>(null)
 const groupCount = ref<number | null>(null)
@@ -16,33 +17,10 @@ const loading = ref(false)
 const fetchStatistics = async () => {
   loading.value = true
   try {
-    const [iamResponse, passwordResponse] = await Promise.all([
-      getStatisticForAdminIamStatisticsGet(),
-      getPasswordStatisticForAdminPasswordsStatisticsGet(),
-    ])
-
-    if (iamResponse.response.ok && iamResponse.data) {
-      userCount.value = iamResponse.data.user_count
-      groupCount.value = iamResponse.data.group_count
-    } else {
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to fetch user/group statistics',
-        life: 5000,
-      })
-    }
-
-    if (passwordResponse.response.ok && passwordResponse.data) {
-      passwordCount.value = passwordResponse.data.password_count
-    } else {
-      toast.add({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Failed to fetch password statistics',
-        life: 5000,
-      })
-    }
+    const stats = await statistics.get.execute()
+    userCount.value = stats.userCount
+    groupCount.value = stats.groupCount
+    passwordCount.value = stats.passwordCount
   } catch (error) {
     console.error('Failed to fetch statistics:', error)
     toast.add({

@@ -21,6 +21,10 @@ class GroupAccessGateway(Protocol):
         """Get all users who own this group"""
         ...
 
+    def get_group_member_users(self, group_id: UUID) -> list[UUID]:
+        """Get the users who belong to this group as members (not owners)"""
+        ...
+
     def group_owns_passwords(self, group_id: UUID) -> bool:
         """Check if a group owns any passwords"""
         ...
