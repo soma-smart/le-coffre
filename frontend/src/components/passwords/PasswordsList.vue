@@ -30,6 +30,12 @@ const { adminPasswordViewEnabled: adminPasswordViewPreference } =
   storeToRefs(adminPasswordViewStore)
 
 const adminPasswordViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
+
+const filterableGroups = computed(() => {
+  if (!isAdmin.value || !adminPasswordViewEnabled.value) return userBelongingGroups.value
+  return groups.value
+})
+
 const currentUserId = computed(() => currentUser.value?.id ?? null)
 const routeGroupSlug = computed(() => route.params.groupSlug as string | undefined)
 const routeFolderFilter = computed(() => route.query.folder as string | undefined)
@@ -69,6 +75,12 @@ const isCurrentUserOwnerOfGroup = (groupId: string) => {
   if (!currentUser.value?.id) return false
   const group = groups.value.find((item) => item.id === groupId)
   return !!group?.owners?.includes(currentUser.value.id)
+}
+
+const handleMobileGroupChange = (groupId: string) => {
+  const group = filterableGroups.value.find((g) => g.id === groupId)
+  if (!group) return
+  router.push({ name: 'HomeGroup', params: { groupSlug: group.name } })
 }
 
 const handleCreateInGroup = (groupId: string) => {
@@ -157,9 +169,28 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-bold">Password Manager</h1>
-      <Button label="New Password" icon="pi pi-plus" @click="handleCreateButtonClick" />
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+      <h1 class="text-2xl sm:text-3xl font-bold">Password Manager</h1>
+      <Button
+        label="New Password"
+        icon="pi pi-plus"
+        @click="handleCreateButtonClick"
+        class="w-full sm:w-auto"
+      />
+    </div>
+
+    <!-- Sélecteur de groupe (mobile uniquement) -->
+
+    <div class="md:hidden mb-4">
+      <Select
+        :options="filterableGroups"
+        optionLabel="name"
+        optionValue="id"
+        :modelValue="selectedGroupTabId"
+        @update:modelValue="handleMobileGroupChange"
+        placeholder="Select a group"
+        class="w-full"
+      />
     </div>
 
     <div class="flex flex-wrap items-center gap-4 mb-4">

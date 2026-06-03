@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { inject, ref, onMounted, onUnmounted } from 'vue'
 import {
   VaultStatusKey,
   markVaultUnlocked,
@@ -11,6 +11,21 @@ import { usePasswordsStore } from '@/stores/passwords'
 
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 const passwordsStore = usePasswordsStore()
+
+const toastPosition = ref('bottom-right')
+
+const updateToastPosition = () => {
+  toastPosition.value = window.innerWidth < 768 ? 'top-center' : 'bottom-right'
+}
+
+onMounted(() => {
+  updateToastPosition()
+  window.addEventListener('resize', updateToastPosition)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateToastPosition)
+})
 
 const handleVaultUnlocked = () => {
   markVaultUnlocked()
@@ -27,7 +42,7 @@ const handleStatusChanged = async () => {
 </script>
 
 <template>
-  <Toast position="bottom-right" />
+  <Toast :position="toastPosition" />
   <ConfirmDialog />
   <RouterView />
 
