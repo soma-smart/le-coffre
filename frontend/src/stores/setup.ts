@@ -1,82 +1,87 @@
 import { defineStore } from 'pinia'
-import { getVaultStatusVaultStatusGet } from '@/client'
-import { type VaultStatus } from '@/client'
-
-type MaybeVaultStatus = VaultStatus | null
-const NOT_SETUP = 'NOT_SETUP'
-
-interface SetupState {
-  vaultStatus: MaybeVaultStatus
-  lastShareTimestamp: string | null
-}
+import { computed, ref } from 'vue'
+import type { VaultStatus } from '@/domain/vault/Vault'
+import { isVaultLocked } from '@/domain/vault/Vault'
+import { useContainer } from '@/plugins/container'
 
 // Global pending promise to deduplicate concurrent calls
 let globalPendingPromise: Promise<void> | null = null
 
-export const useSetupStore = defineStore('setup', {
-  state: (): SetupState => ({
-    vaultStatus: null,
-    lastShareTimestamp: null,
-  }),
+export const useSetupStore = defineStore('setup', () => {
+  // Resolve use cases at setup time — inject() has no component
+  // context inside Pinia async actions.
+  const { vault } = useContainer()
 
-  getters: {
-    /**
-     * Check if vault is locked or pending unlock
-     */
-    isLocked: (state): boolean => {
-      return state.vaultStatus === 'LOCKED' || state.vaultStatus === 'PENDING_UNLOCK'
-    },
-  },
+  const vaultStatus = ref<VaultStatus | null>(null)
+  const lastShareTimestamp = ref<string | null>(null)
+  const error = ref<string | null>(null)
 
-  actions: {
-    /**
-     * Fetches vault status from API - SINGLE SOURCE OF TRUTH
-     * All vault status checks should go through this method
-     * @param force - If true, bypass cache and fetch fresh data
-     */
-    async fetchVaultStatus(force = false): Promise<void> {
-      // Return cached value if already known and not forcing
-      if (!force && this.vaultStatus !== null) {
-        return
+  const isLocked = computed(() =>
+    isVaultLocked(
+      vaultStatus.value ? { status: vaultStatus.value, lastShareTimestamp: null } : null,
+    ),
+  )
+
+  /**
+   * Fetch vault status from the backend. Caches the result; a force
+   * refresh bypasses the cache. Single source of truth — every
+   * consumer that cares about vault status reads through this store.
+   *
+   * On failure, `error` carries the message and `vaultStatus` is left
+   * untouched (the previous answer, or null if this is the first call).
+   * Coercing to NOT_SETUP on failure was wrong: a transient backend
+   * hiccup would redirect a configured admin straight into the
+   * bootstrap wizard.
+   */
+  async function fetchVaultStatus(force = false): Promise<void> {
+    if (!force && vaultStatus.value !== null) return
+    if (!force && globalPendingPromise) return globalPendingPromise
+
+    globalPendingPromise = (async () => {
+      try {
+        const state = await vault.getStatus.execute()
+        vaultStatus.value = state.status
+        lastShareTimestamp.value = state.lastShareTimestamp
+        error.value = null
+      } catch (e) {
+        console.error('Error fetching vault status:', e)
+        error.value = e instanceof Error ? e.message : 'Failed to fetch vault status'
+      } finally {
+        globalPendingPromise = null
       }
+    })()
 
-      // If already fetching and not forcing, wait for existing request
-      if (!force && globalPendingPromise) {
-        return globalPendingPromise
-      }
+    return globalPendingPromise
+  }
 
-      globalPendingPromise = (async () => {
-        try {
-          const response = await getVaultStatusVaultStatusGet()
-          this.vaultStatus = response.data?.status ?? NOT_SETUP
-          this.lastShareTimestamp = response.data?.last_share_timestamp ?? null
-        } catch (error) {
-          console.error('Error fetching vault status:', error)
-          this.vaultStatus = NOT_SETUP
-          this.lastShareTimestamp = null
-        } finally {
-          globalPendingPromise = null
-        }
-      })()
+  async function isSetup(): Promise<boolean> {
+    await fetchVaultStatus()
+    // If the fetch failed, we don't know whether the vault is set up.
+    // Returning `null` would force every caller to handle a tri-state;
+    // returning `true` keeps the user out of the bootstrap wizard until
+    // they retry, which is the safer default in production.
+    if (vaultStatus.value === null) return true
+    return vaultStatus.value !== 'NOT_SETUP'
+  }
 
-      return globalPendingPromise
-    },
+  function invalidateCache(): void {
+    vaultStatus.value = null
+    lastShareTimestamp.value = null
+    error.value = null
+    globalPendingPromise = null
+  }
 
-    /**
-     * Checks if the vault is set up (not in NOT_SETUP state)
-     */
-    async isSetup(): Promise<boolean> {
-      await this.fetchVaultStatus()
-      return this.vaultStatus !== NOT_SETUP
-    },
+  /** Alias used by logout — same effect as invalidateCache, clearer name. */
+  const clear = invalidateCache
 
-    /**
-     * Invalidate cache to force fresh fetch on next call
-     */
-    invalidateCache() {
-      this.vaultStatus = null
-      this.lastShareTimestamp = null
-      globalPendingPromise = null
-    },
-  },
+  return {
+    vaultStatus,
+    lastShareTimestamp,
+    isLocked,
+    error,
+    fetchVaultStatus,
+    isSetup,
+    invalidateCache,
+    clear,
+  }
 })

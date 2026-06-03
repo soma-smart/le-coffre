@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import BlankLayout from '../layouts/BlankLayout.vue'
-import type { ShareResponse } from '@/client'
 
 import SharesModal from '@/components/setup/shamir/SharesModal.vue'
 import StepWelcome from '@/components/setup/StepWelcome.vue'
@@ -10,10 +9,10 @@ import StepAdminAccountForm from '@/components/setup/StepAdminAccountForm.vue'
 import SetupDone from '@/components/setup/SetupDone.vue'
 
 const showModal = ref(false)
-const shares = ref<ShareResponse[]>([])
+const shares = ref<string[]>([])
 const setupId = ref<string>('')
 
-const handleSharesGenerated = (data: { shares: ShareResponse[]; setupId: string }) => {
+const handleSharesGenerated = (data: { shares: string[]; setupId: string }) => {
   shares.value = data.shares
   setupId.value = data.setupId
   showModal.value = true
@@ -45,26 +44,34 @@ const handleModalConfirmed = () => {
         </StepList>
         <StepPanels>
           <StepPanel v-slot="{ activateCallback }" value="1">
-            <StepWelcome @next="activateCallback('2')" />
+            <div class="p-6 sm:p-8">
+              <StepWelcome @next="activateCallback('2')" />
+            </div>
           </StepPanel>
 
           <StepPanel v-slot="{ activateCallback }" value="2">
-            <StepGenerateMasterKey
-              @shares-generated="
-                (s) => {
-                  handleSharesGenerated(s)
-                  activateCallback('3')
-                }
-              "
-            />
+            <div class="p-6 sm:p-8">
+              <StepGenerateMasterKey
+                @shares-generated="
+                  (s) => {
+                    handleSharesGenerated(s)
+                    activateCallback('3')
+                  }
+                "
+              />
+            </div>
           </StepPanel>
 
           <StepPanel v-slot="{ activateCallback }" value="3">
-            <StepAdminAccountForm :setup-id="setupId" @account-created="activateCallback('4')" />
+            <div class="p-6 sm:p-8">
+              <StepAdminAccountForm :setup-id="setupId" @account-created="activateCallback('4')" />
+            </div>
           </StepPanel>
 
           <StepPanel value="4">
-            <SetupDone />
+            <div class="p-6 sm:p-8">
+              <SetupDone />
+            </div>
           </StepPanel>
         </StepPanels>
       </Stepper>

@@ -2,52 +2,44 @@ from uuid import UUID
 
 
 class FakeGroupAccessGateway:
-    """Fake implementation of GroupAccessGateway for testing"""
+    """Fake implementation of GroupAccessGateway for testing.
+
+    Owners and members are tracked as distinct sets, mirroring the real
+    adapter: an owner is reported by get_group_owner_users, a non-owner
+    member by get_group_member_users. An owner also counts as a member for
+    access checks (owners have a membership row in production).
+    """
 
     def __init__(self):
-        self._group_owners: dict[UUID, UUID] = {}  # group_id -> user_id
-        self._group_members: dict[UUID, list[UUID]] = {}  # group_id -> list of user_ids
+        self._group_owners: dict[UUID, set[UUID]] = {}  # group_id -> owner user_ids
+        self._group_members: dict[UUID, set[UUID]] = {}  # group_id -> non-owner member user_ids
         self._groups_with_passwords: set[UUID] = set()  # group_ids that own passwords
 
     def is_user_owner_of_group(self, user_id: UUID, group_id: UUID) -> bool:
-        """Check if user owns the group"""
-        return self._group_owners.get(group_id) == user_id
+        return user_id in self._group_owners.get(group_id, set())
 
     def is_user_member_of_group(self, user_id: UUID, group_id: UUID) -> bool:
-        return user_id in self._group_members.get(group_id, [])
+        return user_id in self._group_members.get(group_id, set()) or self.is_user_owner_of_group(user_id, group_id)
 
     def group_exists(self, group_id: UUID) -> bool:
-        """Check if group exists"""
-        return group_id in self._group_owners
+        return group_id in self._group_owners or group_id in self._group_members
 
     def get_group_owner_users(self, group_id: UUID) -> list[UUID]:
-        """Get all users who own this group"""
-        # For testing purposes, return the list of members if available, otherwise the single owner
-        if group_id in self._group_members:
-            return self._group_members[group_id]
-        elif group_id in self._group_owners:
-            return [self._group_owners[group_id]]
-        return []
+        return list(self._group_owners.get(group_id, set()))
+
+    def get_group_member_users(self, group_id: UUID) -> list[UUID]:
+        return list(self._group_members.get(group_id, set()))
 
     def group_owns_passwords(self, group_id: UUID) -> bool:
-        """Check if a group owns any passwords"""
         return group_id in self._groups_with_passwords
 
     def set_group_owner(self, group_id: UUID, user_id: UUID) -> None:
-        """Test helper to setup ownership"""
-        self._group_owners[group_id] = user_id
-        # Also add to members list
-        if group_id not in self._group_members:
-            self._group_members[group_id] = []
-        if user_id not in self._group_members[group_id]:
-            self._group_members[group_id].append(user_id)
+        """Test helper: register a user as an owner of the group."""
+        self._group_owners.setdefault(group_id, set()).add(user_id)
 
     def add_group_member(self, group_id: UUID, user_id: UUID) -> None:
-        """Test helper to add a member to a group"""
-        if group_id not in self._group_members:
-            self._group_members[group_id] = []
-        if user_id not in self._group_members[group_id]:
-            self._group_members[group_id].append(user_id)
+        """Test helper: register a user as a (non-owner) member of the group."""
+        self._group_members.setdefault(group_id, set()).add(user_id)
 
     def add_group_with_passwords(self, group_id: UUID) -> None:
         """Test helper to simulate a group owning passwords"""
