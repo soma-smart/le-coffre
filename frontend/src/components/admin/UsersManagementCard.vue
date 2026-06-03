@@ -4,12 +4,6 @@ import { useToast } from 'primevue'
 import CreateUserModal from '@/components/modals/CreateUserModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import UserHistoryModal from '@/components/modals/UserHistoryModal.vue'
-import {
-  listUsersUsersGet,
-  promoteUserToAdminUsersUserIdPromoteAdminPost,
-  deleteUserUsersUserIdDelete,
-} from '@/client/sdk.gen'
-import type { ListUserResponse } from '@/client/types.gen'
 import type { User } from '@/domain/user/User'
 import { isUserAdmin as isUserAdminFromDomain } from '@/domain/user/User'
 import { UserDomainError } from '@/domain/user/errors'
@@ -36,9 +30,9 @@ const userToDelete = ref<User | null>(null)
 
 // User history state
 const showUserHistoryModal = ref(false)
-const userToShowHistory = ref<ListUserResponse | null>(null)
+const userToShowHistory = ref<User | null>(null)
 
-const openUserHistory = (user: ListUserResponse) => {
+const openUserHistory = (user: User) => {
   userToShowHistory.value = user
   showUserHistoryModal.value = true
 }

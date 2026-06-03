@@ -1,10 +1,11 @@
 import type {
   CreateUserInput,
+  ListUserPasswordEventsFilters,
   UpdateUserInput,
   UpdateUserPasswordInput,
   UserRepository,
 } from '@/application/ports/UserRepository'
-import { ADMIN_ROLE, type User } from '@/domain/user/User'
+import { ADMIN_ROLE, type User, type UserPasswordEvent } from '@/domain/user/User'
 import { IncorrectOldPasswordError, UserNotFoundError } from '@/domain/user/errors'
 
 /**
@@ -115,6 +116,15 @@ export class InMemoryUserRepository implements UserRepository {
     if (!user.roles.includes(ADMIN_ROLE)) {
       this.storage.set(userId, { ...user, roles: [...user.roles, ADMIN_ROLE] })
     }
+  }
+
+  async listPasswordEvents(
+    _userId: string,
+    _filters?: ListUserPasswordEventsFilters,
+  ): Promise<UserPasswordEvent[]> {
+    void _userId
+    void _filters
+    return []
   }
 }
 

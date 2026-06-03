@@ -70,64 +70,70 @@
 
         <Column field="occurred_on" header="Date & Time" sortable :style="{ width: '22%' }">
           <template #body="slotProps">
-            <span class="text-sm">{{ formatDateTime(slotProps.data.occurred_on) }}</span>
+            <span class="text-sm">{{ formatDateTime(slotProps.data.occurredOn) }}</span>
           </template>
         </Column>
 
         <Column field="event_type" header="Event Type" sortable :style="{ width: '20%' }">
           <template #body="slotProps">
             <Tag
-              :value="formatEventType(slotProps.data.event_type)"
-              :severity="getEventSeverity(slotProps.data.event_type)"
+              :value="formatEventType(slotProps.data.eventType)"
+              :severity="getEventSeverity(slotProps.data.eventType)"
             />
           </template>
         </Column>
 
         <Column field="password_id" header="Password" :style="{ width: '20%' }">
           <template #body="slotProps">
-            <span class="font-mono text-xs text-muted-color">{{ slotProps.data.password_id }}</span>
+            <span class="font-mono text-xs text-muted-color">{{ slotProps.data.passwordId }}</span>
           </template>
         </Column>
 
         <Column field="event_data" header="Details" :style="{ width: '38%' }">
           <template #body="slotProps">
             <div class="text-sm">
-              <span v-if="slotProps.data.event_type === 'PasswordCreatedEvent'">
+              <span v-if="slotProps.data.eventType === 'PasswordCreatedEvent'">
                 Created in folder:
-                <strong>{{ slotProps.data.event_data.folder || 'default' }}</strong>
+                <strong>{{ slotProps.data.eventData.folder || 'default' }}</strong>
               </span>
-              <span v-else-if="slotProps.data.event_type === 'PasswordUpdatedEvent'">
+              <span v-else-if="slotProps.data.eventType === 'PasswordUpdatedEvent'">
                 Updated:
-                <span v-if="slotProps.data.event_data.has_name_changed"> name</span>
-                <span v-if="slotProps.data.event_data.has_password_changed"> password</span>
-                <span v-if="slotProps.data.event_data.has_folder_changed"> folder</span>
-                <span v-if="slotProps.data.event_data.has_login_changed"> login</span>
-                <span v-if="slotProps.data.event_data.has_url_changed"> url</span>
+                <span v-if="slotProps.data.eventData.hasNameChanged"> name</span>
+                <span v-if="slotProps.data.eventData.hasPasswordChanged"> password</span>
+                <span v-if="slotProps.data.eventData.hasFolderChanged"> folder</span>
+                <span v-if="slotProps.data.eventData.hasLoginChanged"> login</span>
+                <span v-if="slotProps.data.eventData.hasUrlChanged"> url</span>
               </span>
-              <span v-else-if="slotProps.data.event_type === 'PasswordSharedEvent'">
+              <span v-else-if="slotProps.data.eventType === 'PasswordSharedEvent'">
                 Shared with group:
                 <strong>{{
-                  slotProps.data.event_data.shared_with_group_name ||
-                  slotProps.data.event_data.shared_with_group_id?.substring(0, 8) + '...' ||
+                  slotProps.data.eventData.sharedWithGroupName ||
+                  (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
+                    0,
+                    8,
+                  ) + '...' ||
                   'Unknown'
                 }}</strong>
               </span>
-              <span v-else-if="slotProps.data.event_type === 'PasswordUnsharedEvent'">
+              <span v-else-if="slotProps.data.eventType === 'PasswordUnsharedEvent'">
                 Unshared from group:
                 <strong>{{
-                  slotProps.data.event_data.unshared_with_group_name ||
-                  slotProps.data.event_data.unshared_with_group_id?.substring(0, 8) + '...' ||
+                  slotProps.data.eventData.unsharedWithGroupName ||
+                  (slotProps.data.eventData.unsharedWithGroupId as string | undefined)?.substring(
+                    0,
+                    8,
+                  ) + '...' ||
                   'Unknown'
                 }}</strong>
               </span>
-              <span v-else-if="slotProps.data.event_type === 'PasswordAccessedEvent'">
+              <span v-else-if="slotProps.data.eventType === 'PasswordAccessedEvent'">
                 Password accessed
               </span>
-              <span v-else-if="slotProps.data.event_type === 'PasswordDeletedEvent'">
+              <span v-else-if="slotProps.data.eventType === 'PasswordDeletedEvent'">
                 Password deleted
               </span>
               <span v-else>
-                {{ JSON.stringify(slotProps.data.event_data) }}
+                {{ JSON.stringify(slotProps.data.eventData) }}
               </span>
             </div>
           </template>
@@ -140,24 +146,29 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import { listPasswordEventsByActorAdminUsersUserIdPasswordEventsGet } from '@/client/sdk.gen'
-import type { ListUserResponse, PasswordEventByActorResponseItem } from '@/client/types.gen'
+import type { User } from '@/domain/user/User'
+import type { UserPasswordEvent } from '@/domain/user/User'
+import { useContainer } from '@/plugins/container'
 
 const props = defineProps<{
-  user: ListUserResponse | null
+  user: User | null
 }>()
 
 const visible = defineModel<boolean>('visible', { required: true })
 
 const toast = useToast()
 
-const events = ref<PasswordEventByActorResponseItem[]>([])
+// Resolve use cases at setup time — inject() has no component context
+// inside async event handlers after an await.
+const { users: userUseCases } = useContainer()
+
+const events = ref<UserPasswordEvent[]>([])
 const loading = ref(false)
 const dateRange = ref<Date[]>([new Date(), new Date()])
 const selectedEventTypes = ref<string[]>([])
 
 const availableEventTypes = computed(() => {
-  const types = new Set(events.value.map((event) => event.event_type))
+  const types = new Set(events.value.map((event) => event.eventType))
   return Array.from(types).sort()
 })
 
@@ -180,27 +191,12 @@ const fetchEvents = async () => {
       endDate = end.toISOString()
     }
 
-    const response = await listPasswordEventsByActorAdminUsersUserIdPasswordEventsGet({
-      path: { user_id: props.user.id },
-      query: {
-        event_type: selectedEventTypes.value.length > 0 ? selectedEventTypes.value : undefined,
-        start_date: startDate,
-        end_date: endDate,
-      },
+    events.value = await userUseCases.listPasswordEvents.execute({
+      userId: props.user.id,
+      eventTypes: selectedEventTypes.value.length > 0 ? selectedEventTypes.value : undefined,
+      startDate,
+      endDate,
     })
-
-    if (response.data) {
-      events.value = response.data.events
-    } else if (response.error) {
-      const detail =
-        (response.error as { detail?: string }).detail ?? 'Failed to load user history.'
-      toast.add({
-        severity: 'error',
-        summary: 'Load Failed',
-        detail,
-        life: 5000,
-      })
-    }
   } catch (error) {
     console.error('Failed to fetch user history:', error)
     toast.add({

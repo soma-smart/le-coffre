@@ -205,7 +205,6 @@ const fetchEvents = async () => {
       startDate,
       endDate,
     })
-
   } catch (error) {
     console.error('Failed to fetch password events:', error)
     // A locked vault (503) is handled globally — skip the duplicate toast.
