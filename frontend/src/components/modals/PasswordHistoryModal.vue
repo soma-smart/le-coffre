@@ -206,20 +206,6 @@ const fetchEvents = async () => {
       endDate,
     })
 
-    if (response.data) {
-      events.value = response.data.events
-    } else if (response.error) {
-      if (response.response?.status !== 503) {
-        const detail =
-          (response.error as { detail?: string }).detail ?? 'Failed to load password history.'
-        toast.add({
-          severity: 'error',
-          summary: 'Load Failed',
-          detail,
-          life: 5000,
-        })
-      }
-    }
   } catch (error) {
     console.error('Failed to fetch password events:', error)
     // A locked vault (503) is handled globally — skip the duplicate toast.
