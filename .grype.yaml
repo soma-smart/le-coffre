@@ -1,0 +1,15 @@
+# Grype configuration — auto-loaded by grype (and anchore/scan-action, which
+# runs grype from the repo root) during the CI image scans.
+#
+# Ignore rules below suppress specific, non-actionable findings so the
+# `--fail-on critical --only-fixed` gate stays meaningful. Keep this list
+# minimal and revisit each entry when upstream ships a stable fix.
+ignore:
+  # CVE-2026-7210 — CPython interpreter vulnerability in the python:3.x-slim
+  # base image. As of 2026-06-05 it is fixed ONLY in CPython 3.15.0b2 (a beta);
+  # no stable release carries the backport (latest 3.13.13 and 3.14.5 are both
+  # still affected). There is no production-appropriate base image to upgrade
+  # to, so we mute just this CVE until a stable CPython with the fix lands.
+  # ACTION: remove this entry once python:3.13-slim (or our pinned base) ships
+  # a CPython release that resolves CVE-2026-7210.
+  - vulnerability: CVE-2026-7210
