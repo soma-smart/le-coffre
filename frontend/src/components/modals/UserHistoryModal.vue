@@ -2,7 +2,7 @@
   <Dialog
     v-model:visible="visible"
     modal
-    :header="`Historique : ${user?.username || ''}`"
+    :header="`History: ${user?.username || ''}`"
     :style="{ width: '90vw', maxWidth: '1200px' }"
     :closable="true"
   >

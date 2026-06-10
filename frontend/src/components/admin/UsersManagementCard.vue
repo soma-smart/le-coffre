@@ -260,7 +260,7 @@ onMounted(() => {
               />
               <Button
                 icon="pi pi-history"
-                label="Historique"
+                label="History"
                 size="small"
                 severity="info"
                 outlined
