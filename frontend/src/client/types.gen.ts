@@ -521,6 +521,16 @@ export type ListPasswordAccessResponse = {
 };
 
 /**
+ * ListPasswordEventsByActorResponseSchema
+ */
+export type ListPasswordEventsByActorResponseSchema = {
+    /**
+     * Events
+     */
+    events: Array<PasswordEventByActorResponseItem>;
+};
+
+/**
  * ListPasswordEventsResponse
  */
 export type ListPasswordEventsResponse = {
@@ -564,6 +574,38 @@ export type LockVaultPostResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * PasswordEventByActorResponseItem
+ */
+export type PasswordEventByActorResponseItem = {
+    /**
+     * Event Id
+     */
+    event_id: string;
+    /**
+     * Event Type
+     */
+    event_type: string;
+    /**
+     * Occurred On
+     */
+    occurred_on: string;
+    /**
+     * Password Id
+     */
+    password_id: string;
+    /**
+     * Actor User Id
+     */
+    actor_user_id: string;
+    /**
+     * Event Data
+     */
+    event_data: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -1240,6 +1282,55 @@ export type ListPasswordEventsPasswordsPasswordIdEventsGetResponses = {
 };
 
 export type ListPasswordEventsPasswordsPasswordIdEventsGetResponse = ListPasswordEventsPasswordsPasswordIdEventsGetResponses[keyof ListPasswordEventsPasswordsPasswordIdEventsGetResponses];
+
+export type ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: {
+        /**
+         * Event Type
+         *
+         * Filter by event types
+         */
+        event_type?: Array<string> | null;
+        /**
+         * Start Date
+         *
+         * Filter events from this date (inclusive)
+         */
+        start_date?: string | null;
+        /**
+         * End Date
+         *
+         * Filter events until this date (inclusive)
+         */
+        end_date?: string | null;
+    };
+    url: '/admin/users/{user_id}/password-events';
+};
+
+export type ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetError = ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetErrors[keyof ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetErrors];
+
+export type ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListPasswordEventsByActorResponseSchema;
+};
+
+export type ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponse = ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses[keyof ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses];
 
 export type DeletePasswordPasswordsPasswordIdDeleteData = {
     body?: never;

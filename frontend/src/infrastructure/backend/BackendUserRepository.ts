@@ -3,19 +3,26 @@ import {
   deleteUserUsersUserIdDelete,
   getUserMeUsersMeGet,
   getUserUsersUserIdGet,
+  listPasswordEventsByActorAdminUsersUserIdPasswordEventsGet,
   listUsersUsersGet,
   promoteUserToAdminUsersUserIdPromoteAdminPost,
   updateUserPasswordUsersMePasswordPut,
   updateUserUsersUserIdPut,
 } from '@/client/sdk.gen'
-import type { GetUserMeResponse, GetUserResponse, ListUserResponse } from '@/client/types.gen'
+import type {
+  GetUserMeResponse,
+  GetUserResponse,
+  ListUserResponse,
+  PasswordEventByActorResponseItem,
+} from '@/client/types.gen'
 import type {
   CreateUserInput,
+  ListUserPasswordEventsFilters,
   UpdateUserInput,
   UpdateUserPasswordInput,
   UserRepository,
 } from '@/application/ports/UserRepository'
-import type { User } from '@/domain/user/User'
+import type { User, UserPasswordEvent } from '@/domain/user/User'
 import { IncorrectOldPasswordError, UserDomainError, UserNotFoundError } from '@/domain/user/errors'
 
 /**
@@ -102,6 +109,22 @@ export class BackendUserRepository implements UserRepository {
     this.throwIfError(response.error, response.response?.status, userId)
   }
 
+  async listPasswordEvents(
+    userId: string,
+    filters?: ListUserPasswordEventsFilters,
+  ): Promise<UserPasswordEvent[]> {
+    const response = await listPasswordEventsByActorAdminUsersUserIdPasswordEventsGet({
+      path: { user_id: userId },
+      query: {
+        event_type: filters?.eventTypes?.length ? filters.eventTypes : undefined,
+        start_date: filters?.startDate,
+        end_date: filters?.endDate,
+      },
+    })
+    this.throwIfError(response.error, response.response?.status, userId)
+    return (response.data?.events ?? []).map(toUserPasswordEvent)
+  }
+
   private throwIfError(error: unknown, status: number | undefined, userId?: string): void {
     if (!error) return
     if (status === 404 && userId) throw new UserNotFoundError(userId)
@@ -143,6 +166,25 @@ function listItemToUser(dto: ListUserResponse): User {
     personalGroupId: null,
     isSso: false,
   }
+}
+
+function toUserPasswordEvent(dto: PasswordEventByActorResponseItem): UserPasswordEvent {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(dto.event_data)) {
+    out[snakeToCamel(key)] = value
+  }
+  return {
+    eventId: dto.event_id,
+    eventType: dto.event_type,
+    occurredOn: dto.occurred_on,
+    passwordId: dto.password_id,
+    actorUserId: dto.actor_user_id,
+    eventData: out,
+  }
+}
+
+function snakeToCamel(key: string): string {
+  return key.replace(/_([a-z0-9])/g, (_, ch) => ch.toUpperCase())
 }
 
 function extractDetail(error: unknown): string | null {

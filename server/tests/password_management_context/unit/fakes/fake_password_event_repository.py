@@ -67,3 +67,24 @@ class FakePasswordEventRepository:
             filtered = [event for event in filtered if event["event_type"] in event_types]
 
         return sorted(filtered, key=lambda e: e["occurred_on"], reverse=True)
+
+    def list_events_by_actor(
+        self,
+        actor_user_id: UUID,
+        event_types: list[str] | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[dict[str, Any]]:
+        """List all events performed by a given actor across all passwords."""
+        filtered = [event for event in self.events if event["actor_user_id"] == actor_user_id]
+
+        if event_types:
+            filtered = [event for event in filtered if event["event_type"] in event_types]
+
+        if start_date:
+            filtered = [event for event in filtered if event["occurred_on"] >= start_date]
+
+        if end_date:
+            filtered = [event for event in filtered if event["occurred_on"] <= end_date]
+
+        return sorted(filtered, key=lambda e: e["occurred_on"], reverse=True)

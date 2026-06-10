@@ -106,3 +106,38 @@ class SqlPasswordEventRepository(SQLBaseRepository):
             }
             for event in results
         ]
+
+    def list_events_by_actor(
+        self,
+        actor_user_id: UUID,
+        event_types: list[str] | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[dict]:
+        """List all password events performed by a given actor across all passwords."""
+        query = select(PasswordEventTable).where(PasswordEventTable.actor_user_id == actor_user_id)
+
+        if event_types:
+            query = query.where(PasswordEventTable.event_type.in_(event_types))  # type: ignore[attr-defined]
+
+        if start_date:
+            query = query.where(PasswordEventTable.occurred_on >= start_date)
+
+        if end_date:
+            query = query.where(PasswordEventTable.occurred_on <= end_date)
+
+        query = query.order_by(PasswordEventTable.occurred_on.desc())  # type: ignore[attr-defined]
+
+        results = self._session.exec(query).all()
+
+        return [
+            {
+                "event_id": str(event.event_id),
+                "event_type": event.event_type,
+                "occurred_on": event.occurred_on.isoformat(),
+                "password_id": str(event.password_id),
+                "actor_user_id": str(event.actor_user_id),
+                "event_data": event.event_data,
+            }
+            for event in results
+        ]
