@@ -1,12 +1,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { logout } from '@/utils/logout'
 import MainLayout from '../layouts/MainLayout.vue'
 import type { User } from '@/domain/user/User'
 import { UserDomainError } from '@/domain/user/errors'
 import { useContainer } from '@/plugins/container'
+import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 
 const toast = useToast()
+
+const router = useRouter()
+
+const handleLogout = () => {
+  logout()
+  router.push('/login').then(() => {
+    toast.add({ severity: 'success', summary: 'Logged out', detail: 'See you soon!', life: 3000 })
+  })
+}
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async event handlers after an await.
@@ -182,6 +194,25 @@ onMounted(() => {
             icon="pi pi-key"
             @click="showPasswordDialog = true"
             class="p-button-outlined"
+          />
+        </div>
+
+        <!-- Theme switcher (mobile uniquement) -->
+        <div class="md:hidden mb-6 border-t pt-4">
+          <h3 class="text-lg font-semibold mb-4">Apparence</h3>
+          <ThemeSwitcher />
+        </div>
+
+        <!-- Bouton logout (mobile uniquement) -->
+        <div class="md:hidden mb-6 border-t pt-4">
+          <h3 class="text-lg font-semibold mb-4">Session</h3>
+          <Button
+            label="Logout"
+            icon="pi pi-sign-out"
+            severity="secondary"
+            outlined
+            class="w-full"
+            @click="handleLogout"
           />
         </div>
       </div>
