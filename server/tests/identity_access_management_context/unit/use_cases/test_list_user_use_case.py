@@ -5,6 +5,7 @@ import pytest
 from identity_access_management_context.application.commands import ListUserCommand
 from identity_access_management_context.application.use_cases import ListUserUseCase
 from identity_access_management_context.domain.entities import User
+from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
 
 from ..fakes import FakeUserRepository
@@ -41,3 +42,22 @@ def test_given_admin_user_when_listing_users_should_return_all_users(
     assert len(users) == 2
     assert any(user.username == "user1" for user in users)
     assert any(user.username == "user2" for user in users)
+
+
+def test_given_non_admin_user_when_listing_users_should_raise_not_admin_error(
+    use_case: ListUserUseCase, user_repository: FakeUserRepository
+):
+    non_admin_user = AuthenticatedUser(user_id=UUID("999e4567-e89b-12d3-a456-426614174999"), roles=[])
+
+    user = User(
+        id=UUID("123e4567-e89b-12d3-a456-426614174000"),
+        username="user1",
+        email="user1@example.com",
+        name="User",
+    )
+    user_repository.save(user)
+
+    command = ListUserCommand(requesting_user=non_admin_user)
+
+    with pytest.raises(NotAdminError):
+        use_case.execute(command)
