@@ -457,3 +457,56 @@ def test_complete_user_workflow(
     fresh_unauth_client = client_factory()
     unauth_stats_response = fresh_unauth_client.get("/api/iam/statistics")
     assert unauth_stats_response.status_code == 401
+
+    # =========================================================================
+    # PHASE 10: USER UPDATE AUTHORIZATION (SELF OR ADMIN)
+    # =========================================================================
+
+    # Step 10.1: A user can update their own profile
+    bob = sso_user_factory("bob@example.com", "Bob Stone")
+    bob_id = bob["user_id"]
+    bob_client = bob["client"]
+
+    self_update_response = bob_client.put(
+        f"/api/users/{bob_id}",
+        json={"username": "bob_updated", "email": "bob_updated@example.com", "name": "Bob Updated"},
+    )
+    assert self_update_response.status_code == 200
+
+    bob_after_self_update = authenticated_admin_client.get(f"/api/users/{bob_id}")
+    assert bob_after_self_update.status_code == 200
+    assert bob_after_self_update.json()["username"] == "bob_updated"
+
+    # Step 10.2: A non-admin user cannot update another user (403), and the target is unchanged
+    carol = sso_user_factory("carol@example.com", "Carol Lane")
+    carol_id = carol["user_id"]
+
+    forbidden_update_response = bob_client.put(
+        f"/api/users/{carol_id}",
+        json={"username": "hacked", "email": "hacked@example.com", "name": "Hacked"},
+    )
+    assert forbidden_update_response.status_code == 403
+
+    carol_unchanged = authenticated_admin_client.get(f"/api/users/{carol_id}")
+    assert carol_unchanged.status_code == 200
+    assert carol_unchanged.json()["username"] == "carol"
+
+    # Step 10.3: An admin can update another user
+    authenticated_admin_client.refresh_csrf_token()
+    admin_update_response = authenticated_admin_client.put(
+        f"/api/users/{carol_id}",
+        json={"username": "carol_by_admin", "email": "carol_by_admin@example.com", "name": "Carol By Admin"},
+    )
+    assert admin_update_response.status_code == 200
+
+    carol_after_admin_update = authenticated_admin_client.get(f"/api/users/{carol_id}")
+    assert carol_after_admin_update.status_code == 200
+    assert carol_after_admin_update.json()["username"] == "carol_by_admin"
+
+    # Step 10.4: An unauthenticated user cannot update a user (401)
+    unauth_update_client = client_factory()
+    unauth_update_response = unauth_update_client.put(
+        f"/api/users/{carol_id}",
+        json={"username": "nope", "email": "nope@example.com", "name": "Nope"},
+    )
+    assert unauth_update_response.status_code == 401
