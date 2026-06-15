@@ -10,6 +10,7 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
 from identity_access_management_context.application.commands import ListUserCommand
 from identity_access_management_context.application.use_cases import ListUserUseCase
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ def list_users(
     Retrieve all users.
 
     - **Authentication**: Requires authentication via access_token cookie
+    - **Authorization**: Only administrators may list users
 
     Returns a list of all users in the system.
     """
@@ -56,6 +58,8 @@ def list_users(
             )
             for user in users
         ]
+    except NotAdminError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in list users")
         raise HTTPException(status_code=500, detail="Internal server error") from e

@@ -510,3 +510,22 @@ def test_complete_user_workflow(
         json={"username": "nope", "email": "nope@example.com", "name": "Nope"},
     )
     assert unauth_update_response.status_code == 401
+
+    # =========================================================================
+    # PHASE 11: LIST USERS AUTHORIZATION (ADMIN ONLY)
+    # =========================================================================
+
+    # Step 11.1: An admin can list all users
+    admin_list_response = authenticated_admin_client.get("/api/users/")
+    assert admin_list_response.status_code == 200
+    assert isinstance(admin_list_response.json(), list)
+    assert len(admin_list_response.json()) >= 1
+
+    # Step 11.2: A non-admin user cannot list users (403)
+    non_admin_list_response = bob_client.get("/api/users/")
+    assert non_admin_list_response.status_code == 403
+
+    # Step 11.3: An unauthenticated user cannot list users (401)
+    unauth_list_client = client_factory()
+    unauth_list_response = unauth_list_client.get("/api/users/")
+    assert unauth_list_response.status_code == 401
