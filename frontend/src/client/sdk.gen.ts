@@ -500,9 +500,10 @@ export const getUserUsersUserIdGet = <ThrowOnError extends boolean = false>(opti
  * - **user_id**: The ID of the user to update
  * - **username**: New username for the user
  * - **email**: New email for the user
- * - **password**: New password for the user (will be hashed)
+ * - **name**: New display name for the user
  *
  * - **Authentication**: Requires authentication via access_token cookie
+ * - **Authorization**: Only the user themselves or an administrator may update a user
  *
  * Returns the updated user ID.
  */
@@ -526,6 +527,7 @@ export const updateUserUsersUserIdPut = <ThrowOnError extends boolean = false>(o
  * Retrieve all users.
  *
  * - **Authentication**: Requires authentication via access_token cookie
+ * - **Authorization**: Only administrators may list users
  *
  * Returns a list of all users in the system.
  */
