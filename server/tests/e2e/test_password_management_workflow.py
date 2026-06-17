@@ -16,6 +16,7 @@ import time
 from uuid import UUID
 
 import jwt
+from pykeepass import create_database
 
 STRONG_PASSWORD = "StrongP@ssw0rd123"
 LOGIN = "My Login"
@@ -28,7 +29,35 @@ def get_user_id_from_token(token: str) -> str:
     return decoded["user_id"]
 
 
-def test_complete_password_management_workflow(client_factory, setup, configured_sso, sso_user_token):
+def create_keepass_file(tmp_path, master_password: str):
+    keepass_path = tmp_path / "test_import.kdbx"
+
+    kp = create_database(str(keepass_path), password=master_password)
+
+    kp.add_entry(
+        destination_group=kp.root_group,
+        title="Imported Gmail",
+        username="gmail-login",
+        password="GmailP@ssw0rd123",
+        url="https://gmail.com",
+        notes="Imported from KeePass",
+    )
+
+    kp.add_entry(
+        destination_group=kp.root_group,
+        title="Imported Github",
+        username="github-login",
+        password="GithubP@ssw0rd123",
+        url="https://github.com",
+        notes="Imported from KeePass",
+    )
+
+    kp.save()
+
+    return keepass_path
+
+
+def test_complete_password_management_workflow(client_factory, setup, configured_sso, sso_user_token, tmp_path):
     """
     Complete workflow covering all password management operations:
 
@@ -728,3 +757,50 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     print("\n" + "=" * 70)
     print("ALL TESTS PASSED SUCCESSFULLY!")
     print("=" * 70)
+
+    # ===================================================================
+    # PHASE 8: KEEPASS IMPORT
+    # ===================================================================
+
+    print("\n=== PHASE 8: KEEPASS IMPORT ===")
+
+    master_password = "KeepassMasterP@ssw0rd123"
+    keepass_path = create_keepass_file(tmp_path, master_password)
+
+    with open(keepass_path, "rb") as keepass_file:
+        import_response = admin_client.post(
+            "/api/passwords/keepass",
+            files={
+                "file": (
+                    "test_import.kdbx",
+                    keepass_file,
+                    "application/octet-stream",
+                )
+            },
+            data={
+                "password": master_password,
+                "group_id": admin_group_id,
+            },
+        )
+
+    assert import_response.status_code == 201
+    import_data = import_response.json()
+
+    assert "ids" in import_data
+    assert len(import_data["ids"]) == 2
+
+    imported_ids = import_data["ids"]
+
+    for imported_id in imported_ids:
+        get_imported_response = admin_client.get(f"/api/passwords/{imported_id}")
+        assert get_imported_response.status_code == 200
+
+    imported_passwords_list = admin_client.get("/api/passwords/list")
+    assert imported_passwords_list.status_code == 200
+
+    imported_names = [p["name"] for p in imported_passwords_list.json()]
+
+    assert "Imported Gmail" in imported_names
+    assert "Imported Github" in imported_names
+
+    print("✓ KeePass passwords imported successfully")

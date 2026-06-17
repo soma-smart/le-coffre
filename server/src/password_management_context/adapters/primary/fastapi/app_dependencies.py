@@ -24,6 +24,8 @@ from password_management_context.adapters.secondary import (
 from password_management_context.adapters.secondary.gateways.iam_user_info_gateway import (
     IamUserInfoGateway,
 )
+from password_management_context.adapters.secondary.gateways.keepass_reader_gateway import PyKeepassReaderGateway
+from password_management_context.adapters.secondary.readers.keepass_reader import KeepassReader
 from password_management_context.application.gateways import (
     GroupAccessGateway,
     PasswordEncryptionGateway,
@@ -32,10 +34,12 @@ from password_management_context.application.gateways import (
     PasswordVaultAccessGateway,
     UserInfoGateway,
 )
+from password_management_context.application.gateways.keepass_reader_gateway import KeepassReaderGateway
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
 )
 from password_management_context.application.use_cases import (
+    CreatePasswordsFromKeepassUseCase,
     CreatePasswordUseCase,
     DeletePasswordUseCase,
     GetPasswordStatisticForAdminUseCase,
@@ -86,6 +90,16 @@ def get_group_access_gateway(
     return GroupAccessGatewayAdapter(group_repository, group_member_repository)
 
 
+def get_keepass_reader() -> KeepassReader:
+    return KeepassReader()
+
+
+def get_keepass_reader_gateway(
+    keepass_reader: KeepassReader = Depends(get_keepass_reader),
+) -> KeepassReaderGateway:
+    return PyKeepassReaderGateway(keepass_reader)
+
+
 def get_user_info_gateway(
     user_info_api: UserInfoApi = Depends(get_user_info_api),
 ) -> UserInfoGateway:
@@ -117,6 +131,26 @@ def get_create_password_usecase(
         group_access_gateway,
         event_publisher,
         password_event_repository,
+    )
+
+
+def get_create_passwords_from_keepass_usecase(
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_encryption_gateway: PasswordEncryptionGateway = Depends(get_password_encryption_gateway),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(get_password_permissions_repository),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    keepass_reader: KeepassReaderGateway = Depends(get_keepass_reader_gateway),
+):
+    return CreatePasswordsFromKeepassUseCase(
+        password_repository,
+        password_encryption_gateway,
+        password_permissions_repository,
+        group_access_gateway,
+        event_publisher,
+        password_event_repository,
+        keepass_reader,
     )
 
 

@@ -2,6 +2,7 @@ from .access.check_access_use_case import CheckAccessUseCase
 from .access.list_access_use_case import ListAccessUseCase
 from .access.share_access_use_case import ShareAccessUseCase
 from .access.unshare_access_use_case import UnshareAccessUseCase
+from .create_password_from_keepass_use_case import CreatePasswordsFromKeepassUseCase
 from .create_password_use_case import CreatePasswordUseCase
 from .delete_password_use_case import DeletePasswordUseCase
 from .delete_passwords_for_deleted_user_use_case import (
@@ -21,6 +22,7 @@ __all__ = [
     "ListPasswordsUseCase",
     "ListPasswordEventsUseCase",
     "ListPasswordEventsByActorUseCase",
+    "CreatePasswordsFromKeepassUseCase",
     "DeletePasswordUseCase",
     "DeletePasswordsForDeletedUserUseCase",
     "UpdatePasswordUseCase",
