@@ -28,6 +28,9 @@ const { groupsForPasswordCreation } = storeToRefs(groupsStore)
 const passwordsStore = usePasswordsStore()
 const { passwords } = storeToRefs(passwordsStore)
 
+const keepassFile = ref<File | null>(null)
+const keepassMasterPassword = ref('')
+
 // Resolve use cases at setup time — inject() has no active instance
 // inside async event handlers after an await.
 const { passwords: passwordUseCases } = useContainer()
@@ -287,6 +290,74 @@ const handlePasswordFocus = () => {
 const handlePasswordBlur = () => {
   passwordFieldFocused.value = false
 }
+
+const handleKeepassFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  keepassFile.value = target.files?.[0] || null
+}
+
+const handleImportKeepass = async () => {
+  if (!keepassFile.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: 'Please select a KeePass file',
+      life: 5000,
+    })
+    return
+  }
+
+  if (!keepassMasterPassword.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: 'KeePass master password is required',
+      life: 5000,
+    })
+    return
+  }
+
+  if (!selectedGroupId.value) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: 'Please select a group',
+      life: 5000,
+    })
+    return
+  }
+
+  try {
+    loading.value = true
+
+    await passwordUseCases.importFromKeepass.execute({
+      file: keepassFile.value,
+      password: keepassMasterPassword.value,
+      groupId: selectedGroupId.value,
+    })
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: 'KeePass passwords imported successfully',
+      life: 5000,
+    })
+
+    keepassFile.value = null
+    keepassMasterPassword.value = ''
+    visible.value = false
+    emit('created')
+  } catch (err: unknown) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: err instanceof Error ? err.message : 'Failed to import KeePass file',
+      life: 5000,
+    })
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
@@ -353,6 +424,41 @@ const handlePasswordBlur = () => {
         <small class="text-muted-color">
           Select the owner group for this password. Only groups you own are shown.
         </small>
+      </div>
+
+      <div v-if="!isEditMode" class="flex flex-col gap-3 border rounded-md p-3">
+        <div class="font-semibold">Import KeePass file</div>
+
+        <div class="flex flex-col gap-2">
+          <label for="keepass-file" class="font-semibold">KeePass file</label>
+          <input
+            id="keepass-file"
+            type="file"
+            accept=".kdbx"
+            :disabled="loading"
+            @change="handleKeepassFileChange"
+          />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label for="keepass-master-password" class="font-semibold">Master password</label>
+          <InputText
+            id="keepass-master-password"
+            v-model="keepassMasterPassword"
+            type="password"
+            placeholder="KeePass master password"
+            :disabled="loading"
+            autocomplete="off"
+          />
+        </div>
+
+        <Button
+          label="Import KeePass"
+          icon="pi pi-upload"
+          severity="secondary"
+          :loading="loading"
+          @click="handleImportKeepass"
+        />
       </div>
 
       <div class="flex flex-col gap-2">
