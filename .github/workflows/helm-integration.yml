@@ -22,7 +22,7 @@ jobs:
             path: frontend
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.1.0
@@ -77,7 +77,7 @@ jobs:
     steps:
       # ── Checkout ──────────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # ── Download Docker images ─────────────────────────────────
       - name: Download backend Docker image
