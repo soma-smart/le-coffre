@@ -49,6 +49,7 @@ import { ListUsersUseCase } from '@/application/user/ListUsers'
 import { PromoteUserToAdminUseCase } from '@/application/user/PromoteUserToAdmin'
 import { UpdateUserUseCase } from '@/application/user/UpdateUser'
 import { UpdateUserPasswordUseCase } from '@/application/user/UpdateUserPassword'
+import { CreatePasswordsFromKeepassUseCase } from './application/password/CreatePasswordsFromKeepassUseCase'
 
 /**
  * Framework-free container — holds every use case the presentation
@@ -80,6 +81,7 @@ export interface Container {
     unshare: UnsharePasswordUseCase
     listAccess: ListPasswordAccessUseCase
     listEvents: ListPasswordEventsUseCase
+    importFromKeepass: CreatePasswordsFromKeepassUseCase
   }
   csrf: {
     fetchToken: FetchCsrfTokenUseCase
@@ -144,6 +146,7 @@ export function buildContainer(ports: Ports): Container {
       unshare: new UnsharePasswordUseCase(ports.passwordRepository),
       listAccess: new ListPasswordAccessUseCase(ports.passwordRepository),
       listEvents: new ListPasswordEventsUseCase(ports.passwordRepository),
+      importFromKeepass: new CreatePasswordsFromKeepassUseCase(ports.passwordRepository),
     },
     csrf: {
       fetchToken: new FetchCsrfTokenUseCase(ports.csrfGateway),

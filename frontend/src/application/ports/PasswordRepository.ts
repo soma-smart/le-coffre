@@ -19,6 +19,12 @@ export interface CreatePasswordInput {
   url?: string | null
 }
 
+export interface ImportPasswordsFromKeepassPayload {
+  file: File
+  password: string
+  groupId: string
+}
+
 export interface UpdatePasswordInput {
   id: string
   name: string
@@ -40,6 +46,7 @@ export interface PasswordRepository {
   create(input: CreatePasswordInput): Promise<string>
   update(input: UpdatePasswordInput): Promise<void>
   delete(passwordId: string): Promise<void>
+  importFromKeepass(payload: ImportPasswordsFromKeepassPayload): Promise<string[]>
   share(passwordId: string, groupId: string): Promise<void>
   unshare(passwordId: string, groupId: string): Promise<void>
   listAccess(passwordId: string): Promise<PasswordAccess>

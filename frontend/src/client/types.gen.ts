@@ -98,6 +98,24 @@ export type AdminLoginResponse = {
 };
 
 /**
+ * Body_create_passwords_from_keepass_passwords_keepass_post
+ */
+export type BodyCreatePasswordsFromKeepassPasswordsKeepassPost = {
+    /**
+     * File
+     */
+    file: Blob | File;
+    /**
+     * Password
+     */
+    password: string;
+    /**
+     * Group Id
+     */
+    group_id: string;
+};
+
+/**
  * ClearPendingSharesResponse
  */
 export type ClearPendingSharesResponse = {
@@ -199,6 +217,16 @@ export type CreatePasswordResponse = {
      * Id
      */
     id: string;
+};
+
+/**
+ * CreatePasswordsFromKeepassResponse
+ */
+export type CreatePasswordsFromKeepassResponse = {
+    /**
+     * Ids
+     */
+    ids: Array<string>;
 };
 
 /**
@@ -1427,6 +1455,39 @@ export type UpdatePasswordPasswordsPasswordIdPutResponses = {
      */
     201: unknown;
 };
+
+export type CreatePasswordsFromKeepassPasswordsKeepassPostData = {
+    body: BodyCreatePasswordsFromKeepassPasswordsKeepassPost;
+    path?: never;
+    query?: never;
+    url: '/passwords/keepass';
+};
+
+export type CreatePasswordsFromKeepassPasswordsKeepassPostErrors = {
+    /**
+     * Invalid KeePass file or password
+     */
+    400: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
+};
+
+export type CreatePasswordsFromKeepassPasswordsKeepassPostError = CreatePasswordsFromKeepassPasswordsKeepassPostErrors[keyof CreatePasswordsFromKeepassPasswordsKeepassPostErrors];
+
+export type CreatePasswordsFromKeepassPasswordsKeepassPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: CreatePasswordsFromKeepassResponse;
+};
+
+export type CreatePasswordsFromKeepassPasswordsKeepassPostResponse = CreatePasswordsFromKeepassPasswordsKeepassPostResponses[keyof CreatePasswordsFromKeepassPasswordsKeepassPostResponses];
 
 export type SharePasswordPasswordsPasswordIdSharePostData = {
     body: SharePasswordRequest;

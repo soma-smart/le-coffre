@@ -1,5 +1,6 @@
 import {
   createPasswordPasswordsPost,
+  createPasswordsFromKeepassPasswordsKeepassPost,
   deletePasswordPasswordsPasswordIdDelete,
   getPasswordPasswordsPasswordIdGet,
   listPasswordAccessPasswordsPasswordIdAccessGet,
@@ -16,6 +17,7 @@ import type {
 } from '@/client/types.gen'
 import type {
   CreatePasswordInput,
+  ImportPasswordsFromKeepassPayload,
   ListPasswordEventsFilters,
   PasswordRepository,
   UpdatePasswordInput,
@@ -68,6 +70,20 @@ export class BackendPasswordRepository implements PasswordRepository {
     this.throwIfError(response.error, response.response?.status)
     if (!response.data) throw new PasswordDomainError('Empty response from create password')
     return response.data.id
+  }
+
+  async importFromKeepass(payload: ImportPasswordsFromKeepassPayload): Promise<string[]> {
+    const response = await createPasswordsFromKeepassPasswordsKeepassPost({
+      body: {
+        file: payload.file,
+        password: payload.password,
+        group_id: payload.groupId,
+      },
+    })
+    this.throwIfError(response.error, response.response?.status)
+    if (!response.data) throw new PasswordDomainError('Empty response from import from KeePass')
+
+    return response.data.ids
   }
 
   async update(input: UpdatePasswordInput): Promise<void> {

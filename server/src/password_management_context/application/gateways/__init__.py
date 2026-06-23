@@ -1,4 +1,5 @@
 from .group_access_gateway import GroupAccessGateway
+from .keepass_reader_gateway import KeepassReaderGateway
 from .password_encryption_gateway import PasswordEncryptionGateway
 from .password_event_repository import PasswordEventRepository
 from .password_permissions_repository import PasswordPermissionsRepository
@@ -14,4 +15,5 @@ __all__ = [
     "PasswordVaultAccessGateway",
     "PasswordEventRepository",
     "UserInfoGateway",
+    "KeepassReaderGateway",
 ]
