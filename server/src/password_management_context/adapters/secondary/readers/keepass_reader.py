@@ -27,14 +27,15 @@ class KeepassReader:
         for entry in keepass.entries or []:
             if not entry.title:
                 continue
-
+            print(f"Reading entry: {entry.path}")
             entries.append(
                 KeepassEntry(
-                    title=entry.title,
+                    title="/".join(entry.path),
                     username=entry.username,
                     password=entry.password,
                     url=entry.url,
                     notes=entry.notes,
+                    folder=entry.path[0] if entry.path and len(entry.path) > 1 else None,
                 )
             )
 

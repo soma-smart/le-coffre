@@ -68,7 +68,7 @@ class CreatePasswordsFromKeepassUseCase(TracedUseCase):
                 id=password_id,
                 name=entry.title or "Imported password",
                 encrypted_value=encrypted_value,
-                folder=None,
+                folder=entry.folder or "keepass_import",
                 login=entry.username,
                 url=entry.url,
             )

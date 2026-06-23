@@ -8,3 +8,4 @@ class KeepassEntry:
     password: str | None
     url: str | None
     notes: str | None = None
+    folder: str | None = None
