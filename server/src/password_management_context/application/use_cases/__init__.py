@@ -10,6 +10,7 @@ from .delete_passwords_for_deleted_user_use_case import (
 from .get_password_statistic_for_admin_use_case import GetPasswordStatisticForAdminUseCase
 from .get_password_use_case import GetPasswordUseCase
 from .is_group_used_use_case import IsGroupUsedUseCase
+from .list_password_events_by_actor_use_case import ListPasswordEventsByActorUseCase
 from .list_password_events_use_case import ListPasswordEventsUseCase
 from .list_passwords_use_case import ListPasswordsUseCase
 from .update_password_use_case import UpdatePasswordUseCase
@@ -19,6 +20,7 @@ __all__ = [
     "GetPasswordUseCase",
     "ListPasswordsUseCase",
     "ListPasswordEventsUseCase",
+    "ListPasswordEventsByActorUseCase",
     "DeletePasswordUseCase",
     "DeletePasswordsForDeletedUserUseCase",
     "UpdatePasswordUseCase",

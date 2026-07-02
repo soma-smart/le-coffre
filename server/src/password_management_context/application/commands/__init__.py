@@ -8,6 +8,7 @@ from .get_password_command import GetPasswordCommand
 from .get_password_statistic_for_admin_command import GetPasswordStatisticForAdminCommand
 from .is_group_used_command import IsGroupUsedCommand
 from .list_access_command import ListAccessCommand
+from .list_password_events_by_actor_command import ListPasswordEventsByActorCommand
 from .list_password_events_command import ListPasswordEventsCommand
 from .list_passwords_command import ListPasswordsCommand
 from .share_resource_command import ShareResourceCommand
@@ -22,6 +23,7 @@ __all__ = [
     "DeletePasswordsForDeletedUserCommand",
     "ListPasswordsCommand",
     "ListPasswordEventsCommand",
+    "ListPasswordEventsByActorCommand",
     "ShareResourceCommand",
     "UnshareResourceCommand",
     "CheckAccessCommand",

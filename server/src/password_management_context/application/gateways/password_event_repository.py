@@ -45,3 +45,18 @@ class PasswordEventRepository(Protocol):
         Sorted by occurred_on descending (most recent first) per password
         """
         ...
+
+    def list_events_by_actor(
+        self,
+        actor_user_id: UUID,
+        event_types: list[str] | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[dict]:
+        """List all password events performed by a given actor across all passwords.
+
+        Returns list of dicts with keys: event_id, event_type, occurred_on,
+        password_id, actor_user_id, event_data
+        Sorted by occurred_on descending (most recent first).
+        """
+        ...

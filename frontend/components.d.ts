@@ -74,6 +74,7 @@ declare module 'vue' {
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     UnlockVaultModal: typeof import('./src/components/modals/UnlockVaultModal.vue')['default']
+    UserHistoryModal: typeof import('./src/components/modals/UserHistoryModal.vue')['default']
     UsersManagementCard: typeof import('./src/components/admin/UsersManagementCard.vue')['default']
     VaultManagementCard: typeof import('./src/components/admin/VaultManagementCard.vue')['default']
   }

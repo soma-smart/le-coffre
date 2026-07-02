@@ -4,6 +4,10 @@ from .list_access_response import (
     ListAccessResponse,
     UserAccessResponse,
 )
+from .list_password_events_by_actor_response import (
+    ListPasswordEventsByActorResponse,
+    PasswordEventByActorItem,
+)
 from .list_password_events_response import (
     ListPasswordEventsResponse,
     PasswordEventItem,
@@ -19,5 +23,7 @@ __all__ = [
     "GroupAccessResponse",
     "ListPasswordEventsResponse",
     "PasswordEventItem",
+    "ListPasswordEventsByActorResponse",
+    "PasswordEventByActorItem",
     "GetPasswordStatisticForAdminResponse",
 ]

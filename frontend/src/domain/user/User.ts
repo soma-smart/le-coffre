@@ -21,6 +21,19 @@ export interface User {
 
 export const ADMIN_ROLE = 'admin'
 
+/**
+ * One password-audit event from the actor (user) perspective.
+ * Returned by the admin user-history endpoint.
+ */
+export interface UserPasswordEvent {
+  eventId: string
+  eventType: string
+  occurredOn: string
+  passwordId: string
+  actorUserId: string
+  eventData: Record<string, unknown>
+}
+
 export function isUserAdmin(user: User | null): boolean {
   return !!user && user.roles.includes(ADMIN_ROLE)
 }

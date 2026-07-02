@@ -3,9 +3,10 @@ from uuid import UUID
 from identity_access_management_context.application.commands import UpdateUserCommand
 from identity_access_management_context.application.gateways import UserEventRepository, UserRepository
 from identity_access_management_context.domain.events import UserUpdatedEvent
-from identity_access_management_context.domain.exceptions import UserNotFoundError
+from identity_access_management_context.domain.exceptions import UserNotFoundError, UserUpdateNotAllowedException
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class UpdateUserUseCase(TracedUseCase):
@@ -20,6 +21,10 @@ class UpdateUserUseCase(TracedUseCase):
         self._user_event_repository = user_event_repository
 
     def execute(self, command: UpdateUserCommand) -> UUID:
+        requesting_user = command.requesting_user
+        if requesting_user.user_id != command.id and not AdminPermissionChecker.is_admin(requesting_user):
+            raise UserUpdateNotAllowedException(requesting_user.user_id, command.id)
+
         user = self.user_repository.get_by_id(command.id)
         if not user:
             raise UserNotFoundError(command.id)
@@ -32,14 +37,14 @@ class UpdateUserUseCase(TracedUseCase):
 
         event = UserUpdatedEvent(
             user_id=command.id,
-            updated_by_user_id=command.id,
+            updated_by_user_id=requesting_user.user_id,
         )
         self._event_publisher.publish(event)
         self._user_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.id,
+            actor_user_id=requesting_user.user_id,
             event_data={"user_id": str(command.id)},
         )
 

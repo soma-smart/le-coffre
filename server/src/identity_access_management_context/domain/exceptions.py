@@ -81,6 +81,13 @@ class SsoUserAlreadyExistsException(IdentityAccessManagementDomainError):
     pass
 
 
+class UserUpdateNotAllowedException(IdentityAccessManagementDomainError):
+    """Raised when a user attempts to update a user they are neither (themselves nor an admin)"""
+
+    def __init__(self, requesting_user_id: UUID, target_user_id: UUID):
+        super().__init__(f"User '{requesting_user_id}' is not allowed to update user '{target_user_id}'")
+
+
 # Group-related exceptions
 class GroupAlreadyExistsException(IdentityAccessManagementDomainError):
     """Raised when attempting to create a group with a name that already exists"""

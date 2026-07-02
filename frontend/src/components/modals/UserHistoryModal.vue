@@ -2,7 +2,7 @@
   <Dialog
     v-model:visible="visible"
     modal
-    :header="`History: ${password?.name || ''}`"
+    :header="`History: ${user?.username || ''}`"
     :style="{ width: '90vw', maxWidth: '1200px' }"
     :closable="true"
   >
@@ -10,9 +10,9 @@
       <!-- Filters -->
       <div class="flex flex-col gap-4 md:flex-row md:items-end">
         <div class="flex-1">
-          <label for="date-range" class="block mb-2 font-medium">Date Range</label>
+          <label for="user-history-date-range" class="block mb-2 font-medium">Date Range</label>
           <DatePicker
-            id="date-range"
+            id="user-history-date-range"
             v-model="dateRange"
             selectionMode="range"
             dateFormat="yy-mm-dd"
@@ -27,9 +27,11 @@
           />
         </div>
         <div class="flex-1">
-          <label for="event-types" class="block mb-2 font-medium">Filter by Event Type</label>
+          <label for="user-history-event-types" class="block mb-2 font-medium"
+            >Filter by Event Type</label
+          >
           <MultiSelect
-            id="event-types"
+            id="user-history-event-types"
             v-model="selectedEventTypes"
             :options="availableEventTypes"
             placeholder="All Event Types"
@@ -42,8 +44,8 @@
           icon="pi pi-refresh"
           label="Refresh"
           outlined
-          @click="fetchEvents"
           :loading="loading"
+          @click="fetchEvents"
         />
       </div>
 
@@ -62,19 +64,17 @@
         <template #empty>
           <div class="text-center py-6 text-muted-color">
             <i class="pi pi-inbox text-4xl mb-3"></i>
-            <p>No events found for this password.</p>
+            <p>Aucune action enregistrée pour cet utilisateur.</p>
           </div>
         </template>
 
-        <Column field="occurredOn" header="Date & Time" sortable :style="{ width: '20%' }">
+        <Column field="occurred_on" header="Date & Time" sortable :style="{ width: '22%' }">
           <template #body="slotProps">
-            <span class="text-sm">
-              {{ formatDateTime(slotProps.data.occurredOn) }}
-            </span>
+            <span class="text-sm">{{ formatDateTime(slotProps.data.occurredOn) }}</span>
           </template>
         </Column>
 
-        <Column field="eventType" header="Event Type" sortable :style="{ width: '20%' }">
+        <Column field="event_type" header="Event Type" sortable :style="{ width: '20%' }">
           <template #body="slotProps">
             <Tag
               :value="formatEventType(slotProps.data.eventType)"
@@ -83,16 +83,13 @@
           </template>
         </Column>
 
-        <Column field="actorUserId" header="Actor" :style="{ width: '20%' }">
+        <Column field="password_id" header="Password" :style="{ width: '20%' }">
           <template #body="slotProps">
-            <div class="flex items-center gap-2">
-              <i class="pi pi-user text-sm"></i>
-              <span class="text-sm">{{ slotProps.data.actorEmail || 'Unknown User' }}</span>
-            </div>
+            <span class="font-mono text-xs text-muted-color">{{ slotProps.data.passwordId }}</span>
           </template>
         </Column>
 
-        <Column field="eventData" header="Details" :style="{ width: '40%' }">
+        <Column field="event_data" header="Details" :style="{ width: '38%' }">
           <template #body="slotProps">
             <div class="text-sm">
               <span v-if="slotProps.data.eventType === 'PasswordCreatedEvent'">
@@ -149,28 +146,23 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import {
-  eventSeverity,
-  humanizeEventType,
-  type Password,
-  type PasswordEvent,
-} from '@/domain/password/Password'
-import { VaultLockedError } from '@/domain/vault/errors'
+import type { User } from '@/domain/user/User'
+import type { UserPasswordEvent } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 
 const props = defineProps<{
-  password: Password | null
+  user: User | null
 }>()
 
 const visible = defineModel<boolean>('visible', { required: true })
 
 const toast = useToast()
 
-// Resolve use cases at setup time — inject() has no active instance
-// inside async handlers after an await.
-const { passwords: passwordUseCases } = useContainer()
+// Resolve use cases at setup time — inject() has no component context
+// inside async event handlers after an await.
+const { users: userUseCases } = useContainer()
 
-const events = ref<PasswordEvent[]>([])
+const events = ref<UserPasswordEvent[]>([])
 const loading = ref(false)
 const dateRange = ref<Date[]>([new Date(), new Date()])
 const selectedEventTypes = ref<string[]>([])
@@ -181,7 +173,7 @@ const availableEventTypes = computed(() => {
 })
 
 const fetchEvents = async () => {
-  if (!props.password) return
+  if (!props.user) return
 
   loading.value = true
   events.value = []
@@ -199,20 +191,18 @@ const fetchEvents = async () => {
       endDate = end.toISOString()
     }
 
-    events.value = await passwordUseCases.listEvents.execute({
-      passwordId: props.password.id,
+    events.value = await userUseCases.listPasswordEvents.execute({
+      userId: props.user.id,
       eventTypes: selectedEventTypes.value.length > 0 ? selectedEventTypes.value : undefined,
       startDate,
       endDate,
     })
   } catch (error) {
-    console.error('Failed to fetch password events:', error)
-    // A locked vault (503) is handled globally — skip the duplicate toast.
-    if (error instanceof VaultLockedError) return
+    console.error('Failed to fetch user history:', error)
     toast.add({
       severity: 'error',
       summary: 'Load Failed',
-      detail: 'Failed to load password history.',
+      detail: 'Failed to load user history.',
       life: 5000,
     })
   } finally {
@@ -231,21 +221,33 @@ const formatDateTime = (dateString: string): string => {
   })
 }
 
-const formatEventType = humanizeEventType
-const getEventSeverity = eventSeverity
+const formatEventType = (eventType: string): string => {
+  return eventType
+    .replace('Event', '')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+}
 
-// Fetch events when modal opens and password changes
+const getEventSeverity = (
+  eventType: string,
+): 'success' | 'info' | 'warn' | 'danger' | 'secondary' => {
+  if (eventType === 'PasswordCreatedEvent') return 'success'
+  if (eventType === 'PasswordDeletedEvent') return 'danger'
+  if (eventType === 'PasswordUpdatedEvent') return 'warn'
+  if (eventType === 'PasswordSharedEvent' || eventType === 'PasswordUnsharedEvent') return 'info'
+  if (eventType === 'PasswordAccessedEvent') return 'secondary'
+  return 'secondary'
+}
+
 watch(
-  () => [visible.value, props.password],
-  ([isVisible, password]) => {
+  () => [visible.value, props.user],
+  ([isVisible, user]) => {
     if (!isVisible) {
-      // Closing the modal: drop the rows so the next open starts clean.
       events.value = []
       return
     }
 
-    if (isVisible && password) {
-      // Set default date range to last 30 days
+    if (isVisible && user) {
       const now = new Date()
       now.setHours(23, 59, 59, 999)
 

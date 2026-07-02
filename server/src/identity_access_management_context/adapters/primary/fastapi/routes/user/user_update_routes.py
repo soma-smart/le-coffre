@@ -11,6 +11,7 @@ from identity_access_management_context.application.commands import UpdateUserCo
 from identity_access_management_context.application.use_cases import UpdateUserUseCase
 from identity_access_management_context.domain.exceptions import (
     UserNotFoundError,
+    UserUpdateNotAllowedException,
 )
 from shared_kernel.adapters.primary.dependencies import get_current_user
 from shared_kernel.domain.entities import ValidatedUser
@@ -43,14 +44,16 @@ def update_user(
     - **user_id**: The ID of the user to update
     - **username**: New username for the user
     - **email**: New email for the user
-    - **password**: New password for the user (will be hashed)
+    - **name**: New display name for the user
 
     - **Authentication**: Requires authentication via access_token cookie
+    - **Authorization**: Only the user themselves or an administrator may update a user
 
     Returns the updated user ID.
     """
     try:
         command = UpdateUserCommand(
+            requesting_user=current_user.to_authenticated_user(),
             id=user_id,
             username=request.username,
             email=request.email,
@@ -62,6 +65,8 @@ def update_user(
 
     except UserNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
+    except UserUpdateNotAllowedException as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in update user")
         raise HTTPException(status_code=500, detail="Internal server error") from e

@@ -41,6 +41,7 @@ from password_management_context.application.use_cases import (
     GetPasswordStatisticForAdminUseCase,
     GetPasswordUseCase,
     ListAccessUseCase,
+    ListPasswordEventsByActorUseCase,
     ListPasswordEventsUseCase,
     ListPasswordsUseCase,
     ShareAccessUseCase,
@@ -247,3 +248,9 @@ def get_password_statistic_for_admin_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
 ):
     return GetPasswordStatisticForAdminUseCase(password_repository)
+
+
+def get_list_password_events_by_actor_usecase(
+    password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+):
+    return ListPasswordEventsByActorUseCase(password_event_repository)

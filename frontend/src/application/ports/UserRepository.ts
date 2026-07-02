@@ -1,4 +1,4 @@
-import type { User } from '@/domain/user/User'
+import type { User, UserPasswordEvent } from '@/domain/user/User'
 
 export interface CreateUserInput {
   username: string
@@ -19,6 +19,12 @@ export interface UpdateUserPasswordInput {
   newPassword: string
 }
 
+export interface ListUserPasswordEventsFilters {
+  eventTypes?: string[]
+  startDate?: string
+  endDate?: string
+}
+
 /**
  * Everything the user use cases need from the outside world. The
  * production implementation wraps @/client; tests use
@@ -34,4 +40,8 @@ export interface UserRepository {
   updatePassword(input: UpdateUserPasswordInput): Promise<void>
   delete(userId: string): Promise<void>
   promoteToAdmin(userId: string): Promise<void>
+  listPasswordEvents(
+    userId: string,
+    filters?: ListUserPasswordEventsFilters,
+  ): Promise<UserPasswordEvent[]>
 }

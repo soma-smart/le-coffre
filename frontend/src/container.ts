@@ -44,6 +44,7 @@ import { CreateUserUseCase } from '@/application/user/CreateUser'
 import { DeleteUserUseCase } from '@/application/user/DeleteUser'
 import { GetCurrentUserUseCase } from '@/application/user/GetCurrentUser'
 import { GetUserUseCase } from '@/application/user/GetUser'
+import { ListUserPasswordEventsUseCase } from '@/application/user/ListUserPasswordEvents'
 import { ListUsersUseCase } from '@/application/user/ListUsers'
 import { PromoteUserToAdminUseCase } from '@/application/user/PromoteUserToAdmin'
 import { UpdateUserUseCase } from '@/application/user/UpdateUser'
@@ -92,6 +93,7 @@ export interface Container {
     updatePassword: UpdateUserPasswordUseCase
     delete: DeleteUserUseCase
     promoteToAdmin: PromoteUserToAdminUseCase
+    listPasswordEvents: ListUserPasswordEventsUseCase
   }
   groups: {
     list: ListGroupsUseCase
@@ -155,6 +157,7 @@ export function buildContainer(ports: Ports): Container {
       updatePassword: new UpdateUserPasswordUseCase(ports.userRepository),
       delete: new DeleteUserUseCase(ports.userRepository),
       promoteToAdmin: new PromoteUserToAdminUseCase(ports.userRepository),
+      listPasswordEvents: new ListUserPasswordEventsUseCase(ports.userRepository),
     },
     groups: {
       list: new ListGroupsUseCase(ports.groupRepository),
