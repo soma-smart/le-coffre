@@ -8,7 +8,7 @@
         <h4 class="font-semibold">{{ password.name }}</h4>
       </div>
 
-      <div class="flex items-center justify-between gap-4 mb-2">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
         <div class="flex items-center gap-2 min-w-0">
           <code
             class="text-sm px-3 py-1 rounded border border-surface font-mono"
@@ -109,7 +109,10 @@
         </div>
       </div>
 
-      <div v-if="password.login || password.url" class="flex items-center gap-4 mb-2 text-sm">
+      <div
+        v-if="password.login || password.url"
+        class="flex flex-wrap items-center gap-2 mb-2 text-sm"
+      >
         <span v-if="password.login" class="flex items-center gap-1 text-muted-color">
           <i class="pi pi-user text-xs" />
           {{ password.login }}
@@ -134,7 +137,9 @@
         </span>
       </div>
 
-      <div class="flex items-center justify-between gap-4 text-xs text-muted-color">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-color"
+      >
         <div class="flex flex-wrap items-center gap-4 min-w-0">
           <i
             v-if="needsUpdate"
