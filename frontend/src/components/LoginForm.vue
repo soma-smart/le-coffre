@@ -13,6 +13,7 @@ import { useCsrfStore } from '@/stores/csrf'
 import { pickDefaultGroupForUser } from '@/domain/group/Group'
 import { slugifyGroupName } from '@/utils/groupSlug'
 import { sortGroupsByName } from '@/utils/groupSort'
+import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const router = useRouter()
 const route = useRoute()
@@ -180,7 +181,19 @@ const handleSsoLogin = async () => {
   ssoLoading.value = true
   try {
     const url = await auth.getSsoUrl.execute()
-    window.location.href = url
+    const ssoUrl = normalizeExternalHttpUrl(url)
+    if (!ssoUrl) {
+      toast.add({
+        severity: 'error',
+        summary: 'SSO Error',
+        detail: 'SSO provider returned an invalid login URL.',
+        life: 5000,
+      })
+      return
+    }
+
+    // Redirect to SSO provider
+    window.location.assign(ssoUrl)
   } catch (error) {
     console.error('SSO URL error:', error)
     const detail =

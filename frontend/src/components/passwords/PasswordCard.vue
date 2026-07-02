@@ -115,8 +115,8 @@
           {{ password.login }}
         </span>
         <a
-          v-if="password.url"
-          :href="password.url"
+          v-if="safePasswordUrl"
+          :href="safePasswordUrl"
           target="_blank"
           rel="noopener noreferrer"
           class="flex items-center gap-1 text-primary hover:underline"
@@ -124,6 +124,14 @@
           <i class="pi pi-external-link text-xs" />
           {{ password.url }}
         </a>
+        <span
+          v-else-if="password.url"
+          class="flex items-center gap-1 text-muted-color"
+          v-tooltip.top="'URL is not opened because it is not http(s)'"
+        >
+          <i class="pi pi-exclamation-triangle text-xs" />
+          {{ password.url }}
+        </span>
       </div>
 
       <div class="flex items-center justify-between gap-4 text-xs text-muted-color">
@@ -161,6 +169,7 @@ import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordReveal } from '@/composables/usePasswordReveal'
 import { usePasswordSharedAccess } from '@/composables/usePasswordSharedAccess'
+import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const actorUsernameCache = new Map<string, string>()
 
@@ -188,6 +197,7 @@ const { passwords: passwordUseCases, users: userUseCases } = useContainer()
 
 const isDeleting = ref(false)
 const needsUpdate = computed(() => isPasswordStale(props.password))
+const safePasswordUrl = computed(() => normalizeExternalHttpUrl(props.password.url))
 
 const canWriteInContext = computed(() => {
   if (!props.password.canWrite) {
