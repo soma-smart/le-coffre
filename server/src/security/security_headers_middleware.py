@@ -23,18 +23,13 @@ CONTENT_SECURITY_POLICY = (
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Attach conservative browser security headers to every response."""
 
-    @staticmethod
-    def _is_docs_or_openapi_path(path: str) -> bool:
-        """Return True for FastAPI documentation and OpenAPI schema endpoints."""
-        return path == "/api/docs" or path.startswith("/api/openapi")
-
     async def dispatch(
         self,
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         response = await call_next(request)
-        if not self._is_docs_or_openapi_path(request.url.path):
+        if not _is_docs_request(request):
             response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
@@ -45,3 +40,28 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         response.headers.setdefault("X-XSS-Protection", "0")
         return response
+
+
+def _is_docs_request(request: Request) -> bool:
+    """Return True for Swagger/ReDoc/OpenAPI endpoints, however the app is deployed.
+
+    Doc paths are read from FastAPI itself (never hard-coded). The request path is
+    normalised by stripping root_path first, so it matches whether or not the proxy
+    keeps the mount prefix (e.g. /api) and whatever root_path/docs_url is configured.
+    """
+    app = request.app
+    path = request.url.path
+    root_path = request.scope.get("root_path", "")
+    if root_path and path.startswith(root_path):
+        path = path[len(root_path) :] or "/"
+    doc_paths = {
+        candidate
+        for candidate in (
+            app.docs_url,
+            app.redoc_url,
+            app.openapi_url,
+            app.swagger_ui_oauth2_redirect_url,
+        )
+        if candidate
+    }
+    return path in doc_paths
