@@ -63,16 +63,16 @@ class OAuth2SsoGateway(SsoGateway):
             logger.warning("SSO discovery request failed for %s: %s", discovery_url, e)
             raise InvalidSsoSettingsException("Unable to retrieve the SSO discovery document") from e
 
-        required_fields = ["authorization_endpoint", "token_endpoint"]
-        missing_fields = [field for field in required_fields if field not in config]
+        required_fields = ["authorization_endpoint", "token_endpoint", "userinfo_endpoint"]
+        missing_fields = [field for field in required_fields if not config.get(field)]
         if missing_fields:
             raise InvalidSsoSettingsException("The SSO discovery document is missing required fields")
 
         discovery_result = SsoDiscoveryResult(
             authorization_endpoint=config["authorization_endpoint"],
             token_endpoint=config["token_endpoint"],
-            userinfo_endpoint=config.get("userinfo_endpoint", ""),
-            jwks_uri=config.get("jwks_uri", ""),
+            userinfo_endpoint=config["userinfo_endpoint"],
+            jwks_uri=config.get("jwks_uri"),
         )
 
         for endpoint in (
