@@ -286,6 +286,27 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     )
 
 
+def _is_health_probe(path: str) -> bool:
+    """Liveness/readiness probes must stay reachable while the app is starting up."""
+    normalized = path.rstrip("/")
+    return normalized.endswith("/health") or normalized.endswith("/health/ready")
+
+
+@app.middleware("http")
+async def readiness_gate(request: Request, call_next):
+    """Return 503 until background migrations finish, instead of leaking raw DB errors.
+
+    Database-backed routes would otherwise hit tables that do not exist yet during
+    the startup window and surface a 500 with a raw ``no such table`` message. The
+    health probes are exempt so liveness/readiness keep reporting the real state.
+    """
+    if not _is_health_probe(request.url.path) and not getattr(request.app.state, "ready", False):
+        if getattr(request.app.state, "migration_failed", False):
+            return JSONResponse(status_code=503, content={"detail": "Service unavailable: database migrations failed"})
+        return JSONResponse(status_code=503, content={"detail": "Service starting: database migrations in progress"})
+    return await call_next(request)
+
+
 # Liveness probe: process is alive and event loop is responsive.
 # Fails only if migrations have fatally failed, to trigger a Kubernetes restart.
 # Note: With root_path="/api", this will be accessible at /api/health
