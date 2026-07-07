@@ -677,7 +677,9 @@ export const configureSsoProviderAuthSsoConfigurePost = <ThrowOnError extends bo
  *
  * Get the SSO authorization URL.
  *
- * Returns the SSO authorization URL.
+ * Generates a CSRF ``state`` bound to the caller via an httpOnly cookie,
+ * embeds it in the authorization URL, and returns that URL. The state is
+ * verified against the cookie when the provider calls back.
  */
 export const getSsoUrlAuthSsoUrlGet = <ThrowOnError extends boolean = false>(options?: Options<GetSsoUrlAuthSsoUrlGetData, ThrowOnError>) => (options?.client ?? client).get<GetSsoUrlAuthSsoUrlGetResponses, GetSsoUrlAuthSsoUrlGetErrors, ThrowOnError>({ url: '/auth/sso/url', ...options });
 
