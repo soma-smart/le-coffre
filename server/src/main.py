@@ -35,6 +35,7 @@ from config import (
     get_rate_limit_unauth_max_requests,
     get_rate_limit_user_max_requests,
     get_rate_limit_window_seconds,
+    get_sso_allow_private_networks,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_admin_management_router,
@@ -48,6 +49,7 @@ from identity_access_management_context.adapters.secondary import (
     JwtTokenGateway,
     OAuth2SsoGateway,
     PrivateApiSsoEncryptionGateway,
+    SsoUrlValidator,
 )
 from monitoring import setup_logging, setup_monitoring
 from password_management_context.adapters.primary.fastapi.routes import (
@@ -181,6 +183,7 @@ async def lifespan(app: FastAPI):
         redirect_uri=f"{base_url}/sso/callback",
         scope="openid email profile",
         provider="oauth2",
+        url_validator=SsoUrlValidator(allow_private_networks=get_sso_allow_private_networks()),
     )
     app.state.sso_gateway = sso_gateway
 
@@ -281,6 +284,27 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
         content={"detail": exc.detail},
         headers=exc.headers,
     )
+
+
+def _is_health_probe(path: str) -> bool:
+    """Liveness/readiness probes must stay reachable while the app is starting up."""
+    normalized = path.rstrip("/")
+    return normalized.endswith("/health") or normalized.endswith("/health/ready")
+
+
+@app.middleware("http")
+async def readiness_gate(request: Request, call_next):
+    """Return 503 until background migrations finish, instead of leaking raw DB errors.
+
+    Database-backed routes would otherwise hit tables that do not exist yet during
+    the startup window and surface a 500 with a raw ``no such table`` message. The
+    health probes are exempt so liveness/readiness keep reporting the real state.
+    """
+    if not _is_health_probe(request.url.path) and not getattr(request.app.state, "ready", False):
+        if getattr(request.app.state, "migration_failed", False):
+            return JSONResponse(status_code=503, content={"detail": "Service unavailable: database migrations failed"})
+        return JSONResponse(status_code=503, content={"detail": "Service starting: database migrations in progress"})
+    return await call_next(request)
 
 
 # Liveness probe: process is alive and event loop is responsive.

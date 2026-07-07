@@ -141,6 +141,10 @@ def database(database_path):
 @pytest.fixture
 def e2e_client(database, env_vars):
     with CsrfTestClient(app) as client:
+        # The `database` fixture already applied migrations, so bypass the startup
+        # readiness gate (which would otherwise 503 while the background migration
+        # task races the test's requests).
+        app.state.ready = True
         yield client
 
 
@@ -285,9 +289,10 @@ def authenticate_sso_user(e2e_client, oidc_server, sso_user):
     query_params = parse_qs(parsed.query)
     valid_code = query_params.get("code", [None])[0]
     assert valid_code, f"Authorization code not found in callback URL: {callback_url}"
+    returned_state = query_params.get("state", [None])[0]
 
-    # Exchange code for token
-    valid_callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}")
+    # Exchange code for token (echo back the CSRF state so it matches the sso_state cookie)
+    valid_callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}&state={returned_state}")
     assert valid_callback_response.status_code == 200, f"Valid callback failed: {valid_callback_response.text}"
 
     callback_data = valid_callback_response.json()
@@ -394,7 +399,11 @@ def client_factory(database, env_vars):
     """
 
     def _make_client():
-        return CsrfTestClient(app)
+        client = CsrfTestClient(app)
+        # The `database` fixture already applied migrations; keep the app marked
+        # ready so the startup readiness gate does not 503 these clients.
+        app.state.ready = True
+        return client
 
     return _make_client
 

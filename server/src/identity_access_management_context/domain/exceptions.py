@@ -42,6 +42,13 @@ class InvalidSsoSettingsException(AuthenticationDomainError):
     pass
 
 
+class DisallowedSsoEndpointException(InvalidSsoSettingsException):
+    """Raised when an SSO URL targets a disallowed scheme or a private/internal address."""
+
+    def __init__(self, message: str = "The provided SSO URL is not allowed") -> None:
+        super().__init__(message)
+
+
 class InvalidRefreshTokenException(AuthenticationDomainError):
     pass
 

@@ -5,7 +5,7 @@ import httpx
 import oidc_provider_mock
 import pytest
 
-from identity_access_management_context.adapters.secondary import OAuth2SsoGateway
+from identity_access_management_context.adapters.secondary import OAuth2SsoGateway, SsoUrlValidator
 from identity_access_management_context.application.gateways import SsoGateway
 from identity_access_management_context.domain.entities import SsoConfiguration
 from identity_access_management_context.domain.exceptions import InvalidSsoSettingsException
@@ -85,6 +85,7 @@ def sso_gateway(oidc_server) -> OAuth2SsoGateway:
     """OAuth2 SSO Gateway configured to use the OIDC mock server."""
     gateway = OAuth2SsoGateway(
         redirect_uri=oidc_server["redirect_uri"],
+        url_validator=SsoUrlValidator(allow_private_networks=True),
     )
     return gateway
 
@@ -208,6 +209,58 @@ async def test_oauth2_flow_with_invalid_code(sso_gateway: SsoGateway, oidc_serve
     assert "invalid" in error_message or "fail" in error_message or "error" in error_message
 
 
+@pytest.fixture
+def strict_gateway() -> OAuth2SsoGateway:
+    """Gateway with the production-default (strict) SSRF guard."""
+    return OAuth2SsoGateway(redirect_uri="https://app.example.com/sso/callback")
+
+
+def _internal_config(token_endpoint: str, userinfo_endpoint: str) -> SsoConfiguration:
+    return SsoConfiguration(
+        client_id="x",
+        client_secret="encrypted(x)",
+        discovery_url="https://idp.example.com/.well-known/openid-configuration",
+        authorization_endpoint="https://idp.example.com/authorize",
+        token_endpoint=token_endpoint,
+        userinfo_endpoint=userinfo_endpoint,
+        jwks_uri="https://idp.example.com/jwks",
+        updated_at=datetime.fromtimestamp(0),
+        client_secret_decrypted="x",
+    )
+
+
+@pytest.mark.asyncio
+async def test_should_reject_discovery_url_targeting_cloud_metadata(strict_gateway: OAuth2SsoGateway):
+    with pytest.raises(InvalidSsoSettingsException) as exc_info:
+        await strict_gateway.validate_discovery(
+            client_id="x",
+            client_secret="x",
+            discovery_url="https://169.254.169.254/latest/meta-data/",
+        )
+    # No network detail must leak (blind SSRF oracle).
+    assert "169.254" not in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_should_reject_http_discovery_url_in_strict_mode(strict_gateway: OAuth2SsoGateway):
+    with pytest.raises(InvalidSsoSettingsException):
+        await strict_gateway.validate_discovery(
+            client_id="x",
+            client_secret="x",
+            discovery_url="http://accounts.google.com/.well-known/openid_configuration",
+        )
+
+
+@pytest.mark.asyncio
+async def test_should_reject_internal_token_endpoint_on_callback(strict_gateway: OAuth2SsoGateway):
+    config = _internal_config(
+        token_endpoint="http://127.0.0.1:5432/token",
+        userinfo_endpoint="https://idp.example.com/userinfo",
+    )
+    with pytest.raises(InvalidSsoSettingsException):
+        await strict_gateway.validate_callback(config, "any-code")
+
+
 @pytest.mark.asyncio
 async def test_oidc_discovery_with_invalid_url(sso_gateway: SsoGateway):
     """Test that invalid discovery URL fails gracefully."""
@@ -297,6 +350,7 @@ async def test_complete_oauth2_flow_with_redirect_uri_override(oidc_test_user):
     # but the CLI flow provides its own redirect_uri at callback time.
     gateway = OAuth2SsoGateway(
         redirect_uri=oidc_server["redirect_uri"],
+        url_validator=SsoUrlValidator(allow_private_networks=True),
     )
 
     sso_discovery_result = await gateway.validate_discovery(

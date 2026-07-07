@@ -19,7 +19,7 @@
     {
       "label": "Start Backend",
       "type": "shell",
-      "command": "cd /app/server && uv run fastapi dev src/main.py --host 0.0.0.0",
+      "command": "cd /app/server && SSO_ALLOW_PRIVATE_NETWORKS=true uv run fastapi dev src/main.py --host 0.0.0.0",
       "dependsOn": ["Start Nginx"],
       "isBackground": true,
       "problemMatcher": [],

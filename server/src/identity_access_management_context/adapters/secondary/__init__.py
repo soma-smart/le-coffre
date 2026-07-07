@@ -9,12 +9,14 @@ from .sql.sql_sso_configuration_repository import SqlSsoConfigurationRepository
 from .sql.sql_sso_user_repository import SqlSsoUserRepository
 from .sql.sql_user_password_repository import SqlUserPasswordRepository
 from .sql.sql_user_repository import SqlUserRepository
+from .sso_url_validator import SsoUrlValidator
 
 __all__ = [
     "BcryptHashingGateway",
     "InMemoryLoginLockoutGateway",
     "JwtTokenGateway",
     "OAuth2SsoGateway",
+    "SsoUrlValidator",
     "SqlSsoUserRepository",
     "SqlUserRepository",
     "SqlUserPasswordRepository",

@@ -28,4 +28,4 @@ class GetSsoAuthorizeUrlUseCase(TracedUseCase):
             self._sso_configuration_repository, self._sso_encryption_gateway
         ).decrypt()
 
-        return await self._sso_gateway.get_authorize_url(sso_config)
+        return await self._sso_gateway.get_authorize_url(sso_config, command.state)

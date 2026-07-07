@@ -25,6 +25,8 @@ from security.rate_limiter import InMemoryRateLimiter
 @pytest.fixture
 def rate_limited_client(database, env_vars):
     with CsrfTestClient(app) as client:
+        # DB already migrated by the `database` fixture; bypass the startup readiness gate.
+        app.state.ready = True
         # Override limits on the live app state so phases trip deterministically.
         app.state.rate_limit_user_max_requests = 50
         app.state.rate_limit_unauth_max_requests = 5
