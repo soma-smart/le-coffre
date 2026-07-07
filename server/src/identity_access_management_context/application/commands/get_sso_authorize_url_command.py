@@ -3,4 +3,4 @@ from dataclasses import dataclass
 
 @dataclass
 class GetSsoAuthorizeUrlCommand:
-    pass
+    state: str | None = None

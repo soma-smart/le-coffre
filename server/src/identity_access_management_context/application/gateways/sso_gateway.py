@@ -28,7 +28,7 @@ class SsoDiscoveryResult:
 
 
 class SsoGateway(Protocol):
-    async def get_authorize_url(self, config: SsoConfiguration) -> str: ...
+    async def get_authorize_url(self, config: SsoConfiguration, state: str | None = None) -> str: ...
 
     async def validate_callback(
         self, config: SsoConfiguration, code: str, redirect_uri: str | None = None

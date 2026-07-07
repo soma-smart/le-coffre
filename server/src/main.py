@@ -35,6 +35,7 @@ from config import (
     get_rate_limit_unauth_max_requests,
     get_rate_limit_user_max_requests,
     get_rate_limit_window_seconds,
+    get_sso_allow_private_networks,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_admin_management_router,
@@ -48,6 +49,7 @@ from identity_access_management_context.adapters.secondary import (
     JwtTokenGateway,
     OAuth2SsoGateway,
     PrivateApiSsoEncryptionGateway,
+    SsoUrlValidator,
 )
 from monitoring import setup_logging, setup_monitoring
 from password_management_context.adapters.primary.fastapi.routes import (
@@ -181,6 +183,7 @@ async def lifespan(app: FastAPI):
         redirect_uri=f"{base_url}/sso/callback",
         scope="openid email profile",
         provider="oauth2",
+        url_validator=SsoUrlValidator(allow_private_networks=get_sso_allow_private_networks()),
     )
     app.state.sso_gateway = sso_gateway
 

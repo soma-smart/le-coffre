@@ -350,11 +350,14 @@ async def test_complete_authentication_workflow(
 
     assert isinstance(sso_url, str)
     assert "http" in sso_url.lower()
+    # The CSRF state is embedded in the URL and bound to the caller via the sso_state cookie.
+    sso_state = parse_qs(urlparse(sso_url).query).get("state", [None])[0]
+    assert sso_state, "SSO authorization URL should carry a state parameter"
     print(f"✅ SSO authorization URL obtained: {sso_url[:50]}...")
 
-    # Step 5.5: Test invalid authorization code
+    # Step 5.5: Test invalid authorization code (with a valid state so we reach the code check)
     print("\n🚫 Step 5.5: Testing SSO callback with invalid code...")
-    invalid_callback_response = e2e_client.get("/api/auth/sso/callback?code=invalid-code-12345")
+    invalid_callback_response = e2e_client.get(f"/api/auth/sso/callback?code=invalid-code-12345&state={sso_state}")
     assert invalid_callback_response.status_code == 400
     error_data = invalid_callback_response.json()
     assert (
@@ -364,8 +367,15 @@ async def test_complete_authentication_workflow(
     )
     print("✅ Invalid SSO code correctly rejected (400)")
 
-    # Step 5.6: Simulate user authorization and get valid code
+    # Step 5.6: Simulate user authorization and get valid code.
+    # Re-fetch the URL to obtain a fresh state + sso_state cookie (the previous
+    # callback consumed/cleared the cookie).
     print("\n🔐 Step 5.6: Simulating user authorization to get valid code...")
+    fresh_url_response = e2e_client.get("/api/auth/sso/url")
+    assert fresh_url_response.status_code == 200
+    fresh_sso_url_data = fresh_url_response.json()
+    sso_url = fresh_sso_url_data if isinstance(fresh_sso_url_data, str) else str(fresh_sso_url_data)
+
     auth_response = httpx.post(
         sso_url,
         data={"sub": oidc_test_user["sub"]},
@@ -379,12 +389,13 @@ async def test_complete_authentication_workflow(
     parsed = urlparse(callback_url)
     query_params = parse_qs(parsed.query)
     valid_code = query_params.get("code", [None])[0]
+    valid_state = query_params.get("state", [None])[0]
     assert valid_code
     print(f"✅ Valid authorization code obtained: {valid_code[:10]}...")
 
     # Step 5.7: Complete SSO login with valid code
     print("\n✨ Step 5.7: Completing SSO login with valid code...")
-    valid_callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}")
+    valid_callback_response = e2e_client.get(f"/api/auth/sso/callback?code={valid_code}&state={valid_state}")
     assert valid_callback_response.status_code == 200
 
     callback_data = valid_callback_response.json()

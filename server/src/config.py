@@ -104,6 +104,17 @@ def get_rate_limit_trusted_proxy_hops() -> int:
     return int(os.environ.get("RATE_LIMIT_TRUSTED_PROXY_HOPS", "1"))
 
 
+def get_sso_allow_private_networks() -> bool:
+    """Allow SSO endpoints to target http/private/internal addresses.
+
+    Default ``false`` (secure-by-default): SSO URLs must be https and must not
+    resolve to private/loopback/link-local addresses, preventing SSRF against
+    internal services and cloud metadata endpoints. Set to ``true`` only for
+    local development or the localhost-bound OIDC mock used in tests.
+    """
+    return os.environ.get("SSO_ALLOW_PRIVATE_NETWORKS", "false").lower() == "true"
+
+
 # ── Login Lockout ────────────────────────────────────────────────
 
 

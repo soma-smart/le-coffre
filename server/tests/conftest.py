@@ -46,6 +46,9 @@ def env_vars():
     # gateway honors *some* finite window and that the use case clears state
     # when it elapses.
     os.environ["LOGIN_LOCKOUT_SECONDS"] = "1"
+    # The e2e OIDC mock is bound to http://localhost; relax the SSRF guard so the
+    # SSO discovery/token/userinfo flow can reach it. Production defaults to strict.
+    os.environ["SSO_ALLOW_PRIVATE_NETWORKS"] = "true"
     yield
     for key in (
         "JWT_SECRET_KEY",
@@ -54,5 +57,6 @@ def env_vars():
         "RATE_LIMIT_UNAUTH_MAX_REQUESTS",
         "RATE_LIMIT_AUTH_MAX_REQUESTS",
         "LOGIN_LOCKOUT_SECONDS",
+        "SSO_ALLOW_PRIVATE_NETWORKS",
     ):
         os.environ.pop(key, None)

@@ -14,8 +14,10 @@ class FakeSsoGateway(SsoGateway):
         self._discovery_error: Exception | None = None
         self._discovery_result: SsoDiscoveryResult | None = None
         self.last_redirect_uri: str | None = None
+        self.last_state: str | None = None
 
-    async def get_authorize_url(self, config: SsoConfiguration) -> str:
+    async def get_authorize_url(self, config: SsoConfiguration, state: str | None = None) -> str:
+        self.last_state = state
         return self._authorize_url
 
     async def validate_callback(

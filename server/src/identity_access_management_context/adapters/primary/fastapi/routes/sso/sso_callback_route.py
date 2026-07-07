@@ -1,7 +1,8 @@
 import logging
+import secrets
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import BaseModel
 
 from config import (
@@ -11,6 +12,9 @@ from config import (
 )
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_sso_login_usecase,
+)
+from identity_access_management_context.adapters.primary.fastapi.routes.sso.get_sso_url_route import (
+    SSO_STATE_COOKIE,
 )
 from identity_access_management_context.application.commands.sso_login_command import (
     SsoLoginCommand,
@@ -47,6 +51,7 @@ class SsoCallbackResponse(BaseModel):
     responses={503: {"description": "Vault is locked"}},
 )
 async def sso_callback(
+    request: Request,
     response: Response,
     code: str = Query(..., description="Authorization code from SSO provider"),
     state: str = Query(None, description="State parameter for CSRF protection"),
@@ -65,6 +70,12 @@ async def sso_callback(
 
     Returns user information and sets HTTP-only secure cookies with JWT tokens.
     """
+    expected_state = request.cookies.get(SSO_STATE_COOKIE)
+    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+        response.delete_cookie(SSO_STATE_COOKIE)
+        raise HTTPException(status_code=400, detail="Invalid SSO state")
+    response.delete_cookie(SSO_STATE_COOKIE)
+
     try:
         command = SsoLoginCommand(code=code, redirect_uri=redirect_uri)
         result = await usecase.execute(command)
@@ -110,7 +121,7 @@ async def sso_callback(
             ),
         )
     except InvalidSsoCodeException as e:
-        raise HTTPException(status_code=400, detail=f"SSO authentication failed: {str(e)}") from e
+        raise HTTPException(status_code=400, detail="SSO authentication failed") from e
     except SsoEncryptionUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     except IdentityAccessManagementDomainError as e:

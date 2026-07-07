@@ -1,9 +1,13 @@
+import logging
 from typing import Any
 from urllib.parse import urlencode
 
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
+from identity_access_management_context.adapters.secondary.sso_url_validator import (
+    SsoUrlValidator,
+)
 from identity_access_management_context.application.gateways import (
     SsoDiscoveryResult,
     SsoGateway,
@@ -14,6 +18,10 @@ from identity_access_management_context.domain.exceptions import (
     InvalidSsoCodeException,
     InvalidSsoSettingsException,
 )
+
+logger = logging.getLogger(__name__)
+
+_HTTP_TIMEOUT_SECONDS = 10.0
 
 
 class OAuth2SsoGateway(SsoGateway):
@@ -28,10 +36,12 @@ class OAuth2SsoGateway(SsoGateway):
         redirect_uri: str,
         scope: str = "openid email profile",
         provider: str = "default",
+        url_validator: SsoUrlValidator | None = None,
     ):
         self.redirect_uri = redirect_uri
         self.scope = scope
         self.provider = provider
+        self._url_validator = url_validator or SsoUrlValidator()
 
     async def validate_discovery(
         self,
@@ -40,32 +50,41 @@ class OAuth2SsoGateway(SsoGateway):
         discovery_url: str,
     ) -> SsoDiscoveryResult:
         """Validate SSO discovery configuration and return endpoints."""
+        self._url_validator.validate(discovery_url)
+
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT_SECONDS, follow_redirects=False) as client:
                 response = await client.get(discovery_url)
                 response.raise_for_status()
                 config = response.json()
-
-                # Validate required fields
-                required_fields = ["authorization_endpoint", "token_endpoint"]
-                missing_fields = [field for field in required_fields if field not in config]
-                if missing_fields:
-                    raise InvalidSsoSettingsException(f"Missing fields in discovery: {missing_fields}")
-
-                return SsoDiscoveryResult(
-                    authorization_endpoint=config["authorization_endpoint"],
-                    token_endpoint=config["token_endpoint"],
-                    userinfo_endpoint=config.get("userinfo_endpoint", ""),
-                    jwks_uri=config.get("jwks_uri", ""),
-                )
         except InvalidSsoSettingsException:
             raise
-        except httpx.TimeoutException as e:
-            raise InvalidSsoSettingsException("Timeout in discovering endpoints") from e
-        except httpx.HTTPStatusError as e:
-            raise InvalidSsoSettingsException(f"HTTP error during discovery: {e.response.status_code}") from e
         except Exception as e:
-            raise InvalidSsoSettingsException(f"Error during discovery of endpoints: {str(e)}") from e
+            logger.warning("SSO discovery request failed for %s: %s", discovery_url, e)
+            raise InvalidSsoSettingsException("Unable to retrieve the SSO discovery document") from e
+
+        required_fields = ["authorization_endpoint", "token_endpoint"]
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise InvalidSsoSettingsException("The SSO discovery document is missing required fields")
+
+        discovery_result = SsoDiscoveryResult(
+            authorization_endpoint=config["authorization_endpoint"],
+            token_endpoint=config["token_endpoint"],
+            userinfo_endpoint=config.get("userinfo_endpoint", ""),
+            jwks_uri=config.get("jwks_uri", ""),
+        )
+
+        for endpoint in (
+            discovery_result.authorization_endpoint,
+            discovery_result.token_endpoint,
+            discovery_result.userinfo_endpoint,
+            discovery_result.jwks_uri,
+        ):
+            if endpoint:
+                self._url_validator.validate(endpoint)
+
+        return discovery_result
 
     def _get_oauth_client(self, config: SsoConfiguration) -> AsyncOAuth2Client:
         """Get or create the OAuth2 client from stored configuration."""
@@ -75,16 +94,18 @@ class OAuth2SsoGateway(SsoGateway):
             client_secret=config.client_secret_decrypted,
             scope=self.scope,
             redirect_uri=self.redirect_uri,
+            timeout=_HTTP_TIMEOUT_SECONDS,
+            follow_redirects=False,
         )
 
-    async def get_authorize_url(self, config) -> str:
+    async def get_authorize_url(self, config: SsoConfiguration, state: str | None = None) -> str:
         """Generate OAuth2 authorization URL."""
         client = self._get_oauth_client(config)
 
-        # Generate authorization URL with state parameter for security
-        authorization_url, state = client.create_authorization_url(
+        # Generate authorization URL with a caller-provided state for CSRF protection
+        authorization_url, _ = client.create_authorization_url(
             config.authorization_endpoint,
-            state=client.token.get("state") if isinstance(client.token, dict) else None,
+            state=state,
         )
 
         return authorization_url
@@ -107,6 +128,11 @@ class OAuth2SsoGateway(SsoGateway):
                           If None, uses the server's default redirect_uri.
         """
 
+        # Re-validate persisted endpoints before any outbound call (defense in depth:
+        # configs stored before this guard existed, or DNS rebinding, must not reach internal hosts).
+        self._url_validator.validate(config.token_endpoint)
+        self._url_validator.validate(config.userinfo_endpoint)
+
         # Use override redirect_uri if provided (for CLI auth), otherwise use default
         effective_redirect_uri = redirect_uri or self.redirect_uri
 
@@ -124,7 +150,7 @@ class OAuth2SsoGateway(SsoGateway):
             )
 
             # Fetch user information
-            async with httpx.AsyncClient() as http_client:
+            async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT_SECONDS, follow_redirects=False) as http_client:
                 # Set the token for authorized requests
                 client.token = token
 
@@ -146,8 +172,11 @@ class OAuth2SsoGateway(SsoGateway):
                 sso_provider=self.provider,
             )
 
+        except InvalidSsoCodeException:
+            raise
         except Exception as e:
-            raise InvalidSsoCodeException(f"Failed to validate SSO code: {str(e)}") from e
+            logger.warning("SSO callback validation failed: %s", e)
+            raise InvalidSsoCodeException("SSO authentication failed") from e
 
     def _extract_email(self, user_info: dict[str, Any]) -> str:
         """Extract email from user info based on provider."""
