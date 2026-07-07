@@ -66,7 +66,9 @@ class OAuth2SsoGateway(SsoGateway):
         required_fields = ["authorization_endpoint", "token_endpoint", "userinfo_endpoint"]
         missing_fields = [field for field in required_fields if not config.get(field)]
         if missing_fields:
-            raise InvalidSsoSettingsException("The SSO discovery document is missing required fields")
+            raise InvalidSsoSettingsException(
+                f"The SSO discovery document is missing required fields: {missing_fields}"
+            )
 
         discovery_result = SsoDiscoveryResult(
             authorization_endpoint=config["authorization_endpoint"],
