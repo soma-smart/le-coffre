@@ -66,13 +66,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     )
 
     # Destructive vault operations throttled by a single GLOBAL bucket (all callers
-    # and all IPs share it), enforcing "at most once per window". This is what stops
-    # the DoS: an attacker cannot loop the anonymous `/vault/unlock/clear` to wipe
-    # accumulated shares, nor loop `/vault/setup` to overwrite a setup in progress —
-    # regardless of how many IPs they rotate through. Keyed by (method, exact path).
+    # and all IPs share it), enforcing "at most once per window" across both ops.
+    # This is what stops the DoS: an attacker cannot loop the anonymous
+    # `/vault/unlock/clear` to wipe accumulated shares, nor loop `/vault/setup` to
+    # overwrite a setup in progress — regardless of how many IPs they rotate through.
     VAULT_SENSITIVE_OPS: dict[tuple[str, str], str] = {
-        ("DELETE", "/api/vault/unlock/clear"): "vault:clear",
-        ("POST", "/api/vault/setup"): "vault:setup",
+        ("DELETE", "/api/vault/unlock/clear"): "vault:sensitive",
+        ("POST", "/api/vault/setup"): "vault:sensitive",
     }
 
     # Frequently-polled read-only endpoints that every page / pre-login flow hits:
