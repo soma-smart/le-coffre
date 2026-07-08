@@ -342,6 +342,15 @@ def test_given_clear_throttle_is_global_across_ips():
         assert c.delete("/api/vault/unlock/clear", headers={"X-Forwarded-For": "203.0.113.2"}).status_code == 429
 
 
+def test_given_clear_and_setup_share_the_same_global_bucket():
+    # clear and setup contend for ONE bucket, so a clear consumes the window for a
+    # subsequent setup (at most one destructive op per window across both routes).
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, sensitive_window=60)
+    with TestClient(app) as c:
+        assert c.delete("/api/vault/unlock/clear").status_code == 200
+        assert c.post("/api/vault/setup", json={"nb_shares": 3, "threshold": 2}).status_code == 429
+
+
 def test_given_unlock_when_flooded_should_not_consume_global_throttle():
     # Submitting shares (the anonymous multi-party path) must never be throttled by
     # the destructive-op bucket.
