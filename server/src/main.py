@@ -34,6 +34,9 @@ from config import (
     get_rate_limit_trusted_proxy_hops,
     get_rate_limit_unauth_max_requests,
     get_rate_limit_user_max_requests,
+    get_rate_limit_vault_max_requests,
+    get_rate_limit_vault_sensitive_max_requests,
+    get_rate_limit_vault_sensitive_window_seconds,
     get_rate_limit_window_seconds,
     get_sso_allow_private_networks,
 )
@@ -197,6 +200,9 @@ async def lifespan(app: FastAPI):
     app.state.rate_limit_user_max_requests = get_rate_limit_user_max_requests()
     app.state.rate_limit_unauth_max_requests = get_rate_limit_unauth_max_requests()
     app.state.rate_limit_auth_max_requests = get_rate_limit_auth_max_requests()
+    app.state.rate_limit_vault_max_requests = get_rate_limit_vault_max_requests()
+    app.state.rate_limit_vault_sensitive_max_requests = get_rate_limit_vault_sensitive_max_requests()
+    app.state.rate_limit_vault_sensitive_window_seconds = get_rate_limit_vault_sensitive_window_seconds()
     app.state.rate_limit_window_seconds = get_rate_limit_window_seconds()
     app.state.rate_limit_trusted_proxies = get_rate_limit_trusted_proxies()
     app.state.rate_limit_trusted_proxy_hops = get_rate_limit_trusted_proxy_hops()

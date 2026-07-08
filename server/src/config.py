@@ -83,6 +83,32 @@ def get_rate_limit_auth_max_requests() -> int:
     return int(os.environ.get("RATE_LIMIT_AUTH_MAX_REQUESTS", "100"))
 
 
+def get_rate_limit_vault_max_requests() -> int:
+    """Max requests per window on vault-mutation endpoints (per-IP vault floor). Default 30.
+
+    Covers the unauthenticated unlock flow (``/vault/unlock``, ``/vault/unlock/clear``),
+    ``/vault/setup`` and ``/vault/validate-setup``. A per-IP floor blunts flooding without
+    hindering the legitimate low-volume unlock ceremony.
+    """
+    return int(os.environ.get("RATE_LIMIT_VAULT_MAX_REQUESTS", "30"))
+
+
+def get_rate_limit_vault_sensitive_max_requests() -> int:
+    """Max destructive vault operations allowed per sensitive window, GLOBALLY. Default 1.
+
+    Applies a single shared bucket (all callers, all IPs) to the destructive ``/vault/unlock/clear``
+    and the vault-overwriting ``/vault/setup``. Combined with the window below this enforces
+    "at most once per minute" so an anonymous attacker cannot loop those operations to prevent
+    unlocking / re-initialize a setup in progress.
+    """
+    return int(os.environ.get("RATE_LIMIT_VAULT_SENSITIVE_MAX_REQUESTS", "1"))
+
+
+def get_rate_limit_vault_sensitive_window_seconds() -> int:
+    """Window for the global destructive-vault-operation throttle. Default 60 (1 minute)."""
+    return int(os.environ.get("RATE_LIMIT_VAULT_SENSITIVE_WINDOW_SECONDS", "60"))
+
+
 def get_rate_limit_window_seconds() -> int:
     """Sliding window duration in seconds. Default 60 (1 minute)."""
     return int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))
