@@ -136,7 +136,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             auth_result = rate_limiter.check(auth_key, auth_max, window, now=now)
             if auth_result.is_limited:
                 logger.warning(
-                    "Rate limit exceeded: bucket=%s limit=%d path=%s %s",
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
                     auth_key,
                     auth_max,
                     request.method,
@@ -152,7 +152,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             sensitive_result = rate_limiter.check(sensitive_key, sensitive_max, sensitive_window, now=now)
             if sensitive_result.is_limited:
                 logger.warning(
-                    "Rate limit exceeded: bucket=%s limit=%d path=%s %s",
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
                     sensitive_key,
                     sensitive_max,
                     request.method,
@@ -168,7 +168,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             vault_result = rate_limiter.check(vault_key, vault_max, window, now=now)
             if vault_result.is_limited:
                 logger.warning(
-                    "Rate limit exceeded: bucket=%s limit=%d path=%s %s",
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
                     vault_key,
                     vault_max,
                     request.method,
@@ -186,7 +186,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         principal_result = rate_limiter.check(principal_key, principal_limit, window, now=now)
         if principal_result.is_limited:
             logger.warning(
-                "Rate limit exceeded: bucket=%s limit=%d path=%s %s",
+                "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
                 principal_key,
                 principal_limit,
                 request.method,
