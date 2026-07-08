@@ -7,8 +7,9 @@ from vault_management_context.domain.entities import Share
 class ShareRepository(Protocol):
     """Store for the pending unlock shares accumulated before reconstruction.
 
-    A dumb sink: deduplication of shares is a domain concern enforced upstream by
-    ``UnlockVaultUseCase``; implementations only persist and return what they are given.
+    A dumb sink regarding *deduplication*: deduplication of shares is enforced upstream by
+    ``UnlockVaultUseCase``; repository implementations persist and return what they are given,
+    but may still apply storage limits (e.g., an in-memory cap) to bound resource usage.
     """
 
     def get_all(self) -> list[Share]: ...
