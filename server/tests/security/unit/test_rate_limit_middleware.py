@@ -41,6 +41,9 @@ def _create_app(
     user_max: int = 300,
     unauth_max: int = 30,
     auth_max: int = 100,
+    vault_max: int = 10,
+    sensitive_max: int = 1,
+    sensitive_window: int = 60,
     window: int = 60,
     login_status_code: int = 401,
     token_gateway: _FakeTokenGateway | None = None,
@@ -56,6 +59,9 @@ def _create_app(
     app.state.rate_limit_user_max_requests = user_max
     app.state.rate_limit_unauth_max_requests = unauth_max
     app.state.rate_limit_auth_max_requests = auth_max
+    app.state.rate_limit_vault_max_requests = vault_max
+    app.state.rate_limit_vault_sensitive_max_requests = sensitive_max
+    app.state.rate_limit_vault_sensitive_window_seconds = sensitive_window
     app.state.rate_limit_window_seconds = window
     app.state.rate_limit_trusted_proxies = trusted_proxies if trusted_proxies is not None else {"127.0.0.1", "::1"}
     app.state.rate_limit_trusted_proxy_hops = trusted_proxy_hops
@@ -97,6 +103,18 @@ def _create_app(
     @app.get("/vault/status")
     async def vault_status():
         return PlainTextResponse("status", status_code=200)
+
+    @app.post("/vault/unlock")
+    async def vault_unlock():
+        return PlainTextResponse("unlock", status_code=202)
+
+    @app.delete("/vault/unlock/clear")
+    async def vault_clear():
+        return PlainTextResponse("clear", status_code=200)
+
+    @app.post("/vault/setup")
+    async def vault_setup():
+        return PlainTextResponse("setup", status_code=201)
 
     @app.get("/other")
     async def other():
@@ -277,6 +295,69 @@ def test_given_access_token_raises_unexpected_error_when_dispatching_should_fall
     warnings = [rec for rec in caplog.records if rec.levelname == "WARNING" and "Token gateway" in rec.getMessage()]
     assert warnings, "Unexpected token-gateway errors must surface at WARNING"
     assert warnings[0].exc_info is not None, "WARNING must include exc_info for Sentry grouping"
+
+
+# ── Vault-mutation floor (per-IP) ─────────────────────────────────────
+
+
+def test_given_vault_unlock_flood_when_dispatching_should_apply_vault_floor():
+    # /unlock is not a "sensitive op" (no global throttle); only the per-IP floor applies.
+    app = _create_app(user_max=100, unauth_max=100, vault_max=3, window=60)
+    with TestClient(app) as c:
+        for _ in range(3):
+            assert c.post("/api/vault/unlock", json={"shares": ["x"]}).status_code == 202
+        assert c.post("/api/vault/unlock", json={"shares": ["x"]}).status_code == 429
+
+
+def test_given_vault_status_when_flooded_should_stay_exempt():
+    app = _create_app(user_max=100, unauth_max=100, vault_max=1, window=60)
+    with TestClient(app) as c:
+        for _ in range(5):
+            assert c.get("/api/vault/status").status_code == 200
+
+
+# ── Global destructive-op throttle (clear / setup, once per window) ───
+
+
+def test_given_clear_second_call_within_window_should_hit_global_throttle():
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, sensitive_window=60)
+    with TestClient(app) as c:
+        assert c.delete("/api/vault/unlock/clear").status_code == 200
+        assert c.delete("/api/vault/unlock/clear").status_code == 429
+
+
+def test_given_setup_second_call_within_window_should_hit_global_throttle():
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, sensitive_window=60)
+    with TestClient(app) as c:
+        assert c.post("/api/vault/setup", json={"nb_shares": 3, "threshold": 2}).status_code == 201
+        assert c.post("/api/vault/setup", json={"nb_shares": 3, "threshold": 2}).status_code == 429
+
+
+def test_given_clear_throttle_is_global_across_ips():
+    # A single shared bucket: a second clear from a DIFFERENT IP is still throttled,
+    # so rotating IPs does not bypass the once-per-window limit.
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, trusted_proxies={"testclient"})
+    with TestClient(app) as c:
+        assert c.delete("/api/vault/unlock/clear", headers={"X-Forwarded-For": "203.0.113.1"}).status_code == 200
+        assert c.delete("/api/vault/unlock/clear", headers={"X-Forwarded-For": "203.0.113.2"}).status_code == 429
+
+
+def test_given_clear_and_setup_share_the_same_global_bucket():
+    # clear and setup contend for ONE bucket, so a clear consumes the window for a
+    # subsequent setup (at most one destructive op per window across both routes).
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, sensitive_window=60)
+    with TestClient(app) as c:
+        assert c.delete("/api/vault/unlock/clear").status_code == 200
+        assert c.post("/api/vault/setup", json={"nb_shares": 3, "threshold": 2}).status_code == 429
+
+
+def test_given_unlock_when_flooded_should_not_consume_global_throttle():
+    # Submitting shares (the anonymous multi-party path) must never be throttled by
+    # the destructive-op bucket.
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1)
+    with TestClient(app) as c:
+        for _ in range(5):
+            assert c.post("/api/vault/unlock", json={"shares": ["x"]}).status_code == 202
 
 
 # ── Auth-route floor (login only) ─────────────────────────────────────

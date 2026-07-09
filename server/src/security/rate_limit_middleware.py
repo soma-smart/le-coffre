@@ -54,6 +54,27 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # LoginLockoutGateway, not here.
     AUTH_ROUTES: tuple[str, ...] = ("/api/auth/login",)
 
+    # Vault-mutation endpoints share a strict per-IP floor. These are the
+    # (mostly unauthenticated) unlock/setup surfaces abused for DoS: looped
+    # `/vault/unlock/clear`, share-pool pollution via `/vault/unlock`, and
+    # `/vault/setup` re-init flooding. `/api/vault/unlock` covers both
+    # `/unlock` and `/unlock/clear`. `/api/vault/status` stays exempt (polled).
+    VAULT_MUTATION_PREFIXES: tuple[str, ...] = (
+        "/api/vault/unlock",
+        "/api/vault/setup",
+        "/api/vault/validate-setup",
+    )
+
+    # Destructive vault operations throttled by a single GLOBAL bucket (all callers
+    # and all IPs share it), enforcing "at most once per window" across both ops.
+    # This is what stops the DoS: an attacker cannot loop the anonymous
+    # `/vault/unlock/clear` to wipe accumulated shares, nor loop `/vault/setup` to
+    # overwrite a setup in progress — regardless of how many IPs they rotate through.
+    VAULT_SENSITIVE_OPS: dict[tuple[str, str], str] = {
+        ("DELETE", "/api/vault/unlock/clear"): "vault:sensitive",
+        ("POST", "/api/vault/setup"): "vault:sensitive",
+    }
+
     # Frequently-polled read-only endpoints that every page / pre-login flow hits:
     # exempting them prevents the normal UI from burning through its IP bucket
     # on routine state checks.  Mutating or credential-submitting endpoints
@@ -89,6 +110,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             user_max = request.app.state.rate_limit_user_max_requests
             unauth_max = request.app.state.rate_limit_unauth_max_requests
             auth_max = request.app.state.rate_limit_auth_max_requests
+            vault_max = request.app.state.rate_limit_vault_max_requests
+            sensitive_max = request.app.state.rate_limit_vault_sensitive_max_requests
+            sensitive_window = request.app.state.rate_limit_vault_sensitive_window_seconds
             window = request.app.state.rate_limit_window_seconds
             trusted_proxies = request.app.state.rate_limit_trusted_proxies
             proxy_hops = request.app.state.rate_limit_trusted_proxy_hops
@@ -112,13 +136,45 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             auth_result = rate_limiter.check(auth_key, auth_max, window, now=now)
             if auth_result.is_limited:
                 logger.warning(
-                    "Rate limit exceeded: bucket=%s limit=%d path=%s %s",
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
                     auth_key,
                     auth_max,
                     request.method,
                     path,
                 )
                 return self._build_429_response(auth_result)
+
+        # Global throttle on destructive vault operations (clear / setup): a single
+        # shared bucket enforcing at-most-once-per-window across all callers. Checked
+        # before the per-IP floor so a throttled request consumes nothing else.
+        sensitive_key = self.VAULT_SENSITIVE_OPS.get((request.method, path))
+        if sensitive_key is not None:
+            sensitive_result = rate_limiter.check(sensitive_key, sensitive_max, sensitive_window, now=now)
+            if sensitive_result.is_limited:
+                logger.warning(
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
+                    sensitive_key,
+                    sensitive_max,
+                    request.method,
+                    path,
+                )
+                return self._build_429_response(sensitive_result)
+
+        # Vault-mutation floor: a strict per-IP bucket in addition to the
+        # principal bucket, defeating the unauthenticated unlock/setup DoS
+        # vectors before they reach the (in-memory) share state.
+        if self._is_vault_mutation(path):
+            vault_key = f"ip:{client_ip}:vault"
+            vault_result = rate_limiter.check(vault_key, vault_max, window, now=now)
+            if vault_result.is_limited:
+                logger.warning(
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
+                    vault_key,
+                    vault_max,
+                    request.method,
+                    path,
+                )
+                return self._build_429_response(vault_result)
 
         principal = self._resolve_principal(request, client_ip)
         if principal.kind == "user":
@@ -130,7 +186,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         principal_result = rate_limiter.check(principal_key, principal_limit, window, now=now)
         if principal_result.is_limited:
             logger.warning(
-                "Rate limit exceeded: bucket=%s limit=%d path=%s %s",
+                "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
                 principal_key,
                 principal_limit,
                 request.method,
@@ -145,6 +201,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _is_exempt(self, path: str) -> bool:
         return any(path.startswith(p) for p in self.EXEMPT_PREFIXES)
+
+    def _is_vault_mutation(self, path: str) -> bool:
+        return any(path.startswith(p) for p in self.VAULT_MUTATION_PREFIXES)
 
     @staticmethod
     def _resolve_principal(request: Request, client_ip: str) -> Principal:

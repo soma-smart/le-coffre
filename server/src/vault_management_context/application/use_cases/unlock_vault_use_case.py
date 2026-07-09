@@ -12,6 +12,7 @@ from vault_management_context.application.gateways import (
     VaultSessionGateway,
 )
 from vault_management_context.application.services import KeySessionManager
+from vault_management_context.domain.entities import Share
 from vault_management_context.domain.events import VaultUnlockedEvent
 from vault_management_context.domain.exceptions import (
     ShareReconstructionError,
@@ -46,10 +47,14 @@ class UnlockVaultUseCase(TracedUseCase):
         if vault is None:
             raise VaultNotSetupException()
 
-        try:
-            existing_shares = self._share_repository.get_all()
-            all_shares = existing_shares + command.shares
+        existing_shares = self._share_repository.get_all()
+        # Domain invariant: a share must not count twice toward the threshold.
+        # Dedupe the submission against the already-pending pool (and against
+        # itself) here, in the application layer, so the store stays a dumb sink.
+        new_shares = self._deduplicate(command.shares, existing_shares)
+        all_shares = existing_shares + new_shares
 
+        try:
             master_secret = self._shamir_gateway.reconstruct_secret(all_shares)
 
             KeySessionManager.decrypt_and_store_key(
@@ -73,5 +78,15 @@ class UnlockVaultUseCase(TracedUseCase):
         except VaultUnlockedError as e:
             raise e
         except Exception as e:
-            self._share_repository.add(command.shares)
+            self._share_repository.add(new_shares)
             raise ShareReconstructionError() from e
+
+    @staticmethod
+    def _deduplicate(new_shares: list[Share], existing_shares: list[Share]) -> list[Share]:
+        seen = {share.secret for share in existing_shares}
+        deduped: list[Share] = []
+        for share in new_shares:
+            if share.secret not in seen:
+                deduped.append(share)
+                seen.add(share.secret)
+        return deduped

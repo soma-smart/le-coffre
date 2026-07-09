@@ -259,6 +259,28 @@ def test_given_insufficient_shares_when_unlocking_fails_should_add_shares_to_rep
     assert stored_shares[0].secret == "share0"
 
 
+def test_given_duplicate_share_when_unlocking_should_not_count_it_twice(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    share_repository: FakeShareRepository,
+):
+    vault_repository.save_vault_with_shares(nb_shares=3, threshold=2)
+    share_repository.add([Share("0:aa")])  # already pending
+
+    # Resubmit the already-pending share plus a new one; reconstruction fails
+    # (no shamir result configured), so the deduped new share is stored.
+    with pytest.raises(ShareReconstructionError):
+        use_case.execute(UnlockVaultCommand(shares=[Share("0:aa"), Share("1:bb")]))
+
+    assert sorted(s.secret for s in share_repository.get_all()) == ["0:aa", "1:bb"]
+
+    # Resubmitting only the duplicate adds nothing.
+    with pytest.raises(ShareReconstructionError):
+        use_case.execute(UnlockVaultCommand(shares=[Share("0:aa")]))
+
+    assert len(share_repository.get_all()) == 2
+
+
 def test_given_valid_shares_when_unlocking_vault_should_store_vault_unlocked_event(
     use_case,
     vault_repository: FakeVaultRepository,

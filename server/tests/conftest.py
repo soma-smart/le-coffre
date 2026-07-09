@@ -40,6 +40,10 @@ def env_vars():
     os.environ["RATE_LIMIT_USER_MAX_REQUESTS"] = "10000"
     os.environ["RATE_LIMIT_UNAUTH_MAX_REQUESTS"] = "10000"
     os.environ["RATE_LIMIT_AUTH_MAX_REQUESTS"] = "10000"
+    os.environ["RATE_LIMIT_VAULT_MAX_REQUESTS"] = "10000"
+    # Neutralize the "once per minute" global throttle on destructive vault ops so the
+    # vault workflow can perform several clears/setups back-to-back within one test.
+    os.environ["RATE_LIMIT_VAULT_SENSITIVE_MAX_REQUESTS"] = "10000"
     # Shorten the lockout window so PHASE 7 can exercise the lock→wait→retry
     # cycle end-to-end without making the suite sleep for minutes. The default
     # (5 failures / 300s) is preserved in production; tests only care that the
@@ -56,6 +60,8 @@ def env_vars():
         "RATE_LIMIT_USER_MAX_REQUESTS",
         "RATE_LIMIT_UNAUTH_MAX_REQUESTS",
         "RATE_LIMIT_AUTH_MAX_REQUESTS",
+        "RATE_LIMIT_VAULT_MAX_REQUESTS",
+        "RATE_LIMIT_VAULT_SENSITIVE_MAX_REQUESTS",
         "LOGIN_LOCKOUT_SECONDS",
         "SSO_ALLOW_PRIVATE_NETWORKS",
     ):
