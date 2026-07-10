@@ -1,6 +1,6 @@
 import ipaddress
 import socket
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 
 from identity_access_management_context.domain.exceptions import (
     DisallowedSsoEndpointException,
@@ -24,13 +24,19 @@ class SsoUrlValidator:
     def __init__(self, allow_private_networks: bool = False) -> None:
         self._allow_private_networks = allow_private_networks
 
-    def validate(self, url: str) -> None:
-        parsed = urlparse((url or "").strip())
-        scheme = parsed.scheme.lower()
+    def validate_scheme(self, url: str) -> None:
+        """Reject non-http(s) schemes (``javascript:``, ``data:``, …) and empty hosts.
 
-        allowed_schemes = {"https", "http"} if self._allow_private_networks else {"https"}
-        if scheme not in allowed_schemes or not parsed.hostname:
-            raise DisallowedSsoEndpointException()
+        Cheap, no DNS resolution. Use where the URL is handed to a *client* to
+        navigate to (the server never connects there), so only the scheme matters —
+        e.g. an authorization endpoint returned by ``/auth/sso/url``. This closes the
+        stored-XSS vector (``window.location`` on a ``javascript:`` URL).
+        """
+        self._require_http_scheme(url)
+
+    def validate(self, url: str) -> None:
+        parsed = self._require_http_scheme(url)
+        scheme = parsed.scheme.lower()
 
         if self._allow_private_networks:
             return
@@ -52,3 +58,10 @@ class SsoUrlValidator:
                 or ip.is_unspecified
             ):
                 raise DisallowedSsoEndpointException()
+
+    def _require_http_scheme(self, url: str) -> ParseResult:
+        parsed = urlparse((url or "").strip())
+        allowed_schemes = {"https", "http"} if self._allow_private_networks else {"https"}
+        if parsed.scheme.lower() not in allowed_schemes or not parsed.hostname:
+            raise DisallowedSsoEndpointException()
+        return parsed

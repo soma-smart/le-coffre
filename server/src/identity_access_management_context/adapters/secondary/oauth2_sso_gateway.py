@@ -102,6 +102,13 @@ class OAuth2SsoGateway(SsoGateway):
 
     async def get_authorize_url(self, config: SsoConfiguration, state: str | None = None) -> str:
         """Generate OAuth2 authorization URL."""
+        # Defense in depth: never hand a non-https authorization endpoint to the
+        # client. A `javascript:`/`data:` value (e.g. from a config persisted before
+        # discovery-time validation existed) would be a stored XSS once the browser
+        # assigns it to window.location. Only the scheme matters here (the server
+        # never connects to this endpoint), so skip the DNS/SSRF checks.
+        self._url_validator.validate_scheme(config.authorization_endpoint)
+
         client = self._get_oauth_client(config)
 
         # Generate authorization URL with a caller-provided state for CSRF protection

