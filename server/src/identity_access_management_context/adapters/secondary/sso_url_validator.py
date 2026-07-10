@@ -25,12 +25,14 @@ class SsoUrlValidator:
         self._allow_private_networks = allow_private_networks
 
     def validate_scheme(self, url: str) -> None:
-        """Reject non-http(s) schemes (``javascript:``, ``data:``, …) and empty hosts.
+        """Reject disallowed schemes (``javascript:``, ``data:``, …) and empty hosts.
 
-        Cheap, no DNS resolution. Use where the URL is handed to a *client* to
-        navigate to (the server never connects there), so only the scheme matters —
-        e.g. an authorization endpoint returned by ``/auth/sso/url``. This closes the
-        stored-XSS vector (``window.location`` on a ``javascript:`` URL).
+        Strict mode allows only ``https``; with ``allow_private_networks=True`` it also
+        allows ``http`` (dev / localhost IdP). Cheap: no DNS resolution. Use where the
+        URL is handed to a *client* to navigate to (the server never connects there), so
+        only the scheme matters — e.g. an authorization endpoint returned by
+        ``/auth/sso/url``. Closes the stored-XSS vector (``window.location`` on a
+        ``javascript:`` URL).
         """
         self._require_http_scheme(url)
 
