@@ -52,7 +52,7 @@ def test_should_register_first_admin_with_password_and_return_user_id(
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    password = "secure123!"
+    password = "securepass123!"
     display_name = "Admin User"
 
     command = RegisterAdminWithPasswordCommand(id=user_id, email=email, password=password, display_name=display_name)
@@ -67,7 +67,7 @@ def test_should_register_first_admin_with_password_and_return_user_id(
     assert saved_user_password.id == user_id
     assert saved_user_password.email == email
     assert saved_user_password.display_name == display_name
-    assert saved_user_password.password_hash == b"hashed(secure123!)"
+    assert saved_user_password.password_hash == b"hashed(securepass123!)"
 
     # Verify admin was created in user repository with admin role
     saved_user = user_repository.get_by_id(user_id)
@@ -93,7 +93,7 @@ def test_should_raise_exception_when_admin_already_exists(
     command = RegisterAdminWithPasswordCommand(
         id=user_id,
         email="new@lecoffre.com",
-        password="secure123!",
+        password="securepass123!",
         display_name="New Admin",
     )
 
@@ -131,7 +131,7 @@ def test_should_delegate_admin_creation_to_user_management_context(
     display_name = "Admin User"
 
     command = RegisterAdminWithPasswordCommand(
-        id=user_id, email=email, password="password123", display_name=display_name
+        id=user_id, email=email, password="securepass123!", display_name=display_name
     )
 
     use_case.execute(command)
@@ -153,7 +153,7 @@ def test_should_publish_admin_registered_event_on_successful_registration(
     email = "admin@lecoffre.com"
 
     command = RegisterAdminWithPasswordCommand(
-        id=user_id, email=email, password="secure123!", display_name="Admin User"
+        id=user_id, email=email, password="securepass123!", display_name="Admin User"
     )
 
     use_case.execute(command)
@@ -172,7 +172,7 @@ def test_should_store_admin_registered_event_on_successful_registration(
     email = "admin@lecoffre.com"
 
     command = RegisterAdminWithPasswordCommand(
-        id=user_id, email=email, password="secure123!", display_name="Admin User"
+        id=user_id, email=email, password="securepass123!", display_name="Admin User"
     )
 
     use_case.execute(command)

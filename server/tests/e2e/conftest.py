@@ -318,7 +318,7 @@ def authenticate_sso_user(e2e_client, oidc_server, sso_user):
 def register_and_login_admin(client):
     admin_data = {
         "email": "admin@example.com",
-        "password": "admin",
+        "password": "admin-password-123",
         "display_name": "System Administrator",
     }
 
@@ -330,7 +330,7 @@ def register_and_login_admin(client):
         "/api/auth/login",
         json={
             "email": "admin@example.com",
-            "password": "admin",
+            "password": "admin-password-123",
         },
     )
     assert login_response.status_code == 200
