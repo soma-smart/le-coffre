@@ -49,8 +49,7 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
         # object raises a PasswordPolicyViolationError on a weak password.
         password = RawPassword(command.password)
 
-        # All operations are synchronous DB/CPU work — run in a thread pool to
-        # avoid blocking the event loop.
+        # All operations are synchronous DB/CPU work.
         def _run() -> UUID:
             user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
 
