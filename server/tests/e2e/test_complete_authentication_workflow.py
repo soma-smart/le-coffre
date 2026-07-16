@@ -308,6 +308,11 @@ async def test_complete_authentication_workflow(
     print("🔗 PHASE 5: SSO AUTHENTICATION")
     print("=" * 80)
 
+    # PHASE 4 rotated the CSRF token server-side (step 4.8), leaving the client's
+    # cached one stale. Resync it: /auth/sso/configure is a CSRF-protected admin POST
+    # and the steps below rely on the client's automatic token injection.
+    e2e_client.refresh_csrf_token()
+
     # Step 5.1: Check SSO status before configuration
     print("\n📊 Step 5.1: Checking SSO status before configuration...")
     status_before_response = e2e_client.get("/api/auth/sso/is-configured")
