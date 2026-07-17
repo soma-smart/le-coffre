@@ -34,15 +34,15 @@ const resolver = ref(
     z
       .object({
         email: z.email({ message: 'Invalid email address.' }),
-        // Must stay in sync with the server policy (MIN_PASSWORD_LENGTH = 12),
+        // Must stay in sync with the server policy (MIN_PASSWORD_LENGTH = 15),
         // otherwise the form passes here and the API answers 400.
-        password: z.string().min(12, { message: 'Password must be at least 12 characters long.' }),
+        password: z.string().min(15, { message: 'Password must be at least 15 characters long.' }),
         display_name: z
           .string()
           .min(2, { message: 'Display name must be at least 2 characters long.' }),
         confirm_password: z
           .string()
-          .min(12, { message: 'Confirm password must be at least 12 characters long.' }),
+          .min(15, { message: 'Confirm password must be at least 15 characters long.' }),
       })
       .refine((data) => data.password === data.confirm_password, {
         message: 'Passwords do not match.',

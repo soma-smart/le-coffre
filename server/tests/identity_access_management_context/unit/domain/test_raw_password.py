@@ -13,7 +13,7 @@ from identity_access_management_context.domain.value_objects import (
 
 
 class TestLengthRule:
-    @pytest.mark.parametrize("value", ["a", "short", "elevenchars"])
+    @pytest.mark.parametrize("value", ["a", "short", "elevenchars", "fourteenchars!"])
     def test_should_reject_password_below_minimum_length(self, value):
         with pytest.raises(PasswordTooShortError) as exc_info:
             RawPassword(value)
@@ -22,18 +22,24 @@ class TestLengthRule:
         assert exc_info.value.min_length == MIN_PASSWORD_LENGTH
 
     def test_should_accept_password_at_exactly_the_minimum_length(self):
-        value = "a" * MIN_PASSWORD_LENGTH
+        # Derived from the constant so this keeps testing the boundary if it moves.
+        # Not "a" * MIN_PASSWORD_LENGTH: a run of one character is itself blocklisted,
+        # which would make this assert the wrong rule.
+        value = ("Boundary" + "x" * MIN_PASSWORD_LENGTH)[:MIN_PASSWORD_LENGTH]
+        assert len(value) == MIN_PASSWORD_LENGTH
 
         assert RawPassword(value).value == value
 
 
 class TestCommonPasswordRule:
-    @pytest.mark.parametrize("value", ["password1234", "administrator", "qwertyuiop12"])
+    # Entries must be at least MIN_PASSWORD_LENGTH, otherwise the length rule fires
+    # first and these would assert the wrong exception.
+    @pytest.mark.parametrize("value", ["passwordpassword", "administrator123", "qwertyuiopasdfgh"])
     def test_should_reject_a_well_known_common_password(self, value):
         with pytest.raises(CommonPasswordError):
             RawPassword(value)
 
-    @pytest.mark.parametrize("value", ["PassWord1234", "  password1234  ", "PASSWORD1234"])
+    @pytest.mark.parametrize("value", ["PasswordPassword", "  passwordpassword  ", "PASSWORDPASSWORD"])
     def test_should_reject_common_password_regardless_of_case_or_padding(self, value):
         with pytest.raises(CommonPasswordError):
             RawPassword(value)
