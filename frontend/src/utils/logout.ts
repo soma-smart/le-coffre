@@ -1,10 +1,10 @@
-import { client } from '@/client/client.gen'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { useCsrfStore } from '@/stores/csrf'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
+import { useContainer } from '@/plugins/container'
 
 /**
  * Logout utility — calls the backend logout endpoint when possible, then clears auth cookies, the legacy `login` localStorage
@@ -45,19 +45,8 @@ function clearLocalSession(): void {
 
 async function requestServerLogout(): Promise<void> {
   try {
-    const csrfToken = await useCsrfStore().getToken()
-    const baseUrl = client.getConfig().baseUrl?.replace(/\/$/, '') || '/api'
-    const headers = new Headers()
-
-    if (csrfToken) {
-      headers.set('X-CSRF-Token', csrfToken)
-    }
-
-    await fetch(`${baseUrl}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-    })
+    await useCsrfStore().getToken()
+    await useContainer().auth.logout.execute()
   } catch {
     // Best-effort only: local session state must still be cleared even if the
     // network is down or the server has already invalidated the cookies.

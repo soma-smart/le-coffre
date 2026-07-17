@@ -60,11 +60,7 @@ function mountWithSeededStores(
 const COOKIES = ['logged_in', 'access_token', 'refresh_token']
 
 describe('logout()', () => {
-  const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
-
   beforeEach(() => {
-    vi.stubGlobal('fetch', fetchMock)
-    fetchMock.mockClear()
     // Plant cookies so the test can later assert their expiry.
     COOKIES.forEach((name) => {
       document.cookie = `${name}=value; path=/`
@@ -73,7 +69,6 @@ describe('logout()', () => {
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
     COOKIES.forEach((name) => {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`
     })
@@ -131,6 +126,7 @@ describe('logout()', () => {
       csrfGateway,
       passwordRepository,
     })
+    const logoutSpy = vi.spyOn(container.auth.logout, 'execute')
 
     const { stores } = mountWithSeededStores(container, pinia)
 
@@ -151,11 +147,7 @@ describe('logout()', () => {
 
     await logout()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-      headers: expect.any(Headers),
-    })
+    expect(logoutSpy).toHaveBeenCalledOnce()
 
     // Every observable user-scoped state ref is back to its initial value.
     expect(stores.user.currentUser).toBeNull()
@@ -182,8 +174,11 @@ describe('logout()', () => {
   })
 
   it('skips the backend request when explicitly asked', async () => {
+    const { container } = createTestContext()
+    const logoutSpy = vi.spyOn(container.auth.logout, 'execute')
+
     await logout({ skipServerRequest: true })
 
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(logoutSpy).not.toHaveBeenCalled()
   })
 })
