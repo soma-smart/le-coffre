@@ -8,7 +8,7 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     UpdateUserPasswordUseCase,
 )
-from identity_access_management_context.domain.entities import UserPassword
+from identity_access_management_context.domain.entities import User, UserPassword
 from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     UserNotFoundException,
@@ -16,17 +16,23 @@ from identity_access_management_context.domain.exceptions import (
 from tests.identity_access_management_context.unit.fakes import (
     FakePasswordHashingGateway,
     FakeUserPasswordRepository,
+    FakeUserRepository,
 )
+from tests.shared_kernel.fakes import FakeTimeGateway
 
 
 @pytest.fixture
 def use_case(
     user_password_repository: FakeUserPasswordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
+    user_repository: FakeUserRepository,
+    time_provider: FakeTimeGateway,
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
+        user_repository,
+        time_provider,
     )
 
 
@@ -34,6 +40,8 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     use_case: UpdateUserPasswordUseCase,
     user_password_repository: FakeUserPasswordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
+    user_repository: FakeUserRepository,
+    time_provider: FakeTimeGateway,
 ):
     # Arrange
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -48,6 +56,16 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
         display_name="Test User",
     )
     user_password_repository.save(user_password)
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email="user@example.com",
+            name="Test User",
+            roles=["user"],
+            current_refresh_token_jti="active-refresh-token-jti",
+        )
+    )
 
     command = UpdateUserPasswordCommand(
         user_id=user_id,
@@ -63,6 +81,10 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     assert updated_user is not None
     assert password_hashing_gateway.verify(new_password, updated_user.password_hash)
     assert not password_hashing_gateway.verify(old_password, updated_user.password_hash)
+    authenticated_user = user_repository.get_by_id(user_id)
+    assert authenticated_user is not None
+    assert authenticated_user.current_refresh_token_jti is None
+    assert authenticated_user.session_invalid_before == time_provider.get_current_time()
 
 
 def test_given_incorrect_old_password_when_updating_password_should_raise_invalid_credentials(

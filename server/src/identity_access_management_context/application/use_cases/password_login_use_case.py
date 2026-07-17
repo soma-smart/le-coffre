@@ -119,6 +119,10 @@ class PasswordLoginUseCase(TracedUseCase):
             email=user_password.email,
             roles=roles,
         )
+        user = self._user_repository.get_by_id(user_password.id)
+        if user is not None:
+            user.current_refresh_token_jti = refresh_token.jti
+            self._user_repository.update(user)
 
         event = AdminLoginEvent(admin_id=user_password.id, email=user_password.email)
         self._event_publisher.publish(event)
@@ -132,7 +136,7 @@ class PasswordLoginUseCase(TracedUseCase):
 
         return AdminLoginResponse(
             jwt_token=token.value,
-            refresh_token=refresh_token,
+            refresh_token=refresh_token.value,
             admin_id=user_password.id,
             email=user_password.email,
         )

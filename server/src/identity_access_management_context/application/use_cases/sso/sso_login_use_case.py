@@ -149,6 +149,10 @@ class SsoLoginUseCase(TracedUseCase):
             email=email,
             roles=roles,
         )
+        user = self._user_repository.get_by_id(user_id)
+        if user is not None:
+            user.current_refresh_token_jti = refresh_token.jti
+            self._user_repository.update(user)
 
         event = SsoLoginEvent(user_id=user_id, email=email, is_new_user=is_new_user)
         self._event_publisher.publish(event)
@@ -162,7 +166,7 @@ class SsoLoginUseCase(TracedUseCase):
 
         return SsoLoginResponse(
             jwt_token=token.value,
-            refresh_token=refresh_token,
+            refresh_token=refresh_token.value,
             user_id=user_id,
             email=email,
             display_name=display_name,

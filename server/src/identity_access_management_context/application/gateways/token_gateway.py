@@ -1,6 +1,9 @@
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Protocol
 from uuid import UUID
+
+ACCESS_TOKEN_TYPE = "access"  # noqa: S105
 
 
 @dataclass
@@ -10,6 +13,10 @@ class Token:
     email: str
     roles: list[str]
     claims: dict[str, Any]
+    jti: str | None = None
+    issued_at: datetime | None = None
+    expires_at: datetime | None = None
+    token_type: str = ACCESS_TOKEN_TYPE
 
     def has_role(self, role: str) -> bool:
         return role in self.roles
@@ -29,7 +36,7 @@ class TokenGateway(Protocol):
         user_id: UUID,
         email: str,
         roles: list[str],
-    ) -> str: ...
+    ) -> Token: ...
 
     def validate_token(self, token: str) -> Token | None: ...
 

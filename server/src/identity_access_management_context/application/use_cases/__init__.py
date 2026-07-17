@@ -10,6 +10,7 @@ from .get_user_me_use_case import GetUserMeUseCase
 from .get_user_use_case import GetUserUseCase
 from .list_groups_use_case import ListGroupsUseCase
 from .list_user_use_case import ListUserUseCase
+from .logout_use_case import LogoutUseCase
 from .password_login_use_case import PasswordLoginUseCase
 from .promote_admin_use_case import PromoteAdminUseCase
 from .refresh_access_token_use_case import RefreshAccessTokenUseCase
@@ -32,6 +33,7 @@ __all__ = [
     "GetUserUseCase",
     "GetUserMeUseCase",
     "ListUserUseCase",
+    "LogoutUseCase",
     "UpdateUserUseCase",
     "UpdateUserPasswordUseCase",
     "ValidateUserTokenUseCase",

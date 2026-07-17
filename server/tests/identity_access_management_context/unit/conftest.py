@@ -15,6 +15,7 @@ from .fakes import (
     FakeGroupUsageGateway,
     FakeLoginLockoutGateway,
     FakePasswordHashingGateway,
+    FakeRevokedTokenRepository,
     FakeSsoConfigurationRepository,
     FakeSsoEncryptionGateway,
     FakeSsoEventRepository,
@@ -50,6 +51,11 @@ def login_lockout_gateway():
 @pytest.fixture
 def token_gateway():
     return FakeTokenGateway()
+
+
+@pytest.fixture
+def revoked_token_repository():
+    return FakeRevokedTokenRepository()
 
 
 @pytest.fixture

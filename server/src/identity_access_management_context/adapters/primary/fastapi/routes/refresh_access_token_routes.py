@@ -3,7 +3,11 @@ import logging
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from pydantic import BaseModel
 
-from config import get_cookie_secure_setting, get_jwt_access_token_expiration_seconds
+from config import (
+    get_cookie_secure_setting,
+    get_jwt_access_token_expiration_seconds,
+    get_jwt_refresh_token_expiration_seconds,
+)
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_refresh_access_token_usecase,
 )
@@ -43,8 +47,7 @@ async def refresh_access_token(
     This endpoint allows clients to obtain a new access token using a valid refresh token.
     The refresh token must be provided as an HTTP-only cookie.
 
-    Sets a new access token in an HTTP-only secure cookie.
-    The refresh token remains valid and unchanged.
+    Sets a new access token and a rotated refresh token in HTTP-only secure cookies.
 
     **Responses**:
     - **200**: Successfully refreshed access token
@@ -71,6 +74,14 @@ async def refresh_access_token(
             samesite="strict",
             max_age=access_token_max_age,
         )
+        response.set_cookie(
+            key="refresh_token",
+            value=result.refresh_token,
+            httponly=True,
+            secure=is_secure,
+            samesite="strict",
+            max_age=get_jwt_refresh_token_expiration_seconds(),
+        )
         # Renew the non-httpOnly auth flag so the frontend can still detect the
         # active session (it expires at the same time as the access token).
         response.set_cookie(
@@ -84,6 +95,10 @@ async def refresh_access_token(
 
         return RefreshAccessTokenResponse(message="Access token refreshed successfully")
     except InvalidRefreshTokenException as e:
+        is_secure = get_cookie_secure_setting()
+        response.delete_cookie("access_token", secure=is_secure, samesite="strict")
+        response.delete_cookie("refresh_token", secure=is_secure, samesite="strict")
+        response.delete_cookie("logged_in", secure=is_secure, samesite="strict")
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in refresh access token")

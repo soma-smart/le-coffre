@@ -12,6 +12,7 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlIamEventRepository,
+    SqlRevokedTokenRepository,
     SqlSsoConfigurationRepository,
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
@@ -25,6 +26,7 @@ from identity_access_management_context.application.gateways import (
     GroupUsageGateway,
     LoginLockoutGateway,
     PasswordHashingGateway,
+    RevokedTokenRepository,
     SsoConfigurationRepository,
     SsoEncryptionGateway,
     SsoEventRepository,
@@ -51,6 +53,7 @@ from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
     ListGroupsUseCase,
     ListUserUseCase,
+    LogoutUseCase,
     PasswordLoginUseCase,
     PromoteAdminUseCase,
     RefreshAccessTokenUseCase,
@@ -131,6 +134,12 @@ def get_user_password_repository(
     return SqlUserPasswordRepository(session)
 
 
+def get_revoked_token_repository(
+    session: Session = Depends(get_session),
+) -> RevokedTokenRepository:
+    return SqlRevokedTokenRepository(session)
+
+
 def get_sso_user_repository(
     session: Session = Depends(get_session),
 ) -> SsoUserRepository:
@@ -205,10 +214,14 @@ def get_update_user_usecase(
 def get_update_user_password_usecase(
     user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
+    user_repository: UserRepository = Depends(get_user_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
+        user_repository,
+        time_provider,
     )
 
 
@@ -363,10 +376,26 @@ def get_sso_login_usecase(
 def get_refresh_access_token_usecase(
     token_gateway: TokenGateway = Depends(get_token_gateway),
     user_repository: UserRepository = Depends(get_user_repository),
+    revoked_token_repository: RevokedTokenRepository = Depends(get_revoked_token_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RefreshAccessTokenUseCase(
         token_gateway,
+        user_repository,
+        revoked_token_repository,
+        time_provider,
+    )
+
+
+def get_logout_usecase(
+    token_gateway: TokenGateway = Depends(get_token_gateway),
+    revoked_token_repository: RevokedTokenRepository = Depends(get_revoked_token_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return LogoutUseCase(
+        token_gateway,
+        revoked_token_repository,
         user_repository,
         time_provider,
     )

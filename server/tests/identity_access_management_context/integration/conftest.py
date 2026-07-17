@@ -4,6 +4,7 @@ from sqlmodel import Session, SQLModel, create_engine
 from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupMemberRepository,
     SqlGroupRepository,
+    SqlRevokedTokenRepository,
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
     SqlUserRepository,
@@ -40,6 +41,11 @@ def sql_user_password_repository(session):
 @pytest.fixture(scope="function")
 def sql_user_repository(session):
     return SqlUserRepository(session)
+
+
+@pytest.fixture(scope="function")
+def sql_revoked_token_repository(session):
+    return SqlRevokedTokenRepository(session)
 
 
 @pytest.fixture(scope="function")

@@ -14,18 +14,20 @@ from identity_access_management_context.domain.exceptions import (
 )
 from tests.shared_kernel.fakes import FakeTimeGateway
 
-from ..fakes import FakeTokenGateway, FakeUserRepository
+from ..fakes import FakeRevokedTokenRepository, FakeTokenGateway, FakeUserRepository
 
 
 @pytest.fixture
 def use_case(
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
     time_provider: FakeTimeGateway,
 ):
     return RefreshAccessTokenUseCase(
         token_gateway=token_gateway,
         user_repository=user_repository,
+        revoked_token_repository=revoked_token_repository,
         time_provider=time_provider,
     )
 
@@ -34,17 +36,26 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
 ):
     # Arrange
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "user@example.com"
     roles = ["user"]
     refresh_token = "valid_refresh_token_123"
+    refresh_token_jti = "refresh-token-jti-1"
 
-    user = User(id=user_id, username="testuser", email=email, name="Test User", roles=roles)
+    user = User(
+        id=user_id,
+        username="testuser",
+        email=email,
+        name="Test User",
+        roles=roles,
+        current_refresh_token_jti=refresh_token_jti,
+    )
     user_repository.save(user)
 
-    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles)
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
     token_gateway.set_unique_jwt_part("new_access_token")
 
     command = RefreshAccessTokenCommand(refresh_token=refresh_token)
@@ -54,7 +65,12 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
 
     # Assert
     assert result.access_token == f"jwt_token_for_{user_id}_new_access_token"
+    assert result.refresh_token == f"refresh_token_for_{user_id}_new_access_token"
     assert result.user_id == user_id
+    updated_user = user_repository.get_by_id(user_id)
+    assert updated_user is not None
+    assert updated_user.current_refresh_token_jti == "refresh-token-jti-new_access_token"
+    assert revoked_token_repository.is_revoked(refresh_token_jti, now=FakeTimeGateway().get_current_time()) is True
 
 
 def test_given_invalid_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(
@@ -65,6 +81,40 @@ def test_given_invalid_refresh_token_when_execute_then_raises_invalid_refresh_to
     command = RefreshAccessTokenCommand(refresh_token=invalid_refresh_token)
 
     # Act & Assert
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+
+def test_given_revoked_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "revoked_refresh_token"
+    refresh_token_jti = "revoked-refresh-token-jti"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+            current_refresh_token_jti=refresh_token_jti,
+        )
+    )
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
+    revoked_token_repository.revoke_jti(
+        refresh_token_jti, expires_at=time_provider.get_current_time().replace(year=2099)
+    )
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
@@ -113,6 +163,7 @@ def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_upda
     # User initially has only "user" role
     old_roles = ["user"]
     refresh_token = "valid_refresh_token_before_promotion"
+    refresh_token_jti = "refresh-token-jti-before-promotion"
 
     # Create user with initial roles
     user = User(
@@ -121,11 +172,18 @@ def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_upda
         email=email,
         name="Promoted User",
         roles=old_roles,
+        current_refresh_token_jti=refresh_token_jti,
     )
     user_repository.save(user)
 
     # Refresh token was issued with old roles
-    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, old_roles)
+    token_gateway.set_valid_refresh_token(
+        refresh_token,
+        user_id,
+        email,
+        old_roles,
+        jti=refresh_token_jti,
+    )
 
     # User gets promoted to admin (roles updated in database)
     user.promote_to_admin()
@@ -153,3 +211,48 @@ def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_upda
     assert last_generated_token.roles == ["user", "admin"], (
         "New access token should have current roles: ['user', 'admin']"
     )
+
+
+def test_given_refresh_token_jti_not_matching_active_session_when_execute_then_raises_invalid_refresh_token_exception(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+):
+    # Arrange
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "stale_refresh_token"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+            current_refresh_token_jti="active-refresh-token-jti",
+        )
+    )
+
+    token_gateway.set_valid_refresh_token(
+        refresh_token,
+        user_id,
+        email,
+        roles,
+        jti="stale-refresh-token-jti",
+    )
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    # Act & Assert
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+    compromised_user = user_repository.get_by_id(user_id)
+    assert compromised_user is not None
+    assert compromised_user.current_refresh_token_jti is None
+    assert compromised_user.session_invalid_before == time_provider.get_current_time()
+    assert revoked_token_repository.is_revoked("stale-refresh-token-jti", now=time_provider.get_current_time()) is True

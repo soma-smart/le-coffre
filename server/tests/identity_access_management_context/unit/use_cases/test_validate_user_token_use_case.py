@@ -10,6 +10,7 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.entities import (
     SsoUser,
+    User,
     UserPassword,
 )
 from identity_access_management_context.domain.exceptions import (
@@ -17,8 +18,15 @@ from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
     UserNotFoundException,
 )
+from tests.shared_kernel.fakes import FakeTimeGateway
 
-from ..fakes import FakeSsoUserRepository, FakeTokenGateway, FakeUserPasswordRepository
+from ..fakes import (
+    FakeRevokedTokenRepository,
+    FakeSsoUserRepository,
+    FakeTokenGateway,
+    FakeUserPasswordRepository,
+    FakeUserRepository,
+)
 
 
 @pytest.fixture
@@ -26,8 +34,18 @@ def use_case(
     user_password_repository: FakeUserPasswordRepository,
     token_gateway: FakeTokenGateway,
     sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
 ):
-    return ValidateUserTokenUseCase(user_password_repository, token_gateway, sso_user_repository)
+    return ValidateUserTokenUseCase(
+        user_password_repository,
+        token_gateway,
+        sso_user_repository,
+        user_repository,
+        revoked_token_repository,
+        time_provider,
+    )
 
 
 def test_should_validate_token_and_return_user_details(
@@ -66,6 +84,89 @@ def test_should_raise_exception_for_invalid_jwt_token(
 ):
     invalid_jwt_token = "invalid_jwt_token_xyz789"
     command = ValidateUserTokenCommand(jwt_token=invalid_jwt_token)
+
+    with pytest.raises(InvalidTokenException):
+        use_case.execute(command)
+
+
+def test_should_raise_exception_when_token_jti_is_revoked(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    token_gateway: FakeTokenGateway,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    display_name = "Admin User"
+    jwt_token = "jwt_token_revoked"
+    revoked_jti = "revoked-access-token-jti"
+
+    user_password_repository.save(
+        UserPassword(
+            id=user_id,
+            email=email,
+            password_hash=b"hashed_password",
+            display_name=display_name,
+        )
+    )
+    token_gateway.set_valid_token(
+        jwt_token,
+        user_id,
+        email,
+        ["admin"],
+        {"display_name": display_name},
+        jti=revoked_jti,
+    )
+    revoked_token_repository.revoke_jti(revoked_jti, expires_at=time_provider.get_current_time().replace(year=2099))
+
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
+
+    with pytest.raises(InvalidTokenException):
+        use_case.execute(command)
+
+
+def test_should_raise_exception_when_token_was_issued_before_session_cutoff(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+    time_provider: FakeTimeGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    display_name = "Admin User"
+    jwt_token = "jwt_token_before_cutoff"
+
+    user_password_repository.save(
+        UserPassword(
+            id=user_id,
+            email=email,
+            password_hash=b"hashed_password",
+            display_name=display_name,
+        )
+    )
+    user_repository.save(
+        User(
+            id=user_id,
+            username="admin",
+            email=email,
+            name=display_name,
+            roles=["admin"],
+            session_invalid_before=time_provider.get_current_time(),
+        )
+    )
+    token_gateway.set_valid_token(
+        jwt_token,
+        user_id,
+        email,
+        ["admin"],
+        {"display_name": display_name},
+        jti="access-token-jti-before-cutoff",
+    )
+    token_gateway.generated_tokens[jwt_token].issued_at = time_provider.get_current_time().replace(year=2000)
+
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
 
     with pytest.raises(InvalidTokenException):
         use_case.execute(command)

@@ -1,3 +1,4 @@
+import { client } from '@/client/client.gen'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { useCsrfStore } from '@/stores/csrf'
 import { useGroupsStore } from '@/stores/groups'
@@ -6,7 +7,7 @@ import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
 
 /**
- * Logout utility — clears auth cookies, the legacy `login` localStorage
+ * Logout utility — calls the backend logout endpoint when possible, then clears auth cookies, the legacy `login` localStorage
  * key (kept for back-compat with any old client storage), and every
  * Pinia store that holds user-scoped data. Without the store wipe a
  * second user logging in on the same SPA tab would briefly see the
@@ -17,7 +18,15 @@ import { useUserStore } from '@/stores/user'
  * `localStorage` call in presentation code (called out in
  * eslint.config.ts's `app/no-direct-browser-storage` allowlist).
  */
-export function logout(): void {
+export async function logout(options: { skipServerRequest?: boolean } = {}): Promise<void> {
+  if (!options.skipServerRequest) {
+    await requestServerLogout()
+  }
+
+  clearLocalSession()
+}
+
+function clearLocalSession(): void {
   const cookiesToClear = ['logged_in', 'access_token', 'refresh_token']
   cookiesToClear.forEach((cookieName) => {
     document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; samesite=strict`
@@ -32,4 +41,25 @@ export function logout(): void {
   useSetupStore().clear()
   useCsrfStore().clearCsrfToken()
   useAdminPasswordViewStore().clear()
+}
+
+async function requestServerLogout(): Promise<void> {
+  try {
+    const csrfToken = await useCsrfStore().getToken()
+    const baseUrl = client.getConfig().baseUrl?.replace(/\/$/, '') || '/api'
+    const headers = new Headers()
+
+    if (csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken)
+    }
+
+    await fetch(`${baseUrl}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+    })
+  } catch {
+    // Best-effort only: local session state must still be cleared even if the
+    // network is down or the server has already invalidated the cookies.
+  }
 }

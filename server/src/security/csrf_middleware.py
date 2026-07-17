@@ -7,8 +7,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from identity_access_management_context.adapters.secondary.sql import (
+    SqlRevokedTokenRepository,
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
+    SqlUserRepository,
 )
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
@@ -89,15 +91,21 @@ class CsrfMiddleware(BaseHTTPMiddleware):
             session_maker = request.app.state.session_maker
             csrf_token_manager = request.app.state.csrf_token_manager
             token_gateway = request.app.state.token_gateway
+            time_provider = request.app.state.time_provider
 
             with session_maker() as session:
                 user_password_repository = SqlUserPasswordRepository(session)
+                user_repository = SqlUserRepository(session)
+                revoked_token_repository = SqlRevokedTokenRepository(session)
                 sso_user_repository = SqlSsoUserRepository(session)
 
                 validate_usecase = ValidateUserTokenUseCase(
                     user_password_repository,
                     token_gateway,
                     sso_user_repository,
+                    user_repository,
+                    revoked_token_repository,
+                    time_provider,
                 )
 
                 # Validate JWT and get user ID

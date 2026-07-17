@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import type { Pinia } from 'pinia'
@@ -60,7 +60,11 @@ function mountWithSeededStores(
 const COOKIES = ['logged_in', 'access_token', 'refresh_token']
 
 describe('logout()', () => {
+  const fetchMock = vi.fn(async () => new Response(null, { status: 200 }))
+
   beforeEach(() => {
+    vi.stubGlobal('fetch', fetchMock)
+    fetchMock.mockClear()
     // Plant cookies so the test can later assert their expiry.
     COOKIES.forEach((name) => {
       document.cookie = `${name}=value; path=/`
@@ -69,13 +73,14 @@ describe('logout()', () => {
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     COOKIES.forEach((name) => {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`
     })
     localStorage.removeItem('login')
   })
 
-  it('clears every user-scoped store + cookies + the legacy login key', async () => {
+  it('calls backend logout then clears every user-scoped store + cookies + the legacy login key', async () => {
     // Seed every store with non-default state. If a future contributor adds a
     // new user-scoped store and forgets to wire it into logout(), this spec
     // fails — the regression catcher this PR is supposed to be.
@@ -144,7 +149,13 @@ describe('logout()', () => {
     expect(stores.csrf.csrfToken).toBe('csrf-abc')
     expect(stores.adminPasswordView.adminPasswordViewEnabled).toBe(true)
 
-    logout()
+    await logout()
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: expect.any(Headers),
+    })
 
     // Every observable user-scoped state ref is back to its initial value.
     expect(stores.user.currentUser).toBeNull()
@@ -168,5 +179,11 @@ describe('logout()', () => {
 
     // Legacy localStorage login key removed.
     expect(localStorage.getItem('login')).toBeNull()
+  })
+
+  it('skips the backend request when explicitly asked', async () => {
+    await logout({ skipServerRequest: true })
+
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

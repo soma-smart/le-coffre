@@ -157,7 +157,7 @@ client.interceptors.response.use(async (response: Response, request: Request, op
 
   // Refresh failed — tear down local session state and redirect to login
   if (router.currentRoute.value.path !== '/login') {
-    logout()
+    await logout({ skipServerRequest: true })
     await router.push({
       path: '/login',
       query: { redirect: router.currentRoute.value.fullPath, reason: 'session_expired' },
@@ -209,7 +209,7 @@ client.interceptors.error.use(async (error: unknown, response: Response | undefi
   // 401 responses are normally handled by the response interceptor above
   // (token refresh + redirect). This is a safety net for any that slip through.
   if (response?.status === 401 && router.currentRoute.value.path !== '/login') {
-    logout()
+    await logout({ skipServerRequest: true })
     await router.push({
       path: '/login',
       query: { redirect: router.currentRoute.value.fullPath, reason: 'session_expired' },
