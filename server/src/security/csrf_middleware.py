@@ -33,14 +33,18 @@ class CsrfMiddleware(BaseHTTPMiddleware):
     CSRF protection middleware using the Synchronizer Token Pattern.
 
     Validates CSRF tokens on mutating requests (POST, PUT, DELETE, PATCH).
-    Exempt routes include SSO endpoints and refresh token endpoint.
+    Exempt routes are those reached before a CSRF token can exist (login,
+    registration, refresh, vault bootstrap/unlock).
 
     The token must be sent in the 'X-CSRF-Token' header.
     """
 
-    # Routes that are exempt from CSRF protection
+    # Routes that are exempt from CSRF protection.
+    # Note: SSO routes are deliberately NOT exempt. Its read endpoints (url,
+    # callback, is-configured) are GETs and are skipped by the method check
+    # anyway, while /api/auth/sso/configure is an authenticated admin POST that
+    # must carry a CSRF token — defense in depth on top of SameSite=strict.
     EXEMPT_ROUTES = [
-        "/api/auth/sso",  # All SSO routes (callback, url, configure)
         "/api/auth/refresh-token",
         "/api/auth/login",  # Login generates the token, can't require it
         "/api/auth/register-admin",  # Registration happens before token exists
