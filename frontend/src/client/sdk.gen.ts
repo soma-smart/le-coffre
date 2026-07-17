@@ -702,14 +702,11 @@ export const ssoCallbackAuthSsoCallbackGet = <ThrowOnError extends boolean = fal
 /**
  * Check if SSO is configured
  *
- * Check if SSO (Single Sign-On) configuration is set.
+ * Check whether SSO (Single Sign-On) has been configured.
  *
- * Returns a boolean indicating whether the system has been configured with SSO settings.
- *
- * - **Authorization**: Bearer token with admin role required
- * - **Returns**: `is_set` - True if SSO is configured, False otherwise
- *
- * **Note**: Only administrators can check SSO configuration status.
+ * Intentionally anonymous: the login page calls this before authentication to
+ * show or hide the SSO button. Returns only ``is_set``, never any provider
+ * detail.
  */
 export const isSsoConfigSetAuthSsoIsConfiguredGet = <ThrowOnError extends boolean = false>(options?: Options<IsSsoConfigSetAuthSsoIsConfiguredGetData, ThrowOnError>) => (options?.client ?? client).get<IsSsoConfigSetAuthSsoIsConfiguredGetResponses, unknown, ThrowOnError>({ url: '/auth/sso/is-configured', ...options });
 
