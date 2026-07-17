@@ -18,13 +18,13 @@ def test_vault_workflow(e2e_client, client_factory):
         "/api/auth/register-admin",
         json={
             "email": "admin@example.com",
-            "password": "admin",
+            "password": "admin-password-123",
             "display_name": "System Administrator",
         },
     )
     login_response = e2e_client.post(
         "/api/auth/login",
-        json={"email": "admin@example.com", "password": "admin"},
+        json={"email": "admin@example.com", "password": "admin-password-123"},
     )
     assert login_response.status_code == 200
     e2e_client.refresh_csrf_token()

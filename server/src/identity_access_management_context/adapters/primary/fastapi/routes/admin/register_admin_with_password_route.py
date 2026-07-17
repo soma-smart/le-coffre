@@ -13,6 +13,7 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
+    IdentityAccessManagementDomainError,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,8 @@ def register_admin(
 
     except AdminAlreadyExistsException as e:
         raise HTTPException(status_code=409, detail=str(e)) from e
+    except IdentityAccessManagementDomainError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in register admin")
         raise HTTPException(status_code=500, detail="Internal server error") from e

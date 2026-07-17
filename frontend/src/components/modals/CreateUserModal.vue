@@ -83,6 +83,17 @@ const handleSubmit = async () => {
     return
   }
 
+  // Must stay in sync with the server policy (MIN_PASSWORD_LENGTH = 15).
+  if (password.value.length < 15) {
+    toast.add({
+      severity: 'error',
+      summary: 'Validation Error',
+      detail: 'Password must be at least 15 characters long',
+      life: 5000,
+    })
+    return
+  }
+
   try {
     loading.value = true
 

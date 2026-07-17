@@ -80,13 +80,13 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     # Register and login admin
     admin_data = {
         "email": "admin@example.com",
-        "password": "admin",
+        "password": "admin-password-123",
         "display_name": "System Administrator",
     }
     admin_client.post("/api/auth/register-admin", json=admin_data)
     admin_client.post(
         "/api/auth/login",
-        json={"email": "admin@example.com", "password": "admin"},
+        json={"email": "admin@example.com", "password": "admin-password-123"},
     )
 
     # Login SSO user
