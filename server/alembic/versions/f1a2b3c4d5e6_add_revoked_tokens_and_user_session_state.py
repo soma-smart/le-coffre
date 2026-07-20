@@ -32,10 +32,9 @@ def upgrade() -> None:
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("reason", sa.String(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("jti"),
     )
     op.create_index(op.f("ix_RevokedToken_id"), "RevokedToken", ["id"], unique=False)
-    op.create_index(op.f("ix_RevokedToken_jti"), "RevokedToken", ["jti"], unique=False)
+    op.create_index(op.f("ix_RevokedToken_jti"), "RevokedToken", ["jti"], unique=True)
     op.create_index(op.f("ix_RevokedToken_user_id"), "RevokedToken", ["user_id"], unique=False)
     op.create_index(op.f("ix_RevokedToken_expires_at"), "RevokedToken", ["expires_at"], unique=False)
 
