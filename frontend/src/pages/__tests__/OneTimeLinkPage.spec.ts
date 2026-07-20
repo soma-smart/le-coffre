@@ -46,7 +46,7 @@ describe('OneTimeLinkPage', () => {
     expect(wrapper.text()).not.toContain('s3cret-value')
   })
 
-  it('reveals the secret and its metadata once the visitor clicks', async () => {
+  it('shows the metadata once the visitor clicks, with the password still masked', async () => {
     setFragment('#tok')
     const repository = new InMemoryOneTimeLinkRepository().seedSecret({
       token: 'tok',
@@ -55,10 +55,53 @@ describe('OneTimeLinkPage', () => {
 
     const wrapper = mountPage(repository)
     await wrapper.find('[data-testid="reveal-button"]').trigger('click')
-    await vi.waitFor(() => expect(wrapper.text()).toContain('s3cret-value'))
+    await vi.waitFor(() =>
+      expect(wrapper.find('[data-testid="revealed-secret"]').exists()).toBe(true),
+    )
 
     expect(wrapper.text()).toContain('Production database')
-    expect(wrapper.text()).toContain('dba')
+    expect(wrapper.find('[data-testid="login-value"]').text()).toBe('dba')
+    // Masked by default: the recipient often opens this with someone nearby.
+    expect(wrapper.find('[data-testid="password-value"]').text()).not.toContain('s3cret-value')
+  })
+
+  it('unmasks the password only when the visitor asks for it', async () => {
+    setFragment('#tok')
+    const repository = new InMemoryOneTimeLinkRepository().seedSecret({
+      token: 'tok',
+      secret: SECRET,
+    })
+
+    const wrapper = mountPage(repository)
+    await wrapper.find('[data-testid="reveal-button"]').trigger('click')
+    await vi.waitFor(() =>
+      expect(wrapper.find('[data-testid="toggle-password"]').exists()).toBe(true),
+    )
+
+    await wrapper.find('[data-testid="toggle-password"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="password-value"]').text()).toBe('s3cret-value')
+  })
+
+  it('offers a copy button for the login as well as the password', async () => {
+    setFragment('#tok')
+    const repository = new InMemoryOneTimeLinkRepository().seedSecret({
+      token: 'tok',
+      secret: SECRET,
+    })
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+
+    const wrapper = mountPage(repository)
+    await wrapper.find('[data-testid="reveal-button"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="copy-login"]').exists()).toBe(true))
+
+    await wrapper.find('[data-testid="copy-login"]').trigger('click')
+    expect(writeText).toHaveBeenLastCalledWith('dba')
+
+    // Copying the password does not require unmasking it first.
+    await wrapper.find('[data-testid="copy-password"]').trigger('click')
+    expect(writeText).toHaveBeenLastCalledWith('s3cret-value')
   })
 
   it('drops the token from the address bar once it is spent', async () => {
@@ -70,7 +113,9 @@ describe('OneTimeLinkPage', () => {
 
     const wrapper = mountPage(repository)
     await wrapper.find('[data-testid="reveal-button"]').trigger('click')
-    await vi.waitFor(() => expect(wrapper.text()).toContain('s3cret-value'))
+    await vi.waitFor(() =>
+      expect(wrapper.find('[data-testid="revealed-secret"]').exists()).toBe(true),
+    )
 
     expect(window.location.hash).toBe('')
   })

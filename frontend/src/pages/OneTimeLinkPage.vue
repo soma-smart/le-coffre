@@ -8,11 +8,17 @@ import { OneTimeLinkDomainError } from '@/domain/oneTimeLink/errors'
 
 const { oneTimeLinks } = useContainer()
 
+type CopyableField = 'login' | 'password'
+
 const token = ref('')
 const secret = ref<RevealedSecret | null>(null)
 const error = ref<string | null>(null)
 const loading = ref(false)
-const copied = ref(false)
+// Which field was just copied, so only that button shows the confirmation.
+const copiedField = ref<CopyableField | null>(null)
+// Masked by default, like everywhere else a secret is displayed in the app:
+// the recipient often opens this link with someone looking over their shoulder.
+const passwordVisible = ref(false)
 
 onMounted(() => {
   // The token lives in the fragment, which the browser never sends to the
@@ -41,11 +47,12 @@ async function reveal() {
   }
 }
 
-async function copySecret() {
-  if (!secret.value) return
-  await navigator.clipboard.writeText(secret.value.password)
-  copied.value = true
-  setTimeout(() => (copied.value = false), 2000)
+async function copyField(field: CopyableField) {
+  const value = field === 'password' ? secret.value?.password : secret.value?.login
+  if (!value) return
+  await navigator.clipboard.writeText(value)
+  copiedField.value = field
+  setTimeout(() => (copiedField.value = null), 2000)
 }
 </script>
 
@@ -53,7 +60,14 @@ async function copySecret() {
   <BlankLayout>
     <div class="flex justify-center items-center min-h-[calc(100vh-12rem)]">
       <Card class="w-full max-w-xl">
-        <template #title>Shared secret</template>
+        <template #header>
+          <!-- Logo beside the title rather than above it, matching MainLayout. -->
+          <div class="flex gap-3 justify-center items-center pt-8 mb-4">
+            <img src="/img/le-coffre.png" alt="Le Coffre" class="w-auto h-10" />
+            <h1 class="text-3xl font-bold text-primary">Le Coffre</h1>
+          </div>
+          <h2 class="mb-4 text-2xl font-bold text-center">Shared secret</h2>
+        </template>
 
         <template #content>
           <Message v-if="error" severity="error" :closable="false" class="mb-4">
@@ -68,6 +82,7 @@ async function copySecret() {
             <Button
               label="Reveal the secret"
               icon="pi pi-eye"
+              class="w-full"
               :loading="loading"
               data-testid="reveal-button"
               @click="reveal"
@@ -86,7 +101,22 @@ async function copySecret() {
 
             <div v-if="secret.login">
               <div class="text-sm text-muted-color">Login</div>
-              <div class="font-medium">{{ secret.login }}</div>
+              <div class="flex gap-2 items-stretch">
+                <code
+                  class="grow p-2 rounded border border-surface break-all"
+                  style="background-color: var(--p-content-background)"
+                  data-testid="login-value"
+                  >{{ secret.login }}</code
+                >
+                <Button
+                  :icon="copiedField === 'login' ? 'pi pi-check' : 'pi pi-copy'"
+                  severity="secondary"
+                  class="shrink-0"
+                  :aria-label="copiedField === 'login' ? 'Copied' : 'Copy login'"
+                  data-testid="copy-login"
+                  @click="copyField('login')"
+                />
+              </div>
             </div>
 
             <div v-if="secret.url">
@@ -98,17 +128,28 @@ async function copySecret() {
 
             <div>
               <div class="text-sm text-muted-color">Password</div>
-              <div class="flex gap-2 items-center">
+              <div class="flex gap-2 items-stretch">
                 <code
                   class="grow p-2 rounded border border-surface break-all"
                   style="background-color: var(--p-content-background)"
-                  >{{ secret.password }}</code
+                  data-testid="password-value"
+                  >{{ passwordVisible ? secret.password : '••••••••' }}</code
                 >
                 <Button
-                  :icon="copied ? 'pi pi-check' : 'pi pi-copy'"
+                  :icon="passwordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"
                   severity="secondary"
-                  :aria-label="copied ? 'Copied' : 'Copy password'"
-                  @click="copySecret"
+                  class="shrink-0"
+                  :aria-label="passwordVisible ? 'Hide password' : 'Show password'"
+                  data-testid="toggle-password"
+                  @click="passwordVisible = !passwordVisible"
+                />
+                <Button
+                  :icon="copiedField === 'password' ? 'pi pi-check' : 'pi pi-copy'"
+                  severity="secondary"
+                  class="shrink-0"
+                  :aria-label="copiedField === 'password' ? 'Copied' : 'Copy password'"
+                  data-testid="copy-password"
+                  @click="copyField('password')"
                 />
               </div>
             </div>
