@@ -32,14 +32,11 @@ def is_sso_config_set(
     usecase: IsSsoConfigSetUseCase = Depends(get_is_sso_config_set_usecase),
 ):
     """
-    Check if SSO (Single Sign-On) configuration is set.
+    Check whether SSO (Single Sign-On) has been configured.
 
-    Returns a boolean indicating whether the system has been configured with SSO settings.
-
-    - **Authorization**: Bearer token with admin role required
-    - **Returns**: `is_set` - True if SSO is configured, False otherwise
-
-    **Note**: Only administrators can check SSO configuration status.
+    Intentionally anonymous: the login page calls this before authentication to
+    show or hide the SSO button. Returns only ``is_set``, never any provider
+    detail.
     """
     try:
         command = IsSsoConfigSetCommand()

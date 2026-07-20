@@ -59,3 +59,22 @@ def test_sso_configure_without_auth_still_returns_401(unauthenticated_client):
     response = unauthenticated_client.post("/api/auth/sso/configure", json=_CONFIGURE_BODY)
 
     assert response.status_code == 401
+
+
+def test_is_configured_is_anonymous_and_leaks_only_the_boolean(unauthenticated_client, configured_sso):
+    # The login page calls this before the user authenticates, so the
+    # endpoint is intentionally reachable without an access_token cookie. Crucially,
+    # even with SSO configured the anonymous response is a single boolean and never
+    # the discovery URL, client ID or any IdP endpoint.
+    response = unauthenticated_client.get("/api/auth/sso/is-configured")
+
+    assert response.status_code == 200
+    assert response.json() == {"is_set": True}
+
+
+def test_is_configured_reports_false_anonymously_when_unset(unauthenticated_client):
+    # Same anonymous contract with no SSO configured: 200 and only the boolean.
+    response = unauthenticated_client.get("/api/auth/sso/is-configured")
+
+    assert response.status_code == 200
+    assert response.json() == {"is_set": False}
