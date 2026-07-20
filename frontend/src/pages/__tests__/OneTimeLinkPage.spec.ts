@@ -138,4 +138,59 @@ describe('OneTimeLinkPage', () => {
 
     expect(wrapper.text()).toContain('This link is incomplete')
   })
+
+  it('offers a copy button for the URL', async () => {
+    setFragment('#tok')
+    const repository = new InMemoryOneTimeLinkRepository().seedSecret({
+      token: 'tok',
+      secret: SECRET,
+    })
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+
+    const wrapper = mountPage(repository)
+    await wrapper.find('[data-testid="reveal-button"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="copy-url"]').exists()).toBe(true))
+
+    await wrapper.find('[data-testid="copy-url"]').trigger('click')
+
+    expect(writeText).toHaveBeenLastCalledWith('https://db.example.com')
+  })
+
+  it('opens an http URL in a new tab, isolated from this page', async () => {
+    setFragment('#tok')
+    const repository = new InMemoryOneTimeLinkRepository().seedSecret({
+      token: 'tok',
+      secret: SECRET,
+    })
+
+    const wrapper = mountPage(repository)
+    await wrapper.find('[data-testid="reveal-button"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="open-url"]').exists()).toBe(true))
+
+    const link = wrapper.find('[data-testid="open-url"]')
+    expect(link.attributes('href')).toBe('https://db.example.com/')
+    expect(link.attributes('target')).toBe('_blank')
+    // noopener stops the opened page reaching back via window.opener;
+    // noreferrer keeps the vault's hostname out of the third party's logs.
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+  })
+
+  it('refuses to turn a non-http URL into a link', async () => {
+    // The URL is whatever an owner typed into the vault, rendered on a page
+    // anyone can open. A javascript: target would execute on click.
+    setFragment('#tok')
+    const repository = new InMemoryOneTimeLinkRepository().seedSecret({
+      token: 'tok',
+      secret: { ...SECRET, url: 'javascript:alert(document.domain)' },
+    })
+
+    const wrapper = mountPage(repository)
+    await wrapper.find('[data-testid="reveal-button"]').trigger('click')
+    await vi.waitFor(() => expect(wrapper.find('[data-testid="url-value"]').exists()).toBe(true))
+
+    expect(wrapper.find('[data-testid="open-url"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="unsafe-url"]').exists()).toBe(true)
+    expect(wrapper.html()).not.toContain('href="javascript:')
+  })
 })

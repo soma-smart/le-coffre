@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Button, Card, Message } from 'primevue'
+import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 import BlankLayout from '../layouts/BlankLayout.vue'
 import { useContainer } from '@/plugins/container'
 import { readTokenFromFragment, type RevealedSecret } from '@/domain/oneTimeLink/OneTimeLink'
@@ -8,7 +9,7 @@ import { OneTimeLinkDomainError } from '@/domain/oneTimeLink/errors'
 
 const { oneTimeLinks } = useContainer()
 
-type CopyableField = 'login' | 'password'
+type CopyableField = 'login' | 'password' | 'url'
 
 const token = ref('')
 const secret = ref<RevealedSecret | null>(null)
@@ -19,6 +20,11 @@ const copiedField = ref<CopyableField | null>(null)
 // Masked by default, like everywhere else a secret is displayed in the app:
 // the recipient often opens this link with someone looking over their shoulder.
 const passwordVisible = ref(false)
+
+// The URL comes from whatever an owner typed into the vault, so it is untrusted
+// input rendered on an anonymous page. Only http(s) targets get an actual link:
+// without this, a stored `javascript:` URL would execute on click.
+const safeUrl = computed(() => normalizeExternalHttpUrl(secret.value?.url))
 
 onMounted(() => {
   // The token lives in the fragment, which the browser never sends to the
@@ -47,8 +53,14 @@ async function reveal() {
   }
 }
 
+function valueOf(field: CopyableField): string | null | undefined {
+  if (field === 'password') return secret.value?.password
+  if (field === 'login') return secret.value?.login
+  return secret.value?.url
+}
+
 async function copyField(field: CopyableField) {
-  const value = field === 'password' ? secret.value?.password : secret.value?.login
+  const value = valueOf(field)
   if (!value) return
   await navigator.clipboard.writeText(value)
   copiedField.value = field
@@ -121,9 +133,50 @@ async function copyField(field: CopyableField) {
 
             <div v-if="secret.url">
               <div class="text-sm text-muted-color">URL</div>
-              <a :href="secret.url" rel="noopener noreferrer" class="font-medium underline">
-                {{ secret.url }}
-              </a>
+              <div class="flex gap-2 items-stretch">
+                <code
+                  class="grow p-2 rounded border border-surface break-all"
+                  style="background-color: var(--p-content-background)"
+                  data-testid="url-value"
+                  >{{ secret.url }}</code
+                >
+                <!-- An anchor rather than a click handler: the browser's own
+                     noopener/noreferrer handling is what stops the opened page
+                     from reaching back through window.opener, and keeps the
+                     vault's hostname out of the third party's Referer. -->
+                <a
+                  v-if="safeUrl"
+                  :href="safeUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-testid="open-url"
+                >
+                  <Button
+                    icon="pi pi-external-link"
+                    severity="secondary"
+                    class="shrink-0 h-full"
+                    aria-label="Open in a new tab"
+                  />
+                </a>
+                <Button
+                  v-else
+                  icon="pi pi-exclamation-triangle"
+                  severity="secondary"
+                  class="shrink-0"
+                  disabled
+                  aria-label="This URL is not http(s) and cannot be opened"
+                  v-tooltip.top="'This URL is not http(s), so it is not opened'"
+                  data-testid="unsafe-url"
+                />
+                <Button
+                  :icon="copiedField === 'url' ? 'pi pi-check' : 'pi pi-copy'"
+                  severity="secondary"
+                  class="shrink-0"
+                  :aria-label="copiedField === 'url' ? 'Copied' : 'Copy URL'"
+                  data-testid="copy-url"
+                  @click="copyField('url')"
+                />
+              </div>
             </div>
 
             <div>
