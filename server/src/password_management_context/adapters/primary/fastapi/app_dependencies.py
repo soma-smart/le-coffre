@@ -17,6 +17,7 @@ from identity_access_management_context.adapters.secondary.sql import (
 )
 from password_management_context.adapters.secondary import (
     PrivateApiPasswordVaultAccessGateway,
+    SqlOneTimeLinkRepository,
     SqlPasswordEventRepository,
     SqlPasswordPermissionsRepository,
     SqlPasswordRepository,
@@ -26,6 +27,7 @@ from password_management_context.adapters.secondary.gateways.iam_user_info_gatew
 )
 from password_management_context.application.gateways import (
     GroupAccessGateway,
+    OneTimeLinkRepository,
     PasswordEncryptionGateway,
     PasswordEventRepository,
     PasswordRepository,
@@ -35,21 +37,27 @@ from password_management_context.application.gateways import (
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
 )
+from password_management_context.application.services import PasswordOwnershipService
 from password_management_context.application.use_cases import (
+    ConsumeOneTimeLinkUseCase,
+    CreateOneTimeLinkUseCase,
     CreatePasswordUseCase,
     DeletePasswordUseCase,
     GetPasswordStatisticForAdminUseCase,
     GetPasswordUseCase,
     ListAccessUseCase,
+    ListOneTimeLinksUseCase,
     ListPasswordEventsByActorUseCase,
     ListPasswordEventsUseCase,
     ListPasswordsUseCase,
+    RevokeOneTimeLinkUseCase,
     ShareAccessUseCase,
     UnshareAccessUseCase,
     UpdatePasswordUseCase,
 )
 from shared_kernel.adapters.primary.dependencies import get_session
-from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.adapters.secondary.utc_time_gateway import UtcTimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
     get_vault_status_api,
 )
@@ -96,6 +104,12 @@ def get_password_vault_access_gateway(
     vault_status_api: VaultStatusApi = Depends(get_vault_status_api),
 ) -> PasswordVaultAccessGateway:
     return PrivateApiPasswordVaultAccessGateway(vault_status_api)
+
+
+def get_one_time_link_repository(
+    session: Session = Depends(get_session),
+) -> OneTimeLinkRepository:
+    return SqlOneTimeLinkRepository(session)
 
 
 def get_event_publisher(request: Request) -> DomainEventPublisher:
@@ -176,6 +190,7 @@ def get_delete_password_usecase(
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
 ):
     return DeletePasswordUseCase(
         password_repository,
@@ -183,6 +198,7 @@ def get_delete_password_usecase(
         group_access_gateway,
         event_publisher,
         password_event_repository,
+        one_time_link_repository,
     )
 
 
@@ -248,6 +264,70 @@ def get_password_statistic_for_admin_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
 ):
     return GetPasswordStatisticForAdminUseCase(password_repository)
+
+
+def get_time_gateway() -> TimeGateway:
+    return UtcTimeGateway()
+
+
+def get_password_ownership_service(
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(get_password_permissions_repository),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
+) -> PasswordOwnershipService:
+    return PasswordOwnershipService(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+    )
+
+
+def get_create_one_time_link_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    ownership_service: PasswordOwnershipService = Depends(get_password_ownership_service),
+    password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return CreateOneTimeLinkUseCase(
+        one_time_link_repository,
+        ownership_service,
+        password_event_repository,
+        time_gateway,
+    )
+
+
+def get_consume_one_time_link_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_encryption_gateway: PasswordEncryptionGateway = Depends(get_password_encryption_gateway),
+    password_vault_access_gateway: PasswordVaultAccessGateway = Depends(get_password_vault_access_gateway),
+    password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return ConsumeOneTimeLinkUseCase(
+        one_time_link_repository,
+        password_repository,
+        password_encryption_gateway,
+        password_vault_access_gateway,
+        password_event_repository,
+        time_gateway,
+    )
+
+
+def get_list_one_time_links_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    ownership_service: PasswordOwnershipService = Depends(get_password_ownership_service),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return ListOneTimeLinksUseCase(one_time_link_repository, ownership_service, time_gateway)
+
+
+def get_revoke_one_time_link_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    ownership_service: PasswordOwnershipService = Depends(get_password_ownership_service),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return RevokeOneTimeLinkUseCase(one_time_link_repository, ownership_service, time_gateway)
 
 
 def get_list_password_events_by_actor_usecase(

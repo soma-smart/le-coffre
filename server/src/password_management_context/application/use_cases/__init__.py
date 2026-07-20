@@ -13,6 +13,10 @@ from .is_group_used_use_case import IsGroupUsedUseCase
 from .list_password_events_by_actor_use_case import ListPasswordEventsByActorUseCase
 from .list_password_events_use_case import ListPasswordEventsUseCase
 from .list_passwords_use_case import ListPasswordsUseCase
+from .one_time_link.consume_one_time_link_use_case import ConsumeOneTimeLinkUseCase
+from .one_time_link.create_one_time_link_use_case import CreateOneTimeLinkUseCase
+from .one_time_link.list_one_time_links_use_case import ListOneTimeLinksUseCase
+from .one_time_link.revoke_one_time_link_use_case import RevokeOneTimeLinkUseCase
 from .update_password_use_case import UpdatePasswordUseCase
 
 __all__ = [
@@ -30,4 +34,8 @@ __all__ = [
     "ListAccessUseCase",
     "IsGroupUsedUseCase",
     "GetPasswordStatisticForAdminUseCase",
+    "CreateOneTimeLinkUseCase",
+    "ConsumeOneTimeLinkUseCase",
+    "ListOneTimeLinksUseCase",
+    "RevokeOneTimeLinkUseCase",
 ]

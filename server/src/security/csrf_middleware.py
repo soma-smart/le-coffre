@@ -49,6 +49,13 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         "/api/vault/setup",  # Vault setup happens before CSRF token exists
         "/api/vault/validate-setup",  # Validate setup happens immediately after
         "/api/vault/unlock",  # Vault unlock happens before authentication is possible
+        # Redeeming a one-time link is anonymous by design: the sole credential is
+        # the secret token in the request body, never the session cookie. CSRF
+        # protects against a third party spending the caller's ambient authority,
+        # and there is none to spend here. Without the exemption a visitor who
+        # happens to be logged in would be rejected, since the public page has no
+        # CSRF token in its store.
+        "/api/one-time-links/consume",
     ]
 
     # HTTP methods that require CSRF protection

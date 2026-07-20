@@ -2,6 +2,7 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from password_management_context.adapters.secondary.sql import (
+    SqlOneTimeLinkRepository,
     SqlPasswordPermissionsRepository,
     SqlPasswordRepository,
 )
@@ -32,3 +33,8 @@ def sql_password_repository(session):
 @pytest.fixture
 def sql_password_permissions_repository(session):
     return SqlPasswordPermissionsRepository(session)
+
+
+@pytest.fixture
+def sql_one_time_link_repository(session):
+    return SqlOneTimeLinkRepository(session)

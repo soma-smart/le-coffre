@@ -134,6 +134,38 @@ export type ConfigureSsoProviderRequest = {
 };
 
 /**
+ * ConsumeOneTimeLinkRequest
+ */
+export type ConsumeOneTimeLinkRequest = {
+    /**
+     * Token
+     */
+    token: string;
+};
+
+/**
+ * ConsumeOneTimeLinkResponse
+ */
+export type ConsumeOneTimeLinkResponse = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Password
+     */
+    password: string;
+    /**
+     * Login
+     */
+    login: string | null;
+    /**
+     * Url
+     */
+    url: string | null;
+};
+
+/**
  * CreateGroupRequest
  */
 export type CreateGroupRequest = {
@@ -159,6 +191,36 @@ export type CreateGroupResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * CreateOneTimeLinkRequest
+ */
+export type CreateOneTimeLinkRequest = {
+    /**
+     * Lifetime Seconds
+     *
+     * How long the link stays valid. Defaults to 24h; bounded by the domain to 5 minutes .. 7 days.
+     */
+    lifetime_seconds?: number | null;
+};
+
+/**
+ * CreateOneTimeLinkResponse
+ */
+export type CreateOneTimeLinkResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Token
+     */
+    token: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
 };
 
 /**
@@ -503,6 +565,34 @@ export type ListGroupsResponse = {
 };
 
 /**
+ * ListOneTimeLinksResponseModel
+ */
+export type ListOneTimeLinksResponseModel = {
+    /**
+     * Links
+     */
+    links: Array<OneTimeLinkSummary>;
+    /**
+     * Total
+     *
+     * How many links exist in total, which may exceed the number returned.
+     */
+    total: number;
+    /**
+     * Active
+     *
+     * How many links are still redeemable right now.
+     */
+    active: number;
+    /**
+     * Max Active
+     *
+     * How many links may be active at once for one password.
+     */
+    max_active: number;
+};
+
+/**
  * ListPasswordAccessResponse
  */
 export type ListPasswordAccessResponse = {
@@ -574,6 +664,40 @@ export type LockVaultPostResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * OneTimeLinkSummary
+ */
+export type OneTimeLinkSummary = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Password Id
+     */
+    password_id: string;
+    /**
+     * Created By User Id
+     */
+    created_by_user_id: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Read At
+     */
+    read_at: string | null;
+    /**
+     * Revoked At
+     */
+    revoked_at: string | null;
 };
 
 /**
@@ -1331,6 +1455,130 @@ export type ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses 
 };
 
 export type ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponse = ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses[keyof ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses];
+
+export type ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetData = {
+    body?: never;
+    path: {
+        /**
+         * Password Id
+         */
+        password_id: string;
+    };
+    query?: {
+        /**
+         * Include Inactive
+         */
+        include_inactive?: boolean;
+    };
+    url: '/passwords/{password_id}/one-time-links';
+};
+
+export type ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetError = ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetErrors[keyof ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetErrors];
+
+export type ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListOneTimeLinksResponseModel;
+};
+
+export type ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponse = ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponses[keyof ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponses];
+
+export type CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostData = {
+    body: CreateOneTimeLinkRequest;
+    path: {
+        /**
+         * Password Id
+         */
+        password_id: string;
+    };
+    query?: never;
+    url: '/passwords/{password_id}/one-time-links';
+};
+
+export type CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostError = CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostErrors[keyof CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostErrors];
+
+export type CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: CreateOneTimeLinkResponse;
+};
+
+export type CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponse = CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses[keyof CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses];
+
+export type RevokeOneTimeLinkOneTimeLinksLinkIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Link Id
+         */
+        link_id: string;
+    };
+    query?: never;
+    url: '/one-time-links/{link_id}';
+};
+
+export type RevokeOneTimeLinkOneTimeLinksLinkIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeOneTimeLinkOneTimeLinksLinkIdDeleteError = RevokeOneTimeLinkOneTimeLinksLinkIdDeleteErrors[keyof RevokeOneTimeLinkOneTimeLinksLinkIdDeleteErrors];
+
+export type RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponse = RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponses[keyof RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponses];
+
+export type ConsumeOneTimeLinkOneTimeLinksConsumePostData = {
+    body: ConsumeOneTimeLinkRequest;
+    path?: never;
+    query?: never;
+    url: '/one-time-links/consume';
+};
+
+export type ConsumeOneTimeLinkOneTimeLinksConsumePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+    /**
+     * Vault is locked
+     */
+    503: unknown;
+};
+
+export type ConsumeOneTimeLinkOneTimeLinksConsumePostError = ConsumeOneTimeLinkOneTimeLinksConsumePostErrors[keyof ConsumeOneTimeLinkOneTimeLinksConsumePostErrors];
+
+export type ConsumeOneTimeLinkOneTimeLinksConsumePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ConsumeOneTimeLinkResponse;
+};
+
+export type ConsumeOneTimeLinkOneTimeLinksConsumePostResponse = ConsumeOneTimeLinkOneTimeLinksConsumePostResponses[keyof ConsumeOneTimeLinkOneTimeLinksConsumePostResponses];
 
 export type DeletePasswordPasswordsPasswordIdDeleteData = {
     body?: never;
