@@ -6,6 +6,7 @@ import { CONTAINER_KEY, containerPlugin, useContainer } from '@/plugins/containe
 import { InMemoryAuthGateway } from '@/infrastructure/in_memory/InMemoryAuthGateway'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
+import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
 import { InMemoryStatisticsGateway } from '@/infrastructure/in_memory/InMemoryStatisticsGateway'
@@ -22,6 +23,7 @@ function makeTestContainer(): Container {
     authGateway: new InMemoryAuthGateway(),
     preferencesGateway: new InMemoryPreferencesGateway(),
     statisticsGateway: new InMemoryStatisticsGateway(),
+    oneTimeLinkRepository: new InMemoryOneTimeLinkRepository(),
   })
 }
 

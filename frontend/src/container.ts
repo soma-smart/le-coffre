@@ -1,6 +1,7 @@
 import type { AuthGateway } from '@/application/ports/AuthGateway'
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
+import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
 import type { StatisticsGateway } from '@/application/ports/StatisticsGateway'
@@ -23,6 +24,10 @@ import { ListGroupsUseCase } from '@/application/group/ListGroups'
 import { PromoteMemberToOwnerUseCase } from '@/application/group/PromoteMemberToOwner'
 import { RemoveMemberFromGroupUseCase } from '@/application/group/RemoveMemberFromGroup'
 import { UpdateGroupUseCase } from '@/application/group/UpdateGroup'
+import { ConsumeOneTimeLinkUseCase } from '@/application/oneTimeLink/ConsumeOneTimeLink'
+import { CreateOneTimeLinkUseCase } from '@/application/oneTimeLink/CreateOneTimeLink'
+import { ListOneTimeLinksUseCase } from '@/application/oneTimeLink/ListOneTimeLinks'
+import { RevokeOneTimeLinkUseCase } from '@/application/oneTimeLink/RevokeOneTimeLink'
 import { CreatePasswordUseCase } from '@/application/password/CreatePassword'
 import { DeletePasswordUseCase } from '@/application/password/DeletePassword'
 import { GetPasswordUseCase } from '@/application/password/GetPassword'
@@ -67,6 +72,7 @@ export interface Ports {
   authGateway: AuthGateway
   preferencesGateway: PreferencesGateway
   statisticsGateway: StatisticsGateway
+  oneTimeLinkRepository: OneTimeLinkRepository
 }
 
 export interface Container {
@@ -129,6 +135,12 @@ export interface Container {
   }
   statistics: {
     get: GetAdminStatisticsUseCase
+  }
+  oneTimeLinks: {
+    create: CreateOneTimeLinkUseCase
+    list: ListOneTimeLinksUseCase
+    revoke: RevokeOneTimeLinkUseCase
+    consume: ConsumeOneTimeLinkUseCase
   }
 }
 
@@ -193,6 +205,12 @@ export function buildContainer(ports: Ports): Container {
     },
     statistics: {
       get: new GetAdminStatisticsUseCase(ports.statisticsGateway),
+    },
+    oneTimeLinks: {
+      create: new CreateOneTimeLinkUseCase(ports.oneTimeLinkRepository),
+      list: new ListOneTimeLinksUseCase(ports.oneTimeLinkRepository),
+      revoke: new RevokeOneTimeLinkUseCase(ports.oneTimeLinkRepository),
+      consume: new ConsumeOneTimeLinkUseCase(ports.oneTimeLinkRepository),
     },
   }
 }
