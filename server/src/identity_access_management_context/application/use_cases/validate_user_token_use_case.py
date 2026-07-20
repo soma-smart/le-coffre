@@ -49,7 +49,7 @@ class ValidateUserTokenUseCase(TracedUseCase):
         authenticated_user = self._user_repository.get_by_id(token_obj.user_id)
         if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
             session_cutoff = authenticated_user.session_invalid_before.replace(microsecond=0)
-            if token_obj.issued_at is not None and token_obj.issued_at < session_cutoff:
+            if token_obj.issued_at is None or token_obj.issued_at < session_cutoff:
                 raise InvalidTokenException()
 
         # Run synchronous DB lookups in a thread pool to avoid blocking the event loop.

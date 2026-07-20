@@ -1,7 +1,7 @@
 """Add revoked tokens and user session state
 
 Revision ID: f1a2b3c4d5e6
-Revises: d28b244c29a1
+Revises: 443d92366c2b
 Create Date: 2026-07-13 00:00:00.000000
 
 """

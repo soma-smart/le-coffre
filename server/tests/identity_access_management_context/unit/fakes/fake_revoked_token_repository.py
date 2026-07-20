@@ -16,7 +16,6 @@ class FakeRevokedTokenRepository:
             return False
         expires_at, _ = revoked
         if expires_at is not None and expires_at <= now:
-            del self.revoked_tokens[jti]
             return False
         return True
 

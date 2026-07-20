@@ -118,7 +118,7 @@ def test_should_raise_exception_when_token_jti_is_revoked(
         {"display_name": display_name},
         jti=revoked_jti,
     )
-    revoked_token_repository.revoke_jti(revoked_jti, expires_at=time_provider.get_current_time().replace(year=2099))
+    revoked_token_repository.revoke_jti(revoked_jti, expires_at=None)
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
 
@@ -165,6 +165,52 @@ def test_should_raise_exception_when_token_was_issued_before_session_cutoff(
         jti="access-token-jti-before-cutoff",
     )
     token_gateway.generated_tokens[jwt_token].issued_at = time_provider.get_current_time().replace(year=2000)
+
+    command = ValidateUserTokenCommand(jwt_token=jwt_token)
+
+    with pytest.raises(InvalidTokenException):
+        use_case.execute(command)
+
+
+def test_should_raise_exception_when_token_has_no_issued_at_and_session_is_invalidated(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+    time_provider: FakeTimeGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "admin@lecoffre.com"
+    display_name = "Admin User"
+    jwt_token = "jwt_token_without_issued_at"
+
+    user_password_repository.save(
+        UserPassword(
+            id=user_id,
+            email=email,
+            password_hash=b"hashed_password",
+            display_name=display_name,
+        )
+    )
+    user_repository.save(
+        User(
+            id=user_id,
+            username="admin",
+            email=email,
+            name=display_name,
+            roles=["admin"],
+            session_invalid_before=time_provider.get_current_time(),
+        )
+    )
+    token_gateway.set_valid_token(
+        jwt_token,
+        user_id,
+        email,
+        ["admin"],
+        {"display_name": display_name},
+        jti="access-token-jti-without-issued-at",
+    )
+    token_gateway.generated_tokens[jwt_token].issued_at = None
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
 

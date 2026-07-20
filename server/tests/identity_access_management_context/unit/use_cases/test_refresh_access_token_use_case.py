@@ -109,9 +109,67 @@ def test_given_revoked_refresh_token_when_execute_then_raises_invalid_refresh_to
         )
     )
     token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
-    revoked_token_repository.revoke_jti(
-        refresh_token_jti, expires_at=time_provider.get_current_time().replace(year=2099)
+    revoked_token_repository.revoke_jti(refresh_token_jti, expires_at=None)
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+
+def test_given_refresh_token_without_jti_when_execute_then_raises_invalid_refresh_token_exception(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "refresh_token_without_jti"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+            current_refresh_token_jti="current-refresh-token-jti",
+        )
     )
+
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti="token-jti")
+    token_gateway.valid_refresh_tokens[refresh_token].jti = None
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+
+def test_given_refresh_token_without_issued_at_when_execute_then_raises_invalid_refresh_token_exception(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "refresh_token_without_issued_at"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+            current_refresh_token_jti="current-refresh-token-jti",
+        )
+    )
+
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti="token-jti")
+    token_gateway.valid_refresh_tokens[refresh_token].issued_at = None
 
     command = RefreshAccessTokenCommand(refresh_token=refresh_token)
 

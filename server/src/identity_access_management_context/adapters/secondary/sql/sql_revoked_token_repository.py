@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any, cast
 
 from sqlmodel import Session, delete, select
 
@@ -36,16 +37,21 @@ class SqlRevokedTokenRepository(SQLBaseRepository, RevokedTokenRepository):
         self.commit()
 
     def is_revoked(self, jti: str, now: datetime) -> bool:
-        self._purge_expired_tokens(now)
-
-        revoked_token = self._session.exec(select(RevokedTokenTable).where(RevokedTokenTable.jti == jti)).first()
+        expires_at_column = cast(Any, RevokedTokenTable.expires_at)
+        revoked_token = self._session.exec(
+            select(RevokedTokenTable).where(
+                RevokedTokenTable.jti == jti,
+                (expires_at_column.is_(None)) | (expires_at_column > now),
+            )
+        ).first()
         return revoked_token is not None
 
     def _purge_expired_tokens(self, now: datetime) -> None:
+        expires_at_column = cast(Any, RevokedTokenTable.expires_at)
         self._session.exec(
             delete(RevokedTokenTable).where(
-                RevokedTokenTable.expires_at.is_not(None),
-                RevokedTokenTable.expires_at <= now,
+                expires_at_column.is_not(None),
+                expires_at_column <= now,
             )
         )
         self.commit()

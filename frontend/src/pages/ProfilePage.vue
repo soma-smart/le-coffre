@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { logout } from '@/utils/logout'
 import MainLayout from '../layouts/MainLayout.vue'
@@ -9,9 +10,11 @@ import { useContainer } from '@/plugins/container'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 
 const toast = useToast()
+const router = useRouter()
 
 const handleLogout = async () => {
   await logout()
+  await router.push('/login')
   toast.add({ severity: 'success', summary: 'Logged out', detail: 'See you soon!', life: 3000 })
 }
 
