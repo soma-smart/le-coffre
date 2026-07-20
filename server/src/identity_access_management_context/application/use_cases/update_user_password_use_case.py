@@ -40,14 +40,14 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         # rather than leaking policy feedback first.
         new_password = RawPassword(command.new_password)
 
-        new_password_hash = self.password_hashing_gateway.hash(new_password.value)
-
-        self.user_password_repository.update_password(command.user_id, new_password_hash)
-
         user = self.user_repository.get_by_id(command.user_id)
         if not user:
             raise UserNotFoundException(command.user_id)
 
+        new_password_hash = self.password_hashing_gateway.hash(new_password.value)
+
+        self.user_password_repository.update_password(command.user_id, new_password_hash)
+
         user.current_refresh_token_jti = None
-        user.session_invalid_before = self.time_provider.get_current_time()
+        user.session_invalid_before = self.time_provider.get_current_time().replace(microsecond=0)
         self.user_repository.update(user)

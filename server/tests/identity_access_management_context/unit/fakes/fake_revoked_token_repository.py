@@ -8,7 +8,9 @@ class FakeRevokedTokenRepository:
         self.revoked_tokens: dict[str, tuple[datetime | None, str]] = {}
 
     def revoke(self, token: Token, reason: str, revoked_at: datetime) -> None:
-        self.revoked_tokens[token.jti or token.value] = (token.expires_at, reason)
+        if token.jti is None:
+            return
+        self.revoked_tokens[token.jti] = (token.expires_at, reason)
 
     def is_revoked(self, jti: str, now: datetime) -> bool:
         revoked = self.revoked_tokens.get(jti)

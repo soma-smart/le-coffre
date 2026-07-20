@@ -47,14 +47,14 @@ class RefreshAccessTokenUseCase(TracedUseCase):
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
         if user.session_invalid_before is not None:
-            session_cutoff = user.session_invalid_before.replace(microsecond=0)
+            session_cutoff = user.session_invalid_before
             if token_data.issued_at < session_cutoff:
                 raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
         if user.current_refresh_token_jti != token_data.jti:
             self.revoked_token_repository.revoke(token_data, "refresh_token_reuse_detected", now)
             user.current_refresh_token_jti = None
-            user.session_invalid_before = now
+            user.session_invalid_before = now.replace(microsecond=0)
             self.user_repository.update(user)
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 

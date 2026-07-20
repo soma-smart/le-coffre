@@ -84,7 +84,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     authenticated_user = user_repository.get_by_id(user_id)
     assert authenticated_user is not None
     assert authenticated_user.current_refresh_token_jti is None
-    assert authenticated_user.session_invalid_before == time_provider.get_current_time()
+    assert authenticated_user.session_invalid_before == time_provider.get_current_time().replace(microsecond=0)
 
 
 def test_given_incorrect_old_password_when_updating_password_should_raise_invalid_credentials(
@@ -133,3 +133,36 @@ def test_given_user_not_in_password_repository_when_updating_password_should_rai
     # Act & Assert
     with pytest.raises(UserNotFoundException):
         use_case.execute(command)
+
+
+def test_given_password_record_exists_but_user_missing_when_updating_password_then_does_not_persist_new_password(
+    use_case: UpdateUserPasswordUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    old_password = "OldPassword123!"
+    new_password = "NewPassword456!"
+
+    user_password_repository.save(
+        UserPassword(
+            id=user_id,
+            email="user@example.com",
+            password_hash=password_hashing_gateway.hash(old_password),
+            display_name="Test User",
+        )
+    )
+
+    command = UpdateUserPasswordCommand(
+        user_id=user_id,
+        old_password=old_password,
+        new_password=new_password,
+    )
+
+    with pytest.raises(UserNotFoundException):
+        use_case.execute(command)
+
+    unchanged_user_password = user_password_repository.get_by_id(user_id)
+    assert unchanged_user_password is not None
+    assert password_hashing_gateway.verify(old_password, unchanged_user_password.password_hash)
+    assert not password_hashing_gateway.verify(new_password, unchanged_user_password.password_hash)

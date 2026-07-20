@@ -312,5 +312,38 @@ def test_given_refresh_token_jti_not_matching_active_session_when_execute_then_r
     compromised_user = user_repository.get_by_id(user_id)
     assert compromised_user is not None
     assert compromised_user.current_refresh_token_jti is None
-    assert compromised_user.session_invalid_before == time_provider.get_current_time()
+    assert compromised_user.session_invalid_before == time_provider.get_current_time().replace(microsecond=0)
     assert revoked_token_repository.is_revoked("stale-refresh-token-jti", now=time_provider.get_current_time()) is True
+
+
+def test_given_refresh_token_issued_microseconds_before_session_cutoff_when_execute_then_raises_invalid_refresh_token_exception(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "microsecond_before_cutoff_refresh_token"
+    refresh_token_jti = "refresh-token-jti-microsecond-before-cutoff"
+
+    session_cutoff = FakeTimeGateway().get_current_time().replace(microsecond=500000)
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+            current_refresh_token_jti=refresh_token_jti,
+            session_invalid_before=session_cutoff,
+        )
+    )
+
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
+    token_gateway.valid_refresh_tokens[refresh_token].issued_at = session_cutoff.replace(microsecond=499999)
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)

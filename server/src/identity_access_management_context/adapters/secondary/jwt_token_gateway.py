@@ -100,6 +100,11 @@ class JwtTokenGateway(TokenGateway):
     def validate_token(self, token: str) -> Token | None:
         try:
             payload = jwt.decode(token, self._secret_key, algorithms=[self._algorithm])
+
+            # Access-token validation must reject refresh tokens.
+            if payload.get("type") == REFRESH_TOKEN_TYPE:
+                return None
+
             return self._build_token_from_payload(token, payload, token_type=ACCESS_TOKEN_TYPE)
 
         except jwt.ExpiredSignatureError:

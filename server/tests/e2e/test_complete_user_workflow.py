@@ -354,7 +354,7 @@ def test_complete_user_workflow(
     )
     assert update_response.status_code == 204, f"Failed to update password: {update_response.text}"
 
-    # Step 8.3: Updating with the now-wrong old password returns 401
+    # Step 8.3: A follow-up update with the now-invalid old password is rejected.
     wrong_old_response = authenticated_admin_client.put(
         "/api/users/me/password",
         json={"old_password": old_password, "new_password": "AnotherPassword456!"},
