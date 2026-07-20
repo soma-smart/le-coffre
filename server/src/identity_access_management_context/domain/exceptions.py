@@ -53,6 +53,34 @@ class InvalidRefreshTokenException(AuthenticationDomainError):
     pass
 
 
+class PasswordPolicyViolationError(IdentityAccessManagementDomainError):
+    """Base exception for account-password policy violations.
+
+    Deliberately NOT an ``AuthenticationDomainError``: that family maps to 401 on
+    some routes, whereas a rejected new password is a bad request (400).
+    """
+
+    pass
+
+
+class PasswordTooShortError(PasswordPolicyViolationError):
+    """Raised when an account password is shorter than the policy minimum."""
+
+    def __init__(self, current_length: int, min_length: int):
+        super().__init__(
+            f"Password is too short: {current_length} characters. Minimum required: {min_length} characters"
+        )
+        self.current_length = current_length
+        self.min_length = min_length
+
+
+class CommonPasswordError(PasswordPolicyViolationError):
+    """Raised when an account password is a well-known common password."""
+
+    def __init__(self):
+        super().__init__("This password is too common. Please choose a less predictable one.")
+
+
 class AccountLockedException(AuthenticationDomainError):
     """Raised when a login is attempted against an account that is temporarily locked.
 

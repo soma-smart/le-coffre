@@ -20,6 +20,7 @@ from identity_access_management_context.domain.events import AdminRegisteredEven
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
 )
+from identity_access_management_context.domain.value_objects import RawPassword
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
 
@@ -44,15 +45,18 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
         self._admin_event_repository = admin_event_repository
 
     def execute(self, command: RegisterAdminWithPasswordCommand) -> UUID:
-        # All operations are synchronous DB/CPU work — run in a thread pool to
-        # avoid blocking the event loop.
+        # Enforce the account-password policy before any work: constructing the value
+        # object raises a PasswordPolicyViolationError on a weak password.
+        password = RawPassword(command.password)
+
+        # All operations are synchronous DB/CPU work.
         def _run() -> UUID:
             user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
 
             if not user_management_service.can_create_admin():
                 raise AdminAlreadyExistsException("An admin account already exists")
 
-            password_hash = self._password_hashing_gateway.hash(command.password)
+            password_hash = self._password_hashing_gateway.hash(password.value)
             user_password = UserPassword(
                 id=command.id,
                 email=command.email,

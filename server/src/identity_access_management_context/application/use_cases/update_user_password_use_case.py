@@ -10,6 +10,7 @@ from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     UserNotFoundException,
 )
+from identity_access_management_context.domain.value_objects import RawPassword
 from shared_kernel.application.gateways import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
@@ -35,7 +36,11 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         if not self.password_hashing_gateway.verify(command.old_password, user_password.password_hash):
             raise InvalidCredentialsException("Invalid old password")
 
-        new_password_hash = self.password_hashing_gateway.hash(command.new_password)
+        # Checked after the old password so a wrong current password still answers 401
+        # rather than leaking policy feedback first.
+        new_password = RawPassword(command.new_password)
+
+        new_password_hash = self.password_hashing_gateway.hash(new_password.value)
 
         self.user_password_repository.update_password(command.user_id, new_password_hash)
 

@@ -23,7 +23,7 @@ def test_complete_user_workflow(
     """
     Complete user management workflow covering all user features step by step.
 
-    Uses authenticated_admin_client (admin@example.com / password="admin") and
+    Uses authenticated_admin_client (admin@example.com / password="admin-password-123") and
     sso_user_factory (which brings in configured_sso + setup).
     """
 
@@ -41,7 +41,7 @@ def test_complete_user_workflow(
     # Step 1.2: Login with correct password returns expected response fields
     correct_login_response = authenticated_admin_client.post(
         "/api/auth/login",
-        json={"email": "admin@example.com", "password": "admin"},
+        json={"email": "admin@example.com", "password": "admin-password-123"},
     )
     assert correct_login_response.status_code == 200
     login_result = correct_login_response.json()
@@ -344,7 +344,7 @@ def test_complete_user_workflow(
     admin_email = admin_me_response2.json()["email"]
     admin_id = admin_me_response2.json()["id"]
 
-    old_password = "admin"
+    old_password = "admin-password-123"
     new_password = "NewSecurePassword123!"
 
     # Step 8.2: Admin updates their own password

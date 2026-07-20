@@ -46,6 +46,16 @@ async def test_complete_authentication_workflow(
     print("📝 PHASE 1: COOKIE-BASED AUTHENTICATION")
     print("=" * 80)
 
+    # Step 1.0: A weak password must be rejected with 400 (not 500, not 201)
+    print("\n🚫 Step 1.0: Verifying the password policy rejects a weak password...")
+    weak_response = e2e_client.post(
+        "/api/auth/register-admin",
+        json={"email": "admin@example.com", "password": "a", "display_name": "Test Admin"},
+    )
+    assert weak_response.status_code == 400
+    assert "too short" in weak_response.json()["detail"].lower()
+    print("✅ Weak password correctly rejected (400)")
+
     # Step 1.1: Register admin user
     print("\n📝 Step 1.1: Registering admin user...")
     admin_data = {

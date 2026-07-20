@@ -12,6 +12,7 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import User, UserPassword
 from identity_access_management_context.domain.events import UserCreatedEvent
+from identity_access_management_context.domain.value_objects import RawPassword
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
@@ -39,6 +40,10 @@ class CreateUserUseCase(TracedUseCase):
     def execute(self, command: CreateUserCommand) -> UUID:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "Create User")
 
+        # Must run before the User is saved below: a late failure would leave an
+        # orphaned User row with no UserPassword.
+        password = RawPassword(command.password)
+
         user = User(
             id=command.id,
             username=command.username,
@@ -48,7 +53,7 @@ class CreateUserUseCase(TracedUseCase):
 
         self.user_repository.save(user)
 
-        password_hash = self.password_hashing_gateway.hash(command.password)
+        password_hash = self.password_hashing_gateway.hash(password.value)
 
         user_password = UserPassword(
             id=command.id,
