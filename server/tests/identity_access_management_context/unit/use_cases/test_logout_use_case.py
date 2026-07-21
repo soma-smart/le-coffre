@@ -64,6 +64,7 @@ def test_given_valid_access_and_refresh_tokens_when_logout_then_revoke_tokens_an
     now = time_provider.get_current_time()
     assert revoked_token_repository.is_revoked("access-jti-1", now=now) is True
     assert revoked_token_repository.is_revoked("refresh-jti-1", now=now) is True
+    assert revoked_token_repository.purge_calls == 1
 
 
 def test_given_only_refresh_token_when_logout_then_clear_active_refresh_jti(

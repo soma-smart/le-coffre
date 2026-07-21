@@ -23,6 +23,7 @@ class LogoutUseCase(TracedUseCase):
 
     def execute(self, command: LogoutCommand) -> None:
         now = self._time_provider.get_current_time()
+        self._revoked_token_repository.purge_expired(now)
 
         access_token = self._token_gateway.validate_token(command.access_token) if command.access_token else None
         refresh_token = (

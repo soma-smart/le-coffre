@@ -18,8 +18,6 @@ class SqlRevokedTokenRepository(SQLBaseRepository, RevokedTokenRepository):
         if token.jti is None:
             return
 
-        self._purge_expired_tokens(revoked_at, commit=False)
-
         existing = self._session.exec(select(RevokedTokenTable).where(RevokedTokenTable.jti == token.jti)).first()
         if existing is None:
             self._session.add(
@@ -45,7 +43,7 @@ class SqlRevokedTokenRepository(SQLBaseRepository, RevokedTokenRepository):
         ).first()
         return revoked_token is not None
 
-    def _purge_expired_tokens(self, now: datetime, *, commit: bool = True) -> None:
+    def purge_expired(self, now: datetime) -> None:
         expires_at_column = cast(Any, RevokedTokenTable.expires_at)
         self._session.exec(
             delete(RevokedTokenTable).where(
@@ -53,5 +51,4 @@ class SqlRevokedTokenRepository(SQLBaseRepository, RevokedTokenRepository):
                 expires_at_column <= now,
             )
         )
-        if commit:
-            self.commit()
+        self.commit()

@@ -71,6 +71,7 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     assert updated_user is not None
     assert updated_user.current_refresh_token_jti == "refresh-token-jti-new_access_token"
     assert revoked_token_repository.is_revoked(refresh_token_jti, now=FakeTimeGateway().get_current_time()) is True
+    assert revoked_token_repository.purge_calls == 1
 
 
 def test_given_invalid_refresh_token_when_execute_then_raises_invalid_refresh_token_exception(

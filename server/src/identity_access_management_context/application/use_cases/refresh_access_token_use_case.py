@@ -43,6 +43,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
         now = self.time_provider.get_current_time()
+        self.revoked_token_repository.purge_expired(now)
         if self.revoked_token_repository.is_revoked(token_data.jti, now):
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
