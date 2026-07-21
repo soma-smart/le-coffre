@@ -73,7 +73,8 @@ class CsrfMiddleware(BaseHTTPMiddleware):
 
         # Check authentication first - if no auth token, let auth middleware handle it (returns 401)
         access_token = request.cookies.get("access_token")
-        if not access_token:
+        refresh_token = request.cookies.get("refresh_token")
+        if not access_token and not refresh_token:
             # No authentication, skip CSRF check and let auth middleware return 401
             return await call_next(request)
 
@@ -112,10 +113,28 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                     time_provider,
                 )
 
-                # Validate JWT and get user ID
-                command = ValidateUserTokenCommand(jwt_token=access_token)
-                response = validate_usecase.execute(command)
-                user_id = response.user_id
+                if access_token:
+                    # Validate access token and derive user ID
+                    command = ValidateUserTokenCommand(jwt_token=access_token)
+                    response = validate_usecase.execute(command)
+                    user_id = response.user_id
+                else:
+                    # Refresh-only sessions still need CSRF enforcement on mutating routes.
+                    refresh_token_obj = token_gateway.validate_refresh_token(refresh_token)
+                    if refresh_token_obj is None:
+                        raise ValueError("Invalid refresh token")
+
+                    now = time_provider.get_current_time()
+                    if refresh_token_obj.jti and revoked_token_repository.is_revoked(refresh_token_obj.jti, now):
+                        raise ValueError("Revoked refresh token")
+
+                    authenticated_user = user_repository.get_by_id(refresh_token_obj.user_id)
+                    if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
+                        session_cutoff = authenticated_user.session_invalid_before
+                        if refresh_token_obj.issued_at is None or refresh_token_obj.issued_at < session_cutoff:
+                            raise ValueError("Invalidated refresh token")
+
+                    user_id = refresh_token_obj.user_id
 
                 # Validate CSRF token
                 if not csrf_token_manager.validate_token(user_id, csrf_token):

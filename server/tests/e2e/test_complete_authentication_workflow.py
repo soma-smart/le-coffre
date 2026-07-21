@@ -233,6 +233,20 @@ async def test_complete_authentication_workflow(
     assert "CSRF token missing" in put_no_csrf_response.json()["detail"]
     print("✅ PUT without CSRF token correctly rejected (403)")
 
+    # Refresh-only authenticated context must still require CSRF on mutating routes
+    refresh_only_client = client_factory()
+    refresh_only_client.cookies.set("refresh_token", e2e_client.cookies.get("refresh_token"))
+    refresh_only_client.cookies.delete("access_token")
+    refresh_only_client.disable_auto_csrf()
+    refresh_only_no_csrf_response = refresh_only_client.post(
+        "/api/groups/",
+        json={"name": "Refresh Only No CSRF", "description": "Should fail"},
+    )
+    assert refresh_only_no_csrf_response.status_code == 403
+    assert "CSRF token missing" in refresh_only_no_csrf_response.json()["detail"]
+    refresh_only_client.enable_auto_csrf()
+    print("✅ Refresh-only request without CSRF correctly rejected (403)")
+
     # Step 4.5: Test POST with invalid CSRF token (should be rejected)
     print("\n🚫 Step 4.5: Testing POST with invalid CSRF token...")
     invalid_csrf_response = e2e_client.post(
