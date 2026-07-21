@@ -132,6 +132,16 @@
               <span v-else-if="slotProps.data.eventType === 'PasswordDeletedEvent'">
                 Password deleted
               </span>
+              <span v-else-if="slotProps.data.eventType === 'OneTimeLinkCreatedEvent'">
+                One-time link created, expires
+                <strong>{{ formatDateTime(slotProps.data.eventData.expiresAt as string) }}</strong>
+              </span>
+              <span v-else-if="slotProps.data.eventType === 'OneTimeLinkReadEvent'">
+                <!-- This log is keyed by actor, and an anonymous reader has no
+                     user id, so the row is filed under whoever issued the link.
+                     Spell that out rather than let it read as their own access. -->
+                One-time link they issued was opened by an anonymous recipient
+              </span>
               <span v-else>
                 {{ JSON.stringify(slotProps.data.eventData) }}
               </span>

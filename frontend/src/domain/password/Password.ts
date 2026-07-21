@@ -88,6 +88,11 @@ export function eventSeverity(eventType: string): PasswordEventSeverity {
   if (eventType === 'PasswordUpdatedEvent') return 'warn'
   if (eventType === 'PasswordSharedEvent' || eventType === 'PasswordUnsharedEvent') return 'info'
   if (eventType === 'PasswordAccessedEvent') return 'secondary'
+  // Issuing a one-time link is a form of sharing, so it matches the sharing
+  // events. Redeeming one is the moment the secret actually left the vault to
+  // someone with no account, which is what an auditor scans the log for.
+  if (eventType === 'OneTimeLinkCreatedEvent') return 'info'
+  if (eventType === 'OneTimeLinkReadEvent') return 'warn'
   return 'secondary'
 }
 

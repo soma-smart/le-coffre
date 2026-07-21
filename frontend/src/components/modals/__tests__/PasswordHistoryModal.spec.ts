@@ -149,4 +149,45 @@ describe('PasswordHistoryModal', () => {
       consoleError.mockRestore()
     }
   })
+
+  it('renders one-time link events in words rather than as raw JSON', async () => {
+    // Any event type without its own branch falls through to
+    // JSON.stringify(eventData), which leaks the wire format into the UI.
+    const anHourAgo = new Date()
+    anHourAgo.setHours(anHourAgo.getHours() - 1)
+    repo.addEvent('pwd-1', {
+      eventId: 'e3',
+      eventType: 'OneTimeLinkCreatedEvent',
+      occurredOn: anHourAgo.toISOString(),
+      actorUserId: 'u',
+      actorEmail: 'alice@example.com',
+      eventData: { linkId: 'l1', expiresAt: '2030-01-01T12:00:00Z' },
+    })
+    repo.addEvent('pwd-1', {
+      eventId: 'e4',
+      eventType: 'OneTimeLinkReadEvent',
+      occurredOn: anHourAgo.toISOString(),
+      actorUserId: 'u',
+      actorEmail: 'alice@example.com',
+      eventData: { linkId: 'l1', actor: 'anonymous' },
+    })
+
+    const wrapper = mount(PasswordHistoryModal, {
+      props: { visible: true, password: samplePassword },
+      global: {
+        plugins: [pinia],
+        provide: { [CONTAINER_KEY as symbol]: container },
+        stubs: { Dialog: DialogStub },
+      },
+    })
+    await flushPromises()
+
+    const text = wrapper.text()
+    expect(text).toContain('One-time link created')
+    // The actor column names the issuer, so the row has to say the reader was
+    // anonymous or it reads as if that user opened it themselves.
+    expect(text).toContain('anonymous recipient')
+    expect(text).not.toContain('linkId')
+    expect(text).not.toContain('{"')
+  })
 })
