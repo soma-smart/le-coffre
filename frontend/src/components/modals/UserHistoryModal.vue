@@ -221,7 +221,7 @@ const fetchEvents = async () => {
 }
 
 const formatDateTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('en-US', {
+  return new Date(dateString).toLocaleString('en-GB', {
     year: 'numeric',
     month: 'short',
     day: '2-digit',

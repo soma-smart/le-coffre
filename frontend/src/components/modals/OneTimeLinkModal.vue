@@ -12,6 +12,7 @@ import {
   type OneTimeLink,
 } from '@/domain/oneTimeLink/OneTimeLink'
 import { OneTimeLinkDomainError } from '@/domain/oneTimeLink/errors'
+import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
 
 const props = defineProps<{
   visible: boolean
@@ -232,11 +233,22 @@ function severityFor(link: OneTimeLink) {
       >
         <div class="text-sm">
           <Tag :value="statusOf(link)" :severity="severityFor(link)" />
-          <span v-if="link.readAt" class="ml-2 text-muted-color">
-            read {{ new Date(link.readAt).toLocaleString() }}
+          <!-- Relative, with the exact timestamp on hover: an absolute date is
+               easy to misread as "already expired" when only the time registers. -->
+          <span
+            v-if="link.readAt"
+            class="ml-2 text-muted-color"
+            :title="formatAbsoluteTime(link.readAt)"
+          >
+            read {{ formatRelativeTime(link.readAt) }}
           </span>
-          <span v-else class="ml-2 text-muted-color">
-            expires {{ new Date(link.expiresAt).toLocaleString() }}
+          <span
+            v-else
+            class="ml-2 text-muted-color"
+            :title="formatAbsoluteTime(link.expiresAt)"
+            data-testid="expiry-label"
+          >
+            expires {{ formatRelativeTime(link.expiresAt) }}
           </span>
         </div>
         <Button
