@@ -32,17 +32,19 @@ describe('one-time link audit use cases', () => {
       .seed(makeLink({ id: 'bob-live', createdByUserId: 'bob' }))
       .seed(makeLink({ id: 'alice-read', readAt: new Date().toISOString() }))
       .seedPasswordName('password-1', 'Prod DB')
-      .seedIssuerEmail('alice', 'alice@example.com')
+      .seedIssuerName('alice', 'Alice Martin')
+      .seedGroupName('password-1', 'Platform team')
   })
 
   it('lists every live link in the vault with its issuer', async () => {
     const page = await new ListAllOneTimeLinksUseCase(repository).execute()
 
     expect(page.links.map((link) => link.id).sort()).toEqual(['alice-live', 'bob-live'])
-    expect(page.links.find((link) => link.id === 'alice-live')?.createdByEmail).toBe(
-      'alice@example.com',
+    expect(page.links.find((link) => link.id === 'alice-live')?.createdByDisplayName).toBe(
+      'Alice Martin',
     )
     expect(page.links[0].passwordName).toBe('Prod DB')
+    expect(page.links[0].groupName).toBe('Platform team')
   })
 
   it('includes spent links only when asked', async () => {
@@ -57,8 +59,10 @@ describe('one-time link audit use cases', () => {
     const page = await new ListMyOneTimeLinksUseCase(repository).execute()
 
     expect(page.links.map((link) => link.id)).toEqual(['alice-live'])
-    // No issuer email on the personal table: there is only one issuer, the reader.
-    expect(page.links[0].createdByEmail).toBeNull()
+    // No issuer on the personal table: there is only one, the reader. The group
+    // is still there, since it says who else can reach the secret.
+    expect(page.links[0].createdByDisplayName).toBeNull()
+    expect(page.links[0].groupName).toBe('Platform team')
   })
 
   it('lets an admin revoke a link they did not issue', async () => {

@@ -42,8 +42,9 @@ class OneTimeLinkAuditItem(BaseModel):
     id: UUID
     password_id: UUID
     password_name: str | None = Field(description="None when the password has since been deleted.")
+    group_name: str | None = Field(description="The group that owns the password.")
     created_by_user_id: UUID
-    created_by_email: str | None
+    created_by_display_name: str | None
     created_at: datetime
     expires_at: datetime
     read_at: datetime | None
@@ -66,8 +67,9 @@ def _to_model(result: ListOneTimeLinkAuditResponse) -> ListOneTimeLinkAuditRespo
                 id=link.id,
                 password_id=link.password_id,
                 password_name=link.password_name,
+                group_name=link.group_name,
                 created_by_user_id=link.created_by_user_id,
-                created_by_email=link.created_by_email,
+                created_by_display_name=link.created_by_display_name,
                 created_at=link.created_at,
                 expires_at=link.expires_at,
                 read_at=link.read_at,

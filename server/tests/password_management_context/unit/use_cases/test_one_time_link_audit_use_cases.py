@@ -62,8 +62,8 @@ def user_info_gateway():
 
 
 @pytest.fixture
-def audit_assembler(password_repository, user_info_gateway):
-    return OneTimeLinkAuditAssembler(password_repository, user_info_gateway)
+def audit_assembler(password_repository, password_permissions_repository, user_info_gateway):
+    return OneTimeLinkAuditAssembler(password_repository, password_permissions_repository, user_info_gateway)
 
 
 @pytest.fixture
@@ -144,17 +144,21 @@ def test_non_admin_cannot_list_every_link(admin_list_use_case):
         admin_list_use_case.execute(ListOneTimeLinksForAdminCommand(requesting_user=PLAIN_USER))
 
 
-def test_admin_listing_spans_every_password_and_names_the_issuer(
+def test_admin_listing_spans_every_password_and_names_the_issuer_and_group(
     create_use_case, admin_list_use_case, user_info_gateway, owned_password
 ):
-    user_info_gateway.set_user_email(ALICE, "alice@example.com")
+    user_info_gateway.set_user_display_name(ALICE, "Alice Martin")
+    user_info_gateway.set_group_name(GROUP_ID, "Platform team")
     _issue(create_use_case)
 
     result = admin_list_use_case.execute(ListOneTimeLinksForAdminCommand(requesting_user=ADMIN))
 
     assert result.total == 1
-    assert result.links[0].created_by_email == "alice@example.com"
+    # The display name, not the email: the tables identify people the way the
+    # rest of the app does.
+    assert result.links[0].created_by_display_name == "Alice Martin"
     assert result.links[0].password_name == "Prod DB"
+    assert result.links[0].group_name == "Platform team"
 
 
 def test_admin_listing_hides_spent_links_unless_asked(
@@ -196,6 +200,20 @@ def test_my_listing_returns_only_my_own_links(create_use_case, my_list_use_case,
     assert len(result.links) == 1
     assert result.links[0].created_by_user_id == ALICE
     assert result.total == 1
+
+
+def test_personal_listing_still_names_the_owning_group(
+    create_use_case, my_list_use_case, user_info_gateway, owned_password
+):
+    """The group matters on both tables: it says who else can reach the secret."""
+    user_info_gateway.set_group_name(GROUP_ID, "Platform team")
+    _issue(create_use_case, user_id=ALICE)
+
+    result = my_list_use_case.execute(ListMyOneTimeLinksCommand(requesting_user_id=ALICE))
+
+    assert result.links[0].group_name == "Platform team"
+    # No issuer on the personal table: there is only one, and it is the reader.
+    assert result.links[0].created_by_display_name is None
 
 
 # ── Admin revocation ──────────────────────────────────────────────────

@@ -287,8 +287,9 @@ def test_admin_sees_and_revokes_links_across_the_whole_vault(
     assert created["token"] not in listed.text
     row = next(link for link in body["links"] if link["id"] == created["id"])
     assert row["password_name"] == "One-time link target"
-    assert row["created_by_email"] is not None
-    print("✓ Admin listing shows the link with its password and issuer")
+    assert row["group_name"] is not None
+    assert row["created_by_display_name"] is not None
+    print("✓ Admin listing shows the link with its password, group and issuer")
 
     assert admin_client.delete(f"/api/admin/one-time-links/{created['id']}").status_code == 204
     consumed = unauthenticated_client.post("/api/one-time-links/consume", json={"token": created["token"]})

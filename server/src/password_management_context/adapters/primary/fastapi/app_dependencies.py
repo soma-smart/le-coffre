@@ -347,9 +347,10 @@ def get_list_password_events_by_actor_usecase(
 
 def get_one_time_link_audit_assembler(
     password_repository: PasswordRepository = Depends(get_password_repository),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(get_password_permissions_repository),
     user_info_gateway: UserInfoGateway = Depends(get_user_info_gateway),
 ) -> OneTimeLinkAuditAssembler:
-    return OneTimeLinkAuditAssembler(password_repository, user_info_gateway)
+    return OneTimeLinkAuditAssembler(password_repository, password_permissions_repository, user_info_gateway)
 
 
 def get_list_one_time_links_for_admin_usecase(

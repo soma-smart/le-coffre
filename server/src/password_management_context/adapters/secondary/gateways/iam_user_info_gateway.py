@@ -26,6 +26,17 @@ class IamUserInfoGateway:
         """
         return self._user_info_api.get_user_email(user_id)
 
+    def get_user_display_name(self, user_id: UUID) -> str | None:
+        """Get the display name for a user.
+
+        Args:
+            user_id: The ID of the user
+
+        Returns:
+            The user's display name, or None if user not found
+        """
+        return self._user_info_api.get_user_display_name(user_id)
+
     def get_group_name(self, group_id: UUID) -> str | None:
         """Get name for a group.
 

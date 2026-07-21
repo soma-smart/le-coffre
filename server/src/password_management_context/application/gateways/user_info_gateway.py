@@ -9,6 +9,10 @@ class UserInfoGateway(Protocol):
         """Get email address for a user"""
         ...
 
+    def get_user_display_name(self, user_id: UUID) -> str | None:
+        """Get the display name for a user"""
+        ...
+
     def get_group_name(self, group_id: UUID) -> str | None:
         """Get name for a group"""
         ...

@@ -47,7 +47,7 @@ defineEmits<{ (e: 'revoke', link: AuditedOneTimeLink): void }>()
       </template>
     </Column>
 
-    <Column field="passwordName" header="Password" :style="{ width: '24%' }">
+    <Column field="passwordName" header="Password" :style="{ width: '20%' }">
       <template #body="slotProps">
         <!-- The link outlives its password, so the name can legitimately be gone. -->
         <span v-if="slotProps.data.passwordName">{{ slotProps.data.passwordName }}</span>
@@ -55,13 +55,27 @@ defineEmits<{ (e: 'revoke', link: AuditedOneTimeLink): void }>()
       </template>
     </Column>
 
-    <Column v-if="showIssuer" field="createdByEmail" header="Issued by" :style="{ width: '22%' }">
+    <!-- Shown on both tables: the owning group is who else can already reach the
+         secret, which is context you need even for your own links. -->
+    <Column field="groupName" header="Group" :style="{ width: '18%' }">
       <template #body="slotProps">
-        <span class="text-sm">{{ slotProps.data.createdByEmail || 'Unknown user' }}</span>
+        <span v-if="slotProps.data.groupName" class="text-sm">{{ slotProps.data.groupName }}</span>
+        <span v-else class="text-sm italic text-muted-color">unknown group</span>
       </template>
     </Column>
 
-    <Column field="createdAt" header="Created" sortable :style="{ width: '16%' }">
+    <Column
+      v-if="showIssuer"
+      field="createdByDisplayName"
+      header="Issued by"
+      :style="{ width: '18%' }"
+    >
+      <template #body="slotProps">
+        <span class="text-sm">{{ slotProps.data.createdByDisplayName || 'Unknown user' }}</span>
+      </template>
+    </Column>
+
+    <Column field="createdAt" header="Created" sortable :style="{ width: '14%' }">
       <template #body="slotProps">
         <span class="text-sm" :title="formatAbsoluteTime(slotProps.data.createdAt)">
           {{ formatRelativeTime(slotProps.data.createdAt) }}
@@ -69,7 +83,7 @@ defineEmits<{ (e: 'revoke', link: AuditedOneTimeLink): void }>()
       </template>
     </Column>
 
-    <Column field="expiresAt" header="Expires" sortable :style="{ width: '16%' }">
+    <Column field="expiresAt" header="Expires" sortable :style="{ width: '14%' }">
       <template #body="slotProps">
         <!-- Relative, like everywhere else links are shown: an absolute date
              reads as "already expired" when only the time registers. -->

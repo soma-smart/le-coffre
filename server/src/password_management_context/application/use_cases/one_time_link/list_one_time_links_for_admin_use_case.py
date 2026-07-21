@@ -33,6 +33,6 @@ class ListOneTimeLinksForAdminUseCase(TracedUseCase):
         total = self.one_time_link_repository.count_all_matching(now, command.include_inactive)
 
         return ListOneTimeLinkAuditResponse(
-            links=self.audit_assembler.assemble(links, with_emails=True),
+            links=self.audit_assembler.assemble(links, with_issuers=True),
             total=total,
         )

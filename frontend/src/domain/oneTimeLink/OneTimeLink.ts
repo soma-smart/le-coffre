@@ -62,11 +62,14 @@ export interface RevealedSecret {
 /**
  * A link seen from a management table rather than from its own password, so it
  * carries the context the bare link lacks. `passwordName` is null once the
- * password has been deleted; `createdByEmail` is only filled for admins.
+ * password has been deleted; `createdByDisplayName` is only filled for admins,
+ * since a personal table has a single issuer: its reader.
  */
 export interface AuditedOneTimeLink extends OneTimeLink {
   passwordName: string | null
-  createdByEmail: string | null
+  /** The group that owns the password, i.e. who else can reach the secret. */
+  groupName: string | null
+  createdByDisplayName: string | null
 }
 
 export interface AuditedOneTimeLinkPage {

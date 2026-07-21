@@ -12,7 +12,8 @@ function makeLink(overrides: Partial<AuditedOneTimeLink> = {}): AuditedOneTimeLi
     passwordId: 'password-1',
     passwordName: 'Prod DB',
     createdByUserId: 'alice',
-    createdByEmail: 'alice@example.com',
+    groupName: 'Platform team',
+    createdByDisplayName: 'Alice Martin',
     createdAt: new Date(now - HOUR).toISOString(),
     expiresAt: new Date(now + HOUR).toISOString(),
     readAt: null,
@@ -59,8 +60,15 @@ describe('OneTimeLinksTable', () => {
   })
 
   it('hides the issuer column unless asked, since the personal table has one issuer', () => {
-    expect(mountTable([makeLink()]).text()).not.toContain('alice@example.com')
-    expect(mountTable([makeLink()], true).text()).toContain('alice@example.com')
+    expect(mountTable([makeLink()]).text()).not.toContain('Alice Martin')
+    expect(mountTable([makeLink()], true).text()).toContain('Alice Martin')
+  })
+
+  it('shows the owning group on both tables', () => {
+    // Who else can already reach the secret is context you need even for your
+    // own links, so it is not gated behind showIssuer.
+    expect(mountTable([makeLink()]).text()).toContain('Platform team')
+    expect(mountTable([makeLink()], true).text()).toContain('Platform team')
   })
 
   it('shows expiry as a duration, which cannot be misread as already past', () => {

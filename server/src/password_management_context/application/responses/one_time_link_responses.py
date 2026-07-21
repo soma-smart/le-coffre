@@ -55,15 +55,17 @@ class ListOneTimeLinksResponse:
 class OneTimeLinkAuditItemResponse:
     """A link seen from a management table rather than from its own password.
 
-    Carries the password name so the row is readable out of context, and the
-    issuer's email for the admin view. Still no token, hashed or otherwise.
+    Carries the password name and its owning group so the row is readable out of
+    context, plus the issuer for the admin view. Still no token, hashed or
+    otherwise.
     """
 
     id: UUID
     password_id: UUID
     password_name: str | None
+    group_name: str | None
     created_by_user_id: UUID
-    created_by_email: str | None
+    created_by_display_name: str | None
     created_at: datetime
     expires_at: datetime
     read_at: datetime | None

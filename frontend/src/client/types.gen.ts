@@ -701,13 +701,19 @@ export type OneTimeLinkAuditItem = {
      */
     password_name: string | null;
     /**
+     * Group Name
+     *
+     * The group that owns the password.
+     */
+    group_name: string | null;
+    /**
      * Created By User Id
      */
     created_by_user_id: string;
     /**
-     * Created By Email
+     * Created By Display Name
      */
-    created_by_email: string | null;
+    created_by_display_name: string | null;
     /**
      * Created At
      */

@@ -12,8 +12,8 @@ class ListMyOneTimeLinksUseCase(TracedUseCase):
     """The links the calling user issued, wherever they point.
 
     No permission check beyond authentication: the filter is the caller's own id,
-    so there is nothing here they did not create themselves. Issuer emails are
-    not resolved, since there is only one issuer and it is them.
+    so there is nothing here they did not create themselves. The issuer is not
+    resolved, since there is only one and it is them.
     """
 
     def __init__(
@@ -36,6 +36,6 @@ class ListMyOneTimeLinksUseCase(TracedUseCase):
         )
 
         return ListOneTimeLinkAuditResponse(
-            links=self.audit_assembler.assemble(links, with_emails=False),
+            links=self.audit_assembler.assemble(links, with_issuers=False),
             total=total,
         )

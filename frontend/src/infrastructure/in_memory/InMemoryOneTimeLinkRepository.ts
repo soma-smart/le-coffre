@@ -84,36 +84,45 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
 
   /** Test-only: what password name and issuer email the audit pages should show. */
   private passwordNames = new Map<string, string>()
-  private issuerEmails = new Map<string, string>()
+  private issuerNames = new Map<string, string>()
+  private groupNames = new Map<string, string>()
 
   seedPasswordName(passwordId: string, name: string): this {
     this.passwordNames.set(passwordId, name)
     return this
   }
 
-  seedIssuerEmail(userId: string, email: string): this {
-    this.issuerEmails.set(userId, email)
+  seedIssuerName(userId: string, displayName: string): this {
+    this.issuerNames.set(userId, displayName)
     return this
   }
 
-  private audited(link: OneTimeLink, withEmails: boolean): AuditedOneTimeLink {
+  seedGroupName(passwordId: string, groupName: string): this {
+    this.groupNames.set(passwordId, groupName)
+    return this
+  }
+
+  private audited(link: OneTimeLink, withIssuers: boolean): AuditedOneTimeLink {
     return {
       ...link,
       passwordName: this.passwordNames.get(link.passwordId) ?? null,
-      createdByEmail: withEmails ? (this.issuerEmails.get(link.createdByUserId) ?? null) : null,
+      groupName: this.groupNames.get(link.passwordId) ?? null,
+      createdByDisplayName: withIssuers
+        ? (this.issuerNames.get(link.createdByUserId) ?? null)
+        : null,
     }
   }
 
   private auditPage(
     source: OneTimeLink[],
     includeInactive: boolean,
-    withEmails: boolean,
+    withIssuers: boolean,
   ): AuditedOneTimeLinkPage {
     // Mirrors the server: filter first, then take the newest, then cap. Filtering
     // after truncation would hide an old live link behind newer spent ones.
     const matching = includeInactive ? source : source.filter((link) => isActive(link))
     const links = [...matching].reverse().slice(0, this.pageSize)
-    return { links: links.map((link) => this.audited(link, withEmails)), total: matching.length }
+    return { links: links.map((link) => this.audited(link, withIssuers)), total: matching.length }
   }
 
   async listAll(includeInactive = false): Promise<AuditedOneTimeLinkPage> {
