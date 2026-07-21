@@ -339,3 +339,65 @@ def test_consume_and_revoke_normalise_a_non_utc_instant(
     expected = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
     assert sql_one_time_link_repository.get_by_id(read.id).read_at == expected  # type: ignore[union-attr]
     assert sql_one_time_link_repository.get_by_id(revoked.id).revoked_at == expected  # type: ignore[union-attr]
+
+
+def test_vault_wide_listing_filters_in_the_query_not_after_truncation(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    """An old live link can sit behind many newer spent ones. Fetching the newest
+    N and filtering afterwards would drop it, leaving an admin unable to revoke a
+    grant that is still open."""
+    buried = _build_link(now=T0)
+    sql_one_time_link_repository.add(buried)
+    for minute in range(1, 21):
+        spent = _build_link(password_id=uuid4(), now=T0 + timedelta(minutes=minute))
+        sql_one_time_link_repository.add(spent)
+        sql_one_time_link_repository.consume(spent.id, T0 + timedelta(minutes=minute))
+    session.expunge_all()
+
+    active = sql_one_time_link_repository.list_all(T0 + timedelta(hours=1), include_inactive=False, limit=10)
+
+    assert [link.id for link in active] == [buried.id]
+    assert sql_one_time_link_repository.count_all_matching(T0 + timedelta(hours=1), include_inactive=False) == 1
+    assert sql_one_time_link_repository.count_all_matching(T0 + timedelta(hours=1), include_inactive=True) == 21
+
+
+def test_listing_for_creator_is_scoped_to_that_user(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+):
+    other_creator = uuid4()
+    mine = _build_link()
+    theirs = _build_link()
+    theirs.created_by_user_id = other_creator
+    sql_one_time_link_repository.add(mine)
+    sql_one_time_link_repository.add(theirs)
+
+    listed = sql_one_time_link_repository.list_for_creator(CREATOR_ID, T0, include_inactive=False, limit=10)
+
+    assert [link.id for link in listed] == [mine.id]
+    assert sql_one_time_link_repository.count_for_creator(CREATOR_ID, T0, include_inactive=False) == 1
+
+
+def test_bulk_revoke_spares_read_links_and_other_users(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    other_creator = uuid4()
+    live = _build_link()
+    read = _build_link()
+    theirs = _build_link()
+    theirs.created_by_user_id = other_creator
+    for link in (live, read, theirs):
+        sql_one_time_link_repository.add(link)
+    sql_one_time_link_repository.consume(read.id, T0)
+    session.expunge_all()
+
+    revoked = sql_one_time_link_repository.revoke_all_for_creator(CREATOR_ID, T0 + timedelta(minutes=5))
+
+    assert revoked == 1
+    assert sql_one_time_link_repository.get_by_id(live.id).is_revoked()  # type: ignore[union-attr]
+    # The read timestamp is the audit trail of a real disclosure: never overwritten.
+    assert sql_one_time_link_repository.get_by_id(read.id).read_at is not None  # type: ignore[union-attr]
+    assert not sql_one_time_link_repository.get_by_id(read.id).is_revoked()  # type: ignore[union-attr]
+    assert not sql_one_time_link_repository.get_by_id(theirs.id).is_revoked()  # type: ignore[union-attr]

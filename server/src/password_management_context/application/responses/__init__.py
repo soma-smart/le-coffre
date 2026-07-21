@@ -15,7 +15,9 @@ from .list_password_events_response import (
 from .one_time_link_responses import (
     ConsumedOneTimeLinkResponse,
     CreatedOneTimeLinkResponse,
+    ListOneTimeLinkAuditResponse,
     ListOneTimeLinksResponse,
+    OneTimeLinkAuditItemResponse,
     OneTimeLinkSummaryResponse,
 )
 from .password_metadata_response import PasswordMetadataResponse
@@ -36,4 +38,6 @@ __all__ = [
     "ConsumedOneTimeLinkResponse",
     "OneTimeLinkSummaryResponse",
     "ListOneTimeLinksResponse",
+    "OneTimeLinkAuditItemResponse",
+    "ListOneTimeLinkAuditResponse",
 ]

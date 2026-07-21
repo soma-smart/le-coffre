@@ -37,7 +37,10 @@ from password_management_context.application.gateways import (
 from password_management_context.application.gateways.password_permissions_repository import (
     PasswordPermissionsRepository,
 )
-from password_management_context.application.services import PasswordOwnershipService
+from password_management_context.application.services import (
+    OneTimeLinkAuditAssembler,
+    PasswordOwnershipService,
+)
 from password_management_context.application.use_cases import (
     ConsumeOneTimeLinkUseCase,
     CreateOneTimeLinkUseCase,
@@ -46,10 +49,14 @@ from password_management_context.application.use_cases import (
     GetPasswordStatisticForAdminUseCase,
     GetPasswordUseCase,
     ListAccessUseCase,
+    ListMyOneTimeLinksUseCase,
+    ListOneTimeLinksForAdminUseCase,
     ListOneTimeLinksUseCase,
     ListPasswordEventsByActorUseCase,
     ListPasswordEventsUseCase,
     ListPasswordsUseCase,
+    RevokeAllOneTimeLinksForUserUseCase,
+    RevokeOneTimeLinkForAdminUseCase,
     RevokeOneTimeLinkUseCase,
     ShareAccessUseCase,
     UnshareAccessUseCase,
@@ -336,3 +343,40 @@ def get_list_password_events_by_actor_usecase(
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
 ):
     return ListPasswordEventsByActorUseCase(password_event_repository)
+
+
+def get_one_time_link_audit_assembler(
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    user_info_gateway: UserInfoGateway = Depends(get_user_info_gateway),
+) -> OneTimeLinkAuditAssembler:
+    return OneTimeLinkAuditAssembler(password_repository, user_info_gateway)
+
+
+def get_list_one_time_links_for_admin_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    audit_assembler: OneTimeLinkAuditAssembler = Depends(get_one_time_link_audit_assembler),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return ListOneTimeLinksForAdminUseCase(one_time_link_repository, audit_assembler, time_gateway)
+
+
+def get_list_my_one_time_links_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    audit_assembler: OneTimeLinkAuditAssembler = Depends(get_one_time_link_audit_assembler),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return ListMyOneTimeLinksUseCase(one_time_link_repository, audit_assembler, time_gateway)
+
+
+def get_revoke_one_time_link_for_admin_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return RevokeOneTimeLinkForAdminUseCase(one_time_link_repository, time_gateway)
+
+
+def get_revoke_all_one_time_links_for_user_usecase(
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return RevokeAllOneTimeLinksForUserUseCase(one_time_link_repository, time_gateway)

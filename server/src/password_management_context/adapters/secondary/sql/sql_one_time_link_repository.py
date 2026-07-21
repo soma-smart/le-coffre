@@ -158,6 +158,62 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
         )
         return self._session.exec(statement).one()  # type: ignore[call-overload]
 
+    def _redeemable_only(self, now: datetime):
+        """WHERE fragment shared by every "active links" query in this adapter."""
+        return (
+            OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
+            OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
+            OneTimeLinkTable.expires_at > _to_naive_utc(now),
+        )
+
+    def list_all(self, now: datetime, include_inactive: bool, limit: int) -> list[OneTimeLink]:
+        query = select(OneTimeLinkTable)
+        if not include_inactive:
+            query = query.where(*self._redeemable_only(now))
+        query = query.order_by(OneTimeLinkTable.created_at.desc()).limit(limit)  # type: ignore[attr-defined]
+        return [_to_entity(row) for row in self._session.exec(query).all()]
+
+    def count_all_matching(self, now: datetime, include_inactive: bool) -> int:
+        statement = select(func.count()).select_from(OneTimeLinkTable)
+        if not include_inactive:
+            statement = statement.where(*self._redeemable_only(now))
+        return self._session.exec(statement).one()  # type: ignore[call-overload]
+
+    def list_for_creator(
+        self, created_by_user_id: UUID, now: datetime, include_inactive: bool, limit: int
+    ) -> list[OneTimeLink]:
+        query = select(OneTimeLinkTable).where(OneTimeLinkTable.created_by_user_id == created_by_user_id)
+        if not include_inactive:
+            query = query.where(*self._redeemable_only(now))
+        query = query.order_by(OneTimeLinkTable.created_at.desc()).limit(limit)  # type: ignore[attr-defined]
+        return [_to_entity(row) for row in self._session.exec(query).all()]
+
+    def count_for_creator(self, created_by_user_id: UUID, now: datetime, include_inactive: bool) -> int:
+        statement = (
+            select(func.count())
+            .select_from(OneTimeLinkTable)
+            .where(OneTimeLinkTable.created_by_user_id == created_by_user_id)
+        )
+        if not include_inactive:
+            statement = statement.where(*self._redeemable_only(now))
+        return self._session.exec(statement).one()  # type: ignore[call-overload]
+
+    def revoke_all_for_creator(self, created_by_user_id: UUID, now: datetime) -> int:
+        # Same guard as the single revoke: an already-read link keeps its read
+        # timestamp, which is the audit trail of an actual disclosure.
+        statement = (
+            update(OneTimeLinkTable)
+            .where(
+                OneTimeLinkTable.created_by_user_id == created_by_user_id,  # type: ignore[arg-type]
+                OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
+                OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
+            )
+            .values(revoked_at=_to_naive_utc(now))
+        )
+        result = self._session.exec(statement)  # type: ignore[call-overload]
+        self.commit()
+        return result.rowcount
+
     def consume(self, link_id: UUID, now: datetime) -> bool:
         # One conditional UPDATE, not a read-then-write. The WHERE clause is the
         # concurrency guard: whichever transaction gets rowcount 1 is the single

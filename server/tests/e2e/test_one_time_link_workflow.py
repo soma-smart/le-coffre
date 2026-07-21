@@ -251,3 +251,136 @@ def test_one_time_link_creation_is_capped_and_a_revoke_frees_a_slot(
     assert admin_client.delete(f"/api/one-time-links/{created_ids[0]}").status_code == 204
     assert admin_client.post(f"/api/passwords/{password_id}/one-time-links", json={}).status_code == 201
     print("\u2713 Revoking one freed a slot")
+
+
+LEAVER_PASSWORD = "AnotherStrongP@ssw0rd1"
+
+
+def _create_user(admin_client, username: str) -> str:
+    response = admin_client.post(
+        "/api/users/",
+        json={
+            "username": username,
+            "email": f"{username}@example.com",
+            "name": username,
+            "password": LEAVER_PASSWORD,
+        },
+    )
+    assert response.status_code in (200, 201), response.text
+    return response.json()["id"]
+
+
+def test_admin_sees_and_revokes_links_across_the_whole_vault(
+    authenticated_admin_client,
+    unauthenticated_client,
+    admin_personal_group_id,
+    setup,
+):
+    admin_client = authenticated_admin_client
+    password_id = _create_password(admin_client, admin_personal_group_id)
+    created = admin_client.post(f"/api/passwords/{password_id}/one-time-links", json={}).json()
+
+    listed = admin_client.get("/api/admin/one-time-links")
+    assert listed.status_code == 200
+    body = listed.json()
+    assert any(link["id"] == created["id"] for link in body["links"])
+    assert created["token"] not in listed.text
+    row = next(link for link in body["links"] if link["id"] == created["id"])
+    assert row["password_name"] == "One-time link target"
+    assert row["created_by_email"] is not None
+    print("✓ Admin listing shows the link with its password and issuer")
+
+    assert admin_client.delete(f"/api/admin/one-time-links/{created['id']}").status_code == 204
+    consumed = unauthenticated_client.post("/api/one-time-links/consume", json={"token": created["token"]})
+    assert consumed.status_code == 404
+    assert STRONG_PASSWORD not in consumed.text
+    print("✓ Admin revocation kills the link")
+
+
+def test_one_time_link_admin_endpoints_reject_a_non_admin(
+    authenticated_admin_client,
+    unauthenticated_client,
+    setup,
+):
+    anonymous = unauthenticated_client
+    assert anonymous.get("/api/admin/one-time-links").status_code == 401
+    assert anonymous.get("/api/one-time-links/mine").status_code == 401
+    print("✓ Admin and personal listings both require a session")
+
+
+def test_a_user_sees_only_the_links_they_issued(
+    authenticated_admin_client,
+    admin_personal_group_id,
+    setup,
+):
+    admin_client = authenticated_admin_client
+    password_id = _create_password(admin_client, admin_personal_group_id)
+    created = admin_client.post(f"/api/passwords/{password_id}/one-time-links", json={}).json()
+
+    mine = admin_client.get("/api/one-time-links/mine")
+
+    assert mine.status_code == 200
+    assert [link["id"] for link in mine.json()["links"]] == [created["id"]]
+    assert created["token"] not in mine.text
+    print("✓ Personal listing returns the caller's own links")
+
+
+def test_deleting_a_user_revokes_the_links_they_issued(
+    authenticated_admin_client,
+    client_factory,
+    unauthenticated_client,
+    setup,
+):
+    """The scenario this feature exists for: someone loses their access, and the
+    anonymous grants they handed out must not outlive their account.
+
+    The link is issued by the user who is then deleted, not by the admin running
+    the test, so this exercises the revocation wired into user deletion rather
+    than the explicit bulk endpoint.
+    """
+    admin_client = authenticated_admin_client
+    leaver_id = _create_user(admin_client, "leaver")
+
+    leaver_client = client_factory()
+    login = leaver_client.post(
+        "/api/auth/login",
+        json={"email": "leaver@example.com", "password": LEAVER_PASSWORD},
+    )
+    assert login.status_code == 200, login.text
+    if hasattr(leaver_client, "refresh_csrf_token"):
+        leaver_client.refresh_csrf_token()
+
+    leaver_group_id = leaver_client.get("/api/users/me").json()["personal_group_id"]
+    password_id = _create_password(leaver_client, leaver_group_id)
+    created = leaver_client.post(f"/api/passwords/{password_id}/one-time-links", json={}).json()
+
+    # Live before the deletion, so the assertion after it means something.
+    assert leaver_client.get("/api/one-time-links/mine").json()["total"] == 1
+
+    assert admin_client.delete(f"/api/users/{leaver_id}").status_code in (200, 204)
+
+    consumed = unauthenticated_client.post("/api/one-time-links/consume", json={"token": created["token"]})
+    assert consumed.status_code == 404
+    assert STRONG_PASSWORD not in consumed.text
+    print("✓ Deleting a user kills the links they issued")
+
+
+def test_bulk_revocation_cuts_every_live_link_a_user_issued(
+    authenticated_admin_client,
+    unauthenticated_client,
+    admin_personal_group_id,
+    setup,
+):
+    admin_client = authenticated_admin_client
+    password_id = _create_password(admin_client, admin_personal_group_id)
+    created = admin_client.post(f"/api/passwords/{password_id}/one-time-links", json={}).json()
+    me = admin_client.get("/api/users/me").json()["id"]
+
+    bulk = admin_client.delete(f"/api/admin/users/{me}/one-time-links")
+
+    assert bulk.status_code == 200
+    assert bulk.json()["revoked_count"] == 1
+    consumed = unauthenticated_client.post("/api/one-time-links/consume", json={"token": created["token"]})
+    assert consumed.status_code == 404
+    assert STRONG_PASSWORD not in consumed.text
+    print("✓ Bulk revocation cuts every live link a user issued")

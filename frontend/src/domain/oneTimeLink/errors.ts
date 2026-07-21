@@ -49,3 +49,11 @@ export class TooManyActiveOneTimeLinksError extends OneTimeLinkDomainError {
     this.name = 'TooManyActiveOneTimeLinksError'
   }
 }
+
+/** Guards the bulk revoke against an unselected dropdown reaching the API. */
+export class OneTimeLinkUserRequiredError extends OneTimeLinkDomainError {
+  constructor() {
+    super('Select a user before revoking their links')
+    this.name = 'OneTimeLinkUserRequiredError'
+  }
+}

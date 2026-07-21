@@ -14,6 +14,12 @@ from .list_one_time_links_command import ListOneTimeLinksCommand
 from .list_password_events_by_actor_command import ListPasswordEventsByActorCommand
 from .list_password_events_command import ListPasswordEventsCommand
 from .list_passwords_command import ListPasswordsCommand
+from .one_time_link_audit_commands import (
+    ListMyOneTimeLinksCommand,
+    ListOneTimeLinksForAdminCommand,
+    RevokeAllOneTimeLinksForUserCommand,
+    RevokeOneTimeLinkForAdminCommand,
+)
 from .revoke_one_time_link_command import RevokeOneTimeLinkCommand
 from .share_resource_command import ShareResourceCommand
 from .unshare_resource_command import UnshareResourceCommand
@@ -38,4 +44,8 @@ __all__ = [
     "ConsumeOneTimeLinkCommand",
     "ListOneTimeLinksCommand",
     "RevokeOneTimeLinkCommand",
+    "ListOneTimeLinksForAdminCommand",
+    "RevokeOneTimeLinkForAdminCommand",
+    "RevokeAllOneTimeLinksForUserCommand",
+    "ListMyOneTimeLinksCommand",
 ]

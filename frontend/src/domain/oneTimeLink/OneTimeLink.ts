@@ -59,7 +59,29 @@ export interface RevealedSecret {
   url: string | null
 }
 
+/**
+ * A link seen from a management table rather than from its own password, so it
+ * carries the context the bare link lacks. `passwordName` is null once the
+ * password has been deleted; `createdByEmail` is only filled for admins.
+ */
+export interface AuditedOneTimeLink extends OneTimeLink {
+  passwordName: string | null
+  createdByEmail: string | null
+}
+
+export interface AuditedOneTimeLinkPage {
+  links: AuditedOneTimeLink[]
+  total: number
+}
+
 export type OneTimeLinkStatus = 'active' | 'read' | 'revoked' | 'expired'
+
+/** PrimeVue Tag severity for a link's lifecycle state. */
+export function severityForStatus(status: OneTimeLinkStatus): 'success' | 'info' | 'secondary' {
+  if (status === 'active') return 'success'
+  if (status === 'read') return 'info'
+  return 'secondary'
+}
 
 /** Reads the lifecycle state of a link. Revocation and reading win over expiry:
  * they are facts about what happened, expiry is merely the passage of time. */

@@ -1,12 +1,18 @@
 import {
   consumeOneTimeLinkOneTimeLinksConsumePost,
+  listMyOneTimeLinksOneTimeLinksMineGet,
+  listOneTimeLinksForAdminAdminOneTimeLinksGet,
+  revokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDelete,
+  revokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDelete,
   createOneTimeLinkPasswordsPasswordIdOneTimeLinksPost,
   listOneTimeLinksPasswordsPasswordIdOneTimeLinksGet,
   revokeOneTimeLinkOneTimeLinksLinkIdDelete,
 } from '@/client/sdk.gen'
-import type { OneTimeLinkSummary } from '@/client/types.gen'
+import type { OneTimeLinkAuditItem, OneTimeLinkSummary } from '@/client/types.gen'
 import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
 import type {
+  AuditedOneTimeLink,
+  AuditedOneTimeLinkPage,
   CreatedOneTimeLink,
   OneTimeLink,
   OneTimeLinkPage,
@@ -77,6 +83,57 @@ export class BackendOneTimeLinkRepository implements OneTimeLinkRepository {
       login: response.data.login ?? null,
       url: response.data.url ?? null,
     }
+  }
+
+  async listAll(includeInactive = false): Promise<AuditedOneTimeLinkPage> {
+    const response = await listOneTimeLinksForAdminAdminOneTimeLinksGet({
+      query: { include_inactive: includeInactive },
+    })
+    throwOnOwnerError(response.error, response.response?.status)
+    return {
+      links: (response.data?.links ?? []).map(toAuditedOneTimeLink),
+      total: response.data?.total ?? 0,
+    }
+  }
+
+  async listMine(includeInactive = false): Promise<AuditedOneTimeLinkPage> {
+    const response = await listMyOneTimeLinksOneTimeLinksMineGet({
+      query: { include_inactive: includeInactive },
+    })
+    throwOnOwnerError(response.error, response.response?.status)
+    return {
+      links: (response.data?.links ?? []).map(toAuditedOneTimeLink),
+      total: response.data?.total ?? 0,
+    }
+  }
+
+  async revokeAsAdmin(linkId: string): Promise<void> {
+    const response = await revokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDelete({
+      path: { link_id: linkId },
+    })
+    throwOnOwnerError(response.error, response.response?.status)
+  }
+
+  async revokeAllForUser(userId: string): Promise<number> {
+    const response = await revokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDelete({
+      path: { user_id: userId },
+    })
+    throwOnOwnerError(response.error, response.response?.status)
+    return response.data?.revoked_count ?? 0
+  }
+}
+
+function toAuditedOneTimeLink(dto: OneTimeLinkAuditItem): AuditedOneTimeLink {
+  return {
+    id: dto.id,
+    passwordId: dto.password_id,
+    passwordName: dto.password_name ?? null,
+    createdByUserId: dto.created_by_user_id,
+    createdByEmail: dto.created_by_email ?? null,
+    createdAt: dto.created_at,
+    expiresAt: dto.expires_at,
+    readAt: dto.read_at ?? null,
+    revokedAt: dto.revoked_at ?? null,
   }
 }
 

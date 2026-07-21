@@ -56,6 +56,37 @@ class OneTimeLinkRepository(Protocol):
         """Total number of links ever issued, across every password"""
         ...
 
+    def list_all(self, now: datetime, include_inactive: bool, limit: int) -> list[OneTimeLink]:
+        """Vault-wide listing, most recent first, redeemable ones only by default.
+
+        Filtered in the query rather than by trimming a page: an old active link
+        can sit behind any number of newer spent ones, and slicing first would
+        hide it from the admin who needs to revoke it.
+        """
+        ...
+
+    def count_all_matching(self, now: datetime, include_inactive: bool) -> int:
+        """How many links the equivalent list_all would have without its limit"""
+        ...
+
+    def list_for_creator(
+        self, created_by_user_id: UUID, now: datetime, include_inactive: bool, limit: int
+    ) -> list[OneTimeLink]:
+        """Same listing, restricted to the links one user issued"""
+        ...
+
+    def count_for_creator(self, created_by_user_id: UUID, now: datetime, include_inactive: bool) -> int:
+        """How many links the equivalent list_for_creator would have without its limit"""
+        ...
+
+    def revoke_all_for_creator(self, created_by_user_id: UUID, now: datetime) -> int:
+        """Revoke every still-redeemable link a user issued, returning the count.
+
+        One conditional UPDATE, so links already read keep their read timestamp:
+        that timestamp is audit data and must never be overwritten by a revoke.
+        """
+        ...
+
     def count_active_all(self, now: datetime) -> int:
         """How many links are still redeemable, across every password"""
         ...

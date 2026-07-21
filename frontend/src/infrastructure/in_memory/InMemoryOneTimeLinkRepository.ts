@@ -1,6 +1,8 @@
 import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
 import {
   isActive,
+  type AuditedOneTimeLink,
+  type AuditedOneTimeLinkPage,
   type CreatedOneTimeLink,
   type OneTimeLink,
   type OneTimeLinkPage,
@@ -22,8 +24,15 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
   private secrets = new Map<string, RevealedSecret>()
   private pageSize = 10
   private maxActive = 5
+  private currentUserId = 'user-1'
   private idGenerator: () => string = () => `link-${this.links.size + 1}`
   private tokenGenerator: () => string = () => `token-${this.links.size + 1}`
+
+  /** Test-only: whose links `listMine` should return. */
+  actingAs(userId: string): this {
+    this.currentUserId = userId
+    return this
+  }
 
   seed(link: OneTimeLink): this {
     this.links.set(link.id, link)
@@ -71,6 +80,66 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
     const source = includeInactive ? all : activeLinks
     const links = [...source].reverse().slice(0, this.pageSize)
     return { links, total: all.length, active: activeLinks.length, maxActive: this.maxActive }
+  }
+
+  /** Test-only: what password name and issuer email the audit pages should show. */
+  private passwordNames = new Map<string, string>()
+  private issuerEmails = new Map<string, string>()
+
+  seedPasswordName(passwordId: string, name: string): this {
+    this.passwordNames.set(passwordId, name)
+    return this
+  }
+
+  seedIssuerEmail(userId: string, email: string): this {
+    this.issuerEmails.set(userId, email)
+    return this
+  }
+
+  private audited(link: OneTimeLink, withEmails: boolean): AuditedOneTimeLink {
+    return {
+      ...link,
+      passwordName: this.passwordNames.get(link.passwordId) ?? null,
+      createdByEmail: withEmails ? (this.issuerEmails.get(link.createdByUserId) ?? null) : null,
+    }
+  }
+
+  private auditPage(
+    source: OneTimeLink[],
+    includeInactive: boolean,
+    withEmails: boolean,
+  ): AuditedOneTimeLinkPage {
+    // Mirrors the server: filter first, then take the newest, then cap. Filtering
+    // after truncation would hide an old live link behind newer spent ones.
+    const matching = includeInactive ? source : source.filter((link) => isActive(link))
+    const links = [...matching].reverse().slice(0, this.pageSize)
+    return { links: links.map((link) => this.audited(link, withEmails)), total: matching.length }
+  }
+
+  async listAll(includeInactive = false): Promise<AuditedOneTimeLinkPage> {
+    return this.auditPage([...this.links.values()], includeInactive, true)
+  }
+
+  async listMine(includeInactive = false): Promise<AuditedOneTimeLinkPage> {
+    const mine = [...this.links.values()].filter(
+      (link) => link.createdByUserId === this.currentUserId,
+    )
+    return this.auditPage(mine, includeInactive, false)
+  }
+
+  async revokeAsAdmin(linkId: string): Promise<void> {
+    return this.revoke(linkId)
+  }
+
+  async revokeAllForUser(userId: string): Promise<number> {
+    let revoked = 0
+    for (const [id, link] of this.links) {
+      // An already-read link keeps its trail rather than being marked revoked.
+      if (link.createdByUserId !== userId || link.readAt || link.revokedAt) continue
+      this.links.set(id, { ...link, revokedAt: new Date().toISOString() })
+      revoked += 1
+    }
+    return revoked
   }
 
   async revoke(linkId: string): Promise<void> {

@@ -82,6 +82,11 @@ const router = createRouter({
       component: () => import('@/pages/GroupsPage.vue'),
     },
     {
+      path: '/my-links',
+      name: 'MyOneTimeLinks',
+      component: () => import('@/pages/MyOneTimeLinksPage.vue'),
+    },
+    {
       path: '/profile',
       name: 'Profile',
       component: () => import('@/pages/ProfilePage.vue'),
@@ -100,6 +105,12 @@ const router = createRouter({
       path: '/admin/users',
       name: 'AdminUsers',
       component: () => import('@/pages/admin/AdminUsersPage.vue'),
+      meta: { requiresAdmin: true },
+    },
+    {
+      path: '/admin/one-time-links',
+      name: 'AdminOneTimeLinks',
+      component: () => import('@/pages/admin/AdminOneTimeLinksPage.vue'),
       meta: { requiresAdmin: true },
     },
     {

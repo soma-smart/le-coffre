@@ -565,6 +565,22 @@ export type ListGroupsResponse = {
 };
 
 /**
+ * ListOneTimeLinkAuditResponseModel
+ */
+export type ListOneTimeLinkAuditResponseModel = {
+    /**
+     * Links
+     */
+    links: Array<OneTimeLinkAuditItem>;
+    /**
+     * Total
+     *
+     * How many links match, which may exceed the number returned.
+     */
+    total: number;
+};
+
+/**
  * ListOneTimeLinksResponseModel
  */
 export type ListOneTimeLinksResponseModel = {
@@ -664,6 +680,50 @@ export type LockVaultPostResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * OneTimeLinkAuditItem
+ */
+export type OneTimeLinkAuditItem = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Password Id
+     */
+    password_id: string;
+    /**
+     * Password Name
+     *
+     * None when the password has since been deleted.
+     */
+    password_name: string | null;
+    /**
+     * Created By User Id
+     */
+    created_by_user_id: string;
+    /**
+     * Created By Email
+     */
+    created_by_email: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Read At
+     */
+    read_at: string | null;
+    /**
+     * Revoked At
+     */
+    revoked_at: string | null;
 };
 
 /**
@@ -845,6 +905,16 @@ export type RemoveMemberFromGroupResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * RevokeAllOneTimeLinksResponse
+ */
+export type RevokeAllOneTimeLinksResponse = {
+    /**
+     * Revoked Count
+     */
+    revoked_count: number;
 };
 
 /**
@@ -1528,6 +1598,130 @@ export type CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses = {
 };
 
 export type CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponse = CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses[keyof CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses];
+
+export type ListMyOneTimeLinksOneTimeLinksMineGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Include Inactive
+         *
+         * Also return spent, revoked and expired links
+         */
+        include_inactive?: boolean;
+    };
+    url: '/one-time-links/mine';
+};
+
+export type ListMyOneTimeLinksOneTimeLinksMineGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListMyOneTimeLinksOneTimeLinksMineGetError = ListMyOneTimeLinksOneTimeLinksMineGetErrors[keyof ListMyOneTimeLinksOneTimeLinksMineGetErrors];
+
+export type ListMyOneTimeLinksOneTimeLinksMineGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListOneTimeLinkAuditResponseModel;
+};
+
+export type ListMyOneTimeLinksOneTimeLinksMineGetResponse = ListMyOneTimeLinksOneTimeLinksMineGetResponses[keyof ListMyOneTimeLinksOneTimeLinksMineGetResponses];
+
+export type ListOneTimeLinksForAdminAdminOneTimeLinksGetData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Include Inactive
+         *
+         * Also return spent, revoked and expired links
+         */
+        include_inactive?: boolean;
+    };
+    url: '/admin/one-time-links';
+};
+
+export type ListOneTimeLinksForAdminAdminOneTimeLinksGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListOneTimeLinksForAdminAdminOneTimeLinksGetError = ListOneTimeLinksForAdminAdminOneTimeLinksGetErrors[keyof ListOneTimeLinksForAdminAdminOneTimeLinksGetErrors];
+
+export type ListOneTimeLinksForAdminAdminOneTimeLinksGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListOneTimeLinkAuditResponseModel;
+};
+
+export type ListOneTimeLinksForAdminAdminOneTimeLinksGetResponse = ListOneTimeLinksForAdminAdminOneTimeLinksGetResponses[keyof ListOneTimeLinksForAdminAdminOneTimeLinksGetResponses];
+
+export type RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Link Id
+         */
+        link_id: string;
+    };
+    query?: never;
+    url: '/admin/one-time-links/{link_id}';
+};
+
+export type RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteError = RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteErrors[keyof RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteErrors];
+
+export type RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponse = RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponses[keyof RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponses];
+
+export type RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/admin/users/{user_id}/one-time-links';
+};
+
+export type RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteError = RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteErrors[keyof RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteErrors];
+
+export type RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: RevokeAllOneTimeLinksResponse;
+};
+
+export type RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponse = RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponses[keyof RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponses];
 
 export type RevokeOneTimeLinkOneTimeLinksLinkIdDeleteData = {
     body?: never;

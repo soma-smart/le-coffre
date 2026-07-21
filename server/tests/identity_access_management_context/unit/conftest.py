@@ -14,6 +14,7 @@ from .fakes import (
     FakeGroupRepository,
     FakeGroupUsageGateway,
     FakeLoginLockoutGateway,
+    FakeOneTimeLinkRevocationGateway,
     FakePasswordHashingGateway,
     FakeSsoConfigurationRepository,
     FakeSsoEncryptionGateway,
@@ -85,6 +86,11 @@ def group_repository():
 @pytest.fixture
 def group_member_repository():
     return FakeGroupMemberRepository()
+
+
+@pytest.fixture
+def one_time_link_revocation_gateway():
+    return FakeOneTimeLinkRevocationGateway()
 
 
 @pytest.fixture

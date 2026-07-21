@@ -63,6 +63,42 @@ class FakeOneTimeLinkRepository(OneTimeLinkRepository):
             ]
         )
 
+    def _redeemable(self, link: OneTimeLink, now: datetime) -> bool:
+        return not link.is_consumed() and not link.is_revoked() and not link.is_expired(now)
+
+    def _matching(self, now: datetime, include_inactive: bool) -> list[OneTimeLink]:
+        links = [link for link in self.storage.values() if include_inactive or self._redeemable(link, now)]
+        return sorted(links, key=lambda link: link.created_at, reverse=True)
+
+    def list_all(self, now: datetime, include_inactive: bool, limit: int) -> list[OneTimeLink]:
+        return self._matching(now, include_inactive)[:limit]
+
+    def count_all_matching(self, now: datetime, include_inactive: bool) -> int:
+        return len(self._matching(now, include_inactive))
+
+    def list_for_creator(
+        self, created_by_user_id: UUID, now: datetime, include_inactive: bool, limit: int
+    ) -> list[OneTimeLink]:
+        mine = [link for link in self._matching(now, include_inactive) if link.created_by_user_id == created_by_user_id]
+        return mine[:limit]
+
+    def count_for_creator(self, created_by_user_id: UUID, now: datetime, include_inactive: bool) -> int:
+        return len(
+            [link for link in self._matching(now, include_inactive) if link.created_by_user_id == created_by_user_id]
+        )
+
+    def revoke_all_for_creator(self, created_by_user_id: UUID, now: datetime) -> int:
+        revoked = 0
+        for link in self.storage.values():
+            if link.created_by_user_id != created_by_user_id:
+                continue
+            # Mirrors the SQL guard: an already-read link keeps its read timestamp.
+            if link.is_consumed() or link.is_revoked():
+                continue
+            link.mark_revoked(now)
+            revoked += 1
+        return revoked
+
     def consume(self, link_id: UUID, now: datetime) -> bool:
         # Mirrors the SQL adapter's conditional UPDATE: only the first caller on
         # an unread, unrevoked link gets True.
