@@ -3,8 +3,12 @@ from identity_access_management_context.application.commands import (
 )
 from identity_access_management_context.application.gateways import (
     PasswordHashingGateway,
+    TokenGateway,
     UserPasswordRepository,
     UserRepository,
+)
+from identity_access_management_context.application.responses import (
+    UpdateUserPasswordResponse,
 )
 from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
@@ -21,14 +25,16 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         user_password_repository: UserPasswordRepository,
         password_hashing_gateway: PasswordHashingGateway,
         user_repository: UserRepository,
+        token_gateway: TokenGateway,
         time_provider: TimeGateway,
     ):
         self.user_password_repository = user_password_repository
         self.password_hashing_gateway = password_hashing_gateway
         self.user_repository = user_repository
+        self.token_gateway = token_gateway
         self.time_provider = time_provider
 
-    def execute(self, command: UpdateUserPasswordCommand) -> None:
+    def execute(self, command: UpdateUserPasswordCommand) -> UpdateUserPasswordResponse:
         user_password = self.user_password_repository.get_by_id(command.user_id)
         if not user_password:
             raise UserNotFoundException(command.user_id)
@@ -48,6 +54,24 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         self.user_password_repository.update_password(command.user_id, new_password_hash)
 
-        user.current_refresh_token_jti = None
+        access_token = self.token_gateway.generate_token(
+            user_id=user.id,
+            email=user.email,
+            roles=user.roles,
+            claims={"display_name": user.name},
+        )
+        refresh_token = self.token_gateway.generate_refresh_token(
+            user_id=user.id,
+            email=user.email,
+            roles=user.roles,
+        )
+
+        # Keep the current browser session alive while invalidating older sessions.
+        user.current_refresh_token_jti = refresh_token.jti
         user.session_invalid_before = self.time_provider.get_current_time().replace(microsecond=0)
         self.user_repository.update(user)
+
+        return UpdateUserPasswordResponse(
+            access_token=access_token.value,
+            refresh_token=refresh_token.value,
+        )

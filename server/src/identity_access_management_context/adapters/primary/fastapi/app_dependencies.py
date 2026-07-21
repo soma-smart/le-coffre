@@ -215,12 +215,14 @@ def get_update_user_password_usecase(
     user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
     user_repository: UserRepository = Depends(get_user_repository),
+    token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
         user_repository,
+        token_gateway,
         time_provider,
     )
 

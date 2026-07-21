@@ -15,6 +15,7 @@ from identity_access_management_context.domain.exceptions import (
 )
 from tests.identity_access_management_context.unit.fakes import (
     FakePasswordHashingGateway,
+    FakeTokenGateway,
     FakeUserPasswordRepository,
     FakeUserRepository,
 )
@@ -26,12 +27,14 @@ def use_case(
     user_password_repository: FakeUserPasswordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
         user_repository,
+        token_gateway,
         time_provider,
     )
 
@@ -41,6 +44,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     user_password_repository: FakeUserPasswordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
 ):
     # Arrange
@@ -74,7 +78,8 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     )
 
     # Act
-    use_case.execute(command)
+    token_gateway.set_unique_jwt_part("password-change")
+    result = use_case.execute(command)
 
     # Assert
     updated_user = user_password_repository.get_by_id(user_id)
@@ -83,8 +88,10 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     assert not password_hashing_gateway.verify(old_password, updated_user.password_hash)
     authenticated_user = user_repository.get_by_id(user_id)
     assert authenticated_user is not None
-    assert authenticated_user.current_refresh_token_jti is None
+    assert authenticated_user.current_refresh_token_jti == "refresh-token-jti-password-change"
     assert authenticated_user.session_invalid_before == time_provider.get_current_time().replace(microsecond=0)
+    assert result.access_token == f"jwt_token_for_{user_id}_password-change"
+    assert result.refresh_token == f"refresh_token_for_{user_id}_password-change"
 
 
 def test_given_incorrect_old_password_when_updating_password_should_raise_invalid_credentials(
