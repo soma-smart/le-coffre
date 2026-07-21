@@ -772,6 +772,14 @@ export type PasswordStatisticForAdminResponse = {
      * Password Count
      */
     password_count: number;
+    /**
+     * One Time Link Count
+     */
+    one_time_link_count: number;
+    /**
+     * Active One Time Link Count
+     */
+    active_one_time_link_count: number;
 };
 
 /**

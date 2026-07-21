@@ -143,6 +143,21 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
         )
         return self._session.exec(statement).one()  # type: ignore[call-overload]
 
+    def count_all(self) -> int:
+        return self._session.exec(select(func.count()).select_from(OneTimeLinkTable)).one()  # type: ignore[call-overload]
+
+    def count_active_all(self, now: datetime) -> int:
+        statement = (
+            select(func.count())
+            .select_from(OneTimeLinkTable)
+            .where(
+                OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
+                OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
+                OneTimeLinkTable.expires_at > _to_naive_utc(now),
+            )
+        )
+        return self._session.exec(statement).one()  # type: ignore[call-overload]
+
     def consume(self, link_id: UUID, now: datetime) -> bool:
         # One conditional UPDATE, not a read-then-write. The WHERE clause is the
         # concurrency guard: whichever transaction gets rowcount 1 is the single

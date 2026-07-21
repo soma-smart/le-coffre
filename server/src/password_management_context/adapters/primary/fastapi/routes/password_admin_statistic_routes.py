@@ -19,6 +19,8 @@ router = APIRouter(prefix="/passwords", tags=["Password Management"])
 
 class PasswordStatisticForAdminResponse(BaseModel):
     password_count: int
+    one_time_link_count: int
+    active_one_time_link_count: int
 
 
 @router.get(
@@ -37,7 +39,8 @@ def get_password_statistic_for_admin(
     - **Authentication**: Requires authentication via access_token cookie
     - **Authorization**: Only administrators can access this endpoint
 
-    Returns the total count of passwords in the system.
+    Returns the total count of passwords in the system, along with how many
+    one-time links have ever been issued and how many are still redeemable.
     """
     try:
         command = GetPasswordStatisticForAdminCommand(requesting_user=current_user.to_authenticated_user())
@@ -45,6 +48,8 @@ def get_password_statistic_for_admin(
 
         return PasswordStatisticForAdminResponse(
             password_count=result.password_count,
+            one_time_link_count=result.one_time_link_count,
+            active_one_time_link_count=result.active_one_time_link_count,
         )
     except NotAdminError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e

@@ -166,7 +166,8 @@ export const getVaultStatusVaultStatusGet = <ThrowOnError extends boolean = fals
  * - **Authentication**: Requires authentication via access_token cookie
  * - **Authorization**: Only administrators can access this endpoint
  *
- * Returns the total count of passwords in the system.
+ * Returns the total count of passwords in the system, along with how many
+ * one-time links have ever been issued and how many are still redeemable.
  */
 export const getPasswordStatisticForAdminPasswordsStatisticsGet = <ThrowOnError extends boolean = false>(options?: Options<GetPasswordStatisticForAdminPasswordsStatisticsGetData, ThrowOnError>) => (options?.client ?? client).get<GetPasswordStatisticForAdminPasswordsStatisticsGetResponses, unknown, ThrowOnError>({
     security: [{

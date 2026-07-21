@@ -52,6 +52,14 @@ class OneTimeLinkRepository(Protocol):
         """How many links are still redeemable: unread, unrevoked and unexpired"""
         ...
 
+    def count_all(self) -> int:
+        """Total number of links ever issued, across every password"""
+        ...
+
+    def count_active_all(self, now: datetime) -> int:
+        """How many links are still redeemable, across every password"""
+        ...
+
     def consume(self, link_id: UUID, now: datetime) -> bool:
         """Atomically mark the link as read.
 

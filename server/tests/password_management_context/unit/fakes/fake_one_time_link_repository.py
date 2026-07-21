@@ -51,6 +51,18 @@ class FakeOneTimeLinkRepository(OneTimeLinkRepository):
             ]
         )
 
+    def count_all(self) -> int:
+        return len(self.storage)
+
+    def count_active_all(self, now: datetime) -> int:
+        return len(
+            [
+                link
+                for link in self.storage.values()
+                if not link.is_consumed() and not link.is_revoked() and not link.is_expired(now)
+            ]
+        )
+
     def consume(self, link_id: UUID, now: datetime) -> bool:
         # Mirrors the SQL adapter's conditional UPDATE: only the first caller on
         # an unread, unrevoked link gets True.

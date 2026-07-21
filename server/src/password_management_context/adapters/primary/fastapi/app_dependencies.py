@@ -112,6 +112,10 @@ def get_one_time_link_repository(
     return SqlOneTimeLinkRepository(session)
 
 
+def get_time_gateway() -> TimeGateway:
+    return UtcTimeGateway()
+
+
 def get_event_publisher(request: Request) -> DomainEventPublisher:
     return request.app.state.domain_event_publisher
 
@@ -262,12 +266,10 @@ def get_list_password_events_usecase(
 
 def get_password_statistic_for_admin_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
+    one_time_link_repository: OneTimeLinkRepository = Depends(get_one_time_link_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
 ):
-    return GetPasswordStatisticForAdminUseCase(password_repository)
-
-
-def get_time_gateway() -> TimeGateway:
-    return UtcTimeGateway()
+    return GetPasswordStatisticForAdminUseCase(password_repository, one_time_link_repository, time_gateway)
 
 
 def get_password_ownership_service(
