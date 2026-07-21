@@ -134,7 +134,7 @@ function severityFor(link: OneTimeLink) {
     v-model:visible="isVisible"
     modal
     :draggable="false"
-    :header="`One-time link${password ? ` — ${password.name}` : ''}`"
+    :header="`One-time link${password ? ` - ${password.name}` : ''}`"
     :style="{ width: '36rem' }"
   >
     <!-- Dialog content is an overflow:auto box with no top padding, and Message
