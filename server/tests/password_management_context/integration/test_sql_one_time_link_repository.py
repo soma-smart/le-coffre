@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -290,3 +290,52 @@ def test_active_listing_drops_expired_links(
 
     assert len(sql_one_time_link_repository.list_active_for_password(PASSWORD_ID, T0, limit=10)) == 1
     assert sql_one_time_link_repository.list_active_for_password(PASSWORD_ID, T0 + timedelta(hours=1), limit=10) == []
+
+
+def test_writes_normalise_a_non_utc_instant_before_storing_it(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    """The column is naive, so an aware value is stored by dropping its offset,
+    not by converting it. Under a UTC+2 clock a 10-minute link would then be
+    stamped two hours ahead and outlive its lifetime by that much, because
+    expiry is compared against a correctly normalised `now`."""
+    paris = timezone(timedelta(hours=2))
+    created_at = datetime(2026, 1, 1, 14, 0, 0, tzinfo=paris)  # 12:00 UTC
+    link = OneTimeLink.create(
+        password_id=PASSWORD_ID,
+        created_by_user_id=CREATOR_ID,
+        token=OneTimeLinkToken.generate(),
+        lifetime=OneTimeLinkLifetime(seconds=600),
+        now=created_at,
+    )
+    sql_one_time_link_repository.add(link)
+    session.expunge_all()
+
+    stored = sql_one_time_link_repository.get_by_id(link.id)
+    assert stored is not None
+    assert stored.created_at == datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+
+    # 30 minutes past a 10-minute lifetime: expired, whatever clock was used.
+    assert sql_one_time_link_repository.count_active_for_password(PASSWORD_ID, created_at) == 1
+    assert sql_one_time_link_repository.count_active_for_password(PASSWORD_ID, created_at + timedelta(minutes=30)) == 0
+
+
+def test_consume_and_revoke_normalise_a_non_utc_instant(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    paris = timezone(timedelta(hours=2))
+    stamped_at = datetime(2026, 1, 1, 14, 0, 0, tzinfo=paris)  # 12:00 UTC
+    read = _build_link()
+    revoked = _build_link()
+    sql_one_time_link_repository.add(read)
+    sql_one_time_link_repository.add(revoked)
+
+    sql_one_time_link_repository.consume(read.id, stamped_at)
+    sql_one_time_link_repository.revoke(revoked.id, stamped_at)
+    session.expunge_all()
+
+    expected = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+    assert sql_one_time_link_repository.get_by_id(read.id).read_at == expected  # type: ignore[union-attr]
+    assert sql_one_time_link_repository.get_by_id(revoked.id).revoked_at == expected  # type: ignore[union-attr]
