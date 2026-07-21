@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Button, Card, Message } from 'primevue'
 import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 import BlankLayout from '../layouts/BlankLayout.vue'
 import { useContainer } from '@/plugins/container'

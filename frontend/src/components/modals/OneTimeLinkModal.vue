@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Button, Dialog, Message, Select, Tag, ToggleSwitch, useToast } from 'primevue'
+import { useToast } from 'primevue'
 import { useContainer } from '@/plugins/container'
 import type { Password } from '@/domain/password/Password'
 import {
