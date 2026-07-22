@@ -732,11 +732,11 @@ export const refreshAccessTokenAuthRefreshTokenPost = <ThrowOnError extends bool
  *
  * Logout the current browser session.
  *
- * - **access_token**: Optional access token cookie to revoke
- * - **refresh_token**: Optional refresh token cookie to revoke
- * - **Authentication**: Clears cookies even if tokens are already missing or expired
+ * - **access_token**: Required access token cookie to revoke
+ * - **refresh_token**: Required refresh token cookie to revoke
+ * - **Authentication**: Always clears cookies after revocation attempt
  */
-export const logoutAuthLogoutPost = <ThrowOnError extends boolean = false>(options?: Options<LogoutAuthLogoutPostData, ThrowOnError>) => (options?.client ?? client).post<LogoutAuthLogoutPostResponses, LogoutAuthLogoutPostErrors, ThrowOnError>({ url: '/auth/logout', ...options });
+export const logoutAuthLogoutPost = <ThrowOnError extends boolean = false>(options: Options<LogoutAuthLogoutPostData, ThrowOnError>) => (options.client ?? client).post<LogoutAuthLogoutPostResponses, LogoutAuthLogoutPostErrors, ThrowOnError>({ url: '/auth/logout', ...options });
 
 /**
  * Create a new group
