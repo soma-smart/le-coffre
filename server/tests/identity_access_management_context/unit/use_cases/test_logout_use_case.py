@@ -67,7 +67,7 @@ def test_given_valid_access_and_refresh_tokens_when_logout_then_revoke_tokens_an
     assert revoked_token_repository.purge_calls == 1
 
 
-def test_given_only_refresh_token_when_logout_then_clear_active_refresh_jti(
+def test_given_invalid_access_and_valid_refresh_tokens_when_logout_then_clear_active_refresh_jti(
     use_case: LogoutUseCase,
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
@@ -77,6 +77,7 @@ def test_given_only_refresh_token_when_logout_then_clear_active_refresh_jti(
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "user@example.com"
     roles = ["user"]
+    access_token = "invalid_access_token"
     refresh_token = "valid_refresh_token"
 
     user_repository.save(
@@ -91,7 +92,7 @@ def test_given_only_refresh_token_when_logout_then_clear_active_refresh_jti(
     )
     token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti="refresh-jti-1")
 
-    use_case.execute(LogoutCommand(access_token=None, refresh_token=refresh_token))
+    use_case.execute(LogoutCommand(access_token=access_token, refresh_token=refresh_token))
 
     updated_user = user_repository.get_by_id(user_id)
     assert updated_user is not None
@@ -100,7 +101,7 @@ def test_given_only_refresh_token_when_logout_then_clear_active_refresh_jti(
     assert revoked_token_repository.is_revoked("refresh-jti-1", now=time_provider.get_current_time()) is True
 
 
-def test_given_no_tokens_when_logout_then_do_nothing(
+def test_given_invalid_tokens_when_logout_then_do_nothing(
     use_case: LogoutUseCase,
     user_repository: FakeUserRepository,
 ):
@@ -116,7 +117,7 @@ def test_given_no_tokens_when_logout_then_do_nothing(
         )
     )
 
-    use_case.execute(LogoutCommand(access_token=None, refresh_token=None))
+    use_case.execute(LogoutCommand(access_token="invalid_access_token", refresh_token="invalid_refresh_token"))
 
     unchanged_user = user_repository.get_by_id(user_id)
     assert unchanged_user is not None

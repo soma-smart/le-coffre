@@ -25,10 +25,8 @@ class LogoutUseCase(TracedUseCase):
         now = self._time_provider.get_current_time()
         self._revoked_token_repository.purge_expired(now)
 
-        access_token = self._token_gateway.validate_token(command.access_token) if command.access_token else None
-        refresh_token = (
-            self._token_gateway.validate_refresh_token(command.refresh_token) if command.refresh_token else None
-        )
+        access_token = self._token_gateway.validate_token(command.access_token)
+        refresh_token = self._token_gateway.validate_refresh_token(command.refresh_token)
 
         if access_token is not None:
             self._revoked_token_repository.revoke(access_token, "logout", now)
