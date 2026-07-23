@@ -1,9 +1,27 @@
 import { describe, expect, it } from 'vitest'
+import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import OneTimeLinksTable from '@/components/oneTimeLink/OneTimeLinksTable.vue'
 import type { AuditedOneTimeLink } from '@/domain/oneTimeLink/OneTimeLink'
 
 const HOUR = 3_600_000
+
+// Stands in for ConfirmationModal so the test can drive the confirm/cancel
+// decision directly, exposing what the modal was asked to say.
+const ConfirmationStub = defineComponent({
+  props: { visible: Boolean, question: String, description: String },
+  emits: ['update:visible', 'confirm'],
+  setup(props, { emit }) {
+    return () =>
+      props.visible
+        ? h('div', { 'data-testid': 'confirm' }, [
+            h('div', { 'data-testid': 'confirm-question' }, props.question),
+            h('div', { 'data-testid': 'confirm-description' }, props.description),
+            h('button', { 'data-testid': 'confirm-yes', onClick: () => emit('confirm') }, 'yes'),
+          ])
+        : null
+  },
+})
 
 function makeLink(overrides: Partial<AuditedOneTimeLink> = {}): AuditedOneTimeLink {
   const now = Date.now()
@@ -23,7 +41,10 @@ function makeLink(overrides: Partial<AuditedOneTimeLink> = {}): AuditedOneTimeLi
 }
 
 function mountTable(links: AuditedOneTimeLink[], showIssuer = false) {
-  return mount(OneTimeLinksTable, { props: { links, loading: false, showIssuer } })
+  return mount(OneTimeLinksTable, {
+    props: { links, loading: false, showIssuer },
+    global: { stubs: { ConfirmationModal: ConfirmationStub } },
+  })
 }
 
 describe('OneTimeLinksTable', () => {
@@ -51,12 +72,27 @@ describe('OneTimeLinksTable', () => {
     expect(wrapper.find('[data-testid="revoke-spent"]').exists()).toBe(false)
   })
 
-  it('emits the link to revoke rather than acting on it directly', async () => {
+  it('asks for confirmation before emitting a revoke, never on the click alone', async () => {
     const wrapper = mountTable([makeLink({ id: 'live' })])
 
     await wrapper.find('[data-testid="revoke-live"]').trigger('click')
+    // The click opens the prompt; nothing is revoked yet.
+    expect(wrapper.emitted('revoke')).toBeUndefined()
+    expect(wrapper.find('[data-testid="confirm"]').exists()).toBe(true)
 
+    await wrapper.find('[data-testid="confirm-yes"]').trigger('click')
     expect(wrapper.emitted('revoke')?.[0]?.[0]).toMatchObject({ id: 'live' })
+  })
+
+  it('names the password, group and creation time in the confirmation', async () => {
+    const wrapper = mountTable([makeLink({ id: 'live', passwordName: 'Prod DB' })])
+
+    await wrapper.find('[data-testid="revoke-live"]').trigger('click')
+
+    expect(wrapper.find('[data-testid="confirm-question"]').text()).toContain('Prod DB')
+    const description = wrapper.find('[data-testid="confirm-description"]').text()
+    expect(description).toContain('Platform team')
+    expect(description).toMatch(/Created .*(hour|minute|second)/)
   })
 
   it('hides the issuer column unless asked, since the personal table has one issuer', () => {

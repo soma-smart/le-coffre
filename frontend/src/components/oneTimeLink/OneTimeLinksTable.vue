@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import {
   isActive,
   severityForStatus,
@@ -15,7 +17,38 @@ defineProps<{
   revokingId?: string | null
 }>()
 
-defineEmits<{ (e: 'revoke', link: AuditedOneTimeLink): void }>()
+// The parent still owns the actual revoke (admin vs owner endpoint differ). This
+// component only guards it behind a confirmation, so both tables get the prompt
+// with no duplication, and only emits once the user confirms.
+const emit = defineEmits<{ (e: 'revoke', link: AuditedOneTimeLink): void }>()
+
+const pendingRevoke = ref<AuditedOneTimeLink | null>(null)
+const showConfirm = ref(false)
+
+const confirmQuestion = computed(() => {
+  const name = pendingRevoke.value?.passwordName ?? 'this password'
+  return `Revoke the one-time link for "${name}"?`
+})
+
+const confirmDescription = computed(() => {
+  const link = pendingRevoke.value
+  if (!link) return ''
+  const group = link.groupName ?? 'unknown group'
+  return [
+    `Group: ${group}`,
+    `Created ${formatRelativeTime(link.createdAt)}`,
+    'Anyone still holding the URL will no longer be able to read the password.',
+  ].join('\n')
+})
+
+function askRevoke(link: AuditedOneTimeLink) {
+  pendingRevoke.value = link
+  showConfirm.value = true
+}
+
+function confirmRevoke() {
+  if (pendingRevoke.value) emit('revoke', pendingRevoke.value)
+}
 </script>
 
 <template>
@@ -104,9 +137,21 @@ defineEmits<{ (e: 'revoke', link: AuditedOneTimeLink): void }>()
           outlined
           :loading="revokingId === slotProps.data.id"
           :data-testid="`revoke-${slotProps.data.id}`"
-          @click="$emit('revoke', slotProps.data)"
+          @click="askRevoke(slotProps.data)"
         />
       </template>
     </Column>
   </DataTable>
+
+  <ConfirmationModal
+    v-model:visible="showConfirm"
+    title="Revoke one-time link"
+    :question="confirmQuestion"
+    :description="confirmDescription"
+    confirm-label="Revoke"
+    cancel-label="Cancel"
+    severity="danger"
+    icon="pi pi-ban"
+    @confirm="confirmRevoke"
+  />
 </template>

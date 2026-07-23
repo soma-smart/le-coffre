@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useToast } from 'primevue'
+import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import { useContainer } from '@/plugins/container'
 import type { Password } from '@/domain/password/Password'
 import {
@@ -113,7 +114,29 @@ async function copyUrl() {
   setTimeout(() => (copied.value = false), 2000)
 }
 
-async function revoke(link: OneTimeLink) {
+const pendingRevoke = ref<OneTimeLink | null>(null)
+const showRevokeConfirm = ref(false)
+
+const revokeQuestion = computed(
+  () => `Revoke this one-time link for "${props.password?.name ?? 'this password'}"?`,
+)
+const revokeDescription = computed(() => {
+  const link = pendingRevoke.value
+  if (!link) return ''
+  return [
+    `Created ${formatRelativeTime(link.createdAt)}, expires ${formatRelativeTime(link.expiresAt)}.`,
+    'Anyone still holding the URL will no longer be able to read the password.',
+  ].join('\n')
+})
+
+function askRevoke(link: OneTimeLink) {
+  pendingRevoke.value = link
+  showRevokeConfirm.value = true
+}
+
+async function confirmRevoke() {
+  const link = pendingRevoke.value
+  if (!link) return
   try {
     await oneTimeLinks.revoke.execute(link.id)
     await refreshLinks()
@@ -236,11 +259,18 @@ function severityFor(link: OneTimeLink) {
           <!-- Relative, with the exact timestamp on hover: an absolute date is
                easy to misread as "already expired" when only the time registers. -->
           <span
+            class="ml-2 text-muted-color"
+            :title="formatAbsoluteTime(link.createdAt)"
+            data-testid="created-label"
+          >
+            created {{ formatRelativeTime(link.createdAt) }}
+          </span>
+          <span
             v-if="link.readAt"
             class="ml-2 text-muted-color"
             :title="formatAbsoluteTime(link.readAt)"
           >
-            read {{ formatRelativeTime(link.readAt) }}
+            &middot; read {{ formatRelativeTime(link.readAt) }}
           </span>
           <span
             v-else
@@ -248,7 +278,7 @@ function severityFor(link: OneTimeLink) {
             :title="formatAbsoluteTime(link.expiresAt)"
             data-testid="expiry-label"
           >
-            expires {{ formatRelativeTime(link.expiresAt) }}
+            &middot; expires {{ formatRelativeTime(link.expiresAt) }}
           </span>
         </div>
         <Button
@@ -257,9 +287,21 @@ function severityFor(link: OneTimeLink) {
           size="small"
           severity="danger"
           text
-          @click="revoke(link)"
+          @click="askRevoke(link)"
         />
       </li>
     </ul>
   </Dialog>
+
+  <ConfirmationModal
+    v-model:visible="showRevokeConfirm"
+    title="Revoke one-time link"
+    :question="revokeQuestion"
+    :description="revokeDescription"
+    confirm-label="Revoke"
+    cancel-label="Cancel"
+    severity="danger"
+    icon="pi pi-ban"
+    @confirm="confirmRevoke"
+  />
 </template>
