@@ -209,13 +209,14 @@ function severityFor(link: OneTimeLink) {
       <Message severity="success" :closable="false" class="mb-2">
         Copy it now. This URL is shown once and cannot be retrieved again.
       </Message>
-      <!-- items-stretch, not items-center: the URL carries a 43-character token
-           and always wraps onto several lines, so a fixed-height button would
-           float in the middle looking undersized next to it. -->
+      <!-- The URL is only ever copied, never read: the token is opaque noise. So
+           it stays on one truncated line, which keeps the copy button beside it at
+           a matching height instead of stretching down a wrapped block. -->
       <div class="flex gap-2 items-stretch">
         <code
-          class="grow p-2 rounded border border-surface break-all"
+          class="overflow-hidden grow p-2 whitespace-nowrap rounded border text-ellipsis border-surface"
           style="background-color: var(--p-content-background)"
+          :title="generatedUrl ?? undefined"
           >{{ generatedUrl }}</code
         >
         <Button
