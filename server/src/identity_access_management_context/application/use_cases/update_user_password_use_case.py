@@ -2,6 +2,7 @@ from identity_access_management_context.application.commands import (
     UpdateUserPasswordCommand,
 )
 from identity_access_management_context.application.gateways import (
+    AuthSessionRepository,
     PasswordHashingGateway,
     TokenGateway,
     UserPasswordRepository,
@@ -25,12 +26,14 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         user_password_repository: UserPasswordRepository,
         password_hashing_gateway: PasswordHashingGateway,
         user_repository: UserRepository,
+        auth_session_repository: AuthSessionRepository,
         token_gateway: TokenGateway,
         time_provider: TimeGateway,
     ):
         self.user_password_repository = user_password_repository
         self.password_hashing_gateway = password_hashing_gateway
         self.user_repository = user_repository
+        self.auth_session_repository = auth_session_repository
         self.token_gateway = token_gateway
         self.time_provider = time_provider
 
@@ -54,6 +57,10 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         self.user_password_repository.update_password(command.user_id, new_password_hash)
 
+        now = self.time_provider.get_current_time().replace(microsecond=0)
+
+        self.auth_session_repository.invalidate_all_for_user(user.id, now)
+
         access_token = self.token_gateway.generate_token(
             user_id=user.id,
             email=user.email,
@@ -66,10 +73,16 @@ class UpdateUserPasswordUseCase(TracedUseCase):
             roles=user.roles,
         )
 
-        # Keep the current browser session alive while invalidating older sessions.
-        user.current_refresh_token_jti = refresh_token.jti
-        user.session_invalid_before = self.time_provider.get_current_time().replace(microsecond=0)
+        # Keep the current browser session alive while invalidating all previous sessions.
+        user.session_invalid_before = now
         self.user_repository.update(user)
+
+        if refresh_token.jti is not None:
+            self.auth_session_repository.create_session(
+                user_id=user.id,
+                refresh_token_jti=refresh_token.jti,
+                created_at=now,
+            )
 
         return UpdateUserPasswordResponse(
             access_token=access_token.value,

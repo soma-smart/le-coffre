@@ -14,19 +14,21 @@ from identity_access_management_context.domain.exceptions import (
 )
 from tests.shared_kernel.fakes import FakeTimeGateway
 
-from ..fakes import FakeRevokedTokenRepository, FakeTokenGateway, FakeUserRepository
+from ..fakes import FakeAuthSessionRepository, FakeRevokedTokenRepository, FakeTokenGateway, FakeUserRepository
 
 
 @pytest.fixture
 def use_case(
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
+    auth_session_repository,
     revoked_token_repository: FakeRevokedTokenRepository,
     time_provider: FakeTimeGateway,
 ):
     return RefreshAccessTokenUseCase(
         token_gateway=token_gateway,
         user_repository=user_repository,
+        auth_session_repository=auth_session_repository,
         revoked_token_repository=revoked_token_repository,
         time_provider=time_provider,
     )
@@ -36,6 +38,7 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
     revoked_token_repository: FakeRevokedTokenRepository,
 ):
     # Arrange
@@ -54,6 +57,7 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
         current_refresh_token_jti=refresh_token_jti,
     )
     user_repository.save(user)
+    auth_session_repository.create_session(user_id, refresh_token_jti, FakeTimeGateway().get_current_time())
 
     token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
     token_gateway.set_unique_jwt_part("new_access_token")
@@ -67,9 +71,11 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     assert result.access_token == f"jwt_token_for_{user_id}_new_access_token"
     assert result.refresh_token == f"refresh_token_for_{user_id}_new_access_token"
     assert result.user_id == user_id
-    updated_user = user_repository.get_by_id(user_id)
-    assert updated_user is not None
-    assert updated_user.current_refresh_token_jti == "refresh-token-jti-new_access_token"
+    rotated_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(
+        user_id,
+        "refresh-token-jti-new_access_token",
+    )
+    assert rotated_session is not None
     assert revoked_token_repository.is_revoked(refresh_token_jti, now=FakeTimeGateway().get_current_time()) is True
     assert revoked_token_repository.purge_calls == 1
 
@@ -214,6 +220,7 @@ def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_upda
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
 ):
     # Arrange
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -243,6 +250,7 @@ def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_upda
         old_roles,
         jti=refresh_token_jti,
     )
+    auth_session_repository.create_session(user_id, refresh_token_jti, FakeTimeGateway().get_current_time())
 
     # User gets promoted to admin (roles updated in database)
     user.promote_to_admin()
@@ -276,6 +284,7 @@ def test_given_refresh_token_jti_not_matching_active_session_when_execute_then_r
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
     user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
     revoked_token_repository: FakeRevokedTokenRepository,
     time_provider: FakeTimeGateway,
 ):
@@ -303,6 +312,7 @@ def test_given_refresh_token_jti_not_matching_active_session_when_execute_then_r
         roles,
         jti="stale-refresh-token-jti",
     )
+    auth_session_repository.create_session(user_id, "active-refresh-token-jti", time_provider.get_current_time())
 
     command = RefreshAccessTokenCommand(refresh_token=refresh_token)
 
@@ -310,11 +320,11 @@ def test_given_refresh_token_jti_not_matching_active_session_when_execute_then_r
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
-    compromised_user = user_repository.get_by_id(user_id)
-    assert compromised_user is not None
-    assert compromised_user.current_refresh_token_jti is None
-    assert compromised_user.session_invalid_before == time_provider.get_current_time().replace(microsecond=0)
-    assert revoked_token_repository.is_revoked("stale-refresh-token-jti", now=time_provider.get_current_time()) is True
+    unchanged_user = user_repository.get_by_id(user_id)
+    assert unchanged_user is not None
+    assert unchanged_user.current_refresh_token_jti == "active-refresh-token-jti"
+    assert unchanged_user.session_invalid_before is None
+    assert revoked_token_repository.is_revoked("stale-refresh-token-jti", now=time_provider.get_current_time()) is False
 
 
 def test_given_refresh_token_issued_microseconds_before_session_cutoff_when_execute_then_raises_invalid_refresh_token_exception(
@@ -348,3 +358,43 @@ def test_given_refresh_token_issued_microseconds_before_session_cutoff_when_exec
 
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
+
+
+def test_given_two_active_sessions_when_one_session_rotates_then_other_session_remains_valid(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+
+    refresh_token_a = "refresh_token_device_a"
+    refresh_token_b = "refresh_token_device_b"
+    refresh_jti_a = "refresh-jti-device-a"
+    refresh_jti_b = "refresh-jti-device-b"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+        )
+    )
+
+    auth_session_repository.create_session(user_id, refresh_jti_a, FakeTimeGateway().get_current_time())
+    auth_session_repository.create_session(user_id, refresh_jti_b, FakeTimeGateway().get_current_time())
+
+    token_gateway.set_valid_refresh_token(refresh_token_a, user_id, email, roles, jti=refresh_jti_a)
+    token_gateway.set_valid_refresh_token(refresh_token_b, user_id, email, roles, jti=refresh_jti_b)
+
+    token_gateway.set_unique_jwt_part("device-a")
+    result_a = use_case.execute(RefreshAccessTokenCommand(refresh_token=refresh_token_a))
+    assert result_a.refresh_token == f"refresh_token_for_{user_id}_device-a"
+
+    token_gateway.set_unique_jwt_part("device-b")
+    result_b = use_case.execute(RefreshAccessTokenCommand(refresh_token=refresh_token_b))
+    assert result_b.refresh_token == f"refresh_token_for_{user_id}_device-b"

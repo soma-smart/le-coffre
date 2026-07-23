@@ -23,14 +23,14 @@ class LogoutResponse(BaseModel):
 )
 def logout(
     response: Response,
-    access_token_cookie: str = Cookie(..., alias="access_token"),
+    access_token_cookie: str | None = Cookie(None, alias="access_token"),
     refresh_token_cookie: str = Cookie(..., alias="refresh_token"),
     usecase: LogoutUseCase = Depends(get_logout_usecase),
 ):
     """
     Logout the current browser session.
 
-    - **access_token**: Required access token cookie to revoke
+    - **access_token**: Optional access token cookie to revoke (may be expired/missing)
     - **refresh_token**: Required refresh token cookie to revoke
     - **Authentication**: Always clears cookies after revocation attempt
     """

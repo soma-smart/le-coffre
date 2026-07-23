@@ -732,7 +732,7 @@ export const refreshAccessTokenAuthRefreshTokenPost = <ThrowOnError extends bool
  *
  * Logout the current browser session.
  *
- * - **access_token**: Required access token cookie to revoke
+ * - **access_token**: Optional access token cookie to revoke (may be expired/missing)
  * - **refresh_token**: Required refresh token cookie to revoke
  * - **Authentication**: Always clears cookies after revocation attempt
  */

@@ -1,4 +1,5 @@
 from .admin_event_repository import AdminEventRepository
+from .auth_session_repository import AuthSessionRepository
 from .group_event_repository import GroupEventRepository
 from .group_member_repository import GroupMemberRepository
 from .group_repository import GroupRepository
@@ -38,4 +39,5 @@ __all__ = [
     "GroupEventRepository",
     "SsoEventRepository",
     "AdminEventRepository",
+    "AuthSessionRepository",
 ]

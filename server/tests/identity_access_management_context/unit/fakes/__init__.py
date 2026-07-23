@@ -1,4 +1,5 @@
 from .fake_admin_event_repository import FakeAdminEventRepository
+from .fake_auth_session_repository import FakeAuthSessionRepository
 from .fake_group_event_repository import FakeGroupEventRepository
 from .fake_group_member_repository import FakeGroupMemberRepository
 from .fake_group_repository import FakeGroupRepository
@@ -34,4 +35,5 @@ __all__ = [
     "FakeGroupEventRepository",
     "FakeSsoEventRepository",
     "FakeAdminEventRepository",
+    "FakeAuthSessionRepository",
 ]

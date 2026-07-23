@@ -497,6 +497,8 @@ async def test_complete_authentication_workflow(
     refresh_data = refresh_response.json()
     assert "message" in refresh_data
     assert refresh_data["message"] == "Access token refreshed successfully"
+    new_refresh_token = refresh_response.cookies.get("refresh_token")
+    assert new_refresh_token is not None
 
     # Extract new access token from cookie
     new_access_token = refresh_response.cookies.get("access_token")
@@ -520,6 +522,27 @@ async def test_complete_authentication_workflow(
     validated_user = validate_response.json()
     assert validated_user["email"] == oidc_test_user["email"]
     print(f"✅ New access token validated successfully for {validated_user['email']}")
+
+    # Step 6.3: Logout must still succeed when only refresh_token remains
+    print("\n🚪 Step 6.3: Verifying refresh-only logout revokes the server session...")
+    logout_csrf_token = e2e_client.get("/api/auth/csrf-token").json()["csrf_token"]
+
+    refresh_only_logout_client = client_factory()
+    refresh_only_logout_client.cookies.set("refresh_token", new_refresh_token)
+    refresh_only_logout_client.cookies.delete("access_token")
+    refresh_only_logout_client.disable_auto_csrf()
+
+    refresh_only_logout_response = refresh_only_logout_client.post(
+        "/api/auth/logout",
+        headers={"X-CSRF-Token": logout_csrf_token},
+    )
+    assert refresh_only_logout_response.status_code == 200
+    assert refresh_only_logout_response.json()["message"] == "Logout successful"
+
+    refresh_after_logout = refresh_only_logout_client.post("/api/auth/refresh-token")
+    assert refresh_after_logout.status_code == 400
+    assert "refresh token" in refresh_after_logout.json()["detail"].lower()
+    print("✅ Refresh-only logout clears server session and blocks token refresh")
 
     # =========================================================================
     # PHASE 7: ACCOUNT LOCKOUT

@@ -2,6 +2,7 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from identity_access_management_context.adapters.secondary.sql import (
+    SqlAuthSessionRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlRevokedTokenRepository,
@@ -56,3 +57,8 @@ def sql_group_member_repository(session):
 @pytest.fixture(scope="function")
 def sql_group_repository(session):
     return SqlGroupRepository(session)
+
+
+@pytest.fixture(scope="function")
+def sql_auth_session_repository(session):
+    return SqlAuthSessionRepository(session)

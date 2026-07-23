@@ -9,6 +9,7 @@ from tests.shared_kernel.fakes import FakeTimeGateway
 
 from .fakes import (
     FakeAdminEventRepository,
+    FakeAuthSessionRepository,
     FakeGroupEventRepository,
     FakeGroupMemberRepository,
     FakeGroupRepository,
@@ -116,6 +117,11 @@ def sso_event_repository():
 @pytest.fixture
 def admin_event_repository():
     return FakeAdminEventRepository()
+
+
+@pytest.fixture
+def auth_session_repository():
+    return FakeAuthSessionRepository()
 
 
 @pytest.fixture

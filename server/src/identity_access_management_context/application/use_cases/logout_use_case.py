@@ -1,8 +1,8 @@
 from identity_access_management_context.application.commands import LogoutCommand
 from identity_access_management_context.application.gateways import (
+    AuthSessionRepository,
     RevokedTokenRepository,
     TokenGateway,
-    UserRepository,
 )
 from shared_kernel.application.gateways import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
@@ -13,19 +13,21 @@ class LogoutUseCase(TracedUseCase):
         self,
         token_gateway: TokenGateway,
         revoked_token_repository: RevokedTokenRepository,
-        user_repository: UserRepository,
+        auth_session_repository: AuthSessionRepository,
         time_provider: TimeGateway,
     ):
         self._token_gateway = token_gateway
         self._revoked_token_repository = revoked_token_repository
-        self._user_repository = user_repository
+        self._auth_session_repository = auth_session_repository
         self._time_provider = time_provider
 
     def execute(self, command: LogoutCommand) -> None:
         now = self._time_provider.get_current_time()
         self._revoked_token_repository.purge_expired(now)
 
-        access_token = self._token_gateway.validate_token(command.access_token)
+        access_token = None
+        if command.access_token:
+            access_token = self._token_gateway.validate_token(command.access_token)
         refresh_token = self._token_gateway.validate_refresh_token(command.refresh_token)
 
         if access_token is not None:
@@ -33,17 +35,9 @@ class LogoutUseCase(TracedUseCase):
 
         if refresh_token is not None:
             self._revoked_token_repository.revoke(refresh_token, "logout", now)
-
-        user_id = access_token.user_id if access_token is not None else None
-        if user_id is None and refresh_token is not None:
-            user_id = refresh_token.user_id
-
-        if user_id is None:
-            return
-
-        user = self._user_repository.get_by_id(user_id)
-        if user is None:
-            return
-
-        user.current_refresh_token_jti = None
-        self._user_repository.update(user)
+            if refresh_token.jti is not None:
+                self._auth_session_repository.invalidate_by_user_id_and_refresh_jti(
+                    user_id=refresh_token.user_id,
+                    refresh_token_jti=refresh_token.jti,
+                    invalidated_at=now,
+                )

@@ -2,6 +2,7 @@ from identity_access_management_context.application.commands import (
     RefreshAccessTokenCommand,
 )
 from identity_access_management_context.application.gateways import (
+    AuthSessionRepository,
     RevokedTokenRepository,
     TokenGateway,
     UserRepository,
@@ -21,11 +22,13 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         self,
         token_gateway: TokenGateway,
         user_repository: UserRepository,
+        auth_session_repository: AuthSessionRepository,
         revoked_token_repository: RevokedTokenRepository,
         time_provider: TimeGateway,
     ):
         self.token_gateway = token_gateway
         self.user_repository = user_repository
+        self.auth_session_repository = auth_session_repository
         self.revoked_token_repository = revoked_token_repository
         self.time_provider = time_provider
 
@@ -52,11 +55,11 @@ class RefreshAccessTokenUseCase(TracedUseCase):
             if token_data.issued_at < session_cutoff:
                 raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
-        if user.current_refresh_token_jti != token_data.jti:
-            self.revoked_token_repository.revoke(token_data, "refresh_token_reuse_detected", now)
-            user.current_refresh_token_jti = None
-            user.session_invalid_before = now.replace(microsecond=0)
-            self.user_repository.update(user)
+        session = self.auth_session_repository.get_active_by_user_id_and_refresh_jti(
+            user_id=token_data.user_id,
+            refresh_token_jti=token_data.jti,
+        )
+        if session is None:
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
         new_access_token = self.token_gateway.generate_token(
@@ -70,8 +73,13 @@ class RefreshAccessTokenUseCase(TracedUseCase):
             roles=user.roles,
         )
         self.revoked_token_repository.revoke(token_data, "refresh_token_rotated", now)
-        user.current_refresh_token_jti = new_refresh_token.jti
-        self.user_repository.update(user)
+        if new_refresh_token.jti is None:
+            raise InvalidRefreshTokenException("Invalid or expired refresh token")
+        self.auth_session_repository.rotate_refresh_token_jti(
+            session_id=session.id,
+            new_refresh_token_jti=new_refresh_token.jti,
+            rotated_at=now,
+        )
 
         return RefreshAccessTokenResponse(
             access_token=new_access_token.value,

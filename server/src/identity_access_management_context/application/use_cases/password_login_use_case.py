@@ -4,6 +4,7 @@ from datetime import datetime
 from identity_access_management_context.application.commands import AdminLoginCommand
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
+    AuthSessionRepository,
     LoginLockoutGateway,
     PasswordHashingGateway,
     TokenGateway,
@@ -31,6 +32,7 @@ class PasswordLoginUseCase(TracedUseCase):
         self,
         user_password_repository: UserPasswordRepository,
         user_repository: UserRepository,
+        auth_session_repository: AuthSessionRepository,
         password_hashing_gateway: PasswordHashingGateway,
         token_gateway: TokenGateway,
         time_provider: TimeGateway,
@@ -40,6 +42,7 @@ class PasswordLoginUseCase(TracedUseCase):
     ):
         self._user_password_repository = user_password_repository
         self._user_repository = user_repository
+        self._auth_session_repository = auth_session_repository
         self._password_hashing_gateway = password_hashing_gateway
         self._token_gateway = token_gateway
         self._time_provider = time_provider
@@ -119,10 +122,12 @@ class PasswordLoginUseCase(TracedUseCase):
             email=user_password.email,
             roles=roles,
         )
-        user = self._user_repository.get_by_id(user_password.id)
-        if user is not None:
-            user.current_refresh_token_jti = refresh_token.jti
-            self._user_repository.update(user)
+        if refresh_token.jti is not None:
+            self._auth_session_repository.create_session(
+                user_id=user_password.id,
+                refresh_token_jti=refresh_token.jti,
+                created_at=now,
+            )
 
         event = AdminLoginEvent(admin_id=user_password.id, email=user_password.email)
         self._event_publisher.publish(event)
