@@ -97,6 +97,9 @@ class JwtTokenGateway(TokenGateway):
             token_type=REFRESH_TOKEN_TYPE,
         )
 
+    def get_refresh_token_expiration_seconds(self) -> int:
+        return self._refresh_token_expiration_seconds
+
     def validate_token(self, token: str) -> Token | None:
         try:
             payload = jwt.decode(token, self._secret_key, algorithms=[self._algorithm])

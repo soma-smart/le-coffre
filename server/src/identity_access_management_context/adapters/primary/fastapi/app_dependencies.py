@@ -2,6 +2,7 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
+from config import get_session_max_lifetime_seconds
 from identity_access_management_context.adapters.primary.private_api import (
     UserInfoApi,
 )
@@ -402,6 +403,7 @@ def get_refresh_access_token_usecase(
         auth_session_repository,
         revoked_token_repository,
         time_provider,
+        get_session_max_lifetime_seconds(),
     )
 
 

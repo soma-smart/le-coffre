@@ -1,5 +1,6 @@
 from identity_access_management_context.application.commands import LogoutCommand
 from identity_access_management_context.application.gateways import (
+    REVOCATION_REASON_LOGOUT,
     AuthSessionRepository,
     RevokedTokenRepository,
     TokenGateway,
@@ -31,10 +32,10 @@ class LogoutUseCase(TracedUseCase):
         refresh_token = self._token_gateway.validate_refresh_token(command.refresh_token)
 
         if access_token is not None:
-            self._revoked_token_repository.revoke(access_token, "logout", now)
+            self._revoked_token_repository.revoke(access_token, REVOCATION_REASON_LOGOUT, now)
 
         if refresh_token is not None:
-            self._revoked_token_repository.revoke(refresh_token, "logout", now)
+            self._revoked_token_repository.revoke(refresh_token, REVOCATION_REASON_LOGOUT, now)
             if refresh_token.jti is not None:
                 self._auth_session_repository.invalidate_by_user_id_and_refresh_jti(
                     user_id=refresh_token.user_id,

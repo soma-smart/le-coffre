@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from identity_access_management_context.application.gateways import Token
+from identity_access_management_context.application.gateways import ActiveRevocation, Token
 
 
 class FakeRevokedTokenRepository:
@@ -14,13 +14,16 @@ class FakeRevokedTokenRepository:
         self.revoked_tokens[token.jti] = (token.expires_at, reason)
 
     def is_revoked(self, jti: str, now: datetime) -> bool:
+        return self.get_active_revocation(jti, now) is not None
+
+    def get_active_revocation(self, jti: str, now: datetime) -> ActiveRevocation | None:
         revoked = self.revoked_tokens.get(jti)
         if revoked is None:
-            return False
-        expires_at, _ = revoked
+            return None
+        expires_at, reason = revoked
         if expires_at is not None and expires_at <= now:
-            return False
-        return True
+            return None
+        return ActiveRevocation(reason=reason)
 
     def purge_expired(self, now: datetime) -> None:
         self.purge_calls += 1

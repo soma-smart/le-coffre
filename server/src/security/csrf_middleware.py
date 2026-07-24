@@ -120,6 +120,15 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                     user_id = response.user_id
                 else:
                     # Refresh-only sessions still need CSRF enforcement on mutating routes.
+                    #
+                    # COUPLING NOTE: this branch re-implements a subset of refresh
+                    # validation and deliberately does NOT check AuthSession state.
+                    # It is safe only because every invalidation path today either
+                    # revokes the token (logout, rotation) or bumps the user's
+                    # session_invalid_before cutoff (password update, reuse
+                    # containment) — the two things checked below. Any future
+                    # invalidation path that only sets AuthSession.invalidated_at
+                    # must add an active-session check here.
                     refresh_token_obj = token_gateway.validate_refresh_token(refresh_token)
                     if refresh_token_obj is None:
                         raise ValueError("Invalid refresh token")

@@ -1,9 +1,14 @@
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
 
 from identity_access_management_context.application.commands import (
     RefreshAccessTokenCommand,
+)
+from identity_access_management_context.application.gateways import (
+    REVOCATION_REASON_LOGOUT,
+    REVOCATION_REASON_REFRESH_TOKEN_ROTATED,
 )
 from identity_access_management_context.application.use_cases import (
     RefreshAccessTokenUseCase,
@@ -31,6 +36,7 @@ def use_case(
         auth_session_repository=auth_session_repository,
         revoked_token_repository=revoked_token_repository,
         time_provider=time_provider,
+        session_max_lifetime_seconds=4 * 3600,
     )
 
 
@@ -280,6 +286,12 @@ def test_given_user_promoted_to_admin_when_refresh_token_then_new_token_has_upda
     )
 
 
+# A jti that matches no active session (and is not revoked) is NOT a theft
+# signal: it can be a token whose session was purged, or the thief's own
+# rotated-forward token after reuse containment already killed the session.
+# This path must therefore stay a plain rejection without any escalation —
+# containment only triggers on a replayed jti revoked for rotation (see
+# test_given_replayed_rotated_refresh_token_... below).
 def test_given_refresh_token_jti_not_matching_active_session_when_execute_then_raises_invalid_refresh_token_exception(
     use_case: RefreshAccessTokenUseCase,
     token_gateway: FakeTokenGateway,
@@ -358,6 +370,261 @@ def test_given_refresh_token_issued_microseconds_before_session_cutoff_when_exec
 
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
+
+
+def test_given_replayed_rotated_refresh_token_when_execute_then_invalidates_all_sessions_and_sets_cutoff(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+):
+    # Arrange: a thief stole the victim's refresh token and rotated it first —
+    # the session now points at the thief's jti, the stolen jti is revoked
+    # with the rotation reason. The victim then replays the stolen token.
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    replayed_refresh_token = "stolen_refresh_token"
+    replayed_jti = "stolen-refresh-token-jti"
+    attacker_jti = "attacker-rotated-refresh-token-jti"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+        )
+    )
+    auth_session_repository.create_session(user_id, attacker_jti, time_provider.get_current_time())
+    revoked_token_repository.revoke_jti(
+        replayed_jti,
+        expires_at=None,
+        reason=REVOCATION_REASON_REFRESH_TOKEN_ROTATED,
+    )
+    token_gateway.set_valid_refresh_token(replayed_refresh_token, user_id, email, roles, jti=replayed_jti)
+
+    command = RefreshAccessTokenCommand(refresh_token=replayed_refresh_token)
+
+    # Act & Assert: generic rejection, but the whole family is contained
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, attacker_jti) is None
+    contained_user = user_repository.get_by_id(user_id)
+    assert contained_user is not None
+    # The cutoff must be the exact (non-truncated) detection time so the
+    # thief's same-second access token fails `issued_at < cutoff`.
+    assert contained_user.session_invalid_before == time_provider.get_current_time()
+
+
+def test_given_replayed_logged_out_refresh_token_when_execute_then_raises_without_containment(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+):
+    # Arrange: an in-flight refresh replaying a token revoked by a normal
+    # logout is benign — it must not log the user out of their other devices.
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    replayed_refresh_token = "logged_out_refresh_token"
+    replayed_jti = "logged-out-refresh-token-jti"
+    other_device_jti = "other-device-refresh-token-jti"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+        )
+    )
+    auth_session_repository.create_session(user_id, other_device_jti, time_provider.get_current_time())
+    revoked_token_repository.revoke_jti(replayed_jti, expires_at=None, reason=REVOCATION_REASON_LOGOUT)
+    token_gateway.set_valid_refresh_token(replayed_refresh_token, user_id, email, roles, jti=replayed_jti)
+
+    command = RefreshAccessTokenCommand(refresh_token=replayed_refresh_token)
+
+    # Act & Assert
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, other_device_jti) is not None
+    unchanged_user = user_repository.get_by_id(user_id)
+    assert unchanged_user is not None
+    assert unchanged_user.session_invalid_before is None
+
+
+def test_given_concurrent_rotation_wins_the_race_when_execute_then_raises_without_revoking(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+):
+    # Arrange: two concurrent refreshes with the same token — the loser's
+    # compare-and-swap matches zero rows. It must reject without revoking the
+    # jti (the winner already did) and without any containment.
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "raced_refresh_token"
+    refresh_token_jti = "raced-refresh-token-jti"
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+        )
+    )
+    auth_session_repository.create_session(user_id, refresh_token_jti, time_provider.get_current_time())
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
+
+    # Simulate the concurrent winner committing between the session lookup and
+    # the compare-and-swap.
+    auth_session_repository.rotate_refresh_token_jti = lambda **_kwargs: False
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    # Act & Assert
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+    assert revoked_token_repository.is_revoked(refresh_token_jti, now=time_provider.get_current_time()) is False
+    unchanged_user = user_repository.get_by_id(user_id)
+    assert unchanged_user is not None
+    assert unchanged_user.session_invalid_before is None
+
+
+def test_given_session_older_than_max_lifetime_when_execute_then_raises_and_invalidates_session(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+):
+    # Arrange: an otherwise-valid session that reached the absolute lifetime cap
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "aged_refresh_token"
+    refresh_token_jti = "aged-refresh-token-jti"
+    now = time_provider.get_current_time()
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+        )
+    )
+    auth_session_repository.create_session(user_id, refresh_token_jti, now - timedelta(hours=4))
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    # Act & Assert: generic rejection, session invalidated, no theft escalation
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(command)
+
+    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, refresh_token_jti) is None
+    unchanged_user = user_repository.get_by_id(user_id)
+    assert unchanged_user is not None
+    assert unchanged_user.session_invalid_before is None
+    assert revoked_token_repository.is_revoked(refresh_token_jti, now=now) is False
+
+
+def test_given_session_just_under_max_lifetime_when_execute_then_returns_new_tokens(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    time_provider: FakeTimeGateway,
+):
+    # Arrange
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "almost_aged_refresh_token"
+    refresh_token_jti = "almost-aged-refresh-token-jti"
+    now = time_provider.get_current_time()
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+        )
+    )
+    auth_session_repository.create_session(user_id, refresh_token_jti, now - timedelta(hours=4) + timedelta(seconds=1))
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
+    token_gateway.set_unique_jwt_part("under_lifetime_cap")
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    # Act
+    result = use_case.execute(command)
+
+    # Assert
+    assert result.refresh_token == f"refresh_token_for_{user_id}_under_lifetime_cap"
+
+
+def test_given_stale_sessions_when_execute_then_purges_sessions_older_than_refresh_ttl(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    time_provider: FakeTimeGateway,
+):
+    # Arrange
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "user@example.com"
+    roles = ["user"]
+    refresh_token = "valid_refresh_token_123"
+    refresh_token_jti = "refresh-token-jti-1"
+    now = time_provider.get_current_time()
+
+    user_repository.save(
+        User(
+            id=user_id,
+            username="testuser",
+            email=email,
+            name="Test User",
+            roles=roles,
+        )
+    )
+    auth_session_repository.create_session(user_id, refresh_token_jti, now)
+    # A session idle for longer than the refresh TTL holds a token that can no
+    # longer be used — it must be purged on the next refresh write path.
+    stale_session = auth_session_repository.create_session(user_id, "stale-refresh-token-jti", now - timedelta(hours=5))
+    token_gateway.set_valid_refresh_token(refresh_token, user_id, email, roles, jti=refresh_token_jti)
+    token_gateway.set_unique_jwt_part("after_purge")
+
+    command = RefreshAccessTokenCommand(refresh_token=refresh_token)
+
+    # Act
+    use_case.execute(command)
+
+    # Assert
+    assert auth_session_repository.purge_dead_cutoffs == [now - timedelta(hours=4)]
+    assert stale_session.id not in auth_session_repository.sessions
 
 
 def test_given_two_active_sessions_when_one_session_rotates_then_other_session_remains_valid(

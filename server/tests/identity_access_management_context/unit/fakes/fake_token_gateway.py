@@ -12,6 +12,10 @@ class FakeTokenGateway(TokenGateway):
         self.unique_part = ""
         self.valid_refresh_tokens = {}
         self.last_generated_token = None
+        self.refresh_token_expiration_seconds = 4 * 3600
+
+    def get_refresh_token_expiration_seconds(self) -> int:
+        return self.refresh_token_expiration_seconds
 
     def set_unique_jwt_part(self, unique_part: str):
         self.unique_part = unique_part

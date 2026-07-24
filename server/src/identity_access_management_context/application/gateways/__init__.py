@@ -6,7 +6,12 @@ from .group_repository import GroupRepository
 from .group_usage_gateway import GroupUsageGateway
 from .login_lockout_gateway import LockoutStatus, LoginLockoutGateway
 from .password_hashing_gateway import PasswordHashingGateway
-from .revoked_token_repository import RevokedTokenRepository
+from .revoked_token_repository import (
+    REVOCATION_REASON_LOGOUT,
+    REVOCATION_REASON_REFRESH_TOKEN_ROTATED,
+    ActiveRevocation,
+    RevokedTokenRepository,
+)
 from .sso_configuration_repository import SsoConfigurationRepository
 from .sso_encryption_gateway import SsoEncryptionGateway
 from .sso_event_repository import SsoEventRepository
@@ -21,6 +26,9 @@ __all__ = [
     "UserRepository",
     "PasswordHashingGateway",
     "RevokedTokenRepository",
+    "ActiveRevocation",
+    "REVOCATION_REASON_LOGOUT",
+    "REVOCATION_REASON_REFRESH_TOKEN_ROTATED",
     "SsoGateway",
     "SsoUserInfo",
     "SsoDiscoveryResult",

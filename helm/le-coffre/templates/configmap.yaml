@@ -9,6 +9,7 @@ data:
   JWT_ALGORITHM: {{ .Values.config.jwt.algorithm | quote }}
   JWT_ACCESS_TOKEN_EXPIRATION_MINUTES: {{ .Values.config.jwt.accessTokenExpirationMinutes | quote }}
   JWT_REFRESH_TOKEN_EXPIRATION_HOURS: {{ .Values.config.jwt.refreshTokenExpirationHours | quote }}
+  SESSION_MAX_LIFETIME_HOURS: {{ .Values.config.jwt.sessionMaxLifetimeHours | quote }}
   APP_BASE_URL: {{ required "config.appBaseUrl is required. Set it to your application's public URL (e.g. https://le-coffre.yourdomain.com)" .Values.config.appBaseUrl | quote }}
   # Rate limiting
   RATE_LIMIT_ENABLED: {{ .Values.config.rateLimit.enabled | toString | quote }}
