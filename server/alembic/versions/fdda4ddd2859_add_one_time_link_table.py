@@ -1,8 +1,8 @@
 """add one time link table
 
-Revision ID: 91d77868648a
-Revises: 443d92366c2b
-Create Date: 2026-07-20 12:31:25.217671
+Revision ID: fdda4ddd2859
+Revises: f1a2b3c4d5e6
+Create Date: 2026-07-24 15:46:20.048462
 
 """
 from typing import Sequence, Union
@@ -13,8 +13,8 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision: str = '91d77868648a'
-down_revision: Union[str, Sequence[str], None] = '443d92366c2b'
+revision: str = 'fdda4ddd2859'
+down_revision: Union[str, Sequence[str], None] = 'f1a2b3c4d5e6'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
