@@ -69,9 +69,22 @@ const router = createRouter({
       meta: { skipSetupCheck: true },
     },
     {
+      // Recipients of a one-time link are outside the vault and have no session.
+      // The token travels in the URL fragment, which the router never sees.
+      path: '/one-time-link',
+      name: 'OneTimeLink',
+      component: () => import('@/pages/OneTimeLinkPage.vue'),
+      meta: { public: true, skipSetupCheck: true },
+    },
+    {
       path: '/groups',
       name: 'Groups',
       component: () => import('@/pages/GroupsPage.vue'),
+    },
+    {
+      path: '/my-links',
+      name: 'MyOneTimeLinks',
+      component: () => import('@/pages/MyOneTimeLinksPage.vue'),
     },
     {
       path: '/profile',
@@ -95,6 +108,12 @@ const router = createRouter({
       meta: { requiresAdmin: true },
     },
     {
+      path: '/admin/one-time-links',
+      name: 'AdminOneTimeLinks',
+      component: () => import('@/pages/admin/AdminOneTimeLinksPage.vue'),
+      meta: { requiresAdmin: true },
+    },
+    {
       path: '/admin/statistics',
       name: 'AdminStatistics',
       component: () => import('@/pages/admin/AdminStatisticsPage.vue'),
@@ -104,6 +123,14 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from) => {
+  // Public routes are reachable with no session at all. This has to run before
+  // anything else: the setup / vault-locked / authentication ladder below is
+  // deny-by-default, so without an early exit it would bounce an anonymous
+  // visitor to /login and their one-time link would never open.
+  if (to.meta.public) {
+    return true
+  }
+
   const setupStore = useSetupStore()
   const userStore = useUserStore()
 

@@ -5,6 +5,7 @@ from .group_member_repository import GroupMemberRepository
 from .group_repository import GroupRepository
 from .group_usage_gateway import GroupUsageGateway
 from .login_lockout_gateway import LockoutStatus, LoginLockoutGateway
+from .one_time_link_revocation_gateway import OneTimeLinkRevocationGateway
 from .password_hashing_gateway import PasswordHashingGateway
 from .revoked_token_repository import (
     REVOCATION_REASON_LOGOUT,
@@ -41,6 +42,7 @@ __all__ = [
     "GroupRepository",
     "GroupMemberRepository",
     "GroupUsageGateway",
+    "OneTimeLinkRevocationGateway",
     "LoginLockoutGateway",
     "LockoutStatus",
     "UserEventRepository",

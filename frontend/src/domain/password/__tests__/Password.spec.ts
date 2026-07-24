@@ -108,6 +108,8 @@ describe('humanizeEventType', () => {
     ['PasswordSharedEvent', 'Password Shared'],
     ['PasswordUnsharedEvent', 'Password Unshared'],
     ['PasswordAccessedEvent', 'Password Accessed'],
+    ['OneTimeLinkCreatedEvent', 'One Time Link Created'],
+    ['OneTimeLinkReadEvent', 'One Time Link Read'],
   ])('humanizes %s to "%s"', (input, expected) => {
     expect(humanizeEventType(input)).toBe(expected)
   })
@@ -121,6 +123,10 @@ describe('eventSeverity', () => {
     expect(eventSeverity('PasswordSharedEvent')).toBe('info')
     expect(eventSeverity('PasswordUnsharedEvent')).toBe('info')
     expect(eventSeverity('PasswordAccessedEvent')).toBe('secondary')
+    expect(eventSeverity('OneTimeLinkCreatedEvent')).toBe('info')
+    // The moment a secret left the vault to someone with no account: it must
+    // stand out in the log rather than blend into the neutral fallback.
+    expect(eventSeverity('OneTimeLinkReadEvent')).toBe('warn')
   })
 
   it('falls back to "secondary" for unknown event types', () => {

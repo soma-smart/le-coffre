@@ -8,4 +8,8 @@ export interface AdminStatistics {
   userCount: number
   groupCount: number
   passwordCount: number
+  /** Every one-time link ever issued, spent ones included: a usage measure. */
+  oneTimeLinkCount: number
+  /** Links still redeemable, i.e. anonymous read grants open on the vault now. */
+  activeOneTimeLinkCount: number
 }

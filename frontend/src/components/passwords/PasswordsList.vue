@@ -6,6 +6,7 @@ import type { Password } from '@/domain/password/Password'
 import FolderCard from './FolderCard.vue'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
+import OneTimeLinkModal from '@/components/modals/OneTimeLinkModal.vue'
 import PasswordHistoryModal from '@/components/modals/PasswordHistoryModal.vue'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useGroupsStore } from '@/stores/groups'
@@ -65,9 +66,11 @@ const {
 const showCreateModal = ref(false)
 const showShareModal = ref(false)
 const showHistoryModal = ref(false)
+const showOneTimeLinkModal = ref(false)
 const defaultCreateGroupId = ref<string | null>(null)
 const editingPassword = ref<Password | null>(null)
 const sharingPassword = ref<Password | null>(null)
+const oneTimeLinkPassword = ref<Password | null>(null)
 const historyPassword = ref<Password | null>(null)
 const isProcessingCreateGroupQuery = ref(false)
 
@@ -114,6 +117,11 @@ const handleShare = (password: Password) => {
 const handleHistory = (password: Password) => {
   historyPassword.value = password
   showHistoryModal.value = true
+}
+
+const handleOneTimeLink = (password: Password) => {
+  oneTimeLinkPassword.value = password
+  showOneTimeLinkModal.value = true
 }
 
 const refreshPasswords = () => passwordsStore.refresh()
@@ -243,6 +251,7 @@ onMounted(async () => {
               @edit="handleEdit"
               @share="handleShare"
               @history="handleHistory"
+              @oneTimeLink="handleOneTimeLink"
               @deleted="refreshPasswords"
             />
             <p v-if="selectedGroupSection.folders.length === 0" class="text-sm text-muted-color">
@@ -269,5 +278,7 @@ onMounted(async () => {
     />
 
     <PasswordHistoryModal v-model:visible="showHistoryModal" :password="historyPassword" />
+
+    <OneTimeLinkModal v-model:visible="showOneTimeLinkModal" :password="oneTimeLinkPassword" />
   </div>
 </template>

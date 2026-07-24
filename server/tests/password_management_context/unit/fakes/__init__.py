@@ -1,4 +1,5 @@
 from .fake_group_access_gateway import FakeGroupAccessGateway
+from .fake_one_time_link_repository import FakeOneTimeLinkRepository
 from .fake_password_encryption_gateway import FakePasswordEncryptionGateway
 from .fake_password_event_repository import FakePasswordEventRepository
 from .fake_password_permissions_repository import FakePasswordPermissionsRepository
@@ -14,4 +15,5 @@ __all__ = [
     "FakePasswordEventRepository",
     "FakePasswordVaultAccessGateway",
     "FakeUserInfoGateway",
+    "FakeOneTimeLinkRepository",
 ]

@@ -32,6 +32,8 @@ export class BackendStatisticsGateway implements StatisticsGateway {
       userCount: iam.data.user_count,
       groupCount: iam.data.group_count,
       passwordCount: passwords.data.password_count,
+      oneTimeLinkCount: passwords.data.one_time_link_count,
+      activeOneTimeLinkCount: passwords.data.active_one_time_link_count,
     }
   }
 }

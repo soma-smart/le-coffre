@@ -127,6 +127,19 @@
       </div>
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+        :class="isMyLinksActive ? 'bg-primary/10' : ''"
+        @click="goToMyLinks()"
+      >
+        <span
+          class="pi pi-link transition-colors"
+          :class="isMyLinksActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
+        />
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isMyLinksActive }"
+          >My links</span
+        >
+      </div>
+      <div
+        class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
         :class="isProfileActive ? 'bg-primary/10' : ''"
         @click="goToProfile()"
       >
@@ -192,6 +205,25 @@
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminUsersActive }"
               >Users</span
+            >
+          </div>
+          <div
+            class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminOneTimeLinksActive ? 'bg-primary/10' : ''"
+            @click="goToAdminOneTimeLinks()"
+          >
+            <span
+              class="pi pi-link transition-colors text-sm"
+              :class="
+                isAdminOneTimeLinksActive
+                  ? 'text-primary'
+                  : 'text-muted-color group-hover:text-primary'
+              "
+            />
+            <span
+              class="ml-2 transition-colors text-sm"
+              :class="{ 'font-semibold': isAdminOneTimeLinksActive }"
+              >One-time links</span
             >
           </div>
           <div
@@ -277,6 +309,8 @@ const isProfileActive = computed(() => route.path === '/profile')
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
 const isAdminConfigActive = computed(() => route.path === '/admin/config')
 const isAdminUsersActive = computed(() => route.path === '/admin/users')
+const isAdminOneTimeLinksActive = computed(() => route.path === '/admin/one-time-links')
+const isMyLinksActive = computed(() => route.path === '/my-links')
 const isAdminStatisticsActive = computed(() => route.path === '/admin/statistics')
 const selectedGroupSlug = computed(() => (route.params.groupSlug as string | undefined) ?? null)
 const selectedGroupId = computed(() => findGroupIdBySlug(groups.value, selectedGroupSlug.value))
@@ -415,6 +449,14 @@ const goToAdminConfig = () => {
 
 const goToAdminUsers = () => {
   router.push('/admin/users')
+}
+
+const goToAdminOneTimeLinks = () => {
+  router.push('/admin/one-time-links')
+}
+
+const goToMyLinks = () => {
+  router.push('/my-links')
 }
 
 const goToAdminStatistics = () => {

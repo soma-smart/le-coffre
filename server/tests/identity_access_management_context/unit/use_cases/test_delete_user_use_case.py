@@ -24,6 +24,7 @@ def use_case(
     group_member_repository: FakeGroupMemberRepository,
     domain_event_publisher: FakeDomainEventPublisher,
     user_event_repository,
+    one_time_link_revocation_gateway,
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -31,6 +32,7 @@ def use_case(
         group_member_repository,
         domain_event_publisher,
         user_event_repository,
+        one_time_link_revocation_gateway,
     )
 
 

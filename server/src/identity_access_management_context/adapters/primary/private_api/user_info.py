@@ -41,6 +41,22 @@ class UserInfoApi:
         except UserNotFoundError:
             return None
 
+    def get_user_display_name(self, user_id: UUID) -> str | None:
+        """Get the display name for a user.
+
+        Args:
+            user_id: The ID of the user
+
+        Returns:
+            The user's display name, or None if user not found
+        """
+        try:
+            command = GetUserCommand(user_id=user_id)
+            user = self._get_user_use_case.execute(command)
+            return user.name
+        except UserNotFoundError:
+            return None
+
     def get_group_name(self, group_id: UUID) -> str | None:
         """Get name for a group.
 

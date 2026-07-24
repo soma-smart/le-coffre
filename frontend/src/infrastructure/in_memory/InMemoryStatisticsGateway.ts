@@ -7,7 +7,13 @@ import type { AdminStatistics } from '@/domain/statistics/Statistics'
  * Mirrors the fake pattern used by InMemoryCsrfGateway.
  */
 export class InMemoryStatisticsGateway implements StatisticsGateway {
-  private next: AdminStatistics = { userCount: 0, groupCount: 0, passwordCount: 0 }
+  private next: AdminStatistics = {
+    userCount: 0,
+    groupCount: 0,
+    passwordCount: 0,
+    oneTimeLinkCount: 0,
+    activeOneTimeLinkCount: 0,
+  }
   private nextError: Error | null = null
 
   seed(statistics: AdminStatistics): this {

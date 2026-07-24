@@ -8,6 +8,7 @@ from identity_access_management_context.adapters.primary.private_api import (
 )
 from identity_access_management_context.adapters.secondary.private_api import (
     PrivateApiGroupUsageGateway,
+    PrivateApiOneTimeLinkRevocationGateway,
 )
 from identity_access_management_context.adapters.secondary.sql import (
     SqlAuthSessionRepository,
@@ -28,6 +29,7 @@ from identity_access_management_context.application.gateways import (
     GroupRepository,
     GroupUsageGateway,
     LoginLockoutGateway,
+    OneTimeLinkRevocationGateway,
     PasswordHashingGateway,
     RevokedTokenRepository,
     SsoConfigurationRepository,
@@ -67,12 +69,17 @@ from identity_access_management_context.application.use_cases import (
     UpdateUserPasswordUseCase,
     UpdateUserUseCase,
 )
-from password_management_context.adapters.primary.private_api import GroupUsageApi
+from password_management_context.adapters.primary.private_api import (
+    GroupUsageApi,
+    OneTimeLinkRevocationApi,
+)
 from password_management_context.adapters.secondary import (
+    SqlOneTimeLinkRepository,
     SqlPasswordPermissionsRepository,
 )
 from password_management_context.application.use_cases import IsGroupUsedUseCase
 from shared_kernel.adapters.primary.dependencies import get_session
+from shared_kernel.adapters.secondary.utc_time_gateway import UtcTimeGateway
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 
@@ -125,6 +132,14 @@ def get_group_usage_gateway(
     group_usage_api = GroupUsageApi(is_group_used_use_case)
     # Create and return the gateway
     return PrivateApiGroupUsageGateway(group_usage_api)
+
+
+def get_one_time_link_revocation_gateway(
+    session: Session = Depends(get_session),
+) -> OneTimeLinkRevocationGateway:
+    one_time_link_repository = SqlOneTimeLinkRepository(session)
+    revocation_api = OneTimeLinkRevocationApi(one_time_link_repository, UtcTimeGateway())
+    return PrivateApiOneTimeLinkRevocationGateway(revocation_api)
 
 
 def get_user_repository(session: Session = Depends(get_session)) -> UserRepository:
@@ -194,6 +209,7 @@ def get_delete_user_usecase(
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
+    one_time_link_revocation_gateway: OneTimeLinkRevocationGateway = Depends(get_one_time_link_revocation_gateway),
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -201,6 +217,7 @@ def get_delete_user_usecase(
         group_member_repository,
         event_publisher,
         user_event_repository,
+        one_time_link_revocation_gateway,
     )
 
 
