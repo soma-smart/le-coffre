@@ -13,7 +13,7 @@ onMounted(() => {
   // Clear user store when arriving at login page
   userStore.clearUser()
 
-  if (route.query.reason === 'no_token') {
+  if (route.query.reason === 'no_token' || route.query.reason === 'session_expired') {
     toast.add({
       severity: 'warn',
       summary: 'Session Expired',

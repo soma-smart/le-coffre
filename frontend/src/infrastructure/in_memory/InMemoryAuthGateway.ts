@@ -66,6 +66,10 @@ export class InMemoryAuthGateway implements AuthGateway {
     // no-op in tests; real implementation relies on cookies
   }
 
+  async logout(): Promise<void> {
+    // no-op in tests; real implementation relies on cookies
+  }
+
   async configureSsoProvider(_input: ConfigureSsoInput): Promise<void> {
     void _input
     this.ssoConfigured = true

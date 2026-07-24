@@ -14,6 +14,7 @@ from .get_user_me_command import GetUserMeCommand
 from .is_sso_config_set_command import IsSsoConfigSetCommand
 from .list_groups_command import ListGroupsCommand
 from .list_user_command import ListUserCommand
+from .logout_command import LogoutCommand
 from .promote_admin_command import PromoteAdminCommand
 from .refresh_access_token_command import RefreshAccessTokenCommand
 from .register_admin_with_password_command import RegisterAdminWithPasswordCommand
@@ -31,6 +32,7 @@ __all__ = [
     "DeleteUserCommand",
     "GetUserCommand",
     "ListUserCommand",
+    "LogoutCommand",
     "ValidateUserTokenCommand",
     "AdminLoginCommand",
     "RegisterAdminWithPasswordCommand",

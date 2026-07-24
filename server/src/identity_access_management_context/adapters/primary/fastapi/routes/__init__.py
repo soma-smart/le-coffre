@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import refresh_access_token_routes
+from . import auth_logout_routes, refresh_access_token_routes
 from .admin import (
     admin_login_route,
     admin_statistic_route,
@@ -59,6 +59,7 @@ def get_authentication_router():
     authentication_router.include_router(sso_callback_route.router)
     authentication_router.include_router(is_sso_config_set_route.router)
     authentication_router.include_router(refresh_access_token_routes.router)
+    authentication_router.include_router(auth_logout_routes.router)
 
     return authentication_router
 

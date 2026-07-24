@@ -463,9 +463,9 @@ const goToAdminStatistics = () => {
   router.push('/admin/statistics')
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   // Clear all authentication data (cookies, localStorage, store)
-  logout()
+  await logout()
 
   // Navigate to login page
   router.push('/login').then(() => {

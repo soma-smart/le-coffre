@@ -3,6 +3,7 @@ import {
   configureSsoProviderAuthSsoConfigurePost,
   getSsoUrlAuthSsoUrlGet,
   isSsoConfigSetAuthSsoIsConfiguredGet,
+  logoutAuthLogoutPost,
   refreshAccessTokenAuthRefreshTokenPost,
   registerAdminAuthRegisterAdminPost,
   ssoCallbackAuthSsoCallbackGet,
@@ -56,6 +57,11 @@ export class BackendAuthGateway implements AuthGateway {
 
   async refreshAccessToken(): Promise<void> {
     const response = await refreshAccessTokenAuthRefreshTokenPost({ credentials: 'include' })
+    this.throwIfError(response.error)
+  }
+
+  async logout(): Promise<void> {
+    const response = await logoutAuthLogoutPost({ credentials: 'include' })
     this.throwIfError(response.error)
   }
 

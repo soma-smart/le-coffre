@@ -1,8 +1,13 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
+from config import (
+    get_cookie_secure_setting,
+    get_jwt_access_token_expiration_seconds,
+    get_jwt_refresh_token_expiration_seconds,
+)
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_update_user_password_usecase,
 )
@@ -35,6 +40,7 @@ class UpdateUserPasswordRequest(BaseModel):
 )
 def update_user_password(
     request: UpdateUserPasswordRequest,
+    response: Response,
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: UpdateUserPasswordUseCase = Depends(get_update_user_password_usecase),
 ):
@@ -57,7 +63,33 @@ def update_user_password(
             old_password=request.old_password,
             new_password=request.new_password,
         )
-        usecase.execute(command)
+        result = usecase.execute(command)
+
+        is_secure = get_cookie_secure_setting()
+        response.set_cookie(
+            key="access_token",
+            value=result.access_token,
+            httponly=True,
+            secure=is_secure,
+            samesite="strict",
+            max_age=get_jwt_access_token_expiration_seconds(),
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=result.refresh_token,
+            httponly=True,
+            secure=is_secure,
+            samesite="strict",
+            max_age=get_jwt_refresh_token_expiration_seconds(),
+        )
+        response.set_cookie(
+            key="logged_in",
+            value="true",
+            httponly=False,
+            secure=is_secure,
+            samesite="strict",
+            max_age=get_jwt_access_token_expiration_seconds(),
+        )
 
     except InvalidCredentialsException as e:
         raise HTTPException(status_code=401, detail=str(e)) from e

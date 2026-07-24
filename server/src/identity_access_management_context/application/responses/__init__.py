@@ -6,12 +6,14 @@ from .is_sso_config_set_response import IsSsoConfigSetResponse
 from .list_group_response import GroupResponse, ListGroupResponse
 from .refresh_access_token_response import RefreshAccessTokenResponse
 from .sso_login_response import SsoLoginResponse
+from .update_user_password_response import UpdateUserPasswordResponse
 from .validate_user_token_response import ValidateUserTokenResponse
 
 __all__ = [
     "AdminLoginResponse",
     "ValidateUserTokenResponse",
     "SsoLoginResponse",
+    "UpdateUserPasswordResponse",
     "RefreshAccessTokenResponse",
     "ListGroupResponse",
     "GroupResponse",

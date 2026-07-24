@@ -5,6 +5,7 @@ from identity_access_management_context.application.commands.sso_login_command i
     SsoLoginCommand,
 )
 from identity_access_management_context.application.gateways import (
+    AuthSessionRepository,
     GroupMemberRepository,
     GroupRepository,
     PasswordHashingGateway,
@@ -46,6 +47,7 @@ class SsoLoginUseCase(TracedUseCase):
         sso_gateway: SsoGateway,
         sso_user_repository: SsoUserRepository,
         user_repository: UserRepository,
+        auth_session_repository: AuthSessionRepository,
         password_hashing_gateway: PasswordHashingGateway,
         token_gateway: TokenGateway,
         time_provider: TimeGateway,
@@ -59,6 +61,7 @@ class SsoLoginUseCase(TracedUseCase):
         self._sso_gateway = sso_gateway
         self._sso_user_repository = sso_user_repository
         self._user_repository = user_repository
+        self._auth_session_repository = auth_session_repository
         self._password_hashing_gateway = password_hashing_gateway
         self._token_gateway = token_gateway
         self._time_provider = time_provider
@@ -149,6 +152,12 @@ class SsoLoginUseCase(TracedUseCase):
             email=email,
             roles=roles,
         )
+        if refresh_token.jti is not None:
+            self._auth_session_repository.create_session(
+                user_id=user_id,
+                refresh_token_jti=refresh_token.jti,
+                created_at=self._time_provider.get_current_time(),
+            )
 
         event = SsoLoginEvent(user_id=user_id, email=email, is_new_user=is_new_user)
         self._event_publisher.publish(event)
@@ -162,7 +171,7 @@ class SsoLoginUseCase(TracedUseCase):
 
         return SsoLoginResponse(
             jwt_token=token.value,
-            refresh_token=refresh_token,
+            refresh_token=refresh_token.value,
             user_id=user_id,
             email=email,
             display_name=display_name,

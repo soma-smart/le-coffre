@@ -25,6 +25,7 @@ export interface SsoCallbackInput {
 export interface AuthGateway {
   login(input: LoginInput): Promise<void>
   registerAdmin(input: RegisterAdminInput): Promise<string>
+  logout(): Promise<void>
   refreshAccessToken(): Promise<void>
   configureSsoProvider(input: ConfigureSsoInput): Promise<void>
   getSsoUrl(): Promise<string>

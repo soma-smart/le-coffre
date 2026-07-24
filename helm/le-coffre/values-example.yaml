@@ -88,7 +88,12 @@ config:
     algorithm: "HS256"
     # Access token lifetime in minutes.
     accessTokenExpirationMinutes: 15
-    refreshTokenExpirationHours: 168
+    # Keep aligned with sessionMaxLifetimeHours (a refresh token can never be
+    # used past its session's absolute lifetime).
+    refreshTokenExpirationHours: 4
+    # Absolute session lifetime: forces a re-login once a session is this old,
+    # regardless of activity.
+    sessionMaxLifetimeHours: 4
     # JWT_SECRET_KEY is managed via an external Kubernetes secret.
     # Generate and create before deploying:
     #

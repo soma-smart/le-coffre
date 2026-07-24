@@ -9,6 +9,7 @@ from tests.shared_kernel.fakes import FakeTimeGateway
 
 from .fakes import (
     FakeAdminEventRepository,
+    FakeAuthSessionRepository,
     FakeGroupEventRepository,
     FakeGroupMemberRepository,
     FakeGroupRepository,
@@ -16,6 +17,7 @@ from .fakes import (
     FakeLoginLockoutGateway,
     FakeOneTimeLinkRevocationGateway,
     FakePasswordHashingGateway,
+    FakeRevokedTokenRepository,
     FakeSsoConfigurationRepository,
     FakeSsoEncryptionGateway,
     FakeSsoEventRepository,
@@ -51,6 +53,11 @@ def login_lockout_gateway():
 @pytest.fixture
 def token_gateway():
     return FakeTokenGateway()
+
+
+@pytest.fixture
+def revoked_token_repository():
+    return FakeRevokedTokenRepository()
 
 
 @pytest.fixture
@@ -116,6 +123,11 @@ def sso_event_repository():
 @pytest.fixture
 def admin_event_repository():
     return FakeAdminEventRepository()
+
+
+@pytest.fixture
+def auth_session_repository():
+    return FakeAuthSessionRepository()
 
 
 @pytest.fixture

@@ -46,6 +46,16 @@ def get_jwt_refresh_token_expiration_seconds() -> int:
     return int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRATION_HOURS", "4")) * 3600
 
 
+def get_session_max_lifetime_seconds() -> int:
+    """Get the absolute session lifetime in seconds. Default is 14400 seconds (4 hours).
+
+    Unlike the refresh token expiration (a sliding window renewed on each
+    rotation), this caps the total age of a session: once exceeded, refresh is
+    refused and the user must log in again, no matter how active they were.
+    """
+    return int(os.environ.get("SESSION_MAX_LIFETIME_HOURS", "4")) * 3600
+
+
 def is_production() -> bool:
     """Check if running in production environment."""
     return os.environ.get("ENVIRONMENT", "development") == "production"

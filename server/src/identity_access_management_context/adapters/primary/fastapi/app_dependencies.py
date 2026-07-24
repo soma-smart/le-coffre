@@ -2,6 +2,7 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
+from config import get_session_max_lifetime_seconds
 from identity_access_management_context.adapters.primary.private_api import (
     UserInfoApi,
 )
@@ -10,9 +11,11 @@ from identity_access_management_context.adapters.secondary.private_api import (
     PrivateApiOneTimeLinkRevocationGateway,
 )
 from identity_access_management_context.adapters.secondary.sql import (
+    SqlAuthSessionRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlIamEventRepository,
+    SqlRevokedTokenRepository,
     SqlSsoConfigurationRepository,
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
@@ -20,6 +23,7 @@ from identity_access_management_context.adapters.secondary.sql import (
 )
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
+    AuthSessionRepository,
     GroupEventRepository,
     GroupMemberRepository,
     GroupRepository,
@@ -27,6 +31,7 @@ from identity_access_management_context.application.gateways import (
     LoginLockoutGateway,
     OneTimeLinkRevocationGateway,
     PasswordHashingGateway,
+    RevokedTokenRepository,
     SsoConfigurationRepository,
     SsoEncryptionGateway,
     SsoEventRepository,
@@ -53,6 +58,7 @@ from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
     ListGroupsUseCase,
     ListUserUseCase,
+    LogoutUseCase,
     PasswordLoginUseCase,
     PromoteAdminUseCase,
     RefreshAccessTokenUseCase,
@@ -146,6 +152,18 @@ def get_user_password_repository(
     return SqlUserPasswordRepository(session)
 
 
+def get_revoked_token_repository(
+    session: Session = Depends(get_session),
+) -> RevokedTokenRepository:
+    return SqlRevokedTokenRepository(session)
+
+
+def get_auth_session_repository(
+    session: Session = Depends(get_session),
+) -> AuthSessionRepository:
+    return SqlAuthSessionRepository(session)
+
+
 def get_sso_user_repository(
     session: Session = Depends(get_session),
 ) -> SsoUserRepository:
@@ -222,10 +240,18 @@ def get_update_user_usecase(
 def get_update_user_password_usecase(
     user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
+    user_repository: UserRepository = Depends(get_user_repository),
+    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
+    token_gateway: TokenGateway = Depends(get_token_gateway),
+    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
         password_hashing_gateway,
+        user_repository,
+        auth_session_repository,
+        token_gateway,
+        time_provider,
     )
 
 
@@ -270,6 +296,7 @@ def get_login_lockout_gateway(request: Request) -> LoginLockoutGateway:
 def get_password_login_usecase(
     user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
     user_repository: UserRepository = Depends(get_user_repository),
+    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
@@ -280,6 +307,7 @@ def get_password_login_usecase(
     return PasswordLoginUseCase(
         user_password_repository,
         user_repository,
+        auth_session_repository,
         password_hashing_gateway,
         token_gateway,
         time_provider,
@@ -351,6 +379,7 @@ def get_sso_login_usecase(
     sso_gateway: SsoGateway = Depends(get_sso_gateway),
     sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
     user_repository: UserRepository = Depends(get_user_repository),
+    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
@@ -365,6 +394,7 @@ def get_sso_login_usecase(
         sso_gateway,
         sso_user_repository,
         user_repository,
+        auth_session_repository,
         password_hashing_gateway,
         token_gateway,
         time_provider,
@@ -380,11 +410,30 @@ def get_sso_login_usecase(
 def get_refresh_access_token_usecase(
     token_gateway: TokenGateway = Depends(get_token_gateway),
     user_repository: UserRepository = Depends(get_user_repository),
+    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
+    revoked_token_repository: RevokedTokenRepository = Depends(get_revoked_token_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RefreshAccessTokenUseCase(
         token_gateway,
         user_repository,
+        auth_session_repository,
+        revoked_token_repository,
+        time_provider,
+        get_session_max_lifetime_seconds(),
+    )
+
+
+def get_logout_usecase(
+    token_gateway: TokenGateway = Depends(get_token_gateway),
+    revoked_token_repository: RevokedTokenRepository = Depends(get_revoked_token_repository),
+    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return LogoutUseCase(
+        token_gateway,
+        revoked_token_repository,
+        auth_session_repository,
         time_provider,
     )
 

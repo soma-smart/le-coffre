@@ -1,3 +1,4 @@
+from .auth_session import AuthSession
 from .group import Group
 from .group_member import GroupMember
 from .personal_group import PersonalGroup
@@ -7,6 +8,7 @@ from .user import User
 from .user_password import UserPassword
 
 __all__ = [
+    "AuthSession",
     "User",
     "SsoUser",
     "SsoConfiguration",

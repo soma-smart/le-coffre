@@ -354,7 +354,7 @@ def test_complete_user_workflow(
     )
     assert update_response.status_code == 204, f"Failed to update password: {update_response.text}"
 
-    # Step 8.3: Updating with the now-wrong old password returns 401
+    # Step 8.3: A follow-up update with the now-invalid old password is rejected.
     wrong_old_response = authenticated_admin_client.put(
         "/api/users/me/password",
         json={"old_password": old_password, "new_password": "AnotherPassword456!"},
@@ -409,11 +409,11 @@ def test_complete_user_workflow(
     # PHASE 9: ADMIN STATISTICS (USERS AND GROUPS)
     # =========================================================================
 
-    # Refresh CSRF token after Phase 8 password change operations
-    authenticated_admin_client.refresh_csrf_token()
+    # Use the re-authenticated session after password rotation.
+    final_client.refresh_csrf_token()
 
     # Step 9.1: Admin gets statistics - response contains user_count and group_count
-    stats_response = authenticated_admin_client.get("/api/iam/statistics")
+    stats_response = final_client.get("/api/iam/statistics")
     assert stats_response.status_code == 200
     stats_data = stats_response.json()
     assert "user_count" in stats_data
@@ -425,7 +425,7 @@ def test_complete_user_workflow(
 
     # Step 9.2: Creating a new user increments user_count by 1
     # Personal group created for the new user must NOT be counted in group_count
-    create_stats_user_response = authenticated_admin_client.post(
+    create_stats_user_response = final_client.post(
         "/api/users/",
         json={
             "username": "statsuser",
@@ -435,16 +435,16 @@ def test_complete_user_workflow(
         },
     )
     assert create_stats_user_response.status_code == 201
-    stats_after_user_response = authenticated_admin_client.get("/api/iam/statistics")
+    stats_after_user_response = final_client.get("/api/iam/statistics")
     assert stats_after_user_response.status_code == 200
     stats_after_user = stats_after_user_response.json()
     assert stats_after_user["user_count"] == initial_user_count + 1
     assert stats_after_user["group_count"] == initial_group_count  # personal group not counted
 
     # Step 9.3: Creating a non-personal group increments group_count by 1
-    create_stats_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Stats Group"})
+    create_stats_group_response = final_client.post("/api/groups/", json={"name": "Stats Group"})
     assert create_stats_group_response.status_code == 201
-    stats_after_group_response = authenticated_admin_client.get("/api/iam/statistics")
+    stats_after_group_response = final_client.get("/api/iam/statistics")
     assert stats_after_group_response.status_code == 200
     assert stats_after_group_response.json()["user_count"] == initial_user_count + 1
     assert stats_after_group_response.json()["group_count"] == initial_group_count + 1
@@ -473,7 +473,7 @@ def test_complete_user_workflow(
     )
     assert self_update_response.status_code == 200
 
-    bob_after_self_update = authenticated_admin_client.get(f"/api/users/{bob_id}")
+    bob_after_self_update = final_client.get(f"/api/users/{bob_id}")
     assert bob_after_self_update.status_code == 200
     assert bob_after_self_update.json()["username"] == "bob_updated"
 
@@ -487,19 +487,19 @@ def test_complete_user_workflow(
     )
     assert forbidden_update_response.status_code == 403
 
-    carol_unchanged = authenticated_admin_client.get(f"/api/users/{carol_id}")
+    carol_unchanged = final_client.get(f"/api/users/{carol_id}")
     assert carol_unchanged.status_code == 200
     assert carol_unchanged.json()["username"] == "carol"
 
     # Step 10.3: An admin can update another user
-    authenticated_admin_client.refresh_csrf_token()
-    admin_update_response = authenticated_admin_client.put(
+    final_client.refresh_csrf_token()
+    admin_update_response = final_client.put(
         f"/api/users/{carol_id}",
         json={"username": "carol_by_admin", "email": "carol_by_admin@example.com", "name": "Carol By Admin"},
     )
     assert admin_update_response.status_code == 200
 
-    carol_after_admin_update = authenticated_admin_client.get(f"/api/users/{carol_id}")
+    carol_after_admin_update = final_client.get(f"/api/users/{carol_id}")
     assert carol_after_admin_update.status_code == 200
     assert carol_after_admin_update.json()["username"] == "carol_by_admin"
 
@@ -516,7 +516,7 @@ def test_complete_user_workflow(
     # =========================================================================
 
     # Step 11.1: An admin can list all users
-    admin_list_response = authenticated_admin_client.get("/api/users/")
+    admin_list_response = final_client.get("/api/users/")
     assert admin_list_response.status_code == 200
     assert isinstance(admin_list_response.json(), list)
     assert len(admin_list_response.json()) >= 1

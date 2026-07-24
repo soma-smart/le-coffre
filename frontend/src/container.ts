@@ -13,6 +13,7 @@ import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
 import { HandleSsoCallbackUseCase } from '@/application/auth/HandleSsoCallback'
 import { IsSsoConfiguredUseCase } from '@/application/auth/IsSsoConfigured'
 import { LoginWithPasswordUseCase } from '@/application/auth/LoginWithPassword'
+import { LogoutUseCase } from '@/application/auth/Logout'
 import { RefreshAccessTokenUseCase } from '@/application/auth/RefreshAccessToken'
 import { RegisterAdminUseCase } from '@/application/auth/RegisterAdmin'
 import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
@@ -126,6 +127,7 @@ export interface Container {
   auth: {
     login: LoginWithPasswordUseCase
     registerAdmin: RegisterAdminUseCase
+    logout: LogoutUseCase
     refreshAccessToken: RefreshAccessTokenUseCase
     configureSso: ConfigureSsoProviderUseCase
     getSsoUrl: GetSsoUrlUseCase
@@ -200,6 +202,7 @@ export function buildContainer(ports: Ports): Container {
     auth: {
       login: new LoginWithPasswordUseCase(ports.authGateway),
       registerAdmin: new RegisterAdminUseCase(ports.authGateway),
+      logout: new LogoutUseCase(ports.authGateway),
       refreshAccessToken: new RefreshAccessTokenUseCase(ports.authGateway),
       configureSso: new ConfigureSsoProviderUseCase(ports.authGateway),
       getSsoUrl: new GetSsoUrlUseCase(ports.authGateway),
