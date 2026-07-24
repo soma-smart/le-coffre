@@ -32,7 +32,8 @@ uv run fastapi dev src/main.py --host 0.0.0.0
 | `JWT_SECRET_KEY` | **Yes (prod)** | Secret key for signing JWTs (≥ 32 chars) | Random (dev only) |
 | `JWT_ALGORITHM` | No | JWT signing algorithm | `HS256` |
 | `JWT_ACCESS_TOKEN_EXPIRATION_MINUTES` | No | Access token lifetime (minutes) | `5` |
-| `JWT_REFRESH_TOKEN_EXPIRATION_HOURS` | No | Refresh token lifetime (hours) | `4` |
+| `JWT_REFRESH_TOKEN_EXPIRATION_HOURS` | No | Refresh token lifetime (hours), sliding with each rotation — keep aligned with `SESSION_MAX_LIFETIME_HOURS` | `4` |
+| `SESSION_MAX_LIFETIME_HOURS` | No | Absolute session lifetime (hours): forces a re-login once a session is this old, regardless of activity | `4` |
 | `ENVIRONMENT` | No | Set to `production` to enable secure cookies and production settings | `development` |
 | `RATE_LIMIT_ENABLED` | No | Enable/disable rate limiting | `true` |
 | `RATE_LIMIT_WINDOW_SECONDS` | No | Sliding window duration (seconds) | `60` |

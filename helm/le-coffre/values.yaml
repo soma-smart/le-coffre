@@ -136,7 +136,13 @@ config:
   jwt:
     algorithm: "HS256"
     accessTokenExpirationMinutes: 15
-    refreshTokenExpirationHours: 168
+    # Keep aligned with sessionMaxLifetimeHours: a refresh token can never be
+    # used past its session's absolute lifetime, so a longer value only leaves
+    # longer-lived signed JWTs around (and RevokedToken rows kept until exp).
+    refreshTokenExpirationHours: 4
+    # Absolute session lifetime: forces a re-login once a session is this old,
+    # regardless of activity (refreshTokenExpirationHours slides with each use).
+    sessionMaxLifetimeHours: 4
     # Option 1 (recommended): provide an external secret created before deploying.
     #   kubectl create secret generic le-coffre \
     #     --from-literal=JWT_SECRET_KEY="$(openssl rand -base64 32)" \

@@ -45,10 +45,16 @@ async function attemptTokenRefresh(): Promise<boolean> {
 
   isRefreshing = true
   try {
-    const { error } = await refreshAccessTokenAuthRefreshTokenPost({
-      credentials: 'include', // Sends the HTTP-only refresh_token cookie
-    })
-    const success = !error
+    // Serialize refreshes across tabs with the Web Locks API: two tabs
+    // refreshing concurrently would replay the same rotated token, which the
+    // backend treats as reuse (theft signal) and answers by killing every
+    // session of the user. Holding the lock means the second tab sends the
+    // already-rotated cookie (shared jar) and succeeds. Falls back to the
+    // unserialized behavior where the API is unavailable (e.g. jsdom).
+    const success =
+      typeof navigator !== 'undefined' && navigator.locks
+        ? await navigator.locks.request('token-refresh', () => performTokenRefresh())
+        : await performTokenRefresh()
     notifyTokenRefreshSubscribers(success)
     return success
   } catch {
@@ -57,6 +63,13 @@ async function attemptTokenRefresh(): Promise<boolean> {
   } finally {
     isRefreshing = false
   }
+}
+
+async function performTokenRefresh(): Promise<boolean> {
+  const { error } = await refreshAccessTokenAuthRefreshTokenPost({
+    credentials: 'include', // Sends the HTTP-only refresh_token cookie
+  })
+  return !error
 }
 
 export { attemptTokenRefresh }
@@ -157,7 +170,7 @@ client.interceptors.response.use(async (response: Response, request: Request, op
 
   // Refresh failed — tear down local session state and redirect to login
   if (router.currentRoute.value.path !== '/login') {
-    logout()
+    await logout({ skipServerRequest: true })
     await router.push({
       path: '/login',
       query: { redirect: router.currentRoute.value.fullPath, reason: 'session_expired' },
@@ -209,7 +222,7 @@ client.interceptors.error.use(async (error: unknown, response: Response | undefi
   // 401 responses are normally handled by the response interceptor above
   // (token refresh + redirect). This is a safety net for any that slip through.
   if (response?.status === 401 && router.currentRoute.value.path !== '/login') {
-    logout()
+    await logout({ skipServerRequest: true })
     await router.push({
       path: '/login',
       query: { redirect: router.currentRoute.value.fullPath, reason: 'session_expired' },

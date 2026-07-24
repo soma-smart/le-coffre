@@ -36,6 +36,7 @@ from ..fakes import (
 def use_case(
     user_password_repository: FakeUserPasswordRepository,
     user_repository: FakeUserRepository,
+    auth_session_repository,
     password_hashing_gateway: FakePasswordHashingGateway,
     token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
@@ -46,6 +47,7 @@ def use_case(
     return PasswordLoginUseCase(
         user_password_repository,
         user_repository,
+        auth_session_repository,
         password_hashing_gateway,
         token_gateway,
         time_provider,

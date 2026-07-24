@@ -14,7 +14,7 @@
         "panel": "dedicated",
         "showReuseMessage": false,
         "clear": false
-      },
+      }
     },
     {
       "label": "Start Backend",
@@ -22,7 +22,17 @@
       "command": "cd /app/server && SSO_ALLOW_PRIVATE_NETWORKS=true uv run fastapi dev src/main.py --host 0.0.0.0",
       "dependsOn": ["Start Nginx"],
       "isBackground": true,
-      "problemMatcher": [],
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "a^"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "FastAPI\\s+Starting development server",
+          "endsPattern": "Application startup complete\\."
+        }
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -51,7 +61,24 @@
     {
       "label": "Start All Services",
       "dependsOn": ["Start Nginx", "Start Backend", "Start Frontend"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Regenerate OpenAPI Client",
+      "detail": "Single entrypoint: launch backend task and regenerate frontend client specs.",
+      "type": "shell",
+      "command": "cd /app/frontend && curl -fsS --retry 20 --retry-delay 1 --retry-connrefused http://localhost:8000/api/openapi.json > /dev/null && bun run openapi-ts",
+      "dependsOn": ["Start Backend"],
+      "dependsOrder": "sequence",
       "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false
+      }
     },
     {
       "label": "Run Keycloak (local SSO)",

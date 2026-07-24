@@ -1,4 +1,5 @@
 import json
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import func
@@ -32,6 +33,8 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             email=result.email,
             name=result.name,
             roles=json.loads(result.roles),
+            current_refresh_token_jti=result.current_refresh_token_jti,
+            session_invalid_before=self._normalize_datetime(result.session_invalid_before),
         )
 
     def get_by_email(self, email: str) -> list[User]:
@@ -46,6 +49,8 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
                 email=row.email,
                 name=row.name,
                 roles=json.loads(row.roles),
+                current_refresh_token_jti=row.current_refresh_token_jti,
+                session_invalid_before=self._normalize_datetime(row.session_invalid_before),
             )
             for row in results
         ]
@@ -67,6 +72,8 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
                 email=row.email,
                 name=row.name,
                 roles=json.loads(row.roles),
+                current_refresh_token_jti=row.current_refresh_token_jti,
+                session_invalid_before=self._normalize_datetime(row.session_invalid_before),
             )
             for row in results
         ]
@@ -112,4 +119,13 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             email=result.email,
             name=result.name,
             roles=json.loads(result.roles),
+            current_refresh_token_jti=result.current_refresh_token_jti,
+            session_invalid_before=self._normalize_datetime(result.session_invalid_before),
         )
+
+    def _normalize_datetime(self, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value

@@ -5,6 +5,9 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        # Helm templates are not valid YAML until rendered ({{ ... }} directives);
+        # they are validated by helm lint in the helm-integration CI workflow.
+        exclude: ^helm/.*/templates/
       - id: check-toml
       - id: detect-private-key
       - id: check-added-large-files

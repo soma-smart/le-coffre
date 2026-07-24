@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import type { Pinia } from 'pinia'
@@ -75,7 +75,7 @@ describe('logout()', () => {
     localStorage.removeItem('login')
   })
 
-  it('clears every user-scoped store + cookies + the legacy login key', async () => {
+  it('calls backend logout then clears every user-scoped store + cookies + the legacy login key', async () => {
     // Seed every store with non-default state. If a future contributor adds a
     // new user-scoped store and forgets to wire it into logout(), this spec
     // fails — the regression catcher this PR is supposed to be.
@@ -126,6 +126,7 @@ describe('logout()', () => {
       csrfGateway,
       passwordRepository,
     })
+    const logoutSpy = vi.spyOn(container.auth.logout, 'execute')
 
     const { stores } = mountWithSeededStores(container, pinia)
 
@@ -144,7 +145,9 @@ describe('logout()', () => {
     expect(stores.csrf.csrfToken).toBe('csrf-abc')
     expect(stores.adminPasswordView.adminPasswordViewEnabled).toBe(true)
 
-    logout()
+    await logout()
+
+    expect(logoutSpy).toHaveBeenCalledOnce()
 
     // Every observable user-scoped state ref is back to its initial value.
     expect(stores.user.currentUser).toBeNull()
@@ -168,5 +171,14 @@ describe('logout()', () => {
 
     // Legacy localStorage login key removed.
     expect(localStorage.getItem('login')).toBeNull()
+  })
+
+  it('skips the backend request when explicitly asked', async () => {
+    const { container } = createTestContext()
+    const logoutSpy = vi.spyOn(container.auth.logout, 'execute')
+
+    await logout({ skipServerRequest: true })
+
+    expect(logoutSpy).not.toHaveBeenCalled()
   })
 })

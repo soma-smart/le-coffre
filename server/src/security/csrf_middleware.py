@@ -7,8 +7,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from identity_access_management_context.adapters.secondary.sql import (
+    SqlRevokedTokenRepository,
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
+    SqlUserRepository,
 )
 from identity_access_management_context.application.commands import (
     ValidateUserTokenCommand,
@@ -71,7 +73,8 @@ class CsrfMiddleware(BaseHTTPMiddleware):
 
         # Check authentication first - if no auth token, let auth middleware handle it (returns 401)
         access_token = request.cookies.get("access_token")
-        if not access_token:
+        refresh_token = request.cookies.get("refresh_token")
+        if not access_token and not refresh_token:
             # No authentication, skip CSRF check and let auth middleware return 401
             return await call_next(request)
 
@@ -93,21 +96,54 @@ class CsrfMiddleware(BaseHTTPMiddleware):
             session_maker = request.app.state.session_maker
             csrf_token_manager = request.app.state.csrf_token_manager
             token_gateway = request.app.state.token_gateway
+            time_provider = request.app.state.time_provider
 
             with session_maker() as session:
                 user_password_repository = SqlUserPasswordRepository(session)
+                user_repository = SqlUserRepository(session)
+                revoked_token_repository = SqlRevokedTokenRepository(session)
                 sso_user_repository = SqlSsoUserRepository(session)
 
                 validate_usecase = ValidateUserTokenUseCase(
                     user_password_repository,
                     token_gateway,
                     sso_user_repository,
+                    user_repository,
+                    revoked_token_repository,
+                    time_provider,
                 )
 
-                # Validate JWT and get user ID
-                command = ValidateUserTokenCommand(jwt_token=access_token)
-                response = validate_usecase.execute(command)
-                user_id = response.user_id
+                if access_token:
+                    # Validate access token and derive user ID
+                    command = ValidateUserTokenCommand(jwt_token=access_token)
+                    response = validate_usecase.execute(command)
+                    user_id = response.user_id
+                else:
+                    # Refresh-only sessions still need CSRF enforcement on mutating routes.
+                    #
+                    # COUPLING NOTE: this branch re-implements a subset of refresh
+                    # validation and deliberately does NOT check AuthSession state.
+                    # It is safe only because every invalidation path today either
+                    # revokes the token (logout, rotation) or bumps the user's
+                    # session_invalid_before cutoff (password update, reuse
+                    # containment) — the two things checked below. Any future
+                    # invalidation path that only sets AuthSession.invalidated_at
+                    # must add an active-session check here.
+                    refresh_token_obj = token_gateway.validate_refresh_token(refresh_token)
+                    if refresh_token_obj is None:
+                        raise ValueError("Invalid refresh token")
+
+                    now = time_provider.get_current_time()
+                    if refresh_token_obj.jti and revoked_token_repository.is_revoked(refresh_token_obj.jti, now):
+                        raise ValueError("Revoked refresh token")
+
+                    authenticated_user = user_repository.get_by_id(refresh_token_obj.user_id)
+                    if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
+                        session_cutoff = authenticated_user.session_invalid_before
+                        if refresh_token_obj.issued_at is None or refresh_token_obj.issued_at < session_cutoff:
+                            raise ValueError("Invalidated refresh token")
+
+                    user_id = refresh_token_obj.user_id
 
                 # Validate CSRF token
                 if not csrf_token_manager.validate_token(user_id, csrf_token):

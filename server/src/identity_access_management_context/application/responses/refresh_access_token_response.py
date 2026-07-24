@@ -5,4 +5,5 @@ from uuid import UUID
 @dataclass
 class RefreshAccessTokenResponse:
     access_token: str
+    refresh_token: str
     user_id: UUID

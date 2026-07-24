@@ -10,14 +10,12 @@ import { useContainer } from '@/plugins/container'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 
 const toast = useToast()
-
 const router = useRouter()
 
-const handleLogout = () => {
-  logout()
-  router.push('/login').then(() => {
-    toast.add({ severity: 'success', summary: 'Logged out', detail: 'See you soon!', life: 3000 })
-  })
+const handleLogout = async () => {
+  await logout()
+  await router.push('/login')
+  toast.add({ severity: 'success', summary: 'Logged out', detail: 'See you soon!', life: 3000 })
 }
 
 // Resolve use cases at setup time — inject() has no component context
