@@ -12,6 +12,8 @@ const { statistics } = useContainer()
 const userCount = ref<number | null>(null)
 const groupCount = ref<number | null>(null)
 const passwordCount = ref<number | null>(null)
+const oneTimeLinkCount = ref<number | null>(null)
+const activeOneTimeLinkCount = ref<number | null>(null)
 const loading = ref(false)
 
 const fetchStatistics = async () => {
@@ -21,6 +23,8 @@ const fetchStatistics = async () => {
     userCount.value = stats.userCount
     groupCount.value = stats.groupCount
     passwordCount.value = stats.passwordCount
+    oneTimeLinkCount.value = stats.oneTimeLinkCount
+    activeOneTimeLinkCount.value = stats.activeOneTimeLinkCount
   } catch (error) {
     console.error('Failed to fetch statistics:', error)
     toast.add({
@@ -75,6 +79,26 @@ onMounted(() => {
         <div>
           <div class="text-muted-color text-sm font-medium uppercase tracking-wide">Passwords</div>
           <div class="text-4xl font-bold mt-1">{{ passwordCount ?? '—' }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card rounded-xl border border-surface p-6 flex items-center gap-4 shadow-sm">
+        <div class="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
+          <span class="pi pi-link text-primary text-2xl" />
+        </div>
+        <div>
+          <div class="text-muted-color text-sm font-medium uppercase tracking-wide">
+            Active links
+          </div>
+          <!-- Headline is the live count: it is the only number that says how
+               much anonymous read access is currently open on the vault. The
+               all-time total sits underneath as usage context. -->
+          <div class="text-4xl font-bold mt-1" data-testid="active-one-time-links">
+            {{ activeOneTimeLinkCount ?? '—' }}
+          </div>
+          <div class="text-muted-color text-xs mt-1" data-testid="total-one-time-links">
+            of {{ oneTimeLinkCount ?? '—' }} issued
+          </div>
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -14,6 +14,7 @@ from tests.fakes import FakeDomainEventPublisher
 
 from ..fakes import (
     FakeGroupAccessGateway,
+    FakeOneTimeLinkRepository,
     FakePasswordEventRepository,
     FakePasswordPermissionsRepository,
     FakePasswordRepository,
@@ -27,6 +28,7 @@ def use_case(
     group_access_gateway: FakeGroupAccessGateway,
     domain_event_publisher: FakeDomainEventPublisher,
     password_event_repository: FakePasswordEventRepository,
+    one_time_link_repository: FakeOneTimeLinkRepository,
 ):
     return DeletePasswordUseCase(
         password_repository,
@@ -34,6 +36,7 @@ def use_case(
         group_access_gateway,
         domain_event_publisher,
         password_event_repository,
+        one_time_link_repository,
     )
 
 
@@ -132,3 +135,45 @@ def test_given_password_when_deleting_should_remove_permissions(
 
     assert password_permissions_repository._ownerships == {}
     assert password_permissions_repository._permissions == {}
+
+
+def test_given_password_with_one_time_links_when_deleting_should_drop_them(
+    use_case: DeletePasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    one_time_link_repository: FakeOneTimeLinkRepository,
+):
+    """Links outlive their password otherwise: redemption already answers 404,
+    but the rows would pile up with nothing left able to reach or clean them."""
+    from datetime import UTC, datetime
+
+    from password_management_context.domain.entities import OneTimeLink
+    from password_management_context.domain.value_objects import (
+        OneTimeLinkLifetime,
+        OneTimeLinkToken,
+    )
+
+    password = Password.create(id=uuid4(), name="doomed", encrypted_value="encrypted(x)")
+    group_id = uuid4()
+    owner_id = uuid4()
+    password_repository.save(password)
+    password_permissions_repository.set_owner(group_id, password.id)
+    group_access_gateway.set_group_owner(group_id, owner_id)
+
+    survivor = uuid4()
+    for password_id in (password.id, survivor):
+        one_time_link_repository.add(
+            OneTimeLink.create(
+                password_id=password_id,
+                created_by_user_id=owner_id,
+                token=OneTimeLinkToken.generate(),
+                lifetime=OneTimeLinkLifetime.default(),
+                now=datetime.now(UTC),
+            )
+        )
+
+    use_case.execute(DeletePasswordCommand(password_id=password.id, requester_id=owner_id))
+
+    assert one_time_link_repository.list_for_password(password.id, limit=10) == []
+    assert len(one_time_link_repository.list_for_password(survivor, limit=10)) == 1

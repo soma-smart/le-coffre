@@ -44,6 +44,7 @@ def _create_app(
     vault_max: int = 10,
     sensitive_max: int = 1,
     sensitive_window: int = 60,
+    one_time_link_max: int = 10,
     window: int = 60,
     login_status_code: int = 401,
     token_gateway: _FakeTokenGateway | None = None,
@@ -62,6 +63,7 @@ def _create_app(
     app.state.rate_limit_vault_max_requests = vault_max
     app.state.rate_limit_vault_sensitive_max_requests = sensitive_max
     app.state.rate_limit_vault_sensitive_window_seconds = sensitive_window
+    app.state.rate_limit_one_time_link_max_requests = one_time_link_max
     app.state.rate_limit_window_seconds = window
     app.state.rate_limit_trusted_proxies = trusted_proxies if trusted_proxies is not None else {"127.0.0.1", "::1"}
     app.state.rate_limit_trusted_proxy_hops = trusted_proxy_hops

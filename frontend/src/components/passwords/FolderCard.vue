@@ -26,6 +26,7 @@
           @edit="handleEdit"
           @share="handleShare"
           @history="handleHistory"
+          @oneTimeLink="handleOneTimeLink"
           @deleted="handleDeleted"
         />
       </div>
@@ -55,6 +56,7 @@ const emit = defineEmits<{
   (e: 'edit', password: Password): void
   (e: 'share', password: Password): void
   (e: 'history', password: Password): void
+  (e: 'oneTimeLink', password: Password): void
   (e: 'deleted'): void
 }>()
 
@@ -74,6 +76,10 @@ const handleShare = (password: Password) => {
 
 const handleHistory = (password: Password) => {
   emit('history', password)
+}
+
+const handleOneTimeLink = (password: Password) => {
+  emit('oneTimeLink', password)
 }
 
 const handleDeleted = () => {

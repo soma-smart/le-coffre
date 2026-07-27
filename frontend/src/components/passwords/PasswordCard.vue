@@ -80,6 +80,21 @@
             "
           />
           <Button
+            icon="pi pi-link"
+            text
+            rounded
+            size="small"
+            severity="secondary"
+            aria-label="One-time link"
+            :disabled="!canWriteInContext"
+            v-tooltip.top="
+              !canWriteInContext
+                ? 'Only an owner can create a one-time link'
+                : 'Create a one-time link'
+            "
+            @click="handleOneTimeLink"
+          />
+          <Button
             icon="pi pi-pencil"
             text
             rounded
@@ -187,6 +202,7 @@ const emit = defineEmits<{
   (e: 'edit', password: Password): void
   (e: 'share', password: Password): void
   (e: 'history', password: Password): void
+  (e: 'oneTimeLink', password: Password): void
   (e: 'deleted'): void
 }>()
 
@@ -226,7 +242,7 @@ const canReadInContext = computed(() => {
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('en-GB', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -291,6 +307,10 @@ const handleEdit = () => {
 
 const handleShare = () => {
   emit('share', props.password)
+}
+
+const handleOneTimeLink = () => {
+  emit('oneTimeLink', props.password)
 }
 
 const handleHistory = () => {

@@ -75,6 +75,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ("POST", "/api/vault/setup"): "vault:sensitive",
     }
 
+    # Redeeming a one-time link is anonymous, so it would otherwise share the
+    # generic unauthenticated per-IP bucket with the recipient's normal browsing.
+    # Its own per-IP floor keeps several recipients behind one NAT working while
+    # bounding abuse of the endpoint.
+    ONE_TIME_LINK_CONSUME_OPS: tuple[tuple[str, str], ...] = (("POST", "/api/one-time-links/consume"),)
+
     # Frequently-polled read-only endpoints that every page / pre-login flow hits:
     # exempting them prevents the normal UI from burning through its IP bucket
     # on routine state checks.  Mutating or credential-submitting endpoints
@@ -113,6 +119,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             vault_max = request.app.state.rate_limit_vault_max_requests
             sensitive_max = request.app.state.rate_limit_vault_sensitive_max_requests
             sensitive_window = request.app.state.rate_limit_vault_sensitive_window_seconds
+            one_time_link_max = request.app.state.rate_limit_one_time_link_max_requests
             window = request.app.state.rate_limit_window_seconds
             trusted_proxies = request.app.state.rate_limit_trusted_proxies
             proxy_hops = request.app.state.rate_limit_trusted_proxy_hops
@@ -175,6 +182,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     path,
                 )
                 return self._build_429_response(vault_result)
+
+        # One-time link redemption floor: per-IP, checked before the principal
+        # bucket so a flood here does not also exhaust the caller's generic quota.
+        if (request.method, path) in self.ONE_TIME_LINK_CONSUME_OPS:
+            one_time_link_key = f"ip:{client_ip}:one-time-link"
+            one_time_link_result = rate_limiter.check(one_time_link_key, one_time_link_max, window, now=now)
+            if one_time_link_result.is_limited:
+                logger.warning(
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
+                    one_time_link_key,
+                    one_time_link_max,
+                    request.method,
+                    path,
+                )
+                return self._build_429_response(one_time_link_result)
 
         principal = self._resolve_principal(request, client_ip)
         if principal.kind == "user":

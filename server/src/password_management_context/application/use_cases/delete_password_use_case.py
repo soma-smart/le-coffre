@@ -1,6 +1,7 @@
 from password_management_context.application.commands import DeletePasswordCommand
 from password_management_context.application.gateways import (
     GroupAccessGateway,
+    OneTimeLinkRepository,
     PasswordEventRepository,
     PasswordPermissionsRepository,
     PasswordRepository,
@@ -28,12 +29,14 @@ class DeletePasswordUseCase(TracedUseCase):
         group_access_gateway: GroupAccessGateway,
         event_publisher: DomainEventPublisher,
         password_event_repository: PasswordEventRepository,
+        one_time_link_repository: OneTimeLinkRepository,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
         self.event_publisher = event_publisher
         self.password_event_repository = password_event_repository
+        self.one_time_link_repository = one_time_link_repository
 
     def execute(self, command: DeletePasswordCommand) -> None:
         if not self.password_repository.get_by_id(command.password_id):
@@ -59,6 +62,10 @@ class DeletePasswordUseCase(TracedUseCase):
         self.password_repository.delete(command.password_id)
         # Revoke all permissions and ownerships for this specific password
         self.password_permissions_repository.revoke_all_access_for_password(command.password_id)
+        # Drop any one-time link too. They are already inert once the password is
+        # gone (redemption answers 404), but leaving them behind would accumulate
+        # rows that nothing can ever reach or clean up.
+        self.one_time_link_repository.delete_for_password(command.password_id)
 
         # Store domain event
         event = PasswordDeletedEvent(

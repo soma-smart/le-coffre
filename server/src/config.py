@@ -119,6 +119,18 @@ def get_rate_limit_vault_sensitive_window_seconds() -> int:
     return int(os.environ.get("RATE_LIMIT_VAULT_SENSITIVE_WINDOW_SECONDS", "60"))
 
 
+def get_rate_limit_one_time_link_max_requests() -> int:
+    """Max one-time link redemptions per window, per IP. Default 10.
+
+    ``/one-time-links/consume`` is anonymous, so without a floor of its own it
+    would fall into the shared unauthenticated per-IP bucket and compete with the
+    recipient's ordinary browsing. A dedicated floor keeps redemption working for
+    several recipients behind one NAT while still bounding abuse. The 256-bit
+    token is not enumerable, so this is about limiting noise, not guessing.
+    """
+    return int(os.environ.get("RATE_LIMIT_ONE_TIME_LINK_MAX_REQUESTS", "10"))
+
+
 def get_rate_limit_window_seconds() -> int:
     """Sliding window duration in seconds. Default 60 (1 minute)."""
     return int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))

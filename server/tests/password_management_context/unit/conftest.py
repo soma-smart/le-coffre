@@ -4,6 +4,7 @@ from tests.fakes import FakeDomainEventPublisher
 
 from .fakes import (
     FakeGroupAccessGateway,
+    FakeOneTimeLinkRepository,
     FakePasswordEncryptionGateway,
     FakePasswordEventRepository,
     FakePasswordPermissionsRepository,
@@ -54,3 +55,19 @@ def password_event_storage_service(password_event_repository):
     )
 
     return PasswordEventStorageService(password_event_repository)
+
+
+@pytest.fixture
+def one_time_link_repository():
+    return FakeOneTimeLinkRepository()
+
+
+@pytest.fixture
+def password_ownership_service(password_repository, password_permissions_repository, group_access_gateway):
+    from password_management_context.application.services import PasswordOwnershipService
+
+    return PasswordOwnershipService(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+    )

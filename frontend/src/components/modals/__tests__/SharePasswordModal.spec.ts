@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import type { Pinia } from 'pinia'
@@ -71,8 +71,14 @@ function seedGroups() {
   groupsStore.fetchAllGroups = vi.fn(async () => {})
 }
 
+// PrimeVue's TabList schedules a timer to position its ink bar. Left mounted,
+// that timer fires after the test's DOM is gone and surfaces as an unhandled
+// "HTMLElement is not defined". Tracking the wrappers and unmounting them keeps
+// the teardown clean.
+const mountedWrappers: { unmount: () => void }[] = []
+
 function mountModal(container: Container, pinia: Pinia) {
-  return mount(SharePasswordModal, {
+  const wrapper = mount(SharePasswordModal, {
     props: { visible: true, password: ownerPassword },
     global: {
       plugins: [pinia],
@@ -80,9 +86,15 @@ function mountModal(container: Container, pinia: Pinia) {
       stubs: { Dialog: DialogStub },
     },
   })
+  mountedWrappers.push(wrapper)
+  return wrapper
 }
 
 describe('SharePasswordModal', () => {
+  afterEach(() => {
+    while (mountedWrappers.length) mountedWrappers.pop()?.unmount()
+  })
+
   let repo: InMemoryPasswordRepository
   let pinia: Pinia
   let container: Container

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 import pytest
@@ -8,13 +9,25 @@ from password_management_context.domain.entities import Password
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
+from tests.shared_kernel.fakes import FakeTimeGateway
 
-from ..fakes import FakePasswordRepository
+from ..fakes import FakeOneTimeLinkRepository, FakePasswordRepository
+
+T0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
 @pytest.fixture
-def use_case(password_repository: FakePasswordRepository):
-    return GetPasswordStatisticForAdminUseCase(password_repository)
+def time_gateway():
+    return FakeTimeGateway(fixed_time=T0)
+
+
+@pytest.fixture
+def use_case(
+    password_repository: FakePasswordRepository,
+    one_time_link_repository: FakeOneTimeLinkRepository,
+    time_gateway: FakeTimeGateway,
+):
+    return GetPasswordStatisticForAdminUseCase(password_repository, one_time_link_repository, time_gateway)
 
 
 @pytest.fixture
@@ -79,3 +92,39 @@ def test_given_non_admin_user_when_getting_password_statistics_should_raise_not_
 
     with pytest.raises(NotAdminError):
         use_case.execute(command)
+
+
+def test_given_admin_should_report_total_and_active_one_time_link_counts(
+    use_case: GetPasswordStatisticForAdminUseCase,
+    one_time_link_repository: FakeOneTimeLinkRepository,
+    admin_user: AuthenticatedUser,
+):
+    """The two numbers answer different questions: the total measures usage over
+    time, the active count says how many anonymous read grants are open now."""
+    from uuid import uuid4
+
+    from password_management_context.domain.entities import OneTimeLink
+    from password_management_context.domain.value_objects import (
+        OneTimeLinkLifetime,
+        OneTimeLinkToken,
+    )
+
+    def issue() -> OneTimeLink:
+        link = OneTimeLink.create(
+            password_id=uuid4(),
+            created_by_user_id=uuid4(),
+            token=OneTimeLinkToken.generate(),
+            lifetime=OneTimeLinkLifetime.default(),
+            now=T0,
+        )
+        one_time_link_repository.add(link)
+        return link
+
+    issue()
+    one_time_link_repository.consume(issue().id, T0)
+    one_time_link_repository.revoke(issue().id, T0)
+
+    result = use_case.execute(GetPasswordStatisticForAdminCommand(requesting_user=admin_user))
+
+    assert result.one_time_link_count == 3
+    assert result.active_one_time_link_count == 1

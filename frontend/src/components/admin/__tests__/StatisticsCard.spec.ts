@@ -36,7 +36,13 @@ describe('StatisticsCard', () => {
   })
 
   it('renders the counts fetched through GetAdminStatisticsUseCase', async () => {
-    gateway.seed({ userCount: 12, groupCount: 4, passwordCount: 87 })
+    gateway.seed({
+      userCount: 12,
+      groupCount: 4,
+      passwordCount: 87,
+      oneTimeLinkCount: 9,
+      activeOneTimeLinkCount: 2,
+    })
     const wrapper = mountCard(container, pinia)
     await flushPromises()
 
@@ -44,6 +50,23 @@ describe('StatisticsCard', () => {
     expect(text).toContain('12')
     expect(text).toContain('4')
     expect(text).toContain('87')
+  })
+
+  it('headlines the live one-time link count and keeps the all-time total as context', async () => {
+    gateway.seed({
+      userCount: 12,
+      groupCount: 4,
+      passwordCount: 87,
+      oneTimeLinkCount: 9,
+      activeOneTimeLinkCount: 2,
+    })
+    const wrapper = mountCard(container, pinia)
+    await flushPromises()
+
+    // The headline has to be the live count: a large all-time total next to a
+    // handful of open grants would read as an alarming amount of exposure.
+    expect(wrapper.find('[data-testid="active-one-time-links"]').text()).toBe('2')
+    expect(wrapper.find('[data-testid="total-one-time-links"]').text()).toContain('9')
   })
 
   it('shows an error toast when the fetch fails', async () => {

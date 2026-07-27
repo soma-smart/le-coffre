@@ -1,6 +1,7 @@
 import { BackendAuthGateway } from '@/infrastructure/backend/BackendAuthGateway'
 import { BackendCsrfGateway } from '@/infrastructure/backend/BackendCsrfGateway'
 import { BackendGroupRepository } from '@/infrastructure/backend/BackendGroupRepository'
+import { BackendOneTimeLinkRepository } from '@/infrastructure/backend/BackendOneTimeLinkRepository'
 import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPasswordRepository'
 import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepository'
 import { BackendVaultRepository } from '@/infrastructure/backend/BackendVaultRepository'
@@ -24,5 +25,6 @@ export function installProductionContainer(): Container {
     authGateway: new BackendAuthGateway(),
     preferencesGateway: new LocalStoragePreferencesGateway(),
     statisticsGateway: new BackendStatisticsGateway(),
+    oneTimeLinkRepository: new BackendOneTimeLinkRepository(),
   })
 }
