@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 # Pre-computed bcrypt hash used for constant-time password verification when
 # user is not found. This prevents timing oracles that could enumerate valid
 # emails by measuring response latency differences.
-# Generated with: bcrypt.hashpw(b'dummy', bcrypt.gensalt()).decode()
+# Generated with: bcrypt.hashpw(hashlib.sha256(b"dummy").digest(), bcrypt.gensalt())
+# Note: BcryptHashingGateway pre-hashes all passwords with SHA-256 before bcrypt.
 # See: SECURITY.md#timing-attack-mitigations, AUTH-VULN-09
 DUMMY_PASSWORD_HASH = b"$2b$12$bTnGLyMH2BYn4GtQhHPnVO33O1fpWb35NL/jHzxbboHURr26xGAu6"
 

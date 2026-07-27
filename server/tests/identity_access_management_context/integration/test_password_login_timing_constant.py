@@ -36,7 +36,7 @@ def test_dummy_hash_never_matches_any_password(
 
     # Try various passwords against the dummy hash
     test_passwords = [
-        "dummy",  # The password used to generate the hash
+        "dummy",  # Common guess; the dummy hash is not expected to match any password
         "correct_password",
         "any_random_string",
         "",
@@ -45,7 +45,7 @@ def test_dummy_hash_never_matches_any_password(
 
     for password in test_passwords:
         result = bcrypt_hashing_gateway.verify(password, DUMMY_PASSWORD_HASH)
-        # All should return False (dummy hash never matches)
+        # All should return False (dummy hash never matches any password)
         assert result is False, (
             f"Dummy hash should not match password '{password}', but verify() returned True. "
             "This means the password was used to create the hash, breaking the mitigation."
