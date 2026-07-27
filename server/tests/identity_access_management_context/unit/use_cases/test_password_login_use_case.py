@@ -393,6 +393,65 @@ def test_given_locked_email_when_logging_in_should_not_record_a_new_failed_login
     assert login_lockout_gateway.successful_login_calls == []
 
 
+# ── Constant-time password verification (timing-attack mitigation) ──────
+#
+# When a user is not found, we still call bcrypt.verify() with a pre-computed
+# dummy hash to ensure constant-time response latency (~260ms) regardless of
+# whether the email exists or not. This prevents timing oracles that could
+# enumerate valid emails by measuring response time differences.
+
+
+def test_given_nonexistent_email_should_call_hashing_gateway_verify_with_dummy_hash(
+    use_case: PasswordLoginUseCase,
+    password_hashing_gateway: FakePasswordHashingGateway,
+):
+    """When a user lookup returns None, verify() must still be called
+    (with the dummy hash) to ensure constant-time latency. This test
+    verifies the mitigation for AUTH-VULN-09 (timing oracle on /api/auth/login)."""
+    from identity_access_management_context.application.use_cases.password_login_use_case import (
+        DUMMY_PASSWORD_HASH,
+    )
+
+    command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
+
+    with pytest.raises(AdminNotFoundException):
+        use_case.execute(command)
+
+    # verify() must have been called exactly once with the dummy hash
+    assert len(password_hashing_gateway.verify_calls) == 1
+    actual_password, actual_hash = password_hashing_gateway.verify_calls[0]
+    assert actual_password == "any_password"
+    assert actual_hash == DUMMY_PASSWORD_HASH, (
+        "verify() must be called with DUMMY_PASSWORD_HASH to ensure timing is constant regardless of email existence"
+    )
+
+
+def test_given_nonexistent_email_should_still_raise_admin_not_found(
+    use_case: PasswordLoginUseCase,
+):
+    """Even though verify() is called with a dummy hash, the behavior is identical:
+    we still raise AdminNotFoundException. The dummy hash is never a valid match,
+    so the exception is guaranteed regardless of the verify() result."""
+    command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
+
+    with pytest.raises(AdminNotFoundException):
+        use_case.execute(command)
+
+
+def test_given_nonexistent_email_should_record_failed_login_after_dummy_verify(
+    use_case: PasswordLoginUseCase,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+):
+    """Regression: even with the dummy verify() call, failed-login recording
+    must still happen to support the lockout gateway's brute-force defense."""
+    command = AdminLoginCommand(email="nonexistent@lecoffre.com", password="any_password")
+
+    with pytest.raises(AdminNotFoundException):
+        use_case.execute(command)
+
+    assert login_lockout_gateway.failed_login_calls == ["nonexistent@lecoffre.com"]
+
+
 # ── Lockout-gateway outage resilience ──────────────────────────────────
 #
 # These tests guard against a fail-open brute-force window when the lockout

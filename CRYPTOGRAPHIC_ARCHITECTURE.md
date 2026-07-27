@@ -111,10 +111,96 @@ flowchart TD
     I --> K
     J --> |"Used for decryption"| K
     K --> L
-    
+
     %% Legend
     O(["Sensitive Data"]):::sensitive
     P["Encrypted Data"]:::encrypted
     Q[(Storage)]:::storage
     R(["Memory"]):::memory
 ```
+
+## Authentication Flow & Password Verification
+
+When an administrator logs in via `POST /api/auth/login`, the system verifies
+the provided password against the stored password hash. This flow has special
+timing-attack considerations to prevent email enumeration (see AUTH-VULN-09).
+
+### Standard Password Verification (User Found)
+
+```mermaid
+flowchart TD
+    A["POST /api/auth/login"] --> B["Check Account Lockout"]
+    B -->|Locked| C["Return 401 (gated early)"]
+    B -->|Not locked| D["Lookup User by Email"]
+    D -->|Found| E["bcrypt.verify(password, real_hash)"]
+    E -->|Match| F["Generate JWT Token"]
+    E -->|No match| G["Raise InvalidCredentialsException"]
+    F --> H["Return 401 with JWT"]
+    G --> H
+```
+
+### Constant-Time Verification (User Not Found)
+
+To prevent timing oracles that could enumerate valid emails by measuring
+response latency, the system uses a **dummy hash** when the user is not found.
+
+```mermaid
+flowchart TD
+    classDef constant fill:#ffffcc,stroke:#ff9900
+
+    A["POST /api/auth/login (non-existent email)"] --> B["Check Account Lockout"]
+    B -->|Not locked| D["Lookup User by Email"]
+    D -->|Not found| E["bcrypt.verify(password, DUMMY_HASH)"]:::constant
+    E -->|Always False| G["Raise AdminNotFoundException"]
+    G --> H["Return 401 (same latency as wrong password)"]
+
+    style E fill:#ffffcc,stroke:#ff9900,stroke-width:3px
+```
+
+### Key Security Property
+
+**Timing Invariant**: Both success/failure and user-found/not-found paths
+converge on the `bcrypt.verify()` call, ensuring:
+- Non-existent email requests: ~260ms (bcrypt time for dummy hash)
+- Wrong password requests: ~260ms (bcrypt time for real hash)
+- Correct password requests: ~260ms (bcrypt time for real hash) + token generation
+
+An attacker cannot distinguish user existence by measuring `POST /api/auth/login`
+response times without triggering rate limits.
+
+### Implementation Details
+
+**Dummy Hash Constant**:
+```python
+# Pre-computed bcrypt hash (from password='dummy')
+# Does not match any real password
+DUMMY_PASSWORD_HASH = b"$2b$12$bTnGLyMH2BYn4GtQhHPnVO33O1fpWb35NL/jHzxbboHURr26xGAu6"
+```
+
+**Location in Code**:
+- Constant definition: `server/src/identity_access_management_context/application/use_cases/password_login_use_case.py:34`
+- Usage: `server/src/identity_access_management_context/application/use_cases/password_login_use_case.py:92-96`
+
+**Verification Process**:
+```python
+def _lookup_and_verify():
+    user_password = self._user_password_repository.get_by_email(command.email)
+    if not user_password:
+        # Always call bcrypt.verify() with dummy hash to ensure constant timing
+        self._password_hashing_gateway.verify(command.password, DUMMY_PASSWORD_HASH)
+        # Result is discarded; we always raise the same exception
+        raise AdminNotFoundException("User not found")
+
+    # Normal path: verify against real password hash
+    if not self._password_hashing_gateway.verify(command.password, user_password.password_hash):
+        raise InvalidCredentialsException("Invalid credentials")
+
+    # Success: return user and roles
+    return user_password, roles
+```
+
+**Defense Layers**:
+1. **Lockout Gate** (before DB/crypto) — prevents timing oracle during active lockout
+2. **Per-Email Counter** — rate limits brute force on any email
+3. **Per-IP Rate Limit** — prevents timing sampling attacks
+4. **Constant-Time Verify** — converges all failure paths to bcrypt latency

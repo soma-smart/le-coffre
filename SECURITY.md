@@ -320,5 +320,59 @@ proven impact may be declined.
 
 ---
 
+### Scenario 8: Timing Attacks on Authentication
+
+**Classification**: In scope.
+
+**Risk**: Response time differences between authentication failure scenarios
+could leak information about email existence. Specifically, the
+`POST /api/auth/login` endpoint previously exhibited:
+- Non-existent email: ~7ms (fast return without password verification)
+- Wrong password: ~260ms (bcrypt comparison time)
+- This 30× ratio allowed attackers to enumerate valid emails by measuring
+  response latency.
+
+**Reference**: AUTH-VULN-09 (CVSS 3.7 — Low)
+
+**Mitigations in place**:
+
+**Layer 1: Lockout Gating (Before Crypto)**
+- Account lockout checks (`is_locked()`) run before any database query or
+  password verification
+- Prevents timing oracle even during active lockout
+- Locked accounts return in ~10ms (consistent with non-attempt failures)
+
+**Layer 2: Per-Email Brute-Force Counter**
+- `LoginLockoutGateway` tracks failed attempts per email
+- After N failures (default: 3), account locks for fixed duration (default: 60s)
+- Both valid and invalid emails are tracked equally to prevent enumeration
+- Failed attempts from the same IP across different emails are also limited
+
+**Layer 3: Per-IP Auth-Route Rate Limiting**
+- `RateLimitMiddleware` enforces strict per-IP bucket on `/api/auth/login`
+- Auth-route check runs before JWT decoding to avoid paying decode cost on flood
+- Limits attacker's ability to collect timing samples across many attempts
+
+**Layer 4: Constant-Time Password Verification for Non-Existent Users**
+- When user lookup returns no match, `bcrypt.verify()` is called with a
+  pre-computed dummy hash (`DUMMY_PASSWORD_HASH`)
+- Ensures non-existent-email requests take ~260ms (same as wrong-password paths)
+- Dummy hash is strategically positioned after user lookup but before event
+  publishing to maximize timing consistency
+- Result of verify() is discarded; `AdminNotFoundException` is raised regardless
+
+**Implementation details**:
+- Dummy hash: Pre-computed bcrypt hash (does not match any real password)
+- Location: `password_login_use_case.py`, line 87 (constant definition) and
+  lines 92-96 (usage)
+- Tests: `test_password_login_use_case.py` and
+  `test_password_login_timing_constant.py`
+
+**Result**: All authentication failure paths now exhibit similar latency
+(~260ms), making it computationally infeasible to distinguish user existence
+by timing without triggering rate limits.
+
+---
+
 For details about the cryptographic design and key management model,
 please refer to: [CRYPTOGRAPHIC_ARCHITECTURE.md](CRYPTOGRAPHIC_ARCHITECTURE.md)
