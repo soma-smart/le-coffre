@@ -2,12 +2,14 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
-import type { AccessRole, Password } from '@/domain/password/Password'
+import type { AccessRole, Password, ShareStatus } from '@/domain/password/Password'
+import { severityForShareStatus, shareStatusOf } from '@/domain/password/Password'
 import { PasswordDomainError } from '@/domain/password/errors'
 import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { sortGroupsByName } from '@/utils/groupSort'
+import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -25,6 +27,7 @@ interface AccessLinkView {
   groupName: string
   roleInGroup: AccessRole
   groupRole: AccessRole
+  expiresAt: string | null
 }
 
 interface UserAccessView {
@@ -38,6 +41,7 @@ interface GroupAccessView {
   groupId: string
   groupName: string
   role: AccessRole
+  expiresAt: string | null
 }
 
 const toast = useToast()
@@ -50,6 +54,10 @@ const { groups: allGroups } = storeToRefs(groupsStore)
 const { passwords: passwordUseCases, users: userUseCases } = useContainer()
 
 const selectedGroupId = ref<string>('')
+const shareExpiresAt = ref<string | null>(null)
+// The group whose deadline is currently being edited, or null when nobody is.
+const retimingGroupId = ref<string | null>(null)
+const retimeExpiresAt = ref<string | null>(null)
 const loading = ref(false)
 const loadingAccess = ref(false)
 const userAccessList = ref<UserAccessView[]>([])
@@ -62,6 +70,15 @@ const availableGroupsForSharing = computed(() => {
   const filtered = allGroups.value.filter((g) => !groupsWithAccessIds.has(g.id))
   return sortGroupsByName(filtered)
 })
+
+// An owning group never expires, so it carries no badge; a shared group shows
+// either its countdown or the fact that it already lapsed.
+const shareStatus = (expiresAt: string | null): ShareStatus => shareStatusOf(expiresAt)
+
+const shareLabel = (expiresAt: string | null): string =>
+  shareStatus(expiresAt) === 'expired'
+    ? 'Expired'
+    : `expires ${formatRelativeTime(expiresAt ?? '')}`
 
 // A user is a password "owner" when they own a group that owns the password.
 const userIsOwner = (user: UserAccessView): boolean =>
@@ -100,6 +117,7 @@ const loadAccessList = async () => {
         groupName: groupName(link.groupId),
         roleInGroup: link.roleInGroup,
         groupRole: link.groupRole,
+        expiresAt: link.expiresAt,
       })
       byUser.set(link.userId, view)
     }
@@ -109,6 +127,7 @@ const loadAccessList = async () => {
       groupId: group.groupId,
       groupName: groupName(group.groupId),
       role: group.role,
+      expiresAt: group.expiresAt,
     }))
 
     for (const user of userAccessList.value) {
@@ -145,6 +164,8 @@ watch(visible, async (isVisible) => {
     await groupsStore.fetchAllGroups()
     await loadAccessList()
     selectedGroupId.value = ''
+    shareExpiresAt.value = null
+    retimingGroupId.value = null
   }
 })
 
@@ -175,16 +196,20 @@ const sharePassword = async () => {
     await passwordUseCases.share.execute({
       passwordId: props.password.id,
       groupId: selectedGroupId.value,
+      expiresAt: shareExpiresAt.value,
     })
 
     toast.add({
       severity: 'success',
       summary: 'Success',
-      detail: 'Password shared successfully',
+      detail: shareExpiresAt.value
+        ? `Password shared until ${formatAbsoluteTime(shareExpiresAt.value)}`
+        : 'Password shared successfully',
       life: 5000,
     })
 
     selectedGroupId.value = ''
+    shareExpiresAt.value = null
     passwordAccessStore.invalidatePasswordAccess()
     await loadAccessList()
     emit('shared')
@@ -248,6 +273,55 @@ const unshareFromGroup = async (groupId: string) => {
   }
 }
 
+const startRetiming = (group: GroupAccessView) => {
+  retimingGroupId.value = group.groupId
+  retimeExpiresAt.value = group.expiresAt
+}
+
+const cancelRetiming = () => {
+  retimingGroupId.value = null
+  retimeExpiresAt.value = null
+}
+
+const saveRetiming = async (groupId: string) => {
+  if (!props.password) return
+
+  loading.value = true
+  try {
+    await passwordUseCases.updateShareExpiration.execute({
+      passwordId: props.password.id,
+      groupId,
+      expiresAt: retimeExpiresAt.value,
+    })
+
+    toast.add({
+      severity: 'success',
+      summary: 'Success',
+      detail: retimeExpiresAt.value
+        ? `Access now runs until ${formatAbsoluteTime(retimeExpiresAt.value)}`
+        : 'Access is now permanent',
+      life: 5000,
+    })
+
+    cancelRetiming()
+    passwordAccessStore.invalidatePasswordAccess()
+    await loadAccessList()
+    emit('shared')
+  } catch (error) {
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail:
+        error instanceof PasswordDomainError
+          ? error.message
+          : 'Failed to change the access duration',
+      life: 5000,
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
   await groupsStore.fetchAllGroups()
 })
@@ -295,6 +369,7 @@ onMounted(async () => {
             :disabled="!selectedGroupId || loading"
           />
         </div>
+        <ShareDurationPicker v-model="shareExpiresAt" :disabled="loading" />
       </div>
 
       <Tabs value="users">
@@ -362,6 +437,13 @@ onMounted(async () => {
                               :value="link.groupRole === 'owner' ? 'owns' : 'shared'"
                               :severity="link.groupRole === 'owner' ? 'success' : 'info'"
                             />
+                            <Tag
+                              v-if="link.expiresAt"
+                              :value="shareLabel(link.expiresAt)"
+                              :severity="severityForShareStatus(shareStatus(link.expiresAt))"
+                              :title="formatAbsoluteTime(link.expiresAt)"
+                              data-testid="user-share-expiry"
+                            />
                           </span>
                         </div>
                       </div>
@@ -399,11 +481,32 @@ onMounted(async () => {
                               <i class="pi pi-share-alt"></i>
                               Shared
                             </span>
+                            <Tag
+                              v-if="group.expiresAt"
+                              :value="shareLabel(group.expiresAt)"
+                              :severity="severityForShareStatus(shareStatus(group.expiresAt))"
+                              :title="formatAbsoluteTime(group.expiresAt)"
+                              data-testid="group-share-expiry"
+                            />
                           </div>
                         </div>
                       </div>
 
-                      <div v-if="canManageSharing && group.role !== 'owner'">
+                      <div
+                        v-if="canManageSharing && group.role !== 'owner'"
+                        class="flex items-center gap-1"
+                      >
+                        <Button
+                          icon="pi pi-clock"
+                          text
+                          rounded
+                          size="small"
+                          aria-label="Change duration"
+                          :disabled="loading"
+                          @click="startRetiming(group)"
+                          v-tooltip="'Change how long this access lasts'"
+                          data-testid="change-duration"
+                        />
                         <Button
                           icon="pi pi-times"
                           text
@@ -414,6 +517,30 @@ onMounted(async () => {
                           :loading="loading"
                           @click="unshareFromGroup(group.groupId)"
                           v-tooltip="'Remove group access'"
+                        />
+                      </div>
+                    </div>
+
+                    <div
+                      v-if="retimingGroupId === group.groupId"
+                      class="mt-3 pt-3 border-t flex flex-col gap-2"
+                      data-testid="retime-form"
+                    >
+                      <ShareDurationPicker v-model="retimeExpiresAt" :disabled="loading" />
+                      <div class="flex justify-end gap-2">
+                        <Button
+                          label="Cancel"
+                          severity="secondary"
+                          size="small"
+                          text
+                          :disabled="loading"
+                          @click="cancelRetiming"
+                        />
+                        <Button
+                          label="Save"
+                          size="small"
+                          :loading="loading"
+                          @click="saveRetiming(group.groupId)"
                         />
                       </div>
                     </div>

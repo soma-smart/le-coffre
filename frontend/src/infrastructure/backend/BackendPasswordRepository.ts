@@ -8,6 +8,7 @@ import {
   sharePasswordPasswordsPasswordIdSharePost,
   unsharePasswordPasswordsPasswordIdShareGroupIdDelete,
   updatePasswordPasswordsPasswordIdPut,
+  updateShareExpirationPasswordsPasswordIdShareGroupIdPatch,
 } from '@/client/sdk.gen'
 import type {
   GetPasswordListResponse,
@@ -25,6 +26,7 @@ import {
   PasswordAccessDeniedError,
   PasswordDomainError,
   PasswordNotFoundError,
+  ShareExpirationInvalidError,
 } from '@/domain/password/errors'
 import { VaultLockedError } from '@/domain/vault/errors'
 
@@ -91,10 +93,10 @@ export class BackendPasswordRepository implements PasswordRepository {
     this.throwIfError(response.error, response.response?.status, passwordId)
   }
 
-  async share(passwordId: string, groupId: string): Promise<void> {
+  async share(passwordId: string, groupId: string, expiresAt?: string | null): Promise<void> {
     const response = await sharePasswordPasswordsPasswordIdSharePost({
       path: { password_id: passwordId },
-      body: { group_id: groupId },
+      body: { group_id: groupId, expires_at: expiresAt ?? null },
     })
     this.throwIfError(response.error, response.response?.status, passwordId)
   }
@@ -103,6 +105,23 @@ export class BackendPasswordRepository implements PasswordRepository {
     const response = await unsharePasswordPasswordsPasswordIdShareGroupIdDelete({
       path: { password_id: passwordId, group_id: groupId },
     })
+    this.throwIfError(response.error, response.response?.status, passwordId)
+  }
+
+  async updateShareExpiration(
+    passwordId: string,
+    groupId: string,
+    expiresAt: string | null,
+  ): Promise<void> {
+    const response = await updateShareExpirationPasswordsPasswordIdShareGroupIdPatch({
+      path: { password_id: passwordId, group_id: groupId },
+      body: { expires_at: expiresAt },
+    })
+    // 400 here is always the deadline: the route rejects a date in the past or
+    // beyond the server's maximum lifetime.
+    if (response.response?.status === 400) {
+      throw new ShareExpirationInvalidError(extractDetail(response.error) ?? undefined)
+    }
     this.throwIfError(response.error, response.response?.status, passwordId)
   }
 
@@ -155,6 +174,7 @@ function toPassword(dto: GetPasswordListResponse): Password {
     login: dto.login,
     url: dto.url,
     accessibleGroupIds: dto.accessible_group_ids,
+    accessExpiresAt: dto.access_expires_at ?? null,
   }
 }
 
@@ -167,11 +187,13 @@ function toPasswordAccess(dto: ListPasswordAccessResponse): PasswordAccess {
       roleInGroup: item.role_in_group,
       groupRole: item.group_role,
       permissions: item.permissions,
+      expiresAt: item.expires_at ?? null,
     })),
     groups: dto.group_access_list.map((item) => ({
       groupId: item.group_id,
       role: item.role,
       permissions: item.permissions,
+      expiresAt: item.expires_at ?? null,
     })),
   }
 }

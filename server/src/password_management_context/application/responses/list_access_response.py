@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from password_management_context.domain.value_objects import AccessRole, PasswordPermission
@@ -17,6 +18,7 @@ class UserAccessResponse:
     role_in_group: AccessRole
     group_role: AccessRole
     permissions: set[PasswordPermission]
+    expires_at: datetime | None = None
 
 
 @dataclass
@@ -24,6 +26,7 @@ class GroupAccessResponse:
     group_id: UUID
     role: AccessRole
     permissions: set[PasswordPermission]
+    expires_at: datetime | None = None
 
 
 @dataclass

@@ -46,7 +46,7 @@ class PasswordOwnershipService:
 
     def _find_owner_group_id(self, password_id: UUID) -> UUID | None:
         all_permissions = self.password_permissions_repository.list_all_permissions_for(password_id)
-        for group_id, (is_owner, _) in all_permissions.items():
-            if is_owner:
+        for group_id, access in all_permissions.items():
+            if access.is_owner:
                 return group_id
         return None

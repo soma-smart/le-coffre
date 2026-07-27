@@ -1,6 +1,8 @@
+from collections.abc import Iterable
+from datetime import datetime
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, delete, select
 
 from password_management_context.adapters.secondary.sql import (
     OwnershipTable,
@@ -11,10 +13,27 @@ from password_management_context.application.gateways.password_permissions_repos
     GroupPermissions,
     PasswordPermissionsRepository,
 )
+from password_management_context.domain.value_objects.password_group_access import (
+    PasswordGroupAccess,
+)
 from password_management_context.domain.value_objects.password_permission import (
     PasswordPermission,
 )
-from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository, as_utc, to_naive_utc
+
+
+def _merge_expiry(current: datetime | None, candidate: datetime | None, is_first: bool) -> datetime | None:
+    """Fold several permission rows for one group into a single deadline.
+
+    A group keeps access for as long as any of its rows is still alive, so the
+    furthest date wins and a permanent row (None) beats every date. Only READ
+    exists today, so in practice there is never more than one row to fold.
+    """
+    if is_first:
+        return candidate
+    if current is None or candidate is None:
+        return None
+    return max(current, candidate)
 
 
 class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRepository):
@@ -47,7 +66,7 @@ class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRep
         return result is not None
 
     def has_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
-        """Check if a group has access to a password"""
+        """Check if a group has access to a password, ignoring expiry"""
         # Check if group is the owner
         if self.is_owner(group_id, password_id):
             return True
@@ -61,9 +80,14 @@ class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRep
         result = self._session.exec(statement).first()
         return result is not None
 
-    def grant_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> None:
-        """Grant a specific permission to a group for a password"""
-        # Check if permission already exists
+    def grant_access(
+        self,
+        group_id: UUID,
+        password_id: UUID,
+        permission: PasswordPermission,
+        expires_at: datetime | None = None,
+    ) -> None:
+        """Grant a permission to a group, permanently or until expires_at"""
         statement = select(PermissionsTable).where(
             PermissionsTable.group_id == group_id,
             PermissionsTable.resource_id == password_id,
@@ -71,14 +95,40 @@ class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRep
         )
         existing = self._session.exec(statement).first()
 
-        if not existing:
-            permission_entry = PermissionsTable(
-                group_id=group_id,
-                resource_id=password_id,
-                permission=permission.value,
+        if existing:
+            # Re-sharing is how a duration is (re)set on an already-shared group;
+            # leaving the row untouched would silently drop the new deadline.
+            existing.expires_at = to_naive_utc(expires_at)
+            self._session.add(existing)
+        else:
+            self._session.add(
+                PermissionsTable(
+                    group_id=group_id,
+                    resource_id=password_id,
+                    permission=permission.value,
+                    expires_at=to_naive_utc(expires_at),
+                )
             )
+
+        self.commit()
+
+    def update_access_expiration(self, group_id: UUID, password_id: UUID, expires_at: datetime | None) -> bool:
+        """Change when an existing share expires; None makes it permanent"""
+        statement = select(PermissionsTable).where(
+            PermissionsTable.group_id == group_id,
+            PermissionsTable.resource_id == password_id,
+        )
+        permission_entries = self._session.exec(statement).all()
+
+        if not permission_entries:
+            return False
+
+        for permission_entry in permission_entries:
+            permission_entry.expires_at = to_naive_utc(expires_at)
             self._session.add(permission_entry)
-            self.commit()
+
+        self.commit()
+        return True
 
     def revoke_access(self, group_id: UUID, password_id: UUID) -> None:
         """Revoke all permissions from a group for a password"""
@@ -94,50 +144,69 @@ class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRep
         if permission_entries:
             self.commit()
 
+    def purge_expired_shares(self, cutoff: datetime) -> int:
+        """Delete shares that expired before cutoff, returning how many were removed"""
+        statement = delete(PermissionsTable).where(
+            col(PermissionsTable.expires_at).is_not(None),
+            col(PermissionsTable.expires_at) < to_naive_utc(cutoff),
+        )
+        deleted = self._session.exec(statement).rowcount
+
+        if deleted:
+            self.commit()
+
+        return deleted
+
     def list_all_permissions_for(self, password_id: UUID) -> GroupPermissions:
         """Get all groups who have access to a password with their permissions"""
-        result: GroupPermissions = {}
-
-        # Get all owner groups
         ownership_statement = select(OwnershipTable).where(OwnershipTable.resource_id == password_id)
-        ownerships = self._session.exec(ownership_statement).all()
-        for ownership in ownerships:
-            if ownership.group_id not in result:
-                result[ownership.group_id] = (True, set())
+        owner_group_ids = {ownership.group_id for ownership in self._session.exec(ownership_statement).all()}
 
-        # Get all groups with permissions
         permission_statement = select(PermissionsTable).where(PermissionsTable.resource_id == password_id)
-        permissions = self._session.exec(permission_statement).all()
-        for permission_entry in permissions:
-            if permission_entry.group_id not in result:
-                result[permission_entry.group_id] = (False, set())
-            try:
-                result[permission_entry.group_id][1].add(PasswordPermission(permission_entry.permission))
-            except ValueError:
-                # Skip invalid permissions
-                pass
+        permission_rows = self._session.exec(permission_statement).all()
 
-        return result
+        return self._assemble(owner_group_ids, permission_rows)
 
     def list_all_permissions_for_bulk(self, password_ids: list[UUID]) -> BulkGroupPermissions:
         """Get all group permissions for multiple passwords in two SQL queries."""
-        result: BulkGroupPermissions = {pwd_id: {} for pwd_id in password_ids}
+        owner_group_ids: dict[UUID, set[UUID]] = {pwd_id: set() for pwd_id in password_ids}
+        permission_rows: dict[UUID, list[PermissionsTable]] = {pwd_id: [] for pwd_id in password_ids}
 
         ownership_statement = select(OwnershipTable).where(OwnershipTable.resource_id.in_(password_ids))
         for ownership in self._session.exec(ownership_statement).all():
-            result[ownership.resource_id][ownership.group_id] = (True, set())
+            owner_group_ids[ownership.resource_id].add(ownership.group_id)
 
         permission_statement = select(PermissionsTable).where(PermissionsTable.resource_id.in_(password_ids))
-        for perm_entry in self._session.exec(permission_statement).all():
-            pwd_perms = result[perm_entry.resource_id]
-            if perm_entry.group_id not in pwd_perms:
-                pwd_perms[perm_entry.group_id] = (False, set())
-            try:
-                pwd_perms[perm_entry.group_id][1].add(PasswordPermission(perm_entry.permission))
-            except ValueError:
-                pass
+        for permission_row in self._session.exec(permission_statement).all():
+            permission_rows[permission_row.resource_id].append(permission_row)
 
-        return result
+        return {pwd_id: self._assemble(owner_group_ids[pwd_id], permission_rows[pwd_id]) for pwd_id in password_ids}
+
+    @staticmethod
+    def _assemble(owner_group_ids: set[UUID], permission_rows: Iterable[PermissionsTable]) -> GroupPermissions:
+        """Fold ownership rows and permission rows into one access object per group"""
+        permissions: dict[UUID, set[PasswordPermission]] = {group_id: set() for group_id in owner_group_ids}
+        expiries: dict[UUID, datetime | None] = {}
+
+        for row in permission_rows:
+            try:
+                permission = PasswordPermission(row.permission)
+            except ValueError:
+                # Skip invalid permissions
+                continue
+
+            is_first = row.group_id not in expiries
+            permissions.setdefault(row.group_id, set()).add(permission)
+            expiries[row.group_id] = _merge_expiry(expiries.get(row.group_id), as_utc(row.expires_at), is_first)
+
+        return {
+            group_id: PasswordGroupAccess(
+                is_owner=group_id in owner_group_ids,
+                permissions=group_permissions,
+                expires_at=expiries.get(group_id),
+            )
+            for group_id, group_permissions in permissions.items()
+        }
 
     def has_any_password_for_group(self, group_id: UUID) -> bool:
         """Check if a group has any password (as owner or with access)"""

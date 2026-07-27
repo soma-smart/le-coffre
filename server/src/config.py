@@ -131,6 +131,29 @@ def get_rate_limit_one_time_link_max_requests() -> int:
     return int(os.environ.get("RATE_LIMIT_ONE_TIME_LINK_MAX_REQUESTS", "10"))
 
 
+def get_max_share_lifetime_seconds() -> int:
+    """Furthest out a temporary password share may be set. Default 365 days.
+
+    A temporary share hands access to an authenticated user who already went
+    through login, so this cap is not a security window the way a one-time
+    link's lifetime is. It exists so "temporary" cannot quietly mean "forever":
+    a year covers the longest legitimate case (a contractor's mission) and any
+    deployment needing something tighter can lower it.
+    """
+    return int(os.environ.get("MAX_SHARE_LIFETIME_SECONDS", str(365 * 24 * 60 * 60)))
+
+
+def get_expired_share_retention_seconds() -> int:
+    """How long an expired share stays visible before being purged. Default 7 days.
+
+    Expiry is enforced when access is read, so a lapsed share grants nothing the
+    moment its deadline passes. The row is kept a while longer purely so its
+    owner sees that the access ran out and can extend it in one click instead of
+    rebuilding it from memory.
+    """
+    return int(os.environ.get("EXPIRED_SHARE_RETENTION_SECONDS", str(7 * 24 * 60 * 60)))
+
+
 def get_rate_limit_window_seconds() -> int:
     """Sliding window duration in seconds. Default 60 (1 minute)."""
     return int(os.environ.get("RATE_LIMIT_WINDOW_SECONDS", "60"))

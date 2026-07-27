@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, Set, Tuple
 from uuid import UUID
 
@@ -5,13 +6,18 @@ from password_management_context.application.gateways.password_permissions_repos
     BulkGroupPermissions,
     GroupPermissions,
 )
-from password_management_context.domain.value_objects import PasswordPermission
+from password_management_context.domain.value_objects import (
+    PasswordGroupAccess,
+    PasswordPermission,
+)
 
 
 class FakePasswordPermissionsRepository:
     def __init__(self):
         self._ownerships: Dict[Tuple[UUID, UUID], bool] = {}
         self._permissions: Dict[Tuple[UUID, UUID], Set[PasswordPermission]] = {}
+        self._expirations: Dict[Tuple[UUID, UUID], datetime | None] = {}
+        self.purged_before: list[datetime] = []
 
     def set_owner(self, owner_id: UUID, password_id: UUID) -> None:
         self._ownerships[(owner_id, password_id)] = True
@@ -28,16 +34,39 @@ class FakePasswordPermissionsRepository:
         key = (group_id, password_id)
         return key in self._permissions and permission in self._permissions[key]
 
-    def grant_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> None:
+    def grant_access(
+        self,
+        group_id: UUID,
+        password_id: UUID,
+        permission: PasswordPermission,
+        expires_at: datetime | None = None,
+    ) -> None:
         key = (group_id, password_id)
         if key not in self._permissions:
             self._permissions[key] = set()
         self._permissions[key].add(permission)
+        self._expirations[key] = expires_at
+
+    def update_access_expiration(self, group_id: UUID, password_id: UUID, expires_at: datetime | None) -> bool:
+        key = (group_id, password_id)
+        if key not in self._permissions:
+            return False
+        self._expirations[key] = expires_at
+        return True
+
+    def purge_expired_shares(self, cutoff: datetime) -> int:
+        self.purged_before.append(cutoff)
+        stale = [key for key, expires_at in self._expirations.items() if expires_at is not None and expires_at < cutoff]
+        for key in stale:
+            self._permissions.pop(key, None)
+            self._expirations.pop(key, None)
+        return len(stale)
 
     def revoke_access(self, group_id: UUID, password_id: UUID) -> None:
         key = (group_id, password_id)
         if key in self._permissions:
             del self._permissions[key]
+        self._expirations.pop(key, None)
 
     def list_all_permissions_for(self, password_id: UUID) -> GroupPermissions:
         result: GroupPermissions = {}
@@ -45,12 +74,16 @@ class FakePasswordPermissionsRepository:
         # First, add owner groups (owners take precedence)
         for owner_id, pwd_id in self._ownerships:
             if pwd_id == password_id:
-                result[owner_id] = (True, set())
+                result[owner_id] = PasswordGroupAccess(is_owner=True, permissions=set())
 
         # Then add groups with explicit permissions (only if not already owners)
         for (group_id, pwd_id), permissions in self._permissions.items():
             if pwd_id == password_id and group_id not in result:
-                result[group_id] = (False, permissions.copy())
+                result[group_id] = PasswordGroupAccess(
+                    is_owner=False,
+                    permissions=permissions.copy(),
+                    expires_at=self._expirations.get((group_id, pwd_id)),
+                )
 
         return result
 
@@ -60,6 +93,7 @@ class FakePasswordPermissionsRepository:
     def clear(self) -> None:
         self._ownerships.clear()
         self._permissions.clear()
+        self._expirations.clear()
 
     def has_any_password_for_group(self, group_id: UUID) -> bool:
         """Check if a group has any password (as owner or with access)"""
@@ -81,6 +115,7 @@ class FakePasswordPermissionsRepository:
         for grp_id, pwd_id in list(self._permissions.keys()):
             if pwd_id == password_id:
                 del self._permissions[(grp_id, pwd_id)]
+                self._expirations.pop((grp_id, pwd_id), None)
 
         for grp_id, pwd_id in list(self._ownerships.keys()):
             if pwd_id == password_id:

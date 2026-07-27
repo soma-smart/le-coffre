@@ -52,3 +52,17 @@ export class PasswordUrlInvalidError extends PasswordDomainError {
     this.name = 'PasswordUrlInvalidError'
   }
 }
+
+export class ShareExpirationInvalidError extends PasswordDomainError {
+  constructor(detail?: string) {
+    super(detail ?? 'The share expiry date is invalid')
+    this.name = 'ShareExpirationInvalidError'
+  }
+}
+
+export class ShareNotFoundError extends PasswordDomainError {
+  constructor(public readonly groupId: string) {
+    super(`Group ${groupId} has no shared access to this password`)
+    this.name = 'ShareNotFoundError'
+  }
+}

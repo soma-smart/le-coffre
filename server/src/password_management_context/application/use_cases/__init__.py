@@ -2,6 +2,7 @@ from .access.check_access_use_case import CheckAccessUseCase
 from .access.list_access_use_case import ListAccessUseCase
 from .access.share_access_use_case import ShareAccessUseCase
 from .access.unshare_access_use_case import UnshareAccessUseCase
+from .access.update_share_expiration_use_case import UpdateShareExpirationUseCase
 from .create_password_use_case import CreatePasswordUseCase
 from .delete_password_use_case import DeletePasswordUseCase
 from .delete_passwords_for_deleted_user_use_case import (
@@ -35,6 +36,7 @@ __all__ = [
     "CheckAccessUseCase",
     "ShareAccessUseCase",
     "UnshareAccessUseCase",
+    "UpdateShareExpirationUseCase",
     "ListAccessUseCase",
     "IsGroupUsedUseCase",
     "GetPasswordStatisticForAdminUseCase",

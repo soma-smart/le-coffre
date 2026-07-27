@@ -8,6 +8,8 @@ import {
   matchesPasswordQuery,
   PASSWORD_STALE_AFTER_DAYS,
   type Password,
+  severityForShareStatus,
+  shareStatusOf,
 } from '@/domain/password/Password'
 
 function makePassword(overrides: Partial<Password> = {}): Password {
@@ -23,6 +25,7 @@ function makePassword(overrides: Partial<Password> = {}): Password {
     login: 'alice@example.com',
     url: 'https://github.com',
     accessibleGroupIds: [],
+    accessExpiresAt: null,
     ...overrides,
   }
 }
@@ -143,5 +146,33 @@ describe('accessibleGroupIdsFor', () => {
   it('falls back to the owning group when no groups are shared', () => {
     const password = makePassword({ groupId: 'g1', accessibleGroupIds: [] })
     expect(accessibleGroupIdsFor(password)).toEqual(['g1'])
+  })
+})
+
+describe('shareStatusOf', () => {
+  const now = new Date('2026-07-27T12:00:00Z')
+
+  it('reports a share with no deadline as permanent', () => {
+    expect(shareStatusOf(null, now)).toBe('permanent')
+  })
+
+  it('reports a share still in the future as active', () => {
+    expect(shareStatusOf('2026-07-27T13:00:00Z', now)).toBe('active')
+  })
+
+  it('reports a share past its deadline as expired', () => {
+    expect(shareStatusOf('2026-07-27T11:59:59Z', now)).toBe('expired')
+  })
+
+  it('treats the exact deadline as expired, matching the backend', () => {
+    expect(shareStatusOf('2026-07-27T12:00:00Z', now)).toBe('expired')
+  })
+})
+
+describe('severityForShareStatus', () => {
+  it('escalates from permanent through active to expired', () => {
+    expect(severityForShareStatus('permanent')).toBe('info')
+    expect(severityForShareStatus('active')).toBe('warn')
+    expect(severityForShareStatus('expired')).toBe('danger')
   })
 })

@@ -16,3 +16,6 @@ class PasswordMetadataResponse:
     login: str | None = None
     url: str | None = None
     accessible_group_ids: tuple[UUID, ...] = field(default_factory=tuple)
+    # When the requester's own access lapses. None when they own the password or
+    # reach it through a permanent share.
+    access_expires_at: datetime | None = None

@@ -5,7 +5,7 @@ import type {
   UpdatePasswordInput,
 } from '@/application/ports/PasswordRepository'
 import type { Password, PasswordAccess, PasswordEvent } from '@/domain/password/Password'
-import { PasswordNotFoundError } from '@/domain/password/errors'
+import { PasswordNotFoundError, ShareNotFoundError } from '@/domain/password/errors'
 
 /**
  * Test-only implementation of PasswordRepository.
@@ -19,7 +19,8 @@ import { PasswordNotFoundError } from '@/domain/password/errors'
 interface StoredPassword {
   entity: Password
   decrypted: string
-  sharedWithGroups: Set<string>
+  /** groupId -> ISO expiry, or null for a permanent share. */
+  sharedWithGroups: Map<string, string | null>
 }
 
 export class InMemoryPasswordRepository implements PasswordRepository {
@@ -36,7 +37,9 @@ export class InMemoryPasswordRepository implements PasswordRepository {
     this.storage.set(password.id, {
       entity: password,
       decrypted,
-      sharedWithGroups: new Set([password.groupId, ...password.accessibleGroupIds]),
+      sharedWithGroups: new Map(
+        [password.groupId, ...password.accessibleGroupIds].map((groupId) => [groupId, null]),
+      ),
     })
     return this
   }
@@ -73,11 +76,12 @@ export class InMemoryPasswordRepository implements PasswordRepository {
       login: input.login ?? null,
       url: input.url ?? null,
       accessibleGroupIds: [input.groupId],
+      accessExpiresAt: null,
     }
     this.storage.set(id, {
       entity,
       decrypted: input.password,
-      sharedWithGroups: new Set([input.groupId]),
+      sharedWithGroups: new Map([[input.groupId, null]]),
     })
     return id
   }
@@ -102,13 +106,13 @@ export class InMemoryPasswordRepository implements PasswordRepository {
     this.events.delete(passwordId)
   }
 
-  async share(passwordId: string, groupId: string): Promise<void> {
+  async share(passwordId: string, groupId: string, expiresAt?: string | null): Promise<void> {
     const entry = this.storage.get(passwordId)
     if (!entry) throw new PasswordNotFoundError(passwordId)
-    entry.sharedWithGroups.add(groupId)
+    entry.sharedWithGroups.set(groupId, expiresAt ?? null)
     entry.entity = {
       ...entry.entity,
-      accessibleGroupIds: Array.from(entry.sharedWithGroups),
+      accessibleGroupIds: Array.from(entry.sharedWithGroups.keys()),
     }
   }
 
@@ -118,8 +122,19 @@ export class InMemoryPasswordRepository implements PasswordRepository {
     entry.sharedWithGroups.delete(groupId)
     entry.entity = {
       ...entry.entity,
-      accessibleGroupIds: Array.from(entry.sharedWithGroups),
+      accessibleGroupIds: Array.from(entry.sharedWithGroups.keys()),
     }
+  }
+
+  async updateShareExpiration(
+    passwordId: string,
+    groupId: string,
+    expiresAt: string | null,
+  ): Promise<void> {
+    const entry = this.storage.get(passwordId)
+    if (!entry) throw new PasswordNotFoundError(passwordId)
+    if (!entry.sharedWithGroups.has(groupId)) throw new ShareNotFoundError(groupId)
+    entry.sharedWithGroups.set(groupId, expiresAt)
   }
 
   async listAccess(passwordId: string): Promise<PasswordAccess> {
@@ -131,10 +146,11 @@ export class InMemoryPasswordRepository implements PasswordRepository {
       // into individual users — component specs that need user links inject a
       // custom listAccess. Group-level access is derived from the share set.
       users: [],
-      groups: Array.from(entry.sharedWithGroups, (groupId) => ({
+      groups: Array.from(entry.sharedWithGroups, ([groupId, expiresAt]) => ({
         groupId,
         role: groupId === entry.entity.groupId ? ('owner' as const) : ('member' as const),
         permissions: ['read'] as Array<'read'>,
+        expiresAt: groupId === entry.entity.groupId ? null : expiresAt,
       })),
     }
   }

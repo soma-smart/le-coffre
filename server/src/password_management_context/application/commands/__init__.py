@@ -24,6 +24,7 @@ from .revoke_one_time_link_command import RevokeOneTimeLinkCommand
 from .share_resource_command import ShareResourceCommand
 from .unshare_resource_command import UnshareResourceCommand
 from .update_password_command import UpdatePasswordCommand
+from .update_share_expiration_command import UpdateShareExpirationCommand
 
 __all__ = [
     "CreatePasswordCommand",
@@ -36,6 +37,7 @@ __all__ = [
     "ListPasswordEventsByActorCommand",
     "ShareResourceCommand",
     "UnshareResourceCommand",
+    "UpdateShareExpirationCommand",
     "CheckAccessCommand",
     "ListAccessCommand",
     "IsGroupUsedCommand",

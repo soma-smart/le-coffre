@@ -41,6 +41,7 @@ import { ListPasswordEventsUseCase } from '@/application/password/ListPasswordEv
 import { ListPasswordsUseCase } from '@/application/password/ListPasswords'
 import { SharePasswordUseCase, UnsharePasswordUseCase } from '@/application/password/SharePassword'
 import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
+import { UpdateShareExpirationUseCase } from '@/application/password/UpdateShareExpiration'
 import { ClearPendingSharesUseCase } from '@/application/vault/ClearPendingShares'
 import { CreateVaultUseCase } from '@/application/vault/CreateVault'
 import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
@@ -89,6 +90,7 @@ export interface Container {
     delete: DeletePasswordUseCase
     share: SharePasswordUseCase
     unshare: UnsharePasswordUseCase
+    updateShareExpiration: UpdateShareExpirationUseCase
     listAccess: ListPasswordAccessUseCase
     listEvents: ListPasswordEventsUseCase
   }
@@ -164,6 +166,7 @@ export function buildContainer(ports: Ports): Container {
       delete: new DeletePasswordUseCase(ports.passwordRepository),
       share: new SharePasswordUseCase(ports.passwordRepository),
       unshare: new UnsharePasswordUseCase(ports.passwordRepository),
+      updateShareExpiration: new UpdateShareExpirationUseCase(ports.passwordRepository),
       listAccess: new ListPasswordAccessUseCase(ports.passwordRepository),
       listEvents: new ListPasswordEventsUseCase(ports.passwordRepository),
     },

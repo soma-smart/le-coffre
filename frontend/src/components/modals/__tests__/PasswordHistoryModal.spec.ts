@@ -34,6 +34,7 @@ const samplePassword: Password = {
   login: null,
   url: null,
   accessibleGroupIds: ['g'],
+  accessExpiresAt: null,
 }
 
 describe('PasswordHistoryModal', () => {

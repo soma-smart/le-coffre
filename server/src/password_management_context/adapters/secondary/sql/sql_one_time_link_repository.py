@@ -1,5 +1,4 @@
-from datetime import UTC, datetime
-from typing import overload
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import func
@@ -10,42 +9,7 @@ from password_management_context.adapters.secondary.sql.model.one_time_link impo
 )
 from password_management_context.application.gateways import OneTimeLinkRepository
 from password_management_context.domain.entities import OneTimeLink
-from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
-
-
-def _as_utc(value: datetime | None) -> datetime | None:
-    """Re-attach UTC to a timestamp coming back from the database.
-
-    The column type is naive, so a reloaded row yields naive datetimes while
-    TimeGateway hands the domain aware ones. Comparing the two raises TypeError,
-    which would blow up expiry checks on any link not still in the session's
-    identity map. Everything written here is UTC, so re-attaching it is sound.
-    """
-    if value is None or value.tzinfo is not None:
-        return value
-    return value.replace(tzinfo=UTC)
-
-
-@overload
-def _to_naive_utc(value: datetime) -> datetime: ...
-
-
-@overload
-def _to_naive_utc(value: None) -> None: ...
-
-
-def _to_naive_utc(value: datetime | None) -> datetime | None:
-    """Convert to UTC then drop the tzinfo, matching how the column stores it.
-
-    Applied at every write and every comparison. Without it the driver decides
-    what to do with an aware value, and SQLite keeps the local wall clock while
-    discarding the offset: an instant of 11:00+02:00 lands as 11:00, two hours
-    off. Expiry is then compared against a correctly normalised `now`, so a link
-    would outlive its lifetime by the size of the offset.
-    """
-    if value is None or value.tzinfo is None:
-        return value
-    return value.astimezone(UTC).replace(tzinfo=None)
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository, as_utc, to_naive_utc
 
 
 def _to_entity(row: OneTimeLinkTable) -> OneTimeLink:
@@ -59,10 +23,10 @@ def _to_entity(row: OneTimeLinkTable) -> OneTimeLink:
         password_id=row.password_id,
         token_hash=row.token_hash,
         created_by_user_id=row.created_by_user_id,
-        created_at=_as_utc(row.created_at),  # type: ignore[arg-type]
-        expires_at=_as_utc(row.expires_at),  # type: ignore[arg-type]
-        read_at=_as_utc(row.read_at),
-        revoked_at=_as_utc(row.revoked_at),
+        created_at=as_utc(row.created_at),  # type: ignore[arg-type]
+        expires_at=as_utc(row.expires_at),  # type: ignore[arg-type]
+        read_at=as_utc(row.read_at),
+        revoked_at=as_utc(row.revoked_at),
     )
 
 
@@ -78,10 +42,10 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
             password_id=link.password_id,
             token_hash=link.token_hash,
             created_by_user_id=link.created_by_user_id,
-            created_at=_to_naive_utc(link.created_at),
-            expires_at=_to_naive_utc(link.expires_at),
-            read_at=_to_naive_utc(link.read_at),
-            revoked_at=_to_naive_utc(link.revoked_at),
+            created_at=to_naive_utc(link.created_at),
+            expires_at=to_naive_utc(link.expires_at),
+            read_at=to_naive_utc(link.read_at),
+            revoked_at=to_naive_utc(link.revoked_at),
         )
         self._session.add(row)
         self.commit()
@@ -110,7 +74,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
                 OneTimeLinkTable.password_id == password_id,
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.expires_at > _to_naive_utc(now),
+                OneTimeLinkTable.expires_at > to_naive_utc(now),
             )
             .order_by(OneTimeLinkTable.created_at.desc())  # type: ignore[attr-defined]
             .limit(limit)
@@ -138,7 +102,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
                 OneTimeLinkTable.password_id == password_id,
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.expires_at > _to_naive_utc(now),
+                OneTimeLinkTable.expires_at > to_naive_utc(now),
             )
         )
         return self._session.exec(statement).one()  # type: ignore[call-overload]
@@ -153,7 +117,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
             .where(
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.expires_at > _to_naive_utc(now),
+                OneTimeLinkTable.expires_at > to_naive_utc(now),
             )
         )
         return self._session.exec(statement).one()  # type: ignore[call-overload]
@@ -163,7 +127,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
         return (
             OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
             OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
-            OneTimeLinkTable.expires_at > _to_naive_utc(now),
+            OneTimeLinkTable.expires_at > to_naive_utc(now),
         )
 
     def list_all(self, now: datetime, include_inactive: bool, limit: int) -> list[OneTimeLink]:
@@ -208,7 +172,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
             )
-            .values(revoked_at=_to_naive_utc(now))
+            .values(revoked_at=to_naive_utc(now))
         )
         result = self._session.exec(statement)  # type: ignore[call-overload]
         self.commit()
@@ -225,7 +189,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
             )
-            .values(read_at=_to_naive_utc(now))
+            .values(read_at=to_naive_utc(now))
         )
         result = self._session.exec(statement)  # type: ignore[call-overload]
         self.commit()
@@ -241,7 +205,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
             )
-            .values(revoked_at=_to_naive_utc(now))
+            .values(revoked_at=to_naive_utc(now))
         )
         result = self._session.exec(statement)  # type: ignore[call-overload]
         self.commit()

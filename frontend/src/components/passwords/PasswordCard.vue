@@ -165,6 +165,15 @@
           <span>Updated: {{ formatDate(password.lastUpdatedAt) }}</span>
         </div>
 
+        <div v-if="accessExpiry" class="flex items-center gap-2 shrink-0">
+          <Tag
+            :value="accessExpiryLabel"
+            :severity="severityForShareStatus(accessExpiryStatus)"
+            :title="formatAbsoluteTime(accessExpiry)"
+            data-testid="access-expiry"
+          />
+        </div>
+
         <div v-if="sharedAccessInfo" class="flex items-center gap-2 shrink-0">
           <span>Shared: {{ formatDate(sharedAccessInfo.occurredOn) }}</span>
           <i
@@ -183,12 +192,18 @@ import { ref, computed, toRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
-import { isPasswordStale, type Password } from '@/domain/password/Password'
+import {
+  isPasswordStale,
+  severityForShareStatus,
+  shareStatusOf,
+  type Password,
+} from '@/domain/password/Password'
 import { VaultLockedError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordReveal } from '@/composables/usePasswordReveal'
 import { usePasswordSharedAccess } from '@/composables/usePasswordSharedAccess'
+import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
 import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const actorUsernameCache = new Map<string, string>()
@@ -218,6 +233,16 @@ const { passwords: passwordUseCases, users: userUseCases } = useContainer()
 
 const isDeleting = ref(false)
 const needsUpdate = computed(() => isPasswordStale(props.password))
+
+// Only set when the viewer reaches this password through a time-limited
+// share. An owner, or anyone on a permanent share, sees no countdown.
+const accessExpiry = computed(() => props.password.accessExpiresAt)
+const accessExpiryStatus = computed(() => shareStatusOf(accessExpiry.value))
+const accessExpiryLabel = computed(() =>
+  accessExpiryStatus.value === 'expired'
+    ? 'Access expired'
+    : `Expires ${formatRelativeTime(accessExpiry.value ?? '')}`,
+)
 const safePasswordUrl = computed(() => normalizeExternalHttpUrl(props.password.url))
 
 const canWriteInContext = computed(() => {
