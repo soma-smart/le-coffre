@@ -65,8 +65,8 @@ class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRep
         result = self._session.exec(statement).first()
         return result is not None
 
-    def has_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
-        """Check if a group has access to a password, ignoring expiry"""
+    def has_access_ignoring_expiry(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
+        """Check whether a group was ever granted this permission, deadline aside"""
         # Check if group is the owner
         if self.is_owner(group_id, password_id):
             return True

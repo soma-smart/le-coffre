@@ -66,20 +66,22 @@ def test_is_owner_returns_false_for_non_owner(sql_password_permissions_repositor
     assert result is False
 
 
-def test_has_access_returns_true_for_owner(sql_password_permissions_repository):
+def test_has_access_ignoring_expiry_returns_true_for_owner(sql_password_permissions_repository):
     # Given
     user_id = uuid4()
     password_id = uuid4()
     sql_password_permissions_repository.set_owner(user_id, password_id)
 
     # When
-    result = sql_password_permissions_repository.has_access(user_id, password_id, PasswordPermission.READ)
+    result = sql_password_permissions_repository.has_access_ignoring_expiry(
+        user_id, password_id, PasswordPermission.READ
+    )
 
     # Then
     assert result is True
 
 
-def test_has_access_returns_true_for_granted_permission(
+def test_has_access_ignoring_expiry_returns_true_for_granted_permission(
     sql_password_permissions_repository,
 ):
     # Given
@@ -88,13 +90,15 @@ def test_has_access_returns_true_for_granted_permission(
     sql_password_permissions_repository.grant_access(user_id, password_id, PasswordPermission.READ)
 
     # When
-    result = sql_password_permissions_repository.has_access(user_id, password_id, PasswordPermission.READ)
+    result = sql_password_permissions_repository.has_access_ignoring_expiry(
+        user_id, password_id, PasswordPermission.READ
+    )
 
     # Then
     assert result is True
 
 
-def test_has_access_returns_false_for_no_permission(
+def test_has_access_ignoring_expiry_returns_false_for_no_permission(
     sql_password_permissions_repository,
 ):
     # Given
@@ -102,7 +106,9 @@ def test_has_access_returns_false_for_no_permission(
     password_id = uuid4()
 
     # When
-    result = sql_password_permissions_repository.has_access(user_id, password_id, PasswordPermission.READ)
+    result = sql_password_permissions_repository.has_access_ignoring_expiry(
+        user_id, password_id, PasswordPermission.READ
+    )
 
     # Then
     assert result is False
@@ -117,7 +123,7 @@ def test_grant_access_creates_permission(sql_password_permissions_repository):
     sql_password_permissions_repository.grant_access(user_id, password_id, PasswordPermission.READ)
 
     # Then
-    assert sql_password_permissions_repository.has_access(user_id, password_id, PasswordPermission.READ)
+    assert sql_password_permissions_repository.has_access_ignoring_expiry(user_id, password_id, PasswordPermission.READ)
 
 
 def test_grant_access_is_idempotent(sql_password_permissions_repository):
@@ -130,7 +136,7 @@ def test_grant_access_is_idempotent(sql_password_permissions_repository):
     sql_password_permissions_repository.grant_access(user_id, password_id, PasswordPermission.READ)
 
     # Then - no exception should be raised
-    assert sql_password_permissions_repository.has_access(user_id, password_id, PasswordPermission.READ)
+    assert sql_password_permissions_repository.has_access_ignoring_expiry(user_id, password_id, PasswordPermission.READ)
 
 
 def test_revoke_access_removes_permission(sql_password_permissions_repository):
@@ -143,7 +149,9 @@ def test_revoke_access_removes_permission(sql_password_permissions_repository):
     sql_password_permissions_repository.revoke_access(user_id, password_id)
 
     # Then
-    assert not sql_password_permissions_repository.has_access(user_id, password_id, PasswordPermission.READ)
+    assert not sql_password_permissions_repository.has_access_ignoring_expiry(
+        user_id, password_id, PasswordPermission.READ
+    )
 
 
 def test_revoke_access_is_idempotent(sql_password_permissions_repository):
@@ -157,7 +165,9 @@ def test_revoke_access_is_idempotent(sql_password_permissions_repository):
     sql_password_permissions_repository.revoke_access(user_id, password_id)
 
     # Then - no exception should be raised
-    assert not sql_password_permissions_repository.has_access(user_id, password_id, PasswordPermission.READ)
+    assert not sql_password_permissions_repository.has_access_ignoring_expiry(
+        user_id, password_id, PasswordPermission.READ
+    )
 
 
 def test_list_all_permissions_for_empty_password(sql_password_permissions_repository):
@@ -220,8 +230,12 @@ def test_should_revoke_all_access_when_revoking_for_owner_group(
     assert not sql_password_permissions_repository.is_owner(owner_group_id, password1_id)
     assert not sql_password_permissions_repository.is_owner(owner_group_id, password2_id)
     assert not sql_password_permissions_repository.is_owner(owner_group_id, password3_id)
-    assert not sql_password_permissions_repository.has_access(other_group_id, password1_id, PasswordPermission.READ)
-    assert not sql_password_permissions_repository.has_access(other_group_id, password2_id, PasswordPermission.READ)
+    assert not sql_password_permissions_repository.has_access_ignoring_expiry(
+        other_group_id, password1_id, PasswordPermission.READ
+    )
+    assert not sql_password_permissions_repository.has_access_ignoring_expiry(
+        other_group_id, password2_id, PasswordPermission.READ
+    )
 
 
 def test_should_not_affect_other_passwords_when_revoking_for_owner_group(
@@ -243,7 +257,9 @@ def test_should_not_affect_other_passwords_when_revoking_for_owner_group(
     # Then - password2 owned by group2 should remain intact
     assert sql_password_permissions_repository.is_owner(group2_id, password2_id)
     assert not sql_password_permissions_repository.is_owner(group1_id, password1_id)
-    assert not sql_password_permissions_repository.has_access(group2_id, password1_id, PasswordPermission.READ)
+    assert not sql_password_permissions_repository.has_access_ignoring_expiry(
+        group2_id, password1_id, PasswordPermission.READ
+    )
 
 
 def test_should_do_nothing_when_revoking_for_owner_group_with_no_passwords(

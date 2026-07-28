@@ -70,7 +70,9 @@ def test_given_owner_and_target_group_when_sharing_access_should_grant_read_perm
     use_case.execute(ShareResourceCommand(owner_id, target_group_id, password.id))
 
     # Assert: Then the target group should have READ access only
-    assert password_permissions_repository.has_access(target_group_id, password.id, PasswordPermission.READ)
+    assert password_permissions_repository.has_access_ignoring_expiry(
+        target_group_id, password.id, PasswordPermission.READ
+    )
 
 
 def test_given_non_owner_user_when_sharing_access_should_raise_user_not_owner_error(
@@ -102,7 +104,9 @@ def test_given_non_owner_user_when_sharing_access_should_raise_user_not_owner_er
         use_case.execute(ShareResourceCommand(non_owner_id, third_group_id, password.id))
 
     # Assert: Third group should not have access
-    assert not password_permissions_repository.has_access(third_group_id, password.id, PasswordPermission.READ)
+    assert not password_permissions_repository.has_access_ignoring_expiry(
+        third_group_id, password.id, PasswordPermission.READ
+    )
 
 
 def test_given_already_shared_password_when_sharing_again_should_maintain_access(
@@ -129,7 +133,9 @@ def test_given_already_shared_password_when_sharing_again_should_maintain_access
     use_case.execute(ShareResourceCommand(owner_id, target_group_id, password.id))
 
     # Assert: Still has access
-    assert password_permissions_repository.has_access(target_group_id, password.id, PasswordPermission.READ)
+    assert password_permissions_repository.has_access_ignoring_expiry(
+        target_group_id, password.id, PasswordPermission.READ
+    )
 
 
 def test_given_non_existing_password_when_sharing_access_should_raise_password_not_found_error(

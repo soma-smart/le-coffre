@@ -22,8 +22,15 @@ class PasswordPermissionsRepository(Protocol):
         """Check if an owner (user or group) is the owner of a password"""
         ...
 
-    def has_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
-        """Check if a user has any access to a password (owner or shared)"""
+    def has_access_ignoring_expiry(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
+        """Check whether a group was ever granted this permission, deadline aside.
+
+        Answers "is this group listed on this password", not "may it read the
+        password right now": a lapsed share still counts here. Deciding access
+        is PasswordGroupAccess.grants_read(now)'s job, reached through
+        list_all_permissions_for. The name is deliberately awkward so that
+        reaching for it as an authorization check reads as a mistake.
+        """
         ...
 
     def grant_access(

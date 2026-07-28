@@ -25,7 +25,7 @@ class FakePasswordPermissionsRepository:
     def is_owner(self, owner_id: UUID, password_id: UUID) -> bool:
         return self._ownerships.get((owner_id, password_id), False)
 
-    def has_access(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
+    def has_access_ignoring_expiry(self, group_id: UUID, password_id: UUID, permission: PasswordPermission) -> bool:
         # Check if group is the owner
         if self.is_owner(group_id, password_id):
             return True
