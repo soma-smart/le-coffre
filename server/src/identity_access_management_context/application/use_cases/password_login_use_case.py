@@ -26,6 +26,14 @@ from shared_kernel.application.tracing import TracedUseCase
 
 logger = logging.getLogger(__name__)
 
+# Pre-computed bcrypt hash used for constant-time password verification when
+# user is not found. This prevents timing oracles that could enumerate valid
+# emails by measuring response latency differences.
+# Generated with: bcrypt.hashpw(hashlib.sha256(b"dummy").digest(), bcrypt.gensalt())
+# Note: BcryptHashingGateway pre-hashes all passwords with SHA-256 before bcrypt.
+# See: SECURITY.md#timing-attack-mitigations, AUTH-VULN-09
+DUMMY_PASSWORD_HASH = b"$2b$12$bTnGLyMH2BYn4GtQhHPnVO33O1fpWb35NL/jHzxbboHURr26xGAu6"
+
 
 class PasswordLoginUseCase(TracedUseCase):
     def __init__(
@@ -75,6 +83,12 @@ class PasswordLoginUseCase(TracedUseCase):
         def _lookup_and_verify():
             user_password = self._user_password_repository.get_by_email(command.email)
             if not user_password:
+                # Always call bcrypt.verify() with a dummy hash to prevent timing
+                # oracles. The latency converges to ~260ms (bcrypt time) regardless
+                # of whether the user exists, preventing email enumeration attacks.
+                # The verify() result is discarded; we always raise the same exception.
+                self._password_hashing_gateway.verify(command.password, DUMMY_PASSWORD_HASH)
+
                 logger.warning("Login failed for email=%s reason='User not found'", command.email)
                 event = AdminLoginFailedEvent(email=command.email, reason="User not found")
                 self._event_publisher.publish(event)

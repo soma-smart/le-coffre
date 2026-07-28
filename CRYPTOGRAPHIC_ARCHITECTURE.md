@@ -111,7 +111,7 @@ flowchart TD
     I --> K
     J --> |"Used for decryption"| K
     K --> L
-    
+
     %% Legend
     O(["Sensitive Data"]):::sensitive
     P["Encrypted Data"]:::encrypted
