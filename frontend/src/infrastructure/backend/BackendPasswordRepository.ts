@@ -98,6 +98,7 @@ export class BackendPasswordRepository implements PasswordRepository {
       path: { password_id: passwordId },
       body: { group_id: groupId, expires_at: expiresAt ?? null },
     })
+    this.throwIfExpirationRejected(response.response?.status, response.error)
     this.throwIfError(response.error, response.response?.status, passwordId)
   }
 
@@ -117,12 +118,23 @@ export class BackendPasswordRepository implements PasswordRepository {
       path: { password_id: passwordId, group_id: groupId },
       body: { expires_at: expiresAt },
     })
-    // 400 here is always the deadline: the route rejects a date in the past or
-    // beyond the server's maximum lifetime.
-    if (response.response?.status === 400) {
-      throw new ShareExpirationInvalidError(extractDetail(response.error) ?? undefined)
-    }
+    this.throwIfExpirationRejected(response.response?.status, response.error)
     this.throwIfError(response.error, response.response?.status, passwordId)
+  }
+
+  /**
+   * Both sharing routes answer 400 only when the deadline is refused: already
+   * past, or beyond the server's maximum lifetime. Every other way those two
+   * use cases can fail maps to 403 or 404, so a 400 can be typed precisely
+   * instead of collapsing into a generic PasswordDomainError.
+   *
+   * Keep this in step with the exception arms of share_password_routes.py and
+   * update_share_expiration_routes.py: a new domain error mapped to 400 there
+   * would start arriving here mislabelled.
+   */
+  private throwIfExpirationRejected(status: number | undefined, error: unknown): void {
+    if (status !== 400) return
+    throw new ShareExpirationInvalidError(extractDetail(error) ?? undefined)
   }
 
   async listAccess(passwordId: string): Promise<PasswordAccess> {
