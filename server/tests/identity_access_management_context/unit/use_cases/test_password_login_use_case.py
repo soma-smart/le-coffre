@@ -364,12 +364,12 @@ def test_given_locked_email_when_logging_in_should_not_call_password_verificatio
         UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
     )
     login_lockout_gateway.force_lock(email, retry_after=10)
-    assert password_hashing_gateway.verify_calls == []
+    assert password_hashing_gateway.get_verification_count() == 0
 
     with pytest.raises(AccountLockedException):
         use_case.execute(AdminLoginCommand(email=email, password="secure123!"))
 
-    assert password_hashing_gateway.verify_calls == []
+    assert password_hashing_gateway.get_verification_count() == 0
 
 
 def test_given_locked_email_when_logging_in_should_not_record_a_new_failed_login(
@@ -418,10 +418,9 @@ def test_given_nonexistent_email_should_call_hashing_gateway_verify_with_dummy_h
         use_case.execute(command)
 
     # verify() must have been called exactly once with the dummy hash
-    assert len(password_hashing_gateway.verify_calls) == 1
-    actual_password, actual_hash = password_hashing_gateway.verify_calls[0]
-    assert actual_password == "any_password"
-    assert actual_hash == DUMMY_PASSWORD_HASH, (
+    assert password_hashing_gateway.get_verification_count() == 1
+    assert password_hashing_gateway.get_last_verified_password() == "any_password"
+    assert password_hashing_gateway.get_last_verified_hash() == DUMMY_PASSWORD_HASH, (
         "verify() must be called with DUMMY_PASSWORD_HASH to ensure timing is constant regardless of email existence"
     )
 
