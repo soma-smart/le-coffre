@@ -117,6 +117,12 @@
                   ) + '...' ||
                   'Unknown'
                 }}</strong>
+                <template v-if="slotProps.data.eventData.expiresAt">
+                  , until
+                  <strong>{{
+                    formatDateTime(slotProps.data.eventData.expiresAt as string)
+                  }}</strong>
+                </template>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordUnsharedEvent'">
                 Unshared from group:

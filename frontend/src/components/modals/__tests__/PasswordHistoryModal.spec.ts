@@ -191,4 +191,59 @@ describe('PasswordHistoryModal', () => {
     expect(text).not.toContain('linkId')
     expect(text).not.toContain('{"')
   })
+
+  it('shows the deadline of a time-limited share in the history', async () => {
+    // The Permission row is purged once the share is long expired, so the audit
+    // log is what keeps "this was shared with X until Y" available for good.
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    repo.addEvent('pwd-1', {
+      eventId: 'e3',
+      eventType: 'PasswordSharedEvent',
+      occurredOn: yesterday.toISOString(),
+      actorUserId: 'u',
+      actorEmail: 'alice@example.com',
+      eventData: { sharedWithGroupName: 'Contractors', expiresAt: '2026-09-01T10:00:00Z' },
+    })
+
+    const wrapper = mount(PasswordHistoryModal, {
+      props: { visible: true, password: samplePassword },
+      global: {
+        plugins: [pinia],
+        provide: { [CONTAINER_KEY as symbol]: container },
+        stubs: { Dialog: DialogStub },
+      },
+    })
+    await flushPromises()
+
+    const text = wrapper.text()
+    expect(text).toContain('Contractors')
+    expect(text).toContain('until')
+  })
+
+  it('shows no deadline for a permanent share', async () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    repo.addEvent('pwd-1', {
+      eventId: 'e4',
+      eventType: 'PasswordSharedEvent',
+      occurredOn: yesterday.toISOString(),
+      actorUserId: 'u',
+      actorEmail: 'alice@example.com',
+      eventData: { sharedWithGroupName: 'Platform', expiresAt: null },
+    })
+
+    const wrapper = mount(PasswordHistoryModal, {
+      props: { visible: true, password: samplePassword },
+      global: {
+        plugins: [pinia],
+        provide: { [CONTAINER_KEY as symbol]: container },
+        stubs: { Dialog: DialogStub },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Platform')
+    expect(wrapper.text()).not.toContain('until')
+  })
 })
