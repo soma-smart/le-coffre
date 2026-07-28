@@ -32,7 +32,13 @@ def use_case(
     group_access_gateway: FakeGroupAccessGateway,
     time_gateway: FakeTimeGateway,
 ) -> ListAccessUseCase:
-    return ListAccessUseCase(password_repository, password_permissions_repository, group_access_gateway, time_gateway)
+    return ListAccessUseCase(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        time_gateway,
+        expired_share_retention_seconds=7 * 24 * 60 * 60,
+    )
 
 
 @pytest.fixture

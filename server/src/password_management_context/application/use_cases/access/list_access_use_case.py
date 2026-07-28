@@ -23,8 +23,6 @@ from password_management_context.domain.value_objects import AccessRole, Passwor
 from shared_kernel.application.gateways.time_gateway import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
-DEFAULT_EXPIRED_SHARE_RETENTION_SECONDS = 7 * 24 * 60 * 60
-
 
 class ListAccessUseCase(TracedUseCase):
     """Lists who can reach a password, including shares that have already lapsed.
@@ -41,7 +39,7 @@ class ListAccessUseCase(TracedUseCase):
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
         time_gateway: TimeGateway,
-        expired_share_retention_seconds: int = DEFAULT_EXPIRED_SHARE_RETENTION_SECONDS,
+        expired_share_retention_seconds: int,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
