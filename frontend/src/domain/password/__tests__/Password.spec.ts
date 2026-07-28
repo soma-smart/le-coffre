@@ -167,6 +167,19 @@ describe('shareStatusOf', () => {
   it('treats the exact deadline as expired, matching the backend', () => {
     expect(shareStatusOf('2026-07-27T12:00:00Z', now)).toBe('expired')
   })
+
+  it('reports an unreadable deadline as expired, never as active', () => {
+    // Comparing an Invalid Date yields false, which would silently claim the
+    // share is live. Never assert a deadline we cannot read.
+    expect(shareStatusOf('not-a-date', now)).toBe('expired')
+    expect(shareStatusOf('2026-13-45T99:99:99Z', now)).toBe('expired')
+  })
+
+  it('still reports a share with no deadline as permanent', () => {
+    // Guard against an over-eager fix that lumps null in with unparseable.
+    expect(shareStatusOf(null, now)).toBe('permanent')
+    expect(shareStatusOf('', now)).toBe('permanent')
+  })
 })
 
 describe('severityForShareStatus', () => {

@@ -124,7 +124,16 @@ export type ShareStatus = 'permanent' | 'active' | 'expired'
  */
 export function shareStatusOf(expiresAt: string | null, now: Date = new Date()): ShareStatus {
   if (!expiresAt) return 'permanent'
-  return new Date(expiresAt) <= now ? 'expired' : 'active'
+
+  // An unreadable deadline counts as expired. Comparing an Invalid Date yields
+  // false, so the naive form would report the share as live, which is the one
+  // answer we must never give about a deadline we cannot read. It also keeps
+  // the badge legible: the expired label is static, whereas the active one
+  // interpolates a relative time that would render blank.
+  const deadline = Date.parse(expiresAt)
+  if (Number.isNaN(deadline)) return 'expired'
+
+  return deadline <= now.getTime() ? 'expired' : 'active'
 }
 
 /** PrimeVue Tag severity for a share's deadline state. */
