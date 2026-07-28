@@ -6,6 +6,7 @@ from identity_access_management_context.application.gateways import (
     GroupRepository,
     OneTimeLinkRevocationGateway,
     UserEventRepository,
+    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.domain.events import UserDeletedEvent
@@ -25,6 +26,7 @@ class DeleteUserUseCase(TracedUseCase):
         event_publisher: DomainEventPublisher,
         user_event_repository: UserEventRepository,
         one_time_link_revocation_gateway: OneTimeLinkRevocationGateway,
+        user_password_repository: UserPasswordRepository,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
@@ -32,6 +34,7 @@ class DeleteUserUseCase(TracedUseCase):
         self.event_publisher = event_publisher
         self._user_event_repository = user_event_repository
         self._one_time_link_revocation_gateway = one_time_link_revocation_gateway
+        self._user_password_repository = user_password_repository
 
     def execute(self, command: DeleteUserCommand) -> None:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
@@ -66,6 +69,12 @@ class DeleteUserUseCase(TracedUseCase):
 
         # Remove user from all remaining groups (including as owner/member) in one operation
         self.group_member_repository.remove_user_from_all_groups(user_id)
+
+        # Credentials live in their own table, keyed by the same id. Leaving the
+        # row behind would keep an authentication secret alive with no user to
+        # own it, and it would shadow any account later created on that email,
+        # because credentials are looked up by email.
+        self._user_password_repository.delete_by_id(user_id)
 
         self.user_repository.delete(user_id)
 

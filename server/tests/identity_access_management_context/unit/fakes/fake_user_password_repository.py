@@ -23,3 +23,6 @@ class FakeUserPasswordRepository:
             if user_password.email == email:
                 return user_password
         return None
+
+    def delete_by_id(self, user_id: UUID) -> None:
+        self._user_passwords.pop(user_id, None)

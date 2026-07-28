@@ -20,3 +20,12 @@ class UserPasswordRepository(Protocol):
     def get_by_email(self, email: str) -> UserPassword | None:
         """Get user password by email"""
         ...
+
+    def delete_by_id(self, user_id: UUID) -> None:
+        """Delete a user's credentials.
+
+        Must run whenever the user itself is deleted. A credential row that
+        outlives its user shadows any account later created with the same
+        email, and is an authentication secret nobody can see or revoke.
+        """
+        ...

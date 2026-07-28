@@ -103,8 +103,28 @@ class PasswordLoginUseCase(TracedUseCase):
                 raise InvalidCredentialsException("Invalid credentials")
 
             user = self._user_repository.get_by_id(user_password.id)
-            roles = user.roles if user is not None else []
-            return user_password, roles
+            if user is None:
+                # Credentials with no user behind them are an inconsistency, not
+                # a role-less account: falling back to an empty role set handed a
+                # valid token to a deleted account, so deleting a user did not
+                # actually revoke its ability to log in. Answering exactly like
+                # an unknown email keeps the endpoint from confirming that the
+                # address once existed; the audit reason is distinct so an
+                # operator can still spot the leftover row.
+                logger.warning("Login failed for email=%s reason='Orphaned credentials'", command.email)
+                event = AdminLoginFailedEvent(email=command.email, reason="Orphaned credentials")
+                self._event_publisher.publish(event)
+                self._admin_event_repository.append_event(
+                    event_id=event.event_id,
+                    event_type=type(event).__name__,
+                    occurred_on=event.occurred_on,
+                    actor_user_id=None,
+                    event_data={"email": command.email, "reason": "Orphaned credentials"},
+                )
+                self._try_record_failed_login(command.email, now)
+                raise AdminNotFoundException("User not found")
+
+            return user_password, user.roles
 
         user_password, roles = _lookup_and_verify()
 
