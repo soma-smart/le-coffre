@@ -150,12 +150,17 @@ class SqlPasswordPermissionsRepository(SQLBaseRepository, PasswordPermissionsRep
             col(PermissionsTable.expires_at).is_not(None),
             col(PermissionsTable.expires_at) < to_naive_utc(cutoff),
         )
-        deleted = self._session.exec(statement).rowcount
+        result = self._session.exec(statement)
 
-        if deleted:
-            self.commit()
+        # Commit unconditionally rather than keying the commit off rowcount.
+        # DBAPIs are only required to report a best effort there (PEP 249 allows
+        # -1 for "cannot be determined"), and the session is request-scoped and
+        # closes with a rollback, so a skipped commit would silently undo the
+        # purge instead of merely miscounting it.
+        self.commit()
 
-        return deleted
+        rowcount = result.rowcount
+        return rowcount if isinstance(rowcount, int) and rowcount > 0 else 0
 
     def list_all_permissions_for(self, password_id: UUID) -> GroupPermissions:
         """Get all groups who have access to a password with their permissions"""
