@@ -6,6 +6,7 @@ import pytest
 from password_management_context.application.commands import (
     GetPasswordCommand,
     ListAccessCommand,
+    ListPasswordEventsCommand,
     ListPasswordsCommand,
     ShareResourceCommand,
     UpdateShareExpirationCommand,
@@ -13,6 +14,7 @@ from password_management_context.application.commands import (
 from password_management_context.application.use_cases import (
     GetPasswordUseCase,
     ListAccessUseCase,
+    ListPasswordEventsUseCase,
     ListPasswordsUseCase,
     ShareAccessUseCase,
     UpdateShareExpirationUseCase,
@@ -37,6 +39,8 @@ from ..fakes import (
     FakePasswordEventRepository,
     FakePasswordPermissionsRepository,
     FakePasswordRepository,
+    FakePasswordVaultAccessGateway,
+    FakeUserInfoGateway,
 )
 
 OWNER_ID = UUID("00000000-0000-0000-0000-00000000a001")
@@ -527,3 +531,66 @@ def test_should_keep_a_recently_expired_share_within_the_retention_window(
     response = list_access_use_case.execute(ListAccessCommand(OWNER_ID, password.id))
 
     assert any(g.group_id == RECIPIENT_GROUP_ID for g in response.group_accesses)
+
+
+# ── Reading the audit history ─────────────────────────────────────────
+
+
+@pytest.fixture
+def events_use_case(
+    password_repository,
+    password_permissions_repository,
+    group_access_gateway,
+    password_event_repository: FakePasswordEventRepository,
+    password_vault_access_gateway: FakePasswordVaultAccessGateway,
+    time_gateway: FakeTimeGateway,
+) -> ListPasswordEventsUseCase:
+    return ListPasswordEventsUseCase(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        password_event_repository,
+        password_vault_access_gateway,
+        FakeUserInfoGateway(),
+        time_gateway,
+    )
+
+
+def test_recipient_can_read_the_history_before_the_deadline(
+    share_use_case: ShareAccessUseCase,
+    events_use_case: ListPasswordEventsUseCase,
+    password: Password,
+):
+    share_use_case.execute(ShareResourceCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, IN_ONE_HOUR))
+
+    response = events_use_case.execute(
+        ListPasswordEventsCommand(
+            requesting_user=AuthenticatedUser(user_id=RECIPIENT_ID, roles=[]),
+            password_id=password.id,
+        )
+    )
+
+    assert response is not None
+
+
+def test_expired_share_also_closes_the_audit_history(
+    share_use_case: ShareAccessUseCase,
+    events_use_case: ListPasswordEventsUseCase,
+    time_gateway: FakeTimeGateway,
+    password: Password,
+):
+    """The history names who reached the password and when it was shared.
+
+    Losing the password but keeping its history would be a partial revocation.
+    """
+    share_use_case.execute(ShareResourceCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, IN_ONE_HOUR))
+
+    time_gateway.set_current_time(IN_ONE_HOUR)
+
+    with pytest.raises(PasswordAccessDeniedError):
+        events_use_case.execute(
+            ListPasswordEventsCommand(
+                requesting_user=AuthenticatedUser(user_id=RECIPIENT_ID, roles=[]),
+                password_id=password.id,
+            )
+        )

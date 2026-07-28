@@ -298,6 +298,7 @@ def get_list_password_events_usecase(
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
     password_vault_access_gateway: PasswordVaultAccessGateway = Depends(get_password_vault_access_gateway),
     user_info_gateway: UserInfoGateway = Depends(get_user_info_gateway),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
 ):
     return ListPasswordEventsUseCase(
         password_repository,
@@ -306,6 +307,7 @@ def get_list_password_events_usecase(
         password_event_repository,
         password_vault_access_gateway,
         user_info_gateway,
+        time_gateway,
     )
 
 
