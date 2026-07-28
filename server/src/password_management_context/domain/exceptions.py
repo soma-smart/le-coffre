@@ -141,17 +141,6 @@ class ShareExpirationInPastError(PasswordManagementDomainError):
         super().__init__(f"Share expiration {expires_at.isoformat()} is not in the future (now is {now.isoformat()})")
 
 
-class ShareExpirationTooFarError(PasswordManagementDomainError):
-    """Raised when a share is given an expiry date beyond the allowed maximum lifetime"""
-
-    def __init__(self, expires_at: datetime, max_lifetime_seconds: int):
-        self.expires_at = expires_at
-        self.max_lifetime_seconds = max_lifetime_seconds
-        super().__init__(
-            f"Share expiration {expires_at.isoformat()} exceeds the maximum lifetime of {max_lifetime_seconds}s"
-        )
-
-
 # One-time link exceptions
 #
 # The four "not consumable" errors below are deliberately distinct so the domain

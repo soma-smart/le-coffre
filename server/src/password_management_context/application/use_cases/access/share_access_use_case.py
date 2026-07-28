@@ -20,9 +20,6 @@ from password_management_context.domain.exceptions import (
     UserNotOwnerOfGroupError,
 )
 from password_management_context.domain.value_objects import PasswordPermission, ShareExpiration
-from password_management_context.domain.value_objects.share_expiration import (
-    DEFAULT_MAX_SHARE_LIFETIME_SECONDS,
-)
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.gateways.time_gateway import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
@@ -39,7 +36,6 @@ class ShareAccessUseCase(TracedUseCase):
         event_publisher: DomainEventPublisher,
         password_event_repository: PasswordEventRepository,
         time_gateway: TimeGateway,
-        max_share_lifetime_seconds: int = DEFAULT_MAX_SHARE_LIFETIME_SECONDS,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
@@ -47,7 +43,6 @@ class ShareAccessUseCase(TracedUseCase):
         self.event_publisher = event_publisher
         self.password_event_repository = password_event_repository
         self.time_gateway = time_gateway
-        self.max_share_lifetime_seconds = max_share_lifetime_seconds
 
     def execute(self, command: ShareResourceCommand):
         # Verify the password exists
@@ -105,11 +100,10 @@ class ShareAccessUseCase(TracedUseCase):
         event_storage_service.store_event(event)
 
     def _validate_expiration(self, command: ShareResourceCommand) -> ShareExpiration | None:
-        """Reject a deadline that is already past or further out than policy allows."""
+        """Reject a deadline that has already passed."""
         if command.expires_at is None:
             return None
         return ShareExpiration.create(
             command.expires_at,
             now=self.time_gateway.get_current_time(),
-            max_lifetime_seconds=self.max_share_lifetime_seconds,
         )

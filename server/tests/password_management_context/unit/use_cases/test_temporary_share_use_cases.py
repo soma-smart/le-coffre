@@ -24,7 +24,6 @@ from password_management_context.domain.exceptions import (
     NotPasswordOwnerError,
     PasswordAccessDeniedError,
     ShareExpirationInPastError,
-    ShareExpirationTooFarError,
     ShareNotFoundError,
 )
 from password_management_context.domain.value_objects import PasswordPermission
@@ -206,29 +205,6 @@ def test_should_reject_an_expiry_in_the_past(share_use_case: ShareAccessUseCase,
         share_use_case.execute(
             ShareResourceCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, NOW - timedelta(seconds=1))
         )
-
-
-def test_should_reject_an_expiry_beyond_the_configured_cap(
-    password_repository,
-    password_permissions_repository,
-    group_access_gateway,
-    domain_event_publisher,
-    password_event_repository,
-    time_gateway: FakeTimeGateway,
-    password: Password,
-):
-    capped = ShareAccessUseCase(
-        password_repository,
-        password_permissions_repository,
-        group_access_gateway,
-        domain_event_publisher,
-        password_event_repository,
-        time_gateway,
-        max_share_lifetime_seconds=86400,
-    )
-
-    with pytest.raises(ShareExpirationTooFarError):
-        capped.execute(ShareResourceCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, NOW + timedelta(days=2)))
 
 
 def test_should_record_the_expiry_on_the_shared_event(
@@ -431,31 +407,6 @@ def test_should_reject_retiming_the_owner_group(
         update_use_case.execute(
             UpdateShareExpirationCommand(OWNER_ID, OWNER_GROUP_ID, password.id, NOW + timedelta(days=30))
         )
-
-
-def test_should_reject_an_extension_beyond_the_configured_cap(
-    share_use_case: ShareAccessUseCase,
-    password_repository,
-    password_permissions_repository,
-    group_access_gateway,
-    domain_event_publisher,
-    password_event_repository,
-    time_gateway: FakeTimeGateway,
-    password: Password,
-):
-    share_use_case.execute(ShareResourceCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, IN_ONE_HOUR))
-    capped = UpdateShareExpirationUseCase(
-        password_repository,
-        password_permissions_repository,
-        group_access_gateway,
-        domain_event_publisher,
-        password_event_repository,
-        time_gateway,
-        max_share_lifetime_seconds=86400,
-    )
-
-    with pytest.raises(ShareExpirationTooFarError):
-        capped.execute(UpdateShareExpirationCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, NOW + timedelta(days=2)))
 
 
 def test_should_record_both_dates_on_the_retiming_event(

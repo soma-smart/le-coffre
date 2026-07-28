@@ -2,10 +2,7 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
-from config import (
-    get_expired_share_retention_seconds,
-    get_max_share_lifetime_seconds,
-)
+from config import get_expired_share_retention_seconds
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_user_info_api,
 )
@@ -237,7 +234,6 @@ def get_share_access_usecase(
         event_publisher,
         password_event_repository,
         time_gateway,
-        get_max_share_lifetime_seconds(),
     )
 
 
@@ -256,7 +252,6 @@ def get_update_share_expiration_usecase(
         event_publisher,
         password_event_repository,
         time_gateway,
-        get_max_share_lifetime_seconds(),
     )
 
 

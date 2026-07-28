@@ -147,14 +147,17 @@ def test_temporary_share_rejects_invalid_deadlines(client_factory, setup, config
     )
     assert past.status_code == 400
 
-    too_far = admin_client.post(
-        f"/api/passwords/{password_id}/share",
-        json={"group_id": sso_group_id, "expires_at": _iso(now + timedelta(days=400))},
-    )
-    assert too_far.status_code == 400
-
-    # Nothing was granted by either attempt
+    # Nothing was granted by the rejected attempt
     assert sso_client.get(f"/api/passwords/{password_id}").status_code == 404
+
+    # A deadline years out is fine: sharing permanently is already unbounded,
+    # so refusing a long share would only push the owner towards a permanent one.
+    far = admin_client.post(
+        f"/api/passwords/{password_id}/share",
+        json={"group_id": sso_group_id, "expires_at": _iso(now + timedelta(days=365 * 5))},
+    )
+    assert far.status_code == 201
+    assert admin_client.delete(f"/api/passwords/{password_id}/share/{sso_group_id}").status_code == 204
 
     # Retiming a share that does not exist
     missing = admin_client.patch(

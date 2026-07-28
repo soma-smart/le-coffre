@@ -159,4 +159,13 @@ describe('ShareDurationPicker', () => {
 
     expect(wrapper.find('[data-testid="share-duration-custom"]').exists()).toBe(false)
   })
+
+  it('offers multi-year presets, since there is no server-side cap', async () => {
+    const { wrapper, model } = mountPicker()
+
+    await choosePreset(wrapper, 94608000)
+
+    // 2026-07-27 plus three years, the middle one being a leap year.
+    expect(model.value).toBe('2029-07-26T12:00:00.000Z')
+  })
 })

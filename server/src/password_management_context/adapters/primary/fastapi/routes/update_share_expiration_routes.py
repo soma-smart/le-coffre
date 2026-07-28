@@ -15,7 +15,6 @@ from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     PasswordNotFoundError,
     ShareExpirationInPastError,
-    ShareExpirationTooFarError,
     ShareNotFoundError,
 )
 from shared_kernel.adapters.primary.dependencies import get_current_user
@@ -65,7 +64,7 @@ def update_share_expiration(
         usecase.execute(command)
 
         return
-    except (ShareExpirationInPastError, ShareExpirationTooFarError) as e:
+    except ShareExpirationInPastError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except NotPasswordOwnerError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e

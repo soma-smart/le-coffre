@@ -2,17 +2,11 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from password_management_context.domain.exceptions import (
-    ShareExpirationInPastError,
-    ShareExpirationTooFarError,
-)
+from password_management_context.domain.exceptions import ShareExpirationInPastError
 from password_management_context.domain.value_objects import (
     PasswordGroupAccess,
     PasswordPermission,
     ShareExpiration,
-)
-from password_management_context.domain.value_objects.share_expiration import (
-    DEFAULT_MAX_SHARE_LIFETIME_SECONDS,
 )
 
 T0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
@@ -27,10 +21,12 @@ def test_should_accept_an_expiration_in_the_future():
     assert expiration.value == T0 + timedelta(hours=1)
 
 
-def test_should_accept_the_exact_maximum_lifetime():
-    furthest = T0 + timedelta(seconds=DEFAULT_MAX_SHARE_LIFETIME_SECONDS)
+def test_should_accept_an_expiration_years_away():
+    """No upper bound: permanent sharing is already unbounded, so a cap would
+    only push a long engagement towards never-expiring access."""
+    far = T0 + timedelta(days=365 * 5)
 
-    assert ShareExpiration.create(furthest, now=T0).value == furthest
+    assert ShareExpiration.create(far, now=T0).value == far
 
 
 def test_should_reject_an_expiration_in_the_past():
@@ -41,21 +37,6 @@ def test_should_reject_an_expiration_in_the_past():
 def test_should_reject_an_expiration_exactly_now():
     with pytest.raises(ShareExpirationInPastError):
         ShareExpiration.create(T0, now=T0)
-
-
-def test_should_reject_an_expiration_beyond_the_maximum_lifetime():
-    too_far = T0 + timedelta(seconds=DEFAULT_MAX_SHARE_LIFETIME_SECONDS + 1)
-
-    with pytest.raises(ShareExpirationTooFarError):
-        ShareExpiration.create(too_far, now=T0)
-
-
-def test_should_honour_a_configured_maximum_lifetime():
-    two_days_out = T0 + timedelta(days=2)
-
-    assert ShareExpiration.create(two_days_out, now=T0, max_lifetime_seconds=3 * 86400).value == two_days_out
-    with pytest.raises(ShareExpirationTooFarError):
-        ShareExpiration.create(two_days_out, now=T0, max_lifetime_seconds=86400)
 
 
 def test_should_normalise_a_naive_expiration_to_utc():

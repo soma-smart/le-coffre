@@ -35,6 +35,10 @@ const presets = [
   { label: '7 days', value: 604800 },
   { label: '30 days', value: 2592000 },
   { label: '90 days', value: 7776000 },
+  { label: '6 months', value: 15552000 },
+  { label: '1 year', value: 31536000 },
+  { label: '2 years', value: 63072000 },
+  { label: '3 years', value: 94608000 },
   { label: 'Custom…', value: CUSTOM },
 ]
 
