@@ -213,6 +213,27 @@ def test_should_reject_an_expiry_in_the_past(share_use_case: ShareAccessUseCase,
         )
 
 
+def test_should_reject_an_expiry_falling_exactly_on_now(share_use_case: ShareAccessUseCase, password: Password):
+    """The boundary is closed: a share born at its own deadline grants nothing."""
+    with pytest.raises(ShareExpirationInPastError):
+        share_use_case.execute(ShareResourceCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, NOW))
+
+
+def test_should_read_a_naive_expiry_as_utc(
+    share_use_case: ShareAccessUseCase,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    password: Password,
+):
+    """A deadline can arrive without an offset, and must not be stored as a bare
+    wall clock: it is read as UTC so the comparison against now stays meaningful."""
+    naive = IN_ONE_HOUR.replace(tzinfo=None)
+
+    share_use_case.execute(ShareResourceCommand(OWNER_ID, RECIPIENT_GROUP_ID, password.id, naive))
+
+    access = password_permissions_repository.list_all_permissions_for(password.id)[RECIPIENT_GROUP_ID]
+    assert access.expires_at == IN_ONE_HOUR
+
+
 def test_should_record_the_expiry_on_the_shared_event(
     share_use_case: ShareAccessUseCase,
     password_event_repository: FakePasswordEventRepository,
