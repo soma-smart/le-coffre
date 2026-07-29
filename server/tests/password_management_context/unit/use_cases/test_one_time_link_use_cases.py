@@ -26,6 +26,7 @@ from password_management_context.domain.exceptions import (
     OneTimeLinkAlreadyUsedError,
     OneTimeLinkExpiredError,
     OneTimeLinkLifetimeTooLongError,
+    OneTimeLinkLifetimeTooShortError,
     OneTimeLinkNotFoundError,
     OneTimeLinkRevokedError,
     PasswordEncryptionUnavailableError,
@@ -146,6 +147,16 @@ def test_given_owner_when_creating_should_return_a_token_and_store_only_its_hash
     assert result.token not in stored.token_hash
 
 
+def test_given_two_creations_should_mint_distinct_tokens(
+    create_use_case: CreateOneTimeLinkUseCase,
+    owned_password: Password,
+):
+    first = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    second = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+
+    assert first.token != second.token
+
+
 def test_given_non_owner_when_creating_should_raise(
     create_use_case: CreateOneTimeLinkUseCase,
     one_time_link_repository: FakeOneTimeLinkRepository,
@@ -176,7 +187,7 @@ def test_given_unknown_password_when_creating_should_raise(
         create_use_case.execute(CreateOneTimeLinkCommand(password_id=uuid4(), requesting_user_id=OWNER_ID))
 
 
-def test_given_out_of_range_lifetime_when_creating_should_raise_and_store_nothing(
+def test_given_lifetime_above_the_maximum_when_creating_should_raise_and_store_nothing(
     create_use_case: CreateOneTimeLinkUseCase,
     one_time_link_repository: FakeOneTimeLinkRepository,
     owned_password: Password,
@@ -187,6 +198,23 @@ def test_given_out_of_range_lifetime_when_creating_should_raise_and_store_nothin
                 password_id=PASSWORD_ID,
                 requesting_user_id=OWNER_ID,
                 lifetime_seconds=30 * 24 * 60 * 60,
+            )
+        )
+
+    assert one_time_link_repository.storage == {}
+
+
+def test_given_lifetime_below_the_minimum_when_creating_should_raise_and_store_nothing(
+    create_use_case: CreateOneTimeLinkUseCase,
+    one_time_link_repository: FakeOneTimeLinkRepository,
+    owned_password: Password,
+):
+    with pytest.raises(OneTimeLinkLifetimeTooShortError):
+        create_use_case.execute(
+            CreateOneTimeLinkCommand(
+                password_id=PASSWORD_ID,
+                requesting_user_id=OWNER_ID,
+                lifetime_seconds=30,
             )
         )
 

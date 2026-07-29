@@ -1,6 +1,9 @@
+from datetime import UTC, datetime
+
 import pytest
 
 from tests.fakes import FakeDomainEventPublisher
+from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
 
 from .fakes import (
     FakeGroupAccessGateway,
@@ -11,6 +14,15 @@ from .fakes import (
     FakePasswordRepository,
     FakePasswordVaultAccessGateway,
 )
+
+# A fixed "now" so expiry-sensitive use cases are deterministic. Tests that care
+# about a deadline move this clock rather than sleeping.
+NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+
+
+@pytest.fixture
+def time_gateway():
+    return FakeTimeGateway(fixed_time=NOW)
 
 
 @pytest.fixture

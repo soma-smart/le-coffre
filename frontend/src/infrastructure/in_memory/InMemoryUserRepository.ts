@@ -17,6 +17,7 @@ import { IncorrectOldPasswordError, UserNotFoundError } from '@/domain/user/erro
 export class InMemoryUserRepository implements UserRepository {
   private readonly storage = new Map<string, User>()
   private readonly passwords = new Map<string, string>()
+  private readonly passwordEvents = new Map<string, UserPasswordEvent[]>()
   private current: User | null = null
   private idGenerator: () => string = randomUuid
   private getCurrentError: Error | null = null
@@ -118,13 +119,19 @@ export class InMemoryUserRepository implements UserRepository {
     }
   }
 
+  seedPasswordEvents(userId: string, events: UserPasswordEvent[]): this {
+    this.passwordEvents.set(userId, events)
+    return this
+  }
+
   async listPasswordEvents(
-    _userId: string,
-    _filters?: ListUserPasswordEventsFilters,
+    userId: string,
+    filters?: ListUserPasswordEventsFilters,
   ): Promise<UserPasswordEvent[]> {
-    void _userId
-    void _filters
-    return []
+    const events = this.passwordEvents.get(userId) ?? []
+    if (!filters?.eventTypes?.length) return events
+    const wanted = new Set(filters.eventTypes)
+    return events.filter((event) => wanted.has(event.eventType))
   }
 }
 

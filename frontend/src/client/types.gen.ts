@@ -411,6 +411,10 @@ export type GetPasswordListResponse = {
      * Accessible Group Ids
      */
     accessible_group_ids: Array<string>;
+    /**
+     * Access Expires At
+     */
+    access_expires_at?: string | null;
 };
 
 /**
@@ -496,6 +500,10 @@ export type GroupAccessItem = {
      * Permissions
      */
     permissions: Array<PermissionEnum>;
+    /**
+     * Expires At
+     */
+    expires_at?: string | null;
 };
 
 /**
@@ -941,6 +949,10 @@ export type SharePasswordRequest = {
      * Group Id
      */
     group_id: string;
+    /**
+     * Expires At
+     */
+    expires_at?: string | null;
 };
 
 /**
@@ -1087,6 +1099,16 @@ export type UpdatePasswordRequest = {
 };
 
 /**
+ * UpdateShareExpirationRequest
+ */
+export type UpdateShareExpirationRequest = {
+    /**
+     * Expires At
+     */
+    expires_at?: string | null;
+};
+
+/**
  * UpdateUserPasswordRequest
  */
 export type UpdateUserPasswordRequest = {
@@ -1138,6 +1160,10 @@ export type UserAccessItem = {
      * Permissions
      */
     permissions: Array<PermissionEnum>;
+    /**
+     * Expires At
+     */
+    expires_at?: string | null;
 };
 
 /**
@@ -1957,6 +1983,40 @@ export type UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses = {
 };
 
 export type UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponse = UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses[keyof UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses];
+
+export type UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchData = {
+    body: UpdateShareExpirationRequest;
+    path: {
+        /**
+         * Password Id
+         */
+        password_id: string;
+        /**
+         * Group Id
+         */
+        group_id: string;
+    };
+    query?: never;
+    url: '/passwords/{password_id}/share/{group_id}';
+};
+
+export type UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchError = UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchErrors[keyof UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchErrors];
+
+export type UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponse = UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponses[keyof UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponses];
 
 export type ListPasswordAccessPasswordsPasswordIdAccessGetData = {
     body?: never;

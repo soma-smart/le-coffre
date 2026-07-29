@@ -13,7 +13,7 @@ _COUNTER_PATH = (
 def _make_use_case(is_owner=False, has_access=False):
     repo = MagicMock()
     repo.is_owner.return_value = is_owner
-    repo.has_access.return_value = has_access
+    repo.has_access_ignoring_expiry.return_value = has_access
     return CheckAccessUseCase(repo)
 
 

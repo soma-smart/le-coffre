@@ -40,8 +40,15 @@ export interface PasswordRepository {
   create(input: CreatePasswordInput): Promise<string>
   update(input: UpdatePasswordInput): Promise<void>
   delete(passwordId: string): Promise<void>
-  share(passwordId: string, groupId: string): Promise<void>
+  /** `expiresAt` is an ISO date; null or omitted shares permanently. */
+  share(passwordId: string, groupId: string, expiresAt?: string | null): Promise<void>
   unshare(passwordId: string, groupId: string): Promise<void>
+  /** Retimes an existing share; null lifts the deadline. */
+  updateShareExpiration(
+    passwordId: string,
+    groupId: string,
+    expiresAt: string | null,
+  ): Promise<void>
   listAccess(passwordId: string): Promise<PasswordAccess>
   listEvents(passwordId: string, filters?: ListPasswordEventsFilters): Promise<PasswordEvent[]>
 }

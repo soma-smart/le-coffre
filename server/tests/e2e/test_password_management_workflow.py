@@ -10,9 +10,11 @@ This consolidated test covers the entire password lifecycle including:
 - Event logging
 - Access listing
 - Timestamp tracking (created_at, last_updated_at)
+- Time-limited sharing: share with a deadline, retime it, lift it
 """
 
 import time
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
@@ -20,6 +22,21 @@ import jwt
 STRONG_PASSWORD = "StrongP@ssw0rd123"
 LOGIN = "My Login"
 URL = "http://example.com"
+
+
+def iso(moment: datetime) -> str:
+    """Serialise a deadline the way the API expects it."""
+    return moment.astimezone(UTC).isoformat()
+
+
+def create_shared_password(admin_client, group_id: str, name: str) -> str:
+    """Create a password owned by group_id and return its id."""
+    response = admin_client.post(
+        "/api/passwords",
+        json={"name": name, "password": STRONG_PASSWORD, "folder": "Shared", "group_id": group_id},
+    )
+    assert response.status_code == 201
+    return response.json()["id"]
 
 
 def get_user_id_from_token(token: str) -> str:
@@ -47,6 +64,11 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     - List access permissions
     - Unshare password
     - Verify access revoked
+
+    Phase 8: Time-Limited Sharing
+    - Share with a deadline, seen by the recipient but not the owner
+    - Extend it, then lift it entirely
+    - Reject a past deadline, a missing share, and a non-owner retiming
 
     Phase 3: Group-Based Sharing
     - Create a group
@@ -724,6 +746,116 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     unauth_stats = unauthenticated_client.get("/api/passwords/statistics")
     assert unauth_stats.status_code == 401
     print("✓ Unauthenticated correctly rejected (401)")
+
+    # ===================================================================
+    # PHASE 8: TIME-LIMITED SHARING
+    # ===================================================================
+
+    print("\n=== PHASE 8: TIME-LIMITED SHARING ===")
+
+    # Expiry is driven by the server clock, so this cannot fast-forward past a
+    # deadline without reaching around the API. Losing access at the deadline is
+    # covered by the use-case unit tests, which own a fake clock.
+    temporary_password_id = create_shared_password(admin_client, admin_group_id, "Contractor Access")
+
+    now = datetime.now(UTC)
+    in_one_hour = now + timedelta(hours=1)
+
+    share_response = admin_client.post(
+        f"/api/passwords/{temporary_password_id}/share",
+        json={"group_id": sso_user_group_id, "expires_at": iso(in_one_hour)},
+    )
+    assert share_response.status_code == 201
+    print("✓ Password shared with a one-hour deadline")
+
+    # The recipient can read it, and is told when their access lapses
+    assert sso_client.get(f"/api/passwords/{temporary_password_id}").status_code == 200
+    recipient_entry = next(p for p in sso_client.get("/api/passwords/list").json() if p["id"] == temporary_password_id)
+    assert datetime.fromisoformat(recipient_entry["access_expires_at"]) == in_one_hour
+    assert recipient_entry["can_write"] is False
+
+    # The owner's own access never lapses
+    owner_entry = next(p for p in admin_client.get("/api/passwords/list").json() if p["id"] == temporary_password_id)
+    assert owner_entry["access_expires_at"] is None
+    print("✓ Deadline visible to the recipient, absent for the owner")
+
+    # The deadline shows up on the access panel, against the shared group only
+    access = admin_client.get(f"/api/passwords/{temporary_password_id}/access").json()
+    shared_group = next(g for g in access["group_access_list"] if g["group_id"] == sso_user_group_id)
+    owner_group = next(g for g in access["group_access_list"] if g["group_id"] == admin_group_id)
+    assert datetime.fromisoformat(shared_group["expires_at"]) == in_one_hour
+    assert owner_group["expires_at"] is None
+    shared_user = next(u for u in access["user_access_list"] if u["group_id"] == sso_user_group_id)
+    assert datetime.fromisoformat(shared_user["expires_at"]) == in_one_hour
+
+    # Extend it
+    in_a_month = now + timedelta(days=30)
+    extend_response = admin_client.patch(
+        f"/api/passwords/{temporary_password_id}/share/{sso_user_group_id}",
+        json={"expires_at": iso(in_a_month)},
+    )
+    assert extend_response.status_code == 204
+    access = admin_client.get(f"/api/passwords/{temporary_password_id}/access").json()
+    shared_group = next(g for g in access["group_access_list"] if g["group_id"] == sso_user_group_id)
+    assert datetime.fromisoformat(shared_group["expires_at"]) == in_a_month
+    print("✓ Deadline extended")
+
+    # Make it permanent
+    permanent_response = admin_client.patch(
+        f"/api/passwords/{temporary_password_id}/share/{sso_user_group_id}",
+        json={"expires_at": None},
+    )
+    assert permanent_response.status_code == 204
+    access = admin_client.get(f"/api/passwords/{temporary_password_id}/access").json()
+    shared_group = next(g for g in access["group_access_list"] if g["group_id"] == sso_user_group_id)
+    assert shared_group["expires_at"] is None
+    assert sso_client.get(f"/api/passwords/{temporary_password_id}").status_code == 200
+    print("✓ Deadline lifted, access kept")
+
+    # Revoking still works on a share that went through the temporary path
+    revoke = admin_client.delete(f"/api/passwords/{temporary_password_id}/share/{sso_user_group_id}")
+    assert revoke.status_code == 204
+    assert sso_client.get(f"/api/passwords/{temporary_password_id}").status_code == 404
+    print("✓ Share revoked")
+
+    # A deadline in the past is refused, and grants nothing
+    rejected_password_id = create_shared_password(admin_client, admin_group_id, "Bad Deadlines")
+    past = admin_client.post(
+        f"/api/passwords/{rejected_password_id}/share",
+        json={"group_id": sso_user_group_id, "expires_at": iso(now - timedelta(minutes=5))},
+    )
+    assert past.status_code == 400
+    assert sso_client.get(f"/api/passwords/{rejected_password_id}").status_code == 404
+
+    # A deadline years out is fine: sharing permanently is already unbounded,
+    # so refusing a long share would only push the owner towards a permanent one.
+    far = admin_client.post(
+        f"/api/passwords/{rejected_password_id}/share",
+        json={"group_id": sso_user_group_id, "expires_at": iso(now + timedelta(days=365 * 5))},
+    )
+    assert far.status_code == 201
+    far_revoke = admin_client.delete(f"/api/passwords/{rejected_password_id}/share/{sso_user_group_id}")
+    assert far_revoke.status_code == 204
+    print("✓ Past deadline refused, far deadline accepted")
+
+    # Retiming a share that does not exist
+    missing = admin_client.patch(
+        f"/api/passwords/{rejected_password_id}/share/{sso_user_group_id}",
+        json={"expires_at": iso(now + timedelta(days=1))},
+    )
+    assert missing.status_code == 404
+
+    # A non-owner cannot retime a share
+    admin_client.post(
+        f"/api/passwords/{rejected_password_id}/share",
+        json={"group_id": sso_user_group_id, "expires_at": iso(now + timedelta(days=1))},
+    )
+    forbidden = sso_client.patch(
+        f"/api/passwords/{rejected_password_id}/share/{sso_user_group_id}",
+        json={"expires_at": iso(now + timedelta(days=30))},
+    )
+    assert forbidden.status_code == 403
+    print("✓ Missing share 404s, non-owner refused")
 
     print("\n" + "=" * 70)
     print("ALL TESTS PASSED SUCCESSFULLY!")

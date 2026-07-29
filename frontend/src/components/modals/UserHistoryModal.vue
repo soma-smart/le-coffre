@@ -77,8 +77,8 @@
         <Column field="event_type" header="Event Type" sortable :style="{ width: '20%' }">
           <template #body="slotProps">
             <Tag
-              :value="formatEventType(slotProps.data.eventType)"
-              :severity="getEventSeverity(slotProps.data.eventType)"
+              :value="humanizeEventType(slotProps.data.eventType)"
+              :severity="eventSeverity(slotProps.data.eventType)"
             />
           </template>
         </Column>
@@ -114,6 +114,12 @@
                   ) + '...' ||
                   'Unknown'
                 }}</strong>
+                <template v-if="slotProps.data.eventData.expiresAt">
+                  , until
+                  <strong>{{
+                    formatDateTime(slotProps.data.eventData.expiresAt as string)
+                  }}</strong>
+                </template>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordUnsharedEvent'">
                 Unshared from group:
@@ -125,6 +131,22 @@
                   ) + '...' ||
                   'Unknown'
                 }}</strong>
+              </span>
+              <span v-else-if="slotProps.data.eventType === 'PasswordShareExpirationUpdatedEvent'">
+                Access duration changed for group
+                <strong>{{
+                  (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
+                    0,
+                    8,
+                  ) + '...' || 'Unknown'
+                }}</strong>
+                <template v-if="slotProps.data.eventData.expiresAt">
+                  , now expires
+                  <strong>{{
+                    formatDateTime(slotProps.data.eventData.expiresAt as string)
+                  }}</strong>
+                </template>
+                <template v-else>, now permanent</template>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordAccessedEvent'">
                 Password accessed
@@ -158,6 +180,7 @@ import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import type { User } from '@/domain/user/User'
 import type { UserPasswordEvent } from '@/domain/user/User'
+import { eventSeverity, humanizeEventType } from '@/domain/password/Password'
 import { useContainer } from '@/plugins/container'
 
 const props = defineProps<{
@@ -229,24 +252,6 @@ const formatDateTime = (dateString: string): string => {
     minute: '2-digit',
     second: '2-digit',
   })
-}
-
-const formatEventType = (eventType: string): string => {
-  return eventType
-    .replace('Event', '')
-    .replace(/([A-Z])/g, ' $1')
-    .trim()
-}
-
-const getEventSeverity = (
-  eventType: string,
-): 'success' | 'info' | 'warn' | 'danger' | 'secondary' => {
-  if (eventType === 'PasswordCreatedEvent') return 'success'
-  if (eventType === 'PasswordDeletedEvent') return 'danger'
-  if (eventType === 'PasswordUpdatedEvent') return 'warn'
-  if (eventType === 'PasswordSharedEvent' || eventType === 'PasswordUnsharedEvent') return 'info'
-  if (eventType === 'PasswordAccessedEvent') return 'secondary'
-  return 'secondary'
 }
 
 watch(

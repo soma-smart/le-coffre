@@ -2,6 +2,7 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
+from config import get_expired_share_retention_seconds
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_user_info_api,
 )
@@ -61,6 +62,7 @@ from password_management_context.application.use_cases import (
     ShareAccessUseCase,
     UnshareAccessUseCase,
     UpdatePasswordUseCase,
+    UpdateShareExpirationUseCase,
 )
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.adapters.secondary.utc_time_gateway import UtcTimeGateway
@@ -152,6 +154,7 @@ def get_get_password_usecase(
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
 ):
     return GetPasswordUseCase(
         password_repository,
@@ -160,6 +163,7 @@ def get_get_password_usecase(
         group_access_gateway,
         event_publisher,
         password_event_repository,
+        time_gateway,
     )
 
 
@@ -186,12 +190,14 @@ def get_list_passwords_usecase(
     password_permissions_repository: PasswordPermissionsRepository = Depends(get_password_permissions_repository),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
 ):
     return ListPasswordsUseCase(
         password_repository,
         password_permissions_repository,
         group_access_gateway,
         password_event_repository,
+        time_gateway,
     )
 
 
@@ -219,6 +225,7 @@ def get_share_access_usecase(
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
 ):
     return ShareAccessUseCase(
         password_repository,
@@ -226,6 +233,25 @@ def get_share_access_usecase(
         group_access_gateway,
         event_publisher,
         password_event_repository,
+        time_gateway,
+    )
+
+
+def get_update_share_expiration_usecase(
+    password_repository: PasswordRepository = Depends(get_password_repository),
+    password_permissions_repository: PasswordPermissionsRepository = Depends(get_password_permissions_repository),
+    group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return UpdateShareExpirationUseCase(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        event_publisher,
+        password_event_repository,
+        time_gateway,
     )
 
 
@@ -249,8 +275,15 @@ def get_list_resource_access_usecase(
     password_repository: PasswordRepository = Depends(get_password_repository),
     password_permissions_repository: PasswordPermissionsRepository = Depends(get_password_permissions_repository),
     group_access_gateway: GroupAccessGateway = Depends(get_group_access_gateway),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
 ):
-    return ListAccessUseCase(password_repository, password_permissions_repository, group_access_gateway)
+    return ListAccessUseCase(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        time_gateway,
+        get_expired_share_retention_seconds(),
+    )
 
 
 def get_list_password_events_usecase(
@@ -260,6 +293,7 @@ def get_list_password_events_usecase(
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
     password_vault_access_gateway: PasswordVaultAccessGateway = Depends(get_password_vault_access_gateway),
     user_info_gateway: UserInfoGateway = Depends(get_user_info_gateway),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
 ):
     return ListPasswordEventsUseCase(
         password_repository,
@@ -268,6 +302,7 @@ def get_list_password_events_usecase(
         password_event_repository,
         password_vault_access_gateway,
         user_info_gateway,
+        time_gateway,
     )
 
 

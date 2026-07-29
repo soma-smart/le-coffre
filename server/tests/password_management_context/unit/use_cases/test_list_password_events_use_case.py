@@ -17,6 +17,7 @@ from password_management_context.domain.exceptions import (
 )
 from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.domain.entities import AuthenticatedUser
+from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
 
 from ..fakes import (
     FakeGroupAccessGateway,
@@ -45,6 +46,7 @@ def use_case(
     password_event_repository: FakePasswordEventRepository,
     password_vault_access_gateway: FakePasswordVaultAccessGateway,
     user_info_gateway: FakeUserInfoGateway,
+    time_gateway: FakeTimeGateway,
 ):
     return ListPasswordEventsUseCase(
         password_repository,
@@ -53,6 +55,7 @@ def use_case(
         password_event_repository,
         password_vault_access_gateway,
         user_info_gateway,
+        time_gateway,
     )
 
 

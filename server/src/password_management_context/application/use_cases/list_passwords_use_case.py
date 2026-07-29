@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from uuid import UUID
 
 from password_management_context.application.commands import ListPasswordsCommand
@@ -16,7 +17,7 @@ from password_management_context.application.responses import PasswordMetadataRe
 from password_management_context.application.services import PasswordTimestampService
 from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
-from password_management_context.domain.value_objects import PasswordPermission
+from shared_kernel.application.gateways.time_gateway import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
@@ -31,6 +32,19 @@ class _PasswordAccessEntry:
     can_read: bool
     can_write: bool
     visible_group_ids: list[UUID]
+    access_expires_at: datetime | None = None
+
+
+@dataclass
+class _UserAccess:
+    """How the requester reaches one password, and until when.
+
+    can_write is the owning-group membership; access_expires_at is the deadline
+    of the share the user came through, so the UI can warn them before it lapses.
+    """
+
+    can_write: bool
+    expires_at: datetime | None
 
 
 class ListPasswordsUseCase(TracedUseCase):
@@ -40,11 +54,13 @@ class ListPasswordsUseCase(TracedUseCase):
         password_permissions_repository: PasswordPermissionsRepository,
         group_access_gateway: GroupAccessGateway,
         password_event_repository: PasswordEventRepository,
+        time_gateway: TimeGateway,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
         self.password_event_repository = password_event_repository
+        self.time_gateway = time_gateway
 
     def execute(self, command: ListPasswordsCommand) -> list[PasswordMetadataResponse]:
         passwords = self._fetch_passwords(command.folder)
@@ -80,10 +96,11 @@ class ListPasswordsUseCase(TracedUseCase):
         all_permissions: BulkGroupPermissions,
     ) -> list[_PasswordAccessEntry]:
         is_admin = AdminPermissionChecker.is_admin(command.requester)
+        now = self.time_gateway.get_current_time()
         cache: MembershipCache = {}
         entries = []
         for password in passwords:
-            entry = self._access_entry_for(command.requester.user_id, password, all_permissions, is_admin, cache)
+            entry = self._access_entry_for(command.requester.user_id, password, all_permissions, is_admin, cache, now)
             if entry is not None:
                 entries.append(entry)
         return entries
@@ -95,19 +112,27 @@ class ListPasswordsUseCase(TracedUseCase):
         all_permissions: BulkGroupPermissions,
         is_admin: bool,
         cache: MembershipCache,
+        now: datetime,
     ) -> _PasswordAccessEntry | None:
         permissions = all_permissions.get(password.id, {})
         owner_group_id = self._find_owner_group_id(permissions)
         if owner_group_id is None:
             return None
 
-        all_group_ids = list(permissions.keys())
-        user_access = self._find_user_access(user_id, permissions, cache)
+        # An expired share is dropped here rather than filtered downstream, so it
+        # can neither grant the password nor show up as a group it reaches.
+        all_group_ids = [gid for gid, access in permissions.items() if access.is_active(now)]
+        user_access = self._find_user_access(user_id, permissions, cache, now)
 
         if user_access is not None:
             visible_ids = self._visible_group_ids_for_user(user_id, owner_group_id, all_group_ids, cache)
             return _PasswordAccessEntry(
-                password, owner_group_id, can_read=True, can_write=user_access, visible_group_ids=visible_ids
+                password,
+                owner_group_id,
+                can_read=True,
+                can_write=user_access.can_write,
+                visible_group_ids=visible_ids,
+                access_expires_at=user_access.expires_at,
             )
 
         if is_admin:
@@ -132,10 +157,11 @@ class ListPasswordsUseCase(TracedUseCase):
             login=entry.password.login,
             url=entry.password.url,
             accessible_group_ids=tuple(entry.visible_group_ids),
+            access_expires_at=entry.access_expires_at,
         )
 
     def _find_owner_group_id(self, permissions: GroupPermissions) -> UUID | None:
-        return next((gid for gid, (is_owner, _) in permissions.items() if is_owner), None)
+        return next((gid for gid, access in permissions.items() if access.is_owner), None)
 
     def _visible_group_ids_for_user(
         self,
@@ -155,14 +181,30 @@ class ListPasswordsUseCase(TracedUseCase):
         user_id: UUID,
         permissions: GroupPermissions,
         cache: MembershipCache,
-    ) -> bool | None:
-        for group_id, (is_owner_group, perms) in permissions.items():
-            if self._user_belongs_to_group(user_id, group_id, cache):
-                if is_owner_group:
-                    return True
-                if PasswordPermission.READ in perms:
-                    return False
-        return None
+        now: datetime,
+    ) -> _UserAccess | None:
+        temporary: _UserAccess | None = None
+
+        for group_id, access in permissions.items():
+            if not access.grants_read(now) or not self._user_belongs_to_group(user_id, group_id, cache):
+                continue
+            if access.is_owner:
+                return _UserAccess(can_write=True, expires_at=None)
+            # Keep looking: a permanent share elsewhere, or ownership, outranks
+            # this one, and the user should not be warned about a deadline that
+            # does not actually end their access.
+            if temporary is None or self._outlasts(access.expires_at, temporary.expires_at):
+                temporary = _UserAccess(can_write=False, expires_at=access.expires_at)
+
+        return temporary
+
+    @staticmethod
+    def _outlasts(candidate: datetime | None, current: datetime | None) -> bool:
+        if candidate is None:
+            return True
+        if current is None:
+            return False
+        return candidate > current
 
     def _user_belongs_to_group(self, user_id: UUID, group_id: UUID, cache: MembershipCache) -> bool:
         is_owner, is_member = self._cached_membership(user_id, group_id, cache)

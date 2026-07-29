@@ -53,6 +53,7 @@ declare module 'vue' {
     SelectButton: typeof import('primevue/selectbutton')['default']
     SetupDone: typeof import('./src/components/setup/SetupDone.vue')['default']
     ShamirInputs: typeof import('./src/components/setup/shamir/ShamirInputs.vue')['default']
+    ShareDurationPicker: typeof import('./src/components/shared/ShareDurationPicker.vue')['default']
     SharePasswordModal: typeof import('./src/components/modals/SharePasswordModal.vue')['default']
     SharesModal: typeof import('./src/components/setup/shamir/SharesModal.vue')['default']
     Skeleton: typeof import('primevue/skeleton')['default']

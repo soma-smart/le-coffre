@@ -32,6 +32,7 @@ const ownerPassword: Password = {
   login: null,
   url: null,
   accessibleGroupIds: ['owner-group'],
+  accessExpiresAt: null,
 }
 
 function makeUser(id: string, name: string): User {
@@ -127,6 +128,7 @@ describe('SharePasswordModal', () => {
           roleInGroup: 'owner',
           groupRole: 'owner',
           permissions: ['read'],
+          expiresAt: null,
         },
         {
           userId: 'user-2',
@@ -134,11 +136,12 @@ describe('SharePasswordModal', () => {
           roleInGroup: 'member',
           groupRole: 'member',
           permissions: ['read'],
+          expiresAt: null,
         },
       ],
       groups: [
-        { groupId: 'owner-group', role: 'owner', permissions: ['read'] },
-        { groupId: 'team-group', role: 'member', permissions: ['read'] },
+        { groupId: 'owner-group', role: 'owner', permissions: ['read'], expiresAt: null },
+        { groupId: 'team-group', role: 'member', permissions: ['read'], expiresAt: null },
       ],
     }
     const accessRepo = { listAccess: async () => access } as unknown as PasswordRepository
@@ -161,5 +164,89 @@ describe('SharePasswordModal', () => {
     expect(text).toContain('shared')
     // The owner link is labelled as owning the password.
     expect(text).toContain('owns')
+  })
+
+  it('badges a live temporary share with its countdown', async () => {
+    await repo.share('pwd-1', 'team-group', new Date(Date.now() + 3_600_000).toISOString())
+
+    const wrapper = mountModal(container, pinia)
+    await flushPromises()
+
+    const badge = wrapper.get('[data-testid="group-share-expiry"]')
+    expect(badge.text()).toContain('expires')
+  })
+
+  it('badges a lapsed share as expired rather than counting down', async () => {
+    await repo.share('pwd-1', 'team-group', new Date(Date.now() - 3_600_000).toISOString())
+
+    const wrapper = mountModal(container, pinia)
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="group-share-expiry"]').text()).toContain('Expired')
+  })
+
+  it('shows no badge on a permanent share', async () => {
+    await repo.share('pwd-1', 'team-group')
+
+    const wrapper = mountModal(container, pinia)
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="group-share-expiry"]').exists()).toBe(false)
+  })
+
+  it('never offers to retime the owning group', async () => {
+    await repo.share('pwd-1', 'team-group')
+
+    const wrapper = mountModal(container, pinia)
+    await flushPromises()
+
+    // Owner + Team are listed, but only the shared group gets the clock button.
+    expect(wrapper.findAll('[data-testid="change-duration"]')).toHaveLength(1)
+  })
+
+  it('lifts the deadline of an existing share through the retime form', async () => {
+    await repo.share('pwd-1', 'team-group', new Date(Date.now() + 3_600_000).toISOString())
+
+    const wrapper = mountModal(container, pinia)
+    await flushPromises()
+
+    await wrapper.get('[data-testid="change-duration"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="retime-form"]').exists()).toBe(true)
+
+    // Two pickers are on screen: the share form's, then the retime form's.
+    const pickers = wrapper.findAllComponents({ name: 'ShareDurationPicker' })
+    expect(pickers).toHaveLength(2)
+    // The picker opens on the current deadline; saving null makes it permanent.
+    await pickers[1].vm.$emit('update:modelValue', null)
+    await flushPromises()
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Save')
+      ?.trigger('click')
+    await flushPromises()
+
+    const access = await repo.listAccess('pwd-1')
+    expect(access.groups.find((group) => group.groupId === 'team-group')?.expiresAt).toBeNull()
+  })
+
+  it('passes the chosen deadline through when sharing with a new group', async () => {
+    const wrapper = mountModal(container, pinia)
+    await flushPromises()
+
+    const deadline = new Date(Date.now() + 86_400_000).toISOString()
+    await wrapper
+      .findComponent({ name: 'ShareDurationPicker' })
+      .vm.$emit('update:modelValue', deadline)
+    await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:modelValue', 'team-group')
+    await flushPromises()
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text().includes('Share'))
+      ?.trigger('click')
+    await flushPromises()
+
+    const access = await repo.listAccess('pwd-1')
+    expect(access.groups.find((group) => group.groupId === 'team-group')?.expiresAt).toBe(deadline)
   })
 })

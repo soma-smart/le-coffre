@@ -21,6 +21,11 @@ export interface Password {
   login: string | null
   url: string | null
   accessibleGroupIds: string[]
+  /**
+   * When the viewer's own access to this password lapses. Null when they own it
+   * or reach it through a permanent share. An owner's access never expires.
+   */
+  accessExpiresAt: string | null
 }
 
 /** OWNER vs MEMBER — used both for a user within a group and for a group on a password. */
@@ -38,6 +43,8 @@ export interface UserAccessLink {
   /** Whether `groupId` owns the password or is merely shared with it. */
   groupRole: AccessRole
   permissions: PasswordPermission[]
+  /** When this share lapses. Null for a permanent share and for the owning group. */
+  expiresAt: string | null
 }
 
 export interface GroupAccessEntry {
@@ -45,6 +52,8 @@ export interface GroupAccessEntry {
   /** Whether this group owns the password or is shared with it. */
   role: AccessRole
   permissions: PasswordPermission[]
+  /** When this share lapses. Null for a permanent share and for the owning group. */
+  expiresAt: string | null
 }
 
 export interface PasswordAccess {
@@ -86,7 +95,12 @@ export function eventSeverity(eventType: string): PasswordEventSeverity {
   if (eventType === 'PasswordCreatedEvent') return 'success'
   if (eventType === 'PasswordDeletedEvent') return 'danger'
   if (eventType === 'PasswordUpdatedEvent') return 'warn'
-  if (eventType === 'PasswordSharedEvent' || eventType === 'PasswordUnsharedEvent') return 'info'
+  if (
+    eventType === 'PasswordSharedEvent' ||
+    eventType === 'PasswordUnsharedEvent' ||
+    eventType === 'PasswordShareExpirationUpdatedEvent'
+  )
+    return 'info'
   if (eventType === 'PasswordAccessedEvent') return 'secondary'
   // Issuing a one-time link is a form of sharing, so it matches the sharing
   // events. Redeeming one is the moment the secret actually left the vault to
@@ -94,6 +108,39 @@ export function eventSeverity(eventType: string): PasswordEventSeverity {
   if (eventType === 'OneTimeLinkCreatedEvent') return 'info'
   if (eventType === 'OneTimeLinkReadEvent') return 'warn'
   return 'secondary'
+}
+
+/**
+ * Lifecycle of a share's deadline. `permanent` is not the same as `active`: a
+ * share with no deadline needs no badge at all, while one that is merely still
+ * alive is worth showing a countdown for.
+ */
+export type ShareStatus = 'permanent' | 'active' | 'expired'
+
+/**
+ * Reads the state of a share's deadline. The backend enforces expiry; this is
+ * purely how the UI labels it. `now` is injectable so tests don't depend on
+ * wall-clock time.
+ */
+export function shareStatusOf(expiresAt: string | null, now: Date = new Date()): ShareStatus {
+  if (!expiresAt) return 'permanent'
+
+  // An unreadable deadline counts as expired. Comparing an Invalid Date yields
+  // false, so the naive form would report the share as live, which is the one
+  // answer we must never give about a deadline we cannot read. It also keeps
+  // the badge legible: the expired label is static, whereas the active one
+  // interpolates a relative time that would render blank.
+  const deadline = Date.parse(expiresAt)
+  if (Number.isNaN(deadline)) return 'expired'
+
+  return deadline <= now.getTime() ? 'expired' : 'active'
+}
+
+/** PrimeVue Tag severity for a share's deadline state. */
+export function severityForShareStatus(status: ShareStatus): 'info' | 'warn' | 'danger' {
+  if (status === 'expired') return 'danger'
+  if (status === 'active') return 'warn'
+  return 'info'
 }
 
 /**

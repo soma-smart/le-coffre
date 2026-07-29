@@ -17,8 +17,8 @@ from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
     PasswordNotFoundError,
 )
-from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.application.gateways.time_gateway import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
 logger = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ class GetPasswordUseCase(TracedUseCase):
         group_access_gateway: GroupAccessGateway,
         event_publisher: DomainEventPublisher,
         password_event_repository: PasswordEventRepository,
+        time_gateway: TimeGateway,
     ):
         self.password_repository = password_repository
         self.password_encryption_gateway = password_encryption_gateway
@@ -40,6 +41,7 @@ class GetPasswordUseCase(TracedUseCase):
         self.group_access_gateway = group_access_gateway
         self.event_publisher = event_publisher
         self.password_event_repository = password_event_repository
+        self.time_gateway = time_gateway
 
     def execute(self, command: GetPasswordCommand) -> str:
         password_entity = self.password_repository.get_by_id(command.password_id)
@@ -66,15 +68,18 @@ class GetPasswordUseCase(TracedUseCase):
     def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
         """Check if user has access to password through any of their groups"""
         all_permissions = self.password_permissions_repository.list_all_permissions_for(password_id)
+        now = self.time_gateway.get_current_time()
 
-        for group_id, (is_owner, permissions) in all_permissions.items():
-            # Check if user is owner or member of this group
+        for group_id, access in all_permissions.items():
+            # An expired share is indistinguishable from no share at all here:
+            # grants_read folds the deadline into the permission check.
+            if not access.grants_read(now):
+                continue
+
             is_user_owner = self.group_access_gateway.is_user_owner_of_group(user_id, group_id)
             is_user_member = self.group_access_gateway.is_user_member_of_group(user_id, group_id)
 
             if is_user_owner or is_user_member:
-                # If the group is the owner or has READ permission, user has access
-                if is_owner or PasswordPermission.READ in permissions:
-                    return True
+                return True
 
         return False

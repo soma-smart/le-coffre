@@ -11,6 +11,7 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
 )
 from password_management_context.domain.value_objects import AccessRole, PasswordPermission
+from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
 
 from ..fakes import (
     FakeGroupAccessGateway,
@@ -29,8 +30,15 @@ def use_case(
     password_repository: FakePasswordRepository,
     password_permissions_repository: FakePasswordPermissionsRepository,
     group_access_gateway: FakeGroupAccessGateway,
+    time_gateway: FakeTimeGateway,
 ) -> ListAccessUseCase:
-    return ListAccessUseCase(password_repository, password_permissions_repository, group_access_gateway)
+    return ListAccessUseCase(
+        password_repository,
+        password_permissions_repository,
+        group_access_gateway,
+        time_gateway,
+        expired_share_retention_seconds=7 * 24 * 60 * 60,
+    )
 
 
 @pytest.fixture

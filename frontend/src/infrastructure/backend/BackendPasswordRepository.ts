@@ -8,6 +8,7 @@ import {
   sharePasswordPasswordsPasswordIdSharePost,
   unsharePasswordPasswordsPasswordIdShareGroupIdDelete,
   updatePasswordPasswordsPasswordIdPut,
+  updateShareExpirationPasswordsPasswordIdShareGroupIdPatch,
 } from '@/client/sdk.gen'
 import type {
   GetPasswordListResponse,
@@ -25,6 +26,7 @@ import {
   PasswordAccessDeniedError,
   PasswordDomainError,
   PasswordNotFoundError,
+  ShareExpirationInvalidError,
 } from '@/domain/password/errors'
 import { VaultLockedError } from '@/domain/vault/errors'
 
@@ -91,11 +93,12 @@ export class BackendPasswordRepository implements PasswordRepository {
     this.throwIfError(response.error, response.response?.status, passwordId)
   }
 
-  async share(passwordId: string, groupId: string): Promise<void> {
+  async share(passwordId: string, groupId: string, expiresAt?: string | null): Promise<void> {
     const response = await sharePasswordPasswordsPasswordIdSharePost({
       path: { password_id: passwordId },
-      body: { group_id: groupId },
+      body: { group_id: groupId, expires_at: expiresAt ?? null },
     })
+    this.throwIfExpirationRejected(response.response?.status, response.error)
     this.throwIfError(response.error, response.response?.status, passwordId)
   }
 
@@ -104,6 +107,34 @@ export class BackendPasswordRepository implements PasswordRepository {
       path: { password_id: passwordId, group_id: groupId },
     })
     this.throwIfError(response.error, response.response?.status, passwordId)
+  }
+
+  async updateShareExpiration(
+    passwordId: string,
+    groupId: string,
+    expiresAt: string | null,
+  ): Promise<void> {
+    const response = await updateShareExpirationPasswordsPasswordIdShareGroupIdPatch({
+      path: { password_id: passwordId, group_id: groupId },
+      body: { expires_at: expiresAt },
+    })
+    this.throwIfExpirationRejected(response.response?.status, response.error)
+    this.throwIfError(response.error, response.response?.status, passwordId)
+  }
+
+  /**
+   * Both sharing routes answer 400 only when the deadline is refused: already
+   * past, or beyond the server's maximum lifetime. Every other way those two
+   * use cases can fail maps to 403 or 404, so a 400 can be typed precisely
+   * instead of collapsing into a generic PasswordDomainError.
+   *
+   * Keep this in step with the exception arms of share_password_routes.py and
+   * update_share_expiration_routes.py: a new domain error mapped to 400 there
+   * would start arriving here mislabelled.
+   */
+  private throwIfExpirationRejected(status: number | undefined, error: unknown): void {
+    if (status !== 400) return
+    throw new ShareExpirationInvalidError(extractDetail(error) ?? undefined)
   }
 
   async listAccess(passwordId: string): Promise<PasswordAccess> {
@@ -155,6 +186,7 @@ function toPassword(dto: GetPasswordListResponse): Password {
     login: dto.login,
     url: dto.url,
     accessibleGroupIds: dto.accessible_group_ids,
+    accessExpiresAt: dto.access_expires_at ?? null,
   }
 }
 
@@ -167,11 +199,13 @@ function toPasswordAccess(dto: ListPasswordAccessResponse): PasswordAccess {
       roleInGroup: item.role_in_group,
       groupRole: item.group_role,
       permissions: item.permissions,
+      expiresAt: item.expires_at ?? null,
     })),
     groups: dto.group_access_list.map((item) => ({
       groupId: item.group_id,
       role: item.role,
       permissions: item.permissions,
+      expiresAt: item.expires_at ?? null,
     })),
   }
 }

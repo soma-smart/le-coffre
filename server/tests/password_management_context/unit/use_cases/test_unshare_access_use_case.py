@@ -67,7 +67,9 @@ def test_given_owner_and_group_with_read_access_when_unsharing_access_should_rev
     use_case.execute(UnshareResourceCommand(owner_id, target_group_id, password.id))
 
     # Assert: Then the group should no longer have READ access
-    assert not password_permissions_repository.has_access(target_group_id, password.id, PasswordPermission.READ)
+    assert not password_permissions_repository.has_access_ignoring_expiry(
+        target_group_id, password.id, PasswordPermission.READ
+    )
 
 
 def test_given_non_owner_when_unsharing_access_should_raise_access_denied_error(

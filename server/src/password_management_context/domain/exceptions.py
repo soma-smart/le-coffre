@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 
@@ -120,6 +121,24 @@ class CannotUnshareWithOwnerError(PasswordManagementDomainError):
         self.owner_id = owner_id
         self.password_id = password_id
         super().__init__(f"Owner {owner_id} cannot have access revoked from password {password_id}")
+
+
+class ShareNotFoundError(PasswordManagementDomainError):
+    """Raised when altering a share that does not exist for this group and password"""
+
+    def __init__(self, group_id: UUID, password_id: UUID):
+        self.group_id = group_id
+        self.password_id = password_id
+        super().__init__(f"Group {group_id} has no shared access to password {password_id}")
+
+
+class ShareExpirationInPastError(PasswordManagementDomainError):
+    """Raised when a share is given an expiry date that has already passed"""
+
+    def __init__(self, expires_at: datetime, now: datetime):
+        self.expires_at = expires_at
+        self.now = now
+        super().__init__(f"Share expiration {expires_at.isoformat()} is not in the future (now is {now.isoformat()})")
 
 
 # One-time link exceptions

@@ -17,6 +17,7 @@ function makePassword(overrides: Partial<Password> = {}): Password {
     login: null,
     url: null,
     accessibleGroupIds: [],
+    accessExpiresAt: null,
     ...overrides,
   }
 }

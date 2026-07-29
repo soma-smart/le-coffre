@@ -35,6 +35,7 @@ class GetPasswordListResponse(BaseModel):
     login: str | None
     url: str | None
     accessible_group_ids: list[UUID]
+    access_expires_at: datetime | None = None
 
 
 @router.get(
@@ -55,6 +56,9 @@ def list_passwords(
     - **Authentication**: Requires authentication via access_token cookie
 
     Returns a list of passwords accessible by the user.
+
+    **access_expires_at** is set when the caller reaches the password through a
+    time-limited share; it is null when they own it or the share is permanent.
     """
     try:
         command = ListPasswordsCommand(
@@ -75,6 +79,7 @@ def list_passwords(
                 login=password.login,
                 url=password.url,
                 accessible_group_ids=list(password.accessible_group_ids),
+                access_expires_at=password.access_expires_at,
             )
             for password in passwords
         ]

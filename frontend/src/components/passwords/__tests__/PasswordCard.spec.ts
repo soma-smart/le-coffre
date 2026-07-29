@@ -28,6 +28,7 @@ const samplePassword: Password = {
   login: 'alice@example.com',
   url: 'https://mail.google.com',
   accessibleGroupIds: ['group-personal'],
+  accessExpiresAt: null,
 }
 
 function mountCard(container: Container, pinia: Pinia) {
@@ -104,5 +105,57 @@ describe('PasswordCard', () => {
     } finally {
       consoleError.mockRestore()
     }
+  })
+
+  it('shows no expiry badge when the viewer owns the password', () => {
+    const wrapper = mountCard(container, pinia)
+
+    expect(wrapper.find('[data-testid="access-expiry"]').exists()).toBe(false)
+  })
+
+  it("counts down the viewer's own access when it is time-limited", () => {
+    const wrapper = mount(PasswordCard, {
+      props: {
+        password: {
+          ...samplePassword,
+          accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        },
+        contextGroupId: 'group-personal',
+      },
+      global: { plugins: [pinia], provide: { [CONTAINER_KEY as symbol]: container } },
+    })
+
+    expect(wrapper.get('[data-testid="access-expiry"]').text()).toContain('Expires')
+  })
+
+  it('puts the countdown beside the name, not down in the metadata row', () => {
+    const wrapper = mount(PasswordCard, {
+      props: {
+        password: {
+          ...samplePassword,
+          accessExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        },
+        contextGroupId: 'group-personal',
+      },
+      global: { plugins: [pinia], provide: { [CONTAINER_KEY as symbol]: container } },
+    })
+
+    const titleRow = wrapper.get('h4').element.parentElement
+    expect(titleRow?.querySelector('[data-testid="access-expiry"]')).not.toBeNull()
+  })
+
+  it('says the access expired once the deadline has passed', () => {
+    const wrapper = mount(PasswordCard, {
+      props: {
+        password: {
+          ...samplePassword,
+          accessExpiresAt: new Date(Date.now() - 3_600_000).toISOString(),
+        },
+        contextGroupId: 'group-personal',
+      },
+      global: { plugins: [pinia], provide: { [CONTAINER_KEY as symbol]: container } },
+    })
+
+    expect(wrapper.get('[data-testid="access-expiry"]').text()).toContain('Access expired')
   })
 })

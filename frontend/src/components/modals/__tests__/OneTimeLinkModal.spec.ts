@@ -22,6 +22,7 @@ const password: Password = {
   login: null,
   url: null,
   accessibleGroupIds: ['g'],
+  accessExpiresAt: null,
 }
 
 function makeLink(overrides: Partial<OneTimeLink> = {}): OneTimeLink {

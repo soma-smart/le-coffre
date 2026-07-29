@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from enum import Enum
 from uuid import UUID
 
@@ -39,12 +40,14 @@ class UserAccessItem(BaseModel):
     role_in_group: AccessRoleEnum
     group_role: AccessRoleEnum
     permissions: list[PermissionEnum]
+    expires_at: datetime | None = None
 
 
 class GroupAccessItem(BaseModel):
     group_id: UUID
     role: AccessRoleEnum
     permissions: list[PermissionEnum]
+    expires_at: datetime | None = None
 
 
 class ListPasswordAccessResponse(BaseModel):
@@ -72,6 +75,9 @@ def list_password_access(
 
     Returns a list of users with their permissions and ownership status.
     Only the owner of the password can list who has access to it.
+
+    Shares that have already expired are still listed, carrying a past
+    **expires_at**, so their owner can see them and extend them.
     """
     try:
         command = ListAccessCommand(
@@ -89,6 +95,7 @@ def list_password_access(
                     role_in_group=AccessRoleEnum(user_access.role_in_group.value),
                     group_role=AccessRoleEnum(user_access.group_role.value),
                     permissions=[PermissionEnum(perm.value) for perm in user_access.permissions],
+                    expires_at=user_access.expires_at,
                 )
             )
         for group_access in result.group_accesses:
@@ -97,6 +104,7 @@ def list_password_access(
                     group_id=group_access.group_id,
                     role=AccessRoleEnum(group_access.role.value),
                     permissions=[PermissionEnum(perm.value) for perm in group_access.permissions],
+                    expires_at=group_access.expires_at,
                 )
             )
         return ret
