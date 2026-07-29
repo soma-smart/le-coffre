@@ -4,8 +4,17 @@
     style="background-color: var(--p-card-background)"
   >
     <div class="flex flex-col gap-2">
-      <div class="flex items-center gap-2 mb-2">
+      <div class="flex flex-wrap items-center gap-2 mb-2">
         <h4 class="font-semibold">{{ password.name }}</h4>
+        <!-- Sits with the name rather than in the metadata row: a lapsing access
+             is the one time-critical thing on the card, and it keeps its colour. -->
+        <Tag
+          v-if="accessExpiry"
+          :value="accessExpiryLabel"
+          :severity="severityForShareStatus(accessExpiryStatus)"
+          :title="formatAbsoluteTime(accessExpiry)"
+          data-testid="access-expiry"
+        />
       </div>
 
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
@@ -163,15 +172,6 @@
           />
           <span>Created: {{ formatDate(password.createdAt) }}</span>
           <span>Updated: {{ formatDate(password.lastUpdatedAt) }}</span>
-        </div>
-
-        <div v-if="accessExpiry" class="flex items-center gap-2 shrink-0">
-          <Tag
-            :value="accessExpiryLabel"
-            :severity="severityForShareStatus(accessExpiryStatus)"
-            :title="formatAbsoluteTime(accessExpiry)"
-            data-testid="access-expiry"
-          />
         </div>
 
         <div v-if="sharedAccessInfo" class="flex items-center gap-2 shrink-0">
