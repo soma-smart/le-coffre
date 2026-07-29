@@ -12,6 +12,8 @@ from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import AdminRegisteredEvent
 from identity_access_management_context.domain.exceptions import (
     AdminAlreadyExistsException,
+    CommonPasswordError,
+    PasswordTooShortError,
 )
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
@@ -181,3 +183,59 @@ def test_should_store_admin_registered_event_on_successful_registration(
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminRegisteredEvent"
     assert stored["actor_user_id"] == user_id
+
+
+class TestPasswordPolicyEnforcement:
+    """The IAM password policy is enforced through this use case, which builds a
+    RawPassword before doing any work. These cases pin the policy at the use-case
+    boundary (the reviewer's preferred altitude) rather than testing the value
+    object directly.
+    """
+
+    def test_should_reject_a_password_shorter_than_the_minimum(
+        self,
+        use_case: RegisterAdminWithPasswordUseCase,
+        user_password_repository: FakeUserPasswordRepository,
+    ):
+        user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+        command = RegisterAdminWithPasswordCommand(
+            id=user_id, email="admin@lecoffre.com", password="short", display_name="Admin User"
+        )
+
+        with pytest.raises(PasswordTooShortError):
+            use_case.execute(command)
+
+        # A rejected password must persist nothing: no orphaned admin credentials.
+        assert user_password_repository.get_by_id(user_id) is None
+
+    def test_should_reject_a_well_known_common_password(
+        self,
+        use_case: RegisterAdminWithPasswordUseCase,
+        user_password_repository: FakeUserPasswordRepository,
+    ):
+        user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+        command = RegisterAdminWithPasswordCommand(
+            id=user_id, email="admin@lecoffre.com", password="passwordpassword", display_name="Admin User"
+        )
+
+        with pytest.raises(CommonPasswordError):
+            use_case.execute(command)
+
+        assert user_password_repository.get_by_id(user_id) is None
+
+    def test_should_accept_a_password_merely_containing_a_common_word(
+        self,
+        use_case: RegisterAdminWithPasswordUseCase,
+        user_password_repository: FakeUserPasswordRepository,
+    ):
+        # Whole-string match, never substring: "SecurePassword123!" contains
+        # "password" but is a fine password and must be accepted.
+        user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+        command = RegisterAdminWithPasswordCommand(
+            id=user_id, email="admin@lecoffre.com", password="SecurePassword123!", display_name="Admin User"
+        )
+
+        result = use_case.execute(command)
+
+        assert result == user_id
+        assert user_password_repository.get_by_id(user_id) is not None
