@@ -55,37 +55,10 @@ def test_should_compare_across_timezones():
 # ── PasswordGroupAccess ───────────────────────────────────────────────
 
 
-def _shared(expires_at: datetime | None) -> PasswordGroupAccess:
-    return PasswordGroupAccess(is_owner=False, permissions={PasswordPermission.READ}, expires_at=expires_at)
-
-
-def test_a_permanent_share_never_expires():
-    access = _shared(None)
-
-    assert not access.is_expired(T0 + timedelta(days=3650))
-    assert access.grants_read(T0)
-
-
-def test_a_temporary_share_grants_read_before_its_expiry():
-    access = _shared(T0 + timedelta(hours=1))
-
-    assert access.grants_read(T0)
-    assert not access.is_expired(T0)
-
-
-def test_a_temporary_share_stops_granting_read_at_its_expiry():
-    access = _shared(T0)
-
-    assert access.is_expired(T0)
-    assert not access.grants_read(T0)
-
-
-def test_an_owner_never_expires():
-    """Ownership lives in its own table and carries no expiry, so it cannot be timed out."""
-    owner = PasswordGroupAccess(is_owner=True, permissions=set(), expires_at=None)
-
-    assert owner.grants_read(T0 + timedelta(days=3650))
-    assert not owner.is_expired(T0 + timedelta(days=3650))
+# These four rules are proved through GetPasswordUseCase with a fake clock in
+# test_temporary_share_use_cases.py, so they are not restated here: a permanent
+# share never expiring, read granted before the deadline, read lost at it, and
+# the owner outliving the recipient's share.
 
 
 def test_a_share_without_read_permission_grants_nothing():
