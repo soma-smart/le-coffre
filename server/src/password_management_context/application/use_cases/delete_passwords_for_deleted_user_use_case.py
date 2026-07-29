@@ -39,8 +39,8 @@ class DeletePasswordsForDeletedUserUseCase(TracedUseCase):
         for password in all_passwords:
             all_permissions = self.password_permissions_repository.list_all_permissions_for(password.id)
 
-            for entity_id, (is_owner, _) in all_permissions.items():
-                if is_owner and entity_id == personal_group_id:
+            for entity_id, access in all_permissions.items():
+                if access.is_owner and entity_id == personal_group_id:
                     password_ids_owned.append(password.id)
                     break
 

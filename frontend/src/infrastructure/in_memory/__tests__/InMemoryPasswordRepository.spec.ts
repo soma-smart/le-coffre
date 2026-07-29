@@ -17,6 +17,7 @@ describe('InMemoryPasswordRepository', () => {
         login: 'alice@example.com',
         url: 'https://mail.google.com',
         accessibleGroupIds: ['group-personal'],
+        accessExpiresAt: null,
       },
       'super-secret',
     )

@@ -9,6 +9,7 @@ from password_management_context.domain.entities import Password
 from password_management_context.domain.exceptions import FolderNotFoundError
 from password_management_context.domain.value_objects import PasswordPermission
 from shared_kernel.domain.entities import AuthenticatedUser
+from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
 
 from ..fakes import (
     FakeGroupAccessGateway,
@@ -24,12 +25,14 @@ def use_case(
     password_permissions_repository: FakePasswordPermissionsRepository,
     group_access_gateway: FakeGroupAccessGateway,
     password_event_repository: FakePasswordEventRepository,
+    time_gateway: FakeTimeGateway,
 ):
     return ListPasswordsUseCase(
         password_repository,
         password_permissions_repository,
         group_access_gateway,
         password_event_repository,
+        time_gateway,
     )
 
 

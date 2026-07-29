@@ -11,6 +11,7 @@ class PasswordSharedEventData(TypedDict):
     password_id: str
     owner_group_id: str
     shared_with_group_id: str
+    expires_at: str | None
 
 
 @dataclass
@@ -20,6 +21,7 @@ class PasswordSharedEvent(BasePasswordEvent):
     owner_group_id: UUID
     shared_with_group_id: UUID
     shared_by_user_id: UUID
+    expires_at: str | None = None
 
     def get_actor_user_id(self) -> UUID:
         return self.shared_by_user_id
@@ -29,4 +31,5 @@ class PasswordSharedEvent(BasePasswordEvent):
             "password_id": str(self.password_id),
             "owner_group_id": str(self.owner_group_id),
             "shared_with_group_id": str(self.shared_with_group_id),
+            "expires_at": self.expires_at,
         }

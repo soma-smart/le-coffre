@@ -48,8 +48,8 @@ class UpdatePasswordUseCase(TracedUseCase):
 
         # Find the owner group (there should be exactly one)
         owner_group_id = None
-        for entity_id, (is_owner, _) in all_permissions.items():
-            if is_owner:
+        for entity_id, access in all_permissions.items():
+            if access.is_owner:
                 owner_group_id = entity_id
                 break
 

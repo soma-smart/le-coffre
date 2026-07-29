@@ -117,6 +117,12 @@
                   ) + '...' ||
                   'Unknown'
                 }}</strong>
+                <template v-if="slotProps.data.eventData.expiresAt">
+                  , until
+                  <strong>{{
+                    formatDateTime(slotProps.data.eventData.expiresAt as string)
+                  }}</strong>
+                </template>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordUnsharedEvent'">
                 Unshared from group:
@@ -128,6 +134,22 @@
                   ) + '...' ||
                   'Unknown'
                 }}</strong>
+              </span>
+              <span v-else-if="slotProps.data.eventType === 'PasswordShareExpirationUpdatedEvent'">
+                Access duration changed for group
+                <strong>{{
+                  (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
+                    0,
+                    8,
+                  ) + '...' || 'Unknown'
+                }}</strong>
+                <template v-if="slotProps.data.eventData.expiresAt">
+                  , now expires
+                  <strong>{{
+                    formatDateTime(slotProps.data.eventData.expiresAt as string)
+                  }}</strong>
+                </template>
+                <template v-else>, now permanent</template>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordAccessedEvent'">
                 Password accessed

@@ -19,6 +19,7 @@ from password_management_context.domain.exceptions import (
     PasswordAccessDeniedError,
     PasswordNotFoundError,
 )
+from shared_kernel.application.gateways.time_gateway import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
@@ -32,6 +33,7 @@ class ListPasswordEventsUseCase(TracedUseCase):
         password_event_repository: PasswordEventRepository,
         password_vault_access_gateway: PasswordVaultAccessGateway,
         user_info_gateway: UserInfoGateway,
+        time_gateway: TimeGateway,
     ):
         self.password_repository = password_repository
         self.password_permissions_repository = password_permissions_repository
@@ -39,6 +41,7 @@ class ListPasswordEventsUseCase(TracedUseCase):
         self.password_event_repository = password_event_repository
         self.password_vault_access_gateway = password_vault_access_gateway
         self.user_info_gateway = user_info_gateway
+        self.time_gateway = time_gateway
 
     def execute(self, command: ListPasswordEventsCommand) -> ListPasswordEventsResponse:
         password_entity = self.password_repository.get_by_id(command.password_id)
@@ -93,8 +96,15 @@ class ListPasswordEventsUseCase(TracedUseCase):
 
     def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
         all_permissions = self.password_permissions_repository.list_all_permissions_for(password_id)
+        now = self.time_gateway.get_current_time()
 
-        for group_id in all_permissions:
+        for group_id, access in all_permissions.items():
+            # The history names who reached the password and when it was shared,
+            # so it has to lapse with the access it documents. Keeping it open
+            # once the share expired would make the revocation only partial.
+            if not access.grants_read(now):
+                continue
+
             is_user_owner = self.group_access_gateway.is_user_owner_of_group(user_id, group_id)
             is_user_member = self.group_access_gateway.is_user_member_of_group(user_id, group_id)
 

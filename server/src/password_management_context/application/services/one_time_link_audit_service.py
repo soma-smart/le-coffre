@@ -70,8 +70,8 @@ class OneTimeLinkAuditAssembler:
 
         owner_group_by_password: dict[UUID, UUID] = {}
         for password_id, group_permissions in permissions.items():
-            for group_id, (is_owner, _) in group_permissions.items():
-                if is_owner:
+            for group_id, access in group_permissions.items():
+                if access.is_owner:
                     owner_group_by_password[password_id] = group_id
                     break
 
