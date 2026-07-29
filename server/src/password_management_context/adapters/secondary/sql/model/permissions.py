@@ -13,7 +13,7 @@ class PermissionsTable(SQLModel, table=True):
     permission: str = Field(default="Password")
     # NULL means the share is permanent, which is what every row predating
     # temporary sharing is. Stored naive UTC like every other timestamp here:
-    # go through shared_kernel.adapters.secondary.sql.naive_utc to read or write it.
+    # go through shared_kernel.utils.naive_utc to read or write it.
     expires_at: datetime | None = Field(default=None, nullable=True, index=True)
 
 

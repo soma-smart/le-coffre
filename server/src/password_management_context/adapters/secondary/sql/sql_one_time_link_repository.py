@@ -9,7 +9,8 @@ from password_management_context.adapters.secondary.sql.model.one_time_link impo
 )
 from password_management_context.application.gateways import OneTimeLinkRepository
 from password_management_context.domain.entities import OneTimeLink
-from shared_kernel.adapters.secondary.sql import SQLBaseRepository, as_utc, to_naive_utc
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+from shared_kernel.utils import as_utc, to_naive_utc
 
 
 def _to_entity(row: OneTimeLinkTable) -> OneTimeLink:

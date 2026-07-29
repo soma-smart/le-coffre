@@ -19,7 +19,8 @@ from password_management_context.domain.value_objects.password_group_access impo
 from password_management_context.domain.value_objects.password_permission import (
     PasswordPermission,
 )
-from shared_kernel.adapters.secondary.sql import SQLBaseRepository, as_utc, to_naive_utc
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+from shared_kernel.utils import as_utc, to_naive_utc
 
 
 def _merge_expiry(current: datetime | None, candidate: datetime | None, is_first: bool) -> datetime | None:

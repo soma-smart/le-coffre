@@ -4,6 +4,13 @@ Every timestamp column in this schema is `sa.DateTime()`, which stores no offset
 while `TimeGateway` hands the domain aware UTC values. These two helpers are the
 only sanctioned crossing point. Any repository persisting or comparing a datetime
 must go through them.
+
+**For secondary SQL adapters only.** Living under `utils/` makes these reachable
+from anywhere, but they are meaningless outside the persistence boundary: the
+domain and the application layer must only ever hold aware datetimes, and a
+naive one reaching them is a bug rather than something to convert. If you find
+yourself importing this outside a repository, the timestamp lost its timezone
+further upstream and that is what needs fixing.
 """
 
 from datetime import UTC, datetime
