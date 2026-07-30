@@ -24,21 +24,42 @@ jobs:
         uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
+        id: install
         working-directory: frontend/
-        run: bun install --frozen-lockfile
+        run: |
+          if bun install --frozen-lockfile; then
+            exit 0
+          fi
+
+          # bun.lock is the only lockfile CI and the Dockerfile install from.
+          # package-lock.json is kept solely for GitHub's dependency graph, which
+          # does not read bun.lock, so a Dependabot npm PR bumps a direct
+          # dependency in package.json and leaves bun.lock behind.
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ❌ Frontend dependencies are out of sync
+
+          `bun install --frozen-lockfile` refused to install: `frontend/bun.lock` disagrees with `frontend/package.json`.
+
+              cd frontend && bun install && git add bun.lock
+
+          On a Dependabot npm PR this is expected. Dependabot updates `package.json`
+          and `package-lock.json` but never `bun.lock`, so the regeneration above is
+          a required manual step before the PR can go green.
+          EOF
+          exit 1
 
       - name: Run Linting
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: frontend/
         run: bunx eslint .
 
       - name: Check Formatting
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: frontend/
         run: bunx prettier --check src/
 
       - name: Check Dependencies Security
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: frontend/
         run: |
           bun audit --json > /tmp/bun_audit.json || true
@@ -56,7 +77,7 @@ jobs:
           node /tmp/check_bun_audit.js
 
       - name: Run Unit + Component Tests
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: frontend/
         run: bunx vitest run
 
@@ -65,7 +86,7 @@ jobs:
       # populates .tsbuildinfo and masks cold-start failures that the
       # Dockerfile's `bun run build` would hit on a clean filesystem.
       - name: Type Check + Build Project
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: frontend/
         run: bun run build
 
@@ -83,21 +104,34 @@ jobs:
           cache-dependency-glob: "server/uv.lock"
 
       - name: Install dependencies
+        id: install
         working-directory: server/
-        run: uv sync --frozen --group monitoring
+        run: |
+          if uv sync --frozen --group monitoring; then
+            exit 0
+          fi
+
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ❌ Backend dependencies are out of sync
+
+          `uv sync --frozen --group monitoring` refused to install: `server/uv.lock` disagrees with `server/pyproject.toml`.
+
+              cd server && uv lock && git add uv.lock
+          EOF
+          exit 1
 
       - name: Check Formatting
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: uv run ruff format --check .
 
       - name: Run Linting
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: uv run ruff check .
 
       - name: Check Alembic Migrations
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: |
           # First, upgrade the database to the current head
@@ -128,7 +162,7 @@ jobs:
           rm "$MIGRATION_FILE"
 
       - name: Check Dependencies Security
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: |
           uv export --format requirements-txt --no-hashes > /tmp/requirements.txt
@@ -178,7 +212,7 @@ jobs:
           python3 /tmp/check_pip_audit.py
 
       - name: Run Unit Tests
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: uv run pytest .
 
@@ -196,21 +230,34 @@ jobs:
           cache-dependency-glob: "server/uv.lock"
 
       - name: Install dependencies (without monitoring group)
+        id: install
         working-directory: server/
-        run: uv sync --frozen
+        run: |
+          if uv sync --frozen; then
+            exit 0
+          fi
+
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ❌ Backend dependencies are out of sync
+
+          `uv sync --frozen` refused to install: `server/uv.lock` disagrees with `server/pyproject.toml`.
+
+              cd server && uv lock && git add uv.lock
+          EOF
+          exit 1
 
       - name: Check Formatting
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: uv run ruff format --check .
 
       - name: Run Linting
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: uv run ruff check .
 
       - name: Run Unit Tests
-        if: success() || failure()
+        if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: server/
         run: uv run pytest .
 

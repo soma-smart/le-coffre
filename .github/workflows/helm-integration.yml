@@ -220,7 +220,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: frontend/node_modules
-          key: bun-${{ hashFiles('frontend/bun.lockb') }}
+          key: bun-${{ hashFiles('frontend/bun.lock') }}
           restore-keys: bun-
 
       - name: Cache Playwright browsers
@@ -228,7 +228,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('frontend/bun.lockb') }}
+          key: playwright-${{ hashFiles('frontend/bun.lock') }}
           restore-keys: playwright-
 
       - name: Install frontend dependencies
