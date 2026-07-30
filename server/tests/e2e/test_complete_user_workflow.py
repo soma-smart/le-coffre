@@ -334,6 +334,57 @@ def test_complete_user_workflow(
     get_deleted_user_response = authenticated_admin_client.get(f"/api/users/{delete_target_id}")
     assert get_deleted_user_response.status_code == 404
 
+    # Step 7.7: Deleting a local user revokes its credentials.
+    # Credentials live in their own table, keyed by user id but looked up by
+    # email. They used to outlive the user they belonged to, which broke two
+    # things: the leftover row still authenticated on its own, and recreating an
+    # account on the same address resolved to it, so the new password was
+    # rejected as invalid.
+    local_user = {
+        "username": "leaver",
+        "email": "leaver@example.com",
+        "name": "Leaver",
+        "password": "leaver-password-12345",
+        "roles": [],
+    }
+    local_user_id = authenticated_admin_client.post("/api/users/", json=local_user).json()["id"]
+
+    before_deletion = client_factory().post(
+        "/api/auth/login",
+        json={"email": local_user["email"], "password": local_user["password"]},
+    )
+    assert before_deletion.status_code == 200
+
+    assert authenticated_admin_client.delete(f"/api/users/{local_user_id}").status_code == 204
+
+    after_deletion = client_factory().post(
+        "/api/auth/login",
+        json={"email": local_user["email"], "password": local_user["password"]},
+    )
+    assert after_deletion.status_code == 401
+
+    # Step 7.8: The freed address can be reused, and the new password is the one
+    # that counts.
+    recreated = authenticated_admin_client.post(
+        "/api/users/",
+        json={**local_user, "username": "leaver2", "password": "second-password-12345"},
+    )
+    assert recreated.status_code == 201, recreated.text
+
+    recreated_client = client_factory()
+    logged_in = recreated_client.post(
+        "/api/auth/login",
+        json={"email": local_user["email"], "password": "second-password-12345"},
+    )
+    assert logged_in.status_code == 200, logged_in.text
+    assert recreated_client.get("/api/users/me").json()["email"] == local_user["email"]
+
+    stale = client_factory().post(
+        "/api/auth/login",
+        json={"email": local_user["email"], "password": local_user["password"]},
+    )
+    assert stale.status_code == 401
+
     # =========================================================================
     # PHASE 8: PASSWORD UPDATE
     # =========================================================================

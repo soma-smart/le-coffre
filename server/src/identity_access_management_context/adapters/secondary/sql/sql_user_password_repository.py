@@ -23,6 +23,14 @@ class SqlUserPasswordRepository(SQLBaseRepository):
         self._session.add(user_password_table)
         self.commit()
 
+    def delete_by_id(self, user_id: UUID) -> None:
+        user_password_table = self._session.exec(
+            select(UserPasswordTable).where(UserPasswordTable.id == user_id)
+        ).first()
+        if user_password_table:
+            self._session.delete(user_password_table)
+            self.commit()
+
     def update_password(self, user_id: UUID, new_hashed_password: bytes) -> None:
         user_password_table = self._session.exec(
             select(UserPasswordTable).where(UserPasswordTable.id == user_id)

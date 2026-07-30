@@ -545,3 +545,38 @@ def test_given_record_successful_login_raises_when_credentials_are_correct_shoul
     assert response.jwt_token
     errors = [rec for rec in caplog.records if rec.levelname == "ERROR" and "lockout" in rec.getMessage().lower()]
     assert errors, "counter-reset failure must log at ERROR"
+
+
+def test_should_refuse_credentials_that_outlived_their_user(
+    use_case: PasswordLoginUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+    event_publisher,
+):
+    """Credentials with no user behind them must not authenticate.
+
+    Deleting a user used to leave its UserPassword row in place. Falling back to
+    an empty role set meant the deleted account still got a valid token, so the
+    deletion did not actually revoke the ability to log in.
+    """
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    email = "deleted@lecoffre.com"
+
+    user_password_repository.save(
+        UserPassword(
+            id=user_id,
+            email=email,
+            password_hash=b"hashed(secure123!)",
+            display_name="Deleted User",
+        )
+    )
+    # Deliberately no matching User row.
+
+    command = AdminLoginCommand(email=email, password="secure123!")
+
+    with pytest.raises(AdminNotFoundException):
+        use_case.execute(command)
+
+    assert login_lockout_gateway.failed_login_calls == [email]
+    events = event_publisher.get_published_events_of_type(AdminLoginFailedEvent)
+    assert [e.reason for e in events] == ["Orphaned credentials"]

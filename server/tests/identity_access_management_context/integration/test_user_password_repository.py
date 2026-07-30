@@ -1,11 +1,8 @@
 from uuid import UUID, uuid4
 
-import pytest
-
 from identity_access_management_context.domain.entities import UserPassword
 
 
-@pytest.fixture
 def test_save_user_password_and_get_by_id(sql_user_password_repository):
     test_user_password = UserPassword(
         id=uuid4(),
@@ -66,3 +63,38 @@ def test_update_user(sql_user_password_repository):
 
 def test_update_missing_user_does_nothing(sql_user_password_repository):
     sql_user_password_repository.update_password(UUID("12345678-1234-5678-1234-567812345678"), b"new_password_hashed")
+
+
+def test_delete_by_id_removes_the_credentials(sql_user_password_repository):
+    user_password = UserPassword(
+        id=uuid4(),
+        email="leaver@example.com",
+        password_hash=b"hashedpassword123",
+        display_name="Leaver",
+    )
+    sql_user_password_repository.save(user_password)
+
+    sql_user_password_repository.delete_by_id(user_password.id)
+
+    assert sql_user_password_repository.get_by_id(user_password.id) is None
+    assert sql_user_password_repository.get_by_email(user_password.email) is None
+
+
+def test_delete_by_id_on_a_missing_row_does_nothing(sql_user_password_repository):
+    sql_user_password_repository.delete_by_id(uuid4())
+
+
+def test_delete_frees_the_email_for_a_new_account(sql_user_password_repository):
+    """get_by_email takes the first match, so a leftover row would shadow the new one."""
+    email = "reused@example.com"
+    old = UserPassword(id=uuid4(), email=email, password_hash=b"old-hash", display_name="Old")
+    sql_user_password_repository.save(old)
+    sql_user_password_repository.delete_by_id(old.id)
+
+    new = UserPassword(id=uuid4(), email=email, password_hash=b"new-hash", display_name="New")
+    sql_user_password_repository.save(new)
+
+    found = sql_user_password_repository.get_by_email(email)
+    assert found is not None
+    assert found.id == new.id
+    assert found.password_hash == b"new-hash"
