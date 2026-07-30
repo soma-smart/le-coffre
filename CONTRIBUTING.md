@@ -42,12 +42,30 @@ bun install
 bun run dev
 ```
 
+## Dependency updates
+
+The frontend has two lockfiles, and only one of them is ever installed from:
+
+- **`frontend/bun.lock` is the source of truth.** CI and `frontend/Dockerfile` both run `bun install --frozen-lockfile`.
+- **`frontend/package-lock.json` exists for GitHub's dependency graph only.** The graph does not read `bun.lock`, so removing `package-lock.json` would leave Dependabot alerts looking at `package.json` alone, blind to transitive vulnerabilities.
+
+Dependabot updates `package.json` and `package-lock.json`, never `bun.lock`. So when a Dependabot npm PR bumps a **direct** dependency, every frontend job fails with `lockfile had changes, but lockfile is frozen`. Regenerate the lockfile on the PR branch:
+
+```bash
+cd frontend && bun install
+git add bun.lock
+```
+
+Bumps to transitive dependencies do not touch `package.json`, so they stay green and need nothing.
+
+The backend has no such split: Dependabot's uv updates keep `server/uv.lock` in step with `pyproject.toml`. If they ever disagree, run `cd server && uv lock`.
+
 ## How to Contribute
 
-1. **Fork the Repository**  
+1. **Fork the Repository**
   Create a fork of the repository to your GitHub account.
 
-2. **Clone Your Fork**  
+2. **Clone Your Fork**
   Clone your fork to your local machine:
 
   ```bash
@@ -55,7 +73,7 @@ bun run dev
   cd le-coffre
   ```
 
-1. **Create a Branch**  
+1. **Create a Branch**
   Create a new branch for your changes:
 
   ```bash
@@ -76,7 +94,7 @@ bun run dev
   ```bash
   git push origin feat/my-feature-branch
   ```
-  
+
 1. **Create a Pull Request**
   Go to the original repository and create a pull request from your branch. Provide a clear description of your changes and why they are needed.
 
