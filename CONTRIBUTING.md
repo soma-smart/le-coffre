@@ -52,8 +52,7 @@ The frontend has two lockfiles, and only one of them is ever installed from:
 Dependabot updates `package.json` and `package-lock.json`, never `bun.lock`. So when a Dependabot npm PR bumps a **direct** dependency, every frontend job fails with `lockfile had changes, but lockfile is frozen`. Regenerate the lockfile on the PR branch:
 
 ```bash
-cd frontend && bun install
-git add bun.lock
+cd frontend && bun install && git add bun.lock
 ```
 
 Bumps to transitive dependencies do not touch `package.json`, so they stay green and need nothing.

@@ -40,8 +40,7 @@ jobs:
 
           `bun install --frozen-lockfile` refused to install: `frontend/bun.lock` disagrees with `frontend/package.json`.
 
-              cd frontend && bun install
-              git add frontend/bun.lock
+              cd frontend && bun install && git add bun.lock
 
           On a Dependabot npm PR this is expected. Dependabot updates `package.json`
           and `package-lock.json` but never `bun.lock`, so the regeneration above is
@@ -115,10 +114,9 @@ jobs:
           tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
           ### ❌ Backend dependencies are out of sync
 
-          `uv sync --frozen` refused to install: `server/uv.lock` disagrees with `server/pyproject.toml`.
+          `uv sync --frozen --group monitoring` refused to install: `server/uv.lock` disagrees with `server/pyproject.toml`.
 
-              cd server && uv lock
-              git add server/uv.lock
+              cd server && uv lock && git add uv.lock
           EOF
           exit 1
 
@@ -244,8 +242,7 @@ jobs:
 
           `uv sync --frozen` refused to install: `server/uv.lock` disagrees with `server/pyproject.toml`.
 
-              cd server && uv lock
-              git add server/uv.lock
+              cd server && uv lock && git add uv.lock
           EOF
           exit 1
 
