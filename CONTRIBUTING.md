@@ -44,13 +44,17 @@ bun run dev
 
 ## Dependency updates
 
-**`frontend/bun.lock` is the only frontend lockfile.** CI, `frontend/Dockerfile` and Dependabot all work from it — never add a `package-lock.json` alongside it, or Dependabot will start updating that one instead and leave `bun.lock` behind.
+**`frontend/bun.lock` is the only frontend lockfile.** CI and `frontend/Dockerfile` work from it — never add a `package-lock.json` alongside it, or Dependabot will start updating that one instead and leave `bun.lock` behind.
 
 If you edit `frontend/package.json` by hand, regenerate the lockfile in the same commit, or every frontend job fails with `lockfile had changes, but lockfile is frozen`:
 
 ```bash
 cd frontend && bun install && git add bun.lock
 ```
+
+Dependabot does **not** do this for you: it bumps `frontend/package.json` and leaves the lockfile behind. The `dependabot-lockfile.yml` workflow covers that gap — on any Dependabot PR touching `frontend/package.json` it runs `bun install` and pushes the regenerated `bun.lock`, which retriggers `front-ci` to validate the result. It authenticates with a `GH_PAT` stored as a **Dependabot** secret; Dependabot-triggered workflows cannot read Actions secrets, so the two stores must both hold the token.
+
+The bun version is pinned by `packageManager` in `frontend/package.json`. `setup-bun` reads it via `bun-version-file`, and `frontend/Dockerfile` plus `Dockerfile.dev` hardcode the matching version — keep all three in step when bumping, otherwise a `bun.lock` written by one can fail `--frozen-lockfile` in another.
 
 The backend works the same way: Dependabot's uv updates keep `server/uv.lock` in step with `pyproject.toml`. If they ever disagree, run `cd server && uv lock`.
 

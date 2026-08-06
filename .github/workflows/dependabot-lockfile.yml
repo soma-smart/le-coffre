@@ -1,0 +1,88 @@
+# Dependabot's npm ecosystem supports bun (GA Feb 2025, bun >= 1.1.39), but in
+# this repo it consistently emits manifest-only updates: PRs #351, #352 and #355
+# each changed `frontend/package.json` and left `bun.lock` untouched, so every
+# one of them fails the `--frozen-lockfile` gate in `front-ci`.
+#
+# This workflow closes that gap by regenerating the lockfile on Dependabot's
+# behalf. It deliberately does NOT decide whether the result is correct — it
+# pushes the lockfile and lets `front-ci` re-run and judge, so the
+# `--frozen-lockfile` check stays the single arbiter.
+name: Dependabot lockfile
+
+on:
+  pull_request:
+    paths:
+      - frontend/package.json
+
+# The PAT push retriggers front-ci; serialise per-PR so two runs can't race to
+# push conflicting lockfiles.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate-lockfile:
+    if: github.actor == 'dependabot[bot]'
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      # Workflows triggered by Dependabot get a read-only GITHUB_TOKEN and can
+      # only see *Dependabot* secrets — Actions secrets are not available. A
+      # missing PAT would otherwise surface as `actions/checkout` silently
+      # falling back to the read-only token and a confusing push failure.
+      - name: Verify GH_PAT is available
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -n "$GH_PAT" ]; then
+            exit 0
+          fi
+
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ❌ `GH_PAT` is not configured as a Dependabot secret
+
+          Dependabot-triggered workflows cannot read Actions secrets. Add the
+          token in **Settings → Secrets and variables → Dependabot → New
+          repository secret**, named `GH_PAT`, with `Contents: read/write` on
+          this repository.
+          EOF
+          exit 1
+
+      - name: Checkout pull request branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: frontend/package.json
+
+      - name: Regenerate bun.lock
+        working-directory: frontend/
+        run: bun install
+
+      - name: Push lockfile if it changed
+        run: |
+          if git diff --quiet -- frontend/bun.lock; then
+            echo "bun.lock already matches package.json — nothing to do."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/bun.lock
+          git commit -m "chore(frontend): regenerate bun.lock"
+          git push
+
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ✅ Regenerated `frontend/bun.lock`
+
+          Dependabot updated `package.json` without the lockfile. The
+          regenerated `bun.lock` has been pushed to this branch; `front-ci` will
+          re-run and validate it with `bun install --frozen-lockfile`.
+          EOF
