@@ -1,7 +1,10 @@
 # =============================================================================
 # Stage 1: Build Frontend
 # =============================================================================
-FROM oven/bun:1-alpine AS builder
+# Keep this tag in sync with `packageManager` in package.json — a bun.lock
+# written by a different bun than the one reading it here can fail the
+# --frozen-lockfile install below.
+FROM oven/bun:1.3.14-alpine AS builder
 
 WORKDIR /frontend
 

@@ -215,6 +215,8 @@ jobs:
       # ── Playwright E2E ────────────────────────────────────────
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: frontend/package.json
 
       - name: Cache bun dependencies
         uses: actions/cache@v6
