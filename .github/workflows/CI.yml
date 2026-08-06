@@ -31,20 +31,15 @@ jobs:
             exit 0
           fi
 
-          # bun.lock is the only lockfile CI and the Dockerfile install from.
-          # package-lock.json is kept solely for GitHub's dependency graph, which
-          # does not read bun.lock, so a Dependabot npm PR bumps a direct
-          # dependency in package.json and leaves bun.lock behind.
+          # bun.lock is the only frontend lockfile — CI, the Dockerfile and
+          # Dependabot all work from it. Reaching here means package.json was
+          # edited without regenerating it.
           tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
           ### ❌ Frontend dependencies are out of sync
 
           `bun install --frozen-lockfile` refused to install: `frontend/bun.lock` disagrees with `frontend/package.json`.
 
               cd frontend && bun install && git add bun.lock
-
-          On a Dependabot npm PR this is expected. Dependabot updates `package.json`
-          and `package-lock.json` but never `bun.lock`, so the regeneration above is
-          a required manual step before the PR can go green.
           EOF
           exit 1
 
