@@ -44,20 +44,17 @@ bun run dev
 
 ## Dependency updates
 
-The frontend has two lockfiles, and only one of them is ever installed from:
+**`frontend/bun.lock` is the only frontend lockfile.** CI, `frontend/Dockerfile` and Dependabot all work from it — never add a `package-lock.json` alongside it, or Dependabot will start updating that one instead and leave `bun.lock` behind.
 
-- **`frontend/bun.lock` is the source of truth.** CI and `frontend/Dockerfile` both run `bun install --frozen-lockfile`.
-- **`frontend/package-lock.json` exists for GitHub's dependency graph only.** The graph does not read `bun.lock`, so removing `package-lock.json` would leave Dependabot alerts looking at `package.json` alone, blind to transitive vulnerabilities.
-
-Dependabot updates `package.json` and `package-lock.json`, never `bun.lock`. So when a Dependabot npm PR bumps a **direct** dependency, every frontend job fails with `lockfile had changes, but lockfile is frozen`. Regenerate the lockfile on the PR branch:
+If you edit `frontend/package.json` by hand, regenerate the lockfile in the same commit, or every frontend job fails with `lockfile had changes, but lockfile is frozen`:
 
 ```bash
 cd frontend && bun install && git add bun.lock
 ```
 
-Bumps to transitive dependencies do not touch `package.json`, so they stay green and need nothing.
+The backend works the same way: Dependabot's uv updates keep `server/uv.lock` in step with `pyproject.toml`. If they ever disagree, run `cd server && uv lock`.
 
-The backend has no such split: Dependabot's uv updates keep `server/uv.lock` in step with `pyproject.toml`. If they ever disagree, run `cd server && uv lock`.
+One consequence of having no `package-lock.json`: GitHub's dependency graph does not read `bun.lock`, so frontend dependencies do not appear there and Dependabot **alerts** do not cover them. Vulnerability detection comes from CI instead — `bun audit` runs against the full transitive tree in the `front-ci` job and fails the build on anything with a fix available, and `release.yml` scans the built frontend image with grype.
 
 ## How to Contribute
 

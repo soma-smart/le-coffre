@@ -27,9 +27,10 @@ updates:
         update-types:
           - "minor"
 
-  # npm dependencies (frontend)
+  # Frontend dependencies. The `npm` ecosystem covers bun too — with only
+  # `bun.lock` present in /frontend, Dependabot updates that lockfile directly.
   - package-ecosystem: npm
-    directory: /
+    directory: /frontend
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
