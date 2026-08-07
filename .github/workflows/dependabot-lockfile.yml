@@ -1,0 +1,148 @@
+# Dependabot's npm ecosystem supports bun (GA Feb 2025, bun >= 1.1.39), but in
+# this repo it consistently emits manifest-only updates: PRs #351, #352 and #355
+# each changed `frontend/package.json` and left `bun.lock` untouched, so every
+# one of them fails the `--frozen-lockfile` gate in `front-ci`.
+#
+# This workflow closes that gap by regenerating the lockfile on Dependabot's
+# behalf. It deliberately does NOT decide whether the result is correct — it
+# pushes the lockfile and lets `front-ci` re-run and judge, so the
+# `--frozen-lockfile` check stays the single arbiter.
+#
+# Three ways in:
+#   1. automatically, on a Dependabot PR touching frontend/package.json;
+#   2. by adding the `regenerate-lockfile` label to any such PR — the only path
+#      that works before this file reaches the default branch, so it is how you
+#      smoke-test changes to this workflow;
+#   3. manually via "Run workflow" with a PR number. GitHub only offers
+#      workflow_dispatch for workflows already on the default branch, so this
+#      one is unavailable until the workflow is merged.
+name: Dependabot lockfile
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - frontend/package.json
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to regenerate frontend/bun.lock on"
+        required: true
+        type: string
+
+# Key on the pull request rather than github.ref: a workflow_dispatch run is
+# ref-selected in the UI and would otherwise not collide with the pull_request
+# run for the same PR, letting two runs race to push conflicting lockfiles.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.pr_number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate-lockfile:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.actor == 'dependabot[bot]' ||
+      contains(github.event.pull_request.labels.*.name, 'regenerate-lockfile')
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      # Workflows triggered by Dependabot get a read-only GITHUB_TOKEN and can
+      # only see *Dependabot* secrets — Actions secrets are not available. A
+      # missing PAT would otherwise surface as `actions/checkout` silently
+      # falling back to the read-only token and a confusing push failure.
+      - name: Verify BUN_LOCKFILE_PAT is available
+        env:
+          BUN_LOCKFILE_PAT: ${{ secrets.BUN_LOCKFILE_PAT }}
+        run: |
+          if [ -n "$BUN_LOCKFILE_PAT" ]; then
+            exit 0
+          fi
+
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ❌ `BUN_LOCKFILE_PAT` is not configured
+
+          This run resolved the secret from the store matching its trigger and
+          found nothing. The token must exist in **both** stores under
+          **Settings → Secrets and variables**:
+
+          - **Dependabot** — used when Dependabot itself opens or updates the PR
+          - **Actions** — used when a human starts the job, via the
+            `regenerate-lockfile` label or "Run workflow"
+
+          Grant it `Contents: read/write` and `Pull requests: read` on this
+          repository.
+          EOF
+          exit 1
+
+      - name: Resolve target branch
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.BUN_LOCKFILE_PAT }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            branch=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName --jq .headRefName)
+          else
+            branch="$HEAD_REF"
+          fi
+
+          if [ -z "$branch" ]; then
+            echo "::error::Could not resolve a head branch to work on."
+            exit 1
+          fi
+
+          # The whole point is to fix up a pull request branch. Refusing the
+          # default branch keeps a mistyped PR number from pushing to main.
+          default_branch=$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef --jq .defaultBranchRef.name)
+          if [ "$branch" = "$default_branch" ]; then
+            echo "::error::Refusing to run against the default branch ($default_branch)."
+            exit 1
+          fi
+
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "Working on branch: $branch"
+
+      - name: Checkout pull request branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.target.outputs.branch }}
+          token: ${{ secrets.BUN_LOCKFILE_PAT }}
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: frontend/package.json
+
+      - name: Regenerate bun.lock
+        working-directory: frontend/
+        run: bun install
+
+      - name: Push lockfile if it changed
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- frontend/bun.lock; then
+            echo "bun.lock already matches package.json — nothing to do."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/bun.lock
+          git commit -m "chore(frontend): regenerate bun.lock"
+          git push
+
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ✅ Regenerated `frontend/bun.lock`
+
+          `package.json` had moved without the lockfile. The regenerated
+          `bun.lock` has been pushed to this branch; `front-ci` will re-run and
+          validate it with `bun install --frozen-lockfile`.
+          EOF

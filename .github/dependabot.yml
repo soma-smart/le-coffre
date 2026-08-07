@@ -27,8 +27,12 @@ updates:
         update-types:
           - "minor"
 
-  # Frontend dependencies. The `npm` ecosystem covers bun too — with only
-  # `bun.lock` present in /frontend, Dependabot updates that lockfile directly.
+  # Frontend dependencies. The `npm` ecosystem is what covers bun, but in
+  # practice Dependabot bumps `package.json` here and leaves `bun.lock`
+  # untouched, which fails the `--frozen-lockfile` gate in `front-ci`. The
+  # `dependabot-lockfile.yml` workflow regenerates and pushes the lockfile on
+  # Dependabot's behalf. Note that bun is supported for version updates only —
+  # Dependabot never opens *security* update PRs for it.
   - package-ecosystem: npm
     directory: /frontend
     schedule:

@@ -44,13 +44,22 @@ bun run dev
 
 ## Dependency updates
 
-**`frontend/bun.lock` is the only frontend lockfile.** CI, `frontend/Dockerfile` and Dependabot all work from it — never add a `package-lock.json` alongside it, or Dependabot will start updating that one instead and leave `bun.lock` behind.
+**`frontend/bun.lock` is the only frontend lockfile.** CI and `frontend/Dockerfile` work from it — never add a `package-lock.json` alongside it, or Dependabot will start updating that one instead and leave `bun.lock` behind.
 
 If you edit `frontend/package.json` by hand, regenerate the lockfile in the same commit, or every frontend job fails with `lockfile had changes, but lockfile is frozen`:
 
 ```bash
 cd frontend && bun install && git add bun.lock
 ```
+
+Dependabot does **not** do this for you: it bumps `frontend/package.json` and leaves the lockfile behind. The `dependabot-lockfile.yml` workflow covers that gap — on any Dependabot PR touching `frontend/package.json` it runs `bun install` and pushes the regenerated `bun.lock`, which retriggers `front-ci` to validate the result. It authenticates with a `BUN_LOCKFILE_PAT` that must exist in **both** secret stores — Dependabot-triggered runs can only read Dependabot secrets, while human-triggered ones read Actions secrets. The token needs `Contents: read/write` and `Pull requests: read` on this repository, and nothing else; withholding `Workflows: write` means a run that somehow tried to rewrite a workflow file would be rejected at the push rather than succeed.
+
+You can also start it by hand on any PR whose diff touches `frontend/package.json`:
+
+- **Add the `regenerate-lockfile` label** to the PR. This is the only route that works while the workflow itself is still under review, because a `pull_request` run uses the workflow file from the PR branch.
+- **Actions → Dependabot lockfile → Run workflow**, passing a PR number. GitHub only offers `workflow_dispatch` for workflows already on the default branch, so this becomes available once the workflow is merged. It refuses to run against the default branch.
+
+The bun version is pinned by `packageManager` in `frontend/package.json`. `setup-bun` reads it via `bun-version-file`, and `frontend/Dockerfile` plus `Dockerfile.dev` hardcode the matching version — keep all three in step when bumping, otherwise a `bun.lock` written by one can fail `--frozen-lockfile` in another.
 
 The backend works the same way: Dependabot's uv updates keep `server/uv.lock` in step with `pyproject.toml`. If they ever disagree, run `cd server && uv lock`.
 
