@@ -53,21 +53,26 @@ jobs:
       # only see *Dependabot* secrets — Actions secrets are not available. A
       # missing PAT would otherwise surface as `actions/checkout` silently
       # falling back to the read-only token and a confusing push failure.
-      - name: Verify GH_PAT is available
+      - name: Verify BUN_LOCKFILE_PAT is available
         env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+          BUN_LOCKFILE_PAT: ${{ secrets.BUN_LOCKFILE_PAT }}
         run: |
-          if [ -n "$GH_PAT" ]; then
+          if [ -n "$BUN_LOCKFILE_PAT" ]; then
             exit 0
           fi
 
           tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
-          ### ❌ `GH_PAT` is not configured
+          ### ❌ `BUN_LOCKFILE_PAT` is not configured
 
-          For Dependabot-triggered runs the token must live in the **Dependabot**
-          secret store — those workflows cannot read Actions secrets. Add it in
-          **Settings → Secrets and variables → Dependabot → New repository
-          secret**, named `GH_PAT`, with `Contents: read/write` on this
+          This run resolved the secret from the store matching its trigger and
+          found nothing. The token must exist in **both** stores under
+          **Settings → Secrets and variables**:
+
+          - **Dependabot** — used when Dependabot itself opens or updates the PR
+          - **Actions** — used when a human starts the job, via the
+            `regenerate-lockfile` label or "Run workflow"
+
+          Grant it `Contents: read/write` and `Pull requests: read` on this
           repository.
           EOF
           exit 1
@@ -75,7 +80,7 @@ jobs:
       - name: Resolve target branch
         id: target
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.BUN_LOCKFILE_PAT }}
           EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ inputs.pr_number }}
           HEAD_REF: ${{ github.head_ref }}
@@ -108,7 +113,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ steps.target.outputs.branch }}
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.BUN_LOCKFILE_PAT }}
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2

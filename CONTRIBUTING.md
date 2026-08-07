@@ -52,7 +52,7 @@ If you edit `frontend/package.json` by hand, regenerate the lockfile in the same
 cd frontend && bun install && git add bun.lock
 ```
 
-Dependabot does **not** do this for you: it bumps `frontend/package.json` and leaves the lockfile behind. The `dependabot-lockfile.yml` workflow covers that gap — on any Dependabot PR touching `frontend/package.json` it runs `bun install` and pushes the regenerated `bun.lock`, which retriggers `front-ci` to validate the result. It authenticates with a `GH_PAT` stored as a **Dependabot** secret; Dependabot-triggered workflows cannot read Actions secrets, so the two stores must both hold the token.
+Dependabot does **not** do this for you: it bumps `frontend/package.json` and leaves the lockfile behind. The `dependabot-lockfile.yml` workflow covers that gap — on any Dependabot PR touching `frontend/package.json` it runs `bun install` and pushes the regenerated `bun.lock`, which retriggers `front-ci` to validate the result. It authenticates with a `BUN_LOCKFILE_PAT` that must exist in **both** secret stores — Dependabot-triggered runs can only read Dependabot secrets, while human-triggered ones read Actions secrets. The token needs `Contents: read/write` and `Pull requests: read` on this repository, and nothing else; withholding `Workflows: write` means a run that somehow tried to rewrite a workflow file would be rejected at the push rather than succeed.
 
 You can also start it by hand on any PR whose diff touches `frontend/package.json`:
 
