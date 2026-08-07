@@ -7,12 +7,7 @@
  */
 
 export type VaultStatus =
-  | 'LOCKED'
-  | 'UNLOCKED'
-  | 'NOT_SETUP'
-  | 'PENDING'
-  | 'SETUPED'
-  | 'PENDING_UNLOCK'
+  'LOCKED' | 'UNLOCKED' | 'NOT_SETUP' | 'PENDING' | 'SETUPED' | 'PENDING_UNLOCK'
 
 export interface VaultState {
   status: VaultStatus
