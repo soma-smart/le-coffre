@@ -1,11 +1,19 @@
 version: 2
+
+# All ecosystems check Monday 06:00 so the week's PRs land as one batch.
+# `cooldown` covers version updates only — security PRs bypass it.
 updates:
   # Python/uv dependencies (server)
   - package-ecosystem: uv
     directory: /server
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 3
     labels:
       - dependencies
       - python:uv
@@ -37,7 +45,12 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 4
     labels:
       - dependencies
       - npm
@@ -71,7 +84,12 @@ updates:
     directory: /.github/workflows
     schedule:
       interval: weekly
-    open-pull-requests-limit: 3
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 2
     labels:
       - dependencies
       - github-actions
@@ -91,7 +109,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 3
     labels:
       - dependencies
       - docker
