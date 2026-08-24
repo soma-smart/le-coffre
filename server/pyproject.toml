@@ -24,7 +24,7 @@ dev = [
   "pytest-asyncio>=1.4.0",
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.16.3",
+  "ruff>=0.16.4",
 ]
 monitoring = [
     "opentelemetry-instrumentation-fastapi>=0.65b0",
