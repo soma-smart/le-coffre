@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+
+/*
+ * The SPA gets its palette from PrimeVue's Aura preset at runtime. The popup
+ * does not ship PrimeVue (see the plan: a 380px popup needs six widgets, and
+ * Aura regenerates its token CSS on every init), so the handful of tokens we
+ * actually use are declared here instead. Keep these in visual sync with the
+ * SPA by eye, there is no shared source to import from.
+ */
+@theme {
+  --color-vault-surface: #ffffff;
+  --color-vault-surface-muted: #f4f5f7;
+  --color-vault-border: #e2e5e9;
+  --color-vault-text: #1f2429;
+  --color-vault-text-muted: #6b7280;
+  --color-vault-accent: #10b981;
+  --color-vault-accent-strong: #059669;
+  --color-vault-danger: #dc2626;
+  --color-vault-warning: #d97706;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-vault-surface: #1b1f24;
+    --color-vault-surface-muted: #23282f;
+    --color-vault-border: #333a43;
+    --color-vault-text: #e8eaed;
+    --color-vault-text-muted: #9aa2ad;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--color-vault-surface);
+  color: var(--color-vault-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
