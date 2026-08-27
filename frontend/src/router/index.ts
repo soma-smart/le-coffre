@@ -77,6 +77,18 @@ const router = createRouter({
       meta: { public: true, skipSetupCheck: true },
     },
     {
+      // `public`: the pairing ceremony must render before authentication so it
+      // can stash the code from the fragment, then send the visitor to /login
+      // itself. Going through the guard instead would put the code into
+      // `?redirect=` and therefore into the SPA host's access log. It also
+      // skips the vault-locked ladder, which is right: pairing involves no
+      // crypto and must work while the vault is locked.
+      path: '/extension/connect',
+      name: 'ExtensionConnect',
+      component: () => import('@/pages/ExtensionConnectPage.vue'),
+      meta: { public: true, skipSetupCheck: true },
+    },
+    {
       path: '/groups',
       name: 'Groups',
       component: () => import('@/pages/GroupsPage.vue'),
