@@ -2,7 +2,9 @@ import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import { buildContainer, type Container, type Ports } from '@/container'
 import { InMemoryAuthGateway } from '@/infrastructure/in_memory/InMemoryAuthGateway'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
+import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
+import { InMemoryPairingHandoffGateway } from '@/infrastructure/in_memory/InMemoryPairingHandoffGateway'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
@@ -41,6 +43,8 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
     preferencesGateway: new InMemoryPreferencesGateway(),
     statisticsGateway: new InMemoryStatisticsGateway(),
     oneTimeLinkRepository: new InMemoryOneTimeLinkRepository(),
+    extensionGateway: new InMemoryExtensionGateway(),
+    pairingHandoffGateway: new InMemoryPairingHandoffGateway(),
     ...overrides,
   }
   const container = buildContainer(ports)
