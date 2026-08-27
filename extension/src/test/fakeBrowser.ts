@@ -45,6 +45,10 @@ export interface FakeBrowser extends Browser {
   grantPermissions: boolean
   /** URLs passed to `tabs.create`, in order. */
   readonly openedTabs: string[]
+  /** Values written to the clipboard, in order, with their clear timeout. */
+  readonly clipboardWrites: Array<{ value: string; clearAfterSeconds: number | null }>
+  /** Set false to model an unavailable offscreen document. */
+  clipboardAvailable: boolean
   /** Alarm name → period in minutes. Named to avoid clashing with the port. */
   readonly scheduledAlarms: Map<string, number>
   /** Fire a scheduled alarm by name. */
@@ -59,6 +63,7 @@ export function createFakeBrowser(): FakeBrowser {
   const grantedOrigins = new Set<string>()
   const openedTabs: string[] = []
   const alarmPeriods = new Map<string, number>()
+  const clipboardWrites: Array<{ value: string; clearAfterSeconds: number | null }> = []
   const alarmListeners: Array<(name: string) => void> = []
   const removalListeners: Array<() => void> = []
   const messageHandlers: Array<(message: unknown) => Promise<unknown>> = []
@@ -70,6 +75,8 @@ export function createFakeBrowser(): FakeBrowser {
     grantPermissions: true,
     openedTabs,
     scheduledAlarms: alarmPeriods,
+    clipboardWrites,
+    clipboardAvailable: true,
 
     permissions: {
       async contains(origins) {
@@ -92,6 +99,17 @@ export function createFakeBrowser(): FakeBrowser {
     tabs: {
       async create(url) {
         openedTabs.push(url)
+      },
+    },
+
+    clipboard: {
+      async copy(value, clearAfterSeconds) {
+        if (!fake.clipboardAvailable) return false
+        clipboardWrites.push({ value, clearAfterSeconds })
+        return true
+      },
+      async clear() {
+        clipboardWrites.push({ value: ' ', clearAfterSeconds: null })
       },
     },
 

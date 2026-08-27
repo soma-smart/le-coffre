@@ -91,9 +91,19 @@ export default defineConfigWithVueTs(
           ],
         },
       ],
+      // Repeats the chrome/browser bans from ext/browser-globals on purpose.
+      // Flat config REPLACES a rule rather than merging it, so listing only
+      // `fetch` here would silently re-permit `chrome.*` in the popup, which is
+      // the directory where the Firefox seam matters most.
       'no-restricted-globals': [
         'error',
         { name: 'fetch', message: 'Network access belongs to the service worker.' },
+        {
+          name: 'chrome',
+          message:
+            'Only src/platform/chrome/** may use chrome.*. The popup goes through the Browser port.',
+        },
+        { name: 'browser', message: 'Use the Browser port from src/platform/browser.ts.' },
       ],
     },
   },

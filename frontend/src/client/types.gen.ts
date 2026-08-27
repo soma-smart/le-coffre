@@ -466,6 +466,10 @@ export type GetExtensionPairingResponse = {
  */
 export type GetExtensionSessionResponse = {
     /**
+     * User Id
+     */
+    user_id: string;
+    /**
      * Email
      */
     email: string;
