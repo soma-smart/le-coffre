@@ -5,6 +5,8 @@ import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
 import { InMemoryPairingHandoffGateway } from '@/infrastructure/in_memory/InMemoryPairingHandoffGateway'
+import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
+import { useCsrfStore } from '@/stores/csrf'
 
 const USER_CODE = 'K7QM-3XR9'
 const NOW = new Date('2026-08-27T12:00:00Z')
@@ -39,8 +41,13 @@ function setFragment(fragment: string) {
 async function mountPage(
   extensionGateway: InMemoryExtensionGateway,
   pairingHandoffGateway = new InMemoryPairingHandoffGateway(),
+  csrfGateway = new InMemoryCsrfGateway(),
 ) {
-  const { pinia, container } = createTestContext({ extensionGateway, pairingHandoffGateway })
+  const { pinia, container } = createTestContext({
+    extensionGateway,
+    pairingHandoffGateway,
+    csrfGateway,
+  })
   const wrapper = mount(ExtensionConnectPage, {
     global: {
       plugins: [pinia],
@@ -179,6 +186,34 @@ describe('ExtensionConnectPage', () => {
     const wrapper = await mountPage(new InMemoryExtensionGateway())
 
     expect(wrapper.text()).toContain('invalid or has expired')
+    expect(wrapper.find('[data-testid="approve-button"]').exists()).toBe(false)
+  })
+
+  it('should prime the CSRF token, which the public route stops the router doing', async () => {
+    // Regression: /extension/connect is meta.public, so router.beforeEach
+    // returns before the block that fetches the CSRF token for authenticated
+    // routes. Approve and Refuse are POSTs, and customClient only attaches a
+    // token it already has cached: it never fetches from an interceptor. The
+    // page therefore has to prime it, or the first Approve dies on the
+    // backend's "CSRF token missing".
+    await mountPage(
+      seededGateway(),
+      new InMemoryPairingHandoffGateway(),
+      new InMemoryCsrfGateway().seed('primed-token'),
+    )
+
+    expect(useCsrfStore().csrfToken).toBe('primed-token')
+  })
+
+  it('should not offer Approve when no secure session could be established', async () => {
+    // Better a plain explanation than a button that fails on click.
+    const wrapper = await mountPage(
+      seededGateway(),
+      new InMemoryPairingHandoffGateway(),
+      new InMemoryCsrfGateway().failWith(new Error('boom')),
+    )
+
+    expect(wrapper.text()).toContain('Could not establish a secure session')
     expect(wrapper.find('[data-testid="approve-button"]').exists()).toBe(false)
   })
 
