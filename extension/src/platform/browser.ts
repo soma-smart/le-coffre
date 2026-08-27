@@ -53,6 +53,25 @@ export interface Browser {
     onAlarm(listener: (name: string) => void): void
   }
 
+  readonly clipboard: {
+    /**
+     * Write a value to the clipboard and schedule its removal.
+     *
+     * Owned by the platform because the mechanism is browser-specific: Chrome
+     * uses an offscreen document, which is the only context with both a DOM and
+     * a lifetime independent of the popup. A timer owned by the popup would die
+     * when the popup closes, which is the normal way people dismiss it, so an
+     * auto-clear promised there would usually not happen.
+     *
+     * Returns false when no clipboard context could be obtained. Callers must
+     * not fall back to copying the value themselves: that would put a live
+     * secret in the popup. Firefox, which has no offscreen API, needs its own
+     * adapter here rather than a fallback in the caller.
+     */
+    copy(value: string, clearAfterSeconds: number | null): Promise<boolean>
+    clear(): Promise<void>
+  }
+
   readonly runtime: {
     /** Absolute URL for a path inside the extension bundle. */
     getUrl(path: string): string
