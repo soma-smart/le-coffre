@@ -334,6 +334,134 @@ export type CsrfTokenResponse = {
 };
 
 /**
+ * ExchangeExtensionDeviceRequest
+ */
+export type ExchangeExtensionDeviceRequest = {
+    /**
+     * User Code
+     */
+    user_code: string;
+    /**
+     * Code Verifier
+     *
+     * The secret the extension kept when it registered
+     */
+    code_verifier: string;
+};
+
+/**
+ * ExchangeExtensionDeviceResponse
+ *
+ * One shape for both outcomes, keyed on `status`.
+ *
+ * A union response model would force the generated client into a discriminated
+ * type for what is, from the extension's point of view, one poll loop. The
+ * token fields are populated only when `status` is `approved`.
+ */
+export type ExchangeExtensionDeviceResponse = {
+    /**
+     * Status
+     *
+     * `approved` once redeemed, `pending` while awaiting approval
+     */
+    status: string;
+    /**
+     * Expires At
+     *
+     * Pairing expiry while pending, token expiry once approved
+     */
+    expires_at: string;
+    /**
+     * Poll Interval Seconds
+     */
+    poll_interval_seconds?: number | null;
+    /**
+     * Token
+     */
+    token?: string | null;
+    /**
+     * Token Id
+     */
+    token_id?: string | null;
+    /**
+     * Email
+     */
+    email?: string | null;
+    /**
+     * Display Name
+     */
+    display_name?: string | null;
+};
+
+/**
+ * ExtensionTokenItem
+ */
+export type ExtensionTokenItem = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Device Name
+     */
+    device_name: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
+    /**
+     * Revoked At
+     */
+    revoked_at: string | null;
+    /**
+     * Created From Ip
+     */
+    created_from_ip: string | null;
+    /**
+     * Is Active
+     */
+    is_active: boolean;
+};
+
+/**
+ * GetExtensionPairingResponse
+ */
+export type GetExtensionPairingResponse = {
+    /**
+     * User Code
+     */
+    user_code: string;
+    /**
+     * Device Name
+     */
+    device_name: string;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Created From Ip
+     */
+    created_from_ip: string | null;
+    /**
+     * Is Resolved
+     */
+    is_resolved: boolean;
+};
+
+/**
  * GetGroupResponse
  */
 export type GetGroupResponse = {
@@ -556,6 +684,16 @@ export type IsSsoConfigSetResponse = {
      * Is Set
      */
     is_set: boolean;
+};
+
+/**
+ * ListExtensionTokensResponseModel
+ */
+export type ListExtensionTokensResponseModel = {
+    /**
+     * Tokens
+     */
+    tokens: Array<ExtensionTokenItem>;
 };
 
 /**
@@ -922,6 +1060,48 @@ export type RegisterAdminResponse = {
 };
 
 /**
+ * RegisterExtensionDeviceRequest
+ */
+export type RegisterExtensionDeviceRequest = {
+    /**
+     * Code Challenge
+     *
+     * base64url(SHA-256(code_verifier))
+     */
+    code_challenge: string;
+    /**
+     * Code Challenge Method
+     *
+     * Only S256 is accepted
+     */
+    code_challenge_method?: string;
+    /**
+     * Device Name
+     *
+     * Self-reported; shown as untrusted on the approval page
+     */
+    device_name?: string;
+};
+
+/**
+ * RegisterExtensionDeviceResponse
+ */
+export type RegisterExtensionDeviceResponse = {
+    /**
+     * User Code
+     */
+    user_code: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
+    /**
+     * Poll Interval Seconds
+     */
+    poll_interval_seconds: number;
+};
+
+/**
  * RemoveMemberFromGroupResponse
  */
 export type RemoveMemberFromGroupResponse = {
@@ -929,6 +1109,16 @@ export type RemoveMemberFromGroupResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * RevokeAllExtensionTokensResponse
+ */
+export type RevokeAllExtensionTokensResponse = {
+    /**
+     * Revoked Count
+     */
+    revoked_count: number;
 };
 
 /**
@@ -2722,3 +2912,229 @@ export type GetStatisticForAdminIamStatisticsGetResponses = {
 };
 
 export type GetStatisticForAdminIamStatisticsGetResponse = GetStatisticForAdminIamStatisticsGetResponses[keyof GetStatisticForAdminIamStatisticsGetResponses];
+
+export type RegisterExtensionDeviceExtensionDevicePostData = {
+    body: RegisterExtensionDeviceRequest;
+    path?: never;
+    query?: never;
+    url: '/extension/device';
+};
+
+export type RegisterExtensionDeviceExtensionDevicePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RegisterExtensionDeviceExtensionDevicePostError = RegisterExtensionDeviceExtensionDevicePostErrors[keyof RegisterExtensionDeviceExtensionDevicePostErrors];
+
+export type RegisterExtensionDeviceExtensionDevicePostResponses = {
+    /**
+     * Successful Response
+     */
+    201: RegisterExtensionDeviceResponse;
+};
+
+export type RegisterExtensionDeviceExtensionDevicePostResponse = RegisterExtensionDeviceExtensionDevicePostResponses[keyof RegisterExtensionDeviceExtensionDevicePostResponses];
+
+export type ExchangeExtensionDeviceExtensionDeviceExchangePostData = {
+    body: ExchangeExtensionDeviceRequest;
+    path?: never;
+    query?: never;
+    url: '/extension/device/exchange';
+};
+
+export type ExchangeExtensionDeviceExtensionDeviceExchangePostErrors = {
+    /**
+     * The pairing is invalid, expired, denied or already redeemed
+     */
+    400: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ExchangeExtensionDeviceExtensionDeviceExchangePostError = ExchangeExtensionDeviceExtensionDeviceExchangePostErrors[keyof ExchangeExtensionDeviceExtensionDeviceExchangePostErrors];
+
+export type ExchangeExtensionDeviceExtensionDeviceExchangePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ExchangeExtensionDeviceResponse;
+};
+
+export type ExchangeExtensionDeviceExtensionDeviceExchangePostResponse = ExchangeExtensionDeviceExtensionDeviceExchangePostResponses[keyof ExchangeExtensionDeviceExtensionDeviceExchangePostResponses];
+
+export type GetExtensionPairingExtensionPairingUserCodeGetData = {
+    body?: never;
+    path: {
+        /**
+         * User Code
+         */
+        user_code: string;
+    };
+    query?: never;
+    url: '/extension/pairing/{user_code}';
+};
+
+export type GetExtensionPairingExtensionPairingUserCodeGetErrors = {
+    /**
+     * The pairing is unknown or has expired
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetExtensionPairingExtensionPairingUserCodeGetError = GetExtensionPairingExtensionPairingUserCodeGetErrors[keyof GetExtensionPairingExtensionPairingUserCodeGetErrors];
+
+export type GetExtensionPairingExtensionPairingUserCodeGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: GetExtensionPairingResponse;
+};
+
+export type GetExtensionPairingExtensionPairingUserCodeGetResponse = GetExtensionPairingExtensionPairingUserCodeGetResponses[keyof GetExtensionPairingExtensionPairingUserCodeGetResponses];
+
+export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostData = {
+    body?: never;
+    path: {
+        /**
+         * User Code
+         */
+        user_code: string;
+    };
+    query?: never;
+    url: '/extension/pairing/{user_code}/approve';
+};
+
+export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors = {
+    /**
+     * The pairing is unknown or has expired
+     */
+    404: unknown;
+    /**
+     * The account already has the maximum number of connected extensions
+     */
+    409: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostError = ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors[keyof ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors];
+
+export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponse = ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses[keyof ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses];
+
+export type DenyExtensionPairingExtensionPairingUserCodeDenyPostData = {
+    body?: never;
+    path: {
+        /**
+         * User Code
+         */
+        user_code: string;
+    };
+    query?: never;
+    url: '/extension/pairing/{user_code}/deny';
+};
+
+export type DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors = {
+    /**
+     * The pairing is unknown or has expired
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DenyExtensionPairingExtensionPairingUserCodeDenyPostError = DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors[keyof DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors];
+
+export type DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type DenyExtensionPairingExtensionPairingUserCodeDenyPostResponse = DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses[keyof DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses];
+
+export type RevokeAllExtensionTokensExtensionTokensDeleteData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/extension/tokens';
+};
+
+export type RevokeAllExtensionTokensExtensionTokensDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: RevokeAllExtensionTokensResponse;
+};
+
+export type RevokeAllExtensionTokensExtensionTokensDeleteResponse = RevokeAllExtensionTokensExtensionTokensDeleteResponses[keyof RevokeAllExtensionTokensExtensionTokensDeleteResponses];
+
+export type ListExtensionTokensExtensionTokensGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/extension/tokens';
+};
+
+export type ListExtensionTokensExtensionTokensGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListExtensionTokensResponseModel;
+};
+
+export type ListExtensionTokensExtensionTokensGetResponse = ListExtensionTokensExtensionTokensGetResponses[keyof ListExtensionTokensExtensionTokensGetResponses];
+
+export type RevokeExtensionTokenExtensionTokensTokenIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Token Id
+         */
+        token_id: string;
+    };
+    query?: never;
+    url: '/extension/tokens/{token_id}';
+};
+
+export type RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors = {
+    /**
+     * No such connected extension for this account
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeExtensionTokenExtensionTokensTokenIdDeleteError = RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors[keyof RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors];
+
+export type RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type RevokeExtensionTokenExtensionTokensTokenIdDeleteResponse = RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses[keyof RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses];

@@ -9,8 +9,11 @@ This test covers the entire authentication system in one comprehensive workflow:
 5. SSO authentication flow (configuration, URL, callback)
 6. Refresh token workflow
 7. Token validation with protected endpoints
+8. Browser-extension pairing (register, approve, exchange, revoke, deny)
 """
 
+import base64
+import hashlib
 import time
 from urllib.parse import parse_qs, urlparse
 
@@ -647,6 +650,140 @@ async def test_complete_authentication_workflow(
     print("✅ Lockout released after window elapsed — correct password succeeds end-to-end")
 
     # =========================================================================
+    # PHASE 8: BROWSER-EXTENSION PAIRING
+    # =========================================================================
+    print("\n" + "=" * 80)
+    print("🧩 PHASE 8: BROWSER-EXTENSION PAIRING")
+    print("=" * 80)
+
+    # Reuses the session admin: /auth/register-admin is first-admin-only, and
+    # PHASE 7 already released the lockout on this account.
+    extension_client = client_factory()
+    login_response = extension_client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.com", "password": "securepassword123"},
+    )
+    assert login_response.status_code == 200, login_response.text
+
+    # Step 8.1: the extension registers its challenge BEFORE opening the tab, so
+    # the approval page renders a server-vouched code rather than caller text.
+    verifier = "e2e-extension-code-verifier-that-is-long-enough-to-pass"
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+
+    anonymous_client = client_factory()
+    register_response = anonymous_client.post(
+        "/api/extension/device",
+        json={
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+            "device_name": "Chrome on macOS",
+        },
+    )
+    assert register_response.status_code == 201, register_response.text
+    user_code = register_response.json()["user_code"]
+    assert register_response.json()["poll_interval_seconds"] > 0
+    print(f"✅ Pairing registered, user code {user_code}")
+
+    # Step 8.2: polling before approval reports pending, not an error. Only a
+    # caller holding the verifier can reach this, so it is not an oracle.
+    pending_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": verifier},
+    )
+    assert pending_response.status_code == 200
+    assert pending_response.json()["status"] == "pending"
+    assert pending_response.json()["token"] is None
+    print("✅ Exchange before approval reports pending")
+
+    # Step 8.3: a wrong verifier is refused, and reveals nothing about state.
+    wrong_verifier_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": "a-different-verifier-of-sufficient-length!!"},
+    )
+    assert wrong_verifier_response.status_code == 400
+    assert wrong_verifier_response.json()["detail"] == "This pairing request is invalid or has expired"
+    print("✅ Wrong verifier refused with a generic message")
+
+    # Step 8.4: the approval page loads the facts the user needs to decide.
+    details_response = extension_client.get(f"/api/extension/pairing/{user_code}")
+    assert details_response.status_code == 200, details_response.text
+    details = details_response.json()
+    assert details["user_code"] == user_code
+    assert details["device_name"] == "Chrome on macOS"
+    assert details["is_resolved"] is False
+    print("✅ Approval page loaded with server-vouched facts")
+
+    # Step 8.5: approving is cookie-authenticated and CSRF-protected.
+    approve_response = extension_client.post(f"/api/extension/pairing/{user_code}/approve")
+    assert approve_response.status_code == 204, approve_response.text
+    print("✅ Pairing approved")
+
+    # Step 8.6: the extension now redeems it, once.
+    exchange_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": verifier},
+    )
+    assert exchange_response.status_code == 200, exchange_response.text
+    exchanged = exchange_response.json()
+    assert exchanged["status"] == "approved"
+    assert exchanged["email"] == "admin@example.com"
+    extension_token = exchanged["token"]
+    assert extension_token and len(extension_token) >= 43
+    print("✅ Pairing redeemed for a read-only token")
+
+    # Step 8.7: one approval yields exactly one credential.
+    replay_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": verifier},
+    )
+    assert replay_response.status_code == 400
+    print("✅ Replaying the exchange mints nothing")
+
+    # Step 8.8: the device shows up in the connected-devices list.
+    tokens_response = extension_client.get("/api/extension/tokens")
+    assert tokens_response.status_code == 200, tokens_response.text
+    tokens = tokens_response.json()["tokens"]
+    assert len(tokens) == 1
+    assert tokens[0]["device_name"] == "Chrome on macOS"
+    assert tokens[0]["is_active"] is True
+    token_id = tokens[0]["id"]
+    print("✅ Connected device listed")
+
+    # Step 8.9: a bearer token cannot enumerate the account's other devices.
+    bearer_client = client_factory()
+    bearer_response = bearer_client.get(
+        "/api/extension/tokens",
+        headers={"Authorization": f"Bearer {extension_token}"},
+    )
+    assert bearer_response.status_code == 401, (
+        "An extension token must not be able to list or revoke the account's devices"
+    )
+    print("✅ Device management stays cookie-only")
+
+    # Step 8.10: revoking disconnects the device, and is idempotent.
+    revoke_response = extension_client.delete(f"/api/extension/tokens/{token_id}")
+    assert revoke_response.status_code == 204, revoke_response.text
+    after_revoke = extension_client.get("/api/extension/tokens").json()["tokens"]
+    assert after_revoke[0]["is_active"] is False
+    assert after_revoke[0]["revoked_at"] is not None
+    print("✅ Device revoked and still listed for audit")
+
+    # Step 8.11: denial is a real path, so a phished user is not stuck waiting.
+    deny_register = anonymous_client.post(
+        "/api/extension/device",
+        json={"code_challenge": challenge, "code_challenge_method": "S256", "device_name": "Suspicious"},
+    )
+    deny_code = deny_register.json()["user_code"]
+    deny_response = extension_client.post(f"/api/extension/pairing/{deny_code}/deny")
+    assert deny_response.status_code == 204, deny_response.text
+    denied_exchange = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": deny_code, "code_verifier": verifier},
+    )
+    assert denied_exchange.status_code == 400
+    print("✅ Denied pairing cannot be redeemed")
+
+    # =========================================================================
     # FINAL VALIDATION
     # =========================================================================
     print("\n" + "=" * 80)
@@ -659,6 +796,7 @@ async def test_complete_authentication_workflow(
     print("✅ Phase 5: SSO authentication")
     print("✅ Phase 6: Refresh token workflow")
     print("✅ Phase 7: Account lockout")
+    print("✅ Phase 8: Browser-extension pairing")
     print("\n" + "=" * 80)
     print("🎊 COMPLETE AUTHENTICATION WORKFLOW TEST PASSED!")
     print("=" * 80 + "\n")

@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddMemberToGroupGroupsGroupIdMembersPostData, AddMemberToGroupGroupsGroupIdMembersPostErrors, AddMemberToGroupGroupsGroupIdMembersPostResponses, AddOwnerToGroupGroupsGroupIdOwnersPostData, AddOwnerToGroupGroupsGroupIdOwnersPostErrors, AddOwnerToGroupGroupsGroupIdOwnersPostResponses, AdminLoginAuthLoginPostData, AdminLoginAuthLoginPostErrors, AdminLoginAuthLoginPostResponses, ClearPendingSharesVaultUnlockClearDeleteData, ClearPendingSharesVaultUnlockClearDeleteResponses, ConfigureSsoProviderAuthSsoConfigurePostData, ConfigureSsoProviderAuthSsoConfigurePostErrors, ConfigureSsoProviderAuthSsoConfigurePostResponses, ConsumeOneTimeLinkOneTimeLinksConsumePostData, ConsumeOneTimeLinkOneTimeLinksConsumePostErrors, ConsumeOneTimeLinkOneTimeLinksConsumePostResponses, CreateGroupGroupsPostData, CreateGroupGroupsPostErrors, CreateGroupGroupsPostResponses, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostData, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostErrors, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses, CreatePasswordPasswordsPostData, CreatePasswordPasswordsPostErrors, CreatePasswordPasswordsPostResponses, CreateUserUsersPostData, CreateUserUsersPostErrors, CreateUserUsersPostResponses, CreateVaultVaultSetupPostData, CreateVaultVaultSetupPostErrors, CreateVaultVaultSetupPostResponses, DeleteGroupGroupsGroupIdDeleteData, DeleteGroupGroupsGroupIdDeleteErrors, DeleteGroupGroupsGroupIdDeleteResponses, DeletePasswordPasswordsPasswordIdDeleteData, DeletePasswordPasswordsPasswordIdDeleteErrors, DeletePasswordPasswordsPasswordIdDeleteResponses, DeleteUserUsersUserIdDeleteData, DeleteUserUsersUserIdDeleteErrors, DeleteUserUsersUserIdDeleteResponses, GetCsrfTokenAuthCsrfTokenGetData, GetCsrfTokenAuthCsrfTokenGetResponses, GetGroupGroupsGroupIdGetData, GetGroupGroupsGroupIdGetErrors, GetGroupGroupsGroupIdGetResponses, GetPasswordPasswordsPasswordIdGetData, GetPasswordPasswordsPasswordIdGetErrors, GetPasswordPasswordsPasswordIdGetResponses, GetPasswordStatisticForAdminPasswordsStatisticsGetData, GetPasswordStatisticForAdminPasswordsStatisticsGetResponses, GetSsoUrlAuthSsoUrlGetData, GetSsoUrlAuthSsoUrlGetErrors, GetSsoUrlAuthSsoUrlGetResponses, GetStatisticForAdminIamStatisticsGetData, GetStatisticForAdminIamStatisticsGetResponses, GetUserMeUsersMeGetData, GetUserMeUsersMeGetResponses, GetUserUsersUserIdGetData, GetUserUsersUserIdGetErrors, GetUserUsersUserIdGetResponses, GetVaultStatusVaultStatusGetData, GetVaultStatusVaultStatusGetResponses, HealthCheckHealthGetData, HealthCheckHealthGetResponses, IsSsoConfigSetAuthSsoIsConfiguredGetData, IsSsoConfigSetAuthSsoIsConfiguredGetResponses, ListGroupsGroupsGetData, ListGroupsGroupsGetErrors, ListGroupsGroupsGetResponses, ListMyOneTimeLinksOneTimeLinksMineGetData, ListMyOneTimeLinksOneTimeLinksMineGetErrors, ListMyOneTimeLinksOneTimeLinksMineGetResponses, ListOneTimeLinksForAdminAdminOneTimeLinksGetData, ListOneTimeLinksForAdminAdminOneTimeLinksGetErrors, ListOneTimeLinksForAdminAdminOneTimeLinksGetResponses, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetData, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetErrors, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponses, ListPasswordAccessPasswordsPasswordIdAccessGetData, ListPasswordAccessPasswordsPasswordIdAccessGetErrors, ListPasswordAccessPasswordsPasswordIdAccessGetResponses, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetData, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetErrors, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses, ListPasswordEventsPasswordsPasswordIdEventsGetData, ListPasswordEventsPasswordsPasswordIdEventsGetErrors, ListPasswordEventsPasswordsPasswordIdEventsGetResponses, ListPasswordsPasswordsListGetData, ListPasswordsPasswordsListGetErrors, ListPasswordsPasswordsListGetResponses, ListUsersUsersGetData, ListUsersUsersGetResponses, LockVaultVaultLockPostData, LockVaultVaultLockPostResponses, LogoutAuthLogoutPostData, LogoutAuthLogoutPostErrors, LogoutAuthLogoutPostResponses, PromoteUserToAdminUsersUserIdPromoteAdminPostData, PromoteUserToAdminUsersUserIdPromoteAdminPostErrors, PromoteUserToAdminUsersUserIdPromoteAdminPostResponses, ReadinessCheckHealthReadyGetData, ReadinessCheckHealthReadyGetResponses, RefreshAccessTokenAuthRefreshTokenPostData, RefreshAccessTokenAuthRefreshTokenPostErrors, RefreshAccessTokenAuthRefreshTokenPostResponses, RegisterAdminAuthRegisterAdminPostData, RegisterAdminAuthRegisterAdminPostErrors, RegisterAdminAuthRegisterAdminPostResponses, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteData, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteErrors, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponses, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponses, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponses, SharePasswordPasswordsPasswordIdSharePostData, SharePasswordPasswordsPasswordIdSharePostErrors, SharePasswordPasswordsPasswordIdSharePostResponses, SsoCallbackAuthSsoCallbackGetData, SsoCallbackAuthSsoCallbackGetErrors, SsoCallbackAuthSsoCallbackGetResponses, UnlockVaultVaultUnlockPostData, UnlockVaultVaultUnlockPostErrors, UnlockVaultVaultUnlockPostResponses, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteData, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteErrors, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses, UpdateGroupGroupsGroupIdPutData, UpdateGroupGroupsGroupIdPutErrors, UpdateGroupGroupsGroupIdPutResponses, UpdatePasswordPasswordsPasswordIdPutData, UpdatePasswordPasswordsPasswordIdPutErrors, UpdatePasswordPasswordsPasswordIdPutResponses, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchData, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchErrors, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponses, UpdateUserPasswordUsersMePasswordPutData, UpdateUserPasswordUsersMePasswordPutErrors, UpdateUserPasswordUsersMePasswordPutResponses, UpdateUserUsersUserIdPutData, UpdateUserUsersUserIdPutErrors, UpdateUserUsersUserIdPutResponses, ValidateVaultSetupVaultValidateSetupPostData, ValidateVaultSetupVaultValidateSetupPostErrors, ValidateVaultSetupVaultValidateSetupPostResponses } from './types.gen';
+import type { AddMemberToGroupGroupsGroupIdMembersPostData, AddMemberToGroupGroupsGroupIdMembersPostErrors, AddMemberToGroupGroupsGroupIdMembersPostResponses, AddOwnerToGroupGroupsGroupIdOwnersPostData, AddOwnerToGroupGroupsGroupIdOwnersPostErrors, AddOwnerToGroupGroupsGroupIdOwnersPostResponses, AdminLoginAuthLoginPostData, AdminLoginAuthLoginPostErrors, AdminLoginAuthLoginPostResponses, ApproveExtensionPairingExtensionPairingUserCodeApprovePostData, ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors, ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses, ClearPendingSharesVaultUnlockClearDeleteData, ClearPendingSharesVaultUnlockClearDeleteResponses, ConfigureSsoProviderAuthSsoConfigurePostData, ConfigureSsoProviderAuthSsoConfigurePostErrors, ConfigureSsoProviderAuthSsoConfigurePostResponses, ConsumeOneTimeLinkOneTimeLinksConsumePostData, ConsumeOneTimeLinkOneTimeLinksConsumePostErrors, ConsumeOneTimeLinkOneTimeLinksConsumePostResponses, CreateGroupGroupsPostData, CreateGroupGroupsPostErrors, CreateGroupGroupsPostResponses, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostData, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostErrors, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses, CreatePasswordPasswordsPostData, CreatePasswordPasswordsPostErrors, CreatePasswordPasswordsPostResponses, CreateUserUsersPostData, CreateUserUsersPostErrors, CreateUserUsersPostResponses, CreateVaultVaultSetupPostData, CreateVaultVaultSetupPostErrors, CreateVaultVaultSetupPostResponses, DeleteGroupGroupsGroupIdDeleteData, DeleteGroupGroupsGroupIdDeleteErrors, DeleteGroupGroupsGroupIdDeleteResponses, DeletePasswordPasswordsPasswordIdDeleteData, DeletePasswordPasswordsPasswordIdDeleteErrors, DeletePasswordPasswordsPasswordIdDeleteResponses, DeleteUserUsersUserIdDeleteData, DeleteUserUsersUserIdDeleteErrors, DeleteUserUsersUserIdDeleteResponses, DenyExtensionPairingExtensionPairingUserCodeDenyPostData, DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors, DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses, ExchangeExtensionDeviceExtensionDeviceExchangePostData, ExchangeExtensionDeviceExtensionDeviceExchangePostErrors, ExchangeExtensionDeviceExtensionDeviceExchangePostResponses, GetCsrfTokenAuthCsrfTokenGetData, GetCsrfTokenAuthCsrfTokenGetResponses, GetExtensionPairingExtensionPairingUserCodeGetData, GetExtensionPairingExtensionPairingUserCodeGetErrors, GetExtensionPairingExtensionPairingUserCodeGetResponses, GetGroupGroupsGroupIdGetData, GetGroupGroupsGroupIdGetErrors, GetGroupGroupsGroupIdGetResponses, GetPasswordPasswordsPasswordIdGetData, GetPasswordPasswordsPasswordIdGetErrors, GetPasswordPasswordsPasswordIdGetResponses, GetPasswordStatisticForAdminPasswordsStatisticsGetData, GetPasswordStatisticForAdminPasswordsStatisticsGetResponses, GetSsoUrlAuthSsoUrlGetData, GetSsoUrlAuthSsoUrlGetErrors, GetSsoUrlAuthSsoUrlGetResponses, GetStatisticForAdminIamStatisticsGetData, GetStatisticForAdminIamStatisticsGetResponses, GetUserMeUsersMeGetData, GetUserMeUsersMeGetResponses, GetUserUsersUserIdGetData, GetUserUsersUserIdGetErrors, GetUserUsersUserIdGetResponses, GetVaultStatusVaultStatusGetData, GetVaultStatusVaultStatusGetResponses, HealthCheckHealthGetData, HealthCheckHealthGetResponses, IsSsoConfigSetAuthSsoIsConfiguredGetData, IsSsoConfigSetAuthSsoIsConfiguredGetResponses, ListExtensionTokensExtensionTokensGetData, ListExtensionTokensExtensionTokensGetResponses, ListGroupsGroupsGetData, ListGroupsGroupsGetErrors, ListGroupsGroupsGetResponses, ListMyOneTimeLinksOneTimeLinksMineGetData, ListMyOneTimeLinksOneTimeLinksMineGetErrors, ListMyOneTimeLinksOneTimeLinksMineGetResponses, ListOneTimeLinksForAdminAdminOneTimeLinksGetData, ListOneTimeLinksForAdminAdminOneTimeLinksGetErrors, ListOneTimeLinksForAdminAdminOneTimeLinksGetResponses, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetData, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetErrors, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponses, ListPasswordAccessPasswordsPasswordIdAccessGetData, ListPasswordAccessPasswordsPasswordIdAccessGetErrors, ListPasswordAccessPasswordsPasswordIdAccessGetResponses, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetData, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetErrors, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses, ListPasswordEventsPasswordsPasswordIdEventsGetData, ListPasswordEventsPasswordsPasswordIdEventsGetErrors, ListPasswordEventsPasswordsPasswordIdEventsGetResponses, ListPasswordsPasswordsListGetData, ListPasswordsPasswordsListGetErrors, ListPasswordsPasswordsListGetResponses, ListUsersUsersGetData, ListUsersUsersGetResponses, LockVaultVaultLockPostData, LockVaultVaultLockPostResponses, LogoutAuthLogoutPostData, LogoutAuthLogoutPostErrors, LogoutAuthLogoutPostResponses, PromoteUserToAdminUsersUserIdPromoteAdminPostData, PromoteUserToAdminUsersUserIdPromoteAdminPostErrors, PromoteUserToAdminUsersUserIdPromoteAdminPostResponses, ReadinessCheckHealthReadyGetData, ReadinessCheckHealthReadyGetResponses, RefreshAccessTokenAuthRefreshTokenPostData, RefreshAccessTokenAuthRefreshTokenPostErrors, RefreshAccessTokenAuthRefreshTokenPostResponses, RegisterAdminAuthRegisterAdminPostData, RegisterAdminAuthRegisterAdminPostErrors, RegisterAdminAuthRegisterAdminPostResponses, RegisterExtensionDeviceExtensionDevicePostData, RegisterExtensionDeviceExtensionDevicePostErrors, RegisterExtensionDeviceExtensionDevicePostResponses, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses, RevokeAllExtensionTokensExtensionTokensDeleteData, RevokeAllExtensionTokensExtensionTokensDeleteResponses, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteData, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteErrors, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponses, RevokeExtensionTokenExtensionTokensTokenIdDeleteData, RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors, RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponses, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponses, SharePasswordPasswordsPasswordIdSharePostData, SharePasswordPasswordsPasswordIdSharePostErrors, SharePasswordPasswordsPasswordIdSharePostResponses, SsoCallbackAuthSsoCallbackGetData, SsoCallbackAuthSsoCallbackGetErrors, SsoCallbackAuthSsoCallbackGetResponses, UnlockVaultVaultUnlockPostData, UnlockVaultVaultUnlockPostErrors, UnlockVaultVaultUnlockPostResponses, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteData, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteErrors, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses, UpdateGroupGroupsGroupIdPutData, UpdateGroupGroupsGroupIdPutErrors, UpdateGroupGroupsGroupIdPutResponses, UpdatePasswordPasswordsPasswordIdPutData, UpdatePasswordPasswordsPasswordIdPutErrors, UpdatePasswordPasswordsPasswordIdPutResponses, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchData, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchErrors, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponses, UpdateUserPasswordUsersMePasswordPutData, UpdateUserPasswordUsersMePasswordPutErrors, UpdateUserPasswordUsersMePasswordPutResponses, UpdateUserUsersUserIdPutData, UpdateUserUsersUserIdPutErrors, UpdateUserUsersUserIdPutResponses, ValidateVaultSetupVaultValidateSetupPostData, ValidateVaultSetupVaultValidateSetupPostErrors, ValidateVaultSetupVaultValidateSetupPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1181,5 +1181,177 @@ export const getStatisticForAdminIamStatisticsGet = <ThrowOnError extends boolea
             type: 'apiKey'
         }],
     url: '/iam/statistics',
+    ...options
+});
+
+/**
+ * Register a browser-extension pairing request
+ *
+ * Register a pairing request before the extension opens the approval tab.
+ *
+ * - **code_challenge**: base64url(SHA-256(code_verifier)); the verifier stays in the extension
+ * - **code_challenge_method**: must be `S256`, `plain` is rejected
+ * - **device_name**: shown on the approval page, explicitly labelled as self-reported
+ * - **Authentication**: none required
+ *
+ * The pairing this creates grants nothing on its own: approving it needs a logged in
+ * session, and redeeming it additionally needs the verifier. The returned `user_code` is
+ * what the user matches against the code shown in their extension.
+ */
+export const registerExtensionDeviceExtensionDevicePost = <ThrowOnError extends boolean = false>(options: Options<RegisterExtensionDeviceExtensionDevicePostData, ThrowOnError>): RequestResult<RegisterExtensionDeviceExtensionDevicePostResponses, RegisterExtensionDeviceExtensionDevicePostErrors, ThrowOnError> => (options.client ?? client).post<RegisterExtensionDeviceExtensionDevicePostResponses, RegisterExtensionDeviceExtensionDevicePostErrors, ThrowOnError>({
+    url: '/extension/device',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Redeem an approved pairing for a read-only token
+ *
+ * Redeem an approved pairing for a read-only bearer token.
+ *
+ * - **user_code**: the code returned when the device registered
+ * - **code_verifier**: proves this is the device that started the pairing
+ * - **Authentication**: none required; the verifier is the credential
+ *
+ * Poll this until `status` is `approved`. The token is returned exactly once and only its
+ * SHA-256 is stored, so a caller that loses this response has to pair again.
+ */
+export const exchangeExtensionDeviceExtensionDeviceExchangePost = <ThrowOnError extends boolean = false>(options: Options<ExchangeExtensionDeviceExtensionDeviceExchangePostData, ThrowOnError>): RequestResult<ExchangeExtensionDeviceExtensionDeviceExchangePostResponses, ExchangeExtensionDeviceExtensionDeviceExchangePostErrors, ThrowOnError> => (options.client ?? client).post<ExchangeExtensionDeviceExtensionDeviceExchangePostResponses, ExchangeExtensionDeviceExtensionDeviceExchangePostErrors, ThrowOnError>({
+    url: '/extension/device/exchange',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Load a pairing request for approval
+ *
+ * Load the facts the approval page needs before the user decides.
+ *
+ * - **user_code**: the code shown in the extension
+ * - **Authentication**: requires authentication via access_token cookie
+ *
+ * Everything returned except `device_name` is vouched for by the server. `device_name` is
+ * self-reported by the extension, so the page must present it as untrusted. `created_from_ip`
+ * matters: a foreign address is what gives away a remote attacker who started the pairing.
+ */
+export const getExtensionPairingExtensionPairingUserCodeGet = <ThrowOnError extends boolean = false>(options: Options<GetExtensionPairingExtensionPairingUserCodeGetData, ThrowOnError>): RequestResult<GetExtensionPairingExtensionPairingUserCodeGetResponses, GetExtensionPairingExtensionPairingUserCodeGetErrors, ThrowOnError> => (options.client ?? client).get<GetExtensionPairingExtensionPairingUserCodeGetResponses, GetExtensionPairingExtensionPairingUserCodeGetErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/extension/pairing/{user_code}',
+    ...options
+});
+
+/**
+ * Approve a browser-extension pairing request
+ *
+ * Approve a pairing, binding it to the signed in account.
+ *
+ * - **user_code**: the code the user matched against their extension
+ * - **Authentication**: requires authentication via access_token cookie
+ *
+ * No credential is issued here. The token is minted when the extension redeems the pairing,
+ * so its plaintext never waits anywhere for the extension to collect it.
+ */
+export const approveExtensionPairingExtensionPairingUserCodeApprovePost = <ThrowOnError extends boolean = false>(options: Options<ApproveExtensionPairingExtensionPairingUserCodeApprovePostData, ThrowOnError>): RequestResult<ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses, ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors, ThrowOnError> => (options.client ?? client).post<ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses, ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/extension/pairing/{user_code}/approve',
+    ...options
+});
+
+/**
+ * Deny a browser-extension pairing request
+ *
+ * Refuse a pairing request.
+ *
+ * - **user_code**: the code shown in the extension
+ * - **Authentication**: requires authentication via access_token cookie
+ *
+ * A real path rather than a timeout: someone who realises they are being phished gets a
+ * deliberate way out, and the extension stops polling immediately instead of waiting for
+ * the request to expire.
+ */
+export const denyExtensionPairingExtensionPairingUserCodeDenyPost = <ThrowOnError extends boolean = false>(options: Options<DenyExtensionPairingExtensionPairingUserCodeDenyPostData, ThrowOnError>): RequestResult<DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses, DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors, ThrowOnError> => (options.client ?? client).post<DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses, DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/extension/pairing/{user_code}/deny',
+    ...options
+});
+
+/**
+ * Disconnect every browser extension
+ *
+ * Disconnect every browser extension connected to the signed in account.
+ *
+ * - **Authentication**: requires authentication via access_token cookie
+ *
+ * Returns how many were still active. Already revoked and expired entries are left alone,
+ * so their original timestamps survive in the audit trail.
+ */
+export const revokeAllExtensionTokensExtensionTokensDelete = <ThrowOnError extends boolean = false>(options?: Options<RevokeAllExtensionTokensExtensionTokensDeleteData, ThrowOnError>): RequestResult<RevokeAllExtensionTokensExtensionTokensDeleteResponses, unknown, ThrowOnError> => (options?.client ?? client).delete<RevokeAllExtensionTokensExtensionTokensDeleteResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/extension/tokens',
+    ...options
+});
+
+/**
+ * List the browser extensions connected to this account
+ *
+ * List every browser extension ever connected to the signed in account.
+ *
+ * - **Authentication**: requires authentication via access_token cookie
+ *
+ * Revoked and expired entries are included: someone checking "did I actually disconnect
+ * that laptop" needs to see the answer rather than an empty list. Cookie-authenticated
+ * only, so an extension token cannot enumerate the account's other devices.
+ */
+export const listExtensionTokensExtensionTokensGet = <ThrowOnError extends boolean = false>(options?: Options<ListExtensionTokensExtensionTokensGetData, ThrowOnError>): RequestResult<ListExtensionTokensExtensionTokensGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListExtensionTokensExtensionTokensGetResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/extension/tokens',
+    ...options
+});
+
+/**
+ * Disconnect one browser extension
+ *
+ * Disconnect one browser extension.
+ *
+ * - **token_id**: the connected extension to disconnect
+ * - **Authentication**: requires authentication via access_token cookie
+ *
+ * A token belonging to another account is reported as missing rather than forbidden, so
+ * this route cannot be used to discover which token ids exist. Revoking an already
+ * revoked extension succeeds without moving the original timestamp.
+ */
+export const revokeExtensionTokenExtensionTokensTokenIdDelete = <ThrowOnError extends boolean = false>(options: Options<RevokeExtensionTokenExtensionTokensTokenIdDeleteData, ThrowOnError>): RequestResult<RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses, RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses, RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/extension/tokens/{token_id}',
     ...options
 });

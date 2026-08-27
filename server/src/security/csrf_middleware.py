@@ -58,6 +58,13 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # happens to be logged in would be rejected, since the public page has no
         # CSRF token in its store.
         "/api/one-time-links/consume",
+        # Browser-extension pairing. Both are anonymous: the extension has no
+        # session yet, so there is no ambient authority for CSRF to protect.
+        # Deliberately mounted under /extension/device, disjoint from
+        # /extension/pairing: this list is prefix-matched, so a bare
+        # "/api/extension" would also exempt the approve and deny routes, which
+        # are cookie-authenticated and must keep their CSRF check.
+        "/api/extension/device",
     ]
 
     # HTTP methods that require CSRF protection
