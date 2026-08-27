@@ -2,19 +2,22 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 
 import { send } from '../bridge'
-import { refreshConnection, state } from '../state/session'
+import { pollPairing, refreshConnection, state } from '../state/session'
 
 const userCode = ref<string | null>(null)
 const busy = ref(false)
 const failure = ref<string | null>(null)
 let poll: ReturnType<typeof setInterval> | undefined
 
+const POLL_INTERVAL_MS = 2000
+
 /**
- * Start pairing: register with the vault, then open the approval tab.
+ * Register a pairing, then open the approval tab.
  *
- * The service worker owns the authoritative poll, because the user is about to
- * click away to sign in and this popup will be destroyed. The interval below is
- * only so the popup reacts quickly while it happens to be open.
+ * Only ever called when there is no pairing in flight. Starting one
+ * unconditionally on mount was the bug: reopening the popup mid-approval
+ * replaced the stored verifier, so the request the user had just approved could
+ * never be redeemed, and a second tab opened every time.
  */
 async function start() {
   busy.value = true
@@ -23,11 +26,23 @@ async function start() {
   const result = await send({ type: 'PAIRING_START' })
   if (result.ok) {
     userCode.value = result.data.userCode
-    poll = setInterval(refreshConnection, 2000)
+    watchForApproval()
   } else {
     state.error = result.error
   }
   busy.value = false
+}
+
+/**
+ * The service worker owns the authoritative poll, because the user is about to
+ * click away to sign in and this popup will be destroyed. This interval only
+ * makes an open popup react in seconds rather than waiting on the alarm, whose
+ * period Chrome clamps.
+ */
+function watchForApproval() {
+  clearInterval(poll)
+  void pollPairing()
+  poll = setInterval(pollPairing, POLL_INTERVAL_MS)
 }
 
 async function cancel() {
@@ -37,7 +52,18 @@ async function cancel() {
   await refreshConnection()
 }
 
-onMounted(start)
+onMounted(() => {
+  // Resume rather than restart when the worker reports a pairing already
+  // awaiting approval, which is exactly the state the user is in when they
+  // come back from the vault tab.
+  if (state.connection?.status === 'pairing') {
+    userCode.value = state.connection.userCode
+    watchForApproval()
+    return
+  }
+  void start()
+})
+
 onUnmounted(() => clearInterval(poll))
 </script>
 
@@ -65,12 +91,6 @@ onUnmounted(() => clearInterval(poll))
     <p v-if="busy" class="text-sm text-vault-text-muted">Preparing…</p>
     <p v-if="failure" class="text-sm text-vault-danger">{{ failure }}</p>
 
-    <button
-      class="rounded border border-vault-border px-3 py-2 text-sm"
-      data-testid="pairing-cancel"
-      @click="cancel"
-    >
-      Cancel
-    </button>
+    <button class="vault-btn" data-testid="pairing-cancel" @click="cancel">Cancel</button>
   </div>
 </template>

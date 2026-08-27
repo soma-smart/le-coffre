@@ -24,6 +24,7 @@ const screen = computed(() => {
     case 'permission-missing':
       return 'onboarding'
     case 'unpaired':
+    case 'pairing':
       return 'pairing'
     case 'ready':
       return 'entries'

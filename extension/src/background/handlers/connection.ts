@@ -11,6 +11,7 @@ import type { Deps } from '../deps'
 import {
   clearEverything,
   readMatchPattern,
+  readPairing,
   readSelectedGroupId,
   readToken,
   readVaultUrl,
@@ -33,7 +34,22 @@ export async function getConnectionState(deps: Deps): Promise<Result<ConnectionS
   }
 
   const token = await readToken(deps.browser, deps.clock.now())
-  if (!token) return ok({ status: 'unpaired', vaultUrl })
+  if (!token) {
+    // A pairing already in flight is its own state, distinct from "never
+    // paired". Collapsing the two is what made the popup restart pairing,
+    // and open a second tab, every time it was reopened while the user was
+    // still approving, overwriting the verifier the approved request needed.
+    const pairing = await readPairing(deps.browser)
+    if (pairing && new Date(pairing.expiresAt).getTime() > deps.clock.now().getTime()) {
+      return ok({
+        status: 'pairing',
+        vaultUrl,
+        userCode: pairing.userCode,
+        expiresAt: pairing.expiresAt,
+      })
+    }
+    return ok({ status: 'unpaired', vaultUrl })
+  }
 
   const session = await deps.makeClient(vaultUrl, token).session()
   if (!session.ok) {
