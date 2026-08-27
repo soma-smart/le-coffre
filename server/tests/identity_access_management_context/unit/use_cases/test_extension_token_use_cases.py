@@ -115,7 +115,7 @@ def _issue(repository, user_id, now=NOW, lifetime=TOKEN_LIFETIME, device_name="C
 
 
 class TestValidate:
-    def test_resolves_a_live_credential_to_its_owner(
+    def test_should_resolve_the_owner_when_the_credential_is_live(
         self, validate_use_case, extension_token_repository, registered_user
     ):
         secret, token = _issue(extension_token_repository, registered_user.user_id)
@@ -126,7 +126,9 @@ class TestValidate:
         assert result.email == registered_user.email
         assert result.token_id == token.id
 
-    def test_never_returns_roles(self, validate_use_case, extension_token_repository, registered_user):
+    def test_should_omit_roles_when_returning_the_identity(
+        self, validate_use_case, extension_token_repository, registered_user
+    ):
         # The caller builds a principal with a fixed non-admin role instead.
         # Echoing the user's own roles would make an admin's extension token
         # return the names, logins and URLs of every secret on the instance
@@ -137,23 +139,25 @@ class TestValidate:
 
         assert not hasattr(result, "roles")
 
-    def test_rejects_an_unknown_credential(self, validate_use_case, registered_user):
+    def test_should_reject_when_the_credential_is_unknown(self, validate_use_case, registered_user):
         with pytest.raises(ExtensionTokenNotFoundError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=ExtensionTokenSecret.generate().value))
 
-    def test_rejects_a_value_too_short_to_have_been_issued(self, validate_use_case):
+    def test_should_reject_when_the_value_is_too_short_to_have_been_issued(self, validate_use_case):
         # Never reaches a database lookup.
         with pytest.raises(ExtensionTokenNotFoundError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token="short"))
 
-    def test_rejects_a_revoked_credential(self, validate_use_case, extension_token_repository, registered_user):
+    def test_should_reject_when_the_credential_is_revoked(
+        self, validate_use_case, extension_token_repository, registered_user
+    ):
         secret, token = _issue(extension_token_repository, registered_user.user_id)
         extension_token_repository.revoke(token.id, NOW)
 
         with pytest.raises(ExtensionTokenRevokedError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
 
-    def test_rejects_an_expired_credential(
+    def test_should_reject_when_the_credential_is_expired(
         self, validate_use_case, extension_token_repository, time_provider, registered_user
     ):
         secret, _ = _issue(extension_token_repository, registered_user.user_id)
@@ -163,7 +167,7 @@ class TestValidate:
         with pytest.raises(ExtensionTokenExpiredError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
 
-    def test_every_failure_carries_the_same_message(
+    def test_should_carry_the_same_message_when_any_failure_occurs(
         self, validate_use_case, extension_token_repository, registered_user
     ):
         # A token holder must not be able to tell revoked from expired from
@@ -179,7 +183,7 @@ class TestValidate:
 
         assert str(revoked.value) == str(missing.value)
 
-    def test_honours_the_account_wide_session_cutoff(
+    def test_should_reject_when_the_credential_predates_the_session_cutoff(
         self, validate_use_case, extension_token_repository, user_repository, registered_user
     ):
         # The same cutoff a password change sets. Without this, "change my
@@ -192,7 +196,7 @@ class TestValidate:
         with pytest.raises(ExtensionTokenRevokedError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
 
-    def test_a_credential_issued_after_the_cutoff_still_works(
+    def test_should_accept_when_the_credential_postdates_the_session_cutoff(
         self, validate_use_case, extension_token_repository, user_repository, registered_user
     ):
         secret, _ = _issue(extension_token_repository, registered_user.user_id, now=NOW)
@@ -203,14 +207,16 @@ class TestValidate:
 
         assert result.user_id == registered_user.user_id
 
-    def test_records_usage(self, validate_use_case, extension_token_repository, registered_user):
+    def test_should_record_usage_when_the_credential_is_validated(
+        self, validate_use_case, extension_token_repository, registered_user
+    ):
         secret, token = _issue(extension_token_repository, registered_user.user_id)
 
         validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
 
         assert extension_token_repository.tokens[token.id].last_used_at == NOW
 
-    def test_a_storage_failure_while_recording_usage_does_not_break_auth(
+    def test_should_still_authenticate_when_recording_usage_fails(
         self, validate_use_case, extension_token_repository, registered_user
     ):
         # Telemetry for a UI label must never be able to lock someone out.
@@ -223,7 +229,7 @@ class TestValidate:
 
 
 class TestListDevices:
-    def test_lists_revoked_and_expired_devices_too(
+    def test_should_list_revoked_and_expired_devices_when_listing(
         self, list_use_case, extension_token_repository, time_provider, user
     ):
         time_provider.set_current_time(NOW)
@@ -239,7 +245,9 @@ class TestListDevices:
         assert by_name["Live"].is_active is True
         assert by_name["Revoked"].is_active is False
 
-    def test_does_not_list_another_users_devices(self, list_use_case, extension_token_repository, user):
+    def test_should_omit_devices_when_they_belong_to_another_user(
+        self, list_use_case, extension_token_repository, user
+    ):
         _issue(extension_token_repository, uuid4())
 
         result = list_use_case.execute(ListExtensionTokensCommand(requesting_user=user))
@@ -248,7 +256,9 @@ class TestListDevices:
 
 
 class TestRevoke:
-    def test_disconnects_one_device(self, revoke_use_case, extension_token_repository, time_provider, user):
+    def test_should_disconnect_the_device_when_revoking(
+        self, revoke_use_case, extension_token_repository, time_provider, user
+    ):
         time_provider.set_current_time(NOW)
         _, token = _issue(extension_token_repository, user.user_id)
 
@@ -256,7 +266,7 @@ class TestRevoke:
 
         assert extension_token_repository.tokens[token.id].revoked_at == NOW
 
-    def test_someone_elses_device_is_reported_as_missing(
+    def test_should_report_missing_when_the_device_belongs_to_another_user(
         self, revoke_use_case, extension_token_repository, time_provider, user
     ):
         # Not "forbidden": this route must not become a way to discover which
@@ -268,7 +278,7 @@ class TestRevoke:
             revoke_use_case.execute(RevokeExtensionTokenCommand(token_id=other.id, requesting_user=user))
         assert extension_token_repository.tokens[other.id].revoked_at is None
 
-    def test_revoking_twice_is_harmless_and_records_once(
+    def test_should_record_once_when_revoking_twice(
         self, revoke_use_case, extension_token_repository, admin_event_repository, time_provider, user
     ):
         time_provider.set_current_time(NOW)
@@ -284,7 +294,7 @@ class TestRevoke:
         # A second audit entry would be misleading: nothing changed.
         assert len(revocation_events) == 1
 
-    def test_revoke_all_disconnects_every_live_device(
+    def test_should_disconnect_every_live_device_when_revoking_all(
         self, revoke_all_use_case, extension_token_repository, time_provider, user
     ):
         time_provider.set_current_time(NOW)
@@ -297,7 +307,7 @@ class TestRevoke:
         assert revoked == 2
         assert extension_token_repository.tokens[other.id].revoked_at is None
 
-    def test_revoke_all_records_nothing_when_there_was_nothing_to_revoke(
+    def test_should_record_nothing_when_there_was_nothing_to_revoke(
         self, revoke_all_use_case, admin_event_repository, time_provider, user
     ):
         time_provider.set_current_time(NOW)

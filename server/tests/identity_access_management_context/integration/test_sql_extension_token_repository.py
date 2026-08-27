@@ -20,7 +20,7 @@ def _token(user_id=None, secret=None, lifetime=THIRTY_DAYS, now=NOW, device_name
 
 
 class TestPersistence:
-    def test_stores_only_the_hash_and_finds_the_token_by_it(self, sql_extension_token_repository):
+    def test_should_store_only_the_hash_when_adding_a_token(self, sql_extension_token_repository):
         secret = ExtensionTokenSecret.generate()
         stored = sql_extension_token_repository.add(_token(secret=secret))
 
@@ -31,12 +31,12 @@ class TestPersistence:
         # The plaintext must never be recoverable from storage.
         assert secret.value not in found.token_hash
 
-    def test_an_unknown_hash_finds_nothing(self, sql_extension_token_repository):
+    def test_should_find_nothing_when_the_hash_is_unknown(self, sql_extension_token_repository):
         sql_extension_token_repository.add(_token())
 
         assert sql_extension_token_repository.get_by_token_hash("deadbeef") is None
 
-    def test_round_trips_timestamps_as_aware_utc(self, sql_extension_token_repository):
+    def test_should_return_aware_utc_when_reading_timestamps_back(self, sql_extension_token_repository):
         stored = sql_extension_token_repository.add(_token())
 
         found = sql_extension_token_repository.get_by_id(stored.id)
@@ -48,7 +48,7 @@ class TestPersistence:
         assert found.created_at == NOW
         assert found.expires_at == NOW + THIRTY_DAYS
 
-    def test_lists_a_users_tokens_newest_first_including_dead_ones(self, sql_extension_token_repository):
+    def test_should_list_newest_first_including_dead_ones_when_listing_for_a_user(self, sql_extension_token_repository):
         user_id = uuid4()
         older = sql_extension_token_repository.add(_token(user_id=user_id, now=NOW - timedelta(days=2)))
         newer = sql_extension_token_repository.add(_token(user_id=user_id, now=NOW))
@@ -63,7 +63,7 @@ class TestPersistence:
 
 
 class TestActiveCount:
-    def test_counts_only_tokens_that_are_neither_revoked_nor_expired(self, sql_extension_token_repository):
+    def test_should_count_only_live_tokens_when_counting_active(self, sql_extension_token_repository):
         user_id = uuid4()
         sql_extension_token_repository.add(_token(user_id=user_id))
         revoked = sql_extension_token_repository.add(_token(user_id=user_id))
@@ -73,7 +73,7 @@ class TestActiveCount:
         # One live, one revoked, one expired by the time we look.
         assert sql_extension_token_repository.count_active_for_user(user_id, NOW + timedelta(minutes=1)) == 1
 
-    def test_does_not_count_another_users_tokens(self, sql_extension_token_repository):
+    def test_should_not_count_when_tokens_belong_to_another_user(self, sql_extension_token_repository):
         user_id = uuid4()
         sql_extension_token_repository.add(_token(user_id=uuid4()))
 
@@ -81,7 +81,7 @@ class TestActiveCount:
 
 
 class TestRevocation:
-    def test_revoking_twice_keeps_the_first_timestamp(self, sql_extension_token_repository):
+    def test_should_keep_the_first_timestamp_when_revoking_twice(self, sql_extension_token_repository):
         stored = sql_extension_token_repository.add(_token())
 
         assert sql_extension_token_repository.revoke(stored.id, NOW) is True
@@ -90,10 +90,10 @@ class TestRevocation:
         assert sql_extension_token_repository.revoke(stored.id, NOW + timedelta(hours=1)) is False
         assert sql_extension_token_repository.get_by_id(stored.id).revoked_at == NOW
 
-    def test_revoking_an_unknown_token_reports_no_change(self, sql_extension_token_repository):
+    def test_should_report_no_change_when_revoking_an_unknown_token(self, sql_extension_token_repository):
         assert sql_extension_token_repository.revoke(uuid4(), NOW) is False
 
-    def test_revoke_all_touches_only_the_users_live_tokens(self, sql_extension_token_repository):
+    def test_should_touch_only_the_users_live_tokens_when_revoking_all(self, sql_extension_token_repository):
         user_id = uuid4()
         first = sql_extension_token_repository.add(_token(user_id=user_id))
         second = sql_extension_token_repository.add(_token(user_id=user_id))
@@ -110,19 +110,21 @@ class TestRevocation:
         assert sql_extension_token_repository.get_by_id(already_revoked.id).revoked_at == NOW - timedelta(days=1)
         assert sql_extension_token_repository.get_by_id(other_user_token.id).revoked_at is None
 
-    def test_revoke_all_reports_zero_when_nothing_is_live(self, sql_extension_token_repository):
+    def test_should_report_zero_when_nothing_is_live(self, sql_extension_token_repository):
         assert sql_extension_token_repository.revoke_all_for_user(uuid4(), NOW) == 0
 
 
 class TestLastUsed:
-    def test_first_use_is_always_recorded(self, sql_extension_token_repository):
+    def test_should_record_when_the_credential_is_used_for_the_first_time(self, sql_extension_token_repository):
         stored = sql_extension_token_repository.add(_token())
 
         sql_extension_token_repository.touch_last_used(stored.id, NOW, coarsen_to_seconds=300)
 
         assert sql_extension_token_repository.get_by_id(stored.id).last_used_at == NOW
 
-    def test_a_second_use_inside_the_coarsening_window_does_not_write(self, sql_extension_token_repository):
+    def test_should_not_write_when_a_second_use_falls_inside_the_coarsening_window(
+        self, sql_extension_token_repository
+    ):
         stored = sql_extension_token_repository.add(_token())
         sql_extension_token_repository.touch_last_used(stored.id, NOW, coarsen_to_seconds=300)
 
@@ -132,7 +134,7 @@ class TestLastUsed:
         # only feeds a "last used" label where minutes of precision are ample.
         assert sql_extension_token_repository.get_by_id(stored.id).last_used_at == NOW
 
-    def test_a_use_past_the_window_writes_again(self, sql_extension_token_repository):
+    def test_should_write_again_when_a_use_falls_past_the_coarsening_window(self, sql_extension_token_repository):
         stored = sql_extension_token_repository.add(_token())
         sql_extension_token_repository.touch_last_used(stored.id, NOW, coarsen_to_seconds=300)
 
@@ -141,6 +143,6 @@ class TestLastUsed:
 
         assert sql_extension_token_repository.get_by_id(stored.id).last_used_at == later
 
-    def test_touching_an_unknown_token_is_harmless(self, sql_extension_token_repository):
+    def test_should_do_nothing_when_touching_an_unknown_token(self, sql_extension_token_repository):
         # Telemetry must never fail the caller: this is not part of authentication.
         sql_extension_token_repository.touch_last_used(uuid4(), NOW, coarsen_to_seconds=300)
