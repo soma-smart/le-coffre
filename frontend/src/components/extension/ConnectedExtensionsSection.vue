@@ -32,7 +32,7 @@ async function load() {
 }
 
 function formatDate(value: Date | null): string {
-  return value ? value.toLocaleString() : '—'
+  return value ? value.toLocaleString() : 'never'
 }
 
 function disconnect(extension: ConnectedExtension) {
