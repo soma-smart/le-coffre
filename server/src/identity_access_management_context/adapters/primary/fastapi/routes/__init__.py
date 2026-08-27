@@ -6,6 +6,7 @@ from .admin import (
     admin_statistic_route,
     register_admin_with_password_route,
 )
+from .extension import get_extension_router
 from .group import (
     get_group_router,
     group_add_member_router,
@@ -85,3 +86,8 @@ def get_admin_management_router():
     admin_management_router.include_router(admin_statistic_route.router)
 
     return admin_management_router
+
+
+__all__ = [
+    "get_extension_router",
+]

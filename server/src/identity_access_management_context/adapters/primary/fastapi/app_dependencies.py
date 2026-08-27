@@ -2,7 +2,15 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
-from config import get_session_max_lifetime_seconds
+from config import (
+    get_extension_last_used_coarsening_seconds,
+    get_extension_pairing_lifetime_seconds,
+    get_extension_pairing_poll_interval_seconds,
+    get_extension_token_lifetime_seconds,
+    get_rate_limit_trusted_proxies,
+    get_rate_limit_trusted_proxy_hops,
+    get_session_max_lifetime_seconds,
+)
 from identity_access_management_context.adapters.primary.private_api import (
     UserInfoApi,
 )
@@ -12,6 +20,8 @@ from identity_access_management_context.adapters.secondary.private_api import (
 )
 from identity_access_management_context.adapters.secondary.sql import (
     SqlAuthSessionRepository,
+    SqlExtensionPairingRepository,
+    SqlExtensionTokenRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlIamEventRepository,
@@ -24,6 +34,8 @@ from identity_access_management_context.adapters.secondary.sql import (
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
+    ExtensionPairingRepository,
+    ExtensionTokenRepository,
     GroupEventRepository,
     GroupMemberRepository,
     GroupRepository,
@@ -45,17 +57,22 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.application.use_cases import (
     AddOwnerToGroupUseCase,
     AddUserToGroupUseCase,
+    ApproveExtensionPairingUseCase,
     ConfigureSsoProviderUseCase,
     CreateGroupUseCase,
     CreateUserUseCase,
     DeleteGroupUseCase,
     DeleteUserUseCase,
+    DenyExtensionPairingUseCase,
+    ExchangeExtensionPairingUseCase,
+    GetExtensionPairingUseCase,
     GetGroupUseCase,
     GetSsoAuthorizeUrlUseCase,
     GetStatisticForAdminUseCase,
     GetUserMeUseCase,
     GetUserUseCase,
     IsSsoConfigSetUseCase,
+    ListExtensionTokensUseCase,
     ListGroupsUseCase,
     ListUserUseCase,
     LogoutUseCase,
@@ -64,10 +81,14 @@ from identity_access_management_context.application.use_cases import (
     RefreshAccessTokenUseCase,
     RegisterAdminWithPasswordUseCase,
     RemoveUserFromGroupUseCase,
+    RevokeAllExtensionTokensUseCase,
+    RevokeExtensionTokenUseCase,
     SsoLoginUseCase,
+    StartExtensionPairingUseCase,
     UpdateGroupUseCase,
     UpdateUserPasswordUseCase,
     UpdateUserUseCase,
+    ValidateExtensionTokenUseCase,
 )
 from password_management_context.adapters.primary.private_api import (
     GroupUsageApi,
@@ -78,6 +99,7 @@ from password_management_context.adapters.secondary import (
     SqlPasswordPermissionsRepository,
 )
 from password_management_context.application.use_cases import IsGroupUsedUseCase
+from security.client_ip import resolve_client_ip
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.adapters.secondary.utc_time_gateway import UtcTimeGateway
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
@@ -562,3 +584,143 @@ def get_statistic_for_admin_usecase(
     group_repository: GroupRepository = Depends(get_group_repository),
 ):
     return GetStatisticForAdminUseCase(user_repository, group_repository)
+
+
+# The pairing routes record the requesting IP so the approval page can show it:
+# a foreign address is what gives away a remote attacker who started the pairing.
+#
+# `security.client_ip` is imported as a submodule rather than through the
+# `security` package root. That root pulls in CsrfMiddleware, which imports this
+# context's SQL adapters, so the direct submodule import keeps the chain short.
+# It also cannot live in shared_kernel: security/csrf_routes.py already imports
+# shared_kernel's dependencies, so putting it there would close a real cycle.
+def get_client_ip(request: Request) -> str:
+    return resolve_client_ip(
+        request,
+        trusted_proxies=get_rate_limit_trusted_proxies(),
+        hops=get_rate_limit_trusted_proxy_hops(),
+    )
+
+
+def get_extension_pairing_repository(
+    session: Session = Depends(get_session),
+) -> ExtensionPairingRepository:
+    return SqlExtensionPairingRepository(session)
+
+
+def get_extension_token_repository(
+    session: Session = Depends(get_session),
+) -> ExtensionTokenRepository:
+    return SqlExtensionTokenRepository(session)
+
+
+def get_start_extension_pairing_usecase(
+    extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return StartExtensionPairingUseCase(
+        extension_pairing_repository,
+        time_provider,
+        get_extension_pairing_lifetime_seconds(),
+        get_extension_pairing_poll_interval_seconds(),
+    )
+
+
+def get_get_extension_pairing_usecase(
+    extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return GetExtensionPairingUseCase(extension_pairing_repository, time_provider)
+
+
+def get_approve_extension_pairing_usecase(
+    extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return ApproveExtensionPairingUseCase(
+        extension_pairing_repository,
+        extension_token_repository,
+        time_provider,
+    )
+
+
+def get_deny_extension_pairing_usecase(
+    extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return DenyExtensionPairingUseCase(extension_pairing_repository, time_provider)
+
+
+def get_exchange_extension_pairing_usecase(
+    extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return ExchangeExtensionPairingUseCase(
+        extension_pairing_repository,
+        extension_token_repository,
+        user_password_repository,
+        sso_user_repository,
+        event_publisher,
+        admin_event_repository,
+        time_provider,
+        get_extension_token_lifetime_seconds(),
+        get_extension_pairing_poll_interval_seconds(),
+    )
+
+
+def get_validate_extension_token_usecase(
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return ValidateExtensionTokenUseCase(
+        extension_token_repository,
+        user_password_repository,
+        sso_user_repository,
+        user_repository,
+        time_provider,
+        get_extension_last_used_coarsening_seconds(),
+    )
+
+
+def get_list_extension_tokens_usecase(
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return ListExtensionTokensUseCase(extension_token_repository, time_provider)
+
+
+def get_revoke_extension_token_usecase(
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return RevokeExtensionTokenUseCase(
+        extension_token_repository,
+        event_publisher,
+        admin_event_repository,
+        time_provider,
+    )
+
+
+def get_revoke_all_extension_tokens_usecase(
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return RevokeAllExtensionTokensUseCase(
+        extension_token_repository,
+        event_publisher,
+        admin_event_repository,
+        time_provider,
+    )
