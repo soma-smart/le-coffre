@@ -5,8 +5,11 @@ import type { Password } from '@/domain/password/Password'
  * tested without mounting the whole password list. Same shape as
  * `decideAdminGuard` in the router.
  *
- *   loading, or no id           → wait  (the list arrives asynchronously; acting
- *                                        on an empty one would silently no-op)
+ *   not loaded, loading, no id  → wait  (the list arrives asynchronously; acting
+ *                                        on an empty one would silently no-op,
+ *                                        and `!loading` is NOT enough, since it
+ *                                        is also false before the first fetch is
+ *                                        requested)
  *   id found and writable       → open
  *   id found but read-only      → refuse
  *   id unknown                  → missing
@@ -21,8 +24,10 @@ export function decideEditFromRoute(input: {
   editId: string | undefined
   passwords: readonly Password[]
   loading: boolean
+  /** True once a fetch has completed. See `hasLoaded` in the passwords store. */
+  loaded: boolean
 }): EditDeepLinkDecision {
-  if (!input.editId || input.loading) return { kind: 'wait' }
+  if (!input.editId || input.loading || !input.loaded) return { kind: 'wait' }
 
   const target = input.passwords.find((password) => password.id === input.editId)
   if (!target) return { kind: 'missing' }

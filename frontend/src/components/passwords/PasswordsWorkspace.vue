@@ -120,7 +120,7 @@ const userStore = useUserStore()
 const passwordAccessStore = usePasswordAccessStore()
 const adminPasswordViewStore = useAdminPasswordViewStore()
 
-const { passwords, loading, error } = storeToRefs(passwordsStore)
+const { passwords, loading, error, hasLoaded } = storeToRefs(passwordsStore)
 const { passwordCountByGroupId } = storeToRefs(passwordAccessStore)
 const { groups, userBelongingGroups, currentUserPersonalGroupId } = storeToRefs(groupsStore)
 const { isAdmin, currentUser } = storeToRefs(userStore)
@@ -389,8 +389,10 @@ watch(
 // ?create=1 watch above does not have to worry about:
 //
 //   1. `passwords` arrives asynchronously, so this has to wait for the store to
-//      settle. Gating only on the id would let `immediate: true` fire against an
-//      empty list and silently no-op.
+//      settle, and `!loading` does not mean settled. Before the first fetch is
+//      requested, loading is false and the list is empty, so gating on it alone
+//      made `immediate: true` fire against an empty list and report a password
+//      that exists as missing. `hasLoaded` is the real signal.
 //   2. The guard is `canWrite` on the entry, not ownership of the group: a
 //      shared password can be writable through a path other than group
 //      ownership.
@@ -398,13 +400,18 @@ watch(
 //      Leaving a stale `?edit=` behind would re-open the modal on every
 //      subsequent navigation.
 watch(
-  [editIdFromRoute, passwords, loading],
-  async ([editId, list, isLoading]) => {
-    if (isProcessingEditQuery.value || !editId || isLoading) return
+  [editIdFromRoute, passwords, loading, hasLoaded],
+  async ([editId, list, isLoading, isLoaded]) => {
+    if (isProcessingEditQuery.value || !editId || isLoading || !isLoaded) return
 
     isProcessingEditQuery.value = true
     try {
-      const decision = decideEditFromRoute({ editId, passwords: list, loading: isLoading })
+      const decision = decideEditFromRoute({
+        editId,
+        passwords: list,
+        loading: isLoading,
+        loaded: isLoaded,
+      })
       if (decision.kind === 'wait') return
 
       if (decision.kind === 'open') {
