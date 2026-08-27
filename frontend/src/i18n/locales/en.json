@@ -571,7 +571,13 @@
     "passwordsWorkspace": {
       "searchResultsTitle": "Search results",
       "allPasswordsTitle": "All passwords",
-      "loadFailed": "Failed to load passwords"
+      "loadFailed": "Failed to load passwords",
+      "editDeepLink": {
+        "readOnlySummary": "Read-only password",
+        "readOnlyDetail": "You do not have permission to edit this password",
+        "notFoundSummary": "Password not found",
+        "notFoundDetail": "That password is no longer available"
+      }
     },
     "oneTimeLinkModal": {
       "title": "One-time link",
