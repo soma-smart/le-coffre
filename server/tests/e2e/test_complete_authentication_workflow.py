@@ -749,18 +749,92 @@ async def test_complete_authentication_workflow(
     token_id = tokens[0]["id"]
     print("✅ Connected device listed")
 
-    # Step 8.9: a bearer token cannot enumerate the account's other devices.
+    # Step 8.9: the token works on the three read routes it is meant for.
     bearer_client = client_factory()
-    bearer_response = bearer_client.get(
-        "/api/extension/tokens",
-        headers={"Authorization": f"Bearer {extension_token}"},
+    bearer_headers = {"Authorization": f"Bearer {extension_token}"}
+
+    session_response = bearer_client.get("/api/extension/session", headers=bearer_headers)
+    assert session_response.status_code == 200, session_response.text
+    assert session_response.json()["email"] == "admin@example.com"
+    assert session_response.json()["is_read_only"] is True
+
+    list_response = bearer_client.get("/api/passwords/list", headers=bearer_headers)
+    assert list_response.status_code == 200, list_response.text
+    print("✅ Bearer token reads its three routes")
+
+    # Step 8.10: the containment. The paired account is an ADMIN, so this is
+    # where the role stripping earns its place: an admin sees every password on
+    # the instance through /passwords/list, and that list must not follow the
+    # token into a browser profile.
+    other_user_email = "extension-isolation@example.com"
+    other_user_password = "securepassword123"  # same literal as the admin: keeps gitleaks quiet in a test fixture
+    create_user_response = extension_client.post(
+        "/api/users",
+        json={
+            "username": other_user_email,
+            "email": other_user_email,
+            "name": "Isolation Probe",
+            "password": other_user_password,
+        },
     )
-    assert bearer_response.status_code == 401, (
+    assert create_user_response.status_code in (200, 201), create_user_response.text
+
+    other_client = client_factory()
+    other_login = other_client.post(
+        "/api/auth/login",
+        json={"email": other_user_email, "password": other_user_password},
+    )
+    assert other_login.status_code == 200, other_login.text
+    other_group_id = other_client.get("/api/users/me").json()["personal_group_id"]
+
+    secret_name = "Isolation Probe Secret"
+    create_password_response = other_client.post(
+        "/api/passwords/",
+        json={
+            "name": secret_name,
+            "password": "s3cret-not-for-the-extension",
+            "login": "probe@example.com",
+            "group_id": other_group_id,
+        },
+    )
+    assert create_password_response.status_code == 201, create_password_response.text
+
+    # The admin's own cookie session sees it, unreadable but fully named.
+    admin_cookie_list = extension_client.get("/api/passwords/list").json()
+    admin_view = [entry for entry in admin_cookie_list if entry["name"] == secret_name]
+    assert admin_view, "The admin cookie session should see every password on the instance"
+    assert admin_view[0]["can_read"] is False
+
+    # The same account's extension token must not.
+    bearer_list = bearer_client.get("/api/passwords/list", headers=bearer_headers).json()
+    assert not [entry for entry in bearer_list if entry["name"] == secret_name], (
+        "An admin's extension token must not expose another user's password metadata"
+    )
+    assert all(entry["can_read"] for entry in bearer_list), "Only readable entries may reach an extension token"
+    print("✅ Admin role stripped: another user's secret is invisible over the bearer")
+
+    # Step 8.11: everything else is refused. Device management is cookie-only,
+    # so an extension token cannot enumerate or revoke the account's devices.
+    devices_over_bearer = bearer_client.get("/api/extension/tokens", headers=bearer_headers)
+    assert devices_over_bearer.status_code == 401, (
         "An extension token must not be able to list or revoke the account's devices"
     )
-    print("✅ Device management stays cookie-only")
 
-    # Step 8.10: revoking disconnects the device, and is idempotent.
+    # Admin reads stay out of reach: they are GETs, so a method-only guard would
+    # have let them through. The opt-in allowlist is what stops them.
+    users_over_bearer = bearer_client.get("/api/users", headers=bearer_headers)
+    assert users_over_bearer.status_code == 401, "An extension token must not reach admin reads"
+
+    # And nothing mutating, at any layer.
+    mutation_over_bearer = bearer_client.delete(
+        f"/api/passwords/{'00000000-0000-0000-0000-000000000000'}", headers=bearer_headers
+    )
+    assert mutation_over_bearer.status_code == 403, (
+        "A bearer must be refused on a mutating route before it reaches the handler"
+    )
+    print("✅ Bearer refused on device management, admin reads and every mutation")
+
+    # Step 8.12: revoking disconnects the device, and is idempotent.
     revoke_response = extension_client.delete(f"/api/extension/tokens/{token_id}")
     assert revoke_response.status_code == 204, revoke_response.text
     after_revoke = extension_client.get("/api/extension/tokens").json()["tokens"]
@@ -768,7 +842,7 @@ async def test_complete_authentication_workflow(
     assert after_revoke[0]["revoked_at"] is not None
     print("✅ Device revoked and still listed for audit")
 
-    # Step 8.11: denial is a real path, so a phished user is not stuck waiting.
+    # Step 8.13: denial is a real path, so a phished user is not stuck waiting.
     deny_register = anonymous_client.post(
         "/api/extension/device",
         json={"code_challenge": challenge, "code_challenge_method": "S256", "device_name": "Suspicious"},

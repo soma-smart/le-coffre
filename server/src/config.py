@@ -169,6 +169,19 @@ def get_rate_limit_one_time_link_max_requests() -> int:
     return int(os.environ.get("RATE_LIMIT_ONE_TIME_LINK_MAX_REQUESTS", "10"))
 
 
+def get_rate_limit_extension_pairing_max_requests() -> int:
+    """Max pairing calls per window, per IP. Default 30.
+
+    The pairing endpoints are anonymous, so without a floor of their own they
+    would fall into the shared unauthenticated per-IP bucket and compete with
+    everything else behind the same NAT. An honest extension polls the exchange
+    every EXTENSION_PAIRING_POLL_INTERVAL_SECONDS for at most the pairing
+    lifetime, which at the defaults is about 60 calls over five minutes: well
+    inside 30 per minute.
+    """
+    return int(os.environ.get("RATE_LIMIT_EXTENSION_PAIRING_MAX_REQUESTS", "30"))
+
+
 def get_expired_share_retention_seconds() -> int:
     """How long an expired share stays visible before being purged. Default 7 days.
 

@@ -3,7 +3,8 @@
 Three mutually-exclusive principal buckets plus an auth-route floor govern
 every non-exempt ``/api/*`` request:
 
-- ``user:<id>:api``   — requests with a valid ``access_token`` cookie (per-user bucket).
+- ``user:<id>:api``   , requests with a valid ``access_token`` cookie, or a valid
+  browser-extension bearer token (per-user bucket).
 - ``ip:<client_ip>:api`` — requests without a valid token (per-IP bucket).
 - ``ip:<client_ip>:auth`` — runs *in addition* on ``/api/auth/login`` only (the
   auth-route volume floor).
@@ -15,14 +16,18 @@ The client IP is extracted via :func:`resolve_client_ip`, which honors
 use :class:`UtcTimeGateway` directly, no monkeypatching needed.
 
 Principal resolution is inline: if the access-token cookie decodes against
-``app.state.token_gateway``, the request is keyed on ``user:<id>:api``;
-otherwise on ``ip:<client_ip>:api``.  Keeping this inline avoids a dedicated
-cross-context private-API seam — the middleware is a primary adapter that's
-allowed to read primary-adapter state directly.
+``app.state.token_gateway``, the request is keyed on ``user:<id>:api``.  Failing
+that, a browser-extension bearer token is resolved the same way, since an
+extension cannot send cookies at all (they are ``SameSite=strict``) and would
+otherwise be stuck in the anonymous bucket, which is unusable behind a NAT.
+Everything else keys on ``ip:<client_ip>:api``.  Keeping this inline avoids a
+dedicated cross-context private-API seam: the middleware is a primary adapter
+that's allowed to read primary-adapter state directly.
 """
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass
 from typing import Literal
@@ -31,6 +36,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from identity_access_management_context.adapters.secondary.sql import SqlExtensionTokenRepository
 from identity_access_management_context.domain.exceptions import InvalidTokenException
 from security.client_ip import resolve_client_ip
 from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
@@ -81,6 +87,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # bounding abuse of the endpoint.
     ONE_TIME_LINK_CONSUME_OPS: tuple[tuple[str, str], ...] = (("POST", "/api/one-time-links/consume"),)
 
+    # Anonymous browser-extension pairing. Same reasoning as the one-time link
+    # floor: no session exists yet, so without a bucket of its own the polling
+    # loop competes with every other unauthenticated caller behind the same NAT.
+    EXTENSION_PAIRING_OPS: tuple[tuple[str, str], ...] = (
+        ("POST", "/api/extension/device"),
+        ("POST", "/api/extension/device/exchange"),
+    )
+
     # Frequently-polled read-only endpoints that every page / pre-login flow hits:
     # exempting them prevents the normal UI from burning through its IP bucket
     # on routine state checks.  Mutating or credential-submitting endpoints
@@ -120,6 +134,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             sensitive_max = request.app.state.rate_limit_vault_sensitive_max_requests
             sensitive_window = request.app.state.rate_limit_vault_sensitive_window_seconds
             one_time_link_max = request.app.state.rate_limit_one_time_link_max_requests
+            extension_pairing_max = request.app.state.rate_limit_extension_pairing_max_requests
             window = request.app.state.rate_limit_window_seconds
             trusted_proxies = request.app.state.rate_limit_trusted_proxies
             proxy_hops = request.app.state.rate_limit_trusted_proxy_hops
@@ -185,6 +200,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # One-time link redemption floor: per-IP, checked before the principal
         # bucket so a flood here does not also exhaust the caller's generic quota.
+        # Extension pairing floor: per-IP, same rationale as the one-time link
+        # floor below. Both pairing endpoints are anonymous by design.
+        if (request.method, path) in self.EXTENSION_PAIRING_OPS:
+            extension_pairing_key = f"ip:{client_ip}:extension-pairing"
+            extension_pairing_result = rate_limiter.check(extension_pairing_key, extension_pairing_max, window, now=now)
+            if extension_pairing_result.is_limited:
+                logger.warning(
+                    "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
+                    extension_pairing_key,
+                    extension_pairing_max,
+                    request.method,
+                    path,
+                )
+                return self._build_429_response(extension_pairing_result)
+
         if (request.method, path) in self.ONE_TIME_LINK_CONSUME_OPS:
             one_time_link_key = f"ip:{client_ip}:one-time-link"
             one_time_link_result = rate_limiter.check(one_time_link_key, one_time_link_max, window, now=now)
@@ -253,7 +283,48 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             token = None
         if token:
             return Principal(kind="user", id=str(token.user_id))
-        return Principal(kind="ip", id=client_ip)
+        return RateLimitMiddleware._resolve_bearer_principal(request, client_ip)
+
+    @staticmethod
+    def _resolve_bearer_principal(request: Request, client_ip: str) -> Principal:
+        """Key a browser-extension caller to its user, not to its IP.
+
+        Without this the extension lands in the 30/min anonymous IP bucket
+        instead of the 300/min per-user one, which is unusable behind a
+        corporate NAT where every colleague shares one address.
+
+        Fails closed to IP keying in every doubtful case: this decides which
+        bucket to charge, never whether the request is allowed.
+        """
+        authorization = request.headers.get("Authorization", "")
+        if not authorization.lower().startswith("bearer "):
+            return Principal(kind="ip", id=client_ip)
+
+        raw_token = authorization[7:].strip()
+        if not _looks_like_extension_token(raw_token):
+            # Cheap format gate before any database access, so junk bearers
+            # never reach a query. An attacker sending well-formed unknown
+            # tokens still falls back to the IP bucket, which caps them at the
+            # anonymous limit.
+            return Principal(kind="ip", id=client_ip)
+
+        try:
+            session_maker = request.app.state.session_maker
+            time_provider = request.app.state.time_provider
+            with session_maker() as session:
+                token_row = SqlExtensionTokenRepository(session).get_by_token_hash(
+                    hashlib.sha256(raw_token.encode()).hexdigest()
+                )
+        except Exception:  # noqa: BLE001 - bucket selection must never fail a request
+            logger.warning(
+                "Could not resolve an extension token for rate-limit keying; bucketing as anonymous",
+                exc_info=True,
+            )
+            return Principal(kind="ip", id=client_ip)
+
+        if token_row is None or not token_row.is_active(time_provider.get_current_time()):
+            return Principal(kind="ip", id=client_ip)
+        return Principal(kind="user", id=str(token_row.user_id))
 
     @staticmethod
     def _build_429_response(result: RateLimitResult) -> JSONResponse:
@@ -266,3 +337,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "Retry-After": str(result.retry_after),
             },
         )
+
+
+# token_urlsafe(32) yields 43 url-safe characters. Anything else did not come
+# from ExtensionTokenSecret.generate() and must not reach a database lookup.
+_EXTENSION_TOKEN_LENGTH = 43
+_EXTENSION_TOKEN_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+
+
+def _looks_like_extension_token(value: str) -> bool:
+    return len(value) == _EXTENSION_TOKEN_LENGTH and all(c in _EXTENSION_TOKEN_ALPHABET for c in value)
