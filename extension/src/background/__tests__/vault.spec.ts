@@ -12,9 +12,7 @@ function group(overrides: Partial<Group> = {}): Group {
     id: 'g1',
     name: 'Marketing',
     isPersonal: false,
-    userId: null,
-    owners: [],
-    members: [],
+    isOwner: false,
     ...overrides,
   }
 }
@@ -36,29 +34,29 @@ function entry(overrides: Partial<Entry> = {}): Entry {
 }
 
 describe('listGroups', () => {
-  it('should drop groups the user does not belong to', async () => {
-    // GET /groups returns EVERY group on the instance, including other people's
-    // personal groups. Without this filter the picker offers groups the user
-    // cannot read and the entry list comes back empty.
+  it('should pass through what the server scoped, personal group first', async () => {
+    // Scoping moved to the server: /extension/groups applies the owner-or-member
+    // rule itself, so a token in browser storage cannot enumerate the instance.
+    // The backend owns that guarantee now: see test_list_groups_use_case.py.
     const { deps, browser, client } = createTestDeps()
     await givenPaired(browser)
     client.groupsResult = {
       ok: true,
       data: [
-        group({ id: 'mine', members: ['user-1'] }),
-        group({ id: 'theirs', isPersonal: true, userId: 'someone', owners: ['someone'] }),
+        group({ id: 'shared', name: 'Marketing' }),
+        group({ id: 'personal', name: 'Alice', isPersonal: true }),
       ],
     }
 
     const result = await listGroups(deps)
 
-    expect(result.ok && result.data.map((g) => g.id)).toEqual(['mine'])
+    expect(result.ok && result.data.map((g) => g.id)).toEqual(['personal', 'shared'])
   })
 
   it('should mark the groups the user owns, since only owners can add', async () => {
     const { deps, browser, client } = createTestDeps()
     await givenPaired(browser)
-    client.groupsResult = { ok: true, data: [group({ id: 'owned', owners: ['user-1'] })] }
+    client.groupsResult = { ok: true, data: [group({ id: 'owned', isOwner: true })] }
 
     const result = await listGroups(deps)
 

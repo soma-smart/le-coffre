@@ -760,7 +760,20 @@ async def test_complete_authentication_workflow(
 
     list_response = bearer_client.get("/api/passwords/list", headers=bearer_headers)
     assert list_response.status_code == 200, list_response.text
-    print("✅ Bearer token reads its three routes")
+    # The group picker's source. Scoped server-side, unlike /groups.
+    groups_response = bearer_client.get("/api/extension/groups", headers=bearer_headers)
+    assert groups_response.status_code == 200, groups_response.text
+    assert groups_response.json()["groups"], "The extension must see at least the personal group"
+
+    # The unscoped directory stays out of reach. It answers with every group on
+    # the instance plus each one's owner and member lists, which is exactly the
+    # organisation-wide map an extension token must not carry.
+    unscoped_groups = bearer_client.get("/api/groups", headers=bearer_headers)
+    assert unscoped_groups.status_code == 401, (
+        "An extension token must not be able to enumerate every group on the instance"
+    )
+
+    print("✅ Bearer token reads its scoped routes, and only those")
 
     # Step 8.10: the containment. The paired account is an ADMIN, so this is
     # where the role stripping earns its place: an admin sees every password on
