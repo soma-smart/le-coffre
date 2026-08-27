@@ -1,4 +1,13 @@
 from .admin_login_response import AdminLoginResponse
+from .extension_responses import (
+    ExchangedExtensionTokenResponse,
+    ExtensionPairingDetailsResponse,
+    ExtensionTokenSummary,
+    ListExtensionTokensResponse,
+    PendingExtensionPairingResponse,
+    StartedExtensionPairingResponse,
+    ValidatedExtensionTokenResponse,
+)
 from .get_group_response import GetGroupResponse
 from .get_statistic_for_admin_response import GetStatisticForAdminResponse
 from .get_user_me_response import GetUserMeResponse
@@ -10,6 +19,13 @@ from .update_user_password_response import UpdateUserPasswordResponse
 from .validate_user_token_response import ValidateUserTokenResponse
 
 __all__ = [
+    "ExchangedExtensionTokenResponse",
+    "ExtensionPairingDetailsResponse",
+    "ExtensionTokenSummary",
+    "ListExtensionTokensResponse",
+    "PendingExtensionPairingResponse",
+    "StartedExtensionPairingResponse",
+    "ValidatedExtensionTokenResponse",
     "AdminLoginResponse",
     "ValidateUserTokenResponse",
     "SsoLoginResponse",
