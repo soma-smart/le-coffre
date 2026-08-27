@@ -30,6 +30,7 @@ from config import (
     get_login_max_failed_attempts,
     get_rate_limit_auth_max_requests,
     get_rate_limit_enabled,
+    get_rate_limit_extension_pairing_max_requests,
     get_rate_limit_one_time_link_max_requests,
     get_rate_limit_trusted_proxies,
     get_rate_limit_trusted_proxy_hops,
@@ -64,6 +65,7 @@ from password_management_context.adapters.secondary import (
     PrivateApiPasswordEncryptionGateway,
 )
 from security import (
+    BearerReadOnlyMiddleware,
     CsrfMiddleware,
     CsrfTokenManager,
     InMemoryRateLimiter,
@@ -206,6 +208,7 @@ async def lifespan(app: FastAPI):
     app.state.rate_limit_vault_sensitive_max_requests = get_rate_limit_vault_sensitive_max_requests()
     app.state.rate_limit_vault_sensitive_window_seconds = get_rate_limit_vault_sensitive_window_seconds()
     app.state.rate_limit_one_time_link_max_requests = get_rate_limit_one_time_link_max_requests()
+    app.state.rate_limit_extension_pairing_max_requests = get_rate_limit_extension_pairing_max_requests()
     app.state.rate_limit_window_seconds = get_rate_limit_window_seconds()
     app.state.rate_limit_trusted_proxies = get_rate_limit_trusted_proxies()
     app.state.rate_limit_trusted_proxy_hops = get_rate_limit_trusted_proxy_hops()
@@ -264,6 +267,7 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Add CSRF protection middleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CsrfMiddleware)
+app.add_middleware(BearerReadOnlyMiddleware)
 app.add_middleware(RequestIdMiddleware)
 
 # Add rate limiting middleware (runs before CSRF since middlewares execute in reverse order)
