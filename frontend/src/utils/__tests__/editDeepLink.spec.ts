@@ -23,22 +23,44 @@ function password(overrides: Partial<Password> = {}): Password {
 describe('decideEditFromRoute', () => {
   it('should wait when there is no id', () => {
     expect(
-      decideEditFromRoute({ editId: undefined, passwords: [password()], loading: false }),
+      decideEditFromRoute({
+        editId: undefined,
+        passwords: [password()],
+        loading: false,
+        loaded: true,
+      }),
     ).toEqual({ kind: 'wait' })
   })
 
   it('should wait while the list is still loading', () => {
     // The store fills asynchronously. Deciding against an empty list would
     // report "not found" for a password that is about to arrive.
-    expect(decideEditFromRoute({ editId: 'pwd-1', passwords: [], loading: true })).toEqual({
-      kind: 'wait',
-    })
+    expect(
+      decideEditFromRoute({ editId: 'pwd-1', passwords: [], loading: true, loaded: false }),
+    ).toEqual({ kind: 'wait' })
+  })
+
+  it('should wait when no fetch has completed yet, even though nothing is loading', () => {
+    // Regression. Before the first fetch is even requested the store sits at
+    // loading=false with an empty list, which is indistinguishable from "loaded
+    // and empty" unless `loaded` is consulted. Gating on `!loading` alone made
+    // the ?edit= deep link announce that an existing password no longer exists,
+    // and strip the param, every single time the user arrived from the
+    // extension's "Edit in vault".
+    expect(
+      decideEditFromRoute({ editId: 'pwd-1', passwords: [], loading: false, loaded: false }),
+    ).toEqual({ kind: 'wait' })
   })
 
   it('should open when the password is writable', () => {
     const target = password()
 
-    const decision = decideEditFromRoute({ editId: 'pwd-1', passwords: [target], loading: false })
+    const decision = decideEditFromRoute({
+      editId: 'pwd-1',
+      passwords: [target],
+      loading: false,
+      loaded: true,
+    })
 
     expect(decision).toEqual({ kind: 'open', password: target })
   })
@@ -50,6 +72,7 @@ describe('decideEditFromRoute', () => {
       editId: 'pwd-1',
       passwords: [password({ canWrite: false })],
       loading: false,
+      loaded: true,
     })
 
     expect(decision).toEqual({ kind: 'refuse' })
@@ -60,14 +83,17 @@ describe('decideEditFromRoute', () => {
       editId: 'gone',
       passwords: [password()],
       loading: false,
+      loaded: true,
     })
 
     expect(decision).toEqual({ kind: 'missing' })
   })
 
-  it('should report missing rather than waiting when the loaded list is empty', () => {
-    expect(decideEditFromRoute({ editId: 'pwd-1', passwords: [], loading: false })).toEqual({
-      kind: 'missing',
-    })
+  it('should report missing once a completed fetch really did come back empty', () => {
+    // The other half of the distinction above: loaded, and genuinely nothing
+    // there. Here the param must be stripped rather than left to re-fire.
+    expect(
+      decideEditFromRoute({ editId: 'pwd-1', passwords: [], loading: false, loaded: true }),
+    ).toEqual({ kind: 'missing' })
   })
 })
