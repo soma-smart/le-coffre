@@ -11,7 +11,7 @@ import type { Request, RequestType } from '@/shared/messages'
 import type { Deps } from './deps'
 import { copyToClipboard } from './handlers/clipboard'
 import { disconnect, getConnectionState, setVaultUrl } from './handlers/connection'
-import { cancelPairing, startPairing } from './handlers/pairing'
+import { cancelPairing, pollPairing, startPairing } from './handlers/pairing'
 import { listEntries, listGroups, matchEntries, selectGroup } from './handlers/vault'
 
 type Handler = (deps: Deps, request: never) => Promise<Result<unknown>>
@@ -22,6 +22,7 @@ const HANDLERS: Record<RequestType, Handler> = {
     setVaultUrl(deps, request.vaultUrl),
   CONNECTION_DISCONNECT: (deps) => disconnect(deps),
   PAIRING_START: (deps) => startPairing(deps),
+  PAIRING_POLL: (deps) => pollPairing(deps),
   PAIRING_CANCEL: (deps) => cancelPairing(deps),
   GROUPS_LIST: (deps) => listGroups(deps),
   SETTINGS_SET_GROUP: (deps, request: { groupId: string }) => selectGroup(deps, request.groupId),
