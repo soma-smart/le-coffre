@@ -78,86 +78,175 @@ function openSite(entry: EntrySummary) {
 <template>
   <div class="flex flex-col gap-3">
     <div class="flex items-center gap-2">
-      <select
-        v-if="state.groups.length > 0"
-        class="flex-1 rounded border border-vault-border bg-vault-surface-muted px-2 py-1.5 text-sm"
-        :value="group?.id"
-        data-testid="group-picker"
-        @change="changeGroup(($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="option in state.groups" :key="option.id" :value="option.id">
-          {{ option.name }}
-        </option>
-      </select>
+      <!-- Native <select> keeps keyboard and screen-reader behaviour for free;
+           the wrapper only supplies the chevron the native control lacks. -->
+      <div v-if="state.groups.length > 0" class="relative flex-1">
+        <select
+          class="vault-field appearance-none pr-8"
+          :value="group?.id"
+          aria-label="Group"
+          data-testid="group-picker"
+          @change="changeGroup(($event.target as HTMLSelectElement).value)"
+        >
+          <option v-for="option in state.groups" :key="option.id" :value="option.id">
+            {{ option.name }}
+          </option>
+        </select>
+        <svg
+          class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-vault-text-muted"
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+      </div>
 
       <button
-        class="rounded border border-vault-border px-2 py-1.5 text-sm"
+        class="vault-icon-btn"
+        aria-label="Settings"
+        title="Settings"
         data-testid="open-settings"
         @click="emit('settings')"
       >
-        ⚙
+        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.5" />
+          <path
+            d="M10 2.5v1.8M10 15.7v1.8M17.5 10h-1.8M4.3 10H2.5M15.3 4.7l-1.3 1.3M6 14l-1.3 1.3M15.3 15.3L14 14M6 6L4.7 4.7"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
       </button>
     </div>
 
-    <input
-      v-model="state.query"
-      type="search"
-      placeholder="Search"
-      class="rounded border border-vault-border bg-vault-surface-muted px-3 py-2 text-sm"
-      data-testid="entry-search"
-    />
+    <div class="relative">
+      <svg
+        class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-vault-text-muted"
+        viewBox="0 0 20 20"
+        fill="none"
+        aria-hidden="true"
+      >
+        <circle cx="9" cy="9" r="5.2" stroke="currentColor" stroke-width="1.6" />
+        <path d="M13 13l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+      <input
+        v-model="state.query"
+        type="search"
+        placeholder="Search"
+        aria-label="Search passwords"
+        class="vault-field pl-8"
+        data-testid="entry-search"
+      />
+    </div>
 
-    <p v-if="state.loading" class="py-6 text-center text-sm text-vault-text-muted">Loading…</p>
+    <!-- Skeleton rows rather than the word "Loading": the popup opens on every
+         click, and a shape that matches the incoming list stops the whole panel
+         jumping once it arrives. -->
+    <ul v-if="state.loading" class="flex flex-col gap-1" aria-hidden="true">
+      <li v-for="n in 4" :key="n" class="vault-row p-2">
+        <div class="vault-skeleton h-3.5 w-1/2 rounded"></div>
+        <div class="vault-skeleton mt-1.5 h-3 w-1/3 rounded"></div>
+      </li>
+    </ul>
 
-    <p
+    <div
       v-else-if="state.entries.length === 0"
-      class="py-6 text-center text-sm text-vault-text-muted"
+      class="flex flex-col items-center gap-2 py-8 text-center"
       data-testid="empty-list"
     >
-      {{ state.query ? 'Nothing matches your search.' : 'No passwords in this group yet.' }}
-    </p>
+      <svg class="h-8 w-8 text-vault-text-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.5" />
+        <path d="M8 10V7a4 4 0 118 0v3" stroke="currentColor" stroke-width="1.5" />
+      </svg>
+      <p class="text-sm text-vault-text-muted">
+        {{ state.query ? 'Nothing matches your search.' : 'No passwords in this group yet.' }}
+      </p>
+    </div>
 
     <ul v-else class="flex flex-col gap-1">
-      <li
-        v-for="entry in state.entries"
-        :key="entry.id"
-        class="rounded border border-vault-border p-2"
-        data-testid="entry-row"
-      >
+      <li v-for="entry in state.entries" :key="entry.id" class="vault-row" data-testid="entry-row">
         <button
-          class="flex w-full flex-col items-start text-left"
+          class="vault-row-toggle"
+          :aria-expanded="expandedId === entry.id"
           @click="expandedId = expandedId === entry.id ? null : entry.id"
         >
-          <span class="text-sm font-medium">{{ entry.name }}</span>
-          <span v-if="entry.login" class="text-xs text-vault-text-muted">{{ entry.login }}</span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-medium">{{ entry.name }}</span>
+            <span v-if="entry.login" class="block truncate text-xs text-vault-text-muted">
+              {{ entry.login }}
+            </span>
+          </span>
+          <svg
+            class="h-4 w-4 shrink-0 text-vault-text-muted transition-transform duration-150"
+            :class="expandedId === entry.id ? 'rotate-180' : ''"
+            viewBox="0 0 20 20"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M6 8l4 4 4-4"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
         </button>
 
-        <div v-if="expandedId === entry.id" class="mt-2 flex flex-wrap gap-1">
+        <div v-if="expandedId === entry.id" class="flex flex-wrap gap-1 px-2 pb-2">
           <button
             v-if="entry.login"
-            class="rounded bg-vault-surface-muted px-2 py-1 text-xs"
+            class="vault-chip"
             data-testid="copy-login"
             @click="copy(entry, 'login')"
           >
+            <svg
+              v-if="copied === `${entry.id}:login`"
+              class="h-3.5 w-3.5 text-vault-accent"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 10.5l3.2 3.2L15 7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
             {{ copied === `${entry.id}:login` ? 'Copied' : 'Copy login' }}
           </button>
+
           <button
-            class="rounded bg-vault-accent px-2 py-1 text-xs text-white"
+            class="vault-chip-primary"
             data-testid="copy-password"
             @click="copy(entry, 'password')"
           >
+            <svg
+              v-if="copied === `${entry.id}:password`"
+              class="h-3.5 w-3.5"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 10.5l3.2 3.2L15 7"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
             {{ copied === `${entry.id}:password` ? 'Copied' : 'Copy password' }}
           </button>
-          <button
-            v-if="entry.url"
-            class="rounded bg-vault-surface-muted px-2 py-1 text-xs"
-            @click="openSite(entry)"
-          >
-            Open site
-          </button>
+
+          <button v-if="entry.url" class="vault-chip" @click="openSite(entry)">Open site</button>
+
           <button
             v-if="entry.canWrite"
-            class="rounded bg-vault-surface-muted px-2 py-1 text-xs"
+            class="vault-chip"
             data-testid="edit-entry"
             @click="openEdit(entry)"
           >
@@ -180,19 +269,27 @@ function openSite(entry: EntrySummary) {
          audit screen: every reveal is recorded. -->
     <p
       v-if="!auditNoticeDismissed"
-      class="text-xs text-vault-text-muted"
+      class="flex items-start gap-1.5 rounded-md bg-vault-surface-muted px-2 py-1.5 text-xs text-vault-text-muted"
       data-testid="audit-notice"
     >
-      Copying a password is recorded in your vault's history.
-      <button class="underline" @click="auditNoticeDismissed = true">Got it</button>
+      <span class="flex-1">Copying a password is recorded in your vault's history.</span>
+      <button
+        class="shrink-0 font-medium underline underline-offset-2 hover:text-vault-text"
+        @click="auditNoticeDismissed = true"
+      >
+        Got it
+      </button>
     </p>
 
-    <button
-      v-if="group?.isOwner"
-      class="rounded border border-vault-border px-3 py-2 text-sm"
-      data-testid="add-password"
-      @click="openCreate"
-    >
+    <button v-if="group?.isOwner" class="vault-btn" data-testid="add-password" @click="openCreate">
+      <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+        <path
+          d="M10 4.5v11M4.5 10h11"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+        />
+      </svg>
       Add a password
     </button>
   </div>

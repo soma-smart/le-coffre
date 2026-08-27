@@ -67,7 +67,7 @@ function connect() {
       v-model="raw"
       type="text"
       placeholder="vault.example.com"
-      class="rounded border border-vault-border bg-vault-surface-muted px-3 py-2 text-sm"
+      class="vault-field"
       data-testid="vault-url-input"
       @keyup.enter="connect"
     />
@@ -82,7 +82,7 @@ function connect() {
     </p>
 
     <button
-      class="rounded bg-vault-accent px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+      class="vault-btn-primary"
       :disabled="busy || !normalized"
       data-testid="connect-button"
       @click="connect"
