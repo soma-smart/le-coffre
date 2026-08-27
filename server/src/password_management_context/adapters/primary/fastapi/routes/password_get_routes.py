@@ -15,8 +15,8 @@ from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
-from shared_kernel.adapters.primary.dependencies import get_current_user
-from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.adapters.primary.dependencies import get_current_principal
+from shared_kernel.domain.entities import ApiPrincipal
 from shared_kernel.domain.exceptions import AccessDeniedError
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class GetPasswordResponse(BaseModel):
 )
 def get_password(
     password_id: UUID,
-    current_user: ValidatedUser = Depends(get_current_user),
+    principal: ApiPrincipal = Depends(get_current_principal),
     usecase: GetPasswordUseCase = Depends(get_get_password_usecase),
 ):
     """
@@ -47,7 +47,7 @@ def get_password(
     - **Authentication**: Requires authentication via access_token cookie
     """
     try:
-        command = GetPasswordCommand(requester_id=current_user.user_id, password_id=password_id)
+        command = GetPasswordCommand(requester_id=principal.user.user_id, password_id=password_id)
         decrypted_password = usecase.execute(command)
 
         return GetPasswordResponse(password=decrypted_password)

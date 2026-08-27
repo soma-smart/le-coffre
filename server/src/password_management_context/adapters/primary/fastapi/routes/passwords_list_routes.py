@@ -14,8 +14,8 @@ from password_management_context.domain.exceptions import (
     FolderNotFoundError,
     PasswordManagementDomainError,
 )
-from shared_kernel.adapters.primary.dependencies import get_current_user
-from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.adapters.primary.dependencies import get_current_principal
+from shared_kernel.domain.entities import ApiPrincipal
 from shared_kernel.domain.exceptions import AccessDeniedError
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class GetPasswordListResponse(BaseModel):
 )
 def list_passwords(
     folder: str | None = None,
-    current_user: ValidatedUser = Depends(get_current_user),
+    principal: ApiPrincipal = Depends(get_current_principal),
     usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),
 ):
     """
@@ -62,7 +62,7 @@ def list_passwords(
     """
     try:
         command = ListPasswordsCommand(
-            requester=current_user.to_authenticated_user(),
+            requester=principal.user.to_authenticated_user(),
             folder=folder,
         )
         passwords = usecase.execute(command)
