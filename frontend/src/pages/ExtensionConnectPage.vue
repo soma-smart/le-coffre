@@ -5,6 +5,7 @@ import { useToast } from 'primevue'
 import type { ExtensionPairingDetails } from '@/domain/extension/Extension'
 import { ExtensionDomainError, TooManyConnectedExtensionsError } from '@/domain/extension/errors'
 import { useContainer } from '@/plugins/container'
+import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
 import BlankLayout from '../layouts/BlankLayout.vue'
 
@@ -17,6 +18,7 @@ const router = useRouter()
 const toast = useToast()
 const { extensions } = useContainer()
 const handoff = extensions.handoff
+const csrfStore = useCsrfStore()
 
 const status = ref<'loading' | 'signed-out' | 'ready' | 'error' | 'done'>('loading')
 const pairing = ref<ExtensionPairingDetails | null>(null)
@@ -67,6 +69,19 @@ onMounted(async () => {
     // The redirect target deliberately carries no fragment: the handoff port
     // already holds the code, and reads it back when this page mounts again.
     status.value = 'signed-out'
+    return
+  }
+
+  // This route is `meta.public`, so router.beforeEach returns before reaching
+  // the block that primes the CSRF token for authenticated routes. Approve and
+  // Refuse are POSTs, and the request interceptor in customClient.ts attaches
+  // X-CSRF-Token only from an already-cached value: it deliberately never
+  // fetches from inside an interceptor, to avoid a nested request during login.
+  // Nothing else on this page would fill that cache, so without this call the
+  // first Approve fails with "CSRF token missing".
+  if (!(await csrfStore.getToken())) {
+    status.value = 'error'
+    errorMessage.value = 'Could not establish a secure session. Reload the page and try again.'
     return
   }
 
