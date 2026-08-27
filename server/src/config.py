@@ -56,6 +56,44 @@ def get_session_max_lifetime_seconds() -> int:
     return int(os.environ.get("SESSION_MAX_LIFETIME_HOURS", "4")) * 3600
 
 
+def get_extension_token_lifetime_seconds() -> int:
+    """Absolute lifetime of a browser-extension token. Default 30 days.
+
+    Absolute, with no sliding renewal: a sliding window means a stolen token
+    never expires as long as the thief keeps using it. Re-pairing is the
+    recovery path, which is cheap because it reuses the normal web login.
+    """
+    return int(os.environ.get("EXTENSION_TOKEN_LIFETIME_DAYS", "30")) * 86400
+
+
+def get_extension_pairing_lifetime_seconds() -> int:
+    """How long an unapproved pairing request stays redeemable. Default 5 minutes.
+
+    Short on purpose: the window only has to cover "click connect, log in on the
+    website, click approve".
+    """
+    return int(os.environ.get("EXTENSION_PAIRING_LIFETIME_SECONDS", "300"))
+
+
+def get_extension_pairing_poll_interval_seconds() -> int:
+    """Interval the extension is told to wait between exchange attempts.
+
+    Returned to the client rather than assumed, so the polling rate can be
+    tuned against the pairing rate-limit bucket without shipping a new
+    extension build.
+    """
+    return int(os.environ.get("EXTENSION_PAIRING_POLL_INTERVAL_SECONDS", "5"))
+
+
+def get_extension_last_used_coarsening_seconds() -> int:
+    """Minimum gap between two `last_used_at` writes for the same token.
+
+    The column only feeds a "last used" label on the connected-devices screen,
+    so writing on every request would be pure write amplification.
+    """
+    return int(os.environ.get("EXTENSION_LAST_USED_COARSENING_SECONDS", "300"))
+
+
 def is_production() -> bool:
     """Check if running in production environment."""
     return os.environ.get("ENVIRONMENT", "development") == "production"

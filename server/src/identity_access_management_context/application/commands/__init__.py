@@ -6,6 +6,17 @@ from .create_group_command import CreateGroupCommand
 from .create_user_command import CreateUserCommand
 from .delete_group_command import DeleteGroupCommand
 from .delete_user_command import DeleteUserCommand
+from .extension_commands import (
+    ApproveExtensionPairingCommand,
+    DenyExtensionPairingCommand,
+    ExchangeExtensionPairingCommand,
+    GetExtensionPairingCommand,
+    ListExtensionTokensCommand,
+    RevokeAllExtensionTokensCommand,
+    RevokeExtensionTokenCommand,
+    StartExtensionPairingCommand,
+    ValidateExtensionTokenCommand,
+)
 from .get_group_command import GetGroupCommand
 from .get_sso_authorize_url_command import GetSsoAuthorizeUrlCommand
 from .get_statistic_for_admin_command import GetStatisticForAdminCommand
@@ -26,6 +37,15 @@ from .update_user_password_command import UpdateUserPasswordCommand
 from .validate_user_token_command import ValidateUserTokenCommand
 
 __all__ = [
+    "ApproveExtensionPairingCommand",
+    "DenyExtensionPairingCommand",
+    "ExchangeExtensionPairingCommand",
+    "GetExtensionPairingCommand",
+    "ListExtensionTokensCommand",
+    "RevokeAllExtensionTokensCommand",
+    "RevokeExtensionTokenCommand",
+    "StartExtensionPairingCommand",
+    "ValidateExtensionTokenCommand",
     "CreateUserCommand",
     "UpdateUserCommand",
     "UpdateUserPasswordCommand",
