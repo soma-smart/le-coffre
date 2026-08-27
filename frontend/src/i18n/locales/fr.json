@@ -608,7 +608,13 @@
     "passwordsWorkspace": {
       "searchResultsTitle": "Résultats de recherche",
       "allPasswordsTitle": "Tous les mots de passe",
-      "loadFailed": "Échec du chargement des mots de passe"
+      "loadFailed": "Échec du chargement des mots de passe",
+      "editDeepLink": {
+        "readOnlySummary": "Mot de passe en lecture seule",
+        "readOnlyDetail": "Vous n'avez pas la permission de modifier ce mot de passe",
+        "notFoundSummary": "Mot de passe introuvable",
+        "notFoundDetail": "Ce mot de passe n'est plus disponible"
+      }
     },
     "oneTimeLinkModal": {
       "title": "Lien à usage unique",

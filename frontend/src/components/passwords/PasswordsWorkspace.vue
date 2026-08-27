@@ -84,6 +84,7 @@ import { computed, onMounted, ref, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
+import { useToast } from 'primevue'
 import { accessibleGroupIdsFor, isRootFolder, type Password } from '@/domain/password/Password'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useGroupsStore } from '@/stores/groups'
@@ -97,8 +98,10 @@ import { useResizableWidth } from '@/composables/useResizableWidth'
 import { useIsMobile } from '@/composables/useIsMobile'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { slugifyGroupName } from '@/utils/groupSlug'
+import { decideEditFromRoute } from '@/utils/editDeepLink'
 
 const { t } = useI18n()
+const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
@@ -130,6 +133,7 @@ const routeGroupSlug = computed(() => route.params.groupSlug as string | undefin
 const routeFolderFilter = computed(() => route.query.folder as string | undefined)
 const routePasswordId = computed(() => route.query.password as string | undefined)
 const shouldOpenCreateFromRoute = computed(() => route.query.create === '1')
+const editIdFromRoute = computed(() => route.query.edit as string | undefined)
 
 const {
   searchQuery,
@@ -317,6 +321,7 @@ const sharingPassword = ref<Password | null>(null)
 const oneTimeLinkPassword = ref<Password | null>(null)
 const historyPassword = ref<Password | null>(null)
 const isProcessingCreateGroupQuery = ref(false)
+const isProcessingEditQuery = ref(false)
 
 const handleCreateInGroup = (groupId: string) => {
   editingPassword.value = null
@@ -375,6 +380,50 @@ watch(
       await router.replace({ query: nextQuery })
     } finally {
       isProcessingCreateGroupQuery.value = false
+    }
+  },
+  { immediate: true },
+)
+
+// Open the edit modal when the route asks for it (?edit=<id>). Three things the
+// ?create=1 watch above does not have to worry about:
+//
+//   1. `passwords` arrives asynchronously, so this has to wait for the store to
+//      settle. Gating only on the id would let `immediate: true` fire against an
+//      empty list and silently no-op.
+//   2. The guard is `canWrite` on the entry, not ownership of the group: a
+//      shared password can be writable through a path other than group
+//      ownership.
+//   3. The param is stripped even when the entry is unknown or read-only.
+//      Leaving a stale `?edit=` behind would re-open the modal on every
+//      subsequent navigation.
+watch(
+  [editIdFromRoute, passwords, loading],
+  async ([editId, list, isLoading]) => {
+    if (isProcessingEditQuery.value || !editId || isLoading) return
+
+    isProcessingEditQuery.value = true
+    try {
+      const decision = decideEditFromRoute({ editId, passwords: list, loading: isLoading })
+      if (decision.kind === 'wait') return
+
+      if (decision.kind === 'open') {
+        handleEdit(decision.password)
+      } else {
+        const key = decision.kind === 'refuse' ? 'readOnly' : 'notFound'
+        toast.add({
+          severity: 'warn',
+          summary: t(`components.passwordsWorkspace.editDeepLink.${key}Summary`),
+          detail: t(`components.passwordsWorkspace.editDeepLink.${key}Detail`),
+          life: 4000,
+        })
+      }
+
+      const nextQuery = { ...route.query }
+      delete nextQuery.edit
+      await router.replace({ query: nextQuery })
+    } finally {
+      isProcessingEditQuery.value = false
     }
   },
   { immediate: true },
