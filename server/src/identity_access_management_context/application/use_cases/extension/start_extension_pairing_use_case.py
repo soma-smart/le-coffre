@@ -33,30 +33,30 @@ class StartExtensionPairingUseCase(TracedUseCase):
         pairing_lifetime_seconds: int,
         poll_interval_seconds: int,
     ):
-        self._extension_pairing_repository = extension_pairing_repository
-        self._time_provider = time_provider
-        self._pairing_lifetime_seconds = pairing_lifetime_seconds
-        self._poll_interval_seconds = poll_interval_seconds
+        self.extension_pairing_repository = extension_pairing_repository
+        self.time_provider = time_provider
+        self.pairing_lifetime_seconds = pairing_lifetime_seconds
+        self.poll_interval_seconds = poll_interval_seconds
 
     def execute(self, command: StartExtensionPairingCommand) -> StartedExtensionPairingResponse:
         # Raises UnsupportedPkceMethodError for anything but S256, so a client
         # cannot negotiate the binding away by asking for `plain`.
         challenge = PkceChallenge.parse(command.code_challenge, command.code_challenge_method)
 
-        now = self._time_provider.get_current_time()
+        now = self.time_provider.get_current_time()
         # Cheap opportunistic cleanup: pairings are short-lived and only ever
         # read by user_code, so dead rows are pure noise in the table.
-        self._extension_pairing_repository.purge_expired(now)
+        self.extension_pairing_repository.purge_expired(now)
 
         pairing = ExtensionPairing.create(
             user_code=PairingUserCode.generate(),
             code_challenge=challenge,
             device_name=self._sanitize_device_name(command.device_name),
-            lifetime=timedelta(seconds=self._pairing_lifetime_seconds),
+            lifetime=timedelta(seconds=self.pairing_lifetime_seconds),
             now=now,
             created_from_ip=command.created_from_ip,
         )
-        stored = self._extension_pairing_repository.add(pairing)
+        stored = self.extension_pairing_repository.add(pairing)
 
         logger.info(
             "Extension pairing started",
@@ -66,7 +66,7 @@ class StartExtensionPairingUseCase(TracedUseCase):
         return StartedExtensionPairingResponse(
             user_code=stored.user_code.value,
             expires_at=stored.expires_at,
-            poll_interval_seconds=self._poll_interval_seconds,
+            poll_interval_seconds=self.poll_interval_seconds,
         )
 
     @staticmethod
