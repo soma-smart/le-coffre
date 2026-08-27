@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -12,6 +13,10 @@ router = APIRouter(prefix="/extension/session", tags=["Browser Extension"])
 
 
 class GetExtensionSessionResponse(BaseModel):
+    # The caller's own id. The extension needs it to tell which groups the
+    # user actually belongs to: GET /groups returns every group on the
+    # instance, so the client has to filter, exactly as the web app does.
+    user_id: UUID
     email: str
     display_name: str
     is_read_only: bool
@@ -36,6 +41,7 @@ def get_extension_session(
     one answers the only question the popup actually has.
     """
     return GetExtensionSessionResponse(
+        user_id=principal.user.user_id,
         email=principal.user.email,
         display_name=principal.user.display_name,
         is_read_only=principal.is_read_only,

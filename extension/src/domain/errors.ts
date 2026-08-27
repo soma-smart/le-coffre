@@ -30,9 +30,19 @@ export type AppError =
   | { kind: 'FORBIDDEN' }
   /** 404, the entry vanished or access was revoked since the list was cached. */
   | { kind: 'NOT_FOUND' }
-  | { kind: 'SERVER_ERROR'; status: number }
+  | { kind: 'SERVER_ERROR'; status: number; detail?: string }
   /** The response parsed as JSON but not as the shape we expect. */
   | { kind: 'PROTOCOL_MISMATCH'; detail: string }
+  /**
+   * No clipboard context was available. The user can retry.
+   *
+   * Deliberately carries NO value. Handing it to the popup so it could copy
+   * instead would put a live secret in the Vue tree, which is the single thing
+   * the entryId-not-value message design exists to prevent. A failed copy is a
+   * better trade than a weaker invariant, and Firefox will need its own
+   * clipboard adapter rather than a cross-cutting fallback.
+   */
+  | { kind: 'CLIPBOARD_UNAVAILABLE' }
 
 /** A handler result. Handlers never throw across the message boundary. */
 export type Result<T> = { ok: true; data: T } | { ok: false; error: AppError }

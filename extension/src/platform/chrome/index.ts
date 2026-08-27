@@ -53,6 +53,30 @@ export const chromeBrowser: Browser = {
     onAlarm: (listener) => chrome.alarms.onAlarm.addListener((alarm) => listener(alarm.name)),
   },
 
+  clipboard: {
+    async copy(value: string, clearAfterSeconds: number | null): Promise<boolean> {
+      if (!(await ensureOffscreenDocument())) return false
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'OFFSCREEN_COPY',
+          value,
+          clearAfterSeconds,
+        })
+        return true
+      } catch {
+        return false
+      }
+    },
+    async clear(): Promise<void> {
+      if (!(await ensureOffscreenDocument())) return
+      try {
+        await chrome.runtime.sendMessage({ type: 'OFFSCREEN_CLEAR' })
+      } catch {
+        // Nothing to recover: the clipboard already holds whatever it holds.
+      }
+    },
+  },
+
   runtime: {
     getUrl: (path) => chrome.runtime.getURL(path),
     sendMessage: <T>(message: unknown) => chrome.runtime.sendMessage(message) as Promise<T>,
@@ -66,4 +90,37 @@ export const chromeBrowser: Browser = {
       })
     },
   },
+}
+
+/**
+ * Open the offscreen document if it is not already open.
+ *
+ * Chrome allows exactly one per extension, and creating a second throws, so a
+ * concurrent call has to be tolerated rather than prevented: the service worker
+ * can be handling two copies at once.
+ */
+async function ensureOffscreenDocument(): Promise<boolean> {
+  if (!chrome.offscreen) return false
+
+  try {
+    if (await chrome.offscreen.hasDocument()) return true
+  } catch {
+    // Older builds lack hasDocument; fall through and let createDocument decide.
+  }
+
+  try {
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: [chrome.offscreen.Reason.CLIPBOARD],
+      justification: 'Write a vault secret to the clipboard and clear it after a timeout.',
+    })
+    return true
+  } catch {
+    // Already open (a concurrent call won the race) counts as success.
+    try {
+      return await chrome.offscreen.hasDocument()
+    } catch {
+      return false
+    }
+  }
 }

@@ -1,34 +1,61 @@
 /**
  * Service-worker entry point.
  *
- * Owns all network I/O, the token lifecycle, the pairing poll loop and the
- * auto-lock alarm. Handlers must stay stateless and re-read storage on every
- * invocation: MV3 terminates this worker after ~30s idle and restarts it on the
- * next event, so module-level mutable state silently evaporates.
- *
- * M0 registers the message plumbing only; handlers arrive in M7/M8.
+ * Owns all network I/O, the token lifecycle, the pairing poll and the auto-lock
+ * alarm. Everything here must survive being torn down and restarted: MV3 kills
+ * this worker after ~30s idle, so state lives in storage and timers are alarms,
+ * never `setTimeout`.
  */
+import { VaultClient } from '@/api/vaultClient'
 import { chromeBrowser } from '@/platform/chrome'
-import { err } from '@/domain/errors'
-import type { Request } from '@/shared/messages'
+import { ALARMS } from '@/shared/storageKeys'
 
-const browser = chromeBrowser
+import type { Deps } from './deps'
+import { pollPairing } from './handlers/pairing'
+import { route } from './router'
+import { clearCredentials, isIdleExpired, readSettings } from './session'
 
-browser.runtime.onMessage(async (message) => {
-  const request = message as Request
+const deps: Deps = {
+  browser: chromeBrowser,
+  clock: { now: () => new Date() },
+  crypto: {
+    randomBytes: (length) => globalThis.crypto.getRandomValues(new Uint8Array(length)),
+    sha256: async (input) =>
+      new Uint8Array(
+        await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(input)),
+      ),
+  },
+  makeClient: (vaultUrl, token) => new VaultClient(vaultUrl, token),
+}
 
-  // Until the handler table lands, answer in the protocol's own shape rather
-  // than throwing, an unhandled rejection here surfaces in the popup as a
-  // bare "message port closed" with no diagnostic value.
-  return err({
-    kind: 'PROTOCOL_MISMATCH',
-    detail: `no handler registered for "${request?.type ?? 'unknown'}" yet`,
-  })
+deps.browser.runtime.onMessage(async (message) => {
+  // Offscreen traffic shares the runtime channel. Leave it to that document.
+  const type = (message as { type?: string })?.type
+  if (type?.startsWith('OFFSCREEN_') || type === 'EVENT') return undefined
+
+  return route(deps, message)
 })
 
-// Losing the host permission invalidates every cached credential derived from
-// it. The user can revoke at any moment from chrome://extensions, with no other
-// signal to us.
-browser.permissions.onRemoved(() => {
-  void browser.session.clear()
+deps.browser.alarms.onAlarm(async (name) => {
+  if (name === ALARMS.pairingPoll) {
+    // Runs here rather than in the popup so an approval still completes after
+    // the user closes the popup, which they will.
+    await pollPairing(deps)
+    return
+  }
+
+  if (name === ALARMS.autoLock) {
+    const settings = await readSettings(deps.browser)
+    if (await isIdleExpired(deps.browser, deps.clock.now(), settings.autoLockMinutes)) {
+      await clearCredentials(deps.browser)
+      await deps.browser.clipboard.clear()
+      await deps.browser.alarms.clear(ALARMS.autoLock)
+    }
+  }
+})
+
+// Losing the host permission invalidates everything derived from it. The user
+// can revoke at any moment from chrome://extensions, with no other signal.
+deps.browser.permissions.onRemoved(() => {
+  void clearCredentials(deps.browser)
 })
