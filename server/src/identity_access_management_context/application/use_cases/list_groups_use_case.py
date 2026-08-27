@@ -43,6 +43,15 @@ class ListGroupsUseCase(TracedUseCase):
             if group.is_personal and group.user_id and not owner_ids:
                 owner_ids = [group.user_id]
 
+            # Same rule the web app applies in the browser (owner or member), but
+            # enforced here when the caller asked to be scoped, so a credential
+            # that must not enumerate the instance cannot simply skip the filter.
+            if command.only_for_user_id is not None and command.only_for_user_id not in (
+                *owner_ids,
+                *members_ids,
+            ):
+                continue
+
             result.groups.append(
                 GroupResponse(
                     id=group.id,
