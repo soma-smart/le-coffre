@@ -469,6 +469,24 @@ export type GetExtensionPairingResponse = {
 };
 
 /**
+ * GetExtensionSessionResponse
+ */
+export type GetExtensionSessionResponse = {
+    /**
+     * Email
+     */
+    email: string;
+    /**
+     * Display Name
+     */
+    display_name: string;
+    /**
+     * Is Read Only
+     */
+    is_read_only: boolean;
+};
+
+/**
  * GetGroupResponse
  */
 export type GetGroupResponse = {
@@ -3253,6 +3271,22 @@ export type DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses = {
 };
 
 export type DenyExtensionPairingExtensionPairingUserCodeDenyPostResponse = DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses[keyof DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses];
+
+export type GetExtensionSessionExtensionSessionGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/extension/session';
+};
+
+export type GetExtensionSessionExtensionSessionGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: GetExtensionSessionResponse;
+};
+
+export type GetExtensionSessionExtensionSessionGetResponse = GetExtensionSessionExtensionSessionGetResponses[keyof GetExtensionSessionExtensionSessionGetResponses];
 
 export type RevokeAllExtensionTokensExtensionTokensDeleteData = {
     body?: never;
