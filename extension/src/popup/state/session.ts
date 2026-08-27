@@ -44,6 +44,24 @@ export async function refreshConnection(): Promise<void> {
   state.loading = false
 }
 
+/**
+ * Ask the worker to attempt one exchange now and adopt whatever state it
+ * reports back.
+ *
+ * Distinct from `refreshConnection`, which only *reads* state: while a pairing
+ * is awaiting approval, reading alone never redeems it, so the popup would sit
+ * on "not connected" until the worker's alarm happened to fire.
+ */
+export async function pollPairing(): Promise<void> {
+  const result = await send({ type: 'PAIRING_POLL' })
+  if (result.ok) {
+    state.connection = result.data
+    state.error = null
+  } else {
+    state.error = result.error
+  }
+}
+
 export async function loadGroups(): Promise<void> {
   state.loading = true
   state.error = null

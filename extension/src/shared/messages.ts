@@ -50,6 +50,15 @@ export type Request =
   | { type: 'CONNECTION_SET_VAULT_URL'; vaultUrl: string }
   | { type: 'CONNECTION_DISCONNECT' }
   | { type: 'PAIRING_START' }
+  /**
+   * Drive one exchange attempt now, rather than waiting for the alarm.
+   *
+   * The service worker's alarm is the safety net for when the popup is shut,
+   * but chrome.alarms clamps sub-minute periods, so relying on it alone leaves
+   * an approved pairing unredeemed for up to a minute while the user stares at
+   * a popup that says it is not connected.
+   */
+  | { type: 'PAIRING_POLL' }
   | { type: 'PAIRING_CANCEL' }
   | { type: 'GROUPS_LIST' }
   | { type: 'SETTINGS_SET_GROUP'; groupId: string }
@@ -73,6 +82,7 @@ export interface ResponsePayloads {
   CONNECTION_SET_VAULT_URL: ConnectionState
   CONNECTION_DISCONNECT: ConnectionState
   PAIRING_START: { userCode: string; expiresAt: string }
+  PAIRING_POLL: ConnectionState
   PAIRING_CANCEL: ConnectionState
   GROUPS_LIST: GroupSummary[]
   SETTINGS_SET_GROUP: ConnectionState
