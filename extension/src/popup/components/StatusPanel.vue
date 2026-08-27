@@ -79,15 +79,22 @@ const message = computed(() => {
 
 <template>
   <div
-    class="flex flex-col gap-2 rounded-lg border border-vault-border p-4"
+    class="flex flex-col items-center gap-2 rounded-lg border border-vault-border bg-vault-surface-muted px-4 py-6 text-center"
+    role="status"
     data-testid="status-panel"
   >
+    <svg class="h-8 w-8 text-vault-text-muted" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" />
+      <path d="M12 7.5v5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+      <circle cx="12" cy="16.4" r="1" fill="currentColor" />
+    </svg>
+
     <p class="font-medium">{{ message.title }}</p>
     <p class="text-sm text-vault-text-muted">{{ message.body }}</p>
 
     <button
       v-if="message.action === 'retry'"
-      class="mt-1 self-start rounded bg-vault-accent px-3 py-1.5 text-sm text-white"
+      class="vault-btn-primary mt-1"
       data-testid="status-retry"
       @click="$emit('retry')"
     >
@@ -95,7 +102,7 @@ const message = computed(() => {
     </button>
     <button
       v-else-if="message.action === 'reconnect'"
-      class="mt-1 self-start rounded bg-vault-accent px-3 py-1.5 text-sm text-white"
+      class="vault-btn-primary mt-1"
       data-testid="status-reconnect"
       @click="$emit('reconnect')"
     >
