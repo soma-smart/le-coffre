@@ -47,9 +47,7 @@ export const groupSchema = z.object({
   id: z.string(),
   name: z.string(),
   is_personal: z.boolean(),
-  user_id: z.string().nullable(),
-  owners: z.array(z.string()),
-  members: z.array(z.string()),
+  is_owner: z.boolean(),
 })
 
 export const listGroupsSchema = z.object({

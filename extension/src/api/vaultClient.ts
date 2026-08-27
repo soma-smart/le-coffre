@@ -110,10 +110,17 @@ export class VaultClient {
     )
   }
 
+  /**
+   * The groups the caller belongs to.
+   *
+   * `/extension/groups`, not `/groups`: the latter returns every group on the
+   * instance and expects the client to filter, which is fine for the web app's
+   * session but not for a token sitting in browser storage.
+   */
   async listGroups(): Promise<Result<Group[]>> {
     const result = await request(
       {
-        url: toApiUrl(this.vaultUrl, '/groups?include_personal=true'),
+        url: toApiUrl(this.vaultUrl, '/extension/groups'),
         bearerToken: this.bearerToken,
       },
       listGroupsSchema,
@@ -125,9 +132,7 @@ export class VaultClient {
         id: group.id,
         name: group.name,
         isPersonal: group.is_personal,
-        userId: group.user_id,
-        owners: group.owners,
-        members: group.members,
+        isOwner: group.is_owner,
       })),
     )
   }

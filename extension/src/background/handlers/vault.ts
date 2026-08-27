@@ -3,7 +3,7 @@
  */
 import { visibleEntriesForGroup, matchesEntryQuery, type Entry } from '@/domain/entry'
 import { err, ok, type Result } from '@/domain/errors'
-import { filterGroupsForUser, isUserOwnerOf, sortGroups } from '@/domain/group'
+import { sortGroups } from '@/domain/group'
 import { matchesDomain, MATCH_RANK } from '@/domain/matchesDomain'
 import type { ConnectionState, EntrySummary, GroupSummary } from '@/shared/messages'
 import { LOCAL_KEYS, SESSION_KEYS } from '@/shared/storageKeys'
@@ -41,33 +41,23 @@ async function handleAuthLoss<T>(deps: Deps, result: Result<T>): Promise<Result<
 /**
  * The groups the user can pick from.
  *
- * Filtered client-side because `GET /api/groups` returns every group on the
- * instance, including other people's personal ones. Without this the picker
- * would offer groups whose entries never load.
+ * No client-side filtering and no extra `session()` round-trip: the server
+ * scopes `/extension/groups` to the caller's own groups.
  */
 export async function listGroups(deps: Deps): Promise<Result<GroupSummary[]>> {
   const resolved = await authenticated(deps)
   if (!resolved.ok) return resolved
 
-  const session = await resolved.data.client.session()
-  if (!session.ok) return handleAuthLoss(deps, session)
-
   const groups = await resolved.data.client.listGroups()
   if (!groups.ok) return handleAuthLoss(deps, groups)
 
-  const userId = session.data.user_id
-  const mine = filterGroupsForUser(groups.data, userId)
-
   await stampActivity(deps.browser, deps.clock.now())
   return ok(
-    sortGroups(mine).map((group) => ({
+    sortGroups(groups.data).map((group) => ({
       id: group.id,
       name: group.name,
       isPersonal: group.isPersonal,
-      // Drives whether "Add password" is offered: the web app's ?create=1 only
-      // opens the modal for an owner, so showing it otherwise would land the
-      // user on a list with nothing happening.
-      isOwner: isUserOwnerOf(group, userId),
+      isOwner: group.isOwner,
     })),
   )
 }

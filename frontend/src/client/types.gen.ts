@@ -394,6 +394,28 @@ export type ExchangeExtensionDeviceResponse = {
 };
 
 /**
+ * ExtensionGroupItem
+ */
+export type ExtensionGroupItem = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Is Personal
+     */
+    is_personal: boolean;
+    /**
+     * Is Owner
+     */
+    is_owner: boolean;
+};
+
+/**
  * ExtensionTokenItem
  */
 export type ExtensionTokenItem = {
@@ -706,6 +728,20 @@ export type IsSsoConfigSetResponse = {
      * Is Set
      */
     is_set: boolean;
+};
+
+/**
+ * ListExtensionGroupsResponse
+ */
+export type ListExtensionGroupsResponse = {
+    /**
+     * Groups
+     */
+    groups: Array<ExtensionGroupItem>;
+    /**
+     * Total
+     */
+    total: number;
 };
 
 /**
@@ -3110,6 +3146,22 @@ export type GetExtensionSessionExtensionSessionGetResponses = {
 };
 
 export type GetExtensionSessionExtensionSessionGetResponse = GetExtensionSessionExtensionSessionGetResponses[keyof GetExtensionSessionExtensionSessionGetResponses];
+
+export type ListExtensionGroupsExtensionGroupsGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/extension/groups';
+};
+
+export type ListExtensionGroupsExtensionGroupsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListExtensionGroupsResponse;
+};
+
+export type ListExtensionGroupsExtensionGroupsGetResponse = ListExtensionGroupsExtensionGroupsGetResponses[keyof ListExtensionGroupsExtensionGroupsGetResponses];
 
 export type RevokeAllExtensionTokensExtensionTokensDeleteData = {
     body?: never;
