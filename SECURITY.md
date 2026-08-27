@@ -9,7 +9,7 @@ Security fixes are **never backported** to unsupported versions.
 
 | Version | Supported |
 | ------- | --------- |
-| >= 0.7.2 (latest) | :white_check_mark: |
+| >= 1.5.1 (latest) | :white_check_mark: |
 
 If you are running an unsupported version, you are strongly encouraged to
 upgrade before reporting a vulnerability.
