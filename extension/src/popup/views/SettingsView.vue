@@ -58,7 +58,7 @@ async function disconnect() {
 
     <button
       v-if="!confirming"
-      class="rounded border border-vault-danger px-3 py-2 text-sm text-vault-danger"
+      class="vault-btn-danger"
       data-testid="disconnect"
       @click="confirming = true"
     >
@@ -68,19 +68,10 @@ async function disconnect() {
     <div v-else class="flex flex-col gap-2">
       <p class="text-sm">Disconnect and forget this vault?</p>
       <div class="flex gap-2">
-        <button
-          class="rounded bg-vault-danger px-3 py-2 text-sm text-white"
-          data-testid="disconnect-confirm"
-          @click="disconnect"
-        >
+        <button class="vault-btn-danger-solid" data-testid="disconnect-confirm" @click="disconnect">
           Disconnect
         </button>
-        <button
-          class="rounded border border-vault-border px-3 py-2 text-sm"
-          @click="confirming = false"
-        >
-          Cancel
-        </button>
+        <button class="vault-btn" @click="confirming = false">Cancel</button>
       </div>
     </div>
   </div>
