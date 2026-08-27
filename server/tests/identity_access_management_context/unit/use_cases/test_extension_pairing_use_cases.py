@@ -137,14 +137,14 @@ def _start(start_use_case, verifier: PkceVerifier, device_name="Chrome on macOS"
 
 
 class TestStart:
-    def test_returns_a_user_code_and_when_it_dies(self, start_use_case):
+    def test_should_return_a_user_code_and_expiry_when_starting_a_pairing(self, start_use_case):
         started = _start(start_use_case, PkceVerifier.generate())
 
         assert started.user_code
         assert started.expires_at == NOW + timedelta(seconds=PAIRING_LIFETIME)
         assert started.poll_interval_seconds == POLL_INTERVAL
 
-    def test_rejects_a_downgrade_to_plain(self, start_use_case):
+    def test_should_reject_when_the_challenge_method_is_not_s256(self, start_use_case):
         # `plain` would make the challenge equal to the verifier, so anyone who
         # saw the request could redeem the pairing. Refusing it explicitly
         # rather than defaulting means a client cannot negotiate it away.
@@ -157,13 +157,15 @@ class TestStart:
                 )
             )
 
-    def test_two_pairings_get_different_codes(self, start_use_case):
+    def test_should_return_different_codes_when_starting_two_pairings(self, start_use_case):
         first = _start(start_use_case, PkceVerifier.generate())
         second = _start(start_use_case, PkceVerifier.generate())
 
         assert first.user_code != second.user_code
 
-    def test_truncates_and_cleans_a_hostile_device_name(self, start_use_case, extension_pairing_repository):
+    def test_should_strip_and_truncate_when_the_device_name_is_hostile(
+        self, start_use_case, extension_pairing_repository
+    ):
         # Self-reported, and rendered on the approval page. Control characters
         # would let a caller forge line breaks there and in log lines.
         _start(start_use_case, PkceVerifier.generate(), device_name="Evil\nName\r\twith control chars" + "x" * 200)
@@ -173,7 +175,7 @@ class TestStart:
         assert "\r" not in stored.device_name
         assert len(stored.device_name) <= 60
 
-    def test_falls_back_to_a_placeholder_when_the_name_is_empty(self, start_use_case, extension_pairing_repository):
+    def test_should_use_a_placeholder_when_the_device_name_is_empty(self, start_use_case, extension_pairing_repository):
         _start(start_use_case, PkceVerifier.generate(), device_name="   ")
 
         stored = next(iter(extension_pairing_repository.pairings.values()))
@@ -181,7 +183,9 @@ class TestStart:
 
 
 class TestApprovalPage:
-    def test_shows_the_server_vouched_facts(self, start_use_case, get_use_case, user):
+    def test_should_return_the_server_vouched_facts_when_loading_the_approval_page(
+        self, start_use_case, get_use_case, user
+    ):
         started = _start(start_use_case, PkceVerifier.generate())
 
         details = get_use_case.execute(GetExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
@@ -193,7 +197,9 @@ class TestApprovalPage:
         assert details.created_from_ip == "203.0.113.5"
         assert details.is_resolved is False
 
-    def test_an_expired_pairing_is_reported_as_missing(self, start_use_case, get_use_case, time_provider, user):
+    def test_should_report_missing_when_the_pairing_has_expired(
+        self, start_use_case, get_use_case, time_provider, user
+    ):
         started = _start(start_use_case, PkceVerifier.generate())
 
         time_provider.set_current_time(NOW + timedelta(seconds=PAIRING_LIFETIME + 1))
@@ -201,19 +207,19 @@ class TestApprovalPage:
         with pytest.raises(ExtensionPairingNotFoundError):
             get_use_case.execute(GetExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
 
-    def test_a_malformed_code_is_reported_as_missing(self, get_use_case, user):
+    def test_should_report_missing_when_the_code_is_malformed(self, get_use_case, user):
         # Same outcome as a code that simply does not exist, so well-formedness
         # cannot be used as a probe.
         with pytest.raises(ExtensionPairingNotFoundError):
             get_use_case.execute(GetExtensionPairingCommand(user_code="not-a-code", requesting_user=user))
 
-    def test_an_unknown_code_is_reported_as_missing(self, get_use_case, user):
+    def test_should_report_missing_when_the_code_is_unknown(self, get_use_case, user):
         with pytest.raises(ExtensionPairingNotFoundError):
             get_use_case.execute(GetExtensionPairingCommand(user_code="ABCD-EFGH", requesting_user=user))
 
 
 class TestApprove:
-    def test_binds_the_pairing_to_the_logged_in_user(
+    def test_should_bind_the_pairing_to_the_user_when_approving(
         self, start_use_case, approve_use_case, extension_pairing_repository, user
     ):
         started = _start(start_use_case, PkceVerifier.generate())
@@ -224,7 +230,7 @@ class TestApprove:
         assert stored.approved_by_user_id == user.user_id
         assert stored.approved_at == NOW
 
-    def test_approving_does_not_mint_a_credential(
+    def test_should_mint_no_credential_when_approving(
         self, start_use_case, approve_use_case, extension_token_repository, user
     ):
         # The token is created during the exchange, so its plaintext never has
@@ -235,7 +241,9 @@ class TestApprove:
 
         assert extension_token_repository.tokens == {}
 
-    def test_normalises_a_lowercase_code(self, start_use_case, approve_use_case, extension_pairing_repository, user):
+    def test_should_approve_when_the_code_is_lowercase(
+        self, start_use_case, approve_use_case, extension_pairing_repository, user
+    ):
         started = _start(start_use_case, PkceVerifier.generate())
 
         approve_use_case.execute(
@@ -245,7 +253,7 @@ class TestApprove:
         stored = next(iter(extension_pairing_repository.pairings.values()))
         assert stored.approved_by_user_id == user.user_id
 
-    def test_cannot_approve_twice(self, start_use_case, approve_use_case, user):
+    def test_should_refuse_when_approving_twice(self, start_use_case, approve_use_case, user):
         started = _start(start_use_case, PkceVerifier.generate())
         command = ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user)
         approve_use_case.execute(command)
@@ -253,7 +261,9 @@ class TestApprove:
         with pytest.raises(ExtensionPairingAlreadyResolvedError):
             approve_use_case.execute(command)
 
-    def test_cannot_approve_an_expired_pairing(self, start_use_case, approve_use_case, time_provider, user):
+    def test_should_refuse_when_approving_an_expired_pairing(
+        self, start_use_case, approve_use_case, time_provider, user
+    ):
         started = _start(start_use_case, PkceVerifier.generate())
 
         time_provider.set_current_time(NOW + timedelta(seconds=PAIRING_LIFETIME + 1))
@@ -261,7 +271,7 @@ class TestApprove:
         with pytest.raises(ExtensionPairingExpiredError):
             approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
 
-    def test_refuses_once_the_user_is_at_the_device_cap(
+    def test_should_refuse_when_the_user_is_at_the_device_cap(
         self, start_use_case, approve_use_case, extension_token_repository, user
     ):
         # Checked at approval, while the user is still looking at a screen that
@@ -286,7 +296,9 @@ class TestApprove:
 
 
 class TestDeny:
-    def test_marks_the_pairing_denied(self, start_use_case, deny_use_case, extension_pairing_repository, user):
+    def test_should_mark_the_pairing_denied_when_denying(
+        self, start_use_case, deny_use_case, extension_pairing_repository, user
+    ):
         started = _start(start_use_case, PkceVerifier.generate())
 
         deny_use_case.execute(DenyExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
@@ -295,7 +307,9 @@ class TestDeny:
         assert stored.denied_at == NOW
         assert stored.approved_at is None
 
-    def test_cannot_deny_an_approved_pairing(self, start_use_case, approve_use_case, deny_use_case, user):
+    def test_should_refuse_when_denying_an_approved_pairing(
+        self, start_use_case, approve_use_case, deny_use_case, user
+    ):
         started = _start(start_use_case, PkceVerifier.generate())
         approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
 
@@ -304,7 +318,7 @@ class TestDeny:
 
 
 class TestExchange:
-    def test_mints_a_credential_for_the_approving_user(
+    def test_should_mint_a_credential_for_the_approver_when_exchanging(
         self, start_use_case, approve_use_case, exchange_use_case, registered_user
     ):
         verifier = PkceVerifier.generate()
@@ -323,7 +337,7 @@ class TestExchange:
         assert result.expires_at == NOW + timedelta(seconds=TOKEN_LIFETIME)
         assert len(result.token) >= 43
 
-    def test_stores_only_the_hash_of_the_credential(
+    def test_should_store_only_the_hash_when_exchanging(
         self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
     ):
         verifier = PkceVerifier.generate()
@@ -342,7 +356,9 @@ class TestExchange:
         assert stored.token_hash != result.token
         assert result.token not in stored.token_hash
 
-    def test_a_wrong_verifier_is_rejected(self, start_use_case, approve_use_case, exchange_use_case, registered_user):
+    def test_should_reject_when_the_verifier_is_wrong(
+        self, start_use_case, approve_use_case, exchange_use_case, registered_user
+    ):
         # The binding that stops someone who merely read the user_code off the
         # screen, or out of the URL fragment, from redeeming the pairing.
         started = _start(start_use_case, PkceVerifier.generate())
@@ -357,7 +373,7 @@ class TestExchange:
                 )
             )
 
-    def test_a_wrong_verifier_mints_nothing(
+    def test_should_mint_nothing_when_the_verifier_is_wrong(
         self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
     ):
         started = _start(start_use_case, PkceVerifier.generate())
@@ -374,7 +390,7 @@ class TestExchange:
 
         assert extension_token_repository.tokens == {}
 
-    def test_an_unapproved_pairing_reports_pending_to_its_owner(
+    def test_should_report_pending_when_the_pairing_is_unapproved(
         self, start_use_case, exchange_use_case, registered_user
     ):
         # Only reachable with a matching verifier, so "pending" is never an
@@ -389,7 +405,7 @@ class TestExchange:
         assert isinstance(result, PendingExtensionPairingResponse)
         assert result.poll_interval_seconds == POLL_INTERVAL
 
-    def test_a_denied_pairing_cannot_be_exchanged(
+    def test_should_refuse_when_exchanging_a_denied_pairing(
         self, start_use_case, deny_use_case, exchange_use_case, registered_user
     ):
         verifier = PkceVerifier.generate()
@@ -401,7 +417,7 @@ class TestExchange:
                 ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
             )
 
-    def test_an_expired_pairing_cannot_be_exchanged(
+    def test_should_refuse_when_exchanging_an_expired_pairing(
         self, start_use_case, approve_use_case, exchange_use_case, time_provider, registered_user
     ):
         verifier = PkceVerifier.generate()
@@ -417,7 +433,7 @@ class TestExchange:
                 ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
             )
 
-    def test_one_approval_yields_exactly_one_credential(
+    def test_should_yield_exactly_one_credential_when_exchanging_twice(
         self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
     ):
         # The single-mint guarantee. A second exchange must not walk away with
@@ -435,7 +451,7 @@ class TestExchange:
             exchange_use_case.execute(command)
         assert len(extension_token_repository.tokens) == 1
 
-    def test_records_the_pairing_in_the_audit_trail(
+    def test_should_record_an_audit_event_when_exchanging(
         self, start_use_case, approve_use_case, exchange_use_case, admin_event_repository, registered_user
     ):
         verifier = PkceVerifier.generate()

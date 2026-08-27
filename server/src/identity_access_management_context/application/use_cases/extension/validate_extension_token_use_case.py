@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from identity_access_management_context.application.commands import ValidateExtensionTokenCommand
 from identity_access_management_context.application.gateways import (
@@ -45,12 +46,12 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
         time_provider: TimeGateway,
         last_used_coarsening_seconds: int,
     ):
-        self._extension_token_repository = extension_token_repository
-        self._user_password_repository = user_password_repository
-        self._sso_user_repository = sso_user_repository
-        self._user_repository = user_repository
-        self._time_provider = time_provider
-        self._last_used_coarsening_seconds = last_used_coarsening_seconds
+        self.extension_token_repository = extension_token_repository
+        self.user_password_repository = user_password_repository
+        self.sso_user_repository = sso_user_repository
+        self.user_repository = user_repository
+        self.time_provider = time_provider
+        self.last_used_coarsening_seconds = last_used_coarsening_seconds
 
     def execute(self, command: ValidateExtensionTokenCommand) -> ValidatedExtensionTokenResponse:
         try:
@@ -60,15 +61,15 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
             # database lookup.
             raise ExtensionTokenNotFoundError() from error
 
-        token = self._extension_token_repository.get_by_token_hash(secret.hashed())
+        token = self.extension_token_repository.get_by_token_hash(secret.hashed())
         if token is None:
             raise ExtensionTokenNotFoundError()
 
-        now = self._time_provider.get_current_time()
+        now = self.time_provider.get_current_time()
         # Raises ExtensionTokenRevokedError / ExtensionTokenExpiredError.
         token.ensure_usable(now)
 
-        authenticated_user = self._user_repository.get_by_id(token.user_id)
+        authenticated_user = self.user_repository.get_by_id(token.user_id)
         if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
             # The same cutoff that kills cookie sessions on a password change or
             # on refresh-token reuse detection. Without honouring it here,
@@ -82,7 +83,7 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
         # Best-effort telemetry for the connected-devices screen. It must never
         # fail authentication, so a storage hiccup here is swallowed.
         try:
-            self._extension_token_repository.touch_last_used(token.id, now, self._last_used_coarsening_seconds)
+            self.extension_token_repository.touch_last_used(token.id, now, self.last_used_coarsening_seconds)
         except Exception:  # noqa: BLE001 - telemetry must not break auth
             logger.warning("Could not record extension token usage", exc_info=True)
 
@@ -93,12 +94,12 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
             token_id=token.id,
         )
 
-    def _resolve_identity(self, user_id) -> tuple[str, str]:
-        user_password = self._user_password_repository.get_by_id(user_id)
+    def _resolve_identity(self, user_id: UUID) -> tuple[str, str]:
+        user_password = self.user_password_repository.get_by_id(user_id)
         if user_password:
             return user_password.email, user_password.display_name
 
-        sso_user = self._sso_user_repository.get_by_user_id(user_id)
+        sso_user = self.sso_user_repository.get_by_user_id(user_id)
         if not sso_user:
             raise UserNotFoundException(user_id)
         return sso_user.email, sso_user.display_name
