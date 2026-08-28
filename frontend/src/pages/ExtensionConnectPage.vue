@@ -163,7 +163,11 @@ async function deny() {
 
 <template>
   <BlankLayout>
-    <div class="flex min-h-screen items-center justify-center p-4">
+    <!-- BlankLayout already stretches to the viewport and pads the content
+         (min-h-screen plus py-24), so a second min-h-screen here only added
+         its own padding on top of that and produced a page that scrolled by a
+         card-less 200px. Horizontal centering is all this wrapper owes. -->
+    <div class="flex justify-center">
       <Card class="w-full max-w-xl">
         <template #title>Connect a browser extension</template>
 
