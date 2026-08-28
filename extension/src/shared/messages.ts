@@ -35,7 +35,14 @@ export type ConnectionState =
   | { status: 'unconfigured' }
   | { status: 'permission-missing'; vaultUrl: string }
   | { status: 'unpaired'; vaultUrl: string }
-  | { status: 'pairing'; vaultUrl: string; userCode: string; expiresAt: string }
+  | {
+      status: 'pairing'
+      vaultUrl: string
+      userCode: string
+      expiresAt: string
+      /** Server-chosen cadence. The pairing bucket is sized for it; see config.py. */
+      pollIntervalSeconds: number
+    }
   | {
       status: 'ready'
       vaultUrl: string
@@ -81,7 +88,7 @@ export interface ResponsePayloads {
   CONNECTION_GET_STATE: ConnectionState
   CONNECTION_SET_VAULT_URL: ConnectionState
   CONNECTION_DISCONNECT: ConnectionState
-  PAIRING_START: { userCode: string; expiresAt: string }
+  PAIRING_START: { userCode: string; expiresAt: string; pollIntervalSeconds: number }
   PAIRING_POLL: ConnectionState
   PAIRING_CANCEL: ConnectionState
   GROUPS_LIST: GroupSummary[]

@@ -46,6 +46,7 @@ export async function getConnectionState(deps: Deps): Promise<Result<ConnectionS
         vaultUrl,
         userCode: pairing.userCode,
         expiresAt: pairing.expiresAt,
+        pollIntervalSeconds: pairing.pollIntervalSeconds,
       })
     }
     return ok({ status: 'unpaired', vaultUrl })
