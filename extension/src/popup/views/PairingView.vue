@@ -6,10 +6,17 @@ import { pollPairing, refreshConnection, state } from '../state/session'
 
 const userCode = ref<string | null>(null)
 const busy = ref(false)
-const failure = ref<string | null>(null)
 let poll: ReturnType<typeof setInterval> | undefined
 
-const POLL_INTERVAL_MS = 2000
+// Floor, not the cadence. The real interval comes from the server, which sizes
+// its per-IP pairing rate bucket for it (config.py:172): hardcoding a faster
+// poll here once saturated that bucket single-handedly and 429'd the pairing
+// mid-approval.
+const MIN_POLL_INTERVAL_MS = 3000
+
+function pollIntervalMs(seconds: number | undefined): number {
+  return Math.max((seconds ?? 5) * 1000, MIN_POLL_INTERVAL_MS)
+}
 
 /**
  * Register a pairing, then open the approval tab.
@@ -21,12 +28,11 @@ const POLL_INTERVAL_MS = 2000
  */
 async function start() {
   busy.value = true
-  failure.value = null
 
   const result = await send({ type: 'PAIRING_START' })
   if (result.ok) {
     userCode.value = result.data.userCode
-    watchForApproval()
+    watchForApproval(pollIntervalMs(result.data.pollIntervalSeconds))
   } else {
     state.error = result.error
   }
@@ -39,10 +45,10 @@ async function start() {
  * makes an open popup react in seconds rather than waiting on the alarm, whose
  * period Chrome clamps.
  */
-function watchForApproval() {
+function watchForApproval(intervalMs: number) {
   clearInterval(poll)
   void pollPairing()
-  poll = setInterval(pollPairing, POLL_INTERVAL_MS)
+  poll = setInterval(pollPairing, intervalMs)
 }
 
 async function cancel() {
@@ -58,7 +64,7 @@ onMounted(() => {
   // come back from the vault tab.
   if (state.connection?.status === 'pairing') {
     userCode.value = state.connection.userCode
-    watchForApproval()
+    watchForApproval(pollIntervalMs(state.connection.pollIntervalSeconds))
     return
   }
   void start()
@@ -89,7 +95,6 @@ onUnmounted(() => clearInterval(poll))
     </div>
 
     <p v-if="busy" class="text-sm text-vault-text-muted">Preparing…</p>
-    <p v-if="failure" class="text-sm text-vault-danger">{{ failure }}</p>
 
     <button class="vault-btn" data-testid="pairing-cancel" @click="cancel">Cancel</button>
   </div>

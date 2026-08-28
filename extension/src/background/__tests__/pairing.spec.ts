@@ -34,7 +34,7 @@ describe('startPairing', () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { userCode: 'ABCD-1234', expiresAt: '2099-01-01T00:00:00Z' },
+      data: { userCode: 'ABCD-1234', expiresAt: '2099-01-01T00:00:00Z', pollIntervalSeconds: 5 },
     })
     expect(browser.openedTabs).toHaveLength(1)
     expect(browser.openedTabs[0]).toContain('ABCD-1234')
@@ -81,6 +81,7 @@ describe('pollPairing', () => {
         vaultUrl: VAULT_URL,
         userCode: IN_FLIGHT.userCode,
         expiresAt: IN_FLIGHT.expiresAt,
+        pollIntervalSeconds: IN_FLIGHT.pollIntervalSeconds,
       },
     })
     expect(await browser.session.get(SESSION_KEYS.pairing)).toMatchObject({
@@ -112,18 +113,51 @@ describe('pollPairing', () => {
     expect(browser.scheduledAlarms.has(ALARMS.pairingPoll)).toBe(false)
   })
 
-  it('should end the pairing when the server refuses it', async () => {
-    // Denied, expired and already-redeemed all arrive as the same generic
-    // error, by design. Any of them is terminal.
+  it('should end the pairing when the server definitively refuses it', async () => {
+    // Denied, expired and already-redeemed all arrive as the same generic 400,
+    // by design. That one status is terminal.
     const { deps, browser, client } = createTestDeps()
     await givenConfigured(browser)
     await browser.session.set(SESSION_KEYS.pairing, IN_FLIGHT)
-    client.exchangeResult = { ok: false, error: { kind: 'PROTOCOL_MISMATCH', detail: 'refused' } }
+    client.exchangeResult = { ok: false, error: { kind: 'SERVER_ERROR', status: 400 } }
 
     const result = await pollPairing(deps)
 
     expect(result.ok).toBe(false)
     expect(await browser.session.get(SESSION_KEYS.pairing)).toBeUndefined()
+  })
+
+  it.each([
+    { kind: 'RATE_LIMITED', retryAfterSeconds: 30 },
+    { kind: 'NETWORK_UNREACHABLE' },
+    { kind: 'SERVER_ERROR', status: 503 },
+    { kind: 'VAULT_LOCKED' },
+    { kind: 'PROTOCOL_MISMATCH', detail: 'garbled by a proxy' },
+  ] as const)('should survive a transient $kind without losing the verifier', async (error) => {
+    // Regression. Cancelling on any error wiped the PKCE verifier, so a 2 s
+    // Wi-Fi blip, or a 429 from the pairing bucket, made the approval the user
+    // was in the middle of giving permanently unredeemable: the exact bug the
+    // resume-instead-of-restart fix had just removed, back through the error
+    // path.
+    const { deps, browser, client } = createTestDeps()
+    await givenConfigured(browser)
+    await browser.session.set(SESSION_KEYS.pairing, IN_FLIGHT)
+    client.exchangeResult = { ok: false, error }
+
+    const result = await pollPairing(deps)
+
+    expect(result.ok).toBe(false)
+    expect(await browser.session.get(SESSION_KEYS.pairing)).toMatchObject({
+      verifier: IN_FLIGHT.verifier,
+    })
+
+    // The approval, whenever the network comes back, still redeems.
+    client.exchangeResult = {
+      ok: true,
+      data: { status: 'approved', expires_at: '2099-06-01T00:00:00Z', token: 'd'.repeat(43) },
+    }
+    const retried = await pollPairing(deps)
+    expect(retried.ok && retried.data.status).toBe('ready')
   })
 
   it('should give up on a pairing whose deadline has passed without calling the server', async () => {

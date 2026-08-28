@@ -14,6 +14,7 @@ import { ALARMS, LOCAL_KEYS } from '@/shared/storageKeys'
 
 import type { Deps } from '../deps'
 import { clearPairing, readPairing, readVaultUrl, storePairing, storeToken } from '../session'
+import { ensureAutoLockAlarm } from './autoLock'
 import { getConnectionState } from './connection'
 
 const DEFAULT_DEVICE_NAME = 'Browser extension'
@@ -57,7 +58,11 @@ export async function startPairing(
     minutesFor(started.data.poll_interval_seconds),
   )
 
-  return ok({ userCode: started.data.user_code, expiresAt: started.data.expires_at })
+  return ok({
+    userCode: started.data.user_code,
+    expiresAt: started.data.expires_at,
+    pollIntervalSeconds: started.data.poll_interval_seconds,
+  })
 }
 
 /**
@@ -92,9 +97,16 @@ export async function pollPairing(deps: Deps): Promise<Result<ConnectionState>> 
     .exchangePairing(pairing.userCode, pairing.verifier)
 
   if (!exchanged.ok) {
-    // Denied, expired or already redeemed all arrive as the same generic 400,
-    // which is what the server intends. Any of them ends this pairing.
-    await cancelPairing(deps)
+    // Only a definitive server refusal ends the pairing. Denied, expired and
+    // already-redeemed all arrive as the same generic 400, which is what the
+    // server intends. Everything else here is transient: a 429 from the
+    // pairing bucket, a dropped connection, a 5xx, a locked vault. Cancelling
+    // on those wipes the PKCE verifier, and with it the user's ability to
+    // redeem an approval they are in the middle of giving; the local expiry
+    // check above already bounds how long a stale pairing can linger.
+    if (exchanged.error.kind === 'SERVER_ERROR' && exchanged.error.status === 400) {
+      await cancelPairing(deps)
+    }
     return err(exchanged.error)
   }
 
@@ -104,6 +116,7 @@ export async function pollPairing(deps: Deps): Promise<Result<ConnectionState>> 
 
   await storeToken(deps.browser, exchanged.data.token, exchanged.data.expires_at)
   await cancelPairing(deps)
+  await ensureAutoLockAlarm(deps)
   return getConnectionState(deps)
 }
 
