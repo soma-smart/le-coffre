@@ -8,6 +8,7 @@ import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepos
 import { BackendVaultRepository } from '@/infrastructure/backend/BackendVaultRepository'
 import { BackendStatisticsGateway } from '@/infrastructure/backend/BackendStatisticsGateway'
 import { LocalStoragePreferencesGateway } from '@/infrastructure/local_storage/LocalStoragePreferencesGateway'
+import { SessionStorageLoginRedirectGateway } from '@/infrastructure/session_storage/SessionStorageLoginRedirectGateway'
 import { SessionStoragePairingHandoffGateway } from '@/infrastructure/session_storage/SessionStoragePairingHandoffGateway'
 import { buildContainer, type Container } from '@/container'
 
@@ -30,5 +31,6 @@ export function installProductionContainer(): Container {
     oneTimeLinkRepository: new BackendOneTimeLinkRepository(),
     extensionGateway: new BackendExtensionGateway(),
     pairingHandoffGateway: new SessionStoragePairingHandoffGateway(),
+    loginRedirectGateway: new SessionStorageLoginRedirectGateway(),
   })
 }
