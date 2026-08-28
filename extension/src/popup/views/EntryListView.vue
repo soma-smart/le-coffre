@@ -7,8 +7,6 @@ import type { EntrySummary } from '@/shared/messages'
 import { openTab, send } from '../bridge'
 import { loadEntries, loadGroups, selectedGroup, state } from '../state/session'
 
-const emit = defineEmits<{ (event: 'settings'): void }>()
-
 const copied = ref<string | null>(null)
 const expandedId = ref<string | null>(null)
 const auditNoticeDismissed = ref(false)
@@ -80,9 +78,9 @@ function openSite(entry: EntrySummary) {
     <div class="flex items-center gap-2">
       <!-- Native <select> keeps keyboard and screen-reader behaviour for free;
            the wrapper only supplies the chevron the native control lacks. -->
-      <div v-if="state.groups.length > 0" class="relative flex-1">
+      <div v-if="state.groups.length > 0" class="relative w-[132px] shrink-0">
         <select
-          class="vault-field appearance-none pr-8"
+          class="vault-field appearance-none pr-7 font-medium"
           :value="group?.id"
           aria-label="Group"
           data-testid="group-picker"
@@ -93,52 +91,34 @@ function openSite(entry: EntrySummary) {
           </option>
         </select>
         <svg
-          class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-vault-text-muted"
+          class="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-vault-text-muted"
           viewBox="0 0 20 20"
           fill="none"
           aria-hidden="true"
         >
-          <path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
         </svg>
       </div>
 
-      <button
-        class="vault-icon-btn"
-        aria-label="Settings"
-        title="Settings"
-        data-testid="open-settings"
-        @click="emit('settings')"
-      >
-        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-          <circle cx="10" cy="10" r="2.6" stroke="currentColor" stroke-width="1.5" />
-          <path
-            d="M10 2.5v1.8M10 15.7v1.8M17.5 10h-1.8M4.3 10H2.5M15.3 4.7l-1.3 1.3M6 14l-1.3 1.3M15.3 15.3L14 14M6 6L4.7 4.7"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-          />
+      <div class="relative flex-1">
+        <svg
+          class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-vault-text-faint"
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+        >
+          <circle cx="9" cy="9" r="5.2" stroke="currentColor" stroke-width="1.6" />
+          <path d="M13 13l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
         </svg>
-      </button>
-    </div>
-
-    <div class="relative">
-      <svg
-        class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-vault-text-muted"
-        viewBox="0 0 20 20"
-        fill="none"
-        aria-hidden="true"
-      >
-        <circle cx="9" cy="9" r="5.2" stroke="currentColor" stroke-width="1.6" />
-        <path d="M13 13l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-      </svg>
-      <input
-        v-model="state.query"
-        type="search"
-        placeholder="Search"
-        aria-label="Search passwords"
-        class="vault-field pl-8"
-        data-testid="entry-search"
-      />
+        <input
+          v-model="state.query"
+          type="search"
+          placeholder="Search"
+          aria-label="Search passwords"
+          class="vault-field pl-8"
+          data-testid="entry-search"
+        />
+      </div>
     </div>
 
     <!-- Skeleton rows rather than the word "Loading": the popup opens on every
@@ -166,15 +146,23 @@ function openSite(entry: EntrySummary) {
     </div>
 
     <ul v-else class="flex flex-col gap-1">
-      <li v-for="entry in state.entries" :key="entry.id" class="vault-row" data-testid="entry-row">
+      <li
+        v-for="entry in state.entries"
+        :key="entry.id"
+        class="vault-row"
+        :class="expandedId === entry.id ? 'vault-row-open' : ''"
+        data-testid="entry-row"
+      >
         <button
           class="vault-row-toggle"
           :aria-expanded="expandedId === entry.id"
           @click="expandedId = expandedId === entry.id ? null : entry.id"
         >
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-medium">{{ entry.name }}</span>
-            <span v-if="entry.login" class="block truncate text-xs text-vault-text-muted">
+            <span class="block truncate text-sm font-medium text-vault-text-strong">
+              {{ entry.name }}
+            </span>
+            <span v-if="entry.login" class="vault-mono block truncate text-vault-text-muted">
               {{ entry.login }}
             </span>
           </span>
@@ -194,33 +182,9 @@ function openSite(entry: EntrySummary) {
           </svg>
         </button>
 
-        <div v-if="expandedId === entry.id" class="flex flex-wrap gap-1 px-2 pb-2">
+        <div v-if="expandedId === entry.id" class="flex flex-col gap-1.5 px-3 pb-3">
           <button
-            v-if="entry.login"
-            class="vault-chip"
-            data-testid="copy-login"
-            @click="copy(entry, 'login')"
-          >
-            <svg
-              v-if="copied === `${entry.id}:login`"
-              class="h-3.5 w-3.5 text-vault-accent"
-              viewBox="0 0 20 20"
-              fill="none"
-              aria-hidden="true"
-            >
-              <path
-                d="M5 10.5l3.2 3.2L15 7"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            {{ copied === `${entry.id}:login` ? 'Copied' : 'Copy login' }}
-          </button>
-
-          <button
-            class="vault-chip-primary"
+            class="vault-chip-primary w-full"
             data-testid="copy-password"
             @click="copy(entry, 'password')"
           >
@@ -239,19 +203,63 @@ function openSite(entry: EntrySummary) {
                 stroke-linejoin="round"
               />
             </svg>
+            <svg v-else class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect
+                x="7"
+                y="7"
+                width="9"
+                height="9"
+                rx="2"
+                stroke="currentColor"
+                stroke-width="1.7"
+              />
+              <path
+                d="M13 7V6a2 2 0 00-2-2H6a2 2 0 00-2 2v5a2 2 0 002 2h1"
+                stroke="currentColor"
+                stroke-width="1.7"
+              />
+            </svg>
             {{ copied === `${entry.id}:password` ? 'Copied' : 'Copy password' }}
           </button>
 
-          <button v-if="entry.url" class="vault-chip" @click="openSite(entry)">Open site</button>
+          <div class="flex gap-1.5">
+            <button
+              v-if="entry.login"
+              class="vault-chip flex-1"
+              data-testid="copy-login"
+              @click="copy(entry, 'login')"
+            >
+              <svg
+                v-if="copied === `${entry.id}:login`"
+                class="h-3.5 w-3.5 text-vault-accent"
+                viewBox="0 0 20 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M5 10.5l3.2 3.2L15 7"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              {{ copied === `${entry.id}:login` ? 'Copied' : 'Copy login' }}
+            </button>
 
-          <button
-            v-if="entry.canWrite"
-            class="vault-chip"
-            data-testid="edit-entry"
-            @click="openEdit(entry)"
-          >
-            Edit in vault
-          </button>
+            <button v-if="entry.url" class="vault-chip flex-1" @click="openSite(entry)">
+              Open site
+            </button>
+
+            <button
+              v-if="entry.canWrite"
+              class="vault-chip flex-1 !text-vault-key"
+              data-testid="edit-entry"
+              @click="openEdit(entry)"
+            >
+              Edit
+            </button>
+          </div>
         </div>
       </li>
     </ul>
@@ -267,21 +275,12 @@ function openSite(entry: EntrySummary) {
 
     <!-- Said out loud rather than left for the user to discover in the vault's
          audit screen: every reveal is recorded. -->
-    <p
-      v-if="!auditNoticeDismissed"
-      class="flex items-start gap-1.5 rounded-md bg-vault-surface-muted px-2 py-1.5 text-xs text-vault-text-muted"
-      data-testid="audit-notice"
+    <button
+      v-if="group?.isOwner"
+      class="vault-btn-outline-accent"
+      data-testid="add-password"
+      @click="openCreate"
     >
-      <span class="flex-1">Copying a password is recorded in your vault's history.</span>
-      <button
-        class="shrink-0 font-medium underline underline-offset-2 hover:text-vault-text"
-        @click="auditNoticeDismissed = true"
-      >
-        Got it
-      </button>
-    </p>
-
-    <button v-if="group?.isOwner" class="vault-btn" data-testid="add-password" @click="openCreate">
       <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
         <path
           d="M10 4.5v11M4.5 10h11"
@@ -292,5 +291,21 @@ function openSite(entry: EntrySummary) {
       </svg>
       Add a password
     </button>
+
+    <!-- Said out loud rather than left for the user to discover in the vault's
+         audit screen: every reveal is recorded. -->
+    <p
+      v-if="!auditNoticeDismissed"
+      class="text-center text-[11px] text-vault-text-muted"
+      data-testid="audit-notice"
+    >
+      Copies are recorded in your vault's history.
+      <button
+        class="cursor-pointer font-semibold text-vault-text underline underline-offset-2"
+        @click="auditNoticeDismissed = true"
+      >
+        Got it
+      </button>
+    </p>
   </div>
 </template>

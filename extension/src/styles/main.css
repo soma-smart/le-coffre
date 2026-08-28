@@ -1,40 +1,38 @@
 @import 'tailwindcss';
 
 /*
- * The SPA gets its palette from PrimeVue's Aura preset at runtime. The popup
- * does not ship PrimeVue (see the plan: a 380px popup needs six widgets, and
- * Aura regenerates its token CSS on every init), so the handful of tokens we
- * actually use are declared here instead. Keep these in visual sync with the
- * SPA by eye, there is no shared source to import from.
+ * Direction "Nuit": the popup commits to a single dark identity, chosen over
+ * the mockup alternatives (brand-teal light, quiet pro). A security product's
+ * popup opens for seconds at a time; one confident look beats a pale twin of
+ * the web app. The palette is the vault's own: deep blue-charcoal surfaces,
+ * the logo's teal for the primary action, its key-orange as the rare warm
+ * accent. A light twin can come later as a second token block; the views only
+ * ever speak token names.
  */
 @theme {
-  --color-vault-surface: #ffffff;
-  --color-vault-surface-muted: #f4f5f7;
-  --color-vault-border: #e2e5e9;
-  --color-vault-text: #1f2429;
-  --color-vault-text-muted: #6b7280;
-  --color-vault-accent: #10b981;
-  --color-vault-accent-strong: #059669;
-  --color-vault-danger: #dc2626;
-  --color-vault-warning: #d97706;
+  --color-vault-surface: #0e181d;
+  --color-vault-surface-muted: #16242b;
+  --color-vault-border: #223540;
+  --color-vault-card: #131f26;
+  --color-vault-card-border: #1d2f38;
+  --color-vault-card-open: #142731;
+  --color-vault-card-open-border: #2b5561;
+  --color-vault-text: #e4edef;
+  --color-vault-text-strong: #f2f7f8;
+  --color-vault-text-muted: #7c979f;
+  --color-vault-text-faint: #61787f;
+  --color-vault-accent: #4cc9b8;
+  --color-vault-accent-strong: #7adcce;
+  --color-vault-on-accent: #04211f;
+  --color-vault-key: #f0a45c;
+  --color-vault-danger: #f87171;
+  --color-vault-warning: #f0a45c;
 
   /* Interaction states. Separate tokens rather than opacity tweaks at each call
-     site, so hover reads the same everywhere and dark mode can diverge. */
-  --color-vault-hover: #eceef1;
-  --color-vault-active: #e2e5ea;
-  --color-vault-ring: #10b981;
-}
-
-@media (prefers-color-scheme: dark) {
-  @theme {
-    --color-vault-surface: #1b1f24;
-    --color-vault-surface-muted: #23282f;
-    --color-vault-border: #333a43;
-    --color-vault-text: #e8eaed;
-    --color-vault-text-muted: #9aa2ad;
-    --color-vault-hover: #2b313a;
-    --color-vault-active: #333a43;
-  }
+     site, so hover reads the same everywhere. */
+  --color-vault-hover: #1a2b33;
+  --color-vault-active: #223540;
+  --color-vault-ring: #4cc9b8;
 }
 
 html,
@@ -54,9 +52,9 @@ body {
  *
  * Kept here rather than repeated as long class lists in each view: a popup has
  * about six controls and they must feel identical. Every interactive element
- * gets a hover state, a visible keyboard focus ring and a pressed state --
- * without them the popup reads as a static document rather than something you
- * can operate.
+ * gets a pointer cursor, a hover state, a visible keyboard focus ring and a
+ * pressed state -- without them the popup reads as a static document rather
+ * than something you can operate.
  *
  * The shared behaviour is applied through a selector list rather than a base
  * class the others `@apply`: Tailwind 4 cannot `@apply` a custom class declared
@@ -65,6 +63,7 @@ body {
 @layer components {
   .vault-btn,
   .vault-btn-primary,
+  .vault-btn-outline-accent,
   .vault-chip,
   .vault-chip-primary,
   .vault-icon-btn,
@@ -80,8 +79,28 @@ body {
       transform 80ms ease;
   }
 
+  /* Buttons default to cursor: default in every browser; a control that does
+     not change the cursor does not read as clickable. Text fields keep the
+     text cursor, but a <select> styled as a field is a picker, so it gets the
+     pointer through the dedicated rule below. */
+  .vault-btn,
+  .vault-btn-primary,
+  .vault-btn-outline-accent,
+  .vault-chip,
+  .vault-chip-primary,
+  .vault-icon-btn,
+  .vault-btn-danger,
+  .vault-btn-danger-solid,
+  .vault-row-toggle {
+    cursor: pointer;
+  }
+  select.vault-field {
+    cursor: pointer;
+  }
+
   .vault-btn:focus-visible,
   .vault-btn-primary:focus-visible,
+  .vault-btn-outline-accent:focus-visible,
   .vault-chip:focus-visible,
   .vault-chip-primary:focus-visible,
   .vault-icon-btn:focus-visible,
@@ -98,6 +117,7 @@ body {
 
   .vault-btn:disabled,
   .vault-btn-primary:disabled,
+  .vault-btn-outline-accent:disabled,
   .vault-chip:disabled,
   .vault-chip-primary:disabled,
   .vault-icon-btn:disabled {
@@ -108,7 +128,7 @@ body {
   /* Neutral action: bordered, fades to the hover surface. */
   .vault-btn {
     @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-vault-border
-      bg-vault-surface px-3 py-2 text-sm font-medium;
+      bg-vault-surface-muted px-3 py-2 text-sm font-medium text-vault-text;
   }
   .vault-btn:hover:not(:disabled) {
     background-color: var(--color-vault-hover);
@@ -118,10 +138,10 @@ body {
     transform: translateY(1px);
   }
 
-  /* The one primary action per screen. */
+  /* The one primary action per screen: the vault's teal, dark text on it. */
   .vault-btn-primary {
     @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-transparent
-      bg-vault-accent px-3 py-2 text-sm font-medium text-white;
+      bg-vault-accent px-3 py-2 text-sm font-bold text-vault-on-accent;
   }
   .vault-btn-primary:hover:not(:disabled) {
     background-color: var(--color-vault-accent-strong);
@@ -130,17 +150,32 @@ body {
     transform: translateY(1px);
   }
 
+  /* Prominent but not primary: the outlined teal of the Nuit direction. */
+  .vault-btn-outline-accent {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border
+      border-vault-card-open-border bg-transparent px-3 py-2 text-sm font-semibold
+      text-vault-accent;
+  }
+  .vault-btn-outline-accent:hover:not(:disabled) {
+    background-color: rgba(76, 201, 184, 0.08);
+  }
+  .vault-btn-outline-accent:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
   /* Compact action inside an expanded row. */
   .vault-chip {
-    @apply inline-flex items-center gap-1 rounded-md bg-vault-surface-muted px-2 py-1 text-xs
-      font-medium;
+    @apply inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs
+      font-semibold;
+    background-color: #1c333c;
+    color: #a9c6cc;
   }
   .vault-chip:hover:not(:disabled) {
-    background-color: var(--color-vault-hover);
+    background-color: #24404b;
   }
   .vault-chip-primary {
-    @apply inline-flex items-center gap-1 rounded-md bg-vault-accent px-2 py-1 text-xs
-      font-medium text-white;
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md bg-vault-accent px-2 py-1.5
+      text-xs font-bold text-vault-on-accent;
   }
   .vault-chip-primary:hover:not(:disabled) {
     background-color: var(--color-vault-accent-strong);
@@ -149,10 +184,11 @@ body {
   /* Icon-only square button. Needs an aria-label at every call site. */
   .vault-icon-btn {
     @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border
-      border-vault-border bg-vault-surface;
+      border-transparent bg-transparent text-vault-text-muted;
   }
   .vault-icon-btn:hover:not(:disabled) {
     background-color: var(--color-vault-hover);
+    color: var(--color-vault-text);
   }
 
   /* Destructive actions. Outlined by default so the solid one can be reserved
@@ -160,37 +196,76 @@ body {
   .vault-btn-danger {
     @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-vault-danger
       bg-transparent px-3 py-2 text-sm font-medium text-vault-danger;
+    cursor: pointer;
   }
   .vault-btn-danger:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--color-vault-danger) 10%, transparent);
+    background-color: color-mix(in srgb, var(--color-vault-danger) 12%, transparent);
   }
   .vault-btn-danger-solid {
     @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-transparent
-      bg-vault-danger px-3 py-2 text-sm font-medium text-white;
+      px-3 py-2 text-sm font-semibold;
+    background-color: #b91c1c;
+    color: #ffffff;
+    cursor: pointer;
   }
   .vault-btn-danger-solid:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--color-vault-danger) 85%, black);
+    background-color: #991b1b;
   }
 
   .vault-field {
-    @apply w-full rounded-md border border-vault-border bg-vault-surface-muted px-3 py-2 text-sm;
+    @apply w-full rounded-md border border-vault-border bg-vault-surface-muted px-3 py-2 text-sm
+      text-vault-text;
+  }
+  .vault-field::placeholder {
+    color: var(--color-vault-text-faint);
   }
   .vault-field:hover {
-    border-color: var(--color-vault-text-muted);
+    border-color: var(--color-vault-text-faint);
   }
 
   /* A whole row acting as a disclosure toggle. */
   .vault-row {
-    @apply rounded-md border border-vault-border;
+    @apply rounded-lg border border-vault-card-border bg-vault-card;
     transition:
       background-color 120ms ease,
-      border-color 120ms ease;
+      border-color 120ms ease,
+      box-shadow 120ms ease;
   }
   .vault-row:hover {
     background-color: var(--color-vault-hover);
   }
+  /* The open row is the one being acted on: stronger border plus a faint teal
+     glow, straight from the Nuit mockup. */
+  .vault-row-open {
+    background-color: var(--color-vault-card-open);
+    border-color: var(--color-vault-card-open-border);
+    box-shadow:
+      0 0 0 1px rgba(76, 201, 184, 0.08),
+      0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+  .vault-row-open:hover {
+    background-color: var(--color-vault-card-open);
+  }
   .vault-row-toggle {
-    @apply flex w-full items-center gap-2 rounded-md px-2 py-2 text-left;
+    @apply flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left;
+  }
+
+  /* Logins and other machine-ish strings. Local monospace only: a password
+     manager does not phone a font CDN. */
+  .vault-mono {
+    font-family: ui-monospace, 'JetBrains Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+    font-size: 11px;
+    letter-spacing: 0.01em;
+  }
+
+  /* The read-only badge: a quiet capability statement, always visible. */
+  .vault-pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5;
+    border-color: #23414b;
+    color: var(--color-vault-accent);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
   }
 
   .vault-skeleton {
@@ -218,6 +293,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .vault-btn,
   .vault-btn-primary,
+  .vault-btn-outline-accent,
   .vault-chip,
   .vault-chip-primary,
   .vault-icon-btn,
@@ -230,7 +306,8 @@ body {
     animation: none;
   }
   .vault-btn:active:not(:disabled),
-  .vault-btn-primary:active:not(:disabled) {
+  .vault-btn-primary:active:not(:disabled),
+  .vault-btn-outline-accent:active:not(:disabled) {
     transform: none;
   }
 }

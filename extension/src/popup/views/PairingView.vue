@@ -89,7 +89,10 @@ onUnmounted(() => clearInterval(poll))
       <p class="text-xs text-vault-text-muted">This code must match the one on that page:</p>
       <!-- The user matches this against the approval page. It is the only thing
            that distinguishes "my extension asked" from "some page asked". -->
-      <p class="font-mono text-2xl font-bold tracking-widest" data-testid="pairing-code">
+      <p
+        class="vault-mono !text-2xl font-bold tracking-widest text-vault-accent"
+        data-testid="pairing-code"
+      >
         {{ userCode }}
       </p>
     </div>
