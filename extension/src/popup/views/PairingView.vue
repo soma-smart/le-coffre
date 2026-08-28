@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
-import { send } from '../bridge'
+import { toPairingApprovalLink } from '@/domain/vaultUrl'
+
+import { openTab, send } from '../bridge'
 import { pollPairing, refreshConnection, state } from '../state/session'
 
 const userCode = ref<string | null>(null)
@@ -14,6 +16,30 @@ let poll: ReturnType<typeof setInterval> | undefined
 // mid-approval.
 const MIN_POLL_INTERVAL_MS = 3000
 
+const vaultUrl = computed(() =>
+  state.connection && 'vaultUrl' in state.connection ? state.connection.vaultUrl : null,
+)
+const vaultHost = computed(() => {
+  try {
+    return vaultUrl.value ? new URL(vaultUrl.value).host : null
+  } catch {
+    return null
+  }
+})
+
+/**
+ * Two modes, one screen. `inFlight` is the pairing awaiting approval, with its
+ * code on display and a poll running. Otherwise nothing is pending and the
+ * user needs an explicit way forward: after a cancel, an expired or revoked
+ * token, or a fresh browser session, the popup must offer "Connect" rather
+ * than open a tab by itself or, worse, show a lone Cancel button.
+ */
+const inFlight = computed(() => userCode.value !== null)
+
+const approvalLink = computed(() =>
+  vaultUrl.value && userCode.value ? toPairingApprovalLink(vaultUrl.value, userCode.value) : null,
+)
+
 function pollIntervalMs(seconds: number | undefined): number {
   return Math.max((seconds ?? 5) * 1000, MIN_POLL_INTERVAL_MS)
 }
@@ -21,7 +47,7 @@ function pollIntervalMs(seconds: number | undefined): number {
 /**
  * Register a pairing, then open the approval tab.
  *
- * Only ever called when there is no pairing in flight. Starting one
+ * Only ever called from an explicit click, never on mount. Starting one
  * unconditionally on mount was the bug: reopening the popup mid-approval
  * replaced the stored verifier, so the request the user had just approved could
  * never be redeemed, and a second tab opened every time.
@@ -58,6 +84,18 @@ async function cancel() {
   await refreshConnection()
 }
 
+/** The user closed the approval tab, or never saw it. Same code, same pairing. */
+function reopenApprovalPage() {
+  if (approvalLink.value) openTab(approvalLink.value)
+}
+
+/** Forget this vault entirely, host permission included, back to the first screen. */
+async function useAnotherVault() {
+  clearInterval(poll)
+  await send({ type: 'CONNECTION_DISCONNECT' })
+  await refreshConnection()
+}
+
 onMounted(() => {
   // Resume rather than restart when the worker reports a pairing already
   // awaiting approval, which is exactly the state the user is in when they
@@ -65,9 +103,7 @@ onMounted(() => {
   if (state.connection?.status === 'pairing') {
     userCode.value = state.connection.userCode
     watchForApproval(pollIntervalMs(state.connection.pollIntervalSeconds))
-    return
   }
-  void start()
 })
 
 onUnmounted(() => clearInterval(poll))
@@ -75,30 +111,74 @@ onUnmounted(() => clearInterval(poll))
 
 <template>
   <div class="flex flex-col gap-4">
-    <div>
-      <h2 class="text-base font-semibold">Approve this extension</h2>
-      <p class="mt-1 text-sm text-vault-text-muted">
-        A tab opened on your vault. Sign in there and approve the request.
-      </p>
-    </div>
+    <template v-if="inFlight">
+      <div>
+        <h2 class="text-base font-semibold text-vault-text-strong">Approve this extension</h2>
+        <p class="mt-1 text-sm text-vault-text-muted">
+          A tab opened on your vault. Sign in there and approve the request.
+        </p>
+      </div>
 
-    <div
-      v-if="userCode"
-      class="flex flex-col items-center gap-2 rounded-lg bg-vault-surface-muted p-4"
-    >
-      <p class="text-xs text-vault-text-muted">This code must match the one on that page:</p>
-      <!-- The user matches this against the approval page. It is the only thing
-           that distinguishes "my extension asked" from "some page asked". -->
-      <p
-        class="vault-mono !text-2xl font-bold tracking-widest text-vault-accent"
-        data-testid="pairing-code"
-      >
-        {{ userCode }}
-      </p>
-    </div>
+      <div class="vault-row vault-row-open flex flex-col items-center gap-2 px-4 py-4">
+        <p class="text-xs text-vault-text-muted">This code must match the one on that page:</p>
+        <!-- The user matches this against the approval page. It is the only thing
+             that distinguishes "my extension asked" from "some page asked". -->
+        <p
+          class="vault-mono !text-2xl font-bold tracking-widest text-vault-accent"
+          data-testid="pairing-code"
+        >
+          {{ userCode }}
+        </p>
+        <p class="flex items-center gap-1.5 text-xs text-vault-text-faint">
+          <span
+            class="h-1.5 w-1.5 animate-pulse rounded-full bg-vault-accent"
+            aria-hidden="true"
+          ></span>
+          Waiting for your approval
+        </p>
+      </div>
 
-    <p v-if="busy" class="text-sm text-vault-text-muted">Preparing…</p>
+      <div class="flex gap-2">
+        <button
+          class="vault-btn flex-1"
+          data-testid="pairing-reopen"
+          :disabled="!approvalLink"
+          @click="reopenApprovalPage"
+        >
+          Reopen the page
+        </button>
+        <button class="vault-btn flex-1" data-testid="pairing-cancel" @click="cancel">
+          Cancel
+        </button>
+      </div>
+    </template>
 
-    <button class="vault-btn" data-testid="pairing-cancel" @click="cancel">Cancel</button>
+    <template v-else>
+      <div>
+        <h2 class="text-base font-semibold text-vault-text-strong">Connect to your vault</h2>
+        <p class="mt-1 text-sm text-vault-text-muted">
+          Sign in on
+          <span class="vault-mono text-vault-text">{{ vaultHost ?? 'your vault' }}</span>
+          and approve this extension. It will only be able to read passwords.
+        </p>
+      </div>
+
+      <button class="vault-btn-primary" data-testid="pairing-start" :disabled="busy" @click="start">
+        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path
+            d="M8 5H5.5A1.5 1.5 0 004 6.5v8A1.5 1.5 0 005.5 16h8a1.5 1.5 0 001.5-1.5V12M11.5 4H16v4.5M16 4l-7 7"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        {{ busy ? 'Opening your vault' : 'Connect' }}
+      </button>
+
+      <button class="vault-btn" data-testid="pairing-change-vault" @click="useAnotherVault">
+        Use a different vault
+      </button>
+    </template>
   </div>
 </template>
