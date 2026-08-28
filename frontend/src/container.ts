@@ -1,6 +1,7 @@
 import type { AuthGateway } from '@/application/ports/AuthGateway'
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { ExtensionGateway } from '@/application/ports/ExtensionGateway'
+import type { LoginRedirectGateway } from '@/application/ports/LoginRedirectGateway'
 import type { PairingHandoffGateway } from '@/application/ports/PairingHandoffGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
@@ -11,6 +12,7 @@ import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
 import { GetAdminStatisticsUseCase } from '@/application/statistics/GetAdminStatistics'
 import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
+import { ConsumeLoginRedirectUseCase } from '@/application/auth/ConsumeLoginRedirect'
 import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
 import { HandleSsoCallbackUseCase } from '@/application/auth/HandleSsoCallback'
 import { IsSsoConfiguredUseCase } from '@/application/auth/IsSsoConfigured'
@@ -18,6 +20,7 @@ import { LoginWithPasswordUseCase } from '@/application/auth/LoginWithPassword'
 import { LogoutUseCase } from '@/application/auth/Logout'
 import { RefreshAccessTokenUseCase } from '@/application/auth/RefreshAccessToken'
 import { RegisterAdminUseCase } from '@/application/auth/RegisterAdmin'
+import { RememberLoginRedirectUseCase } from '@/application/auth/RememberLoginRedirect'
 import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
 import { ApprovePairingUseCase } from '@/application/extension/ApprovePairing'
 import { DenyPairingUseCase } from '@/application/extension/DenyPairing'
@@ -89,6 +92,7 @@ export interface Ports {
   oneTimeLinkRepository: OneTimeLinkRepository
   extensionGateway: ExtensionGateway
   pairingHandoffGateway: PairingHandoffGateway
+  loginRedirectGateway: LoginRedirectGateway
 }
 
 export interface Container {
@@ -155,6 +159,8 @@ export interface Container {
     getSsoUrl: GetSsoUrlUseCase
     handleSsoCallback: HandleSsoCallbackUseCase
     isSsoConfigured: IsSsoConfiguredUseCase
+    rememberLoginRedirect: RememberLoginRedirectUseCase
+    consumeLoginRedirect: ConsumeLoginRedirectUseCase
   }
   preferences: {
     read: ReadPreferenceUseCase
@@ -240,6 +246,8 @@ export function buildContainer(ports: Ports): Container {
       getSsoUrl: new GetSsoUrlUseCase(ports.authGateway),
       handleSsoCallback: new HandleSsoCallbackUseCase(ports.authGateway),
       isSsoConfigured: new IsSsoConfiguredUseCase(ports.authGateway),
+      rememberLoginRedirect: new RememberLoginRedirectUseCase(ports.loginRedirectGateway),
+      consumeLoginRedirect: new ConsumeLoginRedirectUseCase(ports.loginRedirectGateway),
     },
     preferences: {
       read: new ReadPreferenceUseCase(ports.preferencesGateway),
