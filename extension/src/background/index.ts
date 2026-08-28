@@ -11,9 +11,10 @@ import { chromeBrowser } from '@/platform/chrome'
 import { ALARMS } from '@/shared/storageKeys'
 
 import type { Deps } from './deps'
+import { ensureAutoLockAlarm, handleAutoLockAlarm } from './handlers/autoLock'
 import { pollPairing } from './handlers/pairing'
 import { route } from './router'
-import { clearCredentials, isIdleExpired, readSettings } from './session'
+import { clearCredentials } from './session'
 
 const deps: Deps = {
   browser: chromeBrowser,
@@ -45,14 +46,13 @@ deps.browser.alarms.onAlarm(async (name) => {
   }
 
   if (name === ALARMS.autoLock) {
-    const settings = await readSettings(deps.browser)
-    if (await isIdleExpired(deps.browser, deps.clock.now(), settings.autoLockMinutes)) {
-      await clearCredentials(deps.browser)
-      await deps.browser.clipboard.clear()
-      await deps.browser.alarms.clear(ALARMS.autoLock)
-    }
+    await handleAutoLockAlarm(deps)
   }
 })
+
+// Every worker wake-up re-ensures the idle watchdog, so it survives an
+// extension reload or update; the call is a no-op without a stored token.
+void ensureAutoLockAlarm(deps)
 
 // Losing the host permission invalidates everything derived from it. The user
 // can revoke at any moment from chrome://extensions, with no other signal.
