@@ -6,7 +6,7 @@
  * silently evaporates.
  */
 import type { Browser } from '@/platform/browser'
-import { LOCAL_KEYS, SESSION_KEYS } from '@/shared/storageKeys'
+import { ALARMS, LOCAL_KEYS, SESSION_KEYS } from '@/shared/storageKeys'
 
 export interface StoredSettings {
   clipboardClearSeconds: number
@@ -77,12 +77,15 @@ export async function clearCredentials(browser: Browser): Promise<void> {
   await browser.local.remove(LOCAL_KEYS.token)
   await browser.local.remove(LOCAL_KEYS.tokenExpiresAt)
   await browser.session.clear()
+  // No credential, nothing left for the idle watchdog to guard.
+  await browser.alarms.clear(ALARMS.autoLock)
 }
 
 /** Wipe everything, including configuration. Used by Disconnect. */
 export async function clearEverything(browser: Browser): Promise<void> {
   await browser.local.clear()
   await browser.session.clear()
+  await browser.alarms.clear(ALARMS.autoLock)
 }
 
 export async function readPairing(browser: Browser): Promise<PairingInProgress | null> {
