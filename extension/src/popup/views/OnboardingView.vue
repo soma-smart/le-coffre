@@ -41,12 +41,19 @@ function connect() {
         return
       }
       const result = await send({ type: 'CONNECTION_SET_VAULT_URL', vaultUrl })
-      if (result.ok) {
-        state.connection = result.data
-      } else {
+      if (!result.ok) {
         state.error = result.error
         await refreshConnection()
+        return
       }
+
+      // Start the pairing here, as a direct consequence of the click that
+      // just configured the vault, rather than letting the pairing screen open
+      // a tab on its own whenever it happens to mount. That auto-start is what
+      // made the popup pop a new tab after every cancel, expiry or reopen.
+      const started = await send({ type: 'PAIRING_START' })
+      if (!started.ok) state.error = started.error
+      await refreshConnection()
     })
     .finally(() => {
       busy.value = false
