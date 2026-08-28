@@ -224,6 +224,17 @@ the popup renders blank in Chrome while working fine in `vite preview`:
 `scripts/validate-manifest.ts` re-checks the last two against the built output,
 so a regression fails CI rather than shipping.
 
+**The toolbar icon** comes from `action.default_icon`, not from the top-level
+`icons` key, which feeds the extensions page, the management UI and the
+permission prompts instead. Leaving `default_icon` out puts the toolbar at the
+mercy of a fallback, and the symptom is a blank slot in the toolbar while
+everything still looks right on the extensions page. `validate-manifest.ts`
+requires it, at 16 and 32, the two sizes the toolbar renders.
+
+The artwork is the web app's logo, a detailed isometric lock and key. It reads
+well from 32px up and turns to mush at 16px; no resampling filter fixes that,
+only a simplified 16px glyph would.
+
 **Adding a content script later** (autofill) needs a second Vite pass with
 `format: 'iife'` and `inlineDynamicImports`, content scripts cannot be code-split.
 Do not try to fit it into this Rollup graph.

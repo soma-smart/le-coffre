@@ -101,6 +101,27 @@ if (
   fail(`version "${version}" must be 1-4 dot-separated integers, each <= 65535`)
 }
 
+// The toolbar icon comes from action.default_icon, not from the top-level
+// `icons` key: `icons` feeds the extensions page, the management UI and the
+// permission prompts. Chrome's fallback between the two is not something to
+// rely on, and the failure mode is silent and cosmetic, which is exactly the
+// kind that ships. Require it explicitly, at the two sizes the toolbar renders
+// (16 logical, 32 on a HiDPI display).
+const toolbarIcon = manifest.action?.default_icon
+if (!toolbarIcon || typeof toolbarIcon !== 'object' || Object.keys(toolbarIcon).length === 0) {
+  fail(
+    'action.default_icon is missing. Without it the toolbar icon is left to a fallback ' +
+      'from the top-level `icons` key, which is why the extension can show a blank ' +
+      'placeholder in the toolbar while looking fine on the extensions page.',
+  )
+} else {
+  for (const size of ['16', '32']) {
+    if (!toolbarIcon[size]) {
+      fail(`action.default_icon has no "${size}" entry, which is a size the toolbar renders at`)
+    }
+  }
+}
+
 // Every path the manifest names must actually be in the bundle.
 const referenced = [
   manifest.background?.service_worker,
