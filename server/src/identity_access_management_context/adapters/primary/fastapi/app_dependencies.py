@@ -133,6 +133,21 @@ def get_admin_event_repository(
     return SqlIamEventRepository(session)
 
 
+# Hoisted above the use-case providers: Depends(...) in a def line is evaluated
+# at import time, so these must exist before any provider that references them
+# (get_delete_user_usecase does, well before the extension block).
+def get_extension_pairing_repository(
+    session: Session = Depends(get_session),
+) -> ExtensionPairingRepository:
+    return SqlExtensionPairingRepository(session)
+
+
+def get_extension_token_repository(
+    session: Session = Depends(get_session),
+) -> ExtensionTokenRepository:
+    return SqlExtensionTokenRepository(session)
+
+
 def get_group_repository(session: Session = Depends(get_session)) -> GroupRepository:
     return SqlGroupRepository(session)
 
@@ -233,6 +248,9 @@ def get_delete_user_usecase(
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
     one_time_link_revocation_gateway: OneTimeLinkRevocationGateway = Depends(get_one_time_link_revocation_gateway),
     user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -242,6 +260,9 @@ def get_delete_user_usecase(
         user_event_repository,
         one_time_link_revocation_gateway,
         user_password_repository,
+        extension_token_repository,
+        admin_event_repository,
+        time_provider,
     )
 
 
@@ -600,18 +621,6 @@ def get_client_ip(request: Request) -> str:
         trusted_proxies=get_rate_limit_trusted_proxies(),
         hops=get_rate_limit_trusted_proxy_hops(),
     )
-
-
-def get_extension_pairing_repository(
-    session: Session = Depends(get_session),
-) -> ExtensionPairingRepository:
-    return SqlExtensionPairingRepository(session)
-
-
-def get_extension_token_repository(
-    session: Session = Depends(get_session),
-) -> ExtensionTokenRepository:
-    return SqlExtensionTokenRepository(session)
 
 
 def get_start_extension_pairing_usecase(

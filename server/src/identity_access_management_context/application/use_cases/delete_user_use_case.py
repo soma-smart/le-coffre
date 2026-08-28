@@ -2,6 +2,8 @@ import logging
 
 from identity_access_management_context.application.commands import DeleteUserCommand
 from identity_access_management_context.application.gateways import (
+    AdminEventRepository,
+    ExtensionTokenRepository,
     GroupMemberRepository,
     GroupRepository,
     OneTimeLinkRevocationGateway,
@@ -9,8 +11,12 @@ from identity_access_management_context.application.gateways import (
     UserPasswordRepository,
     UserRepository,
 )
+from identity_access_management_context.application.services import (
+    REVOCATION_REASON_USER_DELETED,
+    ExtensionRevocationRecordingService,
+)
 from identity_access_management_context.domain.events import UserDeletedEvent
-from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
@@ -27,6 +33,9 @@ class DeleteUserUseCase(TracedUseCase):
         user_event_repository: UserEventRepository,
         one_time_link_revocation_gateway: OneTimeLinkRevocationGateway,
         user_password_repository: UserPasswordRepository,
+        extension_token_repository: ExtensionTokenRepository,
+        admin_event_repository: AdminEventRepository,
+        time_provider: TimeGateway,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
@@ -35,6 +44,9 @@ class DeleteUserUseCase(TracedUseCase):
         self._user_event_repository = user_event_repository
         self._one_time_link_revocation_gateway = one_time_link_revocation_gateway
         self._user_password_repository = user_password_repository
+        self._extension_token_repository = extension_token_repository
+        self._admin_event_repository = admin_event_repository
+        self._time_provider = time_provider
 
     def execute(self, command: DeleteUserCommand) -> None:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
@@ -50,6 +62,24 @@ class DeleteUserUseCase(TracedUseCase):
             logger.info(
                 "Revoked one-time links of a deleted user",
                 extra={"user_id": str(user_id), "revoked_count": revoked_links},
+            )
+
+        # Extension tokens outlive the account the same way, and worse: token
+        # validation resolves identity through the SSO table, whose row survives
+        # deletion, and skips the session_invalid_before cutoff once the user
+        # row is gone. Without this revocation a deleted SSO account keeps
+        # reading the vault until the token's absolute expiry, up to 30 days.
+        revoked_tokens = self._extension_token_repository.revoke_all_for_user(
+            user_id, self._time_provider.get_current_time()
+        )
+        if revoked_tokens:
+            ExtensionRevocationRecordingService.record(
+                self.event_publisher,
+                self._admin_event_repository,
+                user_id=user_id,
+                token_id=None,
+                reason=REVOCATION_REASON_USER_DELETED,
+                revoked_count=revoked_tokens,
             )
 
         personal_group = self.group_repository.get_by_user_id(user_id)
