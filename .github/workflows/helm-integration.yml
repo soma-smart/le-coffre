@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.2.0
+        uses: docker/setup-buildx-action@v4.3.0
 
       - name: Build Docker image
         uses: docker/build-push-action@v7.3.0
@@ -39,7 +39,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan Docker image (Grype)
-        uses: anchore/scan-action@v7.4.0
+        uses: anchore/scan-action@v7.4.2
         id: grype-scan
         with:
           image: localhost/le-coffre-${{ matrix.service.name }}:ci
