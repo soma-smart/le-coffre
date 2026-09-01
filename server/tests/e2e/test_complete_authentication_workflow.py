@@ -292,21 +292,28 @@ async def test_complete_authentication_workflow(
         assert reuse_response.status_code == 201
     print("✅ CSRF token successfully reused across 3 requests")
 
-    # Step 4.8: Test CSRF token regeneration invalidates old token
-    print("\n🔄 Step 4.8: Testing CSRF token regeneration...")
+    # Step 4.8: issuing a second token leaves the first one valid.
+    #
+    # This step used to assert the opposite, and that assertion encoded a real
+    # bug: one token per user made the app single-tab. Every fresh tab fetches
+    # its own token through the router guard, and the browser extension's
+    # approval page does the same, so opening either one disarmed every tab
+    # already open. The next POST from an older tab failed with "Invalid or
+    # expired CSRF token" with nothing on screen to explain it.
+    print("\n🔄 Step 4.8: Testing that a second CSRF token leaves the first valid...")
     new_token_response = e2e_client.get("/api/auth/csrf-token")
     new_csrf_token = new_token_response.json()["csrf_token"]
     assert new_csrf_token != csrf_token
     print(f"✅ New CSRF token generated: {new_csrf_token[:20]}...")
 
-    # Old token should be rejected
+    # The tab still holding the earlier token keeps working.
     old_token_response = e2e_client.post(
         "/api/groups/",
-        json={"name": "Old Token", "description": "Should fail"},
+        json={"name": "Old Token", "description": "Issued before the newer token"},
         headers={"X-CSRF-Token": csrf_token},
     )
-    assert old_token_response.status_code == 403
-    print("✅ Old CSRF token correctly rejected after regeneration")
+    assert old_token_response.status_code == 201
+    print("✅ Earlier CSRF token still accepted alongside the newer one")
 
     # New token should work
     new_token_test_response = e2e_client.post(
