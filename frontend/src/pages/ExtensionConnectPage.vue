@@ -36,9 +36,24 @@ const requestedAgo = computed(() => {
   return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
 })
 
-const expiresAtLabel = computed(() =>
-  pairing.value ? pairing.value.expiresAt.toLocaleString() : '',
-)
+/**
+ * How long the credential would last, in the plainest terms available.
+ *
+ * Deliberately the granted lifetime and not `pairing.expiresAt`, which is when
+ * this request stops being approvable, five minutes away. Showing that here
+ * told the user they were authorising five minutes of access when they were
+ * authorising thirty days, on the one screen whose whole job is informed
+ * consent.
+ */
+const accessLifetimeLabel = computed(() => {
+  const seconds = pairing.value?.accessLifetimeSeconds ?? 0
+  const days = Math.round(seconds / 86400)
+  if (days >= 1) return days === 1 ? '1 day' : `${days} days`
+  const hours = Math.round(seconds / 3600)
+  if (hours >= 1) return hours === 1 ? '1 hour' : `${hours} hours`
+  const minutes = Math.max(1, Math.round(seconds / 60))
+  return minutes === 1 ? '1 minute' : `${minutes} minutes`
+})
 
 function readCodeFromFragment(): string | null {
   const fragment = window.location.hash.replace(/^#/, '')
@@ -236,7 +251,7 @@ async function deny() {
                 <li>manage your other connected extensions</li>
               </ul>
               <p class="mt-2">
-                Access expires on <strong>{{ expiresAtLabel }}</strong
+                Access lasts <strong>{{ accessLifetimeLabel }}</strong
                 >. You can disconnect it at any time from your profile.
               </p>
             </Message>

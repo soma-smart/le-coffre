@@ -481,6 +481,10 @@ export type GetExtensionPairingResponse = {
      */
     expires_at: string;
     /**
+     * Access Lifetime Seconds
+     */
+    access_lifetime_seconds: number;
+    /**
      * Created From Ip
      */
     created_from_ip: string | null;
