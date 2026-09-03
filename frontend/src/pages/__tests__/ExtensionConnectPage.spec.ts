@@ -28,6 +28,7 @@ function seededGateway(overrides = {}) {
     deviceName: 'Chrome on macOS',
     createdAt: NOW,
     expiresAt: new Date(NOW.getTime() + 300_000),
+    accessLifetimeSeconds: 30 * 86400,
     createdFromIp: '203.0.113.5',
     isResolved: false,
     ...overrides,
@@ -215,6 +216,23 @@ describe('ExtensionConnectPage', () => {
 
     expect(wrapper.text()).toContain('Could not establish a secure session')
     expect(wrapper.find('[data-testid="approve-button"]').exists()).toBe(false)
+  })
+
+  it('should state how long the access lasts, not when the request expires', async () => {
+    // Regression. The sentence reads "Access lasts X" and used to be fed
+    // `pairing.expiresAt`, which is when the request stops being approvable,
+    // five minutes away. It told the user they were authorising five minutes
+    // of access when they were authorising thirty days, on the one screen
+    // whose whole job is informed consent.
+    const wrapper = await mountPage(seededGateway({ accessLifetimeSeconds: 30 * 86400 }))
+
+    expect(wrapper.text()).toContain('Access lasts 30 days')
+  })
+
+  it('should render a short access lifetime in its own unit', async () => {
+    const wrapper = await mountPage(seededGateway({ accessLifetimeSeconds: 7200 }))
+
+    expect(wrapper.text()).toContain('Access lasts 2 hours')
   })
 
   it('should explain itself when no code was supplied at all', async () => {

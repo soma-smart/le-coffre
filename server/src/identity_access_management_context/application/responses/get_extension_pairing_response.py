@@ -14,6 +14,11 @@ class ExtensionPairingDetailsResponse:
     user_code: str
     device_name: str
     created_at: datetime
+    #: When this *request* stops being approvable, minutes away. Not the
+    #: lifetime of the credential it would create.
     expires_at: datetime
+    #: How long the credential itself would last. The approval page states this
+    #: one: it is what the user is actually consenting to.
+    access_lifetime_seconds: int
     created_from_ip: str | None
     is_resolved: bool

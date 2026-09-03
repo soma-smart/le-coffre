@@ -37,6 +37,7 @@ export class BackendExtensionGateway implements ExtensionGateway {
       deviceName: response.data.device_name,
       createdAt: new Date(response.data.created_at),
       expiresAt: new Date(response.data.expires_at),
+      accessLifetimeSeconds: response.data.access_lifetime_seconds,
       createdFromIp: response.data.created_from_ip ?? null,
       isResolved: response.data.is_resolved,
     }
