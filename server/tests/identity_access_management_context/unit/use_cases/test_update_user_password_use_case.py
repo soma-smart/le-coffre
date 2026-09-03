@@ -1,3 +1,4 @@
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
@@ -8,11 +9,12 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     UpdateUserPasswordUseCase,
 )
-from identity_access_management_context.domain.entities import User, UserPassword
+from identity_access_management_context.domain.entities import ExtensionToken, User, UserPassword
 from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     UserNotFoundException,
 )
+from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 from tests.identity_access_management_context.unit.fakes import (
     FakePasswordHashingGateway,
     FakeTokenGateway,
@@ -30,6 +32,9 @@ def use_case(
     auth_session_repository,
     token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
+    extension_token_repository,
+    domain_event_publisher,
+    admin_event_repository,
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
@@ -38,6 +43,9 @@ def use_case(
         auth_session_repository,
         token_gateway,
         time_provider,
+        extension_token_repository,
+        domain_event_publisher,
+        admin_event_repository,
     )
 
 
@@ -189,3 +197,56 @@ def test_given_password_record_exists_but_user_missing_when_updating_password_th
     assert unchanged_user_password is not None
     assert password_hashing_gateway.verify(old_password, unchanged_user_password.password_hash)
     assert not password_hashing_gateway.verify(new_password, unchanged_user_password.password_hash)
+
+
+def test_given_paired_extensions_when_password_changes_then_revokes_them_outright(
+    use_case: UpdateUserPasswordUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+    extension_token_repository,
+    time_provider: FakeTimeGateway,
+):
+    """Revoked on the row, not merely shadowed by session_invalid_before.
+
+    The cutoff alone did stop an extension token authenticating, but it left
+    revoked_at empty, so `is_active` stayed true. Two things read the row rather
+    than the cutoff and both then lied: the "Connected extensions" screen listed
+    a dead credential as live, and the rate limiter kept charging its requests
+    to this user's per-user bucket, which a thief holding the dead token could
+    burn at the victim's expense.
+    """
+    user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    now = time_provider.get_current_time()
+
+    user_repository.save(User(id=user_id, username="u", email="u@example.com", name="U"))
+    user_password_repository.save(
+        UserPassword(
+            id=user_id,
+            email="u@example.com",
+            display_name="U",
+            password_hash=password_hashing_gateway.hash("old-password-long-enough"),
+        )
+    )
+    extension_token_repository.add(
+        ExtensionToken.create(
+            user_id=user_id,
+            secret=ExtensionTokenSecret.generate(),
+            device_name="Browser extension",
+            lifetime=timedelta(days=30),
+            now=now,
+        )
+    )
+    assert extension_token_repository.count_active_for_user(user_id, now) == 1
+
+    use_case.execute(
+        UpdateUserPasswordCommand(
+            user_id=user_id,
+            old_password="old-password-long-enough",
+            new_password="new-password-long-enough",
+        )
+    )
+
+    assert extension_token_repository.count_active_for_user(user_id, now) == 0
+    stored = extension_token_repository.list_for_user(user_id)[0]
+    assert stored.revoked_at is not None
