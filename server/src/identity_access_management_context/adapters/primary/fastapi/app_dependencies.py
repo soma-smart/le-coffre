@@ -289,6 +289,9 @@ def get_update_user_password_usecase(
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
     return UpdateUserPasswordUseCase(
         user_password_repository,
@@ -297,6 +300,9 @@ def get_update_user_password_usecase(
         auth_session_repository,
         token_gateway,
         time_provider,
+        extension_token_repository,
+        event_publisher,
+        admin_event_repository,
     )
 
 

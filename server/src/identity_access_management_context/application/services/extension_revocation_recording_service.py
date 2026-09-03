@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 REVOCATION_REASON_USER_REQUEST = "user_request"
 REVOCATION_REASON_USER_DELETED = "user_deleted"
+REVOCATION_REASON_PASSWORD_CHANGED = "password_changed"  # noqa: S105 - an audit label, not a secret
 
 
 class ExtensionRevocationRecordingService:
