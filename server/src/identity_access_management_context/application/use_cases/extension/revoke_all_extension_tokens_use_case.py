@@ -36,6 +36,7 @@ class RevokeAllExtensionTokensUseCase(TracedUseCase):
                 self.event_publisher,
                 self.admin_event_repository,
                 user_id=user_id,
+                actor_user_id=user_id,
                 token_id=None,
                 reason=REVOCATION_REASON_USER_REQUEST,
                 revoked_count=revoked,

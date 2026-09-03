@@ -387,3 +387,48 @@ def test_given_user_with_extension_tokens_when_deleted_should_revoke_them_all(
     assert len(revocations) == 1
     assert revocations[0].reason == "user_deleted"
     assert revocations[0].revoked_count == 2
+
+
+def test_given_admin_deletion_when_revoking_extensions_then_credits_the_admin_not_the_victim(
+    use_case: DeleteUserUseCase,
+    user_repository: FakeUserRepository,
+    extension_token_repository,
+    admin_event_repository,
+    time_provider,
+):
+    """Who did it, and whose tokens: two questions, two fields.
+
+    The audit entry used to name the deleted user as the actor, while the
+    UserDeletedEvent written a few lines later in the same use case named the
+    administrator. One operation, two rows, two different actors, one of them
+    wrong. And once the actor is corrected the owner has to travel in the
+    payload, or the row says an administrator revoked something without saying
+    whose.
+    """
+    user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    admin_id = UUID("123e4567-e89b-12d3-a456-426614174001")
+    now = time_provider.get_current_time()
+
+    user_repository.save(User(id=user_id, username="u", email="u@example.com", name="U"))
+    extension_token_repository.add(
+        ExtensionToken.create(
+            user_id=user_id,
+            secret=ExtensionTokenSecret.generate(),
+            device_name="Browser extension",
+            lifetime=timedelta(days=30),
+            now=now,
+        )
+    )
+
+    use_case.execute(
+        DeleteUserCommand(
+            user_id=user_id,
+            requesting_user=AuthenticatedUser(user_id=admin_id, roles=["admin"]),
+        )
+    )
+
+    entry = next(
+        event for event in admin_event_repository.events if event["event_type"] == "ExtensionTokenRevokedEvent"
+    )
+    assert entry["actor_user_id"] == admin_id
+    assert entry["event_data"]["user_id"] == str(user_id)
