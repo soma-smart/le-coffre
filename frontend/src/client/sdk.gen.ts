@@ -1243,6 +1243,10 @@ export const exchangeExtensionDeviceExtensionDeviceExchangePost = <ThrowOnError 
  * Everything returned except `device_name` is vouched for by the server. `device_name` is
  * self-reported by the extension, so the page must present it as untrusted. `created_from_ip`
  * matters: a foreign address is what gives away a remote attacker who started the pairing.
+ *
+ * Two different clocks travel here, and confusing them misleads the user at the one moment
+ * consent is given: `expires_at` is when this *request* stops being approvable, minutes away,
+ * while `access_lifetime_seconds` is how long the credential itself would last.
  */
 export const getExtensionPairingExtensionPairingUserCodeGet = <ThrowOnError extends boolean = false>(options: Options<GetExtensionPairingExtensionPairingUserCodeGetData, ThrowOnError>): RequestResult<GetExtensionPairingExtensionPairingUserCodeGetResponses, GetExtensionPairingExtensionPairingUserCodeGetErrors, ThrowOnError> => (options.client ?? client).get<GetExtensionPairingExtensionPairingUserCodeGetResponses, GetExtensionPairingExtensionPairingUserCodeGetErrors, ThrowOnError>({
     security: [{

@@ -645,7 +645,11 @@ def get_get_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
-    return GetExtensionPairingUseCase(extension_pairing_repository, time_provider)
+    return GetExtensionPairingUseCase(
+        extension_pairing_repository,
+        time_provider,
+        get_extension_token_lifetime_seconds(),
+    )
 
 
 def get_approve_extension_pairing_usecase(

@@ -17,6 +17,7 @@ function pairing(overrides: Partial<Parameters<InMemoryExtensionGateway['seedPai
     deviceName: 'Chrome on macOS',
     createdAt: NOW,
     expiresAt: new Date(NOW.getTime() + 300_000),
+    accessLifetimeSeconds: 30 * 86400,
     createdFromIp: '203.0.113.5',
     isResolved: false,
     ...overrides,

@@ -19,9 +19,11 @@ class GetExtensionPairingUseCase(TracedUseCase):
         self,
         extension_pairing_repository: ExtensionPairingRepository,
         time_provider: TimeGateway,
+        token_lifetime_seconds: int,
     ):
         self.extension_pairing_repository = extension_pairing_repository
         self.time_provider = time_provider
+        self.token_lifetime_seconds = token_lifetime_seconds
 
     def execute(self, command: GetExtensionPairingCommand) -> ExtensionPairingDetailsResponse:
         pairing = ExtensionPairingLookupService.get_or_raise(self.extension_pairing_repository, command.user_code)
@@ -35,6 +37,7 @@ class GetExtensionPairingUseCase(TracedUseCase):
             device_name=pairing.device_name,
             created_at=pairing.created_at,
             expires_at=pairing.expires_at,
+            access_lifetime_seconds=self.token_lifetime_seconds,
             created_from_ip=pairing.created_from_ip,
             is_resolved=pairing.is_resolved(),
         )

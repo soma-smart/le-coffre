@@ -19,7 +19,14 @@ export interface ExtensionPairingDetails {
    */
   deviceName: string
   createdAt: Date
+  /**
+   * When this *request* stops being approvable, minutes away. Not the lifetime
+   * of the credential it would create: the approval page states that one, and
+   * showing this in its place understated the grant by a factor of thousands.
+   */
   expiresAt: Date
+  /** How long the credential itself would last, which is what is consented to. */
+  accessLifetimeSeconds: number
   /**
    * The address the pairing was requested from. A foreign one is what gives
    * away a remote attacker who started it.
