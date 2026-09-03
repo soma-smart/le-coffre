@@ -44,7 +44,9 @@ def get_password(
     Retrieve a password by its ID with user authentication.
 
     - **password_id**: The ID of the password to retrieve
-    - **Authentication**: Requires authentication via access_token cookie
+    - **Authentication**: an access_token cookie, or a browser-extension bearer
+      token. An extension token is read-only and never carries the admin role,
+      so it reaches only what its own user can read.
     """
     try:
         command = GetPasswordCommand(requester_id=principal.user.user_id, password_id=password_id)
