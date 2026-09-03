@@ -53,7 +53,9 @@ def list_passwords(
     List all passwords for the authenticated user, optionally filtered by folder.
 
     - **folder**: Optional folder name to filter passwords
-    - **Authentication**: Requires authentication via access_token cookie
+    - **Authentication**: an access_token cookie, or a browser-extension bearer
+      token. An extension token is read-only and never carries the admin role,
+      so it reaches only what its own user can read.
 
     Returns a list of passwords accessible by the user.
 
