@@ -103,7 +103,7 @@ function disconnectAll() {
 <template>
   <div class="border-t pt-4 mt-6">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold">Extensions connectées</h3>
+      <h3 class="text-lg font-semibold">Connected extensions</h3>
       <Button
         v-if="extensions.some((extension) => extension.isActive)"
         label="Disconnect all"
