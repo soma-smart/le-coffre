@@ -101,6 +101,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
                 self._event_publisher,
                 self._admin_event_repository,
                 user_id=user.id,
+                actor_user_id=user.id,
                 token_id=None,
                 reason=REVOCATION_REASON_PASSWORD_CHANGED,
                 revoked_count=revoked,

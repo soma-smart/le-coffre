@@ -24,6 +24,7 @@ class ExtensionRevocationRecordingService:
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
         user_id: UUID,
+        actor_user_id: UUID,
         token_id: UUID | None,
         reason: str,
         revoked_count: int,
@@ -34,6 +35,11 @@ class ExtensionRevocationRecordingService:
             event_publisher: Where the domain event is published.
             admin_event_repository: Where the audit entry is appended.
             user_id: Owner of the revoked credentials.
+            actor_user_id: Who performed the revocation. The same person as the
+                owner for a self-service disconnect or a password change, but an
+                administrator for the account-deletion cascade. Recorded apart
+                from the owner because an audit trail that conflates the two
+                cannot answer either question.
             token_id: The revoked credential, or None for a bulk revocation.
             reason: What separates a deliberate revocation from a cascade
                 (password change, account deletion) when the trail is read back.
@@ -50,8 +56,12 @@ class ExtensionRevocationRecordingService:
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=user_id,
+            actor_user_id=actor_user_id,
             event_data={
+                # The owner belongs in the payload, not only in the actor
+                # column: on a cascade the two differ, and without it the row
+                # says an administrator revoked something without saying whose.
+                "user_id": str(user_id),
                 "token_id": str(token_id) if token_id else None,
                 "reason": reason,
                 "revoked_count": revoked_count,
@@ -59,5 +69,10 @@ class ExtensionRevocationRecordingService:
         )
         logger.info(
             "Extension token(s) revoked",
-            extra={"user_id": str(user_id), "reason": reason, "revoked_count": revoked_count},
+            extra={
+                "user_id": str(user_id),
+                "actor_user_id": str(actor_user_id),
+                "reason": reason,
+                "revoked_count": revoked_count,
+            },
         )
