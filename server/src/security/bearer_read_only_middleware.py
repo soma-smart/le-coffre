@@ -23,6 +23,8 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from security.log_paths import sanitize_path_for_log
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,15 +50,9 @@ class BearerReadOnlyMiddleware(BaseHTTPMiddleware):
         logger.warning(
             "Rejected a mutating request authenticated with a bearer token: %s %s",
             request.method,
-            _sanitize_path(request.url.path),
+            sanitize_path_for_log(request.url.path),
         )
         return JSONResponse(
             status_code=403,
             content={"detail": "This credential is read-only and cannot perform a mutating request"},
         )
-
-
-def _sanitize_path(path: str) -> str:
-    """Truncate to at most 3 segments so resource IDs never reach the log."""
-    parts = path.split("/")
-    return "/".join(parts[:4])
