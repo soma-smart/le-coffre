@@ -27,7 +27,6 @@ that's allowed to read primary-adapter state directly.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from dataclasses import dataclass
 from typing import Literal
@@ -37,7 +36,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from identity_access_management_context.adapters.secondary.sql import SqlExtensionTokenRepository
-from identity_access_management_context.domain.exceptions import InvalidTokenException
+from identity_access_management_context.domain.exceptions import (
+    InvalidExtensionTokenError,
+    InvalidTokenException,
+)
+from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 from security.client_ip import resolve_client_ip
 from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
 
@@ -300,8 +303,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not authorization.lower().startswith("bearer "):
             return Principal(kind="ip", id=client_ip)
 
-        raw_token = authorization[7:].strip()
-        if not _looks_like_extension_token(raw_token):
+        # The value object owns both the shape of a token and how it hashes.
+        # Restating either here is how the two drift: an earlier version of this
+        # file gated on `len == 43` while the value object gates on `>= 43`, and
+        # a change to TOKEN_BYTES or to the digest would have left auth working
+        # while every extension silently dropped from the per-user bucket into
+        # the anonymous IP one, with nothing logged.
+        try:
+            secret = ExtensionTokenSecret(value=authorization[7:].strip())
+        except InvalidExtensionTokenError:
             # Cheap format gate before any database access, so junk bearers
             # never reach a query. An attacker sending well-formed unknown
             # tokens still falls back to the IP bucket, which caps them at the
@@ -312,9 +322,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             session_maker = request.app.state.session_maker
             time_provider = request.app.state.time_provider
             with session_maker() as session:
-                token_row = SqlExtensionTokenRepository(session).get_by_token_hash(
-                    hashlib.sha256(raw_token.encode()).hexdigest()
-                )
+                token_row = SqlExtensionTokenRepository(session).get_by_token_hash(secret.hashed())
         except Exception:  # noqa: BLE001 - bucket selection must never fail a request
             logger.warning(
                 "Could not resolve an extension token for rate-limit keying; bucketing as anonymous",
@@ -337,13 +345,3 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 "Retry-After": str(result.retry_after),
             },
         )
-
-
-# token_urlsafe(32) yields 43 url-safe characters. Anything else did not come
-# from ExtensionTokenSecret.generate() and must not reach a database lookup.
-_EXTENSION_TOKEN_LENGTH = 43
-_EXTENSION_TOKEN_ALPHABET = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
-
-
-def _looks_like_extension_token(value: str) -> bool:
-    return len(value) == _EXTENSION_TOKEN_LENGTH and all(c in _EXTENSION_TOKEN_ALPHABET for c in value)
