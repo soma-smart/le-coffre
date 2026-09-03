@@ -26,6 +26,7 @@ class GetExtensionPairingResponse(BaseModel):
     device_name: str
     created_at: datetime
     expires_at: datetime
+    access_lifetime_seconds: int
     created_from_ip: str | None
     is_resolved: bool
 
@@ -51,6 +52,10 @@ def get_extension_pairing(
     Everything returned except `device_name` is vouched for by the server. `device_name` is
     self-reported by the extension, so the page must present it as untrusted. `created_from_ip`
     matters: a foreign address is what gives away a remote attacker who started the pairing.
+
+    Two different clocks travel here, and confusing them misleads the user at the one moment
+    consent is given: `expires_at` is when this *request* stops being approvable, minutes away,
+    while `access_lifetime_seconds` is how long the credential itself would last.
     """
     try:
         result = usecase.execute(GetExtensionPairingCommand(user_code=user_code, requesting_user=current_user))
@@ -59,6 +64,7 @@ def get_extension_pairing(
             device_name=result.device_name,
             created_at=result.created_at,
             expires_at=result.expires_at,
+            access_lifetime_seconds=result.access_lifetime_seconds,
             created_from_ip=result.created_from_ip,
             is_resolved=result.is_resolved,
         )

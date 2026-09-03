@@ -82,6 +82,7 @@ def get_use_case(extension_pairing_repository, time_provider):
     return GetExtensionPairingUseCase(
         extension_pairing_repository=extension_pairing_repository,
         time_provider=time_provider,
+        token_lifetime_seconds=TOKEN_LIFETIME,
     )
 
 
@@ -196,6 +197,11 @@ class TestApprovalPage:
         # the pairing, so the page needs it.
         assert details.created_from_ip == "203.0.113.5"
         assert details.is_resolved is False
+        # Two different clocks, and the approval page states this one. Handing
+        # it `expires_at` instead told the user they were authorising five
+        # minutes of access when the credential lasts thirty days.
+        assert details.expires_at == NOW + timedelta(seconds=PAIRING_LIFETIME)
+        assert details.access_lifetime_seconds == TOKEN_LIFETIME
 
     def test_should_report_missing_when_the_pairing_has_expired(
         self, start_use_case, get_use_case, time_provider, user
