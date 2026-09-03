@@ -212,7 +212,9 @@ export const createPasswordPasswordsPost = <ThrowOnError extends boolean = false
  * List all passwords for the authenticated user, optionally filtered by folder.
  *
  * - **folder**: Optional folder name to filter passwords
- * - **Authentication**: Requires authentication via access_token cookie
+ * - **Authentication**: an access_token cookie, or a browser-extension bearer
+ * token. An extension token is read-only and never carries the admin role,
+ * so it reaches only what its own user can read.
  *
  * Returns a list of passwords accessible by the user.
  *
@@ -485,7 +487,9 @@ export const deletePasswordPasswordsPasswordIdDelete = <ThrowOnError extends boo
  * Retrieve a password by its ID with user authentication.
  *
  * - **password_id**: The ID of the password to retrieve
- * - **Authentication**: Requires authentication via access_token cookie
+ * - **Authentication**: an access_token cookie, or a browser-extension bearer
+ * token. An extension token is read-only and never carries the admin role,
+ * so it reaches only what its own user can read.
  */
 export const getPasswordPasswordsPasswordIdGet = <ThrowOnError extends boolean = false>(options: Options<GetPasswordPasswordsPasswordIdGetData, ThrowOnError>): RequestResult<GetPasswordPasswordsPasswordIdGetResponses, GetPasswordPasswordsPasswordIdGetErrors, ThrowOnError> => (options.client ?? client).get<GetPasswordPasswordsPasswordIdGetResponses, GetPasswordPasswordsPasswordIdGetErrors, ThrowOnError>({
     security: [{
