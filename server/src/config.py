@@ -67,12 +67,15 @@ def get_extension_token_lifetime_seconds() -> int:
 
 
 def get_extension_pairing_lifetime_seconds() -> int:
-    """How long an unapproved pairing request stays redeemable. Default 5 minutes.
+    """How long an unapproved pairing request stays redeemable. Default 10 minutes.
 
     Short on purpose: the window only has to cover "click connect, log in on the
-    website, click approve".
+    website, click approve". Five minutes was too short in practice, because
+    that middle step can be a full SSO round trip with a second factor, and a
+    request that dies mid-login costs the user the whole flow. Both screens
+    count the deadline down so nobody has to guess how long is left.
     """
-    return int(os.environ.get("EXTENSION_PAIRING_LIFETIME_SECONDS", "300"))
+    return int(os.environ.get("EXTENSION_PAIRING_LIFETIME_SECONDS", "600"))
 
 
 def get_extension_pairing_poll_interval_seconds() -> int:
@@ -176,7 +179,7 @@ def get_rate_limit_extension_pairing_max_requests() -> int:
     would fall into the shared unauthenticated per-IP bucket and compete with
     everything else behind the same NAT. An honest extension polls the exchange
     every EXTENSION_PAIRING_POLL_INTERVAL_SECONDS for at most the pairing
-    lifetime, which at the defaults is about 60 calls over five minutes: well
+    lifetime, which at the defaults is 12 calls a minute for ten minutes: well
     inside 30 per minute.
     """
     return int(os.environ.get("RATE_LIMIT_EXTENSION_PAIRING_MAX_REQUESTS", "30"))
