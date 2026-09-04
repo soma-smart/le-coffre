@@ -235,6 +235,24 @@ describe('ExtensionConnectPage', () => {
     expect(wrapper.text()).toContain('Access lasts 2 hours')
   })
 
+  it('should count the request deadline down so the user knows how long is left', async () => {
+    // The pairing dies ten minutes after Connect, and the sign-in in between
+    // can be a full SSO round trip. Without this the only way to learn the
+    // request timed out is to have Approve fail after signing in.
+    const wrapper = await mountPage(seededGateway({ expiresAt: new Date(NOW.getTime() + 600_000) }))
+
+    expect(wrapper.find('[data-testid="pairing-countdown"]').text()).toContain('10:00')
+    expect(wrapper.find('[data-testid="approve-button"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('should stop offering a decision once the request has expired', async () => {
+    const wrapper = await mountPage(seededGateway({ expiresAt: new Date(NOW.getTime() - 1_000) }))
+
+    expect(wrapper.find('[data-testid="pairing-countdown"]').text()).toContain('has expired')
+    expect(wrapper.find('[data-testid="approve-button"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('[data-testid="deny-button"]').attributes('disabled')).toBeDefined()
+  })
+
   it('should explain itself when no code was supplied at all', async () => {
     setFragment('')
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue'
 import type { ExtensionPairingDetails } from '@/domain/extension/Extension'
@@ -27,6 +27,25 @@ const submitting = ref(false)
 const outcome = ref<'approved' | 'denied' | null>(null)
 
 const userCode = ref<string | null>(null)
+
+// Ticks the countdown below. A deadline the user cannot see is one they can
+// only discover by having Approve fail, after they have already signed in.
+const now = ref(Date.now())
+let ticker: ReturnType<typeof setInterval> | undefined
+
+const secondsLeft = computed(() => {
+  if (!pairing.value) return 0
+  return Math.max(0, Math.round((pairing.value.expiresAt.getTime() - now.value) / 1000))
+})
+
+const hasExpired = computed(() => pairing.value !== null && secondsLeft.value === 0)
+
+/** mm:ss. A precise figure, because the decision it drives is "do I have time". */
+const timeLeftLabel = computed(() => {
+  const minutes = Math.floor(secondsLeft.value / 60)
+  const seconds = secondsLeft.value % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+})
 
 const requestedAgo = computed(() => {
   if (!pairing.value) return ''
@@ -63,6 +82,8 @@ function readCodeFromFragment(): string | null {
 }
 
 onMounted(async () => {
+  ticker = setInterval(() => (now.value = Date.now()), 1000)
+
   // Read and stash the code before anything can navigate away, then scrub the
   // fragment so a shoulder-surfer or a screenshot does not carry it.
   const fromFragment = readCodeFromFragment()
@@ -121,6 +142,8 @@ async function loadPairing() {
         : 'This pairing request is invalid or has expired'
   }
 }
+
+onUnmounted(() => clearInterval(ticker))
 
 function goToSignIn() {
   router.push({ path: '/login', query: { redirect: '/extension/connect' } })
@@ -223,6 +246,19 @@ async function deny() {
               <p class="font-mono text-3xl font-bold tracking-widest" data-testid="pairing-code">
                 {{ pairing.userCode }}
               </p>
+              <!-- The deadline, where the user is already looking. Without it,
+                   the only way to find out the request timed out during sign-in
+                   is to have Approve fail. -->
+              <p
+                v-if="!hasExpired"
+                class="text-xs text-surface-500"
+                data-testid="pairing-countdown"
+              >
+                This request expires in <strong>{{ timeLeftLabel }}</strong>
+              </p>
+              <p v-else class="text-xs text-red-600" data-testid="pairing-countdown">
+                This request has expired. Start again from your extension.
+              </p>
             </div>
 
             <div class="flex flex-col gap-2 text-sm">
@@ -266,13 +302,14 @@ async function deny() {
                 label="Refuse"
                 severity="secondary"
                 outlined
-                :disabled="submitting"
+                :disabled="submitting || hasExpired"
                 data-testid="deny-button"
                 @click="deny"
               />
               <Button
                 label="Approve"
                 :loading="submitting"
+                :disabled="hasExpired"
                 data-testid="approve-button"
                 @click="approve"
               />
