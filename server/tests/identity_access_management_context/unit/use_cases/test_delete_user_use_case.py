@@ -1,3 +1,4 @@
+from datetime import timedelta
 from uuid import UUID
 
 import pytest
@@ -5,12 +6,18 @@ import pytest
 from identity_access_management_context.application.commands import DeleteUserCommand
 from identity_access_management_context.application.use_cases import DeleteUserUseCase
 from identity_access_management_context.domain.entities import (
+    MAX_ACTIVE_TOKENS_PER_USER,
+    ExtensionToken,
     Group,
     PersonalGroup,
     User,
     UserPassword,
 )
-from identity_access_management_context.domain.events import UserDeletedEvent
+from identity_access_management_context.domain.events import (
+    ExtensionTokenRevokedEvent,
+    UserDeletedEvent,
+)
+from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes import FakeDomainEventPublisher
@@ -32,6 +39,9 @@ def use_case(
     user_event_repository,
     one_time_link_revocation_gateway,
     user_password_repository: FakeUserPasswordRepository,
+    extension_token_repository,
+    admin_event_repository,
+    time_provider,
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -41,6 +51,9 @@ def use_case(
         user_event_repository,
         one_time_link_revocation_gateway,
         user_password_repository,
+        extension_token_repository,
+        admin_event_repository,
+        time_provider,
     )
 
 
@@ -327,3 +340,100 @@ def test_given_deleted_user_should_free_the_email_for_a_new_account(
     found = user_password_repository.get_by_email(email)
     assert found is not None
     assert found.password_hash == b"new-hash"
+
+
+def test_given_user_with_extension_tokens_when_deleted_should_revoke_them_all(
+    use_case: DeleteUserUseCase,
+    user_repository: FakeUserRepository,
+    extension_token_repository,
+    time_provider,
+    domain_event_publisher: FakeDomainEventPublisher,
+):
+    """The revocation matrix line for account deletion.
+
+    Extension tokens are the one credential that would otherwise survive: token
+    validation resolves identity through the SSO table, whose row outlives the
+    account, and skips the session_invalid_before cutoff once the user row is
+    gone. Without this cascade a deleted SSO account keeps reading the vault
+    until the token's absolute expiry, up to 30 days.
+    """
+    user_uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
+    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174001")
+    now = time_provider.get_current_time()
+
+    user_repository.save(User(id=user_uuid, username="u", email="u@example.com", name="U"))
+    for _ in range(2):
+        extension_token_repository.add(
+            ExtensionToken.create(
+                user_id=user_uuid,
+                secret=ExtensionTokenSecret.generate(),
+                device_name="Browser extension",
+                lifetime=timedelta(days=30),
+                now=now,
+            ),
+            MAX_ACTIVE_TOKENS_PER_USER,
+            now,
+        )
+    assert extension_token_repository.count_active_for_user(user_uuid, now) == 2
+
+    use_case.execute(
+        DeleteUserCommand(
+            user_id=user_uuid,
+            requesting_user=AuthenticatedUser(user_id=admin_uuid, roles=["admin"]),
+        )
+    )
+
+    assert extension_token_repository.count_active_for_user(user_uuid, now) == 0
+    revocations = [
+        event for event in domain_event_publisher.published_events if isinstance(event, ExtensionTokenRevokedEvent)
+    ]
+    assert len(revocations) == 1
+    assert revocations[0].reason == "user_deleted"
+    assert revocations[0].revoked_count == 2
+
+
+def test_given_admin_deletion_when_revoking_extensions_then_credits_the_admin_not_the_victim(
+    use_case: DeleteUserUseCase,
+    user_repository: FakeUserRepository,
+    extension_token_repository,
+    admin_event_repository,
+    time_provider,
+):
+    """Who did it, and whose tokens: two questions, two fields.
+
+    The audit entry used to name the deleted user as the actor, while the
+    UserDeletedEvent written a few lines later in the same use case named the
+    administrator. One operation, two rows, two different actors, one of them
+    wrong. And once the actor is corrected the owner has to travel in the
+    payload, or the row says an administrator revoked something without saying
+    whose.
+    """
+    user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    admin_id = UUID("123e4567-e89b-12d3-a456-426614174001")
+    now = time_provider.get_current_time()
+
+    user_repository.save(User(id=user_id, username="u", email="u@example.com", name="U"))
+    extension_token_repository.add(
+        ExtensionToken.create(
+            user_id=user_id,
+            secret=ExtensionTokenSecret.generate(),
+            device_name="Browser extension",
+            lifetime=timedelta(days=30),
+            now=now,
+        ),
+        MAX_ACTIVE_TOKENS_PER_USER,
+        now,
+    )
+
+    use_case.execute(
+        DeleteUserCommand(
+            user_id=user_id,
+            requesting_user=AuthenticatedUser(user_id=admin_id, roles=["admin"]),
+        )
+    )
+
+    entry = next(
+        event for event in admin_event_repository.events if event["event_type"] == "ExtensionTokenRevokedEvent"
+    )
+    assert entry["actor_user_id"] == admin_id
+    assert entry["event_data"]["user_id"] == str(user_id)

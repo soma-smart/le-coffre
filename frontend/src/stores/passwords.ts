@@ -18,6 +18,16 @@ export const usePasswordsStore = defineStore('passwords', () => {
 
   const passwordsCount = computed(() => passwords.value.length)
 
+  /**
+   * Whether a fetch has ever completed successfully.
+   *
+   * Distinct from `!loading`: before the first fetch is even requested, loading
+   * is false and the list is empty, which is indistinguishable from "loaded and
+   * genuinely empty" unless you ask this. Anything that reasons about an entry
+   * being absent has to gate on it.
+   */
+  const hasLoaded = computed(() => lastFetch.value !== null)
+
   const folders = computed(() => {
     const folderMap = new Map<string, Password[]>()
     passwords.value.forEach((password) => {
@@ -82,6 +92,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     loading,
     error,
     passwordsCount,
+    hasLoaded,
     folders,
     fetchPasswords,
     invalidateCache,

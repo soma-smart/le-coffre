@@ -10,6 +10,8 @@ from tests.shared_kernel.fakes import FakeTimeGateway
 from .fakes import (
     FakeAdminEventRepository,
     FakeAuthSessionRepository,
+    FakeExtensionPairingRepository,
+    FakeExtensionTokenRepository,
     FakeGroupEventRepository,
     FakeGroupMemberRepository,
     FakeGroupRepository,
@@ -167,3 +169,13 @@ def create_existing_sso_user(
         sso_provider=sso_provider,
         **kwargs,
     )
+
+
+@pytest.fixture
+def extension_token_repository():
+    return FakeExtensionTokenRepository()
+
+
+@pytest.fixture
+def extension_pairing_repository():
+    return FakeExtensionPairingRepository()

@@ -55,23 +55,12 @@ jobs:
         working-directory: frontend/
         run: bunx prettier --check src/
 
+      # Shared with the extension job. The script exists so that "the audit
+      # found something" and "the audit could not reach the advisory API" stay
+      # two different outcomes; inline, they were the same JSON.parse crash.
       - name: Check Dependencies Security
         if: (success() || failure()) && steps.install.outcome == 'success'
-        working-directory: frontend/
-        run: |
-          bun audit --json > /tmp/bun_audit.json || true
-          cat > /tmp/check_bun_audit.js << 'EOF'
-          const data = JSON.parse(require('fs').readFileSync('/tmp/bun_audit.json', 'utf8'));
-          const vulns = Object.values(data.vulnerabilities || {});
-          const fixable = vulns.filter(v => v.fixAvailable !== false && v.fixAvailable != null);
-          if (fixable.length > 0) {
-            console.log('❌ Vulnerabilities with available fixes:');
-            fixable.forEach(v => console.log(`  ${v.name}: ${v.severity} (fix: ${JSON.stringify(v.fixAvailable)})`))
-            process.exit(1);
-          }
-          console.log('✅ No vulnerabilities with available fixes (any unfixable vulnerabilities are ignored)');
-          EOF
-          node /tmp/check_bun_audit.js
+        run: node .github/scripts/check-bun-audit.mjs frontend
 
       - name: Run Unit + Component Tests
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -85,6 +74,75 @@ jobs:
       - name: Type Check + Build Project
         if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: frontend/
+        run: bun run build
+
+  extension-ci:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: extension/package.json
+
+      - name: Install dependencies
+        id: install
+        working-directory: extension/
+        run: |
+          if bun install --frozen-lockfile; then
+            exit 0
+          fi
+
+          # Same contract as the frontend: bun.lock is the only lockfile, and
+          # CI installs from it. Reaching here means package.json was edited
+          # without regenerating it.
+          tee -a "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ### ❌ Extension dependencies are out of sync
+
+          `bun install --frozen-lockfile` refused to install: `extension/bun.lock` disagrees with `extension/package.json`.
+
+              cd extension && bun install && git add bun.lock
+          EOF
+          exit 1
+
+      - name: Run Linting
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        working-directory: extension/
+        run: bunx eslint .
+
+      - name: Check Formatting
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        working-directory: extension/
+        run: bunx prettier --check src/ scripts/
+
+      - name: Check Architecture
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        working-directory: extension/
+        run: ./scripts/check-architecture.sh
+
+      # Shared with the frontend job. The script exists so that "the audit
+      # found something" and "the audit could not reach the advisory API" stay
+      # two different outcomes; inline, they were the same JSON.parse crash.
+      - name: Check Dependencies Security
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        run: node .github/scripts/check-bun-audit.mjs extension
+
+      - name: Run Unit Tests
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        working-directory: extension/
+        run: bunx vitest run
+
+      # `bun run build` chains vue-tsc, vite build and validate-manifest.ts.
+      # That last step is the one that matters most here: it fails the build if
+      # `host_permissions` is ever non-empty, if a permission outside the
+      # reviewed allowlist appears, or if the bundle contains an inline script
+      # or eval() that MV3's CSP would block at runtime with no build error.
+      - name: Type Check + Build + Validate Manifest
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        working-directory: extension/
         run: bun run build
 
   back-ci:

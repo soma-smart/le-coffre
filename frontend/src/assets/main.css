@@ -1,3 +1,18 @@
 @import 'tailwindcss';
 @import 'tailwindcss-primeui';
 @import 'primeicons/primeicons.css';
+
+/*
+ * Bind Tailwind's `dark:` variant to the class PrimeVue actually toggles.
+ *
+ * Tailwind 4 takes its configuration from CSS, so the `darkMode: ['selector',
+ * '[class="p-dark"]']` line in tailwind.config.js is inert: that file is only
+ * read when a stylesheet asks for it with `@config`. Without this rule `dark:`
+ * silently falls back to its default, `@media (prefers-color-scheme: dark)`,
+ * which is decoupled from the theme: PrimeVue switches on `.p-dark`
+ * (darkModeSelector in src/main.ts) and never touches the OS preference.
+ *
+ * The visible symptom was a `dark:`-styled panel rendering dark inside an
+ * otherwise light page, for anyone whose OS is set to dark mode.
+ */
+@custom-variant dark (&:where(.p-dark, .p-dark *));
