@@ -13,7 +13,13 @@ class FakeExtensionTokenRepository:
         self.touch_calls: list[tuple[UUID, datetime]] = []
         self.raise_on_touch = False
 
-    def add(self, token: ExtensionToken) -> ExtensionToken:
+    def add(self, token: ExtensionToken, max_active_tokens: int, now: datetime) -> ExtensionToken | None:
+        # Enforces the cap like the SQL repository does, in one step. A fake
+        # that always inserted would let the device cap look enforced in unit
+        # tests while the real bypass, approving several pairings under the cap
+        # and redeeming them all, went unnoticed.
+        if self.count_active_for_user(token.user_id, now) >= max_active_tokens:
+            return None
         self.tokens[token.id] = token
         return token
 

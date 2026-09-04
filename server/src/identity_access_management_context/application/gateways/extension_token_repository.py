@@ -6,7 +6,16 @@ from identity_access_management_context.domain.entities import ExtensionToken
 
 
 class ExtensionTokenRepository(Protocol):
-    def add(self, token: ExtensionToken) -> ExtensionToken: ...
+    def add(self, token: ExtensionToken, max_active_tokens: int, now: datetime) -> ExtensionToken | None:
+        """Store a freshly minted token, unless the user is at the device cap.
+
+        Returns None when the cap rejected it. The cap is a parameter of the
+        write rather than a separate question asked beforehand: an implementation
+        must count and insert in one atomic step, because every caller mints the
+        token first and a read-then-write would let simultaneous exchanges, or
+        several approvals collected while under the cap, both pass the check.
+        """
+        ...
 
     def get_by_token_hash(self, token_hash: str) -> ExtensionToken | None: ...
 

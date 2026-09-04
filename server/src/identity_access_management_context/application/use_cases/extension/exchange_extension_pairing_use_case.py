@@ -15,13 +15,14 @@ from identity_access_management_context.application.responses import (
     PendingExtensionPairingResponse,
 )
 from identity_access_management_context.application.services import ExtensionPairingLookupService
-from identity_access_management_context.domain.entities import ExtensionToken
+from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, ExtensionToken
 from identity_access_management_context.domain.events import ExtensionPairedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
     ExtensionPairingNotApprovedError,
     ExtensionPairingNotFoundError,
     InvalidPkceVerifierError,
+    TooManyActiveExtensionTokensError,
     UserNotFoundException,
 )
 from identity_access_management_context.domain.value_objects import ExtensionTokenSecret, PkceVerifier
@@ -43,6 +44,9 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
     The token is minted here rather than at approval time, so its plaintext
     exists only in this response and in the extension's storage. Only the
     SHA-256 reaches the database.
+
+    Minting here is also the only place the device cap can be enforced: the
+    approval-time check is early feedback, not a bound.
     """
 
     def __init__(
@@ -56,6 +60,7 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         time_provider: TimeGateway,
         token_lifetime_seconds: int,
         poll_interval_seconds: int,
+        max_active_tokens: int = MAX_ACTIVE_TOKENS_PER_USER,
     ):
         self.extension_pairing_repository = extension_pairing_repository
         self.extension_token_repository = extension_token_repository
@@ -66,6 +71,7 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         self.time_provider = time_provider
         self.token_lifetime_seconds = token_lifetime_seconds
         self.poll_interval_seconds = poll_interval_seconds
+        self.max_active_tokens = max_active_tokens
 
     def execute(
         self, command: ExchangeExtensionPairingCommand
@@ -100,6 +106,14 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
 
         email, display_name = self._resolve_identity(approver_id)
 
+        # Re-checked here, and not only at approval: approval proves the user
+        # was under the cap at that moment, against that pairing. Nothing stops
+        # someone at four tokens from collecting any number of approvals, each
+        # seeing 4 < 5, and redeeming them afterwards. This read is the friendly
+        # exit that leaves the pairing intact; the insert below is the guard.
+        if self.extension_token_repository.count_active_for_user(approver_id, now) >= self.max_active_tokens:
+            raise TooManyActiveExtensionTokensError(self.max_active_tokens)
+
         # Single conditional write. Two concurrent exchanges both reach here,
         # only one gets True, so one approval yields exactly one credential.
         if not self.extension_pairing_repository.consume(pairing.id, now):
@@ -114,7 +128,16 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
             now=now,
             created_from_ip=pairing.created_from_ip,
         )
-        stored = self.extension_token_repository.add(token)
+        stored = self.extension_token_repository.add(token, self.max_active_tokens, now)
+        if stored is None:
+            # Only reachable when a concurrent exchange took the last slot
+            # between the count above and this insert. The pairing is already
+            # consumed, so this one has to be re-paired after freeing a slot.
+            logger.warning(
+                "Extension pairing exchange refused: device cap reached",
+                extra={"user_id": str(approver_id)},
+            )
+            raise TooManyActiveExtensionTokensError(self.max_active_tokens)
 
         event = ExtensionPairedEvent(
             user_id=approver_id,
