@@ -55,23 +55,12 @@ jobs:
         working-directory: frontend/
         run: bunx prettier --check src/
 
+      # Shared with the extension job. The script exists so that "the audit
+      # found something" and "the audit could not reach the advisory API" stay
+      # two different outcomes; inline, they were the same JSON.parse crash.
       - name: Check Dependencies Security
         if: (success() || failure()) && steps.install.outcome == 'success'
-        working-directory: frontend/
-        run: |
-          bun audit --json > /tmp/bun_audit.json || true
-          cat > /tmp/check_bun_audit.js << 'EOF'
-          const data = JSON.parse(require('fs').readFileSync('/tmp/bun_audit.json', 'utf8'));
-          const vulns = Object.values(data.vulnerabilities || {});
-          const fixable = vulns.filter(v => v.fixAvailable !== false && v.fixAvailable != null);
-          if (fixable.length > 0) {
-            console.log('❌ Vulnerabilities with available fixes:');
-            fixable.forEach(v => console.log(`  ${v.name}: ${v.severity} (fix: ${JSON.stringify(v.fixAvailable)})`))
-            process.exit(1);
-          }
-          console.log('✅ No vulnerabilities with available fixes (any unfixable vulnerabilities are ignored)');
-          EOF
-          node /tmp/check_bun_audit.js
+        run: node .github/scripts/check-bun-audit.mjs frontend
 
       - name: Run Unit + Component Tests
         if: (success() || failure()) && steps.install.outcome == 'success'
@@ -134,23 +123,12 @@ jobs:
         working-directory: extension/
         run: ./scripts/check-architecture.sh
 
+      # Shared with the frontend job. The script exists so that "the audit
+      # found something" and "the audit could not reach the advisory API" stay
+      # two different outcomes; inline, they were the same JSON.parse crash.
       - name: Check Dependencies Security
         if: (success() || failure()) && steps.install.outcome == 'success'
-        working-directory: extension/
-        run: |
-          bun audit --json > /tmp/bun_audit_ext.json || true
-          cat > /tmp/check_bun_audit_ext.js << 'EOF'
-          const data = JSON.parse(require('fs').readFileSync('/tmp/bun_audit_ext.json', 'utf8'));
-          const vulns = Object.values(data.vulnerabilities || {});
-          const fixable = vulns.filter(v => v.fixAvailable !== false && v.fixAvailable != null);
-          if (fixable.length > 0) {
-            console.log('❌ Vulnerabilities with available fixes:');
-            fixable.forEach(v => console.log(`  ${v.name}: ${v.severity} (fix: ${JSON.stringify(v.fixAvailable)})`))
-            process.exit(1);
-          }
-          console.log('✅ No vulnerabilities with available fixes (any unfixable vulnerabilities are ignored)');
-          EOF
-          node /tmp/check_bun_audit_ext.js
+        run: node .github/scripts/check-bun-audit.mjs extension
 
       - name: Run Unit Tests
         if: (success() || failure()) && steps.install.outcome == 'success'
