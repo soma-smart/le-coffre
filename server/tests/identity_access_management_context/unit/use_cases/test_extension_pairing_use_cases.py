@@ -29,7 +29,11 @@ from identity_access_management_context.application.use_cases import (
     GetExtensionPairingUseCase,
     StartExtensionPairingUseCase,
 )
-from identity_access_management_context.domain.entities import UserPassword
+from identity_access_management_context.domain.entities import (
+    MAX_ACTIVE_TOKENS_PER_USER,
+    ExtensionToken,
+    UserPassword,
+)
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
     ExtensionPairingDeniedError,
@@ -39,7 +43,7 @@ from identity_access_management_context.domain.exceptions import (
     TooManyActiveExtensionTokensError,
     UnsupportedPkceMethodError,
 )
-from identity_access_management_context.domain.value_objects import PkceVerifier
+from identity_access_management_context.domain.value_objects import ExtensionTokenSecret, PkceVerifier
 from shared_kernel.domain.entities import ValidatedUser
 
 NOW = datetime(2026, 8, 26, 12, 0, 0, tzinfo=UTC)
@@ -282,10 +286,9 @@ class TestApprove:
     ):
         # Checked at approval, while the user is still looking at a screen that
         # can explain it, rather than letting the extension fail silently later.
-        from identity_access_management_context.domain.entities import ExtensionToken
-        from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
-
-        for _ in range(5):
+        # The check that actually bounds anything runs at the exchange, see
+        # TestExchange.test_should_refuse_when_the_cap_filled_up_after_approval.
+        for _ in range(MAX_ACTIVE_TOKENS_PER_USER):
             extension_token_repository.add(
                 ExtensionToken.create(
                     user_id=user.user_id,
@@ -293,7 +296,9 @@ class TestApprove:
                     device_name="existing",
                     lifetime=timedelta(seconds=TOKEN_LIFETIME),
                     now=NOW,
-                )
+                ),
+                MAX_ACTIVE_TOKENS_PER_USER,
+                NOW,
             )
         started = _start(start_use_case, PkceVerifier.generate())
 
@@ -456,6 +461,66 @@ class TestExchange:
         with pytest.raises(ExtensionPairingAlreadyResolvedError):
             exchange_use_case.execute(command)
         assert len(extension_token_repository.tokens) == 1
+
+    def test_should_refuse_when_the_cap_filled_up_after_approval(
+        self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
+    ):
+        # The approval-time check bounds nothing on its own: approving mints no
+        # token, so every one of these approvals sees the same count and passes.
+        # Without a check where the token is actually created, banking eight
+        # approvals and redeeming them afterwards yields eight credentials
+        # against a documented maximum of five.
+        approved = []
+        for _ in range(MAX_ACTIVE_TOKENS_PER_USER + 3):
+            verifier = PkceVerifier.generate()
+            started = _start(start_use_case, verifier)
+            approve_use_case.execute(
+                ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=registered_user)
+            )
+            approved.append((started.user_code, verifier))
+
+        refused = 0
+        for user_code, verifier in approved:
+            try:
+                exchange_use_case.execute(
+                    ExchangeExtensionPairingCommand(user_code=user_code, code_verifier=verifier.value)
+                )
+            except TooManyActiveExtensionTokensError:
+                refused += 1
+
+        assert refused == 3
+        active = extension_token_repository.count_active_for_user(registered_user.user_id, NOW)
+        assert active == MAX_ACTIVE_TOKENS_PER_USER
+
+    def test_should_stay_redeemable_when_a_slot_frees_after_being_refused(
+        self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
+    ):
+        # Refusing over the cap must not burn the pairing: the user revokes a
+        # device from their profile and the extension's next poll goes through,
+        # rather than the pairing dying and forcing the whole flow again.
+        verifier = PkceVerifier.generate()
+        started = _start(start_use_case, verifier)
+        approve_use_case.execute(
+            ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=registered_user)
+        )
+
+        for _ in range(MAX_ACTIVE_TOKENS_PER_USER):
+            filler = PkceVerifier.generate()
+            filler_started = _start(start_use_case, filler)
+            approve_use_case.execute(
+                ApproveExtensionPairingCommand(user_code=filler_started.user_code, requesting_user=registered_user)
+            )
+            exchange_use_case.execute(
+                ExchangeExtensionPairingCommand(user_code=filler_started.user_code, code_verifier=filler.value)
+            )
+
+        command = ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
+        with pytest.raises(TooManyActiveExtensionTokensError):
+            exchange_use_case.execute(command)
+
+        extension_token_repository.revoke(next(iter(extension_token_repository.tokens)), NOW)
+
+        assert isinstance(exchange_use_case.execute(command), ExchangedExtensionTokenResponse)
 
     def test_should_record_an_audit_event_when_exchanging(
         self, start_use_case, approve_use_case, exchange_use_case, admin_event_repository, registered_user

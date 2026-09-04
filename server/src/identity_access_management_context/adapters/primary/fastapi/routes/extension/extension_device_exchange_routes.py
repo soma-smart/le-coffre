@@ -13,6 +13,7 @@ from identity_access_management_context.application.use_cases import ExchangeExt
 from identity_access_management_context.domain.exceptions import (
     ExtensionDomainError,
     IdentityAccessManagementDomainError,
+    TooManyActiveExtensionTokensError,
 )
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,11 @@ def exchange_extension_device(
             expires_at=result.expires_at,
             poll_interval_seconds=result.poll_interval_seconds,
         )
+    except TooManyActiveExtensionTokensError as e:
+        # Reachable only past the verifier check, so the caller has already
+        # proved it owns this pairing and the uniform message above would only
+        # hide, from the device's own user, the one outcome they can act on.
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except ExtensionDomainError as e:
         raise HTTPException(status_code=400, detail=UNUSABLE_PAIRING_DETAIL) from e
     except IdentityAccessManagementDomainError as e:

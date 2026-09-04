@@ -20,6 +20,8 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
     No credential is minted here. The token is created during the exchange, so
     its plaintext never has to wait anywhere for the extension to collect it: it
     exists only in the exchange response and in the extension's own storage.
+
+    Which is also why the device cap below cannot be enforced from here.
     """
 
     def __init__(
@@ -39,9 +41,12 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
         now = self.time_provider.get_current_time()
         user_id = command.requesting_user.user_id
 
-        # Checked at approval rather than at exchange so the user is told they
-        # are at the cap while they are still looking at a screen that can
-        # explain it, instead of the extension failing silently a moment later.
+        # Early feedback, not the bound: approving mints nothing, so any
+        # number of approvals can pass this same check while the count sits
+        # still. ExchangeExtensionPairingUseCase enforces the cap where the
+        # token is created. This one exists so the user is told they are at the
+        # cap while still looking at a screen that can explain it, instead of
+        # the extension failing a moment later with no context.
         active = self.extension_token_repository.count_active_for_user(user_id, now)
         if active >= self.max_active_tokens:
             raise TooManyActiveExtensionTokensError(self.max_active_tokens)
