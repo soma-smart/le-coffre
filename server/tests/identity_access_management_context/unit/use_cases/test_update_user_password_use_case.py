@@ -9,7 +9,12 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     UpdateUserPasswordUseCase,
 )
-from identity_access_management_context.domain.entities import ExtensionToken, User, UserPassword
+from identity_access_management_context.domain.entities import (
+    MAX_ACTIVE_TOKENS_PER_USER,
+    ExtensionToken,
+    User,
+    UserPassword,
+)
 from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     UserNotFoundException,
@@ -235,7 +240,9 @@ def test_given_paired_extensions_when_password_changes_then_revokes_them_outrigh
             device_name="Browser extension",
             lifetime=timedelta(days=30),
             now=now,
-        )
+        ),
+        MAX_ACTIVE_TOKENS_PER_USER,
+        now,
     )
     assert extension_token_repository.count_active_for_user(user_id, now) == 1
 

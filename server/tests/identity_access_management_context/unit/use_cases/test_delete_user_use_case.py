@@ -6,6 +6,7 @@ import pytest
 from identity_access_management_context.application.commands import DeleteUserCommand
 from identity_access_management_context.application.use_cases import DeleteUserUseCase
 from identity_access_management_context.domain.entities import (
+    MAX_ACTIVE_TOKENS_PER_USER,
     ExtensionToken,
     Group,
     PersonalGroup,
@@ -369,7 +370,9 @@ def test_given_user_with_extension_tokens_when_deleted_should_revoke_them_all(
                 device_name="Browser extension",
                 lifetime=timedelta(days=30),
                 now=now,
-            )
+            ),
+            MAX_ACTIVE_TOKENS_PER_USER,
+            now,
         )
     assert extension_token_repository.count_active_for_user(user_uuid, now) == 2
 
@@ -417,7 +420,9 @@ def test_given_admin_deletion_when_revoking_extensions_then_credits_the_admin_no
             device_name="Browser extension",
             lifetime=timedelta(days=30),
             now=now,
-        )
+        ),
+        MAX_ACTIVE_TOKENS_PER_USER,
+        now,
     )
 
     use_case.execute(

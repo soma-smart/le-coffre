@@ -17,7 +17,12 @@ from identity_access_management_context.application.use_cases import (
     RevokeExtensionTokenUseCase,
     ValidateExtensionTokenUseCase,
 )
-from identity_access_management_context.domain.entities import ExtensionToken, User, UserPassword
+from identity_access_management_context.domain.entities import (
+    MAX_ACTIVE_TOKENS_PER_USER,
+    ExtensionToken,
+    User,
+    UserPassword,
+)
 from identity_access_management_context.domain.exceptions import (
     ExtensionTokenExpiredError,
     ExtensionTokenNotFoundError,
@@ -110,7 +115,7 @@ def _issue(repository, user_id, now=NOW, lifetime=TOKEN_LIFETIME, device_name="C
         lifetime=lifetime,
         now=now,
     )
-    repository.add(token)
+    repository.add(token, MAX_ACTIVE_TOKENS_PER_USER, now)
     return secret, token
 
 
