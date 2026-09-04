@@ -33,7 +33,7 @@ with the vault the way a device pairs with an account:
 
 1. **Register.** The popup asks the worker to `POST /api/extension/device` with a
    PKCE challenge and gets back a short `user_code` (`K7QM-3XR9`), the pairing's
-   expiry (5 minutes) and a **poll interval** chosen by the server.
+   expiry (10 minutes) and a **poll interval** chosen by the server.
 2. **Approve.** The worker opens `{vault}/extension/connect#code=...` in a tab.
    The user signs in there however they usually do (password or SSO, the web
    app's own flows), sees the same code, the requesting IP and what the
