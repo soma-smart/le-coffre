@@ -7,6 +7,7 @@ import { openTab, send } from '../bridge'
 import { pollPairing, refreshConnection, state } from '../state/session'
 
 const userCode = ref<string | null>(null)
+const expiresAt = ref<string | null>(null)
 const busy = ref(false)
 let poll: ReturnType<typeof setInterval> | undefined
 
@@ -15,6 +16,24 @@ let poll: ReturnType<typeof setInterval> | undefined
 // poll here once saturated that bucket single-handedly and 429'd the pairing
 // mid-approval.
 const MIN_POLL_INTERVAL_MS = 3000
+
+// The same deadline the approval page counts down. Shown here too because this
+// is the screen the user watches while the tab is elsewhere, and a request that
+// quietly timed out otherwise looks identical to one still waiting.
+const now = ref(Date.now())
+let ticker: ReturnType<typeof setInterval> | undefined
+
+const secondsLeft = computed(() => {
+  if (!expiresAt.value) return 0
+  return Math.max(0, Math.round((new Date(expiresAt.value).getTime() - now.value) / 1000))
+})
+
+const hasExpired = computed(() => expiresAt.value !== null && secondsLeft.value === 0)
+
+const timeLeftLabel = computed(() => {
+  const minutes = Math.floor(secondsLeft.value / 60)
+  return `${minutes}:${String(secondsLeft.value % 60).padStart(2, '0')}`
+})
 
 const vaultUrl = computed(() =>
   state.connection && 'vaultUrl' in state.connection ? state.connection.vaultUrl : null,
@@ -58,6 +77,7 @@ async function start() {
   const result = await send({ type: 'PAIRING_START' })
   if (result.ok) {
     userCode.value = result.data.userCode
+    expiresAt.value = result.data.expiresAt
     watchForApproval(pollIntervalMs(result.data.pollIntervalSeconds))
   } else {
     state.error = result.error
@@ -80,6 +100,7 @@ function watchForApproval(intervalMs: number) {
 async function cancel() {
   clearInterval(poll)
   userCode.value = null
+  expiresAt.value = null
   await send({ type: 'PAIRING_CANCEL' })
   await refreshConnection()
 }
@@ -102,11 +123,17 @@ onMounted(() => {
   // come back from the vault tab.
   if (state.connection?.status === 'pairing') {
     userCode.value = state.connection.userCode
+    expiresAt.value = state.connection.expiresAt
     watchForApproval(pollIntervalMs(state.connection.pollIntervalSeconds))
   }
+
+  ticker = setInterval(() => (now.value = Date.now()), 1000)
 })
 
-onUnmounted(() => clearInterval(poll))
+onUnmounted(() => {
+  clearInterval(poll)
+  clearInterval(ticker)
+})
 </script>
 
 <template>
@@ -129,12 +156,19 @@ onUnmounted(() => clearInterval(poll))
         >
           {{ userCode }}
         </p>
-        <p class="flex items-center gap-1.5 text-xs text-vault-text-faint">
+        <p
+          v-if="!hasExpired"
+          class="flex items-center gap-1.5 text-xs text-vault-text-faint"
+          data-testid="pairing-countdown"
+        >
           <span
             class="h-1.5 w-1.5 animate-pulse rounded-full bg-vault-accent"
             aria-hidden="true"
           ></span>
-          Waiting for your approval
+          Waiting for your approval, {{ timeLeftLabel }} left
+        </p>
+        <p v-else class="text-xs text-vault-text-muted" data-testid="pairing-countdown">
+          This request expired. Connect again to get a new code.
         </p>
       </div>
 
