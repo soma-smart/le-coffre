@@ -25,10 +25,15 @@ from identity_access_management_context.domain.exceptions import (
     InvalidSsoCodeException,
     SsoEncryptionUnavailableError,
 )
+from shared_kernel.adapters.primary.cookie_revocation import revoke_cookie
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+
+def _revoke_sso_state(request: Request, response: Response) -> None:
+    revoke_cookie(request, response, SSO_STATE_COOKIE, secure=get_cookie_secure_setting(), samesite="lax")
 
 
 def _state_rejection_reason(state: str | None, expected_state: str | None) -> str | None:
@@ -87,9 +92,11 @@ async def sso_callback(
         # The body stays generic so a forged state learns nothing. The reason goes
         # to the log only, and never carries the state itself — it is a CSRF token.
         logger.warning("Rejecting SSO callback: %s", rejection_reason)
-        response.delete_cookie(SSO_STATE_COOKIE)
+        _revoke_sso_state(request, response)
         raise HTTPException(status_code=400, detail="Invalid SSO state")
-    response.delete_cookie(SSO_STATE_COOKIE)
+    # The state is single-use: revoke it now, so it stays revoked even when the
+    # code exchange below fails and the route raises.
+    _revoke_sso_state(request, response)
 
     try:
         command = SsoLoginCommand(code=code, redirect_uri=redirect_uri)
