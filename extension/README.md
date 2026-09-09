@@ -252,6 +252,16 @@ manifest one reaches users.
 Do **not** add a `key` field to the manifest. The extension ID is assigned by
 the store on first publication and is permanent.
 
+`STORE_LISTING.md` holds the copy to paste into the console: the description,
+the single-purpose statement, the answers to the data-usage form, the notes
+that let a reviewer actually try the extension, and which screenshots to take.
+The permission justifications stay below, next to the code that explains them.
+
+The owner account is free to change until the first publication, and expensive
+afterwards: recreating the item in another account means a new extension ID,
+so everyone who installed it stops receiving updates. Settle the account, and
+enable the group publisher, before publishing anything.
+
 ### What the repository cannot give you
 
 - **A publisher account.** The listing shows a public publisher name and a
