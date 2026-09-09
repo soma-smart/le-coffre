@@ -31,6 +31,17 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+def _state_rejection_reason(state: str | None, expected_state: str | None) -> str | None:
+    """Why the CSRF state check failed, or None when it passed."""
+    if not state:
+        return "state query parameter missing"
+    if not expected_state:
+        return "sso_state cookie missing — the client must reuse one cookie jar across /auth/sso/url and this callback"
+    if not secrets.compare_digest(state, expected_state):
+        return "state mismatch"
+    return None
+
+
 class SsoUserInfo(BaseModel):
     user_id: UUID
     email: str
@@ -71,7 +82,11 @@ async def sso_callback(
     Returns user information and sets HTTP-only secure cookies with JWT tokens.
     """
     expected_state = request.cookies.get(SSO_STATE_COOKIE)
-    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+    rejection_reason = _state_rejection_reason(state, expected_state)
+    if rejection_reason:
+        # The body stays generic so a forged state learns nothing. The reason goes
+        # to the log only, and never carries the state itself — it is a CSRF token.
+        logger.warning("Rejecting SSO callback: %s", rejection_reason)
         response.delete_cookie(SSO_STATE_COOKIE)
         raise HTTPException(status_code=400, detail="Invalid SSO state")
     response.delete_cookie(SSO_STATE_COOKIE)

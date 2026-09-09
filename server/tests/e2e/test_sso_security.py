@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import parse_qs, urlparse
 
 
@@ -78,3 +79,54 @@ def test_is_configured_reports_false_anonymously_when_unset(unauthenticated_clie
 
     assert response.status_code == 200
     assert response.json() == {"is_set": False}
+
+
+# The 400 body is deliberately generic in every rejection case, so an operator
+# reading it cannot tell a client that dropped its cookie jar (the CLI failure
+# mode) from a genuine forged state. Discriminate in the server log instead —
+# never in the response, and never by echoing the state itself, which is a CSRF
+# token.
+_SSO_CALLBACK_LOGGER = "identity_access_management_context.adapters.primary.fastapi.routes.sso.sso_callback_route"
+
+
+def test_given_no_state_cookie_when_calling_callback_should_log_the_missing_cookie_reason(
+    e2e_client, configured_sso, caplog
+):
+    url_response = e2e_client.get("/api/auth/sso/url")
+    state = parse_qs(urlparse(_extract_sso_url(url_response)).query)["state"][0]
+    e2e_client.cookies.delete("sso_state")  # the client did not keep the jar
+
+    with caplog.at_level(logging.WARNING, logger=_SSO_CALLBACK_LOGGER):
+        response = e2e_client.get(f"/api/auth/sso/callback?code=anything&state={state}")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid SSO state"
+    assert "sso_state cookie missing" in caplog.text
+    assert state not in caplog.text, "the state is a CSRF token and must never be logged"
+
+
+def test_given_mismatched_state_when_calling_callback_should_log_the_mismatch_reason(
+    e2e_client, configured_sso, caplog
+):
+    e2e_client.get("/api/auth/sso/url")  # sets the sso_state cookie
+
+    with caplog.at_level(logging.WARNING, logger=_SSO_CALLBACK_LOGGER):
+        response = e2e_client.get("/api/auth/sso/callback?code=anything&state=forged-state")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid SSO state"
+    assert "state mismatch" in caplog.text
+    assert "forged-state" not in caplog.text
+
+
+def test_given_no_state_parameter_when_calling_callback_should_log_the_missing_parameter_reason(
+    e2e_client, configured_sso, caplog
+):
+    e2e_client.get("/api/auth/sso/url")  # sets the sso_state cookie
+
+    with caplog.at_level(logging.WARNING, logger=_SSO_CALLBACK_LOGGER):
+        response = e2e_client.get("/api/auth/sso/callback?code=anything")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid SSO state"
+    assert "state query parameter missing" in caplog.text
