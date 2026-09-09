@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 
 from config import (
@@ -20,6 +20,7 @@ from identity_access_management_context.application.use_cases import (
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
+from shared_kernel.adapters.primary.cookie_revocation import revoke_cookie
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ class RefreshAccessTokenResponse(BaseModel):
     summary="Refresh access token",
 )
 async def refresh_access_token(
+    request: Request,
     response: Response,
     refresh_token_cookie: str | None = Cookie(None, alias="refresh_token"),
     usecase: RefreshAccessTokenUseCase = Depends(get_refresh_access_token_usecase),
@@ -96,9 +98,10 @@ async def refresh_access_token(
         return RefreshAccessTokenResponse(message="Access token refreshed successfully")
     except InvalidRefreshTokenException as e:
         is_secure = get_cookie_secure_setting()
-        response.delete_cookie("access_token", secure=is_secure, samesite="strict")
-        response.delete_cookie("refresh_token", secure=is_secure, samesite="strict")
-        response.delete_cookie("logged_in", secure=is_secure, samesite="strict")
+        # The session is dead: revoke it in the browser too. access_token and
+        # refresh_token are httpOnly, so the server is the only actor that can.
+        for cookie_name in ("access_token", "refresh_token", "logged_in"):
+            revoke_cookie(request, response, cookie_name, secure=is_secure, samesite="strict")
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in refresh access token")
