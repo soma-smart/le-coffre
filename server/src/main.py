@@ -70,6 +70,7 @@ from security import (
     SecurityHeadersMiddleware,
     csrf_router,
 )
+from shared_kernel.adapters.primary.cookie_revocation import replay_cookie_revocations
 from shared_kernel.adapters.primary.request_id_middleware import (
     RequestIdFilter,
     RequestIdMiddleware,
@@ -274,7 +275,9 @@ _otel_providers = setup_monitoring(app)
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.error("Unhandled exception on %s %s", request.method, request.url.path, exc_info=exc)
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    return replay_cookie_revocations(
+        request, JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    )
 
 
 @app.exception_handler(HTTPException)
@@ -287,10 +290,13 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
             request.url.path,
             exc.detail,
         )
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
-        headers=exc.headers,
+    return replay_cookie_revocations(
+        request,
+        JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
+            headers=exc.headers,
+        ),
     )
 
 
