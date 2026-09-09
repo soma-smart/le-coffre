@@ -3,6 +3,7 @@
   "name": "Le Coffre",
   "version": "0.1.0",
   "description": "Read-only access to the passwords of one group in your self-hosted Le Coffre vault.",
+  "homepage_url": "https://github.com/soma-smart/le-coffre",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/16.png",
