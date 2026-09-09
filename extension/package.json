@@ -15,7 +15,8 @@
     "test:unit": "vitest",
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
-    "validate-manifest": "bun run scripts/validate-manifest.ts dist"
+    "validate-manifest": "bun run scripts/validate-manifest.ts dist",
+    "package": "./scripts/package.sh"
   },
   "dependencies": {
     "vue": "3.5.41",

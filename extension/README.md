@@ -12,9 +12,10 @@ see [The Firefox seam](#the-firefox-seam).
 bun install
 bun run build          # vue-tsc, then vite build, then validate-manifest.ts
 bun run dev            # rebuild dist/ on change (reload the extension to pick it up)
-bunx vitest run        # unit tests
-bunx eslint .
-bunx prettier --check src/ scripts/
+bun run package        # build, then zip for the Chrome Web Store
+bun x vitest run       # unit tests
+bun x eslint .
+bun x prettier --check src/ scripts/
 ./scripts/check-architecture.sh
 ```
 
@@ -238,3 +239,71 @@ only a simplified 16px glyph would.
 **Adding a content script later** (autofill) needs a second Vite pass with
 `format: 'iife'` and `inlineDynamicImports`, content scripts cannot be code-split.
 Do not try to fit it into this Rollup graph.
+
+## Publishing to the Chrome Web Store
+
+`bun run package` builds and produces `le-coffre-extension-<version>.zip`. It
+refuses to run when `manifest.json` and `package.json` disagree on the version,
+and it checks that `manifest.json` sits at the zip's root: a zip *of* `dist/`
+rather than *of its contents* is rejected as "manifest file is missing", the
+classic first-submission failure. Bump both versions before packaging; only the
+manifest one reaches users.
+
+Do **not** add a `key` field to the manifest. The extension ID is assigned by
+the store on first publication and is permanent.
+
+### What the repository cannot give you
+
+- **A publisher account.** The listing shows a public publisher name and a
+  verified contact address, and whoever owns the account can push an automatic
+  update to every install. That makes it a supply-chain key for a password
+  manager, so it belongs to an organisation account with the **group publisher**
+  option enabled, never to one person's Google account. Moving an item between
+  accounts afterwards is painful.
+- **A privacy policy URL.** Mandatory. `PRIVACY.md` in this directory is the
+  text, but it still has to be served from a URL: GitHub Pages on this
+  repository, or a page on the company site.
+- **Screenshots.** At least one, 1280x800 or 640x400. The popup is 380px wide,
+  so they have to be composed on a background rather than captured as-is.
+- **The data-usage disclosure form**, which must be filled in and certified,
+  not left blank.
+
+### The reviewer cannot try it
+
+This is what decides between a three-day review and a three-week one. The first
+screen asks for the address of a self-hosted vault, so a reviewer with no
+instance gets no further. Give them, in the reviewer notes, either a demo
+instance with a test account or a video of the whole pairing flow.
+
+### Permission justifications, ready to paste
+
+Written once here so nobody has to reconstruct the argument at each submission.
+
+- **`storage`**: vault address, granted host pattern, selected group, and the
+  read-only token. Detailed in `PRIVACY.md`.
+- **`alarms`**: MV3 stops the service worker after a few seconds idle, so
+  `setTimeout` cannot be used. Alarms drive the pairing poll and the idle lock.
+- **`clipboardWrite`**: copying a login or a password, and clearing it after a
+  delay. `clipboardRead` is deliberately not requested.
+- **`offscreen`**: the clipboard write needs a context that outlives the popup,
+  otherwise the automatic clearing never happens in the normal case where the
+  user dismisses the popup.
+- **Host access**: declared as `optional_host_permissions`, never
+  `host_permissions`. The vault is self-hosted, so its origin cannot be known at
+  build time; the extension requests the single narrowest pattern covering the
+  user's own API (`https://vault.example.com/api/*`) at runtime, after the user
+  types the address. Nothing is granted at install.
+- **`http://*/*` in that list** will draw attention, and it is there for
+  home-lab vaults on a local network. The popup warns when the address is plain
+  HTTP (`OnboardingView.vue`, `data-testid="insecure-warning"`). Dropping it is a
+  one-line change if the discussion is not worth having.
+- **No remote code**: the bundle loads no script, style, font or image from
+  anywhere but itself, and `validate-manifest.ts` fails the build on an inline
+  script or an `eval`. Worth stating in the submission; it is the policy that
+  rejects the most extensions.
+
+### Publish unlisted first
+
+Same review, a real install URL, working automatic updates, but absent from
+search. It validates the whole chain without exposing a first version to the
+public.
