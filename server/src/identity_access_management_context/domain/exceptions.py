@@ -212,6 +212,96 @@ class SsoEncryptionUnavailableError(IdentityAccessManagementDomainError):
         super().__init__("Vault is locked: unlock the vault to perform this operation")
 
 
+# Browser-extension pairing and credentials
+class ExtensionDomainError(IdentityAccessManagementDomainError):
+    """Base exception for browser-extension pairing and credential errors"""
+
+    pass
+
+
+class InvalidExtensionTokenError(ExtensionDomainError):
+    """Raised when a value too short to have come from generate() is offered as a token.
+
+    Callers map every token failure (this one, expiry, revocation and the
+    session cutoff) to one indistinguishable 401, so a token holder cannot
+    learn *why* their credential stopped working.
+    """
+
+    def __init__(self):
+        super().__init__("Invalid extension token")
+
+
+class ExtensionTokenNotFoundError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("Invalid extension token")
+
+
+class ExtensionTokenExpiredError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("Invalid extension token")
+
+
+class ExtensionTokenRevokedError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("Invalid extension token")
+
+
+class TooManyActiveExtensionTokensError(ExtensionDomainError):
+    """Raised when a user already holds the maximum number of paired extensions.
+
+    Each active token is an independent read grant that has to be revoked
+    individually, so capping how many can exist at once bounds the exposure and
+    makes an accidental (or phished) accumulation visible immediately.
+    """
+
+    def __init__(self, maximum: int):
+        super().__init__(
+            f"You already have {maximum} connected extensions. Revoke one from your profile before connecting another."
+        )
+
+
+class InvalidPkceVerifierError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("Invalid pairing verifier")
+
+
+class UnsupportedPkceMethodError(ExtensionDomainError):
+    def __init__(self, method: str):
+        super().__init__(f"Unsupported code challenge method '{method}'; only S256 is accepted")
+
+
+class InvalidPairingUserCodeError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("Invalid pairing code")
+
+
+class ExtensionPairingNotFoundError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("This pairing request is invalid or has expired")
+
+
+class ExtensionPairingExpiredError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("This pairing request is invalid or has expired")
+
+
+class ExtensionPairingAlreadyResolvedError(ExtensionDomainError):
+    """Raised when a pairing has already been approved, denied or redeemed."""
+
+    def __init__(self):
+        super().__init__("This pairing request is invalid or has expired")
+
+
+class ExtensionPairingNotApprovedError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("This pairing request has not been approved yet")
+
+
+class ExtensionPairingDeniedError(ExtensionDomainError):
+    def __init__(self):
+        super().__init__("This pairing request is invalid or has expired")
+
+
 # Legacy aliases for backward compatibility during migration
 UserNotFoundError = UserNotFoundException
 UserAlreadyExistsError = UserAlreadyExistsException

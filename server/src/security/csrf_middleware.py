@@ -18,14 +18,9 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     ValidateUserTokenUseCase,
 )
+from security.log_paths import sanitize_path_for_log
 
 logger = logging.getLogger(__name__)
-
-
-def _sanitize_path(path: str) -> str:
-    """Truncate path to at most 3 segments to avoid logging resource IDs (UUIDs)."""
-    parts = path.split("/")
-    return "/".join(parts[:4])
 
 
 class CsrfMiddleware(BaseHTTPMiddleware):
@@ -58,6 +53,13 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # happens to be logged in would be rejected, since the public page has no
         # CSRF token in its store.
         "/api/one-time-links/consume",
+        # Browser-extension pairing. Both are anonymous: the extension has no
+        # session yet, so there is no ambient authority for CSRF to protect.
+        # Deliberately mounted under /extension/device, disjoint from
+        # /extension/pairing: this list is prefix-matched, so a bare
+        # "/api/extension" would also exempt the approve and deny routes, which
+        # are cookie-authenticated and must keep their CSRF check.
+        "/api/extension/device",
     ]
 
     # HTTP methods that require CSRF protection
@@ -91,7 +93,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
             logger.warning(
                 "CSRF token missing for %s %s",
                 request.method,
-                _sanitize_path(request.url.path),
+                sanitize_path_for_log(request.url.path),
             )
             return JSONResponse(
                 status_code=403,
@@ -158,7 +160,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                         "Invalid CSRF token for user %s on %s %s",
                         user_id,
                         request.method,
-                        _sanitize_path(request.url.path),
+                        sanitize_path_for_log(request.url.path),
                     )
                     return JSONResponse(
                         status_code=403,

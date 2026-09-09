@@ -2,12 +2,14 @@
 import { computed, onMounted, ref, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { useToast } from 'primevue'
 import type { Password } from '@/domain/password/Password'
 import FolderCard from './FolderCard.vue'
 import CreatePasswordModal from '@/components/modals/CreatePasswordModal.vue'
 import SharePasswordModal from '@/components/modals/SharePasswordModal.vue'
 import OneTimeLinkModal from '@/components/modals/OneTimeLinkModal.vue'
 import PasswordHistoryModal from '@/components/modals/PasswordHistoryModal.vue'
+import { decideEditFromRoute } from '@/utils/editDeepLink'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
@@ -24,7 +26,7 @@ const groupsStore = useGroupsStore()
 const userStore = useUserStore()
 const adminPasswordViewStore = useAdminPasswordViewStore()
 
-const { passwords, loading, error } = storeToRefs(passwordsStore)
+const { passwords, loading, error, hasLoaded } = storeToRefs(passwordsStore)
 const { groups, userBelongingGroups, currentUserPersonalGroupId } = storeToRefs(groupsStore)
 const { isAdmin, currentUser } = storeToRefs(userStore)
 const { adminPasswordViewEnabled: adminPasswordViewPreference } =
@@ -38,9 +40,11 @@ const filterableGroups = computed(() => {
 })
 
 const currentUserId = computed(() => currentUser.value?.id ?? null)
+const toast = useToast()
 const routeGroupSlug = computed(() => route.params.groupSlug as string | undefined)
 const routeFolderFilter = computed(() => route.query.folder as string | undefined)
 const shouldOpenCreateFromRoute = computed(() => route.query.create === '1')
+const editIdFromRoute = computed(() => route.query.edit as string | undefined)
 
 const {
   searchQuery,
@@ -73,6 +77,7 @@ const sharingPassword = ref<Password | null>(null)
 const oneTimeLinkPassword = ref<Password | null>(null)
 const historyPassword = ref<Password | null>(null)
 const isProcessingCreateGroupQuery = ref(false)
+const isProcessingEditQuery = ref(false)
 
 const isCurrentUserOwnerOfGroup = (groupId: string) => {
   if (!currentUser.value?.id) return false
@@ -147,6 +152,59 @@ watch(
       await router.replace({ query: nextQuery })
     } finally {
       isProcessingCreateGroupQuery.value = false
+    }
+  },
+  { immediate: true },
+)
+
+// Open the edit modal when the route asks for it (?edit=<id>). Three things the
+// ?create=1 watch above does not have to worry about:
+//
+//   1. `passwords` arrives asynchronously, so this has to wait for the store to
+//      settle, and `!loading` does not mean settled. Before the first fetch is
+//      requested, loading is false and the list is empty, so gating on it alone
+//      made `immediate: true` fire against an empty list and report a password
+//      that exists as missing. `hasLoaded` is the real signal.
+//   2. The guard is `canWrite` on the entry, not ownership of the group: a
+//      shared password can be writable through a path other than group
+//      ownership.
+//   3. The param is stripped even when the entry is unknown or read-only.
+//      Leaving a stale `?edit=` behind would re-open the modal on every
+//      subsequent navigation.
+watch(
+  [editIdFromRoute, passwords, loading, hasLoaded],
+  async ([editId, list, isLoading, isLoaded]) => {
+    if (isProcessingEditQuery.value || !editId || isLoading || !isLoaded) return
+
+    isProcessingEditQuery.value = true
+    try {
+      const decision = decideEditFromRoute({
+        editId,
+        passwords: list,
+        loading: isLoading,
+        loaded: isLoaded,
+      })
+      if (decision.kind === 'wait') return
+
+      if (decision.kind === 'open') {
+        handleEdit(decision.password)
+      } else {
+        toast.add({
+          severity: 'warn',
+          summary: decision.kind === 'refuse' ? 'Read-only password' : 'Password not found',
+          detail:
+            decision.kind === 'refuse'
+              ? 'You do not have permission to edit this password'
+              : 'That password is no longer available',
+          life: 4000,
+        })
+      }
+
+      const nextQuery = { ...route.query }
+      delete nextQuery.edit
+      await router.replace({ query: nextQuery })
+    } finally {
+      isProcessingEditQuery.value = false
     }
   },
   { immediate: true },

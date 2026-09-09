@@ -9,8 +9,11 @@ This test covers the entire authentication system in one comprehensive workflow:
 5. SSO authentication flow (configuration, URL, callback)
 6. Refresh token workflow
 7. Token validation with protected endpoints
+8. Browser-extension pairing (register, approve, exchange, revoke, deny)
 """
 
+import base64
+import hashlib
 import time
 from urllib.parse import parse_qs, urlparse
 
@@ -289,21 +292,28 @@ async def test_complete_authentication_workflow(
         assert reuse_response.status_code == 201
     print("✅ CSRF token successfully reused across 3 requests")
 
-    # Step 4.8: Test CSRF token regeneration invalidates old token
-    print("\n🔄 Step 4.8: Testing CSRF token regeneration...")
+    # Step 4.8: issuing a second token leaves the first one valid.
+    #
+    # This step used to assert the opposite, and that assertion encoded a real
+    # bug: one token per user made the app single-tab. Every fresh tab fetches
+    # its own token through the router guard, and the browser extension's
+    # approval page does the same, so opening either one disarmed every tab
+    # already open. The next POST from an older tab failed with "Invalid or
+    # expired CSRF token" with nothing on screen to explain it.
+    print("\n🔄 Step 4.8: Testing that a second CSRF token leaves the first valid...")
     new_token_response = e2e_client.get("/api/auth/csrf-token")
     new_csrf_token = new_token_response.json()["csrf_token"]
     assert new_csrf_token != csrf_token
     print(f"✅ New CSRF token generated: {new_csrf_token[:20]}...")
 
-    # Old token should be rejected
+    # The tab still holding the earlier token keeps working.
     old_token_response = e2e_client.post(
         "/api/groups/",
-        json={"name": "Old Token", "description": "Should fail"},
+        json={"name": "Old Token", "description": "Issued before the newer token"},
         headers={"X-CSRF-Token": csrf_token},
     )
-    assert old_token_response.status_code == 403
-    print("✅ Old CSRF token correctly rejected after regeneration")
+    assert old_token_response.status_code == 201
+    print("✅ Earlier CSRF token still accepted alongside the newer one")
 
     # New token should work
     new_token_test_response = e2e_client.post(
@@ -647,6 +657,227 @@ async def test_complete_authentication_workflow(
     print("✅ Lockout released after window elapsed — correct password succeeds end-to-end")
 
     # =========================================================================
+    # PHASE 8: BROWSER-EXTENSION PAIRING
+    # =========================================================================
+    print("\n" + "=" * 80)
+    print("🧩 PHASE 8: BROWSER-EXTENSION PAIRING")
+    print("=" * 80)
+
+    # Reuses the session admin: /auth/register-admin is first-admin-only, and
+    # PHASE 7 already released the lockout on this account.
+    extension_client = client_factory()
+    login_response = extension_client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.com", "password": "securepassword123"},
+    )
+    assert login_response.status_code == 200, login_response.text
+
+    # Step 8.1: the extension registers its challenge BEFORE opening the tab, so
+    # the approval page renders a server-vouched code rather than caller text.
+    verifier = "e2e-extension-code-verifier-that-is-long-enough-to-pass"
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+
+    anonymous_client = client_factory()
+    register_response = anonymous_client.post(
+        "/api/extension/device",
+        json={
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+            "device_name": "Chrome on macOS",
+        },
+    )
+    assert register_response.status_code == 201, register_response.text
+    user_code = register_response.json()["user_code"]
+    assert register_response.json()["poll_interval_seconds"] > 0
+    print(f"✅ Pairing registered, user code {user_code}")
+
+    # Step 8.2: polling before approval reports pending, not an error. Only a
+    # caller holding the verifier can reach this, so it is not an oracle.
+    pending_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": verifier},
+    )
+    assert pending_response.status_code == 200
+    assert pending_response.json()["status"] == "pending"
+    assert pending_response.json()["token"] is None
+    print("✅ Exchange before approval reports pending")
+
+    # Step 8.3: a wrong verifier is refused, and reveals nothing about state.
+    wrong_verifier_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": "a-different-verifier-of-sufficient-length!!"},
+    )
+    assert wrong_verifier_response.status_code == 400
+    assert wrong_verifier_response.json()["detail"] == "This pairing request is invalid or has expired"
+    print("✅ Wrong verifier refused with a generic message")
+
+    # Step 8.4: the approval page loads the facts the user needs to decide.
+    details_response = extension_client.get(f"/api/extension/pairing/{user_code}")
+    assert details_response.status_code == 200, details_response.text
+    details = details_response.json()
+    assert details["user_code"] == user_code
+    assert details["device_name"] == "Chrome on macOS"
+    assert details["is_resolved"] is False
+    print("✅ Approval page loaded with server-vouched facts")
+
+    # Step 8.5: approving is cookie-authenticated and CSRF-protected.
+    approve_response = extension_client.post(f"/api/extension/pairing/{user_code}/approve")
+    assert approve_response.status_code == 204, approve_response.text
+    print("✅ Pairing approved")
+
+    # Step 8.6: the extension now redeems it, once.
+    exchange_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": verifier},
+    )
+    assert exchange_response.status_code == 200, exchange_response.text
+    exchanged = exchange_response.json()
+    assert exchanged["status"] == "approved"
+    assert exchanged["email"] == "admin@example.com"
+    extension_token = exchanged["token"]
+    assert extension_token and len(extension_token) >= 43
+    print("✅ Pairing redeemed for a read-only token")
+
+    # Step 8.7: one approval yields exactly one credential.
+    replay_response = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": user_code, "code_verifier": verifier},
+    )
+    assert replay_response.status_code == 400
+    print("✅ Replaying the exchange mints nothing")
+
+    # Step 8.8: the device shows up in the connected-devices list.
+    tokens_response = extension_client.get("/api/extension/tokens")
+    assert tokens_response.status_code == 200, tokens_response.text
+    tokens = tokens_response.json()["tokens"]
+    assert len(tokens) == 1
+    assert tokens[0]["device_name"] == "Chrome on macOS"
+    assert tokens[0]["is_active"] is True
+    token_id = tokens[0]["id"]
+    print("✅ Connected device listed")
+
+    # Step 8.9: the token works on the three read routes it is meant for.
+    bearer_client = client_factory()
+    bearer_headers = {"Authorization": f"Bearer {extension_token}"}
+
+    session_response = bearer_client.get("/api/extension/session", headers=bearer_headers)
+    assert session_response.status_code == 200, session_response.text
+    assert session_response.json()["email"] == "admin@example.com"
+    assert session_response.json()["is_read_only"] is True
+
+    list_response = bearer_client.get("/api/passwords/list", headers=bearer_headers)
+    assert list_response.status_code == 200, list_response.text
+    # The group picker's source. Scoped server-side, unlike /groups.
+    groups_response = bearer_client.get("/api/extension/groups", headers=bearer_headers)
+    assert groups_response.status_code == 200, groups_response.text
+    assert groups_response.json()["groups"], "The extension must see at least the personal group"
+
+    # The unscoped directory stays out of reach. It answers with every group on
+    # the instance plus each one's owner and member lists, which is exactly the
+    # organisation-wide map an extension token must not carry.
+    unscoped_groups = bearer_client.get("/api/groups", headers=bearer_headers)
+    assert unscoped_groups.status_code == 401, (
+        "An extension token must not be able to enumerate every group on the instance"
+    )
+
+    print("✅ Bearer token reads its scoped routes, and only those")
+
+    # Step 8.10: the containment. The paired account is an ADMIN, so this is
+    # where the role stripping earns its place: an admin sees every password on
+    # the instance through /passwords/list, and that list must not follow the
+    # token into a browser profile.
+    other_user_email = "extension-isolation@example.com"
+    other_user_password = "securepassword123"  # same literal as the admin: keeps gitleaks quiet in a test fixture
+    create_user_response = extension_client.post(
+        "/api/users",
+        json={
+            "username": other_user_email,
+            "email": other_user_email,
+            "name": "Isolation Probe",
+            "password": other_user_password,
+        },
+    )
+    assert create_user_response.status_code in (200, 201), create_user_response.text
+
+    other_client = client_factory()
+    other_login = other_client.post(
+        "/api/auth/login",
+        json={"email": other_user_email, "password": other_user_password},
+    )
+    assert other_login.status_code == 200, other_login.text
+    other_group_id = other_client.get("/api/users/me").json()["personal_group_id"]
+
+    secret_name = "Isolation Probe Secret"
+    create_password_response = other_client.post(
+        "/api/passwords/",
+        json={
+            "name": secret_name,
+            "password": "s3cret-not-for-the-extension",
+            "login": "probe@example.com",
+            "group_id": other_group_id,
+        },
+    )
+    assert create_password_response.status_code == 201, create_password_response.text
+
+    # The admin's own cookie session sees it, unreadable but fully named.
+    admin_cookie_list = extension_client.get("/api/passwords/list").json()
+    admin_view = [entry for entry in admin_cookie_list if entry["name"] == secret_name]
+    assert admin_view, "The admin cookie session should see every password on the instance"
+    assert admin_view[0]["can_read"] is False
+
+    # The same account's extension token must not.
+    bearer_list = bearer_client.get("/api/passwords/list", headers=bearer_headers).json()
+    assert not [entry for entry in bearer_list if entry["name"] == secret_name], (
+        "An admin's extension token must not expose another user's password metadata"
+    )
+    assert all(entry["can_read"] for entry in bearer_list), "Only readable entries may reach an extension token"
+    print("✅ Admin role stripped: another user's secret is invisible over the bearer")
+
+    # Step 8.11: everything else is refused. Device management is cookie-only,
+    # so an extension token cannot enumerate or revoke the account's devices.
+    devices_over_bearer = bearer_client.get("/api/extension/tokens", headers=bearer_headers)
+    assert devices_over_bearer.status_code == 401, (
+        "An extension token must not be able to list or revoke the account's devices"
+    )
+
+    # Admin reads stay out of reach: they are GETs, so a method-only guard would
+    # have let them through. The opt-in allowlist is what stops them.
+    users_over_bearer = bearer_client.get("/api/users", headers=bearer_headers)
+    assert users_over_bearer.status_code == 401, "An extension token must not reach admin reads"
+
+    # And nothing mutating, at any layer.
+    mutation_over_bearer = bearer_client.delete(
+        f"/api/passwords/{'00000000-0000-0000-0000-000000000000'}", headers=bearer_headers
+    )
+    assert mutation_over_bearer.status_code == 403, (
+        "A bearer must be refused on a mutating route before it reaches the handler"
+    )
+    print("✅ Bearer refused on device management, admin reads and every mutation")
+
+    # Step 8.12: revoking disconnects the device, and is idempotent.
+    revoke_response = extension_client.delete(f"/api/extension/tokens/{token_id}")
+    assert revoke_response.status_code == 204, revoke_response.text
+    after_revoke = extension_client.get("/api/extension/tokens").json()["tokens"]
+    assert after_revoke[0]["is_active"] is False
+    assert after_revoke[0]["revoked_at"] is not None
+    print("✅ Device revoked and still listed for audit")
+
+    # Step 8.13: denial is a real path, so a phished user is not stuck waiting.
+    deny_register = anonymous_client.post(
+        "/api/extension/device",
+        json={"code_challenge": challenge, "code_challenge_method": "S256", "device_name": "Suspicious"},
+    )
+    deny_code = deny_register.json()["user_code"]
+    deny_response = extension_client.post(f"/api/extension/pairing/{deny_code}/deny")
+    assert deny_response.status_code == 204, deny_response.text
+    denied_exchange = anonymous_client.post(
+        "/api/extension/device/exchange",
+        json={"user_code": deny_code, "code_verifier": verifier},
+    )
+    assert denied_exchange.status_code == 400
+    print("✅ Denied pairing cannot be redeemed")
+
+    # =========================================================================
     # FINAL VALIDATION
     # =========================================================================
     print("\n" + "=" * 80)
@@ -659,6 +890,7 @@ async def test_complete_authentication_workflow(
     print("✅ Phase 5: SSO authentication")
     print("✅ Phase 6: Refresh token workflow")
     print("✅ Phase 7: Account lockout")
+    print("✅ Phase 8: Browser-extension pairing")
     print("\n" + "=" * 80)
     print("🎊 COMPLETE AUTHENTICATION WORKFLOW TEST PASSED!")
     print("=" * 80 + "\n")

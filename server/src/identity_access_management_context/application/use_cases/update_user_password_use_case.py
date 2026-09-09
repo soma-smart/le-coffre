@@ -2,7 +2,9 @@ from identity_access_management_context.application.commands import (
     UpdateUserPasswordCommand,
 )
 from identity_access_management_context.application.gateways import (
+    AdminEventRepository,
     AuthSessionRepository,
+    ExtensionTokenRepository,
     PasswordHashingGateway,
     TokenGateway,
     UserPasswordRepository,
@@ -11,12 +13,16 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.application.responses import (
     UpdateUserPasswordResponse,
 )
+from identity_access_management_context.application.services import (
+    REVOCATION_REASON_PASSWORD_CHANGED,
+    ExtensionRevocationRecordingService,
+)
 from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     UserNotFoundException,
 )
 from identity_access_management_context.domain.value_objects import RawPassword
-from shared_kernel.application.gateways import TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -29,6 +35,9 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         auth_session_repository: AuthSessionRepository,
         token_gateway: TokenGateway,
         time_provider: TimeGateway,
+        extension_token_repository: ExtensionTokenRepository,
+        event_publisher: DomainEventPublisher,
+        admin_event_repository: AdminEventRepository,
     ):
         self.user_password_repository = user_password_repository
         self.password_hashing_gateway = password_hashing_gateway
@@ -36,6 +45,9 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         self.auth_session_repository = auth_session_repository
         self.token_gateway = token_gateway
         self.time_provider = time_provider
+        self._extension_token_repository = extension_token_repository
+        self._event_publisher = event_publisher
+        self._admin_event_repository = admin_event_repository
 
     def execute(self, command: UpdateUserPasswordCommand) -> UpdateUserPasswordResponse:
         user_password = self.user_password_repository.get_by_id(command.user_id)
@@ -76,6 +88,24 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         # Keep the current browser session alive while invalidating all previous sessions.
         user.session_invalid_before = now
         self.user_repository.update(user)
+
+        # Extension tokens are revoked outright rather than left to the cutoff
+        # above. The cutoff alone did stop them authenticating, but the row kept
+        # revoked_at empty, so `is_active` stayed true: the "Connected
+        # extensions" screen listed a dead credential as live, and the
+        # rate limiter still charged its requests to this user's bucket. Both
+        # read the row, not the cutoff.
+        revoked = self._extension_token_repository.revoke_all_for_user(user.id, now)
+        if revoked:
+            ExtensionRevocationRecordingService.record(
+                self._event_publisher,
+                self._admin_event_repository,
+                user_id=user.id,
+                actor_user_id=user.id,
+                token_id=None,
+                reason=REVOCATION_REASON_PASSWORD_CHANGED,
+                revoked_count=revoked,
+            )
 
         if refresh_token.jti is not None:
             self.auth_session_repository.create_session(

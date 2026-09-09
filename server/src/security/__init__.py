@@ -1,5 +1,6 @@
 """Security utilities for API protection."""
 
+from .bearer_read_only_middleware import BearerReadOnlyMiddleware
 from .csrf_middleware import CsrfMiddleware
 from .csrf_routes import router as csrf_router
 from .csrf_tokens import CsrfTokenManager
@@ -8,6 +9,7 @@ from .rate_limiter import InMemoryRateLimiter, RateLimitResult
 from .security_headers_middleware import SecurityHeadersMiddleware
 
 __all__ = [
+    "BearerReadOnlyMiddleware",
     "CsrfMiddleware",
     "CsrfTokenManager",
     "csrf_router",

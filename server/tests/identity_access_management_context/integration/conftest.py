@@ -3,6 +3,8 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from identity_access_management_context.adapters.secondary.sql import (
     SqlAuthSessionRepository,
+    SqlExtensionPairingRepository,
+    SqlExtensionTokenRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlRevokedTokenRepository,
@@ -62,3 +64,13 @@ def sql_group_repository(session):
 @pytest.fixture(scope="function")
 def sql_auth_session_repository(session):
     return SqlAuthSessionRepository(session)
+
+
+@pytest.fixture(scope="function")
+def sql_extension_token_repository(session):
+    return SqlExtensionTokenRepository(session)
+
+
+@pytest.fixture(scope="function")
+def sql_extension_pairing_repository(session):
+    return SqlExtensionPairingRepository(session)

@@ -5,7 +5,10 @@ import { buildContainer, type Container } from '@/container'
 import { CONTAINER_KEY, containerPlugin, useContainer } from '@/plugins/container'
 import { InMemoryAuthGateway } from '@/infrastructure/in_memory/InMemoryAuthGateway'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
+import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
+import { InMemoryLoginRedirectGateway } from '@/infrastructure/in_memory/InMemoryLoginRedirectGateway'
+import { InMemoryPairingHandoffGateway } from '@/infrastructure/in_memory/InMemoryPairingHandoffGateway'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
@@ -24,6 +27,9 @@ function makeTestContainer(): Container {
     preferencesGateway: new InMemoryPreferencesGateway(),
     statisticsGateway: new InMemoryStatisticsGateway(),
     oneTimeLinkRepository: new InMemoryOneTimeLinkRepository(),
+    extensionGateway: new InMemoryExtensionGateway(),
+    pairingHandoffGateway: new InMemoryPairingHandoffGateway(),
+    loginRedirectGateway: new InMemoryLoginRedirectGateway(),
   })
 }
 

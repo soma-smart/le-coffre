@@ -180,6 +180,13 @@ const ssoLoading = ref(false)
 const handleSsoLogin = async () => {
   ssoLoading.value = true
   try {
+    // The SSO round trip leaves the app entirely, so ?redirect= cannot ride
+    // the URL the way it does for the password flow. Stash it; the callback
+    // page consumes it. Without this, "Sign in to continue" from the
+    // extension-approval page dropped SSO users on the home page and the
+    // pairing silently expired.
+    auth.rememberLoginRedirect.execute({ path: route.query.redirect as string | undefined })
+
     const url = await auth.getSsoUrl.execute()
     const ssoUrl = normalizeExternalHttpUrl(url)
     if (!ssoUrl) {
