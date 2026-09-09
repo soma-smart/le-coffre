@@ -2,7 +2,6 @@ name: Helm Integration Test
 
 on:
   workflow_dispatch:
-  # See CI.yml: no base-branch filter, so stacked PRs are covered too.
   pull_request:
 
 concurrency:

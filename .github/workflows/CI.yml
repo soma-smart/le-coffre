@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - main
-  # No base-branch filter: a stacked PR targets its parent PR's branch, not
-  # main, and would otherwise get no CI at all until the parent merges.
   pull_request:
 
 concurrency:
