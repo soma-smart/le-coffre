@@ -30,6 +30,7 @@ declare module 'vue' {
     FolderCard: typeof import('./src/components/passwords/FolderCard.vue')['default']
     Form: typeof import('@primevue/forms/form')['default']
     GroupDetailsModal: typeof import('./src/components/modals/GroupDetailsModal.vue')['default']
+    GroupHistoryModal: typeof import('./src/components/modals/GroupHistoryModal.vue')['default']
     IconField: typeof import('primevue/iconfield')['default']
     InputIcon: typeof import('primevue/inputicon')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']

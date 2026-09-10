@@ -8,6 +8,7 @@ from .get_group_use_case import GetGroupUseCase
 from .get_statistic_for_admin_use_case import GetStatisticForAdminUseCase
 from .get_user_me_use_case import GetUserMeUseCase
 from .get_user_use_case import GetUserUseCase
+from .list_group_events_use_case import ListGroupEventsUseCase
 from .list_groups_use_case import ListGroupsUseCase
 from .list_user_use_case import ListUserUseCase
 from .logout_use_case import LogoutUseCase
@@ -44,6 +45,7 @@ __all__ = [
     "RemoveUserFromGroupUseCase",
     "DeleteGroupUseCase",
     "ListGroupsUseCase",
+    "ListGroupEventsUseCase",
     "GetGroupUseCase",
     "UpdateGroupUseCase",
     "PromoteAdminUseCase",

@@ -507,6 +507,38 @@ export type GroupAccessItem = {
 };
 
 /**
+ * GroupEventResponse
+ */
+export type GroupEventResponse = {
+    /**
+     * Event Id
+     */
+    event_id: string;
+    /**
+     * Event Type
+     */
+    event_type: string;
+    /**
+     * Occurred On
+     */
+    occurred_on: string;
+    /**
+     * Actor User Id
+     */
+    actor_user_id: string;
+    /**
+     * Actor Email
+     */
+    actor_email: string | null;
+    /**
+     * Event Data
+     */
+    event_data: {
+        [key: string]: unknown;
+    };
+};
+
+/**
  * GroupItem
  */
 export type GroupItem = {
@@ -556,6 +588,16 @@ export type IsSsoConfigSetResponse = {
      * Is Set
      */
     is_set: boolean;
+};
+
+/**
+ * ListGroupEventsResponse
+ */
+export type ListGroupEventsResponse = {
+    /**
+     * Events
+     */
+    events: Array<GroupEventResponse>;
 };
 
 /**
@@ -2706,6 +2748,55 @@ export type ListGroupsGroupsGetResponses = {
 };
 
 export type ListGroupsGroupsGetResponse = ListGroupsGroupsGetResponses[keyof ListGroupsGroupsGetResponses];
+
+export type ListGroupEventsGroupsGroupIdEventsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Group Id
+         */
+        group_id: string;
+    };
+    query?: {
+        /**
+         * Event Type
+         *
+         * Filter by event types
+         */
+        event_type?: Array<string> | null;
+        /**
+         * Start Date
+         *
+         * Filter events from this date (inclusive)
+         */
+        start_date?: string | null;
+        /**
+         * End Date
+         *
+         * Filter events until this date (inclusive)
+         */
+        end_date?: string | null;
+    };
+    url: '/groups/{group_id}/events';
+};
+
+export type ListGroupEventsGroupsGroupIdEventsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListGroupEventsGroupsGroupIdEventsGetError = ListGroupEventsGroupsGroupIdEventsGetErrors[keyof ListGroupEventsGroupsGroupIdEventsGetErrors];
+
+export type ListGroupEventsGroupsGroupIdEventsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ListGroupEventsResponse;
+};
+
+export type ListGroupEventsGroupsGroupIdEventsGetResponse = ListGroupEventsGroupsGroupIdEventsGetResponses[keyof ListGroupEventsGroupsGroupIdEventsGetResponses];
 
 export type GetStatisticForAdminIamStatisticsGetData = {
     body?: never;
