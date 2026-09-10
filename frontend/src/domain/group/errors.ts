@@ -12,6 +12,13 @@ export class GroupNotFoundError extends GroupDomainError {
   }
 }
 
+export class GroupAccessDeniedError extends GroupDomainError {
+  constructor(public readonly groupId: string) {
+    super(`Access to group ${groupId} was denied`)
+    this.name = 'GroupAccessDeniedError'
+  }
+}
+
 export class GroupNameRequiredError extends GroupDomainError {
   constructor() {
     super('Group name is required')
