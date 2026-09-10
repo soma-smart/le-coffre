@@ -26,3 +26,36 @@ class FakeGroupEventRepository:
                 "event_data": event_data,
             }
         )
+
+    def list_events(
+        self,
+        group_id: UUID,
+        event_types: list[str] | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> list[dict[str, Any]]:
+        """List membership events for a specific group with optional filters"""
+        group_id_str = str(group_id)
+        filtered = [event for event in self.events if event["event_data"].get("group_id") == group_id_str]
+
+        if event_types:
+            filtered = [event for event in filtered if event["event_type"] in event_types]
+
+        if start_date:
+            filtered = [event for event in filtered if event["occurred_on"] >= start_date]
+
+        if end_date:
+            filtered = [event for event in filtered if event["occurred_on"] <= end_date]
+
+        filtered = sorted(filtered, key=lambda e: e["occurred_on"], reverse=True)
+
+        return [
+            {
+                "event_id": str(event["event_id"]),
+                "event_type": event["event_type"],
+                "occurred_on": event["occurred_on"].isoformat(),
+                "actor_user_id": str(event["actor_user_id"]),
+                "event_data": event["event_data"],
+            }
+            for event in filtered
+        ]
