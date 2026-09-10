@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, toRef, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { useToast } from 'primevue'
 import { useConfirm } from 'primevue/useconfirm'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
-import type { Group } from '@/domain/group/Group'
+import { isUserOwnerOf, type Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
@@ -30,6 +30,13 @@ const userStore = useUserStore()
 const { isAdmin } = storeToRefs(userStore)
 
 const showHistoryModal = ref(false)
+
+// isOwner from useGroupMembers depends on a users.list call that's admin-only,
+// so it stays false for a real non-admin owner. Compute ownership from the
+// group prop directly (unrestricted) so History stays visible for them.
+const canViewHistory = computed(
+  () => props.group != null && (isAdmin.value || isUserOwnerOf(props.group, currentUserId.value)),
+)
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
@@ -179,7 +186,7 @@ watch(visible, (isVisible) => {
 
         <!-- History button (only for owners of the group or admins) -->
         <Button
-          v-if="!group.isPersonal && (isAdmin || isOwner)"
+          v-if="!group.isPersonal && canViewHistory"
           label="History"
           icon="pi pi-history"
           size="small"
