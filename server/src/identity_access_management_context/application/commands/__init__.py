@@ -12,6 +12,7 @@ from .get_statistic_for_admin_command import GetStatisticForAdminCommand
 from .get_user_command import GetUserCommand
 from .get_user_me_command import GetUserMeCommand
 from .is_sso_config_set_command import IsSsoConfigSetCommand
+from .list_group_events_command import ListGroupEventsCommand
 from .list_groups_command import ListGroupsCommand
 from .list_user_command import ListUserCommand
 from .logout_command import LogoutCommand
@@ -42,6 +43,7 @@ __all__ = [
     "CreateGroupCommand",
     "GetGroupCommand",
     "ListGroupsCommand",
+    "ListGroupEventsCommand",
     "AddUserToGroupCommand",
     "AddOwnerToGroupCommand",
     "RemoveUserFromGroupCommand",
