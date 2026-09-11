@@ -6,14 +6,14 @@ dependencies = [
   "alembic>=1.19.1",
   "authlib>=1.7.2",
   "bcrypt>=5.0.0",
-  "cryptography>=50.0.0",
+  "cryptography>=50.0.1",
   "fastapi[standard]>=0.141.1",
   "httpx>=0.28.1",
   "passlib[bcrypt]>=1.7.4",
   "PyCryptodome>=3.23.0",
   "python-multipart>=0.0.32",
   "pyjwt>=2.13.0",
-  "sqlmodel>=0.0.39",
+  "sqlmodel>=0.0.42",
   "tenacity>=9.1.4",
 ]
 
@@ -24,7 +24,7 @@ dev = [
   "pytest-asyncio>=1.4.0",
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.16.3",
+  "ruff>=0.16.6",
 ]
 monitoring = [
     "opentelemetry-instrumentation-fastapi>=0.65b0",
@@ -34,7 +34,7 @@ monitoring = [
     "opentelemetry-sdk>=1.40.0",
 ]
 sqlite = ["sqlite-utils==3.39.1"]
-postgres = ["psycopg2==2.9.12", "psycopg[binary]==3.3.4"]
+postgres = ["psycopg2==2.9.12", "psycopg[binary]==3.3.5"]
 
 [tool.pytest.ini_options]
 pythonpath = "src"
