@@ -58,6 +58,22 @@ describe('usePasswordsStore (wired through container)', () => {
     expect(store.folders.map((f) => f.name).sort()).toEqual(['Dev', 'Mail'])
   })
 
+  it('groups folders per-group, scoping by accessibleGroupIds', async () => {
+    await repo.create({ name: 'AWS Root', password: 'x', groupId: 'g1', folder: 'AWS' })
+    await repo.create({ name: 'Redis', password: 'y', groupId: 'g1', folder: 'default' })
+    await repo.create({ name: 'Sentry', password: 'z', groupId: 'g2', folder: 'Ops' })
+
+    const wrapper = mountWithContext(container, pinia)
+    const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
+
+    await store.fetchPasswords()
+
+    expect(store.foldersByGroupId['g1'].map((f) => f.name)).toEqual(['default', 'AWS'])
+    expect(store.foldersByGroupId['g1'].map((f) => f.count)).toEqual([1, 1])
+    expect(store.foldersByGroupId['g2'].map((f) => f.name)).toEqual(['Ops'])
+    expect(store.foldersByGroupId['g3']).toBeUndefined()
+  })
+
   it('deduplicates concurrent fetches', async () => {
     await repo.create({ name: 'Gmail', password: 'x', groupId: 'g' })
 
@@ -74,6 +90,7 @@ describe('usePasswordsStore (wired through container)', () => {
     const store = (wrapper.vm as unknown as { store: ReturnType<typeof usePasswordsStore> }).store
     expect(store.passwordsCount).toBe(0)
     expect(store.folders).toEqual([])
+    expect(store.foldersByGroupId).toEqual({})
   })
 
   it('a second fetch returns the cached list even when the underlying state changed', async () => {

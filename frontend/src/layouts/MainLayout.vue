@@ -2,6 +2,8 @@
 import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
 
+withDefaults(defineProps<{ padded?: boolean }>(), { padded: true })
+
 const router = useRouter()
 const route = useRoute()
 
@@ -18,14 +20,17 @@ const isProfileActive = computed(() => route.path === '/profile')
         <img src="/img/le-coffre.png" alt="Le Coffre" class="h-10 w-auto" />
         <h1 class="text-2xl font-bold text-primary">Le Coffre</h1>
       </div>
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 min-h-0 flex">
         <MainMenu />
       </div>
     </aside>
 
     <!-- Contenu principal -->
     <div class="flex-1 flex flex-col min-w-0">
-      <main class="flex-1 p-6 overflow-y-auto overflow-x-hidden pb-16 md:pb-0">
+      <main
+        class="flex-1 overflow-x-hidden pb-16 md:pb-0"
+        :class="padded ? 'p-6 overflow-y-auto' : 'overflow-hidden'"
+      >
         <slot />
       </main>
     </div>
