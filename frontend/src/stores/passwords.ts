@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { Password } from '@/domain/password/Password'
+import { accessibleGroupIdsFor, folderNamesOf, type Password } from '@/domain/password/Password'
 import { useContainer } from '@/plugins/container'
 
 // Global pending promise to deduplicate concurrent calls across instances
@@ -32,6 +32,31 @@ export const usePasswordsStore = defineStore('passwords', () => {
       count: items.length,
       passwords: items,
     }))
+  })
+
+  /**
+   * Folder names scoped per group (a password can belong to several groups
+   * via `accessibleGroupIds`, so it can appear under more than one group's
+   * entry here). Feeds both the sidebar's folder level and the middle pane —
+   * kept in one place so the two never disagree on what folders exist.
+   */
+  const foldersByGroupId = computed(() => {
+    const byGroup = new Map<string, Password[]>()
+    for (const password of passwords.value) {
+      for (const groupId of accessibleGroupIdsFor(password)) {
+        if (!byGroup.has(groupId)) byGroup.set(groupId, [])
+        byGroup.get(groupId)!.push(password)
+      }
+    }
+
+    const result: Record<string, { name: string; count: number }[]> = {}
+    for (const [groupId, groupPasswords] of byGroup) {
+      result[groupId] = folderNamesOf(groupPasswords).map((name) => ({
+        name,
+        count: groupPasswords.filter((p) => p.folder === name).length,
+      }))
+    }
+    return result
   })
 
   const fetchPasswords = async (force = false) => {
@@ -83,6 +108,7 @@ export const usePasswordsStore = defineStore('passwords', () => {
     error,
     passwordsCount,
     folders,
+    foldersByGroupId,
     fetchPasswords,
     invalidateCache,
     clear,

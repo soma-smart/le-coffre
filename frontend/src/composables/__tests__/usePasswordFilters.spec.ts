@@ -147,7 +147,7 @@ describe('usePasswordFilters', () => {
     expect(groupedByGroupAndFolder.value[0].folders.map((f) => f.name)).toEqual(['Work'])
   })
 
-  it('selects the route-specified group tab and opens the Default folder', () => {
+  it('selects the route-specified group tab', () => {
     const target = makeGroup({ id: 'target', name: 'Target' })
     const deps = makeDeps({
       allGroups: ref([target]),
@@ -159,9 +159,8 @@ describe('usePasswordFilters', () => {
       routeGroupSlug: ref('Target'),
     })
 
-    const { selectedGroupTabId, openFolderKey } = usePasswordFilters(deps)
+    const { selectedGroupTabId } = usePasswordFilters(deps)
     expect(selectedGroupTabId.value).toBe('target')
-    expect(openFolderKey.value).toBe('target-Default')
   })
 
   it('clears selection state when the visible sections become empty', async () => {
@@ -173,7 +172,7 @@ describe('usePasswordFilters', () => {
       passwords: passwords as Ref<readonly Password[]>,
     })
 
-    const { selectedGroupTabId, openFolderKey, groupedByGroupAndFolder } = usePasswordFilters(deps)
+    const { selectedGroupTabId, groupedByGroupAndFolder } = usePasswordFilters(deps)
     // One section was visible, so the tab is set.
     expect(groupedByGroupAndFolder.value).toHaveLength(1)
     expect(selectedGroupTabId.value).toBe('g1')
@@ -182,22 +181,124 @@ describe('usePasswordFilters', () => {
     passwords.value = []
     await new Promise((r) => setTimeout(r, 0)) // flush watchers
     expect(selectedGroupTabId.value).toBeNull()
-    expect(openFolderKey.value).toBeNull()
   })
 
-  it('toggleFolder opens a closed folder and closes an open one', () => {
+  it('visiblePasswords lists the whole selected group when no folder is selected', () => {
     const group = makeGroup({ id: 'g1' })
     const deps = makeDeps({
       allGroups: ref([group]),
       userBelongingGroups: ref([group]),
-      passwords: ref([makePassword({ id: 'p1', folder: 'Work', groupId: 'g1' })]),
+      passwords: ref([
+        makePassword({ id: 'p1', folder: 'Work', groupId: 'g1' }),
+        makePassword({ id: 'p2', folder: 'Home', groupId: 'g1' }),
+      ]),
     })
 
-    const { openFolderKey, toggleFolder } = usePasswordFilters(deps)
-    openFolderKey.value = null
-    toggleFolder('g1-Work')
-    expect(openFolderKey.value).toBe('g1-Work')
-    toggleFolder('g1-Work')
-    expect(openFolderKey.value).toBeNull()
+    const { visiblePasswords, paneTitle, paneCount } = usePasswordFilters(deps)
+    expect(visiblePasswords.value.map((p) => p.id).sort()).toEqual(['p1', 'p2'])
+    expect(paneTitle.value).toBe('Engineering')
+    expect(paneCount.value).toBe(2)
+  })
+
+  it('visiblePasswords narrows to the route folder, and paneTitle reflects it', () => {
+    const group = makeGroup({ id: 'g1' })
+    const deps = makeDeps({
+      allGroups: ref([group]),
+      userBelongingGroups: ref([group]),
+      passwords: ref([
+        makePassword({ id: 'p1', folder: 'Work', groupId: 'g1' }),
+        makePassword({ id: 'p2', folder: 'Home', groupId: 'g1' }),
+      ]),
+      routeFolderFilter: ref('Work'),
+    })
+
+    const { visiblePasswords, paneTitle, paneCount, selectedFolderName } = usePasswordFilters(deps)
+    expect(selectedFolderName.value).toBe('Work')
+    expect(visiblePasswords.value.map((p) => p.id)).toEqual(['p1'])
+    expect(paneTitle.value).toBe('Work')
+    expect(paneCount.value).toBe(1)
+  })
+
+  it('paneTitle reads "No folder" for the root folder', () => {
+    const group = makeGroup({ id: 'g1' })
+    const deps = makeDeps({
+      allGroups: ref([group]),
+      userBelongingGroups: ref([group]),
+      passwords: ref([makePassword({ id: 'p1', folder: 'default', groupId: 'g1' })]),
+      routeFolderFilter: ref('default'),
+    })
+
+    const { paneTitle } = usePasswordFilters(deps)
+    expect(paneTitle.value).toBe('No folder')
+  })
+
+  it('searchResults is empty for a blank query, regardless of selection', () => {
+    const group = makeGroup({ id: 'g1' })
+    const deps = makeDeps({
+      allGroups: ref([group]),
+      userBelongingGroups: ref([group]),
+      passwords: ref([makePassword({ id: 'p1', groupId: 'g1' })]),
+    })
+
+    const { searchResults } = usePasswordFilters(deps)
+    expect(searchResults.value).toEqual([])
+  })
+
+  it('searchResults spans every visible group, not just the selected one', () => {
+    const groupA = makeGroup({ id: 'a', name: 'Alpha' })
+    const groupB = makeGroup({ id: 'b', name: 'Beta' })
+    const deps = makeDeps({
+      allGroups: ref([groupA, groupB]),
+      userBelongingGroups: ref([groupA, groupB]),
+      passwords: ref([
+        makePassword({ id: 'p1', name: 'GitHub', groupId: 'a' }),
+        makePassword({ id: 'p2', name: 'GitLab', groupId: 'b' }),
+        makePassword({ id: 'p3', name: 'Netflix', groupId: 'b' }),
+      ]),
+    })
+
+    const { searchQuery, searchResults } = usePasswordFilters(deps)
+    searchQuery.value = 'git'
+    expect(searchResults.value.map((p) => p.id).sort()).toEqual(['p1', 'p2'])
+  })
+
+  it('searchResults excludes groups outside filterableGroups (admin scoping)', () => {
+    const userGroup = makeGroup({ id: 'own', name: 'Own', owners: ['u1'] })
+    const outsideGroup = makeGroup({ id: 'outside', name: 'Outside', owners: ['u2'] })
+    const deps = makeDeps({
+      allGroups: ref([userGroup, outsideGroup]),
+      userBelongingGroups: ref([userGroup]),
+      isAdmin: ref(true),
+      adminPasswordViewEnabled: ref(false),
+      passwords: ref([
+        makePassword({ id: 'p1', name: 'Matching', groupId: 'own' }),
+        makePassword({ id: 'p2', name: 'Matching Too', groupId: 'outside' }),
+      ]),
+    })
+
+    const { searchQuery, searchResults } = usePasswordFilters(deps)
+    searchQuery.value = 'matching'
+    expect(searchResults.value.map((p) => p.id)).toEqual(['p1'])
+  })
+
+  it('searchResults deduplicates a password shared into several visible groups', () => {
+    const groupA = makeGroup({ id: 'a', name: 'Alpha' })
+    const groupB = makeGroup({ id: 'b', name: 'Beta' })
+    const deps = makeDeps({
+      allGroups: ref([groupA, groupB]),
+      userBelongingGroups: ref([groupA, groupB]),
+      passwords: ref([
+        makePassword({
+          id: 'p1',
+          name: 'Shared Secret',
+          groupId: 'a',
+          accessibleGroupIds: ['a', 'b'],
+        }),
+      ]),
+    })
+
+    const { searchQuery, searchResults } = usePasswordFilters(deps)
+    searchQuery.value = 'shared'
+    expect(searchResults.value.map((p) => p.id)).toEqual(['p1'])
   })
 })

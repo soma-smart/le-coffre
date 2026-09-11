@@ -2,6 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue'
 import type { Group } from '@/domain/group/Group'
 import {
   accessibleGroupIdsFor,
+  folderLabelOf,
   matchesPasswordQuery,
   type Password,
 } from '@/domain/password/Password'
@@ -52,10 +53,12 @@ export interface PasswordFiltersDeps {
  * - `filterableGroups` — scope of the list (admin-view vs user's own)
  * - `selectedGroupIdFromRoute` — the group id the url points at
  * - `groupedByGroupAndFolder` — the fully-shaped list sections
- * - `selectedGroupTabId` / `openFolderKey` — UI selection state
+ * - `selectedGroupTabId` — which group is currently selected
  * - `selectedGroupSection` — the section currently opened
- * - `setDefaultOpenFolderForSelectedGroup` — reset helper the container calls
- *   after a create/edit flow completes
+ * - `selectedFolderName` / `visiblePasswords` / `paneTitle` / `paneCount` — the
+ *   middle pane's contents, narrowed to the route's `?folder=` when set
+ * - `searchResults` — every password matching `searchQuery`, across every
+ *   group `filterableGroups` allows (not just the selected one)
  *
  * Everything router-aware (vault gating, modal state, fetching) stays in the
  * calling component. This composable is fully testable without Vue Router or
@@ -64,7 +67,6 @@ export interface PasswordFiltersDeps {
 export function usePasswordFilters(deps: PasswordFiltersDeps) {
   const searchQuery = ref('')
   const selectedGroupTabId = ref<string | null>(null)
-  const openFolderKey = ref<string | null>(null)
 
   const filterableGroups = computed<Group[]>(() => {
     if (!deps.isAdmin.value) return [...deps.userBelongingGroups.value]
@@ -155,27 +157,68 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
     }
   })
 
-  function setDefaultOpenFolderForSelectedGroup() {
+  /**
+   * The folder narrowing the middle pane, straight from the route — `null`
+   * means "whole group".
+   */
+  const selectedFolderName = computed<string | null>(() => deps.routeFolderFilter.value ?? null)
+
+  /**
+   * The passwords the middle pane should list: the selected group, narrowed
+   * to `selectedFolderName` when set. Reuses `selectedGroupSection.folders`,
+   * which the route-folder-filter loop above already prunes to that single
+   * folder — so this is a flatten, not a second filtering pass.
+   */
+  const visiblePasswords = computed<Password[]>(() => {
     const section = selectedGroupSection.value
-    if (!section || section.folders.length === 0) {
-      openFolderKey.value = null
-      return
+    if (!section) return []
+    return section.folders.flatMap((folder) => folder.passwords)
+  })
+
+  /** Middle pane header: the folder name when narrowed, else the group name. */
+  const paneTitle = computed<string>(() => {
+    if (selectedFolderName.value) return folderLabelOf(selectedFolderName.value)
+    return selectedGroupSection.value?.name ?? ''
+  })
+
+  const paneCount = computed<number>(() => visiblePasswords.value.length)
+
+  /**
+   * Global search results: every password matching `searchQuery`, across
+   * every group `filterableGroups` allows (not just the selected one) — a
+   * password manager's search has to find what you can't currently see.
+   * Empty when the query is empty, so callers can use it to detect "search
+   * mode" without re-deriving the same trim/empty check.
+   */
+  const searchResults = computed<Password[]>(() => {
+    const query = searchQuery.value.trim()
+    if (!query) return []
+
+    const visibleGroupIds = new Set(filterableGroups.value.map((group) => group.id))
+    const groupsById = new Map(filterableGroups.value.map((group) => [group.id, group]))
+    const seen = new Set<string>()
+    const results: Password[] = []
+
+    for (const password of deps.passwords.value) {
+      if (seen.has(password.id)) continue
+      const isAccessible = accessibleGroupIdsFor(password).some((id) => visibleGroupIds.has(id))
+      if (!isAccessible) continue
+
+      const groupName = groupsById.get(password.groupId)?.name
+      if (!matchesPasswordQuery(password, query, groupName)) continue
+
+      seen.add(password.id)
+      results.push(password)
     }
-    const defaultFolder = section.folders.find(
-      (folder) => folder.name.trim().toLowerCase() === 'default',
-    )
-    const folderToOpen = defaultFolder ?? section.folders[0]
-    openFolderKey.value = `${section.id}-${folderToOpen.name}`
-  }
+
+    return results.sort((a, b) => a.name.localeCompare(b.name))
+  })
 
   watch(
     selectedGroupIdFromRoute,
     (groupId) => {
       if (!groupId) return
-      if (selectedGroupTabId.value !== groupId) {
-        selectedGroupTabId.value = groupId
-        setDefaultOpenFolderForSelectedGroup()
-      }
+      selectedGroupTabId.value = groupId
     },
     { immediate: true },
   )
@@ -189,7 +232,6 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
     (sections) => {
       if (sections.length === 0) {
         selectedGroupTabId.value = null
-        openFolderKey.value = null
         return
       }
 
@@ -197,7 +239,6 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
         if (selectedGroupTabId.value !== selectedGroupIdFromRoute.value) {
           selectedGroupTabId.value = selectedGroupIdFromRoute.value
         }
-        if (openFolderKey.value === null) setDefaultOpenFolderForSelectedGroup()
         return
       }
 
@@ -207,15 +248,10 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
       ) {
         const personal = sections.find((s) => s.id === deps.currentUserPersonalGroupId.value)
         selectedGroupTabId.value = personal?.id ?? sections[0].id
-        setDefaultOpenFolderForSelectedGroup()
       }
     },
     { immediate: true },
   )
-
-  function toggleFolder(folderKey: string) {
-    openFolderKey.value = openFolderKey.value === folderKey ? null : folderKey
-  }
 
   return {
     searchQuery,
@@ -224,8 +260,10 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
     groupedByGroupAndFolder,
     selectedGroupSection,
     selectedGroupTabId,
-    openFolderKey,
-    setDefaultOpenFolderForSelectedGroup,
-    toggleFolder,
+    selectedFolderName,
+    visiblePasswords,
+    paneTitle,
+    paneCount,
+    searchResults,
   }
 }
