@@ -15,7 +15,10 @@
     </div>
 
     <div v-else class="flex-1 min-h-0 flex">
-      <div class="w-80 border-r border-surface shrink-0">
+      <div
+        class="relative shrink-0 border-r border-surface"
+        :style="{ width: `${listPaneWidth}px` }"
+      >
         <PasswordListPane
           :title="paneTitle"
           :passwords="panePasswords"
@@ -25,6 +28,7 @@
           :folderNarrowed="folderNarrowed"
           @select="selectPassword"
         />
+        <ResizeHandle @pointerdown="startListPaneResizing" />
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto p-6 bg-surface-50">
         <PasswordDetailPane
@@ -71,12 +75,20 @@ import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { usePasswordFilters } from '@/composables/usePasswordFilters'
 import { usePasswordSelection } from '@/composables/usePasswordSelection'
+import { useResizableWidth } from '@/composables/useResizableWidth'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { slugifyGroupName } from '@/utils/groupSlug'
 
 const route = useRoute()
 const router = useRouter()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
+
+const { width: listPaneWidth, startResizing: startListPaneResizing } = useResizableWidth({
+  storageKey: 'le-coffre.password-list-pane-width',
+  defaultWidth: 320,
+  min: 240,
+  max: 560,
+})
 
 const passwordsStore = usePasswordsStore()
 const groupsStore = useGroupsStore()
