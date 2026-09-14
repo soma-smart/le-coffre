@@ -9,6 +9,10 @@ import type { Password } from '@/domain/password/Password'
 import { PasswordDomainError } from '@/domain/password/errors'
 import { VaultLockedError } from '@/domain/vault/errors'
 import { createTestContext } from '@/test/componentTestHelpers'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
+const showPasswordSelector = `button[aria-label="${t('components.passwordCard.showPassword')}"]`
 
 // The reveal/copy/delete handlers surface failures through PrimeVue toasts.
 // Asserting whether a toast fires IS the user-facing behaviour under test for
@@ -62,7 +66,7 @@ describe('PasswordCard', () => {
   it('reveals the decrypted secret through GetPasswordUseCase when the eye button is clicked', async () => {
     const wrapper = mountCard(container, pinia)
 
-    const revealButton = wrapper.find('button[aria-label="Show password"]')
+    const revealButton = wrapper.find(showPasswordSelector)
     expect(revealButton.exists()).toBe(true)
     await revealButton.trigger('click')
     await flushPromises()
@@ -78,7 +82,7 @@ describe('PasswordCard', () => {
       }
       const wrapper = mountCard(container, pinia)
 
-      await wrapper.find('button[aria-label="Show password"]').trigger('click')
+      await wrapper.find(showPasswordSelector).trigger('click')
       await flushPromises()
 
       expect(wrapper.text()).not.toContain('super-secret')
@@ -96,7 +100,7 @@ describe('PasswordCard', () => {
       }
       const wrapper = mountCard(container, pinia)
 
-      await wrapper.find('button[aria-label="Show password"]').trigger('click')
+      await wrapper.find(showPasswordSelector).trigger('click')
       await flushPromises()
 
       // The global interceptor owns the vault-locked UX; the card stays quiet.
@@ -125,7 +129,10 @@ describe('PasswordCard', () => {
       global: { plugins: [pinia], provide: { [CONTAINER_KEY as symbol]: container } },
     })
 
-    expect(wrapper.get('[data-testid="access-expiry"]').text()).toContain('Expires')
+    // relativeTime.ts is deliberately pinned to en-GB regardless of locale, so
+    // the duration itself stays English even though the "Expire" prefix is ours.
+    const expiresPrefix = t('components.passwordCard.accessExpiresLabel', { relative: '' }).trim()
+    expect(wrapper.get('[data-testid="access-expiry"]').text()).toContain(expiresPrefix)
   })
 
   it('puts the countdown beside the name, not down in the metadata row', () => {
@@ -156,6 +163,8 @@ describe('PasswordCard', () => {
       global: { plugins: [pinia], provide: { [CONTAINER_KEY as symbol]: container } },
     })
 
-    expect(wrapper.get('[data-testid="access-expiry"]').text()).toContain('Access expired')
+    expect(wrapper.get('[data-testid="access-expiry"]').text()).toContain(
+      t('components.passwordCard.accessExpiredLabel'),
+    )
   })
 })

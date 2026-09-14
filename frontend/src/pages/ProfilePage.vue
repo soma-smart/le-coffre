@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import { logout } from '@/utils/logout'
 import MainLayout from '../layouts/MainLayout.vue'
 import type { User } from '@/domain/user/User'
@@ -11,11 +12,17 @@ import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 
 const toast = useToast()
 const router = useRouter()
+const { t } = useI18n()
 
 const handleLogout = async () => {
   await logout()
   await router.push('/login')
-  toast.add({ severity: 'success', summary: 'Logged out', detail: 'See you soon!', life: 3000 })
+  toast.add({
+    severity: 'success',
+    summary: t('pages.profile.loggedOutSummary'),
+    detail: t('pages.profile.loggedOutDetail'),
+    life: 3000,
+  })
 }
 
 // Resolve use cases at setup time — inject() has no component context
@@ -41,7 +48,7 @@ const fetchUserInfo = async () => {
     error.value = null
     user.value = await users.getCurrent.execute()
   } catch (err) {
-    error.value = 'Error while getting user informations'
+    error.value = t('pages.profile.errors.fetchFailed')
     console.error('Error fetching user info:', err)
   } finally {
     loading.value = false
@@ -65,8 +72,8 @@ const updatePassword = async () => {
   ) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'All fields are required',
+      summary: t('common.error'),
+      detail: t('pages.profile.errors.allFieldsRequired'),
       life: 3000,
     })
     return
@@ -75,8 +82,8 @@ const updatePassword = async () => {
   if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: "Passwords don't match",
+      summary: t('common.error'),
+      detail: t('pages.profile.errors.passwordsDontMatch'),
       life: 3000,
     })
     return
@@ -85,8 +92,8 @@ const updatePassword = async () => {
   if (passwordForm.value.newPassword.length < 8) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'New password needs at least 8 characters',
+      summary: t('common.error'),
+      detail: t('pages.profile.errors.passwordTooShort'),
       life: 3000,
     })
     return
@@ -101,8 +108,8 @@ const updatePassword = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Password updated successfully',
+      summary: t('common.success'),
+      detail: t('pages.profile.passwordUpdatedDetail'),
       life: 3000,
     })
 
@@ -110,15 +117,17 @@ const updatePassword = async () => {
     resetPasswordForm()
   } catch (err: unknown) {
     console.error('Error updating password:', err)
+    // UserDomainError/Error messages come from the backend or an unknown
+    // failure — not ours to translate. Only our own fallback text is.
     const detail =
       err instanceof UserDomainError
         ? err.message
         : err instanceof Error
           ? err.message
-          : 'An unexpected error occurred'
+          : t('pages.profile.errors.unexpected')
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail,
       life: 3000,
     })
@@ -136,7 +145,7 @@ onMounted(() => {
   <MainLayout>
     <Toast position="bottom-right" />
     <div class="max-w-4xl mx-auto">
-      <h1 class="text-3xl font-bold mb-6">Profil</h1>
+      <h1 class="text-3xl font-bold mb-6">{{ t('pages.profile.title') }}</h1>
 
       <!-- Loading state -->
       <div v-if="loading" class="rounded-lg p-6 text-center">
@@ -151,27 +160,29 @@ onMounted(() => {
       <!-- User info -->
       <div v-else-if="user" class="rounded-lg p-6 space-y-4">
         <div class="border-b pb-4">
-          <h2 class="text-xl font-semibold">Display Name: {{ user.name }}</h2>
+          <h2 class="text-xl font-semibold">
+            {{ t('pages.profile.displayName', { name: user.name }) }}
+          </h2>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="block text-sm font-medium mb-1"> Username </label>
+            <label class="block text-sm font-medium mb-1">{{ t('pages.profile.username') }}</label>
             <p>{{ user.username }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1"> Email </label>
+            <label class="block text-sm font-medium mb-1">{{ t('pages.profile.email') }}</label>
             <p>{{ user.email }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1"> ID </label>
+            <label class="block text-sm font-medium mb-1">{{ t('pages.profile.id') }}</label>
             <p class="font-mono text-sm">{{ user.id }}</p>
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1"> Rôles </label>
+            <label class="block text-sm font-medium mb-1">{{ t('pages.profile.roles') }}</label>
             <div class="flex flex-wrap gap-2">
               <span
                 v-for="role in user.roles"
@@ -186,9 +197,9 @@ onMounted(() => {
 
         <!-- Password Update Section - Only for non-SSO users -->
         <div v-if="!user.isSso" class="border-t pt-4 mt-6">
-          <h3 class="text-lg font-semibold mb-4">Sécurité</h3>
+          <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.security') }}</h3>
           <Button
-            label="Change Password"
+            :label="t('pages.profile.changePassword')"
             icon="pi pi-key"
             @click="showPasswordDialog = true"
             class="p-button-outlined"
@@ -197,15 +208,15 @@ onMounted(() => {
 
         <!-- Theme switcher (mobile uniquement) -->
         <div class="md:hidden mb-6 border-t pt-4">
-          <h3 class="text-lg font-semibold mb-4">Apparence</h3>
+          <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.appearance') }}</h3>
           <ThemeSwitcher />
         </div>
 
         <!-- Bouton logout (mobile uniquement) -->
         <div class="md:hidden mb-6 border-t pt-4">
-          <h3 class="text-lg font-semibold mb-4">Session</h3>
+          <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.session') }}</h3>
           <Button
-            label="Logout"
+            :label="t('pages.profile.logout')"
             icon="pi pi-sign-out"
             severity="secondary"
             outlined
@@ -218,7 +229,7 @@ onMounted(() => {
       <!-- Password Update Dialog -->
       <Dialog
         v-model:visible="showPasswordDialog"
-        header="Change Password"
+        :header="t('pages.profile.changePassword')"
         :modal="true"
         :closable="true"
         :style="{ width: '450px' }"
@@ -227,42 +238,44 @@ onMounted(() => {
         <div class="space-y-4">
           <div>
             <label for="oldPassword" class="block text-sm font-medium mb-2">
-              Current Password
+              {{ t('pages.profile.currentPassword') }}
             </label>
             <Password
               id="oldPassword"
               v-model="passwordForm.oldPassword"
               :feedback="false"
               toggleMask
-              placeholder="Enter your current password"
+              :placeholder="t('pages.profile.currentPasswordPlaceholder')"
               class="w-full"
               inputClass="w-full"
             />
           </div>
 
           <div>
-            <label for="newPassword" class="block text-sm font-medium mb-2"> New Password </label>
+            <label for="newPassword" class="block text-sm font-medium mb-2">
+              {{ t('pages.profile.newPassword') }}
+            </label>
             <Password
               id="newPassword"
               v-model="passwordForm.newPassword"
               toggleMask
-              placeholder="Enter new password"
+              :placeholder="t('pages.profile.newPasswordPlaceholder')"
               class="w-full"
               inputClass="w-full"
             />
-            <small class="text-muted-color">Minimum 8 characters</small>
+            <small class="text-muted-color">{{ t('pages.profile.minChars') }}</small>
           </div>
 
           <div>
             <label for="confirmPassword" class="block text-sm font-medium mb-2">
-              Confirm new Password
+              {{ t('pages.profile.confirmNewPassword') }}
             </label>
             <Password
               id="confirmPassword"
               v-model="passwordForm.confirmPassword"
               :feedback="false"
               toggleMask
-              placeholder="Confirm new password"
+              :placeholder="t('pages.profile.confirmNewPasswordPlaceholder')"
               class="w-full"
               inputClass="w-full"
             />
@@ -271,14 +284,14 @@ onMounted(() => {
 
         <template #footer>
           <Button
-            label="Cancel"
+            :label="t('common.cancel')"
             icon="pi pi-times"
             @click="showPasswordDialog = false"
             class="p-button-text"
             :disabled="passwordLoading"
           />
           <Button
-            label="Update"
+            :label="t('common.update')"
             icon="pi pi-check"
             @click="updatePassword"
             :loading="passwordLoading"

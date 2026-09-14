@@ -4,6 +4,9 @@ import OneTimeLinkPage from '@/pages/OneTimeLinkPage.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 const SECRET = {
   name: 'Production database',
@@ -136,7 +139,9 @@ describe('OneTimeLinkPage', () => {
     const wrapper = mountPage(new InMemoryOneTimeLinkRepository())
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.text()).toContain('This link is incomplete')
+    // This string is one we author (unlike the domain error messages
+    // elsewhere in this file, which stay in English regardless of locale).
+    expect(wrapper.text()).toContain(t('pages.oneTimeLink.errors.incompleteLink'))
   })
 
   it('offers a copy button for the URL', async () => {

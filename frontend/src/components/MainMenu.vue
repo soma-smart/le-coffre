@@ -12,7 +12,7 @@
           :class="isPasswordsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }"
-          >Passwords</span
+          >{{ t('components.mainMenu.passwords') }}</span
         >
       </div>
       <div class="pl-8 pb-2">
@@ -71,7 +71,7 @@
               class="pi text-xs"
               :class="adminPasswordViewEnabled ? 'pi-eye' : 'pi-eye-slash'"
             />
-            <span class="uppercase tracking-wide">Show admin groups</span>
+            <span class="uppercase tracking-wide">{{ t('components.mainMenu.showAdminGroups') }}</span>
           </button>
         </div>
         <div
@@ -122,7 +122,7 @@
           :class="isGroupsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }"
-          >Groups</span
+          >{{ t('components.mainMenu.groups') }}</span
         >
       </div>
       <div
@@ -135,7 +135,7 @@
           :class="isMyLinksActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isMyLinksActive }"
-          >My links</span
+          >{{ t('components.mainMenu.myLinks') }}</span
         >
       </div>
       <div
@@ -148,7 +148,7 @@
           :class="isProfileActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }"
-          >Profile</span
+          >{{ t('components.mainMenu.profile') }}</span
         >
         <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1"
           >⌘+W</span
@@ -165,7 +165,7 @@
             :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
           />
           <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }"
-            >Admin</span
+            >{{ t('components.mainMenu.admin') }}</span
           >
           <span
             class="ml-auto pi transition-transform"
@@ -187,7 +187,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminConfigActive }"
-              >Config</span
+              >{{ t('components.mainMenu.config') }}</span
             >
           </div>
           <div
@@ -204,7 +204,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminUsersActive }"
-              >Users</span
+              >{{ t('components.mainMenu.users') }}</span
             >
           </div>
           <div
@@ -223,7 +223,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminOneTimeLinksActive }"
-              >One-time links</span
+              >{{ t('components.mainMenu.oneTimeLinks') }}</span
             >
           </div>
           <div
@@ -242,7 +242,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminStatisticsActive }"
-              >Statistics</span
+              >{{ t('components.mainMenu.statistics') }}</span
             >
           </div>
         </div>
@@ -251,7 +251,7 @@
     <!-- Logout Button and Theme Switcher at bottom -->
     <div class="p-4 border-t border-surface flex flex-col gap-3">
       <Button
-        label="Logout"
+        :label="t('components.mainMenu.logout')"
         icon="pi pi-sign-out"
         @click="handleLogout"
         severity="secondary"
@@ -267,6 +267,7 @@
 import { onMounted, watch, computed, ref, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { usePasswordsStore } from '@/stores/passwords'
 import { usePasswordAccessStore } from '../stores/passwordAccess'
@@ -282,6 +283,7 @@ const router = useRouter()
 const route = useRoute()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 const toast = useToast()
+const { t } = useI18n()
 
 const passwordsStore = usePasswordsStore()
 
@@ -471,8 +473,8 @@ const handleLogout = async () => {
   router.push('/login').then(() => {
     toast.add({
       severity: 'success',
-      summary: 'Logout Successful',
-      detail: 'You have been logged out successfully.',
+      summary: t('components.mainMenu.logoutSuccessSummary'),
+      detail: t('components.mainMenu.logoutSuccessDetail'),
       life: 5000,
     })
   })

@@ -1,7 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { primaryColors, surfaces, type ColorPalette } from '@/config/colorThemes'
+import fr from '@/i18n/locales/fr.json'
+import en from '@/i18n/locales/en.json'
 
 describe('colorThemes', () => {
+  // ThemeSwitcher shows each swatch's name as a tooltip via
+  // translateColorName(), which falls back to this raw key when no
+  // translation exists — silently shipping an untranslated tooltip. This
+  // guards against that for every color this config actually defines.
+  it.each([...primaryColors, ...surfaces].map((c) => c.name))(
+    "has a tooltip translation for '%s' in every locale",
+    (name) => {
+      expect(fr.components.themeSwitcher.colorNames, `fr.json: ${name}`).toHaveProperty(name)
+      expect(en.components.themeSwitcher.colorNames, `en.json: ${name}`).toHaveProperty(name)
+    },
+  )
+
+
   it('lists every primary color the theme picker expects', () => {
     const names = primaryColors.map((c) => c.name)
     expect(names).toEqual([

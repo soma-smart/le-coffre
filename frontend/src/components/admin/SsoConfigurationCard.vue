@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import { AuthDomainError } from '@/domain/auth/errors'
 import { useContainer } from '@/plugins/container'
 
 const toast = useToast()
+const { t } = useI18n()
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
@@ -26,8 +28,8 @@ const handleSubmit = async () => {
   if (!formData.client_id || !formData.client_secret || !formData.discovery_url) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please fill in all required fields.',
+      summary: t('common.validationError'),
+      detail: t('components.admin.ssoConfiguration.fillAllFields'),
       life: 5000,
     })
     return
@@ -44,8 +46,8 @@ const handleSubmit = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'SSO Configured',
-      detail: 'SSO provider has been configured successfully.',
+      summary: t('components.admin.ssoConfiguration.configuredSummary'),
+      detail: t('components.admin.ssoConfiguration.configuredDetail'),
       life: 5000,
     })
 
@@ -53,13 +55,14 @@ const handleSubmit = async () => {
     resetForm()
   } catch (error) {
     console.error('Failed to configure SSO:', error)
+    // AuthDomainError's message is the backend's own wording — not ours to translate.
     const detail =
       error instanceof AuthDomainError
         ? error.message
-        : 'Failed to configure SSO provider. Please check your settings and try again.'
+        : t('components.admin.ssoConfiguration.configFailedFallback')
     toast.add({
       severity: 'error',
-      summary: 'Configuration Failed',
+      summary: t('components.admin.ssoConfiguration.configFailedSummary'),
       detail,
       life: 5000,
     })
@@ -81,35 +84,39 @@ const resetForm = () => {
     <template #title>
       <div class="flex items-center gap-2">
         <i class="pi pi-shield"></i>
-        SSO Configuration
+        {{ t('components.admin.ssoConfiguration.title') }}
       </div>
     </template>
     <template #content>
       <p class="text-muted-color mb-4">
-        Configure Single Sign-On (SSO) provider using OpenID Connect auto-discovery.
+        {{ t('components.admin.ssoConfiguration.description') }}
       </p>
 
       <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
         <div class="flex flex-col gap-2">
-          <label for="client-id" class="font-semibold">Client ID</label>
+          <label for="client-id" class="font-semibold">{{
+            t('components.admin.ssoConfiguration.clientIdLabel')
+          }}</label>
           <InputText
             id="client-id"
             v-model="formData.client_id"
-            placeholder="Enter OAuth2 Client ID"
+            :placeholder="t('components.admin.ssoConfiguration.clientIdPlaceholder')"
             :invalid="submitted && !formData.client_id"
             required
           />
           <small v-if="submitted && !formData.client_id" class="text-red-500">
-            Client ID is required
+            {{ t('components.admin.ssoConfiguration.clientIdRequired') }}
           </small>
         </div>
 
         <div class="flex flex-col gap-2">
-          <label for="client-secret" class="font-semibold">Client Secret</label>
+          <label for="client-secret" class="font-semibold">{{
+            t('components.admin.ssoConfiguration.clientSecretLabel')
+          }}</label>
           <Password
             inputId="client-secret"
             v-model="formData.client_secret"
-            placeholder="Enter OAuth2 Client Secret"
+            :placeholder="t('components.admin.ssoConfiguration.clientSecretPlaceholder')"
             :invalid="submitted && !formData.client_secret"
             :feedback="false"
             toggleMask
@@ -117,12 +124,14 @@ const resetForm = () => {
             required
           />
           <small v-if="submitted && !formData.client_secret" class="text-red-500">
-            Client Secret is required
+            {{ t('components.admin.ssoConfiguration.clientSecretRequired') }}
           </small>
         </div>
 
         <div class="flex flex-col gap-2">
-          <label for="discovery-url" class="font-semibold">Discovery URL</label>
+          <label for="discovery-url" class="font-semibold">{{
+            t('components.admin.ssoConfiguration.discoveryUrlLabel')
+          }}</label>
           <InputText
             id="discovery-url"
             v-model="formData.discovery_url"
@@ -131,24 +140,24 @@ const resetForm = () => {
             required
           />
           <small class="text-muted-color">
-            OpenID Connect discovery URL (.well-known/openid-configuration)
+            {{ t('components.admin.ssoConfiguration.discoveryUrlHelp') }}
           </small>
           <small v-if="submitted && !formData.discovery_url" class="text-red-500">
-            Discovery URL is required
+            {{ t('components.admin.ssoConfiguration.discoveryUrlRequired') }}
           </small>
         </div>
 
         <div class="flex gap-2 mt-4">
           <Button
             type="submit"
-            label="Configure SSO"
+            :label="t('components.admin.ssoConfiguration.configureButton')"
             icon="pi pi-check"
             :loading="loading"
             :disabled="loading"
           />
           <Button
             type="button"
-            label="Reset"
+            :label="t('components.admin.ssoConfiguration.resetButton')"
             icon="pi pi-refresh"
             severity="secondary"
             outlined
