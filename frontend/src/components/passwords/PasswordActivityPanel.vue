@@ -16,12 +16,13 @@
       <p v-else-if="events.length === 0" class="text-sm text-muted-color">No recent activity.</p>
 
       <ul v-else class="flex flex-col gap-3">
-        <li v-for="event in events" :key="event.eventId" class="flex items-center gap-3">
+        <li v-for="event in events" :key="event.eventId" class="flex items-center justify-between gap-3">
           <Tag
+            class="shrink-0"
             :value="humanizeEventType(event.eventType)"
             :severity="eventSeverity(event.eventType)"
           />
-          <span class="text-sm text-muted-color truncate">
+          <span class="text-sm text-muted-color truncate text-right">
             by {{ event.actorEmail || 'Unknown user' }} · {{ formatDate(event.occurredOn) }}
           </span>
         </li>
