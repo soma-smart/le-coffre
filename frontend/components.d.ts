@@ -82,6 +82,7 @@ declare module 'vue' {
     Tabs: typeof import('primevue/tabs')['default']
     Tag: typeof import('primevue/tag')['default']
     ThemeSwitcher: typeof import('./src/components/ThemeSwitcher.vue')['default']
+    Timeline: typeof import('primevue/timeline')['default']
     Toast: typeof import('primevue/toast')['default']
     ToggleSwitch: typeof import('primevue/toggleswitch')['default']
     UnlockVaultModal: typeof import('./src/components/modals/UnlockVaultModal.vue')['default']

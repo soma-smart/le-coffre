@@ -45,6 +45,35 @@ describe('useRecentPasswordActivity', () => {
     expect(events.value.map((e) => e.eventId)).toEqual(['newest', 'mid'])
   })
 
+  it('exposes hasMore when the password has more events than the limit', async () => {
+    const execute = vi
+      .fn()
+      .mockResolvedValue([
+        makeEvent({ eventId: 'a', occurredOn: '2026-01-01T00:00:00Z' }),
+        makeEvent({ eventId: 'b', occurredOn: '2026-02-01T00:00:00Z' }),
+        makeEvent({ eventId: 'c', occurredOn: '2026-03-01T00:00:00Z' }),
+      ])
+    const { events, hasMore } = useRecentPasswordActivity({
+      passwordId: ref('p1'),
+      useCases: { listEvents: { execute } },
+      limit: 2,
+    })
+
+    await vi.waitFor(() => expect(events.value).toHaveLength(2))
+    expect(hasMore.value).toBe(true)
+  })
+
+  it('leaves hasMore false when every event fits under the limit', async () => {
+    const execute = vi.fn().mockResolvedValue([makeEvent()])
+    const { events, hasMore } = useRecentPasswordActivity({
+      passwordId: ref('p1'),
+      useCases: { listEvents: { execute } },
+    })
+
+    await vi.waitFor(() => expect(events.value).toHaveLength(1))
+    expect(hasMore.value).toBe(false)
+  })
+
   it('re-fetches when the passwordId changes, and clears when it becomes null', async () => {
     const execute = vi.fn().mockResolvedValue([makeEvent({ eventId: 'a' })])
     const passwordId = ref<string | null>('p1')
