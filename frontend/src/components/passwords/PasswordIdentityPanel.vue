@@ -3,10 +3,13 @@
     <template #title>Identity</template>
     <template #content>
       <div class="flex flex-col gap-4">
-        <div v-if="password.login">
+        <div>
           <label class="text-xs uppercase tracking-wide text-muted-color">Username</label>
-          <div class="flex items-center gap-2 mt-1">
-            <span class="text-sm">{{ password.login }}</span>
+          <div class="flex items-center gap-2 mt-1 w-full min-w-0">
+            <span v-if="password.login" class="text-sm flex-1 min-w-0 truncate">{{
+              password.login
+            }}</span>
+            <span v-else class="text-sm flex-1 min-w-0 italic text-muted-color">None</span>
             <Button
               icon="pi pi-copy"
               text
@@ -14,6 +17,7 @@
               size="small"
               severity="secondary"
               aria-label="Copy username"
+              :disabled="!password.login"
               @click="copyUsername"
             />
           </div>
@@ -21,9 +25,9 @@
 
         <div>
           <label class="text-xs uppercase tracking-wide text-muted-color">Password</label>
-          <div class="flex items-center gap-2 mt-1">
+          <div class="flex items-center gap-2 mt-1 w-full min-w-0">
             <code
-              class="text-sm px-3 py-1 rounded border border-surface font-mono"
+              class="text-sm px-3 py-1 rounded border border-surface font-mono flex-1 min-w-0 truncate"
               style="background-color: var(--p-content-background)"
             >
               {{ isVisible && passwordValue ? passwordValue : '••••••••' }}
@@ -54,23 +58,24 @@
           </div>
         </div>
 
-        <div v-if="password.url">
+        <div>
           <label class="text-xs uppercase tracking-wide text-muted-color">Website</label>
-          <div class="flex items-center gap-2 mt-1 min-w-0">
+          <div class="flex items-center gap-2 mt-1 w-full min-w-0">
             <a
-              v-if="safePasswordUrl"
+              v-if="password.url && safePasswordUrl"
               :href="safePasswordUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="text-sm text-primary hover:underline truncate"
+              class="text-sm text-primary hover:underline truncate flex-1 min-w-0"
               >{{ password.url }}</a
             >
             <span
-              v-else
-              class="text-sm text-muted-color truncate"
+              v-else-if="password.url"
+              class="text-sm text-muted-color truncate flex-1 min-w-0"
               v-tooltip.top="'URL is not opened because it is not http(s)'"
               >{{ password.url }}</span
             >
+            <span v-else class="text-sm flex-1 min-w-0 italic text-muted-color">None</span>
             <Button
               icon="pi pi-copy"
               text
@@ -78,6 +83,7 @@
               size="small"
               severity="secondary"
               aria-label="Copy website"
+              :disabled="!password.url"
               @click="copyWebsite"
             />
           </div>
