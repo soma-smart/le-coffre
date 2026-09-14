@@ -42,7 +42,7 @@
       </div>
     </div>
 
-    <div v-if="expanded" class="pl-4 pb-1">
+    <div v-if="expanded" class="pl-4 pt-1 pb-1 pr-1 flex flex-col gap-0.5">
       <div
         class="flex items-center px-4 py-1.5 cursor-pointer group transition-colors hover:bg-emphasis rounded"
         :class="active && activeFolder === null ? 'bg-primary/10' : ''"
@@ -61,6 +61,7 @@
           :class="{ 'font-semibold': active && activeFolder === null }"
           >All</span
         >
+        <Badge class="ml-auto" severity="secondary" :value="count" />
       </div>
       <div
         v-for="folder in folders"
