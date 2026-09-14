@@ -40,8 +40,8 @@ describe('ResizeHandle', () => {
     }
   })
 
-  it('defaults to a 9px glow', () => {
-    expect(gripSpan().width).toBe(9)
+  it('defaults to a 5px glow', () => {
+    expect(gripSpan().width).toBe(5)
   })
 
   it('forwards pointerdown so the parent can start a drag', async () => {
