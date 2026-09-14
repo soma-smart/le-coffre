@@ -27,7 +27,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
       class="hidden md:flex relative shrink-0 border-r border-surface flex-col"
       :style="{ width: `${sidebarWidth}px` }"
     >
-      <div class="p-4 border-b border-surface flex items-center gap-3">
+      <div class="h-18 px-4 border-b border-surface flex items-center gap-3">
         <img src="/img/le-coffre.png" alt="Le Coffre" class="h-10 w-auto" />
         <h1 class="text-2xl font-bold text-primary">Le Coffre</h1>
       </div>
