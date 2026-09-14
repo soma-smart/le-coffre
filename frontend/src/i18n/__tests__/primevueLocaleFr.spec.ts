@@ -18,9 +18,9 @@ describe('primevueLocaleFr', () => {
     )
     expect(missing).toEqual([])
 
-    const missingAria = Object.keys(
-      (englishDefaults.aria as Record<string, unknown>) ?? {},
-    ).filter((key) => !(key in (primevueLocaleFr.aria ?? {})))
+    const missingAria = Object.keys((englishDefaults.aria as Record<string, unknown>) ?? {}).filter(
+      (key) => !(key in (primevueLocaleFr.aria ?? {})),
+    )
     expect(missingAria).toEqual([])
   })
 
@@ -44,7 +44,7 @@ describe('primevueLocaleFr', () => {
     expect(primevueLocaleFr.reject).not.toBe(englishDefaults.reject)
   })
 
-  it('primevueLocaleEn is PrimeVue\'s own English locale, kept in sync with the installed version', () => {
+  it("primevueLocaleEn is PrimeVue's own English locale, kept in sync with the installed version", () => {
     expect(primevueLocaleEn).toBe(englishDefaults)
   })
 })

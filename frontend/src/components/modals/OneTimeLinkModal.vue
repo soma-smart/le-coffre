@@ -83,7 +83,9 @@ async function refreshLinks() {
     canIssue.value = canIssueAnotherLink(page)
   } catch (err) {
     error.value =
-      err instanceof OneTimeLinkDomainError ? err.message : t('components.oneTimeLinkModal.loadFailed')
+      err instanceof OneTimeLinkDomainError
+        ? err.message
+        : t('components.oneTimeLinkModal.loadFailed')
   }
 }
 
@@ -104,7 +106,9 @@ async function generate() {
     await refreshLinks()
   } catch (err) {
     error.value =
-      err instanceof OneTimeLinkDomainError ? err.message : t('components.oneTimeLinkModal.createFailed')
+      err instanceof OneTimeLinkDomainError
+        ? err.message
+        : t('components.oneTimeLinkModal.createFailed')
   } finally {
     loading.value = false
   }
@@ -114,7 +118,11 @@ async function copyUrl() {
   if (!generatedUrl.value) return
   await navigator.clipboard.writeText(generatedUrl.value)
   copied.value = true
-  toast.add({ severity: 'success', summary: t('components.oneTimeLinkModal.linkCopiedSummary'), life: 2000 })
+  toast.add({
+    severity: 'success',
+    summary: t('components.oneTimeLinkModal.linkCopiedSummary'),
+    life: 2000,
+  })
   setTimeout(() => (copied.value = false), 2000)
 }
 
@@ -151,7 +159,9 @@ async function confirmRevoke() {
     await refreshLinks()
   } catch (err) {
     error.value =
-      err instanceof OneTimeLinkDomainError ? err.message : t('components.oneTimeLinkModal.revokeFailed')
+      err instanceof OneTimeLinkDomainError
+        ? err.message
+        : t('components.oneTimeLinkModal.revokeFailed')
   }
 }
 
@@ -199,7 +209,9 @@ function severityFor(link: OneTimeLink) {
 
     <div v-if="!generatedUrl" class="flex gap-2 items-end mb-4">
       <div class="grow">
-        <label class="block mb-1 text-sm">{{ t('components.oneTimeLinkModal.validForLabel') }}</label>
+        <label class="block mb-1 text-sm">{{
+          t('components.oneTimeLinkModal.validForLabel')
+        }}</label>
         <Select
           v-model="lifetimeSeconds"
           :options="lifetimeOptions"
@@ -244,7 +256,11 @@ function severityFor(link: OneTimeLink) {
 
     <div class="flex flex-wrap gap-2 justify-between items-baseline mb-2">
       <h4 class="font-medium">
-        {{ showHistory ? t('components.oneTimeLinkModal.allLinks') : t('components.oneTimeLinkModal.activeLinksTitle') }}
+        {{
+          showHistory
+            ? t('components.oneTimeLinkModal.allLinks')
+            : t('components.oneTimeLinkModal.activeLinksTitle')
+        }}
       </h4>
       <span class="text-sm text-muted-color" data-testid="link-counters">
         <span data-testid="active-links">{{
@@ -252,7 +268,12 @@ function severityFor(link: OneTimeLink) {
         }}</span>
         <span v-if="showHistory && hiddenLinks > 0" data-testid="hidden-links">
           &nbsp;&middot;
-          {{ t('components.oneTimeLinkModal.showingOfTotal', { shown: links.length, total: totalLinks }) }}
+          {{
+            t('components.oneTimeLinkModal.showingOfTotal', {
+              shown: links.length,
+              total: totalLinks,
+            })
+          }}
         </span>
       </span>
     </div>
@@ -265,7 +286,11 @@ function severityFor(link: OneTimeLink) {
     </div>
 
     <p v-if="links.length === 0" class="text-sm text-muted-color">
-      {{ showHistory ? t('components.oneTimeLinkModal.noLinkIssued') : t('components.oneTimeLinkModal.noActiveLink') }}
+      {{
+        showHistory
+          ? t('components.oneTimeLinkModal.noLinkIssued')
+          : t('components.oneTimeLinkModal.noActiveLink')
+      }}
     </p>
     <ul v-else class="flex flex-col gap-2">
       <li
@@ -274,7 +299,10 @@ function severityFor(link: OneTimeLink) {
         class="flex gap-2 justify-between items-center p-2 rounded border border-surface"
       >
         <div class="text-sm">
-          <Tag :value="t(`common.oneTimeLinkStatus.${statusOf(link)}`)" :severity="severityFor(link)" />
+          <Tag
+            :value="t(`common.oneTimeLinkStatus.${statusOf(link)}`)"
+            :severity="severityFor(link)"
+          />
           <!-- Relative, with the exact timestamp on hover: an absolute date is
                easy to misread as "already expired" when only the time registers. -->
           <span
@@ -282,14 +310,22 @@ function severityFor(link: OneTimeLink) {
             :title="formatAbsoluteTime(link.createdAt)"
             data-testid="created-label"
           >
-            {{ t('components.oneTimeLinkModal.createdLabel', { relative: formatRelativeTime(link.createdAt) }) }}
+            {{
+              t('components.oneTimeLinkModal.createdLabel', {
+                relative: formatRelativeTime(link.createdAt),
+              })
+            }}
           </span>
           <span
             v-if="link.readAt"
             class="ml-2 text-muted-color"
             :title="formatAbsoluteTime(link.readAt)"
           >
-            {{ t('components.oneTimeLinkModal.readLabel', { relative: formatRelativeTime(link.readAt) }) }}
+            {{
+              t('components.oneTimeLinkModal.readLabel', {
+                relative: formatRelativeTime(link.readAt),
+              })
+            }}
           </span>
           <span
             v-else
@@ -297,7 +333,11 @@ function severityFor(link: OneTimeLink) {
             :title="formatAbsoluteTime(link.expiresAt)"
             data-testid="expiry-label"
           >
-            {{ t('components.oneTimeLinkModal.expiresLabel', { relative: formatRelativeTime(link.expiresAt) }) }}
+            {{
+              t('components.oneTimeLinkModal.expiresLabel', {
+                relative: formatRelativeTime(link.expiresAt),
+              })
+            }}
           </span>
         </div>
         <Button

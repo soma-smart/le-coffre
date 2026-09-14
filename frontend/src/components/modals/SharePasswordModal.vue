@@ -80,7 +80,9 @@ const shareStatus = (expiresAt: string | null): ShareStatus => shareStatusOf(exp
 const shareLabel = (expiresAt: string | null): string =>
   shareStatus(expiresAt) === 'expired'
     ? t('components.sharePasswordModal.expiredLabel')
-    : t('components.sharePasswordModal.expiresLabel', { relative: formatRelativeTime(expiresAt ?? '') })
+    : t('components.sharePasswordModal.expiresLabel', {
+        relative: formatRelativeTime(expiresAt ?? ''),
+      })
 
 // A user is a password "owner" when they own a group that owns the password.
 const userIsOwner = (user: UserAccessView): boolean =>
@@ -356,7 +358,9 @@ onMounted(async () => {
     >
       <!-- Share with new group (only for users with write access) -->
       <div v-if="canManageSharing" class="flex flex-col gap-4 pb-4 border-b">
-        <h3 class="font-semibold text-lg">{{ t('components.sharePasswordModal.shareWithGroupTitle') }}</h3>
+        <h3 class="font-semibold text-lg">
+          {{ t('components.sharePasswordModal.shareWithGroupTitle') }}
+        </h3>
         <div class="flex gap-2">
           <Select
             id="group-select"

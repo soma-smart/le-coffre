@@ -52,9 +52,9 @@ async function generateMasterKey() {
     />
     <p class="mt-4">
       {{ t('components.setup.generateMasterKey.description1Prefix') }}
-      <a href="https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing" target="_blank"
-        >{{ t('components.setup.generateMasterKey.sssLinkText') }}</a
-      >
+      <a href="https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing" target="_blank">{{
+        t('components.setup.generateMasterKey.sssLinkText')
+      }}</a>
       {{ t('components.setup.generateMasterKey.description1Suffix') }}
     </p>
     <p class="mt-4">

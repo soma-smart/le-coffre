@@ -74,7 +74,9 @@ const handleLockVault = () => {
         <div class="flex items-start gap-3">
           <i class="pi pi-exclamation-triangle text-xl"></i>
           <div class="flex-1">
-            <h3 class="font-semibold mb-2">{{ t('components.admin.vaultManagement.warningTitle') }}</h3>
+            <h3 class="font-semibold mb-2">
+              {{ t('components.admin.vaultManagement.warningTitle') }}
+            </h3>
             <p class="text-sm">
               {{ t('components.admin.vaultManagement.warningBody') }}
             </p>

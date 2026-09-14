@@ -185,7 +185,9 @@ watch(visible, (isVisible) => {
           <span v-if="group.isPersonal" class="font-medium">{{
             t('components.groupDetailsModal.personalGroup')
           }}</span>
-          <span v-else class="font-medium">{{ t('components.groupDetailsModal.sharedGroup') }}</span>
+          <span v-else class="font-medium">{{
+            t('components.groupDetailsModal.sharedGroup')
+          }}</span>
         </div>
 
         <!-- History button (only for owners of the group or admins) -->
@@ -201,7 +203,9 @@ watch(visible, (isVisible) => {
 
       <div v-if="isFetching" class="text-center py-4">
         <ProgressSpinner style="width: 30px; height: 30px" />
-        <p class="text-sm text-muted-color mt-2">{{ t('components.groupDetailsModal.loadingMembers') }}</p>
+        <p class="text-sm text-muted-color mt-2">
+          {{ t('components.groupDetailsModal.loadingMembers') }}
+        </p>
       </div>
 
       <div v-else class="flex flex-col gap-4">
@@ -234,7 +238,9 @@ watch(visible, (isVisible) => {
                     <div>
                       <p class="font-semibold">
                         {{ user.name }}
-                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
+                        <span
+                          v-if="user.id === currentUserId"
+                          class="text-sm text-primary-600 ml-2"
                           >{{ t('components.groupDetailsModal.you') }}</span
                         >
                       </p>
@@ -287,7 +293,9 @@ watch(visible, (isVisible) => {
                     <div>
                       <p class="font-semibold">
                         {{ user.name }}
-                        <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
+                        <span
+                          v-if="user.id === currentUserId"
+                          class="text-sm text-primary-600 ml-2"
                           >{{ t('components.groupDetailsModal.you') }}</span
                         >
                       </p>
@@ -363,7 +371,11 @@ watch(visible, (isVisible) => {
     </div>
 
     <template #footer>
-      <Button :label="t('common.cancel')" severity="secondary" @click="showAddMemberDialog = false" />
+      <Button
+        :label="t('common.cancel')"
+        severity="secondary"
+        @click="showAddMemberDialog = false"
+      />
       <Button
         :label="t('common.add')"
         icon="pi pi-user-plus"

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildPageReportTemplate } from '../dataTablePageReport'
 
 describe('buildPageReportTemplate', () => {
-  it('translates the surrounding words while leaving PrimeVue\'s own tokens untouched', () => {
+  it("translates the surrounding words while leaving PrimeVue's own tokens untouched", () => {
     const t = (key: string) =>
       ({
         'common.pagination.showing': 'Affichage de',

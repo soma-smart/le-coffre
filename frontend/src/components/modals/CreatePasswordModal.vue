@@ -344,9 +344,9 @@ const handlePasswordBlur = () => {
                 class="text-sm"
               ></i>
               <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color"
-                >{{ t('components.createPasswordModal.personalTag') }}</span
-              >
+              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color">{{
+                t('components.createPasswordModal.personalTag')
+              }}</span>
             </div>
           </template>
           <template #value="slotProps">
@@ -374,7 +374,9 @@ const handlePasswordBlur = () => {
       <div class="flex flex-col gap-2">
         <label for="password-value" class="font-semibold"
           >{{ t('components.createPasswordModal.passwordLabel')
-          }}{{ isEditMode ? t('components.createPasswordModal.passwordLabelEditSuffix') : '' }}</label
+          }}{{
+            isEditMode ? t('components.createPasswordModal.passwordLabelEditSuffix') : ''
+          }}</label
         >
         <InputText
           id="password-value"
@@ -453,7 +455,12 @@ const handlePasswordBlur = () => {
     </div>
 
     <template #footer>
-      <Button :label="t('common.cancel')" severity="secondary" @click="handleCancel" :disabled="loading" />
+      <Button
+        :label="t('common.cancel')"
+        severity="secondary"
+        @click="handleCancel"
+        :disabled="loading"
+      />
       <Button
         :label="isEditMode ? t('common.update') : t('common.create')"
         @click="handleSubmit"

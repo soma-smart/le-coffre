@@ -16,7 +16,6 @@ describe('colorThemes', () => {
     },
   )
 
-
   it('lists every primary color the theme picker expects', () => {
     const names = primaryColors.map((c) => c.name)
     expect(names).toEqual([

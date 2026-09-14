@@ -72,13 +72,23 @@
           </div>
         </template>
 
-        <Column field="occurred_on" :header="t('components.userHistoryModal.dateTimeHeader')" sortable :style="{ width: '22%' }">
+        <Column
+          field="occurred_on"
+          :header="t('components.userHistoryModal.dateTimeHeader')"
+          sortable
+          :style="{ width: '22%' }"
+        >
           <template #body="slotProps">
             <span class="text-sm">{{ formatDateTime(slotProps.data.occurredOn) }}</span>
           </template>
         </Column>
 
-        <Column field="event_type" :header="t('components.userHistoryModal.eventTypeHeader')" sortable :style="{ width: '20%' }">
+        <Column
+          field="event_type"
+          :header="t('components.userHistoryModal.eventTypeHeader')"
+          sortable
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <Tag
               :value="translateEventType(t, slotProps.data.eventType)"
@@ -87,26 +97,46 @@
           </template>
         </Column>
 
-        <Column field="password_id" :header="t('components.userHistoryModal.passwordHeader')" :style="{ width: '20%' }">
+        <Column
+          field="password_id"
+          :header="t('components.userHistoryModal.passwordHeader')"
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <span class="font-mono text-xs text-muted-color">{{ slotProps.data.passwordId }}</span>
           </template>
         </Column>
 
-        <Column field="event_data" :header="t('components.userHistoryModal.detailsHeader')" :style="{ width: '38%' }">
+        <Column
+          field="event_data"
+          :header="t('components.userHistoryModal.detailsHeader')"
+          :style="{ width: '38%' }"
+        >
           <template #body="slotProps">
             <div class="text-sm">
               <span v-if="slotProps.data.eventType === 'PasswordCreatedEvent'">
                 {{ t('common.passwordEvents.createdInFolder') }}
-                <strong>{{ slotProps.data.eventData.folder || t('common.passwordEvents.defaultFolder') }}</strong>
+                <strong>{{
+                  slotProps.data.eventData.folder || t('common.passwordEvents.defaultFolder')
+                }}</strong>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordUpdatedEvent'">
                 {{ t('common.passwordEvents.updatedLabel') }}
-                <span v-if="slotProps.data.eventData.hasNameChanged"> {{ t('common.passwordEvents.fieldName') }}</span>
-                <span v-if="slotProps.data.eventData.hasPasswordChanged"> {{ t('common.passwordEvents.fieldPassword') }}</span>
-                <span v-if="slotProps.data.eventData.hasFolderChanged"> {{ t('common.passwordEvents.fieldFolder') }}</span>
-                <span v-if="slotProps.data.eventData.hasLoginChanged"> {{ t('common.passwordEvents.fieldLogin') }}</span>
-                <span v-if="slotProps.data.eventData.hasUrlChanged"> {{ t('common.passwordEvents.fieldUrl') }}</span>
+                <span v-if="slotProps.data.eventData.hasNameChanged">
+                  {{ t('common.passwordEvents.fieldName') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasPasswordChanged">
+                  {{ t('common.passwordEvents.fieldPassword') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasFolderChanged">
+                  {{ t('common.passwordEvents.fieldFolder') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasLoginChanged">
+                  {{ t('common.passwordEvents.fieldLogin') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasUrlChanged">
+                  {{ t('common.passwordEvents.fieldUrl') }}</span
+                >
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordSharedEvent'">
                 {{ t('common.passwordEvents.sharedWithGroup') }}

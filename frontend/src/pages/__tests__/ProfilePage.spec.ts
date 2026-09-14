@@ -78,8 +78,8 @@ describe('ProfilePage', () => {
     // have switched together.
     expect(i18n.global.locale.value).toBe('en')
     expect(document.documentElement.lang).toBe('en')
-    expect(
-      container.preferences.read.execute<string>({ key: PREFERENCE_KEYS.UI_LOCALE }),
-    ).toBe('en')
+    expect(container.preferences.read.execute<string>({ key: PREFERENCE_KEYS.UI_LOCALE })).toBe(
+      'en',
+    )
   })
 })
