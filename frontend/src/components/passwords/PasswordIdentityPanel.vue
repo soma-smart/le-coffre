@@ -1,6 +1,5 @@
 <template>
   <Card>
-    <template #title>Identity</template>
     <template #content>
       <div class="flex flex-col gap-4">
         <div>
