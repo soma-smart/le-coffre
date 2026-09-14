@@ -39,14 +39,17 @@ const resolver = computed(() =>
         email: z.email({ message: t('components.setup.adminAccountForm.invalidEmail') }),
         // Must stay in sync with the server policy (MIN_PASSWORD_LENGTH = 15),
         // otherwise the form passes here and the API answers 400.
+        // A never-touched PrimeVue input can reach the resolver as `null`
+        // rather than `''` — the base z.string() message covers that type
+        // mismatch, .min() covers a string that's merely too short.
         password: z
-          .string()
+          .string({ message: t('components.setup.adminAccountForm.passwordRequired') })
           .min(15, { message: t('components.setup.adminAccountForm.passwordTooShort') }),
         display_name: z
-          .string()
+          .string({ message: t('components.setup.adminAccountForm.displayNameRequired') })
           .min(2, { message: t('components.setup.adminAccountForm.displayNameTooShort') }),
         confirm_password: z
-          .string()
+          .string({ message: t('components.setup.adminAccountForm.confirmPasswordRequired') })
           .min(15, { message: t('components.setup.adminAccountForm.confirmPasswordTooShort') }),
       })
       .refine((data) => data.password === data.confirm_password, {
@@ -174,7 +177,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             </Message>
           </div>
           <div class="flex flex-col gap-1 mb-4">
-            <label for="confirm_password">{{ t('components.setup.adminAccountForm.confirmPasswordLabel') }}</label>
+            <label for="confirm_password">{{
+              t('components.setup.adminAccountForm.confirmPasswordLabel')
+            }}</label>
             <Password
               inputId="confirm_password"
               name="confirm_password"
@@ -192,7 +197,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             </Message>
           </div>
           <div class="flex flex-col gap-1 mb-4">
-            <label for="display_name">{{ t('components.setup.adminAccountForm.displayNameLabel') }}</label>
+            <label for="display_name">{{
+              t('components.setup.adminAccountForm.displayNameLabel')
+            }}</label>
             <InputText
               id="display_name"
               name="display_name"

@@ -101,6 +101,8 @@
       "errors": {
         "invalidEmail": "Adresse e-mail invalide.",
         "invalidCredentials": "Adresse e-mail ou mot de passe invalide",
+        "emailRequired": "L'adresse e-mail est requise",
+        "passwordRequired": "Le mot de passe est requis",
         "generic": "La connexion a échoué"
       }
     },
@@ -726,8 +728,11 @@
         "displayNameLabel": "Nom affiché",
         "submitButton": "Créer le compte administrateur",
         "invalidEmail": "Adresse e-mail invalide.",
+        "passwordRequired": "Le mot de passe est requis.",
         "passwordTooShort": "Le mot de passe doit contenir au moins 15 caractères.",
+        "displayNameRequired": "Le nom affiché est requis.",
         "displayNameTooShort": "Le nom affiché doit contenir au moins 2 caractères.",
+        "confirmPasswordRequired": "La confirmation du mot de passe est requise.",
         "confirmPasswordTooShort": "La confirmation du mot de passe doit contenir au moins 15 caractères.",
         "passwordsDontMatch": "Les mots de passe ne correspondent pas.",
         "createFailedFallback": "Échec de la création du compte administrateur",

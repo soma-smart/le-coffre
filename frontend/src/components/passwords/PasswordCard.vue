@@ -31,10 +31,16 @@
             rounded
             size="small"
             severity="secondary"
-            :aria-label="isVisible ? t('components.passwordCard.hidePassword') : t('components.passwordCard.showPassword')"
+            :aria-label="
+              isVisible
+                ? t('components.passwordCard.hidePassword')
+                : t('components.passwordCard.showPassword')
+            "
             :loading="isLoading"
             :disabled="!canReadInContext"
-            v-tooltip.top="!canReadInContext ? t('components.passwordCard.noReadAccessTooltip') : undefined"
+            v-tooltip.top="
+              !canReadInContext ? t('components.passwordCard.noReadAccessTooltip') : undefined
+            "
             @click="toggleVisibility"
           />
           <Button
@@ -45,7 +51,9 @@
             severity="secondary"
             :aria-label="t('components.passwordCard.copyPasswordAria')"
             :disabled="!canReadInContext"
-            v-tooltip.top="!canReadInContext ? t('components.passwordCard.noReadAccessTooltip') : undefined"
+            v-tooltip.top="
+              !canReadInContext ? t('components.passwordCard.noReadAccessTooltip') : undefined
+            "
             @click="copyToClipboard"
           />
         </div>
@@ -107,7 +115,9 @@
             severity="secondary"
             :aria-label="t('components.passwordCard.editAria')"
             :disabled="!canWriteInContext"
-            v-tooltip.top="!canWriteInContext ? t('components.passwordCard.noWriteAccessTooltip') : undefined"
+            v-tooltip.top="
+              !canWriteInContext ? t('components.passwordCard.noWriteAccessTooltip') : undefined
+            "
             @click="handleEdit"
           />
           <Button
@@ -119,7 +129,9 @@
             :aria-label="t('components.passwordCard.deleteAria')"
             :loading="isDeleting"
             :disabled="!canWriteInContext"
-            v-tooltip.top="!canWriteInContext ? t('components.passwordCard.noWriteAccessTooltip') : undefined"
+            v-tooltip.top="
+              !canWriteInContext ? t('components.passwordCard.noWriteAccessTooltip') : undefined
+            "
             @click="handleDelete"
           />
         </div>
@@ -162,15 +174,27 @@
             class="pi pi-exclamation-triangle text-orange-500"
             v-tooltip.top="t('components.passwordCard.staleTooltip')"
           />
-          <span>{{ t('components.passwordCard.createdLabel', { date: formatDate(password.createdAt) }) }}</span>
-          <span>{{ t('components.passwordCard.updatedLabel', { date: formatDate(password.lastUpdatedAt) }) }}</span>
+          <span>{{
+            t('components.passwordCard.createdLabel', { date: formatDate(password.createdAt) })
+          }}</span>
+          <span>{{
+            t('components.passwordCard.updatedLabel', { date: formatDate(password.lastUpdatedAt) })
+          }}</span>
         </div>
 
         <div v-if="sharedAccessInfo" class="flex items-center gap-2 shrink-0">
-          <span>{{ t('components.passwordCard.sharedLabel', { date: formatDate(sharedAccessInfo.occurredOn) }) }}</span>
+          <span>{{
+            t('components.passwordCard.sharedLabel', {
+              date: formatDate(sharedAccessInfo.occurredOn),
+            })
+          }}</span>
           <i
             class="pi pi-user"
-            v-tooltip.top="t('components.passwordCard.sharedByTooltip', { username: sharedAccessInfo.actorUsername })"
+            v-tooltip.top="
+              t('components.passwordCard.sharedByTooltip', {
+                username: sharedAccessInfo.actorUsername,
+              })
+            "
             :aria-label="t('components.passwordCard.sharedByAria')"
           />
         </div>

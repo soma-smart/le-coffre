@@ -116,7 +116,9 @@ watch(modelValue, (value) => {
 
 <template>
   <div class="flex flex-col gap-2">
-    <label for="share-duration" class="block text-sm font-medium">{{ t('components.shareDurationPicker.label') }}</label>
+    <label for="share-duration" class="block text-sm font-medium">{{
+      t('components.shareDurationPicker.label')
+    }}</label>
     <Select
       id="share-duration"
       v-model="selectedPreset"

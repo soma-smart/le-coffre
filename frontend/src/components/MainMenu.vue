@@ -11,9 +11,9 @@
           class="pi pi-key transition-colors"
           :class="isPasswordsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }"
-          >{{ t('components.mainMenu.passwords') }}</span
-        >
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }">{{
+          t('components.mainMenu.passwords')
+        }}</span>
       </div>
       <div class="pl-8 pb-2">
         <div
@@ -71,7 +71,9 @@
               class="pi text-xs"
               :class="adminPasswordViewEnabled ? 'pi-eye' : 'pi-eye-slash'"
             />
-            <span class="uppercase tracking-wide">{{ t('components.mainMenu.showAdminGroups') }}</span>
+            <span class="uppercase tracking-wide">{{
+              t('components.mainMenu.showAdminGroups')
+            }}</span>
           </button>
         </div>
         <div
@@ -121,9 +123,9 @@
           class="pi pi-users transition-colors"
           :class="isGroupsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }"
-          >{{ t('components.mainMenu.groups') }}</span
-        >
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }">{{
+          t('components.mainMenu.groups')
+        }}</span>
       </div>
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
@@ -134,9 +136,9 @@
           class="pi pi-link transition-colors"
           :class="isMyLinksActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isMyLinksActive }"
-          >{{ t('components.mainMenu.myLinks') }}</span
-        >
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isMyLinksActive }">{{
+          t('components.mainMenu.myLinks')
+        }}</span>
       </div>
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
@@ -147,9 +149,9 @@
           class="pi pi-user transition-colors"
           :class="isProfileActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }"
-          >{{ t('components.mainMenu.profile') }}</span
-        >
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }">{{
+          t('components.mainMenu.profile')
+        }}</span>
         <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1"
           >⌘+W</span
         >
@@ -164,9 +166,9 @@
             class="pi pi-shield transition-colors"
             :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
           />
-          <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }"
-            >{{ t('components.mainMenu.admin') }}</span
-          >
+          <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }">{{
+            t('components.mainMenu.admin')
+          }}</span>
           <span
             class="ml-auto pi transition-transform"
             :class="adminMenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'"

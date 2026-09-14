@@ -39,7 +39,9 @@ describe('i18n locales', () => {
 
   it.each(Object.keys(locales))('%s.json has no empty translation values', (name) => {
     const messages = locales[name]
-    const empty = leafKeys(messages).filter((key) => (valueAt(messages, key) as string).trim() === '')
+    const empty = leafKeys(messages).filter(
+      (key) => (valueAt(messages, key) as string).trim() === '',
+    )
 
     expect(empty).toEqual([])
   })
@@ -58,7 +60,8 @@ describe('i18n locales', () => {
       const [first, ...rest] = namesByLocale
       const isMismatched = rest.some(
         (entry) =>
-          entry.names.size !== first.names.size || [...first.names].some((n) => !entry.names.has(n)),
+          entry.names.size !== first.names.size ||
+          [...first.names].some((n) => !entry.names.has(n)),
       )
       if (isMismatched) {
         const summary = namesByLocale.map((e) => `${e.name}=[${[...e.names].join(',')}]`).join(' ')

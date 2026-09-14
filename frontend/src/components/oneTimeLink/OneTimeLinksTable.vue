@@ -33,7 +33,8 @@ const pendingRevoke = ref<AuditedOneTimeLink | null>(null)
 const showConfirm = ref(false)
 
 const confirmQuestion = computed(() => {
-  const name = pendingRevoke.value?.passwordName ?? t('components.oneTimeLinksTable.revokeQuestionFallback')
+  const name =
+    pendingRevoke.value?.passwordName ?? t('components.oneTimeLinksTable.revokeQuestionFallback')
   return t('components.oneTimeLinksTable.revokeQuestion', { name })
 })
 
@@ -80,7 +81,11 @@ function confirmRevoke() {
       </div>
     </template>
 
-    <Column field="status" :header="t('components.oneTimeLinksTable.statusHeader')" :style="{ width: '12%' }">
+    <Column
+      field="status"
+      :header="t('components.oneTimeLinksTable.statusHeader')"
+      :style="{ width: '12%' }"
+    >
       <template #body="slotProps">
         <Tag
           :value="t(`common.oneTimeLinkStatus.${statusOf(slotProps.data)}`)"
@@ -89,7 +94,11 @@ function confirmRevoke() {
       </template>
     </Column>
 
-    <Column field="passwordName" :header="t('components.oneTimeLinksTable.passwordHeader')" :style="{ width: '20%' }">
+    <Column
+      field="passwordName"
+      :header="t('components.oneTimeLinksTable.passwordHeader')"
+      :style="{ width: '20%' }"
+    >
       <template #body="slotProps">
         <!-- The link outlives its password, so the name can legitimately be gone. -->
         <span v-if="slotProps.data.passwordName">{{ slotProps.data.passwordName }}</span>
@@ -99,7 +108,11 @@ function confirmRevoke() {
 
     <!-- Shown on both tables: the owning group is who else can already reach the
          secret, which is context you need even for your own links. -->
-    <Column field="groupName" :header="t('components.oneTimeLinksTable.groupHeader')" :style="{ width: '18%' }">
+    <Column
+      field="groupName"
+      :header="t('components.oneTimeLinksTable.groupHeader')"
+      :style="{ width: '18%' }"
+    >
       <template #body="slotProps">
         <span v-if="slotProps.data.groupName" class="text-sm">{{ slotProps.data.groupName }}</span>
         <span v-else class="text-sm italic text-muted-color">{{ t('common.unknownGroup') }}</span>
@@ -113,11 +126,18 @@ function confirmRevoke() {
       :style="{ width: '18%' }"
     >
       <template #body="slotProps">
-        <span class="text-sm">{{ slotProps.data.createdByDisplayName || t('common.unknownUser') }}</span>
+        <span class="text-sm">{{
+          slotProps.data.createdByDisplayName || t('common.unknownUser')
+        }}</span>
       </template>
     </Column>
 
-    <Column field="createdAt" :header="t('components.oneTimeLinksTable.createdHeader')" sortable :style="{ width: '14%' }">
+    <Column
+      field="createdAt"
+      :header="t('components.oneTimeLinksTable.createdHeader')"
+      sortable
+      :style="{ width: '14%' }"
+    >
       <template #body="slotProps">
         <span class="text-sm" :title="formatAbsoluteTime(slotProps.data.createdAt)">
           {{ formatRelativeTime(slotProps.data.createdAt) }}
@@ -125,7 +145,12 @@ function confirmRevoke() {
       </template>
     </Column>
 
-    <Column field="expiresAt" :header="t('components.oneTimeLinksTable.expiresHeader')" sortable :style="{ width: '14%' }">
+    <Column
+      field="expiresAt"
+      :header="t('components.oneTimeLinksTable.expiresHeader')"
+      sortable
+      :style="{ width: '14%' }"
+    >
       <template #body="slotProps">
         <!-- Relative, like everywhere else links are shown: an absolute date
              reads as "already expired" when only the time registers. -->
@@ -135,7 +160,11 @@ function confirmRevoke() {
       </template>
     </Column>
 
-    <Column :header="t('components.oneTimeLinksTable.actionsHeader')" :exportable="false" :style="{ width: '10%' }">
+    <Column
+      :header="t('components.oneTimeLinksTable.actionsHeader')"
+      :exportable="false"
+      :style="{ width: '10%' }"
+    >
       <template #body="slotProps">
         <Button
           v-if="isActive(slotProps.data)"
