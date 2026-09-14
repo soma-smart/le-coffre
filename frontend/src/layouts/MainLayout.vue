@@ -30,6 +30,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
       <div class="h-18 px-4 border-b border-surface flex items-center gap-3">
         <img src="/img/le-coffre.png" alt="Le Coffre" class="h-10 w-auto" />
         <h1 class="text-2xl font-bold text-primary">Le Coffre</h1>
+        <ThemeSwitcher variant="icon" class="ml-auto" />
       </div>
       <div class="flex-1 min-h-0 flex">
         <MainMenu />
