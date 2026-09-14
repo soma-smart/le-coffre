@@ -15,7 +15,7 @@
           >Passwords</span
         >
       </div>
-      <div class="pl-8 pb-2">
+      <div>
         <PasswordGroupNavItem
           v-for="group in myPasswordGroups"
           :key="group.id"
