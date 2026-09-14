@@ -22,7 +22,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
 
 <template>
   <div class="h-screen flex overflow-hidden">
-    <!-- Menu latéral -->
+    <!-- Sidebar menu -->
     <aside
       class="hidden md:flex relative shrink-0 border-r border-surface flex-col"
       :style="{ width: `${sidebarWidth}px` }"
@@ -37,7 +37,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
       <ResizeHandle @pointerdown="startSidebarResizing" />
     </aside>
 
-    <!-- Contenu principal -->
+    <!-- Main content -->
     <div class="flex-1 flex flex-col min-w-0">
       <main
         class="flex-1 overflow-x-hidden pb-16 md:pb-0"
@@ -48,7 +48,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
     </div>
   </div>
 
-  <!-- Barre de navigation (mobile uniquement) -->
+  <!-- Navigation bar (mobile only) -->
   <nav
     class="md:hidden fixed bottom-0 left-0 right-0 border-t border-surface bg-surface-0 dark:bg-surface-900 flex"
   >
