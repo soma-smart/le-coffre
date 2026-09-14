@@ -12,6 +12,9 @@ import { useGroupsStore } from '@/stores/groups'
 import type { Password, PasswordAccess } from '@/domain/password/Password'
 import type { User } from '@/domain/user/User'
 import { createTestContext } from '@/test/componentTestHelpers'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 const DialogStub = defineComponent({
   props: ['visible'],
@@ -161,9 +164,9 @@ describe('SharePasswordModal', () => {
     expect(text).toContain('Bob')
     // Bob's access is via the Team group, shown as a shared link.
     expect(text).toContain('Team')
-    expect(text).toContain('shared')
+    expect(text).toContain(t('components.sharePasswordModal.sharedTag'))
     // The owner link is labelled as owning the password.
-    expect(text).toContain('owns')
+    expect(text).toContain(t('components.sharePasswordModal.ownsTag'))
   })
 
   it('badges a live temporary share with its countdown', async () => {
@@ -173,7 +176,10 @@ describe('SharePasswordModal', () => {
     await flushPromises()
 
     const badge = wrapper.get('[data-testid="group-share-expiry"]')
-    expect(badge.text()).toContain('expires')
+    // relativeTime.ts is deliberately pinned to en-GB regardless of locale, so
+    // only the "expire" prefix is ours to check here.
+    const expiresPrefix = t('components.sharePasswordModal.expiresLabel', { relative: '' }).trim()
+    expect(badge.text()).toContain(expiresPrefix)
   })
 
   it('badges a lapsed share as expired rather than counting down', async () => {
@@ -182,7 +188,9 @@ describe('SharePasswordModal', () => {
     const wrapper = mountModal(container, pinia)
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="group-share-expiry"]').text()).toContain('Expired')
+    expect(wrapper.get('[data-testid="group-share-expiry"]').text()).toContain(
+      t('components.sharePasswordModal.expiredLabel'),
+    )
   })
 
   it('shows no badge on a permanent share', async () => {
@@ -220,9 +228,10 @@ describe('SharePasswordModal', () => {
     // The picker opens on the current deadline; saving null makes it permanent.
     await pickers[1].vm.$emit('update:modelValue', null)
     await flushPromises()
+    const saveLabel = t('components.sharePasswordModal.saveButton')
     await wrapper
       .findAll('button')
-      .find((button) => button.text() === 'Save')
+      .find((button) => button.text() === saveLabel)
       ?.trigger('click')
     await flushPromises()
 
@@ -240,9 +249,10 @@ describe('SharePasswordModal', () => {
       .vm.$emit('update:modelValue', deadline)
     await wrapper.findComponent({ name: 'Select' }).vm.$emit('update:modelValue', 'team-group')
     await flushPromises()
+    const shareLabel = t('components.sharePasswordModal.shareButton')
     await wrapper
       .findAll('button')
-      .find((button) => button.text().includes('Share'))
+      .find((button) => button.text().includes(shareLabel))
       ?.trigger('click')
     await flushPromises()
 

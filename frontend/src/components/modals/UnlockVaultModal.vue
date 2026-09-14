@@ -2,6 +2,7 @@
 import { ref, computed, nextTick } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from 'vue-i18n'
 import type { VaultStatus } from '@/domain/vault/Vault'
 import { VaultDomainError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
@@ -21,6 +22,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const confirm = useConfirm()
+const { t } = useI18n()
 const setupStore = useSetupStore()
 
 // Resolve use cases at setup time — inject() has no component context
@@ -48,13 +50,11 @@ const lastShareAge = computed(() => {
   const lastSubmit = new Date(props.lastShareTimestamp)
   const ageMinutes = Math.floor((Date.now() - lastSubmit.getTime()) / 60000)
 
-  if (ageMinutes < 1) return 'just now'
-  if (ageMinutes === 1) return '1 minute ago'
-  if (ageMinutes < 60) return `${ageMinutes} minutes ago`
+  if (ageMinutes < 1) return t('common.justNow')
+  if (ageMinutes < 60) return t('common.minutesAgo', { count: ageMinutes })
 
   const ageHours = Math.floor(ageMinutes / 60)
-  if (ageHours === 1) return '1 hour ago'
-  return `${ageHours} hours ago`
+  return t('common.hoursAgo', { count: ageHours })
 })
 
 const addShare = () => {
@@ -121,8 +121,8 @@ const handleSubmit = async () => {
   if (!isValid.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please fill in all share secrets',
+      summary: t('common.validationError'),
+      detail: t('components.unlockVaultModal.allSharesRequired'),
       life: 3000,
     })
     return
@@ -139,8 +139,8 @@ const handleSubmit = async () => {
     if (newStatus === 'UNLOCKED') {
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Vault unlocked successfully',
+        summary: t('components.unlockVaultModal.unlockedSummary'),
+        detail: t('components.unlockVaultModal.unlockedDetail'),
         life: 3000,
       })
       visible.value = false
@@ -149,21 +149,28 @@ const handleSubmit = async () => {
       // Backend returned 202: shares accepted but not yet enough.
       toast.add({
         severity: 'info',
-        summary: 'Shares Added',
-        detail: 'Shares added. Waiting for additional shares to unlock.',
+        summary: t('components.unlockVaultModal.sharesAddedSummary'),
+        detail: t('components.unlockVaultModal.sharesAddedDetail'),
         life: 5000,
       })
       emit('statusChanged', newStatus)
       shares.value = ['']
     }
   } catch (err: unknown) {
+    // VaultDomainError/Error messages come from the backend or an unknown
+    // failure — not ours to translate. Only our own fallback text is.
     const detail =
       err instanceof VaultDomainError
         ? err.message
         : err instanceof Error
           ? err.message
-          : 'Failed to unlock vault'
-    toast.add({ severity: 'error', summary: 'Unlock Failed', detail, life: 5000 })
+          : t('components.unlockVaultModal.unlockFailedFallback')
+    toast.add({
+      severity: 'error',
+      summary: t('components.unlockVaultModal.unlockFailedSummary'),
+      detail,
+      life: 5000,
+    })
     console.error('Failed to unlock vault:', err)
   } finally {
     loading.value = false
@@ -177,11 +184,11 @@ const resetForm = () => {
 
 const handleReset = async () => {
   confirm.require({
-    message: 'This will clear all pending shares. Continue?',
-    header: 'Clear Pending Shares',
+    message: t('components.unlockVaultModal.clearConfirmMessage'),
+    header: t('components.unlockVaultModal.clearConfirmHeader'),
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Clear Shares',
-    rejectLabel: 'Cancel',
+    acceptLabel: t('components.unlockVaultModal.clearConfirmAccept'),
+    rejectLabel: t('common.cancel'),
     acceptClass: 'p-button-danger',
     accept: async () => {
       try {
@@ -191,8 +198,8 @@ const handleReset = async () => {
 
         toast.add({
           severity: 'success',
-          summary: 'Shares Cleared',
-          detail: 'All pending shares have been cleared',
+          summary: t('components.unlockVaultModal.sharesClearedSummary'),
+          detail: t('components.unlockVaultModal.sharesClearedDetail'),
           life: 3000,
         })
 
@@ -205,8 +212,8 @@ const handleReset = async () => {
             ? err.message
             : err instanceof Error
               ? err.message
-              : 'Failed to clear shares'
-        toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 })
+              : t('components.unlockVaultModal.clearFailedFallback')
+        toast.add({ severity: 'error', summary: t('common.error'), detail, life: 5000 })
         console.error('Failed to clear shares:', err)
       } finally {
         loading.value = false
@@ -220,7 +227,7 @@ const handleReset = async () => {
   <Dialog
     v-model:visible="visible"
     modal
-    header="Unlock Vault"
+    :header="t('components.unlockVaultModal.title')"
     :closable="false"
     :closeOnEscape="false"
     :style="{ width: '40rem' }"
@@ -232,13 +239,17 @@ const handleReset = async () => {
           <i :class="isPendingUnlock ? 'pi pi-info-circle' : 'pi pi-lock'" class="mt-0.5"></i>
           <div>
             <p class="text-sm font-semibold mb-1">
-              {{ isPendingUnlock ? 'Unlock in Progress' : 'Vault is Locked' }}
+              {{
+                isPendingUnlock
+                  ? t('components.unlockVaultModal.unlockInProgressTitle')
+                  : t('components.unlockVaultModal.vaultLockedTitle')
+              }}
             </p>
             <p class="text-sm">
               {{
                 isPendingUnlock
-                  ? 'At least one share has already been submitted. Your shares will be added to the existing ones.'
-                  : 'Please enter your Shamir shares to unlock the vault and access your passwords.'
+                  ? t('components.unlockVaultModal.pendingUnlockBody')
+                  : t('components.unlockVaultModal.lockedBody')
               }}
             </p>
           </div>
@@ -250,9 +261,9 @@ const handleReset = async () => {
         <div class="flex gap-2">
           <i class="pi pi-clock"></i>
           <div>
-            <p class="text-sm font-semibold mb-1">Pending shares are old</p>
+            <p class="text-sm font-semibold mb-1">{{ t('components.unlockVaultModal.staleSharesTitle') }}</p>
             <p class="text-sm">
-              Last share was submitted {{ lastShareAge }}. Consider clearing and starting fresh.
+              {{ t('components.unlockVaultModal.staleSharesBody', { age: lastShareAge }) }}
             </p>
           </div>
         </div>
@@ -262,10 +273,12 @@ const handleReset = async () => {
         <!-- Show existing shares placeholder when PENDING_UNLOCK -->
         <div v-if="isPendingUnlock" class="flex gap-2 items-start">
           <div class="flex-1">
-            <label class="block text-sm font-semibold mb-1"> Existing Share(s) </label>
+            <label class="block text-sm font-semibold mb-1">
+              {{ t('components.unlockVaultModal.existingShareLabel') }}
+            </label>
             <Password
               model-value="••••••••••••••••"
-              placeholder="Existing shares"
+              :placeholder="t('components.unlockVaultModal.existingSharesPlaceholder')"
               disabled
               :feedback="false"
               class="w-full"
@@ -280,7 +293,11 @@ const handleReset = async () => {
         <div v-for="(share, index) in shares" :key="index" class="flex gap-2 items-start">
           <div class="flex-1">
             <label :for="`share-${index}`" class="block text-sm font-semibold mb-1">
-              {{ isPendingUnlock ? `Additional Share ${index + 1}` : `Share ${index + 1}` }}
+              {{
+                isPendingUnlock
+                  ? t('components.unlockVaultModal.additionalShareLabel', { index: index + 1 })
+                  : t('components.unlockVaultModal.shareLabel', { index: index + 1 })
+              }}
             </label>
             <InputText
               :id="`share-${index}`"
@@ -289,7 +306,7 @@ const handleReset = async () => {
               @focus="handleShareFocus(index)"
               @blur="handleShareBlur"
               type="text"
-              placeholder="Enter share secret"
+              :placeholder="t('components.unlockVaultModal.shareSecretPlaceholder')"
               :disabled="loading"
               autocomplete="off"
               autocorrect="off"
@@ -312,13 +329,13 @@ const handleReset = async () => {
             :disabled="loading"
             @click="removeShare(index)"
             class="mt-7"
-            v-tooltip.top="'Remove share'"
+            v-tooltip.top="t('components.unlockVaultModal.removeShareTooltip')"
           />
         </div>
 
         <Button
           icon="pi pi-plus"
-          label="Add Share"
+          :label="t('components.unlockVaultModal.addShareButton')"
           severity="secondary"
           outlined
           :disabled="loading"
@@ -327,8 +344,7 @@ const handleReset = async () => {
       </div>
 
       <Message severity="info" :closable="false" class="text-sm">
-        The shares are the secret parts generated during vault setup. You need enough shares to meet
-        the threshold.
+        {{ t('components.unlockVaultModal.thresholdInfo') }}
       </Message>
     </div>
 
@@ -336,7 +352,7 @@ const handleReset = async () => {
       <div class="flex justify-between w-full">
         <Button
           v-if="isPendingUnlock"
-          label="Clear Pending Shares"
+          :label="t('components.unlockVaultModal.clearPendingSharesButton')"
           @click="handleReset"
           :loading="loading"
           icon="pi pi-times"
@@ -348,14 +364,18 @@ const handleReset = async () => {
         <div class="flex gap-2">
           <Button
             type="button"
-            label="Reset"
+            :label="t('components.unlockVaultModal.resetButton')"
             severity="secondary"
             class="p-button-text"
             :disabled="loading"
             @click="resetForm"
           />
           <Button
-            :label="isPendingUnlock ? 'Add Shares' : 'Submit Shares'"
+            :label="
+              isPendingUnlock
+                ? t('components.unlockVaultModal.addSharesButton')
+                : t('components.unlockVaultModal.submitSharesButton')
+            "
             @click="handleSubmit"
             :loading="loading"
             :disabled="!isValid"

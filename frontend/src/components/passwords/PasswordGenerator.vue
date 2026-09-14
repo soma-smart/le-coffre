@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   generatePassword,
   estimatePasswordStrength,
@@ -9,6 +10,8 @@ import {
 const emit = defineEmits<{
   (e: 'generate', password: string): void
 }>()
+
+const { t } = useI18n()
 
 // Generator options
 const length = ref(16)
@@ -47,15 +50,15 @@ const strengthLabel = computed(() => {
   if (!passwordStrength.value) return ''
   switch (passwordStrength.value.strength) {
     case 'weak':
-      return 'Weak'
+      return t('components.passwordGenerator.strengths.weak')
     case 'fair':
-      return 'Fair'
+      return t('components.passwordGenerator.strengths.fair')
     case 'good':
-      return 'Good'
+      return t('components.passwordGenerator.strengths.good')
     case 'strong':
-      return 'Strong'
+      return t('components.passwordGenerator.strengths.strong')
     case 'very-strong':
-      return 'Very Strong'
+      return t('components.passwordGenerator.strengths.veryStrong')
     default:
       return ''
   }
@@ -107,7 +110,7 @@ generate()
 <template>
   <div class="password-generator">
     <Button
-      label="Generate Password"
+      :label="t('components.passwordGenerator.generateButton')"
       icon="pi pi-bolt"
       @click="showGenerator = !showGenerator"
       severity="secondary"
@@ -122,7 +125,7 @@ generate()
     >
       <!-- Generated Password Display -->
       <div class="flex flex-col gap-2">
-        <label class="font-semibold text-sm">Generated Password</label>
+        <label class="font-semibold text-sm">{{ t('components.passwordGenerator.generatedPasswordLabel') }}</label>
         <div class="flex gap-2">
           <InputText
             v-model="generatedPassword"
@@ -135,14 +138,14 @@ generate()
             @click="generate"
             severity="secondary"
             outlined
-            v-tooltip.top="'Regenerate'"
+            v-tooltip.top="t('components.passwordGenerator.regenerateTooltip')"
           />
           <Button
             icon="pi pi-copy"
             @click="copyToClipboard"
             severity="secondary"
             outlined
-            v-tooltip.top="'Copy to clipboard'"
+            v-tooltip.top="t('components.passwordGenerator.copyTooltip')"
           />
         </div>
 
@@ -165,7 +168,7 @@ generate()
       <!-- Length Slider -->
       <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
-          <label class="font-semibold text-sm">Length</label>
+          <label class="font-semibold text-sm">{{ t('components.passwordGenerator.lengthLabel') }}</label>
           <span class="text-sm font-mono">{{ length }}</span>
         </div>
         <Slider v-model="length" :min="8" :max="64" @change="generate" class="w-full" />
@@ -173,38 +176,38 @@ generate()
 
       <!-- Character Options -->
       <div class="flex flex-col gap-2">
-        <label class="font-semibold text-sm">Character Types</label>
+        <label class="font-semibold text-sm">{{ t('components.passwordGenerator.characterTypesLabel') }}</label>
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeUppercase" inputId="uppercase" binary @change="generate" />
-            <label for="uppercase" class="text-sm cursor-pointer">Uppercase (A-Z)</label>
+            <label for="uppercase" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.uppercase') }}</label>
           </div>
 
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeLowercase" inputId="lowercase" binary @change="generate" />
-            <label for="lowercase" class="text-sm cursor-pointer">Lowercase (a-z)</label>
+            <label for="lowercase" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.lowercase') }}</label>
           </div>
 
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeNumbers" inputId="numbers" binary @change="generate" />
-            <label for="numbers" class="text-sm cursor-pointer">Numbers (0-9)</label>
+            <label for="numbers" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.numbers') }}</label>
           </div>
 
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeSymbols" inputId="symbols" binary @change="generate" />
-            <label for="symbols" class="text-sm cursor-pointer">Symbols (!@#$...)</label>
+            <label for="symbols" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.symbols') }}</label>
           </div>
         </div>
 
         <Message v-if="!isValidOptions" severity="warn" :closable="false" class="text-xs">
-          At least one character type must be selected
+          {{ t('components.passwordGenerator.atLeastOneType') }}
         </Message>
       </div>
 
       <!-- Actions -->
       <div class="flex gap-2 pt-2">
         <Button
-          label="Use This Password"
+          :label="t('components.passwordGenerator.useThisPassword')"
           @click="usePassword"
           icon="pi pi-check"
           :disabled="!generatedPassword || !isValidOptions"

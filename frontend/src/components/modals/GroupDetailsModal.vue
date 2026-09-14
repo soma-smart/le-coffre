@@ -2,6 +2,7 @@
 import { computed, ref, toRef, watch } from 'vue'
 import { useToast } from 'primevue'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const confirm = useConfirm()
+const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const { currentUserId } = storeToRefs(groupsStore)
 const userStore = useUserStore()
@@ -74,8 +76,8 @@ const handleAddMember = async () => {
   if (!selectedUserId.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please select a user',
+      summary: t('common.validationError'),
+      detail: t('components.groupDetailsModal.userRequired'),
       life: 5000,
     })
     return
@@ -85,8 +87,8 @@ const handleAddMember = async () => {
   if (ok) {
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Member added successfully',
+      summary: t('common.success'),
+      detail: t('components.groupDetailsModal.memberAddedDetail'),
       life: 5000,
     })
     showAddMemberDialog.value = false
@@ -95,8 +97,8 @@ const handleAddMember = async () => {
   } else {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to add member to group',
+      summary: t('common.error'),
+      detail: t('components.groupDetailsModal.addMemberFailed'),
       life: 5000,
     })
   }
@@ -107,16 +109,16 @@ const handleRemoveMember = async (userId: string) => {
   if (ok) {
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Member removed successfully',
+      summary: t('common.success'),
+      detail: t('components.groupDetailsModal.memberRemovedDetail'),
       life: 5000,
     })
     emit('memberRemoved')
   } else {
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to remove member from group',
+      summary: t('common.error'),
+      detail: t('components.groupDetailsModal.removeMemberFailed'),
       life: 5000,
     })
   }
@@ -124,26 +126,26 @@ const handleRemoveMember = async (userId: string) => {
 
 const handlePromoteToOwner = (user: User) => {
   confirm.require({
-    message: `Are you sure you want to promote ${user.name} to owner?`,
-    header: 'Promote to Owner',
+    message: t('components.groupDetailsModal.promoteConfirmMessage', { name: user.name }),
+    header: t('components.groupDetailsModal.promoteConfirmHeader'),
     icon: 'pi pi-crown',
-    acceptLabel: 'Promote',
-    rejectLabel: 'Cancel',
+    acceptLabel: t('components.groupDetailsModal.promoteConfirmAccept'),
+    rejectLabel: t('common.cancel'),
     accept: async () => {
       const ok = await promoteToOwnerCore(user.id)
       if (ok) {
         toast.add({
           severity: 'success',
-          summary: 'Success',
-          detail: `${user.name} promoted to owner`,
+          summary: t('common.success'),
+          detail: t('components.groupDetailsModal.promotedDetail', { name: user.name }),
           life: 5000,
         })
         emit('memberAdded')
       } else {
         toast.add({
           severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to promote member to owner',
+          summary: t('common.error'),
+          detail: t('components.groupDetailsModal.promoteFailed'),
           life: 5000,
         })
       }
@@ -168,11 +170,11 @@ watch(visible, (isVisible) => {
   <Dialog
     v-model:visible="visible"
     modal
-    :header="group?.name || 'Group Details'"
+    :header="group?.name || t('components.groupDetailsModal.defaultTitle')"
     :style="{ width: '40rem' }"
   >
     <div v-if="!group" class="text-center py-4">
-      <p class="text-muted-color">No group selected</p>
+      <p class="text-muted-color">{{ t('components.groupDetailsModal.noGroupSelected') }}</p>
     </div>
 
     <div v-else class="flex flex-col gap-4">
@@ -180,8 +182,10 @@ watch(visible, (isVisible) => {
       <div class="pb-3 border-b flex items-center justify-between">
         <div class="flex items-center gap-2 text-muted-color">
           <i class="pi pi-tag"></i>
-          <span v-if="group.isPersonal" class="font-medium">Personal Group</span>
-          <span v-else class="font-medium">Shared Group</span>
+          <span v-if="group.isPersonal" class="font-medium">{{
+            t('components.groupDetailsModal.personalGroup')
+          }}</span>
+          <span v-else class="font-medium">{{ t('components.groupDetailsModal.sharedGroup') }}</span>
         </div>
 
         <!-- History button (only for owners of the group or admins) -->
@@ -197,7 +201,7 @@ watch(visible, (isVisible) => {
 
       <div v-if="isFetching" class="text-center py-4">
         <ProgressSpinner style="width: 30px; height: 30px" />
-        <p class="text-sm text-muted-color mt-2">Loading members...</p>
+        <p class="text-sm text-muted-color mt-2">{{ t('components.groupDetailsModal.loadingMembers') }}</p>
       </div>
 
       <div v-else class="flex flex-col gap-4">
@@ -205,11 +209,11 @@ watch(visible, (isVisible) => {
         <div>
           <h3 class="font-semibold text-lg mb-3 flex items-center gap-2">
             <i class="pi pi-crown text-yellow-500"></i>
-            <span>Owners</span>
+            <span>{{ t('components.groupDetailsModal.owners') }}</span>
           </h3>
 
           <div v-if="ownerUsers.length === 0" class="text-center py-3 text-muted-color">
-            <p class="text-sm">No owners</p>
+            <p class="text-sm">{{ t('components.groupDetailsModal.noOwners') }}</p>
           </div>
 
           <div v-else class="space-y-2">
@@ -231,7 +235,7 @@ watch(visible, (isVisible) => {
                       <p class="font-semibold">
                         {{ user.name }}
                         <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
-                          >(You)</span
+                          >{{ t('components.groupDetailsModal.you') }}</span
                         >
                       </p>
                       <p class="text-sm text-muted-color">{{ user.email }}</p>
@@ -248,13 +252,13 @@ watch(visible, (isVisible) => {
           <div class="flex items-center justify-between mb-3">
             <h3 class="font-semibold text-lg flex items-center gap-2">
               <i class="pi pi-users"></i>
-              <span>Members</span>
+              <span>{{ t('components.groupDetailsModal.members') }}</span>
             </h3>
 
             <!-- Add Member Button (only for owners of non-personal groups) -->
             <Button
               v-if="isOwner && !group.isPersonal"
-              label="Add Member"
+              :label="t('components.groupDetailsModal.addMemberButton')"
               icon="pi pi-user-plus"
               size="small"
               @click="showAddMemberDialog = true"
@@ -262,7 +266,7 @@ watch(visible, (isVisible) => {
           </div>
 
           <div v-if="memberUsers.length === 0" class="text-center py-3 text-muted-color">
-            <p class="text-sm">No members yet</p>
+            <p class="text-sm">{{ t('components.groupDetailsModal.noMembers') }}</p>
           </div>
 
           <div v-else class="space-y-2 max-h-64 overflow-y-auto">
@@ -284,7 +288,7 @@ watch(visible, (isVisible) => {
                       <p class="font-semibold">
                         {{ user.name }}
                         <span v-if="user.id === currentUserId" class="text-sm text-primary-600 ml-2"
-                          >(You)</span
+                          >{{ t('components.groupDetailsModal.you') }}</span
                         >
                       </p>
                       <p class="text-sm text-muted-color">{{ user.email }}</p>
@@ -299,8 +303,8 @@ watch(visible, (isVisible) => {
                       rounded
                       severity="warning"
                       size="small"
-                      aria-label="Promote to owner"
-                      v-tooltip.top="'Promote to owner'"
+                      :aria-label="t('components.groupDetailsModal.promoteAria')"
+                      v-tooltip.top="t('components.groupDetailsModal.promoteTooltip')"
                       :loading="isActing"
                       @click="handlePromoteToOwner(user)"
                     />
@@ -310,8 +314,8 @@ watch(visible, (isVisible) => {
                       rounded
                       severity="danger"
                       size="small"
-                      aria-label="Remove member"
-                      v-tooltip.top="'Remove member'"
+                      :aria-label="t('components.groupDetailsModal.removeAria')"
+                      v-tooltip.top="t('components.groupDetailsModal.removeTooltip')"
                       :loading="isActing"
                       @click="handleRemoveMember(user.id)"
                     />
@@ -325,7 +329,7 @@ watch(visible, (isVisible) => {
     </div>
 
     <template #footer>
-      <Button label="Close" severity="secondary" @click="visible = false" />
+      <Button :label="t('common.close')" severity="secondary" @click="visible = false" />
     </template>
   </Dialog>
 
@@ -333,7 +337,7 @@ watch(visible, (isVisible) => {
   <Dialog
     v-model:visible="showAddMemberDialog"
     modal
-    header="Add Member"
+    :header="t('components.groupDetailsModal.addMemberTitle')"
     :style="{ width: '30rem' }"
   >
     <div
@@ -345,7 +349,7 @@ watch(visible, (isVisible) => {
         :options="availableUsers"
         optionLabel="name"
         optionValue="id"
-        placeholder="Select a user to add"
+        :placeholder="t('components.groupDetailsModal.selectUserPlaceholder')"
         :disabled="isActing"
         class="w-full"
       >
@@ -359,9 +363,9 @@ watch(visible, (isVisible) => {
     </div>
 
     <template #footer>
-      <Button label="Cancel" severity="secondary" @click="showAddMemberDialog = false" />
+      <Button :label="t('common.cancel')" severity="secondary" @click="showAddMemberDialog = false" />
       <Button
-        label="Add"
+        :label="t('common.add')"
         icon="pi pi-user-plus"
         @click="handleAddMember"
         :loading="isActing"
