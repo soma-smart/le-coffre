@@ -14,14 +14,29 @@ import AppState from './plugins/appState'
 import VaultStatus from './plugins/vaultStatus'
 import { containerPlugin } from './plugins/container'
 import { installProductionContainer } from './composition_root'
+import { PREFERENCE_KEYS } from './domain/preferences/Preference'
 import i18n from './i18n'
 import primevueLocaleFr from './i18n/primevueLocaleFr'
+import primevueLocaleEn from './i18n/primevueLocaleEn'
+
+const container = installProductionContainer()
+
+// The language switcher (profile page) only persists a choice; applying it
+// happens here so every page — not just the profile page — starts in the
+// right language, before the app ever renders.
+const savedLocale = container.preferences.read.execute<'fr' | 'en'>({
+  key: PREFERENCE_KEYS.UI_LOCALE,
+})
+if (savedLocale === 'en') {
+  i18n.global.locale.value = 'en'
+}
+document.documentElement.lang = i18n.global.locale.value
 
 const app = createApp(App)
-app.use(containerPlugin(installProductionContainer()))
+app.use(containerPlugin(container))
 app.use(i18n)
 app.use(PrimeVue, {
-  locale: primevueLocaleFr,
+  locale: i18n.global.locale.value === 'en' ? primevueLocaleEn : primevueLocaleFr,
   theme: {
     preset: Aura,
     options: {
