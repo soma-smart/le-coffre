@@ -43,10 +43,10 @@ describe('PasswordGroupNavItem', () => {
     expect(wrapper.emitted('select')).toHaveLength(1)
   })
 
-  it('shows no folder list, and no toggle chevron, when the group has no folders', () => {
+  it('still shows the toggle chevron and the "All" entry when the group has no folders', () => {
     const wrapper = mountItem({ expanded: true, folders: [] })
-    expect(wrapper.find('[aria-label^="Expand"]').exists()).toBe(false)
-    expect(wrapper.text()).not.toContain('All')
+    expect(wrapper.find('[aria-label^="Collapse"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('All')
   })
 
   it('hides the folder list when collapsed, even with folders present', () => {
