@@ -125,6 +125,94 @@ describe('useRecentPasswordActivity', () => {
     expect(events.value).toEqual([])
   })
 
+  it('keeps the placeholder up for its minimum even when the fetch returns at once', async () => {
+    vi.useFakeTimers()
+    try {
+      const execute = vi.fn().mockResolvedValue([makeEvent()])
+      const { events, showPlaceholder } = useRecentPasswordActivity({
+        passwordId: ref('p1'),
+        useCases: { listEvents: { execute } },
+        minPlaceholderMs: 1000,
+      })
+
+      await nextTick()
+      expect(showPlaceholder.value).toBe(true)
+
+      // The events are in hand well before the placeholder is allowed to go.
+      await vi.advanceTimersByTimeAsync(900)
+      expect(events.value).toHaveLength(1)
+      expect(showPlaceholder.value).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(100)
+      expect(showPlaceholder.value).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('hides the placeholder as soon as a fetch slower than the minimum returns', async () => {
+    vi.useFakeTimers()
+    try {
+      let resolveFetch: (value: PasswordEvent[]) => void = () => {}
+      const execute = vi.fn().mockReturnValue(
+        new Promise<PasswordEvent[]>((resolve) => {
+          resolveFetch = resolve
+        }),
+      )
+      const { showPlaceholder } = useRecentPasswordActivity({
+        passwordId: ref('p1'),
+        useCases: { listEvents: { execute } },
+        minPlaceholderMs: 1000,
+      })
+
+      await vi.advanceTimersByTimeAsync(1500)
+      expect(showPlaceholder.value).toBe(true)
+
+      resolveFetch([makeEvent()])
+      await vi.advanceTimersByTimeAsync(0)
+      expect(showPlaceholder.value).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('holds the placeholder over a failure too, so the error cannot flash past it', async () => {
+    vi.useFakeTimers()
+    try {
+      const execute = vi.fn().mockRejectedValue(new Error('boom'))
+      const { isError, showPlaceholder } = useRecentPasswordActivity({
+        passwordId: ref('p1'),
+        useCases: { listEvents: { execute } },
+        minPlaceholderMs: 1000,
+      })
+
+      await vi.advanceTimersByTimeAsync(500)
+      expect(isError.value).toBe(true)
+      expect(showPlaceholder.value).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(500)
+      expect(showPlaceholder.value).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('drops the placeholder immediately when the selection becomes null', async () => {
+    const execute = vi.fn().mockReturnValue(new Promise<PasswordEvent[]>(() => {}))
+    const passwordId = ref<string | null>('p1')
+    const { showPlaceholder } = useRecentPasswordActivity({
+      passwordId,
+      useCases: { listEvents: { execute } },
+    })
+
+    await nextTick()
+    expect(showPlaceholder.value).toBe(true)
+
+    passwordId.value = null
+    await nextTick()
+    expect(showPlaceholder.value).toBe(false)
+  })
+
   it('starts empty and never fetches when the initial passwordId is null', async () => {
     const execute = vi.fn()
     const { events } = useRecentPasswordActivity({
