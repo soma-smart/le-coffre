@@ -53,6 +53,7 @@ declare module 'vue' {
     PasswordsHeaderBar: typeof import('./src/components/passwords/PasswordsHeaderBar.vue')['default']
     PasswordsWorkspace: typeof import('./src/components/passwords/PasswordsWorkspace.vue')['default']
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
+    ResizeHandle: typeof import('./src/components/shared/ResizeHandle.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
