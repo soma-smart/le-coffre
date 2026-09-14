@@ -5,6 +5,16 @@
       :class="active ? 'bg-primary/10' : ''"
       @click="emit('select')"
     >
+      <div class="w-6 h-6 flex items-center justify-center shrink-0">
+        <button
+          type="button"
+          class="w-6 h-6 flex items-center justify-center text-muted-color hover:text-primary"
+          :aria-label="expanded ? `Collapse ${group.name}` : `Expand ${group.name}`"
+          @click.stop="emit('toggle')"
+        >
+          <span class="pi text-xs" :class="expanded ? 'pi-chevron-down' : 'pi-chevron-right'" />
+        </button>
+      </div>
       <span
         class="pi transition-colors text-sm"
         :class="[
@@ -29,19 +39,10 @@
           />
         </div>
         <Badge class="ml-1" :value="count" />
-        <button
-          v-if="folders.length > 0"
-          type="button"
-          class="w-6 h-6 flex items-center justify-center text-muted-color hover:text-primary"
-          :aria-label="expanded ? `Collapse ${group.name}` : `Expand ${group.name}`"
-          @click.stop="emit('toggle')"
-        >
-          <span class="pi text-xs" :class="expanded ? 'pi-chevron-down' : 'pi-chevron-right'" />
-        </button>
       </div>
     </div>
 
-    <div v-if="expanded && folders.length > 0" class="pl-4 pb-1">
+    <div v-if="expanded" class="pl-4 pb-1">
       <div
         class="flex items-center px-4 py-1.5 cursor-pointer group transition-colors hover:bg-emphasis rounded"
         :class="active && activeFolder === null ? 'bg-primary/10' : ''"
