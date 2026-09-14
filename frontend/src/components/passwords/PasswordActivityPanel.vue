@@ -7,30 +7,44 @@
       </div>
     </template>
     <template #content>
-      <div v-if="isLoading" class="flex flex-col gap-3">
-        <Skeleton v-for="n in 3" :key="n" height="2.5rem" />
-      </div>
+      <!-- Both outcomes wait for the placeholder to have had its time on
+           screen, so a fast failure or a fast empty result can't flash past
+           the skeleton rows either. -->
+      <p v-if="!showPlaceholder && isError" class="text-sm text-muted-color">
+        Failed to load recent activity.
+      </p>
 
-      <p v-else-if="isError" class="text-sm text-muted-color">Failed to load recent activity.</p>
+      <p v-else-if="!showPlaceholder && events.length === 0" class="text-sm text-muted-color">
+        No recent activity.
+      </p>
 
-      <p v-else-if="events.length === 0" class="text-sm text-muted-color">No recent activity.</p>
-
+      <!-- One Timeline renders both states: while loading it holds
+           `PLACEHOLDER_ROWS` skeleton rows, so the markers, the line and the
+           row heights are already in place and only what sits inside a row
+           changes when the events land. -->
       <Timeline
         v-else
-        :value="events"
+        :value="rows"
         align="left"
         class="password-activity-timeline"
         :class="{ 'timeline-has-more': hasMore }"
+        :aria-busy="showPlaceholder"
       >
         <template #opposite="{ item }">
-          <div class="text-xs text-muted-color leading-tight whitespace-nowrap">
+          <div v-if="item" class="text-xs text-muted-color leading-tight whitespace-nowrap">
             <div>{{ formatEventDate(item.occurredOn) }}</div>
             <div>{{ formatEventTime(item.occurredOn) }}</div>
+          </div>
+          <!-- Widths are relative to the column, which is pinned below, so the
+               skeletons and the text they stand in for can't disagree. -->
+          <div v-else class="flex flex-col items-end gap-1">
+            <Skeleton width="100%" height="0.7rem" />
+            <Skeleton width="55%" height="0.7rem" />
           </div>
         </template>
 
         <template #content="{ item }">
-          <div class="flex items-center justify-between gap-3">
+          <div v-if="item" class="flex items-center justify-between gap-3">
             <Tag
               class="shrink-0"
               :value="humanizeEventType(item.eventType)"
@@ -40,6 +54,10 @@
               {{ item.actorEmail || 'Unknown user' }}
             </span>
           </div>
+          <div v-else class="flex items-center justify-between gap-3">
+            <Skeleton width="5rem" height="1.75rem" borderRadius="var(--p-tag-border-radius)" />
+            <Skeleton width="7rem" height="0.8rem" />
+          </div>
         </template>
       </Timeline>
     </template>
@@ -48,7 +66,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { eventSeverity, humanizeEventType } from '@/domain/password/Password'
+import { eventSeverity, humanizeEventType, type PasswordEvent } from '@/domain/password/Password'
 import { useContainer } from '@/plugins/container'
 import { useRecentPasswordActivity } from '@/composables/useRecentPasswordActivity'
 
@@ -64,10 +82,24 @@ const emit = defineEmits<{
 const { passwords: passwordUseCases } = useContainer()
 
 const passwordIdRef = computed(() => props.passwordId)
-const { events, isLoading, isError, hasMore } = useRecentPasswordActivity({
+const { events, isError, hasMore, showPlaceholder } = useRecentPasswordActivity({
   passwordId: passwordIdRef,
   useCases: passwordUseCases,
 })
+
+/** How many skeleton rows stand in for the events while they load. */
+const PLACEHOLDER_ROWS = 3
+
+/**
+ * The rows the Timeline renders: the real events once loaded, or a run of
+ * `null`s standing in for them while the placeholder is up. Every slot
+ * branches on `item` to tell the two apart. The `#marker` slot is left
+ * unoverridden on purpose — placeholder rows get the same real marker, which
+ * is what keeps the line and the row rhythm identical across the swap.
+ */
+const rows = computed<(PasswordEvent | null)[]>(() =>
+  showPlaceholder.value ? Array.from({ length: PLACEHOLDER_ROWS }, () => null) : events.value,
+)
 
 const formatEventDate = (dateString: string): string =>
   new Date(dateString).toLocaleDateString('en-GB', {
@@ -105,8 +137,22 @@ const formatEventTime = (dateString: string): string =>
   justify-content: center;
 }
 
+.password-activity-timeline {
+  /* Enough for the widest date `formatEventDate` produces — "14 Sep 2026" at
+     text-xs. Everything in the column is sized from this one number. */
+  --activity-date-width: 5.5rem;
+}
+
+/* Pinned rather than left to size itself, because the column's natural width
+   is whatever its widest row happens to be: the skeletons and the dates they
+   stand in for measure differently, so the whole timeline stepped sideways on
+   load. (So do "3 Sep 2026" and "14 Sep 2026", which shifted it between one
+   password and the next.) A fixed width makes every state line up by
+   construction. The `2rem` is the theme's own side padding on the column,
+   which `box-sizing: border-box` folds into the width. */
 .password-activity-timeline :deep(.p-timeline-event-opposite) {
   flex: 0 0 auto;
+  width: calc(var(--activity-date-width) + 2rem);
 }
 
 /* Rows default to a 5rem min-height (sized for richer demo content than our
