@@ -183,6 +183,7 @@
       "roles": "Roles",
       "security": "Security",
       "changePassword": "Change Password",
+      "language": "Language",
       "appearance": "Appearance",
       "session": "Session",
       "logout": "Logout",
@@ -269,7 +270,6 @@
       "surfaceColors": "Surface Colors",
       "preset": "Preset",
       "rippleEffect": "Ripple Effect",
-      "language": "Language",
       "colorNames": {
         "noir": "Black",
         "emerald": "Emerald",

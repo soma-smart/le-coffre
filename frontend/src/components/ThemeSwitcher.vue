@@ -17,23 +17,6 @@
       class="!w-full md:!w-80 lg:!w-[34rem]"
     >
       <div class="flex flex-col gap-6">
-        <div class="flex-col justify-start items-start gap-2 flex w-full">
-          <span class="text-sm font-medium">{{ t('components.themeSwitcher.language') }}</span>
-          <div
-            class="inline-flex p-[0.28rem] items-start gap-[0.28rem] rounded-[0.71rem] border border-[#00000003] w-full"
-          >
-            <SelectButton
-              :fluid="true"
-              v-model="languageModel"
-              @update:modelValue="onLanguageChange"
-              :options="languageOptions"
-              optionLabel="label"
-              optionValue="value"
-              :allowEmpty="false"
-            />
-          </div>
-        </div>
-
         <div class="flex items-center">
           <span class="font-medium flex-1">{{ t('components.themeSwitcher.darkTheme') }}</span>
           <button
@@ -120,13 +103,9 @@ import { AppStateKey, type AppState } from '@/plugins/appState'
 import { primaryColors, surfaces } from '@/config/colorThemes'
 import { useContainer } from '@/plugins/container'
 import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
-import i18n from '@/i18n'
-import { primevueLocaleFr } from '@/i18n/primevueLocaleFr'
-import { primevueLocaleEn } from '@/i18n/primevueLocaleEn'
 import { translateColorName } from '@/utils/colorLabel'
 
 type ThemePresetName = keyof typeof themePresetsData
-type UiLocale = 'fr' | 'en'
 
 interface ThemeSettings {
   primaryColor: string
@@ -138,13 +117,6 @@ interface ThemeSettings {
 
 const { preferences } = useContainer()
 const { t } = useI18n()
-
-// Language names are shown in their own language regardless of the current
-// UI locale (an autonym) — "Français" and "English" are never translated.
-const languageOptions: { label: string; value: UiLocale }[] = [
-  { label: 'Français', value: 'fr' },
-  { label: 'English', value: 'en' },
-]
 
 // Access global properties
 const $primevue = usePrimeVue()
@@ -169,7 +141,6 @@ const iconClass = ref('pi-moon')
 const selectedPrimaryColor = ref('noir')
 const selectedSurfaceColor = ref<string | null>(null)
 const drawerVisible = ref(false)
-const languageModel = ref<UiLocale>('fr')
 
 const rippleActive = computed(() => $primevue.config.ripple)
 
@@ -186,28 +157,7 @@ const saveSettings = () => {
   preferences.write.execute({ key: PREFERENCE_KEYS.THEME_SETTINGS, value: settings })
 }
 
-// i18n.global drives every t() call app-wide; PrimeVue keeps its own
-// separate locale (filter labels, calendar names, the password-strength
-// meter, ...) on $primevue.config, so both must be swapped together.
-const applyLocale = (locale: UiLocale) => {
-  i18n.global.locale.value = locale
-  $primevue.config.locale = locale === 'en' ? primevueLocaleEn : primevueLocaleFr
-  document.documentElement.lang = locale
-}
-
-const onLanguageChange = (locale: UiLocale) => {
-  languageModel.value = locale
-  applyLocale(locale)
-  preferences.write.execute({ key: PREFERENCE_KEYS.UI_LOCALE, value: locale })
-}
-
 const loadSettings = () => {
-  const savedLocale = preferences.read.execute<UiLocale>({ key: PREFERENCE_KEYS.UI_LOCALE })
-  if (savedLocale) {
-    languageModel.value = savedLocale
-    applyLocale(savedLocale)
-  }
-
   const settings = preferences.read.execute<ThemeSettings>({
     key: PREFERENCE_KEYS.THEME_SETTINGS,
   })

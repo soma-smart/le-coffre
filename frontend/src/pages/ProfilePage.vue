@@ -3,16 +3,34 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from 'vue-i18n'
+import { usePrimeVue } from 'primevue/config'
 import { logout } from '@/utils/logout'
 import MainLayout from '../layouts/MainLayout.vue'
 import type { User } from '@/domain/user/User'
 import { UserDomainError } from '@/domain/user/errors'
 import { useContainer } from '@/plugins/container'
+import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
+import i18n from '@/i18n'
+import { primevueLocaleFr } from '@/i18n/primevueLocaleFr'
+import { primevueLocaleEn } from '@/i18n/primevueLocaleEn'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
+
+type UiLocale = 'fr' | 'en'
 
 const toast = useToast()
 const router = useRouter()
 const { t } = useI18n()
+const $primevue = usePrimeVue()
+
+// Language names are shown in their own language regardless of the current
+// UI locale (an autonym) — "Français" and "English" are never translated.
+const languageOptions: { label: string; value: UiLocale }[] = [
+  { label: 'Français', value: 'fr' },
+  { label: 'English', value: 'en' },
+]
+// main.ts already applies the persisted locale before the app mounts, so
+// this only needs to reflect whatever is already live.
+const languageModel = ref<UiLocale>(i18n.global.locale.value as UiLocale)
 
 const handleLogout = async () => {
   await logout()
@@ -27,7 +45,18 @@ const handleLogout = async () => {
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async event handlers after an await.
-const { users } = useContainer()
+const { users, preferences } = useContainer()
+
+// i18n.global drives every t() call app-wide; PrimeVue keeps its own
+// separate locale (filter labels, calendar names, the password-strength
+// meter, ...) on $primevue.config, so both must be swapped together.
+const onLanguageChange = (locale: UiLocale) => {
+  languageModel.value = locale
+  i18n.global.locale.value = locale
+  $primevue.config.locale = locale === 'en' ? primevueLocaleEn : primevueLocaleFr
+  document.documentElement.lang = locale
+  preferences.write.execute({ key: PREFERENCE_KEYS.UI_LOCALE, value: locale })
+}
 
 const user = ref<User | null>(null)
 const loading = ref(true)
@@ -204,6 +233,23 @@ onMounted(() => {
             @click="showPasswordDialog = true"
             class="p-button-outlined"
           />
+        </div>
+
+        <!-- Language -->
+        <div class="border-t pt-4 mt-6">
+          <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.language') }}</h3>
+          <div
+            class="inline-flex p-[0.28rem] items-start gap-[0.28rem] rounded-[0.71rem] border border-[#00000003]"
+          >
+            <SelectButton
+              v-model="languageModel"
+              @update:modelValue="onLanguageChange"
+              :options="languageOptions"
+              optionLabel="label"
+              optionValue="value"
+              :allowEmpty="false"
+            />
+          </div>
         </div>
 
         <!-- Theme switcher (mobile uniquement) -->

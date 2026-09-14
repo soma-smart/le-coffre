@@ -183,6 +183,7 @@
       "roles": "Rôles",
       "security": "Sécurité",
       "changePassword": "Changer le mot de passe",
+      "language": "Langue",
       "appearance": "Apparence",
       "session": "Session",
       "logout": "Déconnexion",
@@ -269,7 +270,6 @@
       "surfaceColors": "Couleurs de surface",
       "preset": "Préréglage",
       "rippleEffect": "Effet d'ondulation",
-      "language": "Langue",
       "colorNames": {
         "noir": "Noir",
         "emerald": "Émeraude",
