@@ -261,7 +261,9 @@ const handleReset = async () => {
         <div class="flex gap-2">
           <i class="pi pi-clock"></i>
           <div>
-            <p class="text-sm font-semibold mb-1">{{ t('components.unlockVaultModal.staleSharesTitle') }}</p>
+            <p class="text-sm font-semibold mb-1">
+              {{ t('components.unlockVaultModal.staleSharesTitle') }}
+            </p>
             <p class="text-sm">
               {{ t('components.unlockVaultModal.staleSharesBody', { age: lastShareAge }) }}
             </p>

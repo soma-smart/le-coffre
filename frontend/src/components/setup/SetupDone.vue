@@ -21,7 +21,12 @@ const handleLogin = async () => {
       {{ t('components.setup.done.loginHint') }}
     </p>
     <div class="flex pt-6 justify-center">
-      <Button :label="t('components.setup.done.loginButton')" icon="pi pi-sign-in" iconPos="right" @click="handleLogin" />
+      <Button
+        :label="t('components.setup.done.loginButton')"
+        icon="pi pi-sign-in"
+        iconPos="right"
+        @click="handleLogin"
+      />
     </div>
   </div>
 </template>

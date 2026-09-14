@@ -56,9 +56,9 @@ const handleConfirm = () => {
     :header="t('components.setup.sharesModal.title')"
     :style="{ width: '36rem' }"
   >
-    <span class="text-surface-500 block mb-8"
-      >{{ t('components.setup.sharesModal.description') }}</span
-    >
+    <span class="text-surface-500 block mb-8">{{
+      t('components.setup.sharesModal.description')
+    }}</span>
 
     <div v-for="(share, idx) in shares" :key="idx" class="flex items-center gap-2 mb-2">
       <label class="font-semibold shrink-0" :for="`share-secret-${idx}`">{{

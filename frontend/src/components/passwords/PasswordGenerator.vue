@@ -125,7 +125,9 @@ generate()
     >
       <!-- Generated Password Display -->
       <div class="flex flex-col gap-2">
-        <label class="font-semibold text-sm">{{ t('components.passwordGenerator.generatedPasswordLabel') }}</label>
+        <label class="font-semibold text-sm">{{
+          t('components.passwordGenerator.generatedPasswordLabel')
+        }}</label>
         <div class="flex gap-2">
           <InputText
             v-model="generatedPassword"
@@ -168,7 +170,9 @@ generate()
       <!-- Length Slider -->
       <div class="flex flex-col gap-2">
         <div class="flex justify-between items-center">
-          <label class="font-semibold text-sm">{{ t('components.passwordGenerator.lengthLabel') }}</label>
+          <label class="font-semibold text-sm">{{
+            t('components.passwordGenerator.lengthLabel')
+          }}</label>
           <span class="text-sm font-mono">{{ length }}</span>
         </div>
         <Slider v-model="length" :min="8" :max="64" @change="generate" class="w-full" />
@@ -176,26 +180,36 @@ generate()
 
       <!-- Character Options -->
       <div class="flex flex-col gap-2">
-        <label class="font-semibold text-sm">{{ t('components.passwordGenerator.characterTypesLabel') }}</label>
+        <label class="font-semibold text-sm">{{
+          t('components.passwordGenerator.characterTypesLabel')
+        }}</label>
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeUppercase" inputId="uppercase" binary @change="generate" />
-            <label for="uppercase" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.uppercase') }}</label>
+            <label for="uppercase" class="text-sm cursor-pointer">{{
+              t('components.passwordGenerator.uppercase')
+            }}</label>
           </div>
 
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeLowercase" inputId="lowercase" binary @change="generate" />
-            <label for="lowercase" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.lowercase') }}</label>
+            <label for="lowercase" class="text-sm cursor-pointer">{{
+              t('components.passwordGenerator.lowercase')
+            }}</label>
           </div>
 
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeNumbers" inputId="numbers" binary @change="generate" />
-            <label for="numbers" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.numbers') }}</label>
+            <label for="numbers" class="text-sm cursor-pointer">{{
+              t('components.passwordGenerator.numbers')
+            }}</label>
           </div>
 
           <div class="flex items-center gap-2">
             <Checkbox v-model="includeSymbols" inputId="symbols" binary @change="generate" />
-            <label for="symbols" class="text-sm cursor-pointer">{{ t('components.passwordGenerator.symbols') }}</label>
+            <label for="symbols" class="text-sm cursor-pointer">{{
+              t('components.passwordGenerator.symbols')
+            }}</label>
           </div>
         </div>
 

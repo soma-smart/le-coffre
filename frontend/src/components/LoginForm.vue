@@ -5,7 +5,12 @@ import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import z from 'zod'
-import { AuthDomainError, InvalidCredentialsError } from '@/domain/auth/errors'
+import {
+  AuthDomainError,
+  AuthEmailRequiredError,
+  AuthPasswordRequiredError,
+  InvalidCredentialsError,
+} from '@/domain/auth/errors'
 import { useContainer } from '@/plugins/container'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useUserStore } from '@/stores/user'
@@ -41,7 +46,12 @@ const resolver = computed(() =>
   zodResolver(
     z.object({
       email: z.email({ message: t('auth.login.errors.invalidEmail') }),
-      password: z.string(),
+      // A never-touched or cleared Password input can reach the resolver as
+      // `null` rather than `''` — the base z.string() message covers that
+      // type mismatch, .min(1) covers an actual empty string.
+      password: z
+        .string({ message: t('auth.login.errors.passwordRequired') })
+        .min(1, { message: t('auth.login.errors.passwordRequired') }),
     }),
   ),
 )
@@ -164,20 +174,27 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     // The countdown Message (isRateLimited) already communicates the
     // lockout / rate-limit state; a second toast would just be noise.
     if (isRateLimited.value) return
-    // InvalidCredentialsError carries a fixed, deliberately generic domain
-    // constant (never reveals whether the email or the password was wrong),
-    // so it's safe to swap for its translation. The other branches carry
-    // the backend's raw error detail or an unknown Error's message — that
-    // text isn't ours to translate (no matching key, and rewording it could
-    // drop detail the server chose to include), so it's passed through as-is.
+    // InvalidCredentialsError, AuthEmailRequiredError and
+    // AuthPasswordRequiredError all carry a fixed, argument-less domain
+    // constant we author ourselves (InvalidCredentialsError's is also
+    // deliberately generic — it never reveals whether the email or the
+    // password was wrong) — safe to swap for their translation. The
+    // catch-all AuthDomainError branch below carries the backend's raw
+    // error detail instead, which isn't ours to translate (no matching
+    // key, and rewording it could drop detail the server chose to
+    // include), so that one is passed through as-is.
     const detail =
       err instanceof InvalidCredentialsError
         ? t('auth.login.errors.invalidCredentials')
-        : err instanceof AuthDomainError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : t('auth.login.errors.generic')
+        : err instanceof AuthEmailRequiredError
+          ? t('auth.login.errors.emailRequired')
+          : err instanceof AuthPasswordRequiredError
+            ? t('auth.login.errors.passwordRequired')
+            : err instanceof AuthDomainError
+              ? err.message
+              : err instanceof Error
+                ? err.message
+                : t('auth.login.errors.generic')
     toast.add({
       severity: 'error',
       summary: t('auth.login.toasts.errorSummary'),

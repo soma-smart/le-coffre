@@ -101,6 +101,8 @@
       "errors": {
         "invalidEmail": "Invalid email address.",
         "invalidCredentials": "Invalid email or password",
+        "emailRequired": "Email is required",
+        "passwordRequired": "Password is required",
         "generic": "Login failed"
       }
     },
@@ -726,8 +728,11 @@
         "displayNameLabel": "Display Name",
         "submitButton": "Create admin account",
         "invalidEmail": "Invalid email address.",
+        "passwordRequired": "Password is required.",
         "passwordTooShort": "Password must be at least 15 characters long.",
+        "displayNameRequired": "Display name is required.",
         "displayNameTooShort": "Display name must be at least 2 characters long.",
+        "confirmPasswordRequired": "Confirm password is required.",
         "confirmPasswordTooShort": "Confirm password must be at least 15 characters long.",
         "passwordsDontMatch": "Passwords do not match.",
         "createFailedFallback": "Failed to create admin account",
