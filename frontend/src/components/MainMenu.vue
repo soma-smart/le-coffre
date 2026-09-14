@@ -29,7 +29,7 @@
           @select="goToPasswordsGroup(group.id)"
           @toggle="toggleGroupExpanded(group.id)"
           @create="goToCreatePasswordForGroup(group.id)"
-          @select-folder="handleSelectFolder(group.id)"
+          @select-folder="goToGroupFolder(group.id, $event)"
         />
 
         <div v-if="isAdmin" class="px-4 py-2">
@@ -67,7 +67,7 @@
           @select="goToPasswordsGroup(group.id)"
           @toggle="toggleGroupExpanded(group.id)"
           @create="goToCreatePasswordForGroup(group.id)"
-          @select-folder="handleSelectFolder(group.id)"
+          @select-folder="goToGroupFolder(group.id, $event)"
         />
       </div>
     </div>
@@ -381,14 +381,14 @@ const goToGroupFolder = (groupId: string, folderName: string | null) => {
 
   expandedGroupIds.value.add(groupId)
 
-  const query: Record<string, string> = {}
-  if (folderName) query.folder = folderName
+  const query: Record<string, string> = { ...(route.query as Record<string, string>) }
+  if (folderName) {
+    query.folder = folderName
+  } else {
+    delete query.folder
+  }
   router.push({ name: 'HomeGroup', params: { groupSlug: slug }, query })
 }
-
-/** Curried so the template can pass a per-group handler without an inline untyped arrow param. */
-const handleSelectFolder = (groupId: string) => (folderName: string | null) =>
-  goToGroupFolder(groupId, folderName)
 
 const toggleAdminPasswordView = () => {
   if (!isAdmin.value) return
