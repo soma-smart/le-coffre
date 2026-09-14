@@ -195,13 +195,13 @@ onMounted(() => {
           />
         </div>
 
-        <!-- Theme switcher (mobile uniquement) -->
+        <!-- Theme switcher (mobile only) -->
         <div class="md:hidden mb-6 border-t pt-4">
           <h3 class="text-lg font-semibold mb-4">Apparence</h3>
           <ThemeSwitcher />
         </div>
 
-        <!-- Bouton logout (mobile uniquement) -->
+        <!-- Logout button (mobile only) -->
         <div class="md:hidden mb-6 border-t pt-4">
           <h3 class="text-lg font-semibold mb-4">Session</h3>
           <Button
