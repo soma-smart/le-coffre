@@ -208,7 +208,7 @@
       </div>
     </div>
 
-    <!-- Logout Button and Theme Switcher at bottom -->
+    <!-- Logout Button at bottom -->
     <div class="p-4 border-t border-surface flex flex-col gap-3 shrink-0">
       <Button
         label="Logout"
@@ -218,7 +218,6 @@
         outlined
         class="w-full"
       />
-      <ThemeSwitcher />
     </div>
   </div>
 </template>
