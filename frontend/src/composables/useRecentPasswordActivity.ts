@@ -34,14 +34,17 @@ export interface UseRecentPasswordActivityOptions {
 export function useRecentPasswordActivity(options: UseRecentPasswordActivityOptions) {
   const limit = options.limit ?? 5
   const events = ref<PasswordEvent[]>([])
+  /** Whether the password has more events than fit under `limit` — i.e. whether
+   *  there's history beyond what's shown here (see the history modal for the rest). */
+  const hasMore = ref(false)
   const { isLoading, isError, run } = useAsyncStatus<PasswordEvent[]>()
 
   async function load(passwordId: string) {
     const result = await run(() => options.useCases.listEvents.execute({ passwordId }))
     if (result === undefined) return
-    events.value = [...result]
-      .sort((a, b) => Date.parse(b.occurredOn) - Date.parse(a.occurredOn))
-      .slice(0, limit)
+    const sorted = [...result].sort((a, b) => Date.parse(b.occurredOn) - Date.parse(a.occurredOn))
+    events.value = sorted.slice(0, limit)
+    hasMore.value = sorted.length > limit
   }
 
   watch(
@@ -49,6 +52,7 @@ export function useRecentPasswordActivity(options: UseRecentPasswordActivityOpti
     (id) => {
       if (!id) {
         events.value = []
+        hasMore.value = false
         return
       }
       load(id)
@@ -56,5 +60,5 @@ export function useRecentPasswordActivity(options: UseRecentPasswordActivityOpti
     { immediate: true },
   )
 
-  return { events, isLoading, isError }
+  return { events, isLoading, isError, hasMore }
 }
