@@ -200,9 +200,7 @@ describe('PasswordsWorkspace (via HomePage)', () => {
 
     expect(wrapper.findComponent({ name: 'PasswordHistoryModal' }).props('visible')).toBe(false)
 
-    const viewAllButton = wrapper
-      .findAll('button')
-      .find((el) => el.text() === 'View All')
+    const viewAllButton = wrapper.findAll('button').find((el) => el.text() === 'View All')
     expect(viewAllButton).toBeDefined()
     await viewAllButton!.trigger('click')
 
