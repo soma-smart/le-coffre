@@ -1,3 +1,9 @@
 @import 'tailwindcss';
 @import 'tailwindcss-primeui';
 @import 'primeicons/primeicons.css';
+
+/* Dark mode is driven by the `.p-dark` class that ThemeSwitcher toggles on
+ * <html> (and that PrimeVue's `darkModeSelector` is configured with in main.ts).
+ * Tailwind v4 has no JS config, so without this the `dark:` variant would fall
+ * back to `prefers-color-scheme` and ignore the in-app toggle entirely. */
+@custom-variant dark (&:where(.p-dark, .p-dark *));

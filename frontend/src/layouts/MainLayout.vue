@@ -49,7 +49,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
   </div>
 
   <!-- Barre de navigation (mobile uniquement) -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 border-t border-surface bg-surface-0 flex">
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 border-t border-surface bg-surface-0 dark:bg-surface-900 flex">
     <button
       @click="router.push('/')"
       class="flex-1 flex flex-col items-center py-3 gap-1"

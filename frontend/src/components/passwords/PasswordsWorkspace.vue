@@ -30,7 +30,7 @@
         />
         <ResizeHandle @pointerdown="startListPaneResizing" />
       </div>
-      <div class="flex-1 min-h-0 overflow-y-auto p-6 bg-surface-50">
+      <div class="flex-1 min-h-0 overflow-y-auto p-6 bg-surface-50 dark:bg-surface-950">
         <PasswordDetailPane
           :password="selectedPassword"
           :contextGroupId="selectedGroupIdFromRoute"
