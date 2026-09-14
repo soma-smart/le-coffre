@@ -201,15 +201,20 @@ describe('PasswordDetailPane', () => {
     expect(wrapper.get('button[aria-label="Edit"]').attributes('disabled')).toBeDefined()
   })
 
-  it('emits "edit"/"share"/"history"/"oneTimeLink" with the password when their buttons are clicked', async () => {
+  it('emits "edit"/"oneTimeLink" with the password when their buttons are clicked', async () => {
     const wrapper = mountPane(container, pinia)
     await wrapper.get('button[aria-label="Edit"]').trigger('click')
-    await wrapper.get('button[aria-label="History"]').trigger('click')
     await wrapper.get('button[aria-label="One-time link"]').trigger('click')
 
     expect(wrapper.emitted('edit')?.[0]).toEqual([samplePassword])
-    expect(wrapper.emitted('history')?.[0]).toEqual([samplePassword])
     expect(wrapper.emitted('oneTimeLink')?.[0]).toEqual([samplePassword])
+  })
+
+  it('forwards PasswordActivityPanel\'s "viewAll" as "history" with the password', async () => {
+    const wrapper = mountPane(container, pinia)
+    await wrapper.findComponent({ name: 'PasswordActivityPanel' }).vm.$emit('viewAll')
+
+    expect(wrapper.emitted('history')?.[0]).toEqual([samplePassword])
   })
 
   it('deletes through the use case and emits "deleted" once the confirmation is accepted', async () => {

@@ -19,15 +19,6 @@
       </div>
       <div class="flex gap-1 shrink-0">
         <Button
-          icon="pi pi-history"
-          text
-          rounded
-          severity="secondary"
-          aria-label="History"
-          v-tooltip.top="'View history'"
-          @click="emit('history', password)"
-        />
-        <Button
           icon="pi pi-share-alt"
           text
           rounded
