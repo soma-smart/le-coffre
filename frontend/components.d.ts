@@ -42,6 +42,7 @@ declare module 'vue' {
     OneTimeLinksTable: typeof import('./src/components/oneTimeLink/OneTimeLinksTable.vue')['default']
     Password: typeof import('primevue/password')['default']
     PasswordActivityPanel: typeof import('./src/components/passwords/PasswordActivityPanel.vue')['default']
+    PasswordAvatar: typeof import('./src/components/passwords/PasswordAvatar.vue')['default']
     PasswordDetailPane: typeof import('./src/components/passwords/PasswordDetailPane.vue')['default']
     PasswordGenerator: typeof import('./src/components/passwords/PasswordGenerator.vue')['default']
     PasswordGroupNavItem: typeof import('./src/components/menu/PasswordGroupNavItem.vue')['default']

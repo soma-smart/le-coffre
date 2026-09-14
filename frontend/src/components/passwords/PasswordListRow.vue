@@ -5,12 +5,7 @@
     :aria-current="selected ? 'true' : undefined"
     @click="emit('select')"
   >
-    <div
-      class="w-9 h-9 rounded flex items-center justify-center text-sm font-semibold shrink-0"
-      :class="selected ? 'bg-primary text-white' : 'bg-emphasis text-muted-color'"
-    >
-      {{ initial }}
-    </div>
+    <PasswordAvatar :name="password.name" :active="selected" />
     <div class="min-w-0">
       <p class="font-semibold truncate">{{ password.name }}</p>
       <p v-if="subtitle" class="text-xs text-muted-color truncate">{{ subtitle }}</p>
@@ -35,7 +30,6 @@ const emit = defineEmits<{
   select: []
 }>()
 
-const initial = computed(() => props.password.name.trim().charAt(0).toUpperCase() || '?')
 const subtitle = computed(() =>
   passwordSubtitle(props.password, { groupName: props.groupName, showFolder: props.showFolder }),
 )
