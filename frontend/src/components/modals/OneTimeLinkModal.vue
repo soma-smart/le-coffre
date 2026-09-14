@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import { useContainer } from '@/plugins/container'
 import type { Password } from '@/domain/password/Password'
@@ -26,15 +27,16 @@ const emit = defineEmits<{
 
 const { oneTimeLinks } = useContainer()
 const toast = useToast()
+const { t } = useI18n()
 
 // Kept within the domain's 5 minutes .. 7 days bounds; the backend is the
 // authority and rejects anything outside them with a 400.
-const lifetimeOptions = [
-  { label: '1 hour', value: 3600 },
-  { label: '24 hours (default)', value: 86400 },
-  { label: '3 days', value: 259200 },
-  { label: '7 days', value: 604800 },
-]
+const lifetimeOptions = computed(() => [
+  { label: t('common.durations.hour1'), value: 3600 },
+  { label: t('common.durations.hours24Default'), value: 86400 },
+  { label: t('common.durations.days3'), value: 259200 },
+  { label: t('common.durations.days7'), value: 604800 },
+])
 
 const lifetimeSeconds = ref(86400)
 const links = ref<OneTimeLink[]>([])
@@ -80,7 +82,8 @@ async function refreshLinks() {
     maxActiveLinks.value = page.maxActive
     canIssue.value = canIssueAnotherLink(page)
   } catch (err) {
-    error.value = err instanceof OneTimeLinkDomainError ? err.message : 'Could not load links'
+    error.value =
+      err instanceof OneTimeLinkDomainError ? err.message : t('components.oneTimeLinkModal.loadFailed')
   }
 }
 
@@ -100,7 +103,8 @@ async function generate() {
     generatedUrl.value = buildOneTimeLinkUrl(window.location.origin, created.token)
     await refreshLinks()
   } catch (err) {
-    error.value = err instanceof OneTimeLinkDomainError ? err.message : 'Could not create the link'
+    error.value =
+      err instanceof OneTimeLinkDomainError ? err.message : t('components.oneTimeLinkModal.createFailed')
   } finally {
     loading.value = false
   }
@@ -110,22 +114,27 @@ async function copyUrl() {
   if (!generatedUrl.value) return
   await navigator.clipboard.writeText(generatedUrl.value)
   copied.value = true
-  toast.add({ severity: 'success', summary: 'Link copied', life: 2000 })
+  toast.add({ severity: 'success', summary: t('components.oneTimeLinkModal.linkCopiedSummary'), life: 2000 })
   setTimeout(() => (copied.value = false), 2000)
 }
 
 const pendingRevoke = ref<OneTimeLink | null>(null)
 const showRevokeConfirm = ref(false)
 
-const revokeQuestion = computed(
-  () => `Revoke this one-time link for "${props.password?.name ?? 'this password'}"?`,
+const revokeQuestion = computed(() =>
+  t('components.oneTimeLinkModal.revokeQuestion', {
+    name: props.password?.name ?? t('components.oneTimeLinkModal.revokeQuestionFallback'),
+  }),
 )
 const revokeDescription = computed(() => {
   const link = pendingRevoke.value
   if (!link) return ''
   return [
-    `Created ${formatRelativeTime(link.createdAt)}, expires ${formatRelativeTime(link.expiresAt)}.`,
-    'Anyone still holding the URL will no longer be able to read the password.',
+    t('components.oneTimeLinkModal.revokeDescriptionCreated', {
+      created: formatRelativeTime(link.createdAt),
+      expires: formatRelativeTime(link.expiresAt),
+    }),
+    t('components.oneTimeLinkModal.revokeDescriptionWarning'),
   ].join('\n')
 })
 
@@ -141,7 +150,8 @@ async function confirmRevoke() {
     await oneTimeLinks.revoke.execute(link.id)
     await refreshLinks()
   } catch (err) {
-    error.value = err instanceof OneTimeLinkDomainError ? err.message : 'Could not revoke the link'
+    error.value =
+      err instanceof OneTimeLinkDomainError ? err.message : t('components.oneTimeLinkModal.revokeFailed')
   }
 }
 
@@ -158,7 +168,11 @@ function severityFor(link: OneTimeLink) {
     v-model:visible="isVisible"
     modal
     :draggable="false"
-    :header="`One-time link${password ? ` - ${password.name}` : ''}`"
+    :header="
+      password
+        ? t('components.oneTimeLinkModal.titleWithPassword', { name: password.name })
+        : t('components.oneTimeLinkModal.title')
+    "
     :style="{ width: '36rem' }"
   >
     <!-- Dialog content is an overflow:auto box with no top padding, and Message
@@ -169,7 +183,7 @@ function severityFor(link: OneTimeLink) {
       <Message v-if="error" severity="error" :closable="false" class="mb-3">{{ error }}</Message>
 
       <Message severity="warn" :closable="false" class="mb-3">
-        Anyone holding the link can read this password once, without signing in.
+        {{ t('components.oneTimeLinkModal.disclaimer') }}
       </Message>
     </div>
 
@@ -180,13 +194,12 @@ function severityFor(link: OneTimeLink) {
       class="mb-3"
       data-testid="cap-reached"
     >
-      This password already has {{ maxActiveLinks }} active links. Revoke one before creating
-      another.
+      {{ t('components.oneTimeLinkModal.capReached', { max: maxActiveLinks }) }}
     </Message>
 
     <div v-if="!generatedUrl" class="flex gap-2 items-end mb-4">
       <div class="grow">
-        <label class="block mb-1 text-sm">Valid for</label>
+        <label class="block mb-1 text-sm">{{ t('components.oneTimeLinkModal.validForLabel') }}</label>
         <Select
           v-model="lifetimeSeconds"
           :options="lifetimeOptions"
@@ -196,7 +209,7 @@ function severityFor(link: OneTimeLink) {
         />
       </div>
       <Button
-        label="Generate"
+        :label="t('components.oneTimeLinkModal.generateButton')"
         icon="pi pi-link"
         :loading="loading"
         :disabled="!canIssue"
@@ -207,7 +220,7 @@ function severityFor(link: OneTimeLink) {
 
     <div v-else class="mb-4" data-testid="generated-url">
       <Message severity="success" :closable="false" class="mb-2">
-        Copy it now. This URL is shown once and cannot be retrieved again.
+        {{ t('components.oneTimeLinkModal.copyOnceWarning') }}
       </Message>
       <!-- The URL is only ever copied, never read: the token is opaque noise. So
            it stays on one truncated line, which keeps the copy button beside it at
@@ -222,7 +235,7 @@ function severityFor(link: OneTimeLink) {
         <Button
           :icon="copied ? 'pi pi-check' : 'pi pi-copy'"
           severity="secondary"
-          aria-label="Copy link"
+          :aria-label="t('components.oneTimeLinkModal.copyLinkAria')"
           class="shrink-0"
           @click="copyUrl"
         />
@@ -230,11 +243,16 @@ function severityFor(link: OneTimeLink) {
     </div>
 
     <div class="flex flex-wrap gap-2 justify-between items-baseline mb-2">
-      <h4 class="font-medium">{{ showHistory ? 'All links' : 'Active links' }}</h4>
+      <h4 class="font-medium">
+        {{ showHistory ? t('components.oneTimeLinkModal.allLinks') : t('components.oneTimeLinkModal.activeLinksTitle') }}
+      </h4>
       <span class="text-sm text-muted-color" data-testid="link-counters">
-        <span data-testid="active-links">{{ activeLinks }}/{{ maxActiveLinks }} active</span>
+        <span data-testid="active-links">{{
+          t('components.oneTimeLinkModal.activeCount', { active: activeLinks, max: maxActiveLinks })
+        }}</span>
         <span v-if="showHistory && hiddenLinks > 0" data-testid="hidden-links">
-          &nbsp;&middot; showing {{ links.length }} of {{ totalLinks }}
+          &nbsp;&middot;
+          {{ t('components.oneTimeLinkModal.showingOfTotal', { shown: links.length, total: totalLinks }) }}
         </span>
       </span>
     </div>
@@ -242,12 +260,12 @@ function severityFor(link: OneTimeLink) {
     <div v-if="totalLinks > activeLinks" class="flex gap-2 items-center mb-3">
       <ToggleSwitch v-model="showHistory" inputId="otl-history" data-testid="history-toggle" />
       <label for="otl-history" class="text-sm text-muted-color">
-        Show used, revoked and expired links
+        {{ t('components.oneTimeLinkModal.showHistoryLabel') }}
       </label>
     </div>
 
     <p v-if="links.length === 0" class="text-sm text-muted-color">
-      {{ showHistory ? 'No link issued yet.' : 'No active link.' }}
+      {{ showHistory ? t('components.oneTimeLinkModal.noLinkIssued') : t('components.oneTimeLinkModal.noActiveLink') }}
     </p>
     <ul v-else class="flex flex-col gap-2">
       <li
@@ -256,7 +274,7 @@ function severityFor(link: OneTimeLink) {
         class="flex gap-2 justify-between items-center p-2 rounded border border-surface"
       >
         <div class="text-sm">
-          <Tag :value="statusOf(link)" :severity="severityFor(link)" />
+          <Tag :value="t(`common.oneTimeLinkStatus.${statusOf(link)}`)" :severity="severityFor(link)" />
           <!-- Relative, with the exact timestamp on hover: an absolute date is
                easy to misread as "already expired" when only the time registers. -->
           <span
@@ -264,14 +282,14 @@ function severityFor(link: OneTimeLink) {
             :title="formatAbsoluteTime(link.createdAt)"
             data-testid="created-label"
           >
-            created {{ formatRelativeTime(link.createdAt) }}
+            {{ t('components.oneTimeLinkModal.createdLabel', { relative: formatRelativeTime(link.createdAt) }) }}
           </span>
           <span
             v-if="link.readAt"
             class="ml-2 text-muted-color"
             :title="formatAbsoluteTime(link.readAt)"
           >
-            &middot; read {{ formatRelativeTime(link.readAt) }}
+            {{ t('components.oneTimeLinkModal.readLabel', { relative: formatRelativeTime(link.readAt) }) }}
           </span>
           <span
             v-else
@@ -279,12 +297,12 @@ function severityFor(link: OneTimeLink) {
             :title="formatAbsoluteTime(link.expiresAt)"
             data-testid="expiry-label"
           >
-            &middot; expires {{ formatRelativeTime(link.expiresAt) }}
+            {{ t('components.oneTimeLinkModal.expiresLabel', { relative: formatRelativeTime(link.expiresAt) }) }}
           </span>
         </div>
         <Button
           v-if="isActive(link)"
-          label="Revoke"
+          :label="t('components.oneTimeLinkModal.revokeButton')"
           size="small"
           severity="danger"
           text
@@ -296,11 +314,11 @@ function severityFor(link: OneTimeLink) {
 
   <ConfirmationModal
     v-model:visible="showRevokeConfirm"
-    title="Revoke one-time link"
+    :title="t('components.oneTimeLinkModal.revokeConfirmTitle')"
     :question="revokeQuestion"
     :description="revokeDescription"
-    confirm-label="Revoke"
-    cancel-label="Cancel"
+    :confirm-label="t('components.oneTimeLinkModal.revokeConfirmLabel')"
+    :cancel-label="t('common.cancel')"
     severity="danger"
     icon="pi pi-ban"
     @confirm="confirmRevoke"

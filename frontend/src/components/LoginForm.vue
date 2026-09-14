@@ -3,6 +3,7 @@ import { zodResolver } from '@primevue/forms/resolvers/zod'
 import { useToast } from 'primevue'
 import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import z from 'zod'
 import { AuthDomainError, InvalidCredentialsError } from '@/domain/auth/errors'
 import { useContainer } from '@/plugins/container'
@@ -18,6 +19,7 @@ import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 const router = useRouter()
 const route = useRoute()
 const toast = useToast()
+const { t } = useI18n()
 const passwordsStore = usePasswordsStore()
 const userStore = useUserStore()
 const groupsStore = useGroupsStore()
@@ -34,10 +36,11 @@ const formValues = {
   password: '',
 }
 
-const resolver = ref(
+// computed (not a plain ref) so the message re-resolves if the locale changes later
+const resolver = computed(() =>
   zodResolver(
     z.object({
-      email: z.email({ message: 'Invalid email address.' }),
+      email: z.email({ message: t('auth.login.errors.invalidEmail') }),
       password: z.string(),
     }),
   ),
@@ -79,9 +82,9 @@ const isRateLimited = computed(() => rateLimitCountdown.value > 0)
 const countdownMessage = computed(() => {
   const seconds = rateLimitCountdown.value
   if (rateLimitReason.value === 'account-locked') {
-    return `Account temporarily locked after too many failed logins. Try again in ${seconds} seconds.`
+    return t('auth.login.accountLocked', { seconds })
   }
-  return `Too many login attempts. Please try again in ${seconds} seconds.`
+  return t('auth.login.rateLimited', { seconds })
 })
 
 const onRateLimited = (event: Event) => {
@@ -138,8 +141,8 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
 
     toast.add({
       severity: 'success',
-      summary: 'Login Successful',
-      detail: 'You have logged in successfully.',
+      summary: t('auth.login.toasts.successSummary'),
+      detail: t('auth.login.toasts.successDetail'),
       life: 5000,
     })
 
@@ -161,15 +164,26 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     // The countdown Message (isRateLimited) already communicates the
     // lockout / rate-limit state; a second toast would just be noise.
     if (isRateLimited.value) return
+    // InvalidCredentialsError carries a fixed, deliberately generic domain
+    // constant (never reveals whether the email or the password was wrong),
+    // so it's safe to swap for its translation. The other branches carry
+    // the backend's raw error detail or an unknown Error's message — that
+    // text isn't ours to translate (no matching key, and rewording it could
+    // drop detail the server chose to include), so it's passed through as-is.
     const detail =
       err instanceof InvalidCredentialsError
-        ? err.message
+        ? t('auth.login.errors.invalidCredentials')
         : err instanceof AuthDomainError
           ? err.message
           : err instanceof Error
             ? err.message
-            : 'Login failed'
-    toast.add({ severity: 'error', summary: 'Login Failed', detail, life: 5000 })
+            : t('auth.login.errors.generic')
+    toast.add({
+      severity: 'error',
+      summary: t('auth.login.toasts.errorSummary'),
+      detail,
+      life: 5000,
+    })
   } finally {
     loading.value = false
   }
@@ -185,8 +199,8 @@ const handleSsoLogin = async () => {
     if (!ssoUrl) {
       toast.add({
         severity: 'error',
-        summary: 'SSO Error',
-        detail: 'SSO provider returned an invalid login URL.',
+        summary: t('auth.sso.errorSummary'),
+        detail: t('auth.sso.errors.invalidUrl'),
         life: 5000,
       })
       return
@@ -196,11 +210,10 @@ const handleSsoLogin = async () => {
     window.location.assign(ssoUrl)
   } catch (error) {
     console.error('SSO URL error:', error)
-    const detail =
-      error instanceof AuthDomainError
-        ? error.message
-        : 'Failed to get SSO login URL. SSO may not be configured.'
-    toast.add({ severity: 'error', summary: 'SSO Error', detail, life: 5000 })
+    // Same rule as the login handler: the domain error's message is the
+    // backend's raw detail, not ours to translate.
+    const detail = error instanceof AuthDomainError ? error.message : t('auth.sso.errors.generic')
+    toast.add({ severity: 'error', summary: t('auth.sso.errorSummary'), detail, life: 5000 })
   } finally {
     ssoLoading.value = false
   }
@@ -217,12 +230,12 @@ const handleSsoLogin = async () => {
       <div class="flex justify-center mb-4">
         <img src="/img/le-coffre.png" alt="Le Coffre" class="h-32 w-auto" />
       </div>
-      <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
+      <h2 class="text-2xl font-bold mb-4 text-center">{{ t('auth.login.title') }}</h2>
     </template>
     <template #content>
       <Form v-slot="$form" :formValues :resolver @submit="onFormSubmit">
         <div class="flex flex-col gap-1 mb-4">
-          <label for="email">Email</label>
+          <label for="email">{{ t('auth.login.email') }}</label>
           <InputText
             autocomplete="email"
             id="email"
@@ -238,7 +251,7 @@ const handleSsoLogin = async () => {
           </Message>
         </div>
         <div class="flex flex-col gap-1 mb-4">
-          <label for="password">Password</label>
+          <label for="password">{{ t('auth.login.password') }}</label>
           <Password
             inputId="password"
             name="password"
@@ -256,7 +269,7 @@ const handleSsoLogin = async () => {
           fluid
           block
           type="submit"
-          label="Login"
+          :label="t('auth.login.submit')"
           class="mt-4"
           :disabled="!$form.valid || loading || isRateLimited"
           :loading="loading"
@@ -269,7 +282,7 @@ const handleSsoLogin = async () => {
       <template v-if="isSsoConfigured">
         <div class="flex items-center gap-2 my-4">
           <Divider class="flex-1" />
-          <span class="text-sm text-gray-500">OR</span>
+          <span class="text-sm text-gray-500">{{ t('auth.login.or') }}</span>
           <Divider class="flex-1" />
         </div>
 
@@ -278,7 +291,7 @@ const handleSsoLogin = async () => {
           block
           severity="secondary"
           outlined
-          label="Login with SSO"
+          :label="t('auth.login.ssoSubmit')"
           icon="pi pi-sign-in"
           @click="handleSsoLogin"
           :loading="ssoLoading"

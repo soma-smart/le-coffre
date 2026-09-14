@@ -9,7 +9,11 @@
               {{ folder.name }}
             </h3>
             <p class="text-sm text-muted-color">
-              {{ folder.count }} {{ folder.count === 1 ? 'password' : 'passwords' }}
+              {{
+                folder.count === 1
+                  ? t('common.passwordCountOne', { count: folder.count })
+                  : t('common.passwordCountOther', { count: folder.count })
+              }}
             </p>
           </div>
         </div>
@@ -36,8 +40,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Password } from '@/domain/password/Password'
 import PasswordCard from './PasswordCard.vue'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   folder: {

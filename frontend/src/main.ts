@@ -14,10 +14,14 @@ import AppState from './plugins/appState'
 import VaultStatus from './plugins/vaultStatus'
 import { containerPlugin } from './plugins/container'
 import { installProductionContainer } from './composition_root'
+import i18n from './i18n'
+import primevueLocaleFr from './i18n/primevueLocaleFr'
 
 const app = createApp(App)
 app.use(containerPlugin(installProductionContainer()))
+app.use(i18n)
 app.use(PrimeVue, {
+  locale: primevueLocaleFr,
   theme: {
     preset: Aura,
     options: {

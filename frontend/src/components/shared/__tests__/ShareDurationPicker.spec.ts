@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { defineComponent, h, ref } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import ShareDurationPicker from '@/components/shared/ShareDurationPicker.vue'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 const NOW = new Date('2026-07-27T12:00:00Z')
 
@@ -67,7 +70,7 @@ describe('ShareDurationPicker', () => {
     const { model, wrapper } = mountPicker()
 
     expect(model.value).toBeNull()
-    expect(wrapper.text()).toContain('Access lasts until it is revoked')
+    expect(wrapper.text()).toContain(t('components.shareDurationPicker.permanentHint'))
   })
 
   it('turns a preset into an absolute deadline measured from now', async () => {

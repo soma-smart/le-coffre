@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import type { AccessRole, Password, ShareStatus } from '@/domain/password/Password'
 import { severityForShareStatus, shareStatusOf } from '@/domain/password/Password'
@@ -45,6 +46,7 @@ interface GroupAccessView {
 }
 
 const toast = useToast()
+const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const passwordAccessStore = usePasswordAccessStore()
 const { groups: allGroups } = storeToRefs(groupsStore)
@@ -77,8 +79,8 @@ const shareStatus = (expiresAt: string | null): ShareStatus => shareStatusOf(exp
 
 const shareLabel = (expiresAt: string | null): string =>
   shareStatus(expiresAt) === 'expired'
-    ? 'Expired'
-    : `expires ${formatRelativeTime(expiresAt ?? '')}`
+    ? t('components.sharePasswordModal.expiredLabel')
+    : t('components.sharePasswordModal.expiresLabel', { relative: formatRelativeTime(expiresAt ?? '') })
 
 // A user is a password "owner" when they own a group that owns the password.
 const userIsOwner = (user: UserAccessView): boolean =>
@@ -138,8 +140,8 @@ const loadAccessList = async () => {
     console.log(error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to load sharing information',
+      summary: t('common.error'),
+      detail: t('components.sharePasswordModal.loadAccessFailed'),
       life: 5000,
     })
   } finally {
@@ -174,8 +176,8 @@ const sharePassword = async () => {
   if (!props.password || !selectedGroupId.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please select a group',
+      summary: t('common.validationError'),
+      detail: t('components.sharePasswordModal.groupRequired'),
       life: 5000,
     })
     return
@@ -184,8 +186,8 @@ const sharePassword = async () => {
   if (!canManageSharing.value) {
     toast.add({
       severity: 'error',
-      summary: 'Permission Denied',
-      detail: 'Only users with write access can share this password',
+      summary: t('components.sharePasswordModal.permissionDeniedSummary'),
+      detail: t('components.sharePasswordModal.shareForbidden'),
       life: 5000,
     })
     return
@@ -201,10 +203,12 @@ const sharePassword = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
+      summary: t('common.success'),
       detail: shareExpiresAt.value
-        ? `Password shared until ${formatAbsoluteTime(shareExpiresAt.value)}`
-        : 'Password shared successfully',
+        ? t('components.sharePasswordModal.sharedUntil', {
+            date: formatAbsoluteTime(shareExpiresAt.value),
+          })
+        : t('components.sharePasswordModal.sharedSuccessfully'),
       life: 5000,
     })
 
@@ -217,8 +221,11 @@ const sharePassword = async () => {
     console.log(error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: error instanceof PasswordDomainError ? error.message : 'Failed to share password',
+      summary: t('common.error'),
+      detail:
+        error instanceof PasswordDomainError
+          ? error.message
+          : t('components.sharePasswordModal.shareFailedFallback'),
       life: 5000,
     })
   } finally {
@@ -233,8 +240,8 @@ const unshareFromGroup = async (groupId: string) => {
   if (!canManageSharing.value) {
     toast.add({
       severity: 'error',
-      summary: 'Permission Denied',
-      detail: 'Only users with write access can unshare this password',
+      summary: t('components.sharePasswordModal.permissionDeniedSummary'),
+      detail: t('components.sharePasswordModal.unshareForbidden'),
       life: 5000,
     })
     return
@@ -249,8 +256,8 @@ const unshareFromGroup = async (groupId: string) => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Password unshared successfully',
+      summary: t('common.success'),
+      detail: t('components.sharePasswordModal.unshareSuccessfully'),
       life: 5000,
     })
 
@@ -261,10 +268,12 @@ const unshareFromGroup = async (groupId: string) => {
     emit('unshared')
   } catch (error) {
     const detail =
-      error instanceof PasswordDomainError ? error.message : 'Failed to unshare password'
+      error instanceof PasswordDomainError
+        ? error.message
+        : t('components.sharePasswordModal.unshareFailedFallback')
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail,
       life: 5000,
     })
@@ -296,10 +305,12 @@ const saveRetiming = async (groupId: string) => {
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
+      summary: t('common.success'),
       detail: retimeExpiresAt.value
-        ? `Access now runs until ${formatAbsoluteTime(retimeExpiresAt.value)}`
-        : 'Access is now permanent',
+        ? t('components.sharePasswordModal.accessUntil', {
+            date: formatAbsoluteTime(retimeExpiresAt.value),
+          })
+        : t('components.sharePasswordModal.accessNowPermanent'),
       life: 5000,
     })
 
@@ -310,11 +321,11 @@ const saveRetiming = async (groupId: string) => {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail:
         error instanceof PasswordDomainError
           ? error.message
-          : 'Failed to change the access duration',
+          : t('components.sharePasswordModal.retimeFailedFallback'),
       life: 5000,
     })
   } finally {
@@ -328,7 +339,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" modal header="Share Password" :style="{ width: '36rem' }">
+  <Dialog
+    v-model:visible="visible"
+    modal
+    :header="t('components.sharePasswordModal.title')"
+    :style="{ width: '36rem' }"
+  >
     <div v-if="loadingAccess" class="flex justify-center py-4">
       <ProgressSpinner />
     </div>
@@ -340,7 +356,7 @@ onMounted(async () => {
     >
       <!-- Share with new group (only for users with write access) -->
       <div v-if="canManageSharing" class="flex flex-col gap-4 pb-4 border-b">
-        <h3 class="font-semibold text-lg">Share with Group</h3>
+        <h3 class="font-semibold text-lg">{{ t('components.sharePasswordModal.shareWithGroupTitle') }}</h3>
         <div class="flex gap-2">
           <Select
             id="group-select"
@@ -348,10 +364,10 @@ onMounted(async () => {
             :options="availableGroupsForSharing"
             optionLabel="name"
             optionValue="id"
-            placeholder="Select a group to share with"
+            :placeholder="t('components.sharePasswordModal.selectGroupPlaceholder')"
             :disabled="loading"
             filter
-            filterPlaceholder="Search groups..."
+            :filterPlaceholder="t('components.sharePasswordModal.searchGroupsPlaceholder')"
             class="flex-1"
           >
             <template #option="slotProps">
@@ -362,7 +378,7 @@ onMounted(async () => {
             </template>
           </Select>
           <Button
-            label="Share"
+            :label="t('components.sharePasswordModal.shareButton')"
             icon="pi pi-share-alt"
             @click="sharePassword"
             :loading="loading"
@@ -374,14 +390,14 @@ onMounted(async () => {
 
       <Tabs value="users">
         <TabList>
-          <Tab value="users">User access view</Tab>
-          <Tab value="groups">Group access view</Tab>
+          <Tab value="users">{{ t('components.sharePasswordModal.usersTab') }}</Tab>
+          <Tab value="groups">{{ t('components.sharePasswordModal.groupsTab') }}</Tab>
         </TabList>
         <TabPanels>
           <TabPanel value="users">
             <div class="flex flex-col gap-3 pt-4">
               <div v-if="userAccessList.length === 0" class="text-center py-4 text-muted-color">
-                <p>No users have access yet</p>
+                <p>{{ t('components.sharePasswordModal.noUsersYet') }}</p>
               </div>
 
               <div v-else class="space-y-2">
@@ -401,11 +417,11 @@ onMounted(async () => {
                         <div class="flex gap-2 items-center text-sm text-muted-color">
                           <span v-if="userIsOwner(user)" class="flex items-center gap-1">
                             <i class="pi pi-crown text-yellow-500"></i>
-                            Owner
+                            {{ t('components.sharePasswordModal.ownerLabel') }}
                           </span>
                           <span v-else class="flex items-center gap-1">
                             <i class="pi pi-eye"></i>
-                            Can read
+                            {{ t('components.sharePasswordModal.canReadLabel') }}
                           </span>
                         </div>
                         <div
@@ -413,16 +429,22 @@ onMounted(async () => {
                         >
                           <span class="flex items-center gap-1">
                             <i class="pi pi-users"></i>
-                            Via:
+                            {{ t('components.sharePasswordModal.viaLabel') }}
                           </span>
                           <span
                             v-for="link in user.links"
                             :key="link.groupId"
                             class="surface-100 px-2 py-1 rounded flex items-center gap-1"
                             v-tooltip="
-                              (link.roleInGroup === 'owner' ? 'Owner' : 'Member') +
-                              ' of this group · group ' +
-                              (link.groupRole === 'owner' ? 'owns the password' : 'is shared')
+                              (link.roleInGroup === 'owner'
+                                ? t('components.sharePasswordModal.ownerOfGroupRole')
+                                : t('components.sharePasswordModal.memberOfGroupRole')) +
+                              ' ' +
+                              t('components.sharePasswordModal.ofThisGroup') +
+                              ' · ' +
+                              (link.groupRole === 'owner'
+                                ? t('components.sharePasswordModal.ownsScope')
+                                : t('components.sharePasswordModal.sharedScope'))
                             "
                           >
                             <i
@@ -434,7 +456,11 @@ onMounted(async () => {
                             ></i>
                             {{ link.groupName }}
                             <Tag
-                              :value="link.groupRole === 'owner' ? 'owns' : 'shared'"
+                              :value="
+                                link.groupRole === 'owner'
+                                  ? t('components.sharePasswordModal.ownsTag')
+                                  : t('components.sharePasswordModal.sharedTag')
+                              "
                               :severity="link.groupRole === 'owner' ? 'success' : 'info'"
                             />
                             <Tag
@@ -457,7 +483,7 @@ onMounted(async () => {
           <TabPanel value="groups">
             <div class="flex flex-col gap-3 pt-4">
               <div v-if="groupAccessList.length === 0" class="text-center py-4 text-muted-color">
-                <p>No groups have access yet</p>
+                <p>{{ t('components.sharePasswordModal.noGroupsYet') }}</p>
               </div>
 
               <div v-else class="space-y-2">
@@ -475,11 +501,11 @@ onMounted(async () => {
                           <div class="flex gap-2 items-center text-sm text-muted-color">
                             <span v-if="group.role === 'owner'" class="flex items-center gap-1">
                               <i class="pi pi-crown text-yellow-500"></i>
-                              Owner Group
+                              {{ t('components.sharePasswordModal.ownerGroupLabel') }}
                             </span>
                             <span v-else class="flex items-center gap-1">
                               <i class="pi pi-share-alt"></i>
-                              Shared
+                              {{ t('components.sharePasswordModal.sharedLabel') }}
                             </span>
                             <Tag
                               v-if="group.expiresAt"
@@ -501,10 +527,10 @@ onMounted(async () => {
                           text
                           rounded
                           size="small"
-                          aria-label="Change duration"
+                          :aria-label="t('components.sharePasswordModal.changeDurationAria')"
                           :disabled="loading"
                           @click="startRetiming(group)"
-                          v-tooltip="'Change how long this access lasts'"
+                          v-tooltip="t('components.sharePasswordModal.changeDurationTooltip')"
                           data-testid="change-duration"
                         />
                         <Button
@@ -513,10 +539,10 @@ onMounted(async () => {
                           rounded
                           severity="danger"
                           size="small"
-                          aria-label="Revoke access"
+                          :aria-label="t('components.sharePasswordModal.revokeAccessAria')"
                           :loading="loading"
                           @click="unshareFromGroup(group.groupId)"
-                          v-tooltip="'Remove group access'"
+                          v-tooltip="t('components.sharePasswordModal.revokeAccessTooltip')"
                         />
                       </div>
                     </div>
@@ -529,7 +555,7 @@ onMounted(async () => {
                       <ShareDurationPicker v-model="retimeExpiresAt" :disabled="loading" />
                       <div class="flex justify-end gap-2">
                         <Button
-                          label="Cancel"
+                          :label="t('components.sharePasswordModal.cancelButton')"
                           severity="secondary"
                           size="small"
                           text
@@ -537,7 +563,7 @@ onMounted(async () => {
                           @click="cancelRetiming"
                         />
                         <Button
-                          label="Save"
+                          :label="t('components.sharePasswordModal.saveButton')"
                           size="small"
                           :loading="loading"
                           @click="saveRetiming(group.groupId)"
@@ -554,7 +580,12 @@ onMounted(async () => {
     </div>
 
     <template #footer>
-      <Button label="Close" severity="secondary" @click="visible = false" :disabled="loading" />
+      <Button
+        :label="t('components.sharePasswordModal.closeButton')"
+        severity="secondary"
+        @click="visible = false"
+        :disabled="loading"
+      />
     </template>
   </Dialog>
 </template>

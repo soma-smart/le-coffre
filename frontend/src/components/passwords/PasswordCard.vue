@@ -31,12 +31,10 @@
             rounded
             size="small"
             severity="secondary"
-            :aria-label="isVisible ? 'Hide password' : 'Show password'"
+            :aria-label="isVisible ? t('components.passwordCard.hidePassword') : t('components.passwordCard.showPassword')"
             :loading="isLoading"
             :disabled="!canReadInContext"
-            v-tooltip.top="
-              !canReadInContext ? 'You don\'t have read access to this password' : undefined
-            "
+            v-tooltip.top="!canReadInContext ? t('components.passwordCard.noReadAccessTooltip') : undefined"
             @click="toggleVisibility"
           />
           <Button
@@ -45,11 +43,9 @@
             rounded
             size="small"
             severity="secondary"
-            aria-label="Copy password"
+            :aria-label="t('components.passwordCard.copyPasswordAria')"
             :disabled="!canReadInContext"
-            v-tooltip.top="
-              !canReadInContext ? 'You don\'t have read access to this password' : undefined
-            "
+            v-tooltip.top="!canReadInContext ? t('components.passwordCard.noReadAccessTooltip') : undefined"
             @click="copyToClipboard"
           />
         </div>
@@ -61,9 +57,9 @@
             rounded
             size="small"
             severity="secondary"
-            aria-label="History"
+            :aria-label="t('components.passwordCard.historyAria')"
             @click="handleHistory"
-            v-tooltip.top="'View history'"
+            v-tooltip.top="t('components.passwordCard.historyTooltip')"
           />
           <Button
             icon=" pi pi-share-alt"
@@ -73,19 +69,19 @@
             severity="secondary"
             :aria-label="
               !canReadInContext
-                ? 'You don\'t have read access to this password'
+                ? t('components.passwordCard.noReadAccessTooltip')
                 : !canWriteInContext
-                  ? 'View sharing access'
-                  : 'Manage sharing'
+                  ? t('components.passwordCard.shareViewOnlyAria')
+                  : t('components.passwordCard.shareManageAria')
             "
             :disabled="!canReadInContext"
             @click="handleShare"
             v-tooltip.top="
               !canReadInContext
-                ? 'You don\'t have read access to this password'
+                ? t('components.passwordCard.noReadAccessTooltip')
                 : !canWriteInContext
-                  ? 'View who has access to this password'
-                  : 'Manage sharing'
+                  ? t('components.passwordCard.shareViewOnlyTooltip')
+                  : t('components.passwordCard.shareManageTooltip')
             "
           />
           <Button
@@ -94,12 +90,12 @@
             rounded
             size="small"
             severity="secondary"
-            aria-label="One-time link"
+            :aria-label="t('components.passwordCard.oneTimeLinkAria')"
             :disabled="!canWriteInContext"
             v-tooltip.top="
               !canWriteInContext
-                ? 'Only an owner can create a one-time link'
-                : 'Create a one-time link'
+                ? t('components.passwordCard.oneTimeLinkOwnerOnlyTooltip')
+                : t('components.passwordCard.oneTimeLinkCreateTooltip')
             "
             @click="handleOneTimeLink"
           />
@@ -109,11 +105,9 @@
             rounded
             size="small"
             severity="secondary"
-            aria-label="Edit"
+            :aria-label="t('components.passwordCard.editAria')"
             :disabled="!canWriteInContext"
-            v-tooltip.top="
-              !canWriteInContext ? 'You don\'t have write access to this password' : undefined
-            "
+            v-tooltip.top="!canWriteInContext ? t('components.passwordCard.noWriteAccessTooltip') : undefined"
             @click="handleEdit"
           />
           <Button
@@ -122,12 +116,10 @@
             rounded
             size="small"
             severity="danger"
-            aria-label="Delete"
+            :aria-label="t('components.passwordCard.deleteAria')"
             :loading="isDeleting"
             :disabled="!canWriteInContext"
-            v-tooltip.top="
-              !canWriteInContext ? 'You don\'t have write access to this password' : undefined
-            "
+            v-tooltip.top="!canWriteInContext ? t('components.passwordCard.noWriteAccessTooltip') : undefined"
             @click="handleDelete"
           />
         </div>
@@ -154,7 +146,7 @@
         <span
           v-else-if="password.url"
           class="flex items-center gap-1 text-muted-color"
-          v-tooltip.top="'URL is not opened because it is not http(s)'"
+          v-tooltip.top="t('components.passwordCard.unsafeUrlTooltip')"
         >
           <i class="pi pi-exclamation-triangle text-xs" />
           {{ password.url }}
@@ -168,18 +160,18 @@
           <i
             v-if="needsUpdate"
             class="pi pi-exclamation-triangle text-orange-500"
-            v-tooltip.top="'Password not updated in 3+ months'"
+            v-tooltip.top="t('components.passwordCard.staleTooltip')"
           />
-          <span>Created: {{ formatDate(password.createdAt) }}</span>
-          <span>Updated: {{ formatDate(password.lastUpdatedAt) }}</span>
+          <span>{{ t('components.passwordCard.createdLabel', { date: formatDate(password.createdAt) }) }}</span>
+          <span>{{ t('components.passwordCard.updatedLabel', { date: formatDate(password.lastUpdatedAt) }) }}</span>
         </div>
 
         <div v-if="sharedAccessInfo" class="flex items-center gap-2 shrink-0">
-          <span>Shared: {{ formatDate(sharedAccessInfo.occurredOn) }}</span>
+          <span>{{ t('components.passwordCard.sharedLabel', { date: formatDate(sharedAccessInfo.occurredOn) }) }}</span>
           <i
             class="pi pi-user"
-            v-tooltip.top="'by ' + sharedAccessInfo.actorUsername"
-            aria-label="Shared by user"
+            v-tooltip.top="t('components.passwordCard.sharedByTooltip', { username: sharedAccessInfo.actorUsername })"
+            :aria-label="t('components.passwordCard.sharedByAria')"
           />
         </div>
       </div>
@@ -192,6 +184,7 @@ import { ref, computed, toRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from 'vue-i18n'
 import {
   isPasswordStale,
   severityForShareStatus,
@@ -223,6 +216,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const confirm = useConfirm()
+const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const { userBelongingGroups } = storeToRefs(groupsStore)
 
@@ -240,8 +234,10 @@ const accessExpiry = computed(() => props.password.accessExpiresAt)
 const accessExpiryStatus = computed(() => shareStatusOf(accessExpiry.value))
 const accessExpiryLabel = computed(() =>
   accessExpiryStatus.value === 'expired'
-    ? 'Access expired'
-    : `Expires ${formatRelativeTime(accessExpiry.value ?? '')}`,
+    ? t('components.passwordCard.accessExpiredLabel')
+    : t('components.passwordCard.accessExpiresLabel', {
+        relative: formatRelativeTime(accessExpiry.value ?? ''),
+      }),
 )
 const safePasswordUrl = computed(() => normalizeExternalHttpUrl(props.password.url))
 
@@ -286,8 +282,8 @@ const { passwordValue, isVisible, isLoading, toggleVisibility, revealAndCopy } =
     if (error instanceof VaultLockedError) return
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to fetch password',
+      summary: t('common.error'),
+      detail: t('components.passwordCard.fetchFailedDetail'),
       life: 3000,
     })
   },
@@ -311,16 +307,16 @@ const copyToClipboard = async () => {
     await navigator.clipboard.writeText(value)
     toast.add({
       severity: 'success',
-      summary: 'Copied',
-      detail: 'Password copied to clipboard',
+      summary: t('components.passwordCard.copiedSummary'),
+      detail: t('components.passwordCard.copiedDetail'),
       life: 3000,
     })
   } catch (error) {
     console.error('Error copying to clipboard:', error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to copy password',
+      summary: t('common.error'),
+      detail: t('components.passwordCard.copyFailedDetail'),
       life: 3000,
     })
   }
@@ -344,11 +340,11 @@ const handleHistory = () => {
 
 const handleDelete = () => {
   confirm.require({
-    message: `Are you sure you want to delete "${props.password.name}"?`,
-    header: 'Confirm Deletion',
+    message: t('components.passwordCard.deleteConfirmMessage', { name: props.password.name }),
+    header: t('components.passwordCard.deleteConfirmHeader'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancel',
-    acceptLabel: 'Delete',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('components.passwordCard.deleteConfirmAccept'),
     acceptClass: 'p-button-danger',
     accept: async () => {
       isDeleting.value = true
@@ -356,8 +352,8 @@ const handleDelete = () => {
         await passwordUseCases.delete.execute({ passwordId: props.password.id })
         toast.add({
           severity: 'success',
-          summary: 'Deleted',
-          detail: 'Password deleted successfully',
+          summary: t('components.passwordCard.deletedSummary'),
+          detail: t('components.passwordCard.deletedDetail'),
           life: 3000,
         })
         emit('deleted')
@@ -365,8 +361,8 @@ const handleDelete = () => {
         console.error('Error deleting password:', error)
         toast.add({
           severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to delete password',
+          summary: t('common.error'),
+          detail: t('components.passwordCard.deleteFailedDetail'),
           life: 3000,
         })
       } finally {
