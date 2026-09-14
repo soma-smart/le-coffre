@@ -5,10 +5,9 @@
 
   <div v-else :key="password.id" class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2 min-w-0">
+      <div class="flex items-center gap-3 min-w-0">
+        <PasswordAvatar :name="password.name" size="md" />
         <h2 class="text-xl font-semibold truncate">{{ password.name }}</h2>
-        <!-- Sits with the name rather than in the identity panel: a lapsing access
-             is the one time-critical thing here, and it keeps its colour. -->
         <Tag
           v-if="accessExpiry"
           :value="accessExpiryLabel"
