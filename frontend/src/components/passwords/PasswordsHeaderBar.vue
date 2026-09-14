@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 p-4 border-b border-surface"
+    class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 p-4 sm:py-0 sm:h-18 border-b border-surface"
   >
     <IconField class="flex-1 sm:max-w-sm">
       <InputIcon class="pi pi-search" />
