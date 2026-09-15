@@ -16,8 +16,9 @@
 
     <div v-else class="flex-1 min-h-0 flex">
       <div
-        class="relative shrink-0 border-r border-surface"
-        :style="{ width: `${listPaneWidth}px` }"
+        v-if="!mobileShowsDetail"
+        class="relative w-full md:w-auto md:shrink-0 md:border-r border-surface"
+        :style="isMobile ? undefined : { width: `${listPaneWidth}px` }"
       >
         <PasswordListPane
           :title="paneTitle"
@@ -28,12 +29,17 @@
           :folderNarrowed="folderNarrowed"
           @select="selectPassword"
         />
-        <ResizeHandle @pointerdown="startListPaneResizing" />
+        <ResizeHandle v-if="!isMobile" @pointerdown="startListPaneResizing" />
       </div>
-      <div class="flex-1 min-h-0 overflow-y-auto p-6 bg-surface-50 dark:bg-surface-950">
+      <div
+        v-if="!isMobile || mobileShowsDetail"
+        class="flex-1 min-h-0 overflow-y-auto p-6 bg-surface-50 dark:bg-surface-950"
+      >
         <PasswordDetailPane
           :password="selectedPassword"
           :contextGroupId="selectedGroupIdFromRoute"
+          :showBack="isMobile"
+          @back="clearSelection"
           @edit="handleEdit"
           @share="handleShare"
           @history="handleHistory"
@@ -76,12 +82,14 @@ import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { usePasswordFilters } from '@/composables/usePasswordFilters'
 import { usePasswordSelection } from '@/composables/usePasswordSelection'
 import { useResizableWidth } from '@/composables/useResizableWidth'
+import { useIsMobile } from '@/composables/useIsMobile'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { slugifyGroupName } from '@/utils/groupSlug'
 
 const route = useRoute()
 const router = useRouter()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
+const isMobile = useIsMobile()
 
 const { width: listPaneWidth, startResizing: startListPaneResizing } = useResizableWidth({
   storageKey: 'le-coffre.password-list-pane-width',
@@ -139,13 +147,17 @@ const folderNarrowed = computed(
   () => paneMode.value === 'scope' && selectedFolderName.value !== null,
 )
 
-const autoSelectFirst = ref(true)
+// Mobile shows one pane at a time, so it opens on the list with nothing
+// selected; desktop always has a detail pane to fill.
+const autoSelectFirst = computed(() => !isMobile.value)
 const { selectedPassword, contextFixNeeded, staleId } = usePasswordSelection({
   visiblePasswords: panePasswords,
   allPasswords: passwords,
   routePasswordId,
   autoSelectFirst,
 })
+
+const mobileShowsDetail = computed(() => isMobile.value && selectedPassword.value !== null)
 
 const isCurrentUserOwnerOfGroup = (groupId: string) => {
   if (!currentUserId.value) return false
@@ -181,6 +193,13 @@ function selectPassword(passwordId: string) {
 
   const destination = routeToPassword(target)
   if (destination) router.push(destination)
+}
+
+/** Mobile "back": selection is route-driven, so dropping `?password=` returns to the list. */
+function clearSelection() {
+  const query = { ...route.query }
+  delete query.password
+  router.push({ query })
 }
 
 // Guards the two self-healing watchers below against the initial mount

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { mount, flushPromises } from '@vue/test-utils'
 import HomePage from '@/pages/HomePage.vue'
@@ -103,9 +103,106 @@ async function mountWorkspace(passwords: Password[], initialPath: string) {
   return { wrapper, router }
 }
 
+/**
+ * `useIsMobile` reads `matchMedia('(max-width: 767px)').matches` during setup.
+ * The jsdom polyfill in test/setup.ts always answers `false`, which is what
+ * keeps the desktop specs on the two-pane path; force it on to get the mobile
+ * layout. Returns a restore function.
+ */
+function stubViewportAsMobile() {
+  const original = window.matchMedia
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: query.includes('max-width: 767px'),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+  return () => Object.defineProperty(window, 'matchMedia', { writable: true, value: original })
+}
+
 describe('PasswordsWorkspace (via HomePage)', () => {
   beforeEach(() => {
     toastAdd.mockClear()
+  })
+
+  describe('mobile layout', () => {
+    let restoreViewport: () => void
+
+    beforeEach(() => {
+      restoreViewport = stubViewportAsMobile()
+    })
+    afterEach(() => {
+      restoreViewport()
+    })
+
+    it('opens on the list with nothing auto-selected, leaving the detail pane unmounted', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail' }),
+        makePassword({ id: 'p2', name: 'GitHub' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      expect(wrapper.text()).toContain('Gmail')
+      expect(wrapper.text()).toContain('GitHub')
+      expect(wrapper.find('[aria-current="true"]').exists()).toBe(false)
+      expect(wrapper.findComponent({ name: 'PasswordDetailPane' }).exists()).toBe(false)
+      expect(router.currentRoute.value.query.password).toBeUndefined()
+    })
+
+    it('replaces the list with a full-width detail pane once a row is picked', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail' }),
+        makePassword({ id: 'p2', name: 'GitHub' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      const row = wrapper.findAll('.cursor-pointer').find((el) => el.text().includes('GitHub'))
+      expect(row).toBeDefined()
+      await row!.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query.password).toBe('p2')
+      expect(wrapper.findComponent({ name: 'PasswordDetailPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('••••••••')
+    })
+
+    it('returns to the list from the detail pane back button', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail' }),
+        makePassword({ id: 'p2', name: 'GitHub' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(
+        passwords,
+        '/passwords/Engineering?password=p2',
+      )
+
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(false)
+
+      await wrapper.get('[data-testid="detail-back"]').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query.password).toBeUndefined()
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordDetailPane' }).exists()).toBe(false)
+    })
+
+    it('hides the list resize handle, which has no full-width equivalent', async () => {
+      const passwords = [makePassword({ id: 'p1', name: 'Gmail' })]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      // Scoped to the list pane: MainLayout's sidebar has a handle of its own.
+      const listPaneWrapper = wrapper.findComponent({ name: 'PasswordListPane' }).element
+        .parentElement
+      expect(listPaneWrapper?.querySelector('.cursor-col-resize')).toBeNull()
+    })
   })
 
   it("selects the password named by the route's ?password= query", async () => {
