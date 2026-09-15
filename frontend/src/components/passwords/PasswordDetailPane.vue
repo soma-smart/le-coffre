@@ -6,6 +6,16 @@
   <div v-else :key="password.id" class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-3 min-w-0">
+        <Button
+          v-if="showBack"
+          icon="pi pi-arrow-left"
+          text
+          rounded
+          severity="secondary"
+          aria-label="Back to list"
+          data-testid="detail-back"
+          @click="emit('back')"
+        />
         <PasswordAvatar :name="password.name" size="md" />
         <h2 class="text-xl font-semibold truncate">{{ password.name }}</h2>
         <Tag
@@ -98,6 +108,8 @@ const props = defineProps<{
   password: Password | null
   /** The group the middle pane is currently scoped to, if any — narrows write access. */
   contextGroupId?: string | null
+  /** Renders a back button, for the mobile layout where this pane replaces the list. */
+  showBack?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -106,6 +118,7 @@ const emit = defineEmits<{
   history: [password: Password]
   oneTimeLink: [password: Password]
   deleted: []
+  back: []
 }>()
 
 const toast = useToast()
