@@ -16,6 +16,7 @@
     "refresh": "Refresh",
     "unknownUser": "Unknown user",
     "unknownGroup": "unknown group",
+    "personalGroupName": "{username}'s Personal Group",
     "unknown": "Unknown",
     "deletedPassword": "deleted password",
     "vaultLockedSummary": "Vault Locked",
