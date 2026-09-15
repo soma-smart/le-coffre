@@ -20,14 +20,23 @@
         class="relative w-full md:w-auto md:shrink-0 md:border-r border-surface"
         :style="isMobile ? undefined : { width: `${listPaneWidth}px` }"
       >
+        <PasswordGroupListPane
+          v-if="mobileShowsGroups"
+          :groups="visiblePasswordGroups"
+          :passwordCountByGroupId="passwordCountByGroupId"
+          @select="selectGroup"
+        />
         <PasswordListPane
+          v-else
           :title="paneTitle"
           :passwords="panePasswords"
           :selectedPasswordId="selectedPassword?.id ?? null"
           :mode="paneMode"
           :groups="groups"
           :folderNarrowed="folderNarrowed"
+          :showBack="isMobile"
           @select="selectPassword"
+          @back="clearGroupScope"
         />
         <ResizeHandle v-if="!isMobile" @pointerdown="startListPaneResizing" />
       </div>
@@ -78,8 +87,10 @@ import { isRootFolder, type Password } from '@/domain/password/Password'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
+import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { usePasswordFilters } from '@/composables/usePasswordFilters'
+import { useAdminNavigation } from '@/composables/useAdminNavigation'
 import { usePasswordSelection } from '@/composables/usePasswordSelection'
 import { useResizableWidth } from '@/composables/useResizableWidth'
 import { useIsMobile } from '@/composables/useIsMobile'
@@ -101,9 +112,11 @@ const { width: listPaneWidth, startResizing: startListPaneResizing } = useResiza
 const passwordsStore = usePasswordsStore()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
+const passwordAccessStore = usePasswordAccessStore()
 const adminPasswordViewStore = useAdminPasswordViewStore()
 
 const { passwords, loading, error } = storeToRefs(passwordsStore)
+const { passwordCountByGroupId } = storeToRefs(passwordAccessStore)
 const { groups, userBelongingGroups, currentUserPersonalGroupId } = storeToRefs(groupsStore)
 const { isAdmin, currentUser } = storeToRefs(userStore)
 const { adminPasswordViewEnabled: adminPasswordViewPreference } =
@@ -124,6 +137,7 @@ const {
   visiblePasswords,
   paneTitle: scopePaneTitle,
   searchResults,
+  allGroupsPasswords,
 } = usePasswordFilters({
   passwords,
   allGroups: groups,
@@ -136,13 +150,25 @@ const {
   routeFolderFilter,
 })
 
-const paneMode = computed<'scope' | 'search'>(() => (searchQuery.value.trim() ? 'search' : 'scope'))
-const panePasswords = computed<Password[]>(() =>
-  paneMode.value === 'search' ? searchResults.value : visiblePasswords.value,
-)
-const paneTitle = computed(() =>
-  paneMode.value === 'search' ? 'Search results' : scopePaneTitle.value,
-)
+// 'scope' = one group (the route names it); 'all' = no group selected, every
+// password the user can reach; 'search' outranks both, spanning groups too.
+const paneMode = computed<'scope' | 'search' | 'all'>(() => {
+  if (searchQuery.value.trim()) return 'search'
+  return routeGroupSlug.value ? 'scope' : 'all'
+})
+
+const panePasswords = computed<Password[]>(() => {
+  if (paneMode.value === 'search') return searchResults.value
+  if (paneMode.value === 'all') return allGroupsPasswords.value
+  return visiblePasswords.value
+})
+
+const paneTitle = computed(() => {
+  if (paneMode.value === 'search') return 'Search results'
+  if (paneMode.value === 'all') return 'All passwords'
+  return scopePaneTitle.value
+})
+
 const folderNarrowed = computed(
   () => paneMode.value === 'scope' && selectedFolderName.value !== null,
 )
@@ -158,6 +184,36 @@ const { selectedPassword, contextFixNeeded, staleId } = usePasswordSelection({
 })
 
 const mobileShowsDetail = computed(() => isMobile.value && selectedPassword.value !== null)
+
+// Mobile has no group sidebar, so the unscoped route becomes the first level
+// of a groups → passwords → detail drill-down. Searching outranks it: results
+// span groups, so there is nothing to pick a group for.
+const mobileShowsGroups = computed(
+  () => isMobile.value && paneMode.value === 'all' && !mobileShowsDetail.value,
+)
+
+const { visiblePasswordGroups } = useAdminNavigation(
+  {
+    allGroups: groups,
+    userBelongingGroups,
+    currentUserPersonalGroupId,
+    isAdmin,
+    adminPasswordViewEnabled,
+    passwordCountByGroupId,
+  },
+  currentUserId,
+)
+
+function selectGroup(groupId: string) {
+  const group = groups.value.find((item) => item.id === groupId)
+  if (!group) return
+  router.push({ name: 'HomeGroup', params: { groupSlug: slugifyGroupName(group.name) } })
+}
+
+/** Mobile "back" from the password list: drops the group scope, and with it any folder/password narrowing. */
+function clearGroupScope() {
+  router.push({ name: 'PasswordsRoot' })
+}
 
 const isCurrentUserOwnerOfGroup = (groupId: string) => {
   if (!currentUserId.value) return false

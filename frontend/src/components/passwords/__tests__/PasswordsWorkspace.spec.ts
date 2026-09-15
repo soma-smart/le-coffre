@@ -86,6 +86,7 @@ async function mountWorkspace(passwords: Password[], initialPath: string) {
     history: createMemoryHistory(),
     routes: [
       { path: '/', name: 'Home', component: HomePage },
+      { path: '/passwords', name: 'PasswordsRoot', component: HomePage },
       { path: '/passwords/:groupSlug', name: 'HomeGroup', component: HomePage },
     ],
   })
@@ -130,6 +131,32 @@ function stubViewportAsMobile() {
 describe('PasswordsWorkspace (via HomePage)', () => {
   beforeEach(() => {
     toastAdd.mockClear()
+  })
+
+  describe('unscoped /passwords route', () => {
+    it('lists every password across groups, rather than defaulting to one group', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      expect(wrapper.text()).toContain('All passwords')
+      expect(wrapper.text()).toContain('Gmail')
+      expect(wrapper.text()).toContain('Personal Note')
+    })
+
+    it("names each row's group, since the list spans groups", async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).props('mode')).toBe('all')
+      expect(wrapper.text()).toContain('Engineering')
+      expect(wrapper.text()).toContain('Alice')
+    })
   })
 
   describe('mobile layout', () => {
@@ -192,6 +219,67 @@ describe('PasswordsWorkspace (via HomePage)', () => {
       expect(router.currentRoute.value.query.password).toBeUndefined()
       expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(true)
       expect(wrapper.findComponent({ name: 'PasswordDetailPane' }).exists()).toBe(false)
+    })
+
+    it('shows the group list at /passwords, standing in for the hidden sidebar', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('Engineering')
+      expect(wrapper.text()).toContain('Alice')
+    })
+
+    it('drills from a group into its password list', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords')
+
+      const groupRow = wrapper
+        .findComponent({ name: 'PasswordGroupListPane' })
+        .findAll('.cursor-pointer')
+        .find((el) => el.text().includes('Engineering'))
+      expect(groupRow).toBeDefined()
+      await groupRow!.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.params.groupSlug).toBe('Engineering')
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('Gmail')
+    })
+
+    it('returns from a password list to the group list', async () => {
+      const passwords = [makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' })]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      await wrapper.get('[data-testid="list-back"]').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.name).toBe('PasswordsRoot')
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(true)
+    })
+
+    it('shows search results rather than the group list while searching', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      const search = wrapper.get('input[placeholder="Search all passwords..."]')
+      await search.setValue('personal')
+      await flushPromises()
+
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('Search results')
+      expect(wrapper.text()).toContain('Personal Note')
     })
 
     it('hides the list resize handle, which has no full-width equivalent', async () => {
