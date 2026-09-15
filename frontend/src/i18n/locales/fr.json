@@ -16,6 +16,7 @@
     "refresh": "Actualiser",
     "unknownUser": "Utilisateur inconnu",
     "unknownGroup": "groupe inconnu",
+    "personalGroupName": "Groupe personnel de {username}",
     "unknown": "Inconnu",
     "deletedPassword": "mot de passe supprimé",
     "pagination": {
@@ -420,7 +421,6 @@
       "namePlaceholder": "ex. Compte Gmail",
       "ownerLabel": "Propriétaire",
       "ownerPlaceholder": "Sélectionnez le groupe propriétaire",
-      "personalTag": "(Personnel)",
       "ownerHelp": "Sélectionnez le groupe propriétaire de ce mot de passe. Seuls les groupes que vous possédez sont affichés.",
       "passwordLabel": "Mot de passe",
       "passwordLabelEditSuffix": " (laisser vide pour conserver l'actuel)",

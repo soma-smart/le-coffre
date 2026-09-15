@@ -15,6 +15,7 @@ import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { usePasswordFilters } from '@/composables/usePasswordFilters'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
+import { translateGroupName } from '@/utils/groupDisplayName'
 
 const route = useRoute()
 const router = useRouter()
@@ -194,7 +195,7 @@ onMounted(async () => {
     <div class="md:hidden mb-4">
       <Select
         :options="filterableGroups"
-        optionLabel="name"
+        :optionLabel="(group) => translateGroupName(t, group.name, group.isPersonal)"
         optionValue="id"
         :modelValue="selectedGroupTabId"
         @update:modelValue="handleMobileGroupChange"
@@ -238,7 +239,11 @@ onMounted(async () => {
               ]"
             />
             <div>
-              <h2 class="text-xl font-semibold">{{ selectedGroupSection.name }}</h2>
+              <h2 class="text-xl font-semibold">
+                {{
+                  translateGroupName(t, selectedGroupSection.name, selectedGroupSection.isPersonal)
+                }}
+              </h2>
               <p class="text-sm text-muted-color">
                 {{
                   selectedGroupSection.count === 1

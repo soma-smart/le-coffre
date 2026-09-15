@@ -11,6 +11,7 @@ import { useModelFromEntity } from '@/composables/useModelFromEntity'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
 import { isSafeHttpUrl, normalizeExternalHttpUrl } from '@/utils/safeUrl'
+import { translateGroupName } from '@/utils/groupDisplayName'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -58,6 +59,11 @@ const folderSuggestions = ref<string[]>([])
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
+
+const selectedGroupLabel = computed(() => {
+  const group = groupsForPasswordCreation.value.find((g) => g.id === selectedGroupId.value)
+  return group ? translateGroupName(t, group.name, group.isPersonal) : ''
+})
 
 const resolveDefaultGroupId = (): string => {
   const preferredGroupId = props.defaultGroupId
@@ -343,9 +349,8 @@ const handlePasswordBlur = () => {
                 :class="slotProps.option.isPersonal ? 'pi pi-user' : 'pi pi-users'"
                 class="text-sm"
               ></i>
-              <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color">{{
-                t('components.createPasswordModal.personalTag')
+              <span>{{
+                translateGroupName(t, slotProps.option.name, slotProps.option.isPersonal)
               }}</span>
             </div>
           </template>
@@ -359,9 +364,7 @@ const handlePasswordBlur = () => {
                 "
                 class="text-sm"
               ></i>
-              <span>{{
-                groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.name
-              }}</span>
+              <span>{{ selectedGroupLabel }}</span>
             </div>
             <span v-else>{{ slotProps.placeholder }}</span>
           </template>

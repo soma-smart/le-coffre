@@ -16,6 +16,7 @@
     "refresh": "Refresh",
     "unknownUser": "Unknown user",
     "unknownGroup": "unknown group",
+    "personalGroupName": "{username}'s Personal Group",
     "unknown": "Unknown",
     "deletedPassword": "deleted password",
     "pagination": {
@@ -420,7 +421,6 @@
       "namePlaceholder": "e.g., Gmail Account",
       "ownerLabel": "Owner",
       "ownerPlaceholder": "Select owner group",
-      "personalTag": "(Personal)",
       "ownerHelp": "Select the owner group for this password. Only groups you own are shown.",
       "passwordLabel": "Password",
       "passwordLabelEditSuffix": " (leave empty to keep current)",

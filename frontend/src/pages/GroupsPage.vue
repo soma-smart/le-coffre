@@ -10,6 +10,7 @@ import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import type { Group } from '@/domain/group/Group'
 import { sortGroups } from '../utils/groupSort'
+import { translateGroupName } from '@/utils/groupDisplayName'
 
 const toast = useToast()
 const { t } = useI18n()
@@ -53,7 +54,9 @@ const groupHasPasswords = ref(false)
 
 // Computed properties for delete modal
 const deleteModalQuestion = computed(() => {
-  return t('pages.groups.deleteQuestion', { name: selectedGroup.value?.name })
+  const group = selectedGroup.value
+  const name = group ? translateGroupName(t, group.name, group.isPersonal) : undefined
+  return t('pages.groups.deleteQuestion', { name })
 })
 
 const deleteModalDescription = computed(() => {
@@ -283,7 +286,7 @@ onMounted(async () => {
             <div class="flex items-center gap-2 justify-between">
               <div class="flex items-center gap-2">
                 <i class="pi pi-users text-primary"></i>
-                <span>{{ group.name }}</span>
+                <span>{{ translateGroupName(t, group.name, group.isPersonal) }}</span>
               </div>
               <div class="flex gap-1">
                 <Button
