@@ -44,19 +44,28 @@
         </template>
 
         <template #content="{ item }">
-          <div v-if="item" class="flex items-center justify-between gap-3">
+          <div v-if="item" class="flex items-center gap-3">
             <Tag
               class="shrink-0"
               :value="humanizeEventType(item.eventType)"
               :severity="eventSeverity(item.eventType)"
+              :title="humanizeEventType(item.eventType)"
             />
-            <span class="text-sm text-muted-color truncate text-right">
+            <span
+              class="text-sm text-muted-color whitespace-nowrap"
+              :title="item.actorEmail || 'Unknown user'"
+            >
               {{ item.actorEmail || 'Unknown user' }}
             </span>
           </div>
-          <div v-else class="flex items-center justify-between gap-3">
-            <Skeleton width="5rem" height="1.75rem" borderRadius="var(--p-tag-border-radius)" />
-            <Skeleton width="7rem" height="0.8rem" />
+          <div v-else class="flex items-center gap-3">
+            <Skeleton
+              width="5rem"
+              height="1.75rem"
+              borderRadius="var(--p-tag-border-radius)"
+              class="shrink-0"
+            />
+            <Skeleton width="7rem" height="0.8rem" class="shrink-0" />
           </div>
         </template>
       </Timeline>
@@ -216,5 +225,35 @@ const formatEventTime = (dateString: string): string =>
   bottom: -1rem;
   mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+}
+
+/* The theme gives this column `flex: 1` but leaves `min-width: auto`, so its
+   minimum size is the *min-content* width of the row inside it — the badge's
+   full natural width. The column therefore refuses to shrink and pushes the
+   whole event past the card's edge instead, which is the overflow itself.
+   Pinning the minimum to 0 lets the column take only the width that's left.
+
+   Rows then crop rather than reflow: height stays constant, and what runs out
+   of room is the right-hand end. The mask fades that edge instead of slicing
+   the text off mid-glyph. Content is packed left, so on a row that fits, the
+   faded strip is empty space and the fade is invisible — it only ever shows
+   up when something is genuinely cut off. Both ends carry a `title` with the
+   full text. */
+.password-activity-timeline :deep(.p-timeline-event-content) {
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent 100%);
+}
+
+/* The theme's 1rem side padding on the date column is cheap on a desktop and
+   expensive on a phone, where it costs a sixth of the row. Narrow it — and the
+   date width with it — so the content column keeps enough room to hold a badge
+   on one line. */
+@media (max-width: 639px) {
+  .password-activity-timeline :deep(.p-timeline-event-opposite) {
+    padding-inline: 0.5rem;
+    width: calc(var(--activity-date-width) + 1rem);
+  }
 }
 </style>
