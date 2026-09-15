@@ -44,7 +44,13 @@
         </template>
 
         <template #content="{ item }">
-          <div v-if="item" class="flex items-center gap-3">
+          <!-- Badge left, author right: `justify-between` spends whatever room
+               the card has left on the space between them, and `gap-3` is the
+               floor that space collapses to. Past that point neither item
+               gives way (both `shrink-0`), so the row simply outgrows the
+               column and its right-hand end — the author — is cropped and
+               faded by the column's mask. -->
+          <div v-if="item" class="flex items-center justify-between gap-3">
             <Tag
               class="shrink-0"
               :value="humanizeEventType(item.eventType)"
@@ -52,13 +58,13 @@
               :title="humanizeEventType(item.eventType)"
             />
             <span
-              class="text-sm text-muted-color whitespace-nowrap"
+              class="shrink-0 text-sm text-muted-color whitespace-nowrap"
               :title="item.actorEmail || 'Unknown user'"
             >
               {{ item.actorEmail || 'Unknown user' }}
             </span>
           </div>
-          <div v-else class="flex items-center gap-3">
+          <div v-else class="flex items-center justify-between gap-3">
             <Skeleton
               width="5rem"
               height="1.75rem"
@@ -234,16 +240,21 @@ const formatEventTime = (dateString: string): string =>
    Pinning the minimum to 0 lets the column take only the width that's left.
 
    Rows then crop rather than reflow: height stays constant, and what runs out
-   of room is the right-hand end. The mask fades that edge instead of slicing
-   the text off mid-glyph. Content is packed left, so on a row that fits, the
-   faded strip is empty space and the fade is invisible — it only ever shows
-   up when something is genuinely cut off. Both ends carry a `title` with the
-   full text. */
+   of room is the right-hand end — the author, which is the item pinned there.
+   The mask fades that edge instead of slicing the text off mid-glyph.
+
+   The fade is exactly as wide as the theme's 1rem right padding on this
+   column, and that's the whole trick: a row that fits ends at the *content*
+   edge, where the mask is still fully opaque, so the author is never dimmed
+   just for sitting on the right. Overflow, on the other hand, is clipped at
+   the padding edge — it spills across precisely the band the gradient covers,
+   so the fade only ever paints text that is genuinely cut off. Both ends
+   carry a `title` with the full text. */
 .password-activity-timeline :deep(.p-timeline-event-content) {
   min-width: 0;
   overflow: hidden;
-  mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent 100%);
 }
 
 /* The theme's 1rem side padding on the date column is cheap on a desktop and
