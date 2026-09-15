@@ -184,16 +184,12 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
   const paneCount = computed<number>(() => visiblePasswords.value.length)
 
   /**
-   * Global search results: every password matching `searchQuery`, across
-   * every group `filterableGroups` allows (not just the selected one) — a
-   * password manager's search has to find what you can't currently see.
-   * Empty when the query is empty, so callers can use it to detect "search
-   * mode" without re-deriving the same trim/empty check.
+   * Every password reachable through `filterableGroups`, deduped (a shared
+   * password is accessible via several groups) and name-sorted, optionally
+   * narrowed by a search query. Backs both the global search and the
+   * unscoped "all passwords" list, which differ only by that query.
    */
-  const searchResults = computed<Password[]>(() => {
-    const query = searchQuery.value.trim()
-    if (!query) return []
-
+  const passwordsAcrossGroups = (query: string): Password[] => {
     const visibleGroupIds = new Set(filterableGroups.value.map((group) => group.id))
     const groupsById = new Map(filterableGroups.value.map((group) => [group.id, group]))
     const seen = new Set<string>()
@@ -205,14 +201,34 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
       if (!isAccessible) continue
 
       const groupName = groupsById.get(password.groupId)?.name
-      if (!matchesPasswordQuery(password, query, groupName)) continue
+      if (query && !matchesPasswordQuery(password, query, groupName)) continue
 
       seen.add(password.id)
       results.push(password)
     }
 
     return results.sort((a, b) => a.name.localeCompare(b.name))
+  }
+
+  /**
+   * Global search results: every password matching `searchQuery`, across
+   * every group `filterableGroups` allows (not just the selected one) — a
+   * password manager's search has to find what you can't currently see.
+   * Empty when the query is empty, so callers can use it to detect "search
+   * mode" without re-deriving the same trim/empty check.
+   */
+  const searchResults = computed<Password[]>(() => {
+    const query = searchQuery.value.trim()
+    if (!query) return []
+    return passwordsAcrossGroups(query)
   })
+
+  /**
+   * The unscoped list: every password the user can reach, regardless of
+   * group. Backs the `/passwords` route, where no group is selected — as
+   * opposed to `visiblePasswords`, which is always narrowed to one group.
+   */
+  const allGroupsPasswords = computed<Password[]>(() => passwordsAcrossGroups(''))
 
   watch(
     selectedGroupIdFromRoute,
@@ -265,5 +281,6 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
     paneTitle,
     paneCount,
     searchResults,
+    allGroupsPasswords,
   }
 }

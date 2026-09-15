@@ -232,6 +232,46 @@ describe('usePasswordFilters', () => {
     expect(paneTitle.value).toBe('No folder')
   })
 
+  it('allGroupsPasswords spans every filterable group, deduped and name-sorted', () => {
+    const personalGroup = makeGroup({ id: 'personal', name: 'Alice', isPersonal: true })
+    const sharedGroup = makeGroup({ id: 'shared', name: 'Team' })
+    const deps = makeDeps({
+      allGroups: ref([sharedGroup, personalGroup]),
+      userBelongingGroups: ref([sharedGroup, personalGroup]),
+      currentUserPersonalGroupId: ref('personal'),
+      passwords: ref([
+        makePassword({ id: 'p1', name: 'Zulip', groupId: 'shared' }),
+        makePassword({ id: 'p2', name: 'Airtable', groupId: 'personal' }),
+        // Shared into both groups — must appear once, not twice.
+        makePassword({
+          id: 'p3',
+          name: 'Mailgun',
+          groupId: 'shared',
+          accessibleGroupIds: ['shared', 'personal'],
+        }),
+      ]),
+    })
+
+    const { allGroupsPasswords } = usePasswordFilters(deps)
+    expect(allGroupsPasswords.value.map((p) => p.id)).toEqual(['p2', 'p3', 'p1'])
+  })
+
+  it('allGroupsPasswords excludes groups outside the filterable scope', () => {
+    const ownGroup = makeGroup({ id: 'own', name: 'Own' })
+    const outsideGroup = makeGroup({ id: 'outside', name: 'Outside' })
+    const deps = makeDeps({
+      allGroups: ref([ownGroup, outsideGroup]),
+      userBelongingGroups: ref([ownGroup]),
+      passwords: ref([
+        makePassword({ id: 'p1', name: 'Mine', groupId: 'own' }),
+        makePassword({ id: 'p2', name: 'Theirs', groupId: 'outside' }),
+      ]),
+    })
+
+    const { allGroupsPasswords } = usePasswordFilters(deps)
+    expect(allGroupsPasswords.value.map((p) => p.id)).toEqual(['p1'])
+  })
+
   it('searchResults is empty for a blank query, regardless of selection', () => {
     const group = makeGroup({ id: 'g1' })
     const deps = makeDeps({

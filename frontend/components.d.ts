@@ -45,6 +45,7 @@ declare module 'vue' {
     PasswordAvatar: typeof import('./src/components/passwords/PasswordAvatar.vue')['default']
     PasswordDetailPane: typeof import('./src/components/passwords/PasswordDetailPane.vue')['default']
     PasswordGenerator: typeof import('./src/components/passwords/PasswordGenerator.vue')['default']
+    PasswordGroupListPane: typeof import('./src/components/passwords/PasswordGroupListPane.vue')['default']
     PasswordGroupNavItem: typeof import('./src/components/menu/PasswordGroupNavItem.vue')['default']
     PasswordHistoryModal: typeof import('./src/components/modals/PasswordHistoryModal.vue')['default']
     PasswordIdentityPanel: typeof import('./src/components/passwords/PasswordIdentityPanel.vue')['default']

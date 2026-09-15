@@ -8,7 +8,7 @@ withDefaults(defineProps<{ padded?: boolean }>(), { padded: true })
 const router = useRouter()
 const route = useRoute()
 
-const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords/'))
+const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords'))
 const isGroupsActive = computed(() => route.path === '/groups')
 const isProfileActive = computed(() => route.path === '/profile')
 
@@ -54,7 +54,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
     class="md:hidden fixed bottom-0 left-0 right-0 border-t border-surface bg-surface-0 dark:bg-surface-900 flex"
   >
     <button
-      @click="router.push('/')"
+      @click="router.push({ name: 'PasswordsRoot' })"
       class="flex-1 flex flex-col items-center py-3 gap-1"
       :class="isPasswordsActive ? 'text-primary' : 'text-muted-color'"
     >

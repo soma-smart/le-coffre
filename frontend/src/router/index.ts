@@ -3,14 +3,10 @@ import HomeView from '@/pages/HomePage.vue'
 import SetupView from '@/pages/SetupPage.vue'
 import { useSetupStore } from '@/stores/setup'
 import { useUserStore } from '@/stores/user'
-import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
 import { isAuthenticated } from '@/utils/auth'
 import { attemptTokenRefresh } from '@/customClient'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
-import { pickDefaultGroupForUser } from '@/domain/group/Group'
-import { sortGroupsByName } from '@/utils/groupSort'
-import { slugifyGroupName } from '@/utils/groupSlug'
 
 export type AdminGuardDecision = { kind: 'allow' } | { kind: 'redirectHome' } | { kind: 'block' }
 
@@ -44,6 +40,13 @@ const router = createRouter({
     {
       path: '/',
       name: 'Home',
+      component: HomeView,
+    },
+    {
+      // No group selected: every password the user can reach. On mobile, where
+      // the group sidebar is hidden, this is the group list instead.
+      path: '/passwords',
+      name: 'PasswordsRoot',
       component: HomeView,
     },
     {
@@ -206,23 +209,11 @@ router.beforeEach(async (to, from) => {
     if (decision.kind === 'redirectHome') return { name: 'Home' }
   }
 
+  // `/` is an alias for the unscoped password list rather than a view of its
+  // own. It deliberately does not pick a default group: landing on the app
+  // shows everything, matching what the "Passwords" nav item does.
   if (to.name === 'Home' && isLoggedIn) {
-    const groupsStore = useGroupsStore()
-    await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
-
-    const defaultGroup = pickDefaultGroupForUser(
-      groupsStore.userBelongingGroups,
-      groupsStore.currentUserPersonalGroupId,
-      sortGroupsByName,
-    )
-
-    if (defaultGroup) {
-      return {
-        name: 'HomeGroup',
-        params: { groupSlug: slugifyGroupName(defaultGroup.name) },
-        query: to.query,
-      }
-    }
+    return { name: 'PasswordsRoot', query: to.query }
   }
 
   // Otherwise, the app is set up and logged in, allow the navigation

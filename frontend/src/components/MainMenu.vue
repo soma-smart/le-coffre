@@ -266,7 +266,7 @@ const adminMenuExpanded = ref(false)
 const expandedGroupIds = ref(new Set<string>())
 
 // Active state detection
-const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords/'))
+const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords'))
 const isGroupsActive = computed(() => route.path === '/groups')
 const isProfileActive = computed(() => route.path === '/profile')
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
@@ -354,9 +354,9 @@ const goToGroupRoute = (groupId: string | null, shouldOpenCreate = false) => {
   })
 }
 
+/** Clears the group scope rather than picking a default one — the list then spans every group. */
 const goToAllPasswords = () => {
-  const defaultGroupId = getDefaultGroupId(myPasswordGroups.value)
-  goToGroupRoute(defaultGroupId)
+  router.push({ name: 'PasswordsRoot' })
 }
 
 const goToPasswordsGroup = (groupId: string) => {
@@ -487,7 +487,7 @@ watch(
 watch(
   () => route.path,
   (newPath) => {
-    if (newPath === '/' || newPath.startsWith('/passwords/')) {
+    if (newPath === '/' || newPath.startsWith('/passwords')) {
       passwordsStore.fetchPasswords()
       groupsStore.fetchAllGroups()
     }
