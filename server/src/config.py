@@ -56,6 +56,47 @@ def get_session_max_lifetime_seconds() -> int:
     return int(os.environ.get("SESSION_MAX_LIFETIME_HOURS", "4")) * 3600
 
 
+def get_extension_token_lifetime_seconds() -> int:
+    """Absolute lifetime of a browser-extension token. Default 30 days.
+
+    Absolute, with no sliding renewal: a sliding window means a stolen token
+    never expires as long as the thief keeps using it. Re-pairing is the
+    recovery path, which is cheap because it reuses the normal web login.
+    """
+    return int(os.environ.get("EXTENSION_TOKEN_LIFETIME_DAYS", "30")) * 86400
+
+
+def get_extension_pairing_lifetime_seconds() -> int:
+    """How long an unapproved pairing request stays redeemable. Default 10 minutes.
+
+    Short on purpose: the window only has to cover "click connect, log in on the
+    website, click approve". Five minutes was too short in practice, because
+    that middle step can be a full SSO round trip with a second factor, and a
+    request that dies mid-login costs the user the whole flow. Both screens
+    count the deadline down so nobody has to guess how long is left.
+    """
+    return int(os.environ.get("EXTENSION_PAIRING_LIFETIME_SECONDS", "600"))
+
+
+def get_extension_pairing_poll_interval_seconds() -> int:
+    """Interval the extension is told to wait between exchange attempts.
+
+    Returned to the client rather than assumed, so the polling rate can be
+    tuned against the pairing rate-limit bucket without shipping a new
+    extension build.
+    """
+    return int(os.environ.get("EXTENSION_PAIRING_POLL_INTERVAL_SECONDS", "5"))
+
+
+def get_extension_last_used_coarsening_seconds() -> int:
+    """Minimum gap between two `last_used_at` writes for the same token.
+
+    The column only feeds a "last used" label on the connected-devices screen,
+    so writing on every request would be pure write amplification.
+    """
+    return int(os.environ.get("EXTENSION_LAST_USED_COARSENING_SECONDS", "300"))
+
+
 def is_production() -> bool:
     """Check if running in production environment."""
     return os.environ.get("ENVIRONMENT", "development") == "production"
@@ -129,6 +170,19 @@ def get_rate_limit_one_time_link_max_requests() -> int:
     token is not enumerable, so this is about limiting noise, not guessing.
     """
     return int(os.environ.get("RATE_LIMIT_ONE_TIME_LINK_MAX_REQUESTS", "10"))
+
+
+def get_rate_limit_extension_pairing_max_requests() -> int:
+    """Max pairing calls per window, per IP. Default 30.
+
+    The pairing endpoints are anonymous, so without a floor of their own they
+    would fall into the shared unauthenticated per-IP bucket and compete with
+    everything else behind the same NAT. An honest extension polls the exchange
+    every EXTENSION_PAIRING_POLL_INTERVAL_SECONDS for at most the pairing
+    lifetime, which at the defaults is 12 calls a minute for ten minutes: well
+    inside 30 per minute.
+    """
+    return int(os.environ.get("RATE_LIMIT_EXTENSION_PAIRING_MAX_REQUESTS", "30"))
 
 
 def get_expired_share_retention_seconds() -> int:

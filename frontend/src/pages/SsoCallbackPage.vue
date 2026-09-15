@@ -55,7 +55,10 @@ onMounted(async () => {
     userStore.clearUser()
     await csrfStore.fetchCsrfToken()
 
-    await router.push('/')
+    // Home unless a sign-in round trip stashed a destination, e.g. the
+    // extension-approval page. The use case re-validates the stored value, so
+    // only an in-app path can come back.
+    await router.push(auth.consumeLoginRedirect.execute() ?? '/')
   } catch (error) {
     console.error('SSO callback error:', error)
     const detail =

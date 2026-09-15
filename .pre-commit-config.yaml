@@ -35,3 +35,13 @@ repos:
         entry: frontend/scripts/check-architecture.sh
         files: ^frontend/src/
         pass_filenames: false
+
+      # Same idea for the browser extension: domain/ stays pure, popup/ never
+      # calls the API, and chrome.* stays inside platform/chrome/ so Firefox
+      # remains a second adapter rather than a rewrite.
+      - id: extension-architecture-check
+        name: Enforce extension dependency rules
+        language: script
+        entry: extension/scripts/check-architecture.sh
+        files: ^extension/src/
+        pass_filenames: false
