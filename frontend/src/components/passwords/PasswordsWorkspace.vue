@@ -178,7 +178,10 @@ const folderNarrowed = computed(
 const autoSelectFirst = computed(() => !isMobile.value)
 const { selectedPassword, contextFixNeeded, staleId } = usePasswordSelection({
   visiblePasswords: panePasswords,
-  allPasswords: passwords,
+  // Recovery is scoped to the groups currently in view, not the whole store:
+  // a password only reachable through a hidden group must read as stale, so
+  // the id is dropped rather than routed to a group that isn't listed.
+  allPasswords: allGroupsPasswords,
   routePasswordId,
   autoSelectFirst,
 })
