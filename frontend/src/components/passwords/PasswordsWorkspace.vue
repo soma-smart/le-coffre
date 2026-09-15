@@ -83,7 +83,7 @@
 import { computed, onMounted, ref, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { isRootFolder, type Password } from '@/domain/password/Password'
+import { accessibleGroupIdsFor, isRootFolder, type Password } from '@/domain/password/Password'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
@@ -225,10 +225,19 @@ const canCreateAnywhere = computed(() =>
   filterableGroups.value.some((group) => isCurrentUserOwnerOfGroup(group.id)),
 )
 
-/** Builds the route to a password, resolving its own group/folder — used for
- * cross-group navigation (search results, or a stale/foreign `?password=`). */
+/** Builds the route to a password, resolving a group the viewer can actually
+ * navigate to — used for cross-group navigation (search results, or a
+ * stale/foreign `?password=`). A shared password's owning group may be
+ * invisible to the viewer, so fall back to whichever accessible group is in
+ * scope. Null when none is: the caller then leaves the route alone. */
 function routeToPassword(password: Password, extraQuery: Record<string, string> = {}) {
-  const group = groups.value.find((g) => g.id === password.groupId)
+  const navigableGroups = new Map(filterableGroups.value.map((g) => [g.id, g]))
+  const accessibleIds = accessibleGroupIdsFor(password)
+  const targetId = navigableGroups.has(password.groupId)
+    ? password.groupId
+    : (accessibleIds.find((id) => navigableGroups.has(id)) ?? null)
+
+  const group = targetId ? navigableGroups.get(targetId) : null
   if (!group) return null
 
   const query: Record<string, string> = { ...extraQuery, password: password.id }
