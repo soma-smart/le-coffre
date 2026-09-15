@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import type { Password } from '@/domain/password/Password'
 import FolderCard from './FolderCard.vue'
@@ -14,9 +15,11 @@ import { useUserStore } from '@/stores/user'
 import { useAdminPasswordViewStore } from '@/stores/adminPasswordView'
 import { usePasswordFilters } from '@/composables/usePasswordFilters'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
+import { translateGroupName } from '@/utils/groupDisplayName'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 
 const passwordsStore = usePasswordsStore()
@@ -178,9 +181,9 @@ onMounted(async () => {
 <template>
   <div>
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-      <h1 class="text-2xl sm:text-3xl font-bold">Password Manager</h1>
+      <h1 class="text-2xl sm:text-3xl font-bold">{{ t('components.passwordsList.title') }}</h1>
       <Button
-        label="New Password"
+        :label="t('components.passwordsList.newPasswordButton')"
         icon="pi pi-plus"
         @click="handleCreateButtonClick"
         class="w-full sm:w-auto"
@@ -192,11 +195,11 @@ onMounted(async () => {
     <div class="md:hidden mb-4">
       <Select
         :options="filterableGroups"
-        optionLabel="name"
+        :optionLabel="(group) => translateGroupName(t, group.name, group.isPersonal)"
         optionValue="id"
         :modelValue="selectedGroupTabId"
         @update:modelValue="handleMobileGroupChange"
-        placeholder="Select a group"
+        :placeholder="t('components.passwordsList.selectGroupPlaceholder')"
         class="w-full"
       />
     </div>
@@ -204,7 +207,11 @@ onMounted(async () => {
     <div class="flex flex-wrap items-center gap-4 mb-4">
       <IconField>
         <InputIcon class="pi pi-search" />
-        <InputText v-model="searchQuery" placeholder="Filter" class="min-w-64" />
+        <InputText
+          v-model="searchQuery"
+          :placeholder="t('components.passwordsList.filterPlaceholder')"
+          class="min-w-64"
+        />
       </IconField>
     </div>
 
@@ -217,7 +224,7 @@ onMounted(async () => {
     </div>
 
     <div v-else-if="groupedByGroupAndFolder.length === 0" class="text-center py-8 text-surface-500">
-      <p>No passwords to display.</p>
+      <p>{{ t('components.passwordsList.noPasswords') }}</p>
     </div>
 
     <div v-else class="space-y-4">
@@ -232,10 +239,17 @@ onMounted(async () => {
               ]"
             />
             <div>
-              <h2 class="text-xl font-semibold">{{ selectedGroupSection.name }}</h2>
+              <h2 class="text-xl font-semibold">
+                {{
+                  translateGroupName(t, selectedGroupSection.name, selectedGroupSection.isPersonal)
+                }}
+              </h2>
               <p class="text-sm text-muted-color">
-                {{ selectedGroupSection.count }}
-                {{ selectedGroupSection.count === 1 ? 'password' : 'passwords' }}
+                {{
+                  selectedGroupSection.count === 1
+                    ? t('common.passwordCountOne', { count: selectedGroupSection.count })
+                    : t('common.passwordCountOther', { count: selectedGroupSection.count })
+                }}
               </p>
             </div>
           </div>
@@ -255,7 +269,7 @@ onMounted(async () => {
               @deleted="refreshPasswords"
             />
             <p v-if="selectedGroupSection.folders.length === 0" class="text-sm text-muted-color">
-              No passwords in this group.
+              {{ t('components.passwordsList.noPasswordsInGroup') }}
             </p>
           </div>
         </template>

@@ -8,6 +8,9 @@ import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { useGroupsStore } from '@/stores/groups'
 import { createTestContext } from '@/test/componentTestHelpers'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 // Pass-through stub so Dialog doesn't teleport to document.body, which
 // would make findAll() miss the form. The body still renders in place.
@@ -67,7 +70,8 @@ describe('CreatePasswordModal', () => {
     await wrapper.find('input#password-name').setValue('Gmail')
     await wrapper.find('input#password-value').setValue('super-secret')
 
-    const submit = wrapper.findAll('button').find((b) => b.text().trim() === 'Create')
+    const createLabel = t('common.create')
+    const submit = wrapper.findAll('button').find((b) => b.text().trim() === createLabel)
     expect(submit, 'expected a Create button in the footer').toBeTruthy()
 
     await submit!.trigger('click')

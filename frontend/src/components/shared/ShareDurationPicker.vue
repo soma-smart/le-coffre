@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 /**
  * Picks how long an access should last, as an ISO deadline (or null for
@@ -24,23 +25,25 @@ const props = withDefaults(
   { disabled: false, now: undefined },
 )
 
+const { t } = useI18n()
+
 const PERMANENT = 0
 const CUSTOM = -1
 
-const presets = [
-  { label: 'Permanent', value: PERMANENT },
-  { label: '1 hour', value: 3600 },
-  { label: '12 hours', value: 43200 },
-  { label: '24 hours', value: 86400 },
-  { label: '7 days', value: 604800 },
-  { label: '30 days', value: 2592000 },
-  { label: '90 days', value: 7776000 },
-  { label: '6 months', value: 15552000 },
-  { label: '1 year', value: 31536000 },
-  { label: '2 years', value: 63072000 },
-  { label: '3 years', value: 94608000 },
-  { label: 'Custom…', value: CUSTOM },
-]
+const presets = computed(() => [
+  { label: t('common.durations.permanent'), value: PERMANENT },
+  { label: t('common.durations.hour1'), value: 3600 },
+  { label: t('common.durations.hours12'), value: 43200 },
+  { label: t('common.durations.hours24'), value: 86400 },
+  { label: t('common.durations.days7'), value: 604800 },
+  { label: t('common.durations.days30'), value: 2592000 },
+  { label: t('common.durations.days90'), value: 7776000 },
+  { label: t('common.durations.months6'), value: 15552000 },
+  { label: t('common.durations.year1'), value: 31536000 },
+  { label: t('common.durations.years2'), value: 63072000 },
+  { label: t('common.durations.years3'), value: 94608000 },
+  { label: t('common.durations.custom'), value: CUSTOM },
+])
 
 const currentTime = () => props.now ?? new Date()
 
@@ -113,7 +116,9 @@ watch(modelValue, (value) => {
 
 <template>
   <div class="flex flex-col gap-2">
-    <label for="share-duration" class="block text-sm font-medium">Access duration</label>
+    <label for="share-duration" class="block text-sm font-medium">{{
+      t('components.shareDurationPicker.label')
+    }}</label>
     <Select
       id="share-duration"
       v-model="selectedPreset"
@@ -135,12 +140,12 @@ watch(modelValue, (value) => {
       :minDate="minDate"
       :manualInput="false"
       :disabled="props.disabled"
-      placeholder="Pick an end date"
+      :placeholder="t('components.shareDurationPicker.customDatePlaceholder')"
       fluid
       data-testid="share-duration-custom"
     />
     <p v-if="modelValue === null" class="text-xs text-muted-color">
-      Access lasts until it is revoked.
+      {{ t('components.shareDurationPicker.permanentHint') }}
     </p>
   </div>
 </template>

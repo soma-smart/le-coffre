@@ -5,6 +5,9 @@ import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { AppStateKey, type AppState } from '@/plugins/appState'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 // PrimeVue theming mutates document styles via @primeuix/themes — stub the
 // side-effecting helpers so the test environment doesn't need a real stylesheet.
@@ -25,10 +28,10 @@ describe('ThemeSwitcher', () => {
     document.documentElement.classList.remove('p-dark')
   })
 
-  function mountSwitcher() {
-    const { pinia, container } = createTestContext()
+  function mountSwitcher(overrides?: Parameters<typeof createTestContext>[0]) {
+    const { pinia, container } = createTestContext(overrides)
     const appState: AppState = reactive({ theme: 'Aura', darkTheme: false })
-    return mount(ThemeSwitcher, {
+    const wrapper = mount(ThemeSwitcher, {
       global: {
         plugins: [pinia],
         provide: {
@@ -37,11 +40,13 @@ describe('ThemeSwitcher', () => {
         },
       },
     })
+    return { wrapper, container }
   }
 
   it('mounts cleanly against the extracted palette data', () => {
-    const wrapper = mountSwitcher()
-    expect(wrapper.find('button[aria-label="Open Theme Customizer"]').exists()).toBe(true)
+    const { wrapper } = mountSwitcher()
+    const label = t('components.themeSwitcher.openThemeCustomizer')
+    expect(wrapper.find(`button[aria-label="${label}"]`).exists()).toBe(true)
   })
 
   it('leaves the dark-theme class off when no saved preference exists', () => {

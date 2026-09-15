@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 
 defineProps<{
   shares: string[]
@@ -10,6 +11,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n()
 
 const storedSharesConfirmed = ref(false)
 const copiedState = ref<{ [key: number]: boolean }>({})
@@ -19,8 +21,8 @@ const copyShare = async (secret: string, index: number) => {
     await navigator.clipboard.writeText(secret)
     toast.add({
       severity: 'success',
-      summary: 'Copied',
-      detail: 'Share copied to clipboard',
+      summary: t('components.setup.sharesModal.copiedSummary'),
+      detail: t('components.setup.sharesModal.copiedDetail'),
       life: 5000,
     })
 
@@ -31,7 +33,12 @@ const copyShare = async (secret: string, index: number) => {
     //     copiedState.value[index] = false;
     // }, 2000);
   } catch (err) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to copy share', life: 5000 })
+    toast.add({
+      severity: 'error',
+      summary: t('components.setup.sharesModal.copyFailedSummary'),
+      detail: t('components.setup.sharesModal.copyFailedDetail'),
+      life: 5000,
+    })
     console.error('Failed to copy share:', err)
   }
 }
@@ -46,15 +53,17 @@ const handleConfirm = () => {
     modal
     :closable="false"
     :closeOnEscape="false"
-    header="Shares of the master key"
+    :header="t('components.setup.sharesModal.title')"
     :style="{ width: '36rem' }"
   >
-    <span class="text-surface-500 block mb-8"
-      >Please store the following shares securely (index and secret):</span
-    >
+    <span class="text-surface-500 block mb-8">{{
+      t('components.setup.sharesModal.description')
+    }}</span>
 
     <div v-for="(share, idx) in shares" :key="idx" class="flex items-center gap-2 mb-2">
-      <label class="font-semibold shrink-0" :for="`share-secret-${idx}`">Share {{ idx + 1 }}</label>
+      <label class="font-semibold shrink-0" :for="`share-secret-${idx}`">{{
+        t('components.setup.sharesModal.shareLabel', { index: idx + 1 })
+      }}</label>
       <Password
         :inputId="`share-secret-${idx}`"
         :model-value="share"
@@ -69,7 +78,7 @@ const handleConfirm = () => {
         :icon="copiedState[idx] ? 'pi pi-check' : 'pi pi-copy'"
         text
         rounded
-        aria-label="Copy share secret"
+        :aria-label="t('components.setup.sharesModal.copyAria')"
         @click="copyShare(share, idx)"
       />
     </div>
@@ -78,14 +87,14 @@ const handleConfirm = () => {
     <Form class="flex items-center gap-4 mb-2">
       <Checkbox inputId="storedSharesCheckbox" v-model="storedSharesConfirmed" :binary="true" />
       <label for="storedSharesCheckbox" class="ml-2">
-        I have stored the above shares and their indices securely. I cannot retrieve them later.
+        {{ t('components.setup.sharesModal.confirmCheckboxLabel') }}
       </label>
     </Form>
 
     <template #footer>
       <Button
         icon="pi pi-check"
-        label="Continue"
+        :label="t('components.setup.sharesModal.continueButton')"
         severity="danger"
         @click="handleConfirm"
         autofocus

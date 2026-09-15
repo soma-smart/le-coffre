@@ -3,6 +3,9 @@ import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import OneTimeLinksTable from '@/components/oneTimeLink/OneTimeLinksTable.vue'
 import type { AuditedOneTimeLink } from '@/domain/oneTimeLink/OneTimeLink'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 const HOUR = 3_600_000
 
@@ -51,7 +54,7 @@ describe('OneTimeLinksTable', () => {
   it('renders a live link with its status and password', () => {
     const wrapper = mountTable([makeLink()])
 
-    expect(wrapper.text()).toContain('active')
+    expect(wrapper.text()).toContain(t('common.oneTimeLinkStatus.active'))
     expect(wrapper.text()).toContain('Prod DB')
   })
 
@@ -59,7 +62,7 @@ describe('OneTimeLinksTable', () => {
     // The link outlives its password, so this row must still read sensibly.
     const wrapper = mountTable([makeLink({ passwordName: null })])
 
-    expect(wrapper.text()).toContain('deleted password')
+    expect(wrapper.text()).toContain(t('common.deletedPassword'))
   })
 
   it('offers revoke only for links that can still be redeemed', () => {
@@ -92,7 +95,12 @@ describe('OneTimeLinksTable', () => {
     expect(wrapper.find('[data-testid="confirm-question"]').text()).toContain('Prod DB')
     const description = wrapper.find('[data-testid="confirm-description"]').text()
     expect(description).toContain('Platform team')
-    expect(description).toMatch(/Created .*(hour|minute|second)/)
+    // relativeTime.ts is deliberately pinned to en-GB regardless of locale, so
+    // the duration itself stays English even though "Créé" is ours.
+    const createdPrefix = t('components.oneTimeLinksTable.revokeDescriptionCreated', {
+      created: '',
+    }).trim()
+    expect(description).toMatch(new RegExp(`${createdPrefix} .*(hour|minute|second)`))
   })
 
   it('hides the issuer column unless asked, since the personal table has one issuer', () => {
@@ -111,5 +119,21 @@ describe('OneTimeLinksTable', () => {
     const wrapper = mountTable([makeLink()])
 
     expect(wrapper.text()).toMatch(/in \d+ (minute|hour|second)/)
+  })
+
+  it('translates the pagination summary once there are enough rows to paginate', () => {
+    // The paginator (and its "Showing X to Y of Z" report) only renders
+    // once there are more rows than fit on one page.
+    const links = Array.from({ length: 11 }, (_, i) => makeLink({ id: `link-${i}` }))
+    const wrapper = mountTable(links)
+
+    // PrimeVue substitutes {first}/{last}/{totalRecords} itself — this
+    // confirms our translated wording survives that substitution intact,
+    // rather than regressing to the untranslated English default.
+    expect(wrapper.text()).toContain(
+      `${t('common.pagination.showing')} 1 ${t('common.pagination.to')} 10 ${t(
+        'common.pagination.of',
+      )} 11 ${t('components.oneTimeLinksTable.rowsNoun')}`,
+    )
   })
 })

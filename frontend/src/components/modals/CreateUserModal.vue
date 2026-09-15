@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import { UserDomainError } from '@/domain/user/errors'
 import { useContainer } from '@/plugins/container'
 import PasswordGenerator from '@/components/passwords/PasswordGenerator.vue'
@@ -12,6 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n()
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async event handlers after an await.
@@ -46,8 +48,8 @@ const handleSubmit = async () => {
   if (!username.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Username is required',
+      summary: t('common.validationError'),
+      detail: t('components.createUserModal.usernameRequired'),
       life: 5000,
     })
     return
@@ -56,8 +58,8 @@ const handleSubmit = async () => {
   if (!email.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Email is required',
+      summary: t('common.validationError'),
+      detail: t('components.createUserModal.emailRequired'),
       life: 5000,
     })
     return
@@ -66,8 +68,8 @@ const handleSubmit = async () => {
   if (!name.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Name is required',
+      summary: t('common.validationError'),
+      detail: t('components.createUserModal.nameRequired'),
       life: 5000,
     })
     return
@@ -76,8 +78,8 @@ const handleSubmit = async () => {
   if (!password.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Password is required',
+      summary: t('common.validationError'),
+      detail: t('components.createUserModal.passwordRequired'),
       life: 5000,
     })
     return
@@ -87,8 +89,8 @@ const handleSubmit = async () => {
   if (password.value.length < 15) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Password must be at least 15 characters long',
+      summary: t('common.validationError'),
+      detail: t('components.createUserModal.passwordTooShort'),
       life: 5000,
     })
     return
@@ -106,8 +108,8 @@ const handleSubmit = async () => {
 
     toast.add({
       severity: 'success',
-      summary: 'User Created',
-      detail: 'User has been created successfully',
+      summary: t('components.createUserModal.createdSummary'),
+      detail: t('components.createUserModal.createdDetail'),
       life: 5000,
     })
 
@@ -115,15 +117,17 @@ const handleSubmit = async () => {
     emit('created')
   } catch (error) {
     console.error('Error creating user:', error)
+    // UserDomainError/Error messages come from the backend or an unknown
+    // failure — not ours to translate. Only our own fallback text is.
     const detail =
       error instanceof UserDomainError
         ? error.message
         : error instanceof Error
           ? error.message
-          : 'An unexpected error occurred'
+          : t('components.createUserModal.errorFallback')
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail,
       life: 5000,
     })
@@ -134,44 +138,64 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" modal header="Create New User" :style="{ width: '32rem' }">
+  <Dialog
+    v-model:visible="visible"
+    modal
+    :header="t('components.createUserModal.title')"
+    :style="{ width: '32rem' }"
+  >
     <form @submit.prevent="handleSubmit" class="flex flex-col gap-4">
       <div class="flex flex-col gap-2">
-        <label for="username" class="font-semibold">Username</label>
+        <label for="username" class="font-semibold">{{
+          t('components.createUserModal.usernameLabel')
+        }}</label>
         <InputText
           id="username"
           v-model="username"
-          placeholder="Enter username"
+          :placeholder="t('components.createUserModal.usernamePlaceholder')"
           required
           autofocus
         />
-        <small class="text-muted-color">Unique username for login</small>
+        <small class="text-muted-color">{{ t('components.createUserModal.usernameHelp') }}</small>
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="email" class="font-semibold">Email</label>
+        <label for="email" class="font-semibold">{{
+          t('components.createUserModal.emailLabel')
+        }}</label>
         <InputText
           id="email"
           v-model="email"
           type="email"
-          placeholder="Enter email address"
+          :placeholder="t('components.createUserModal.emailPlaceholder')"
           required
         />
-        <small class="text-muted-color">User's email address</small>
+        <small class="text-muted-color">{{ t('components.createUserModal.emailHelp') }}</small>
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="name" class="font-semibold">Display Name</label>
-        <InputText id="name" v-model="name" placeholder="Enter display name" required />
-        <small class="text-muted-color">User's full name</small>
+        <label for="name" class="font-semibold">{{
+          t('components.createUserModal.displayNameLabel')
+        }}</label>
+        <InputText
+          id="name"
+          v-model="name"
+          :placeholder="t('components.createUserModal.displayNamePlaceholder')"
+          required
+        />
+        <small class="text-muted-color">{{
+          t('components.createUserModal.displayNameHelp')
+        }}</small>
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="password" class="font-semibold">Password</label>
+        <label for="password" class="font-semibold">{{
+          t('components.createUserModal.passwordLabel')
+        }}</label>
         <Password
           inputId="password"
           v-model="password"
-          placeholder="Enter password"
+          :placeholder="t('components.createUserModal.passwordPlaceholder')"
           toggleMask
           :feedback="false"
           fluid
@@ -186,7 +210,7 @@ const handleSubmit = async () => {
       <div class="flex justify-end gap-2 mt-4">
         <Button
           type="button"
-          label="Cancel"
+          :label="t('common.cancel')"
           severity="secondary"
           outlined
           @click="visible = false"
@@ -194,7 +218,7 @@ const handleSubmit = async () => {
         />
         <Button
           type="submit"
-          label="Create User"
+          :label="t('components.createUserModal.createButton')"
           icon="pi pi-user-plus"
           :loading="loading"
           :disabled="loading"

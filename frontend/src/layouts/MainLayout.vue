@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 
 const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords/'))
 const isGroupsActive = computed(() => route.path === '/groups')
@@ -39,7 +41,7 @@ const isProfileActive = computed(() => route.path === '/profile')
       :class="isPasswordsActive ? 'text-primary' : 'text-muted-color'"
     >
       <span class="pi pi-key text-xl" />
-      <span class="text-xs">Passwords</span>
+      <span class="text-xs">{{ t('layouts.mainNav.passwords') }}</span>
     </button>
 
     <button
@@ -48,7 +50,7 @@ const isProfileActive = computed(() => route.path === '/profile')
       :class="isGroupsActive ? 'text-primary' : 'text-muted-color'"
     >
       <span class="pi pi-users text-xl" />
-      <span class="text-xs">Groups</span>
+      <span class="text-xs">{{ t('layouts.mainNav.groups') }}</span>
     </button>
 
     <button
@@ -57,7 +59,7 @@ const isProfileActive = computed(() => route.path === '/profile')
       :class="isProfileActive ? 'text-primary' : 'text-muted-color'"
     >
       <span class="pi pi-user text-xl" />
-      <span class="text-xs">Profile</span>
+      <span class="text-xs">{{ t('layouts.mainNav.profile') }}</span>
     </button>
   </nav>
 </template>

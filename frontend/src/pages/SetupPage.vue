@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BlankLayout from '../layouts/BlankLayout.vue'
 
 import SharesModal from '@/components/setup/shamir/SharesModal.vue'
@@ -8,6 +9,7 @@ import StepGenerateMasterKey from '@/components/setup/StepGenerateMasterKey.vue'
 import StepAdminAccountForm from '@/components/setup/StepAdminAccountForm.vue'
 import SetupDone from '@/components/setup/SetupDone.vue'
 
+const { t } = useI18n()
 const showModal = ref(false)
 const shares = ref<string[]>([])
 const setupId = ref<string>('')
@@ -37,10 +39,10 @@ const handleModalConfirmed = () => {
     <div class="card flex justify-center">
       <Stepper value="1" class="basis-[50rem]" linear>
         <StepList>
-          <Step value="1">Start</Step>
-          <Step value="2">Master Key</Step>
-          <Step value="3">Admin account</Step>
-          <Step value="4">Done</Step>
+          <Step value="1">{{ t('pages.setup.steps.start') }}</Step>
+          <Step value="2">{{ t('pages.setup.steps.masterKey') }}</Step>
+          <Step value="3">{{ t('pages.setup.steps.adminAccount') }}</Step>
+          <Step value="4">{{ t('pages.setup.steps.done') }}</Step>
         </StepList>
         <StepPanels>
           <StepPanel v-slot="{ activateCallback }" value="1">

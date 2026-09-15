@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import { z } from 'zod'
 import { zodResolver } from '@primevue/forms/resolvers/zod'
 import { AuthDomainError } from '@/domain/auth/errors'
@@ -20,6 +21,7 @@ const setupStore = useSetupStore()
 const { vault, auth } = useContainer()
 
 const toast = useToast()
+const { t } = useI18n()
 const loading = ref(false)
 
 const formValues = reactive({
@@ -29,23 +31,29 @@ const formValues = reactive({
   display_name: 'admin',
 })
 
-const resolver = ref(
+// computed (not a plain ref) so messages re-resolve if the locale changes later
+const resolver = computed(() =>
   zodResolver(
     z
       .object({
-        email: z.email({ message: 'Invalid email address.' }),
+        email: z.email({ message: t('components.setup.adminAccountForm.invalidEmail') }),
         // Must stay in sync with the server policy (MIN_PASSWORD_LENGTH = 15),
         // otherwise the form passes here and the API answers 400.
-        password: z.string().min(15, { message: 'Password must be at least 15 characters long.' }),
+        // A never-touched PrimeVue input can reach the resolver as `null`
+        // rather than `''` — the base z.string() message covers that type
+        // mismatch, .min() covers a string that's merely too short.
+        password: z
+          .string({ message: t('components.setup.adminAccountForm.passwordRequired') })
+          .min(15, { message: t('components.setup.adminAccountForm.passwordTooShort') }),
         display_name: z
-          .string()
-          .min(2, { message: 'Display name must be at least 2 characters long.' }),
+          .string({ message: t('components.setup.adminAccountForm.displayNameRequired') })
+          .min(2, { message: t('components.setup.adminAccountForm.displayNameTooShort') }),
         confirm_password: z
-          .string()
-          .min(15, { message: 'Confirm password must be at least 15 characters long.' }),
+          .string({ message: t('components.setup.adminAccountForm.confirmPasswordRequired') })
+          .min(15, { message: t('components.setup.adminAccountForm.confirmPasswordTooShort') }),
       })
       .refine((data) => data.password === data.confirm_password, {
-        message: 'Passwords do not match.',
+        message: t('components.setup.adminAccountForm.passwordsDontMatch'),
         path: ['confirm_password'],
       }),
   ),
@@ -66,18 +74,19 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
         displayName: values.display_name,
       })
     } catch (registerError) {
+      // AuthDomainError's message is the backend's own wording — not ours to translate.
       const detail =
         registerError instanceof AuthDomainError
           ? registerError.message
-          : 'Failed to create admin account'
-      toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 })
+          : t('components.setup.adminAccountForm.createFailedFallback')
+      toast.add({ severity: 'error', summary: t('common.error'), detail, life: 5000 })
       loading.value = false
       return
     }
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Admin account created successfully.',
+      summary: t('components.setup.adminAccountForm.createdSummary'),
+      detail: t('components.setup.adminAccountForm.createdDetail'),
       life: 5000,
     })
 
@@ -85,13 +94,14 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     try {
       await vault.validateSetup.execute({ setupId: props.setupId })
     } catch (validationError) {
+      // VaultDomainError's message is the backend's own wording — not ours to translate.
       const detail =
         validationError instanceof VaultDomainError
           ? validationError.message
-          : 'Failed to validate vault setup'
+          : t('components.setup.adminAccountForm.validateFailedFallback')
       toast.add({
         severity: 'error',
-        summary: 'Vault Validation Error',
+        summary: t('components.setup.adminAccountForm.vaultValidationErrorSummary'),
         detail,
         life: 5000,
       })
@@ -101,8 +111,8 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
 
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Vault setup validated successfully.',
+      summary: t('components.setup.adminAccountForm.createdSummary'),
+      detail: t('components.setup.adminAccountForm.vaultValidatedDetail'),
       life: 5000,
     })
 
@@ -113,7 +123,12 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     loading.value = false
   } catch (error) {
     loading.value = false
-    toast.add({ severity: 'error', summary: 'API Error', detail: error, life: 5000 })
+    toast.add({
+      severity: 'error',
+      summary: t('components.setup.adminAccountForm.apiErrorSummary'),
+      detail: error,
+      life: 5000,
+    })
   }
 }
 </script>
@@ -121,23 +136,21 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
 <template>
   <div class="flex flex-col sm:flex-row gap-8 items-center sm:items-start">
     <div class="flex-1 w-full sm:w-1/2">
-      <h1 class="text-2xl font-bold">Create Admin Account</h1>
+      <h1 class="text-2xl font-bold">{{ t('components.setup.adminAccountForm.title') }}</h1>
       <img
         src="/img/intro/admin.png"
         alt="Informative illustration"
         class="mt-4 h-48 mx-auto sm:mx-0"
       />
       <p class="mt-4">
-        Create your initial admin account. This account will have full access to the vault and will
-        be used to manage other users. Make sure to use a strong password and keep your credentials
-        safe.
+        {{ t('components.setup.adminAccountForm.description') }}
       </p>
     </div>
     <Card class="flex justify-center flex-1 w-full sm:w-1/2">
       <template #content>
         <Form v-slot="$form" :formValues :resolver @submit="onFormSubmit">
           <div class="flex flex-col gap-1 mb-4">
-            <label for="email">Email</label>
+            <label for="email">{{ t('components.setup.adminAccountForm.emailLabel') }}</label>
             <InputText
               autocomplete="email"
               id="email"
@@ -151,7 +164,7 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             </Message>
           </div>
           <div class="flex flex-col gap-1 mb-4">
-            <label for="password">Password</label>
+            <label for="password">{{ t('components.setup.adminAccountForm.passwordLabel') }}</label>
             <Password
               inputId="password"
               name="password"
@@ -164,7 +177,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             </Message>
           </div>
           <div class="flex flex-col gap-1 mb-4">
-            <label for="confirm_password">Confirm Password</label>
+            <label for="confirm_password">{{
+              t('components.setup.adminAccountForm.confirmPasswordLabel')
+            }}</label>
             <Password
               inputId="confirm_password"
               name="confirm_password"
@@ -182,7 +197,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             </Message>
           </div>
           <div class="flex flex-col gap-1 mb-4">
-            <label for="display_name">Display Name</label>
+            <label for="display_name">{{
+              t('components.setup.adminAccountForm.displayNameLabel')
+            }}</label>
             <InputText
               id="display_name"
               name="display_name"
@@ -203,7 +220,7 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
             fluid
             block
             type="submit"
-            label="Create admin account"
+            :label="t('components.setup.adminAccountForm.submitButton')"
             class="flex justify-center mt-4"
             :disabled="!$form.valid || loading"
             :loading="loading"
