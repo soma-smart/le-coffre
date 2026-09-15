@@ -545,6 +545,40 @@ async def test_complete_authentication_workflow(
     assert "refresh token" in refresh_after_logout.json()["detail"].lower()
     print("✅ Refresh-only logout clears server session and blocks token refresh")
 
+    # Step 6.4: a rejected refresh must also revoke the browser's cookies. Only the
+    # server can do this: access_token and refresh_token are httpOnly, so no frontend
+    # code is able to clear them. The route stages the deletions on its Response and
+    # then raises, so they have to survive the trip through the global HTTPException
+    # handler to reach the client at all.
+    print("\n🧹 Step 6.4: A rejected refresh must revoke the session cookies...")
+    stale_client = client_factory()
+    stale_login = stale_client.post(
+        "/api/auth/login",
+        json={"email": "admin@example.com", "password": "securepassword123"},
+    )
+    assert stale_login.status_code == 200
+    assert stale_client.cookies.get("logged_in") == "true"
+
+    # Rotate that session's refresh token from elsewhere, which invalidates the copy
+    # stale_client still holds. Every cookie in its jar is server-issued, so the
+    # revocations below are matched the way a browser would match them.
+    rotator = client_factory()
+    rotator.cookies.set("refresh_token", stale_client.cookies.get("refresh_token"))
+    assert rotator.post("/api/auth/refresh-token").status_code == 200
+
+    rejected_refresh = stale_client.post("/api/auth/refresh-token")
+    assert rejected_refresh.status_code == 400
+
+    revocations = " ".join(rejected_refresh.headers.get_list("set-cookie"))
+    for cookie_name in ("access_token", "refresh_token", "logged_in"):
+        assert f"{cookie_name}=" in revocations, (
+            f"the 400 must revoke {cookie_name} — only the server can clear an httpOnly cookie"
+        )
+        assert stale_client.cookies.get(cookie_name) is None, (
+            f"{cookie_name} should be gone from the jar after a rejected refresh"
+        )
+    print("✅ Rejected refresh revokes access_token, refresh_token and logged_in")
+
     # =========================================================================
     # PHASE 7: ACCOUNT LOCKOUT
     # =========================================================================
