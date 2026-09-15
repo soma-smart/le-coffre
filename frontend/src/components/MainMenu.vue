@@ -35,7 +35,7 @@
           <span
             class="ml-2 transition-colors text-sm truncate"
             :class="{ 'font-semibold': isActivePasswordGroup(group.id) }"
-            >{{ group.name }}</span
+            >{{ translateGroupName(t, group.name, group.isPersonal) }}</span
           >
           <div class="ml-auto flex items-center">
             <div class="w-6 h-6 flex items-center justify-center">
@@ -96,7 +96,7 @@
           <span
             class="ml-2 transition-colors text-sm truncate"
             :class="{ 'font-semibold': isActivePasswordGroup(group.id) }"
-            >{{ group.name }}</span
+            >{{ translateGroupName(t, group.name, group.isPersonal) }}</span
           >
           <div class="ml-auto flex items-center">
             <div class="w-6 h-6 flex items-center justify-center">
@@ -280,6 +280,7 @@ import { useAdminNavigation } from '@/composables/useAdminNavigation'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { logout } from '@/utils/logout'
 import { slugifyGroupName, findGroupIdBySlug } from '@/utils/groupSlug'
+import { translateGroupName } from '@/utils/groupDisplayName'
 
 const router = useRouter()
 const route = useRoute()

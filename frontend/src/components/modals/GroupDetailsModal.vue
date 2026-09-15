@@ -9,6 +9,7 @@ import type { Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
+import { translateGroupName } from '@/utils/groupDisplayName'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -157,7 +158,11 @@ watch(visible, (isVisible) => {
   <Dialog
     v-model:visible="visible"
     modal
-    :header="group?.name || t('components.groupDetailsModal.defaultTitle')"
+    :header="
+      group
+        ? translateGroupName(t, group.name, group.isPersonal)
+        : t('components.groupDetailsModal.defaultTitle')
+    "
     :style="{ width: '40rem' }"
   >
     <div v-if="!group" class="text-center py-4">

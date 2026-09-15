@@ -11,6 +11,7 @@ import { useGroupsStore } from '@/stores/groups'
 import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
+import { translateGroupName } from '@/utils/groupDisplayName'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -100,8 +101,10 @@ const fetchUserDisplayName = async (userId: string): Promise<string> => {
 }
 
 // Resolve a group name from the already-loaded group list, falling back to the id.
-const groupName = (groupId: string): string =>
-  allGroups.value.find((g) => g.id === groupId)?.name || groupId
+const groupName = (groupId: string): string => {
+  const group = allGroups.value.find((g) => g.id === groupId)
+  return group ? translateGroupName(t, group.name, group.isPersonal) : groupId
+}
 
 // Load the access links and fold the per-(user, group) rows into one card per user.
 const loadAccessList = async () => {
@@ -366,7 +369,7 @@ onMounted(async () => {
             id="group-select"
             v-model="selectedGroupId"
             :options="availableGroupsForSharing"
-            optionLabel="name"
+            :optionLabel="(group) => translateGroupName(t, group.name, group.isPersonal)"
             optionValue="id"
             :placeholder="t('components.sharePasswordModal.selectGroupPlaceholder')"
             :disabled="loading"
@@ -377,7 +380,9 @@ onMounted(async () => {
             <template #option="slotProps">
               <div class="flex items-center gap-2">
                 <i class="pi pi-users text-sm"></i>
-                <span>{{ slotProps.option.name }}</span>
+                <span>{{
+                  translateGroupName(t, slotProps.option.name, slotProps.option.isPersonal)
+                }}</span>
               </div>
             </template>
           </Select>
