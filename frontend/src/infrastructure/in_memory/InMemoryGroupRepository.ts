@@ -1,5 +1,9 @@
-import type { GroupRepository, ListGroupsFilters } from '@/application/ports/GroupRepository'
-import type { Group } from '@/domain/group/Group'
+import type {
+  GroupRepository,
+  ListGroupEventsFilters,
+  ListGroupsFilters,
+} from '@/application/ports/GroupRepository'
+import type { Group, GroupEvent } from '@/domain/group/Group'
 import { GroupNotFoundError } from '@/domain/group/errors'
 
 /**
@@ -9,6 +13,7 @@ import { GroupNotFoundError } from '@/domain/group/errors'
  */
 export class InMemoryGroupRepository implements GroupRepository {
   private readonly storage = new Map<string, Group>()
+  private readonly events = new Map<string, GroupEvent[]>()
   private idGenerator: () => string = randomUuid
 
   useIdGenerator(generator: () => string): this {
@@ -18,6 +23,13 @@ export class InMemoryGroupRepository implements GroupRepository {
 
   seed(group: Group): this {
     this.storage.set(group.id, group)
+    return this
+  }
+
+  addEvent(groupId: string, event: GroupEvent): this {
+    const bucket = this.events.get(groupId) ?? []
+    bucket.push(event)
+    this.events.set(groupId, bucket)
     return this
   }
 
@@ -83,6 +95,24 @@ export class InMemoryGroupRepository implements GroupRepository {
     if (!group.owners.includes(userId)) {
       this.storage.set(groupId, { ...group, owners: [...group.owners, userId] })
     }
+  }
+
+  async listEvents(groupId: string, filters?: ListGroupEventsFilters): Promise<GroupEvent[]> {
+    if (!this.storage.has(groupId)) throw new GroupNotFoundError(groupId)
+    let events = [...(this.events.get(groupId) ?? [])]
+    if (filters?.eventTypes?.length) {
+      const set = new Set(filters.eventTypes)
+      events = events.filter((event) => set.has(event.eventType))
+    }
+    if (filters?.startDate) {
+      const min = new Date(filters.startDate).getTime()
+      events = events.filter((event) => new Date(event.occurredOn).getTime() >= min)
+    }
+    if (filters?.endDate) {
+      const max = new Date(filters.endDate).getTime()
+      events = events.filter((event) => new Date(event.occurredOn).getTime() <= max)
+    }
+    return events
   }
 }
 
