@@ -4,7 +4,12 @@ import type { Password } from '@/domain/password/Password'
 export interface PasswordSelectionDeps {
   /** Passwords the middle pane currently lists (selected group/folder, or search results). */
   visiblePasswords: Ref<readonly Password[]>
-  /** Every password the current user can see, regardless of the pane's scope. */
+  /**
+   * Every password reachable through the groups currently in view — the
+   * recovery set for a `?password=` that falls outside the pane. Wider than
+   * `visiblePasswords`, but still bounded by group visibility: an id outside
+   * it counts as stale.
+   */
   allPasswords: Ref<readonly Password[]>
   /** The `?password=` route query value, if any. */
   routePasswordId: Ref<string | undefined>
