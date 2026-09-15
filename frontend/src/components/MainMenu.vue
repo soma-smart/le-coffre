@@ -383,6 +383,11 @@ const goToGroupFolder = (groupId: string, folderName: string | null) => {
   } else {
     delete query.folder
   }
+
+  const currentFolder = (route.query.folder as string | undefined) ?? null
+  const isSameScope = selectedGroupId.value === groupId && currentFolder === folderName
+  if (!isSameScope) delete query.password
+
   router.push({ name: 'HomeGroup', params: { groupSlug: slug }, query })
 }
 
