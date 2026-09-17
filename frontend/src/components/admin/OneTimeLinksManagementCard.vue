@@ -94,10 +94,7 @@ const handleBulkRevokeConfirmed = async () => {
     const revoked = await oneTimeLinks.revokeAllForUser.execute(selectedUserId.value)
     toast.add({
       severity: 'success',
-      summary:
-        revoked === 1
-          ? t('components.admin.oneTimeLinks.bulkRevokedOne')
-          : t('components.admin.oneTimeLinks.bulkRevokedOther', { count: revoked }),
+      summary: t('components.admin.oneTimeLinks.bulkRevoked', { count: revoked }, revoked),
       life: 3000,
     })
     await fetchLinks()

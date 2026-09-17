@@ -11,7 +11,7 @@ export const PREFERENCE_KEYS = {
   THEME_SETTINGS: 'app-settings',
   /** Admin "see every group" toggle on the passwords page. */
   ADMIN_PASSWORD_VIEW_ENABLED: 'admin-password-view-enabled',
-  /** UI language, chosen from the theme drawer's language switcher. */
+  /** UI language, chosen from the Profile page's language switcher. */
   UI_LOCALE: 'ui-locale',
 } as const
 

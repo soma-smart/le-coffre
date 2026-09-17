@@ -19,6 +19,11 @@
     "personalGroupName": "{username}'s Personal Group",
     "unknown": "Unknown",
     "deletedPassword": "deleted password",
+    "vaultLockedSummary": "Vault Locked",
+    "vaultLockedDetail": "The vault is locked. Please unlock it to continue.",
+    "rateLimitedSummary": "Rate Limited",
+    "rateLimitedDetailWithSeconds": "Too many requests. Please try again in {seconds} seconds.",
+    "rateLimitedDetail": "Too many requests. Please try again later.",
     "pagination": {
       "showing": "Showing",
       "to": "to",
@@ -27,8 +32,7 @@
     "justNow": "just now",
     "minutesAgo": "{count} min ago",
     "hoursAgo": "{count} h ago",
-    "passwordCountOne": "{count} password",
-    "passwordCountOther": "{count} passwords",
+    "passwordCount": "{count} password | {count} passwords",
     "oneTimeLinkStatus": {
       "active": "active",
       "read": "read",
@@ -349,8 +353,7 @@
         "bulkDescriptionLine1": "Links already read keep their audit trail and are left untouched.",
         "bulkDescriptionLine2": "This cannot be undone.",
         "fetchFailed": "Failed to fetch one-time links",
-        "bulkRevokedOne": "1 link revoked",
-        "bulkRevokedOther": "{count} links revoked",
+        "bulkRevoked": "{count} link revoked | {count} links revoked",
         "bulkRevokeFailed": "Failed to revoke the links"
       },
       "statistics": {
@@ -756,7 +759,7 @@
         "outOf": "parts out of",
         "toReconstruct": "to reconstruct the key.",
         "canLosePrefix": "You can lose",
-        "partsSuffix": "parts."
+        "partsSuffix": "part. | parts."
       },
       "sharesModal": {
         "title": "Shares of the master key",

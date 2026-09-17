@@ -19,6 +19,11 @@
     "personalGroupName": "Groupe personnel de {username}",
     "unknown": "Inconnu",
     "deletedPassword": "mot de passe supprimé",
+    "vaultLockedSummary": "Coffre verrouillé",
+    "vaultLockedDetail": "Le coffre est verrouillé. Veuillez le déverrouiller pour continuer.",
+    "rateLimitedSummary": "Trop de requêtes",
+    "rateLimitedDetailWithSeconds": "Trop de requêtes. Veuillez réessayer dans {seconds} secondes.",
+    "rateLimitedDetail": "Trop de requêtes. Veuillez réessayer plus tard.",
     "pagination": {
       "showing": "Affichage de",
       "to": "à",
@@ -27,8 +32,7 @@
     "justNow": "à l'instant",
     "minutesAgo": "il y a {count} min",
     "hoursAgo": "il y a {count} h",
-    "passwordCountOne": "{count} mot de passe",
-    "passwordCountOther": "{count} mots de passe",
+    "passwordCount": "{count} mot de passe | {count} mots de passe",
     "oneTimeLinkStatus": {
       "active": "actif",
       "read": "lu",
@@ -349,8 +353,7 @@
         "bulkDescriptionLine1": "Les liens déjà lus conservent leur trace d'audit et ne sont pas modifiés.",
         "bulkDescriptionLine2": "Cette action est irréversible.",
         "fetchFailed": "Impossible de récupérer les liens à usage unique",
-        "bulkRevokedOne": "1 lien révoqué",
-        "bulkRevokedOther": "{count} liens révoqués",
+        "bulkRevoked": "{count} lien révoqué | {count} liens révoqués",
         "bulkRevokeFailed": "Échec de la révocation des liens"
       },
       "statistics": {
@@ -756,7 +759,7 @@
         "outOf": "parts sur",
         "toReconstruct": "pour reconstituer la clé.",
         "canLosePrefix": "Vous pouvez perdre",
-        "partsSuffix": "parts."
+        "partsSuffix": "part. | parts."
       },
       "sharesModal": {
         "title": "Parts de la clé maîtresse",

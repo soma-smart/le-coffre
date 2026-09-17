@@ -9,11 +9,7 @@
               {{ folder.name }}
             </h3>
             <p class="text-sm text-muted-color">
-              {{
-                folder.count === 1
-                  ? t('common.passwordCountOne', { count: folder.count })
-                  : t('common.passwordCountOther', { count: folder.count })
-              }}
+              {{ t('common.passwordCount', { count: folder.count }, folder.count) }}
             </p>
           </div>
         </div>

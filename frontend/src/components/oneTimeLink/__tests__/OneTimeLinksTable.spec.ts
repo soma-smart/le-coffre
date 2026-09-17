@@ -95,12 +95,12 @@ describe('OneTimeLinksTable', () => {
     expect(wrapper.find('[data-testid="confirm-question"]').text()).toContain('Prod DB')
     const description = wrapper.find('[data-testid="confirm-description"]').text()
     expect(description).toContain('Platform team')
-    // relativeTime.ts is deliberately pinned to en-GB regardless of locale, so
-    // the duration itself stays English even though "Créé" is ours.
+    // relativeTime.ts follows the active UI locale, so the duration renders in
+    // French just like "Créé" itself.
     const createdPrefix = t('components.oneTimeLinksTable.revokeDescriptionCreated', {
       created: '',
     }).trim()
-    expect(description).toMatch(new RegExp(`${createdPrefix} .*(hour|minute|second)`))
+    expect(description).toMatch(new RegExp(`${createdPrefix} .*(heure|minute|seconde)`))
   })
 
   it('hides the issuer column unless asked, since the personal table has one issuer', () => {
@@ -118,7 +118,7 @@ describe('OneTimeLinksTable', () => {
   it('shows expiry as a duration, which cannot be misread as already past', () => {
     const wrapper = mountTable([makeLink()])
 
-    expect(wrapper.text()).toMatch(/in \d+ (minute|hour|second)/)
+    expect(wrapper.text()).toMatch(/dans \d+ (minute|heure|seconde)/)
   })
 
   it('translates the pagination summary once there are enough rows to paginate', () => {

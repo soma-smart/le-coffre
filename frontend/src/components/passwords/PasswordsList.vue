@@ -246,9 +246,11 @@ onMounted(async () => {
               </h2>
               <p class="text-sm text-muted-color">
                 {{
-                  selectedGroupSection.count === 1
-                    ? t('common.passwordCountOne', { count: selectedGroupSection.count })
-                    : t('common.passwordCountOther', { count: selectedGroupSection.count })
+                  t(
+                    'common.passwordCount',
+                    { count: selectedGroupSection.count },
+                    selectedGroupSection.count,
+                  )
                 }}
               </p>
             </div>
