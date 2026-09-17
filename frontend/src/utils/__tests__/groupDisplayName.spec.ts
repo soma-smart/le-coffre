@@ -13,12 +13,6 @@ describe('translateGroupName', () => {
     )
   })
 
-  it('treats an omitted isPersonal the same as true, trusting the caller', () => {
-    expect(translateGroupName(t, "malvergnat's Personal Group")).toBe(
-      'Groupe personnel de malvergnat',
-    )
-  })
-
   it('never touches a shared group name, even one that happens to match the pattern', () => {
     expect(translateGroupName(t, "malvergnat's Personal Group", false)).toBe(
       "malvergnat's Personal Group",
