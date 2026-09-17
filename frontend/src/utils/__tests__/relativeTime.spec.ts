@@ -9,41 +9,35 @@ describe('formatRelativeTime', () => {
     // The reported confusion: a link created at 14:37 local with the default
     // 24-hour lifetime rendered "7/22/2026, 2:37 PM". At 14:40 the eye caught
     // "2:37" and concluded it had expired, missing that the date was tomorrow.
-    i18n.global.locale.value = 'fr'
     const expiresAt = '2026-07-22T12:37:00Z'
 
-    // Just under 24h of remaining time, so hours rather than days: "dans 24
-    // heures" says the same thing more precisely than "demain" would.
-    expect(formatRelativeTime(expiresAt, NOW)).toBe('dans 24 heures')
-    i18n.global.locale.value = 'en'
+    // Just under 24h of remaining time, so hours rather than days: "in 24
+    // hours" says the same thing more precisely than "tomorrow" would.
+    expect(formatRelativeTime(expiresAt, NOW)).toBe('in 24 hours')
   })
 
   it('uses hours and minutes for shorter lifetimes', () => {
-    i18n.global.locale.value = 'fr'
-    expect(formatRelativeTime('2026-07-21T15:40:00Z', NOW)).toBe('dans 3 heures')
-    expect(formatRelativeTime('2026-07-21T13:25:00Z', NOW)).toBe('dans 45 minutes')
-    i18n.global.locale.value = 'en'
+    expect(formatRelativeTime('2026-07-21T15:40:00Z', NOW)).toBe('in 3 hours')
+    expect(formatRelativeTime('2026-07-21T13:25:00Z', NOW)).toBe('in 45 minutes')
   })
 
   it('renders past instants as elapsed time', () => {
-    i18n.global.locale.value = 'fr'
-    expect(formatRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('il y a 5 minutes')
-    expect(formatRelativeTime('2026-07-20T12:40:00Z', NOW)).toBe('il y a 1 jour')
-    i18n.global.locale.value = 'en'
+    expect(formatRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('5 minutes ago')
+    expect(formatRelativeTime('2026-07-20T12:40:00Z', NOW)).toBe('1 day ago')
   })
 
   it('falls back to seconds just either side of now', () => {
-    i18n.global.locale.value = 'fr'
-    expect(formatRelativeTime('2026-07-21T12:40:30Z', NOW)).toBe('dans 30 secondes')
-    expect(formatRelativeTime('2026-07-21T12:39:30Z', NOW)).toBe('il y a 30 secondes')
-    i18n.global.locale.value = 'en'
+    expect(formatRelativeTime('2026-07-21T12:40:30Z', NOW)).toBe('in 30 seconds')
+    expect(formatRelativeTime('2026-07-21T12:39:30Z', NOW)).toBe('30 seconds ago')
   })
 
-  it('switches to English when the UI locale is English', () => {
-    i18n.global.locale.value = 'en'
+  it('switches to French when the UI locale is French', () => {
+    i18n.global.locale.value = 'fr'
 
-    expect(formatRelativeTime('2026-07-22T12:37:00Z', NOW)).toBe('in 24 hours')
-    expect(formatRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('5 minutes ago')
+    expect(formatRelativeTime('2026-07-22T12:37:00Z', NOW)).toBe('dans 24 heures')
+    expect(formatRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('il y a 5 minutes')
+
+    i18n.global.locale.value = 'en'
   })
 
   it('follows the active UI locale rather than the browser locale', () => {
