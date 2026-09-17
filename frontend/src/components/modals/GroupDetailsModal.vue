@@ -171,11 +171,7 @@ watch(visible, (isVisible) => {
   <Dialog
     v-model:visible="visible"
     modal
-    :header="
-      group
-        ? translateGroupName(t, group.name, group.isPersonal)
-        : t('components.groupDetailsModal.defaultTitle')
-    "
+    :header="group ? group.name : t('components.groupDetailsModal.defaultTitle')"
     :style="{ width: '40rem' }"
   >
     <div v-if="!group" class="text-center py-4">

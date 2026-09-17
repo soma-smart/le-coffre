@@ -242,7 +242,6 @@ import { useAdminNavigation } from '@/composables/useAdminNavigation'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { logout } from '@/utils/logout'
 import { slugifyGroupName, findGroupIdBySlug } from '@/utils/groupSlug'
-import { translateGroupName } from '@/utils/groupDisplayName'
 
 const router = useRouter()
 const route = useRoute()
