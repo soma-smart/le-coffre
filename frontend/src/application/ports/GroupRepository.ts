@@ -1,7 +1,13 @@
-import type { Group } from '@/domain/group/Group'
+import type { Group, GroupEvent } from '@/domain/group/Group'
 
 export interface ListGroupsFilters {
   includePersonal?: boolean
+}
+
+export interface ListGroupEventsFilters {
+  eventTypes?: string[]
+  startDate?: string
+  endDate?: string
 }
 
 export interface GroupRepository {
@@ -13,4 +19,5 @@ export interface GroupRepository {
   addMember(groupId: string, userId: string): Promise<void>
   removeMember(groupId: string, userId: string): Promise<void>
   promoteToOwner(groupId: string, userId: string): Promise<void>
+  listEvents(groupId: string, filters?: ListGroupEventsFilters): Promise<GroupEvent[]>
 }
