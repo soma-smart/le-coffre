@@ -468,6 +468,8 @@
       "promoteAria": "Promouvoir propriétaire",
       "removeTooltip": "Retirer le membre",
       "removeAria": "Retirer le membre",
+      "demoteTooltip": "Redevenir simple membre",
+      "demoteAria": "Redevenir simple membre",
       "addMemberTitle": "Ajouter un membre",
       "selectUserPlaceholder": "Sélectionnez un utilisateur à ajouter",
       "userRequired": "Veuillez sélectionner un utilisateur",

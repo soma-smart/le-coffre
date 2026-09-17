@@ -153,6 +153,12 @@ const handlePromoteToOwner = (user: User) => {
   })
 }
 
+// TODO: wire to a real use case once the backend supports it — today
+// remove_user_from_group_use_case.py raises CannotRemoveOwnerException for
+// any owner, and there is no demote/remove-owner route or repository method
+// yet. Left as a visible no-op stub rather than a real call until that lands.
+const handleDemoteSelf = () => {}
+
 watch(
   () => props.group,
   (newGroup) => {
@@ -247,6 +253,20 @@ watch(visible, (isVisible) => {
                       <p class="text-sm text-muted-color">{{ user.email }}</p>
                     </div>
                   </div>
+
+                  <!-- Step down to member: only on your own card, and never on a
+                       personal group (its single owner can't demote themselves). -->
+                  <Button
+                    v-if="user.id === currentUserId && !group.isPersonal"
+                    icon="pi pi-arrow-circle-down"
+                    text
+                    rounded
+                    severity="secondary"
+                    size="small"
+                    :aria-label="t('components.groupDetailsModal.demoteAria')"
+                    v-tooltip.top="t('components.groupDetailsModal.demoteTooltip')"
+                    @click="handleDemoteSelf"
+                  />
                 </div>
               </template>
             </Card>
