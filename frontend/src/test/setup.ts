@@ -6,6 +6,7 @@ import ConfirmationService from 'primevue/confirmationservice'
 import { resetContainer } from '@/plugins/container'
 import i18n from '@/i18n'
 import primevueLocaleFr from '@/i18n/primevueLocaleFr'
+import primevueLocaleEn from '@/i18n/primevueLocaleEn'
 
 // jsdom doesn't implement window.matchMedia, but several PrimeVue
 // overlays (DatePicker, MultiSelect, AutoComplete) call it on mount for
@@ -42,9 +43,17 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 
 // Installed for every component mount in vitest — matches what main.ts
 // installs at runtime, so useToast() / useConfirm() don't throw
-// "No PrimeVue Toast provided!" when a component's setup calls them.
+// "No PrimeVue Toast provided!" when a component's setup calls them. The
+// PrimeVue locale is derived from i18n's own locale, same as main.ts, so a
+// test that switches i18n before mounting doesn't start the two out of sync.
 config.global.plugins = [
-  [PrimeVue, { unstyled: true, locale: primevueLocaleFr }],
+  [
+    PrimeVue,
+    {
+      unstyled: true,
+      locale: i18n.global.locale.value === 'en' ? primevueLocaleEn : primevueLocaleFr,
+    },
+  ],
   ToastService,
   ConfirmationService,
   i18n,
