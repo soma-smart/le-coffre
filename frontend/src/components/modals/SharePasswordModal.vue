@@ -11,7 +11,6 @@ import { useGroupsStore } from '@/stores/groups'
 import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import { sortGroupsByName } from '@/utils/groupSort'
 import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
-import { translateGroupName } from '@/utils/groupDisplayName'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -103,7 +102,7 @@ const fetchUserDisplayName = async (userId: string): Promise<string> => {
 // Resolve a group name from the already-loaded group list, falling back to the id.
 const groupName = (groupId: string): string => {
   const group = allGroups.value.find((g) => g.id === groupId)
-  return group ? translateGroupName(t, group.name, group.isPersonal) : groupId
+  return group?.name ?? groupId
 }
 
 // Load the access links and fold the per-(user, group) rows into one card per user.
@@ -369,7 +368,7 @@ onMounted(async () => {
             id="group-select"
             v-model="selectedGroupId"
             :options="availableGroupsForSharing"
-            :optionLabel="(group) => translateGroupName(t, group.name, group.isPersonal)"
+            :optionLabel="(group) => group.name"
             optionValue="id"
             :placeholder="t('components.sharePasswordModal.selectGroupPlaceholder')"
             :disabled="loading"
@@ -380,9 +379,7 @@ onMounted(async () => {
             <template #option="slotProps">
               <div class="flex items-center gap-2">
                 <i class="pi pi-users text-sm"></i>
-                <span>{{
-                  translateGroupName(t, slotProps.option.name, slotProps.option.isPersonal)
-                }}</span>
+                <span>{{ slotProps.option.name }}</span>
               </div>
             </template>
           </Select>

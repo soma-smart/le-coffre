@@ -11,7 +11,6 @@ import { useModelFromEntity } from '@/composables/useModelFromEntity'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordsStore } from '@/stores/passwords'
 import { isSafeHttpUrl, normalizeExternalHttpUrl } from '@/utils/safeUrl'
-import { translateGroupName } from '@/utils/groupDisplayName'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -62,7 +61,7 @@ const passwordFieldFocused = ref(false)
 
 const selectedGroupLabel = computed(() => {
   const group = groupsForPasswordCreation.value.find((g) => g.id === selectedGroupId.value)
-  return group ? translateGroupName(t, group.name, group.isPersonal) : ''
+  return group?.name ?? ''
 })
 
 const resolveDefaultGroupId = (): string => {
@@ -349,9 +348,7 @@ const handlePasswordBlur = () => {
                 :class="slotProps.option.isPersonal ? 'pi pi-user' : 'pi pi-users'"
                 class="text-sm"
               ></i>
-              <span>{{
-                translateGroupName(t, slotProps.option.name, slotProps.option.isPersonal)
-              }}</span>
+              <span>{{ slotProps.option.name }}</span>
             </div>
           </template>
           <template #value="slotProps">

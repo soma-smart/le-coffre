@@ -148,16 +148,12 @@
               <span v-else-if="slotProps.data.eventType === 'PasswordSharedEvent'">
                 {{ t('common.passwordEvents.sharedWithGroup') }}
                 <strong>{{
-                  translateGroupName(
-                    t,
-                    slotProps.data.eventData.sharedWithGroupName ||
-                      (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
-                        0,
-                        8,
-                      ) + '...' ||
-                      t('common.unknown'),
-                    false,
-                  )
+                  slotProps.data.eventData.sharedWithGroupName ||
+                  (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
+                    0,
+                    8,
+                  ) + '...' ||
+                  t('common.unknown')
                 }}</strong>
                 <template v-if="slotProps.data.eventData.expiresAt">
                   {{ t('common.passwordEvents.untilLabel') }}
@@ -169,15 +165,12 @@
               <span v-else-if="slotProps.data.eventType === 'PasswordUnsharedEvent'">
                 {{ t('common.passwordEvents.unsharedFromGroup') }}
                 <strong>{{
-                  translateGroupName(
-                    t,
-                    slotProps.data.eventData.unsharedWithGroupName ||
-                      (
-                        slotProps.data.eventData.unsharedWithGroupId as string | undefined
-                      )?.substring(0, 8) + '...' ||
-                      t('common.unknown'),
-                    false,
-                  )
+                  slotProps.data.eventData.unsharedWithGroupName ||
+                  (slotProps.data.eventData.unsharedWithGroupId as string | undefined)?.substring(
+                    0,
+                    8,
+                  ) + '...' ||
+                  t('common.unknown')
                 }}</strong>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordShareExpirationUpdatedEvent'">
@@ -232,7 +225,6 @@ import { VaultLockedError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { translateEventType } from '@/utils/eventTypeLabel'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
-import { translateGroupName } from '@/utils/groupDisplayName'
 
 const props = defineProps<{
   password: Password | null
