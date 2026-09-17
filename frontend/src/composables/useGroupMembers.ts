@@ -14,6 +14,7 @@ export interface GroupMembersUseCases {
     addMemberToGroup(groupId: string, userId: string): Promise<void>
     removeMemberFromGroup(groupId: string, userId: string): Promise<void>
     promoteToOwner(groupId: string, userId: string): Promise<void>
+    demoteToMember(groupId: string, userId: string): Promise<void>
   }
 }
 
@@ -96,6 +97,15 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
     return true
   }
 
+  async function demoteToMember(userId: string): Promise<boolean> {
+    if (!options.group.value) return false
+    const groupId = options.group.value.id
+    await action.run(() => options.useCases.store.demoteToMember(groupId, userId))
+    if (action.status.value !== 'ready') return false
+    await loadAll()
+    return true
+  }
+
   return {
     users,
     groupDetails,
@@ -113,5 +123,6 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
     addMember,
     removeMember,
     promoteToOwner,
+    demoteToMember,
   }
 }

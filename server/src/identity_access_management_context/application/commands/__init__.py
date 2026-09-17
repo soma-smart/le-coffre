@@ -6,6 +6,7 @@ from .create_group_command import CreateGroupCommand
 from .create_user_command import CreateUserCommand
 from .delete_group_command import DeleteGroupCommand
 from .delete_user_command import DeleteUserCommand
+from .demote_owner_to_member_command import DemoteOwnerToMemberCommand
 from .get_group_command import GetGroupCommand
 from .get_sso_authorize_url_command import GetSsoAuthorizeUrlCommand
 from .get_statistic_for_admin_command import GetStatisticForAdminCommand
@@ -45,6 +46,7 @@ __all__ = [
     "AddUserToGroupCommand",
     "AddOwnerToGroupCommand",
     "RemoveUserFromGroupCommand",
+    "DemoteOwnerToMemberCommand",
     "DeleteGroupCommand",
     "UpdateGroupCommand",
     "IsSsoConfigSetCommand",

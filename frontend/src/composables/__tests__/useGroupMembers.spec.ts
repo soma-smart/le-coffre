@@ -36,6 +36,7 @@ function makeUseCases(overrides: Partial<GroupMembersUseCases> = {}): GroupMembe
       addMemberToGroup: vi.fn(async () => {}),
       removeMemberFromGroup: vi.fn(async () => {}),
       promoteToOwner: vi.fn(async () => {}),
+      demoteToMember: vi.fn(async () => {}),
     },
     ...overrides,
   }
@@ -137,6 +138,7 @@ describe('useGroupMembers', () => {
         addMemberToGroup,
         removeMemberFromGroup: vi.fn(async () => {}),
         promoteToOwner: vi.fn(async () => {}),
+        demoteToMember: vi.fn(async () => {}),
       },
     })
 
@@ -165,6 +167,7 @@ describe('useGroupMembers', () => {
         }),
         removeMemberFromGroup: vi.fn(async () => {}),
         promoteToOwner: vi.fn(async () => {}),
+        demoteToMember: vi.fn(async () => {}),
       },
     })
 
@@ -180,7 +183,7 @@ describe('useGroupMembers', () => {
     expect(m.actionError.value).toBeInstanceOf(Error)
   })
 
-  it('returns false from add/remove/promote when no group is provided', async () => {
+  it('returns false from add/remove/promote/demote when no group is provided', async () => {
     const useCases = makeUseCases()
     const m = useGroupMembers({
       group: ref<Group | null>(null),
@@ -190,6 +193,7 @@ describe('useGroupMembers', () => {
     expect(await m.addMember('u3')).toBe(false)
     expect(await m.removeMember('u3')).toBe(false)
     expect(await m.promoteToOwner('u3')).toBe(false)
+    expect(await m.demoteToMember('u3')).toBe(false)
   })
 
   it('removeMember calls the store action and reloads the group', async () => {
@@ -204,6 +208,7 @@ describe('useGroupMembers', () => {
         addMemberToGroup: vi.fn(async () => {}),
         removeMemberFromGroup,
         promoteToOwner: vi.fn(async () => {}),
+        demoteToMember: vi.fn(async () => {}),
       },
     })
 
@@ -232,6 +237,7 @@ describe('useGroupMembers', () => {
         addMemberToGroup: vi.fn(async () => {}),
         removeMemberFromGroup: vi.fn(async () => {}),
         promoteToOwner,
+        demoteToMember: vi.fn(async () => {}),
       },
     })
 
@@ -245,6 +251,35 @@ describe('useGroupMembers', () => {
     const ok = await m.promoteToOwner('u2')
     expect(ok).toBe(true)
     expect(promoteToOwner).toHaveBeenCalledWith('g1', 'u2')
+    expect(get).toHaveBeenCalledTimes(2)
+  })
+
+  it('demoteToMember calls the store action and reloads the group', async () => {
+    const demoteToMember = vi.fn(async () => {})
+    const get = vi
+      .fn<() => Promise<Group>>()
+      .mockResolvedValueOnce(makeGroup({ owners: ['u1', 'u2'], members: [] }))
+      .mockResolvedValueOnce(makeGroup({ owners: ['u1'], members: ['u2'] }))
+    const useCases = makeUseCases({
+      groups: { get: { execute: get } },
+      store: {
+        addMemberToGroup: vi.fn(async () => {}),
+        removeMemberFromGroup: vi.fn(async () => {}),
+        promoteToOwner: vi.fn(async () => {}),
+        demoteToMember,
+      },
+    })
+
+    const m = useGroupMembers({
+      group: ref(makeGroup()),
+      currentUserId: ref('u1'),
+      useCases,
+    })
+    await m.loadAll()
+
+    const ok = await m.demoteToMember('u2')
+    expect(ok).toBe(true)
+    expect(demoteToMember).toHaveBeenCalledWith('g1', 'u2')
     expect(get).toHaveBeenCalledTimes(2)
   })
 })

@@ -13,4 +13,5 @@ export interface GroupRepository {
   addMember(groupId: string, userId: string): Promise<void>
   removeMember(groupId: string, userId: string): Promise<void>
   promoteToOwner(groupId: string, userId: string): Promise<void>
+  demoteToMember(groupId: string, userId: string): Promise<void>
 }

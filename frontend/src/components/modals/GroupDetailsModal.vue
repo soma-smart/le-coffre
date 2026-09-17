@@ -5,10 +5,13 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
+import { useUserStore } from '@/stores/user'
 import type { Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
+import { translateGroupName } from '@/utils/groupDisplayName'
+import { GroupDomainError, GroupLastOwnerError } from '@/domain/group/errors'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -26,6 +29,8 @@ const confirm = useConfirm()
 const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const { currentUserId } = storeToRefs(groupsStore)
+const userStore = useUserStore()
+const { isAdmin } = storeToRefs(userStore)
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
@@ -41,10 +46,12 @@ const {
   isOwner,
   isFetching,
   isActing,
+  actionError,
   loadAll,
   addMember: addMemberCore,
   removeMember: removeMemberCore,
   promoteToOwner: promoteToOwnerCore,
+  demoteToMember: demoteToMemberCore,
 } = useGroupMembers({
   group: toRef(props, 'group'),
   currentUserId,
@@ -55,6 +62,7 @@ const {
       addMemberToGroup: groupsStore.addMemberToGroup,
       removeMemberFromGroup: groupsStore.removeMemberFromGroup,
       promoteToOwner: groupsStore.promoteToOwner,
+      demoteToMember: groupsStore.demoteToMember,
     },
   },
 })
@@ -140,11 +148,50 @@ const handlePromoteToOwner = (user: User) => {
   })
 }
 
-// TODO: wire to a real use case once the backend supports it — today
-// remove_user_from_group_use_case.py raises CannotRemoveOwnerException for
-// any owner, and there is no demote/remove-owner route or repository method
-// yet. Left as a visible no-op stub rather than a real call until that lands.
-const handleDemoteSelf = () => {}
+const handleDemoteOwner = (user: User) => {
+  if (!props.group) return
+  const group = props.group
+
+  confirm.require({
+    message: t('components.groupDetailsModal.demoteConfirmMessage', { name: user.name }),
+    header: t('components.groupDetailsModal.demoteConfirmHeader'),
+    icon: 'pi pi-arrow-circle-down',
+    acceptLabel: t('components.groupDetailsModal.demoteConfirmAccept'),
+    rejectLabel: t('common.cancel'),
+    accept: async () => {
+      const ok = await demoteToMemberCore(user.id)
+      if (ok) {
+        toast.add({
+          severity: 'success',
+          summary: t('common.success'),
+          detail: t('components.groupDetailsModal.demotedDetail', { name: user.name }),
+          life: 5000,
+        })
+        emit('memberAdded')
+      } else {
+        // GroupLastOwnerError carries only ids — build the user-facing message
+        // ourselves so it names the actual person and group instead. Any other
+        // GroupDomainError message comes straight from the backend and isn't
+        // ours to translate; only the generic fallback is.
+        const detail =
+          actionError.value instanceof GroupLastOwnerError
+            ? t('components.groupDetailsModal.demoteFailedLastOwner', {
+                user: user.name,
+                group: translateGroupName(t, group.name, group.isPersonal),
+              })
+            : actionError.value instanceof GroupDomainError
+              ? actionError.value.message
+              : t('components.groupDetailsModal.demoteFailed')
+        toast.add({
+          severity: 'error',
+          summary: t('common.error'),
+          detail,
+          life: 5000,
+        })
+      }
+    },
+  })
+}
 
 watch(
   () => props.group,
@@ -231,18 +278,19 @@ watch(visible, (isVisible) => {
                     </div>
                   </div>
 
-                  <!-- Step down to member: only on your own card, and never on a
-                       personal group (its single owner can't demote themselves). -->
+                  <!-- Step down to member: on your own card, or any owner's card
+                       if you're an admin. Never on a personal group (its single
+                       owner can't be demoted). -->
                   <Button
-                    v-if="user.id === currentUserId && !group.isPersonal"
+                    v-if="(user.id === currentUserId || isAdmin) && !group.isPersonal"
                     icon="pi pi-arrow-circle-down"
                     text
                     rounded
-                    severity="secondary"
+                    severity="warning"
                     size="small"
                     :aria-label="t('components.groupDetailsModal.demoteAria')"
                     v-tooltip.top="t('components.groupDetailsModal.demoteTooltip')"
-                    @click="handleDemoteSelf"
+                    @click="handleDemoteOwner(user)"
                   />
                 </div>
               </template>
@@ -300,9 +348,11 @@ watch(visible, (isVisible) => {
                     </div>
                   </div>
 
-                  <!-- Action buttons (only for owner of non-personal groups) -->
-                  <div v-if="isOwner && !group.isPersonal" class="flex gap-1">
+                  <!-- Promote: owners of the group, or any admin. Remove: owners
+                       of the group only. Neither applies to personal groups. -->
+                  <div v-if="!group.isPersonal" class="flex gap-1">
                     <Button
+                      v-if="isOwner || isAdmin"
                       icon="pi pi-crown"
                       text
                       rounded
@@ -314,6 +364,7 @@ watch(visible, (isVisible) => {
                       @click="handlePromoteToOwner(user)"
                     />
                     <Button
+                      v-if="isOwner"
                       icon="pi pi-times"
                       text
                       rounded
