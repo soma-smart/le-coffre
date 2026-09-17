@@ -17,6 +17,7 @@ from identity_access_management_context.domain.exceptions import (
 )
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.services import AdminPermissionChecker
 
 
 class AddOwnerToGroupUseCase(TracedUseCase):
@@ -42,8 +43,11 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         if group.is_personal:
             raise CannotModifyPersonalGroupException(command.group_id)
 
-        if not self.group_member_repository.is_owner(command.group_id, command.requester_id):
-            raise UserNotOwnerOfGroupException(command.requester_id, command.group_id)
+        requester_id = command.requesting_user.user_id
+        is_admin = AdminPermissionChecker.is_admin(command.requesting_user)
+        is_owner = self.group_member_repository.is_owner(command.group_id, requester_id)
+        if not (is_admin or is_owner):
+            raise UserNotOwnerOfGroupException(requester_id, command.group_id)
 
         user = self.user_repository.get_by_id(command.user_id)
         if user is None:
@@ -57,13 +61,13 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         event = OwnerAddedToGroupEvent(
             group_id=command.group_id,
             user_id=command.user_id,
-            added_by_user_id=command.requester_id,
+            added_by_user_id=requester_id,
         )
         self._event_publisher.publish(event)
         self._group_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requester_id,
+            actor_user_id=requester_id,
             event_data={"group_id": str(command.group_id), "user_id": str(command.user_id)},
         )

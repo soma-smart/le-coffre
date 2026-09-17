@@ -32,3 +32,19 @@ export class GroupUserRequiredError extends GroupDomainError {
     this.name = 'GroupUserRequiredError'
   }
 }
+
+/**
+ * Demoting this user would leave the group with no owner at all. Kept
+ * distinct from GroupDomainError (rather than carrying a plain message) so
+ * callers can build their own translated, name-bearing message instead of
+ * showing the backend's raw id-based detail string.
+ */
+export class GroupLastOwnerError extends GroupDomainError {
+  constructor(
+    public readonly groupId: string,
+    public readonly userId: string,
+  ) {
+    super(`User ${userId} is the last owner of group ${groupId}`)
+    this.name = 'GroupLastOwnerError'
+  }
+}

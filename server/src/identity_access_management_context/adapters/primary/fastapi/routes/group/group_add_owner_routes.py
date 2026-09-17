@@ -56,7 +56,7 @@ def add_owner_to_group(
     - **group_id**: ID of the group (path parameter)
     - **user_id**: ID of the user to promote to owner
     - **Authorization**: Bearer token required (access_token cookie)
-    - **Permission**: Only group owners can add new owners
+    - **Permission**: Only group owners or admins can add new owners
 
     The user must already be a member of the group before being promoted to owner.
     Cannot add owners to personal groups.
@@ -64,7 +64,7 @@ def add_owner_to_group(
     """
     try:
         command = AddOwnerToGroupCommand(
-            requester_id=current_user.user_id,
+            requesting_user=current_user.to_authenticated_user(),
             group_id=group_id,
             user_id=request.user_id,
         )
