@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { translateGroupName } from '../groupDisplayName'
+import { isPersonalGroupName, translateGroupName } from '../groupDisplayName'
 
 describe('translateGroupName', () => {
   const t = (key: string, params?: Record<string, unknown>) => {
@@ -37,5 +37,19 @@ describe('translateGroupName', () => {
     expect(translateGroupName(t, "o'brien's Personal Group", true)).toBe(
       "Groupe personnel de o'brien",
     )
+  })
+})
+
+describe('isPersonalGroupName', () => {
+  it('matches the backend personal-group pattern', () => {
+    expect(isPersonalGroupName("malvergnat's Personal Group")).toBe(true)
+  })
+
+  it('rejects a free-form shared group name', () => {
+    expect(isPersonalGroupName('Team Marketing')).toBe(false)
+  })
+
+  it('rejects a name that merely happens to be the same length as the suffix', () => {
+    expect(isPersonalGroupName('Some Random Group')).toBe(false)
   })
 })

@@ -27,8 +27,8 @@ const container = installProductionContainer()
 const savedLocale = container.preferences.read.execute<'fr' | 'en'>({
   key: PREFERENCE_KEYS.UI_LOCALE,
 })
-if (savedLocale === 'en') {
-  i18n.global.locale.value = 'en'
+if (savedLocale === 'en' || savedLocale === 'fr') {
+  i18n.global.locale.value = savedLocale
 }
 document.documentElement.lang = i18n.global.locale.value
 

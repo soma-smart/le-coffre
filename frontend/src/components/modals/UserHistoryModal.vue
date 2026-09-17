@@ -149,6 +149,7 @@
                         8,
                       ) + '...' ||
                       t('common.unknown'),
+                    false,
                   )
                 }}</strong>
                 <template v-if="slotProps.data.eventData.expiresAt">
@@ -168,6 +169,7 @@
                         slotProps.data.eventData.unsharedWithGroupId as string | undefined
                       )?.substring(0, 8) + '...' ||
                       t('common.unknown'),
+                    false,
                   )
                 }}</strong>
               </span>

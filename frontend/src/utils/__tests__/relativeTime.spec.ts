@@ -13,6 +13,7 @@ describe('formatRelativeTime', () => {
     // The reported confusion: a link created at 14:37 local with the default
     // 24-hour lifetime rendered "7/22/2026, 2:37 PM". At 14:40 the eye caught
     // "2:37" and concluded it had expired, missing that the date was tomorrow.
+    i18n.global.locale.value = 'fr'
     const expiresAt = '2026-07-22T12:37:00Z'
 
     // Just under 24h of remaining time, so hours rather than days: "dans 24
@@ -21,16 +22,19 @@ describe('formatRelativeTime', () => {
   })
 
   it('uses hours and minutes for shorter lifetimes', () => {
+    i18n.global.locale.value = 'fr'
     expect(formatRelativeTime('2026-07-21T15:40:00Z', NOW)).toBe('dans 3 heures')
     expect(formatRelativeTime('2026-07-21T13:25:00Z', NOW)).toBe('dans 45 minutes')
   })
 
   it('renders past instants as elapsed time', () => {
+    i18n.global.locale.value = 'fr'
     expect(formatRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('il y a 5 minutes')
     expect(formatRelativeTime('2026-07-20T12:40:00Z', NOW)).toBe('il y a 1 jour')
   })
 
   it('falls back to seconds just either side of now', () => {
+    i18n.global.locale.value = 'fr'
     expect(formatRelativeTime('2026-07-21T12:40:30Z', NOW)).toBe('dans 30 secondes')
     expect(formatRelativeTime('2026-07-21T12:39:30Z', NOW)).toBe('il y a 30 secondes')
   })
@@ -58,6 +62,7 @@ describe('formatRelativeTime', () => {
     } as unknown as typeof Intl.RelativeTimeFormat
 
     try {
+      i18n.global.locale.value = 'fr'
       formatRelativeTime('2026-07-22T12:37:00Z', NOW)
       i18n.global.locale.value = 'en'
       formatRelativeTime('2026-07-22T12:37:00Z', NOW)
