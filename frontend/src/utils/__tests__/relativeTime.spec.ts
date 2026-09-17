@@ -1,12 +1,8 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import i18n from '@/i18n'
 import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
 
 const NOW = new Date('2026-07-21T12:40:00Z')
-
-afterEach(() => {
-  i18n.global.locale.value = 'fr'
-})
 
 describe('formatRelativeTime', () => {
   it('reads a 24-hour link as a full day away, not as a past time', () => {
@@ -19,24 +15,28 @@ describe('formatRelativeTime', () => {
     // Just under 24h of remaining time, so hours rather than days: "dans 24
     // heures" says the same thing more precisely than "demain" would.
     expect(formatRelativeTime(expiresAt, NOW)).toBe('dans 24 heures')
+    i18n.global.locale.value = 'en'
   })
 
   it('uses hours and minutes for shorter lifetimes', () => {
     i18n.global.locale.value = 'fr'
     expect(formatRelativeTime('2026-07-21T15:40:00Z', NOW)).toBe('dans 3 heures')
     expect(formatRelativeTime('2026-07-21T13:25:00Z', NOW)).toBe('dans 45 minutes')
+    i18n.global.locale.value = 'en'
   })
 
   it('renders past instants as elapsed time', () => {
     i18n.global.locale.value = 'fr'
     expect(formatRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('il y a 5 minutes')
     expect(formatRelativeTime('2026-07-20T12:40:00Z', NOW)).toBe('il y a 1 jour')
+    i18n.global.locale.value = 'en'
   })
 
   it('falls back to seconds just either side of now', () => {
     i18n.global.locale.value = 'fr'
     expect(formatRelativeTime('2026-07-21T12:40:30Z', NOW)).toBe('dans 30 secondes')
     expect(formatRelativeTime('2026-07-21T12:39:30Z', NOW)).toBe('il y a 30 secondes')
+    i18n.global.locale.value = 'en'
   })
 
   it('switches to English when the UI locale is English', () => {
