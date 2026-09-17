@@ -15,7 +15,6 @@ export function translateGroupName(
   isPersonal?: boolean,
 ): string {
   if (isPersonal === false) return name
-  if (!name.endsWith(PERSONAL_GROUP_SUFFIX)) return name
 
   const username = name.slice(0, -PERSONAL_GROUP_SUFFIX.length)
   return t('common.personalGroupName', { username })
