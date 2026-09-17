@@ -87,11 +87,11 @@ describe('OneTimeLinkModal', () => {
 
     const wrapper = await openModal(repo)
 
-    // relativeTime.ts is deliberately pinned to en-GB regardless of locale, so
-    // the duration itself stays English even though the "created" prefix is ours.
+    // relativeTime.ts follows the active UI locale, so the duration renders in
+    // French just like the "created" prefix itself.
     const createdPrefix = t('components.oneTimeLinkModal.createdLabel', { relative: '' }).trim()
     expect(wrapper.find('[data-testid="created-label"]').text()).toMatch(
-      new RegExp(`${createdPrefix} .*(hour|minute|second)`),
+      new RegExp(`${createdPrefix} .*(heure|minute|seconde)`),
     )
   })
 

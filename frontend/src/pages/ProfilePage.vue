@@ -10,7 +10,6 @@ import type { User } from '@/domain/user/User'
 import { UserDomainError } from '@/domain/user/errors'
 import { useContainer } from '@/plugins/container'
 import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
-import i18n from '@/i18n'
 import { primevueLocaleFr } from '@/i18n/primevueLocaleFr'
 import { primevueLocaleEn } from '@/i18n/primevueLocaleEn'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
@@ -19,7 +18,7 @@ type UiLocale = 'fr' | 'en'
 
 const toast = useToast()
 const router = useRouter()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const $primevue = usePrimeVue()
 
 // Language names are shown in their own language regardless of the current
@@ -30,7 +29,7 @@ const languageOptions: { label: string; value: UiLocale }[] = [
 ]
 // main.ts already applies the persisted locale before the app mounts, so
 // this only needs to reflect whatever is already live.
-const languageModel = ref<UiLocale>(i18n.global.locale.value as UiLocale)
+const languageModel = ref<UiLocale>(locale.value as UiLocale)
 
 const handleLogout = async () => {
   await logout()
@@ -47,15 +46,18 @@ const handleLogout = async () => {
 // inside async event handlers after an await.
 const { users, preferences } = useContainer()
 
-// i18n.global drives every t() call app-wide; PrimeVue keeps its own
+// The i18n composer drives every t() call app-wide; PrimeVue keeps its own
 // separate locale (filter labels, calendar names, the password-strength
 // meter, ...) on $primevue.config, so both must be swapped together.
-const onLanguageChange = (locale: UiLocale) => {
-  languageModel.value = locale
-  i18n.global.locale.value = locale
-  $primevue.config.locale = locale === 'en' ? primevueLocaleEn : primevueLocaleFr
-  document.documentElement.lang = locale
-  preferences.write.execute({ key: PREFERENCE_KEYS.UI_LOCALE, value: locale })
+const onLanguageChange = (newLocale: UiLocale) => {
+  languageModel.value = newLocale
+  locale.value = newLocale
+  $primevue.config.locale = newLocale === 'en' ? primevueLocaleEn : primevueLocaleFr
+  document.documentElement.lang = newLocale
+  // PreferencesGateway.write() is documented to never throw (quota errors,
+  // private mode, ... are swallowed at the adapter) — preferences are
+  // non-load-bearing UX state, so there's no failure here to react to.
+  preferences.write.execute({ key: PREFERENCE_KEYS.UI_LOCALE, value: newLocale })
 }
 
 const user = ref<User | null>(null)

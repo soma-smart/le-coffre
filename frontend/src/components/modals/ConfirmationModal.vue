@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -33,10 +36,11 @@ let countdownTimer: number | null = null
 const canConfirm = computed(() => countdown.value === 0)
 
 const confirmButtonLabel = computed(() => {
+  const label = props.confirmLabel || t('common.confirm')
   if (countdown.value > 0) {
-    return `${props.confirmLabel || 'Confirm'} in ${countdown.value}s`
+    return t('common.confirmWithCountdown', { label, seconds: countdown.value })
   }
-  return props.confirmLabel || 'Confirm'
+  return label
 })
 
 const iconClass = computed(() => {
@@ -162,7 +166,7 @@ const handleCancel = () => {
 
     <template #footer>
       <Button
-        :label="cancelLabel || 'Cancel'"
+        :label="cancelLabel || t('common.cancel')"
         icon="pi pi-times"
         text
         @click="handleCancel"

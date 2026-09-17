@@ -296,11 +296,11 @@ onMounted(() => {
       <!-- Promote Admin Confirmation Modal -->
       <ConfirmationModal
         v-model:visible="showPromoteAdminModal"
-        title="Promote User to Admin"
+        :title="t('components.admin.users.promoteDialogTitle')"
         :question="promoteModalQuestion"
         :description="promoteModalDescription"
-        confirm-label="Promote to Admin"
-        cancel-label="Cancel"
+        :confirm-label="t('components.admin.users.promoteToAdminLabel')"
+        :cancel-label="t('common.cancel')"
         severity="warning"
         icon="pi pi-shield"
         :countdown-seconds="3"
@@ -310,11 +310,11 @@ onMounted(() => {
       <!-- Delete User Confirmation Modal -->
       <ConfirmationModal
         v-model:visible="showDeleteUserModal"
-        title="Delete User"
+        :title="t('components.admin.users.deleteDialogTitle')"
         :question="deleteModalQuestion"
         :description="deleteModalDescription"
-        confirm-label="Delete User"
-        cancel-label="Cancel"
+        :confirm-label="t('components.admin.users.deleteButton')"
+        :cancel-label="t('common.cancel')"
         severity="danger"
         icon="pi pi-trash"
         :countdown-seconds="3"

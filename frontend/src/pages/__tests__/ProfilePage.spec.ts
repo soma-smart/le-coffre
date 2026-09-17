@@ -8,6 +8,7 @@ import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserR
 import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
 import type { User } from '@/domain/user/User'
 import i18n from '@/i18n'
+import { primevueLocaleEn } from '@/i18n/primevueLocaleEn'
 
 const t = i18n.global.t.bind(i18n.global)
 
@@ -77,6 +78,9 @@ describe('ProfilePage', () => {
     // labels, calendar names, ...) live on a separate config, so both must
     // have switched together.
     expect(i18n.global.locale.value).toBe('en')
+    expect(
+      (wrapper.vm.$primevue as { config: { locale: { weak: string } } }).config.locale.weak,
+    ).toBe(primevueLocaleEn.weak)
     expect(document.documentElement.lang).toBe('en')
     expect(container.preferences.read.execute<string>({ key: PREFERENCE_KEYS.UI_LOCALE })).toBe(
       'en',

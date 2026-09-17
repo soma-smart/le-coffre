@@ -247,7 +247,7 @@ describe('PasswordHistoryModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Platform')
-    expect(wrapper.text()).not.toContain('until')
+    expect(wrapper.text()).not.toContain(t('common.passwordEvents.untilLabel').trim())
   })
 
   it('shows translated labels in the event-type filter, keyed by the raw event type', async () => {

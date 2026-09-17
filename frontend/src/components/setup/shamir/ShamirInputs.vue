@@ -41,6 +41,8 @@ watch(
 
 const isValidSSSConfig = computed(() => isValidShamirConfig(state))
 
+const losableParts = computed(() => Math.max(0, (state.shares ?? 0) - (state.threshold ?? 0)))
+
 defineExpose({
   isValidSSSConfig,
   state,
@@ -97,9 +99,9 @@ defineExpose({
           <span> {{ t('components.setup.shamirInputs.toReconstruct') }}</span>
           <span> {{ t('components.setup.shamirInputs.canLosePrefix') }} </span>
           <span class="font-bold text-red-500">
-            {{ Math.max(0, (state.shares ?? 0) - (state.threshold ?? 0)) }}
+            {{ losableParts }}
           </span>
-          <span> {{ t('components.setup.shamirInputs.partsSuffix') }}</span>
+          <span> {{ t('components.setup.shamirInputs.partsSuffix', losableParts) }}</span>
         </p>
       </div>
     </template>
