@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { mount } from '@vue/test-utils'
 import OneTimeLinksTable from '@/components/oneTimeLink/OneTimeLinksTable.vue'
@@ -51,6 +51,10 @@ function mountTable(links: AuditedOneTimeLink[], showIssuer = false) {
 }
 
 describe('OneTimeLinksTable', () => {
+  afterEach(() => {
+    i18n.global.locale.value = 'en'
+  })
+
   it('renders a live link with its status and password', () => {
     const wrapper = mountTable([makeLink()])
 
@@ -88,6 +92,7 @@ describe('OneTimeLinksTable', () => {
   })
 
   it('names the password, group and creation time in the confirmation', async () => {
+    i18n.global.locale.value = 'fr'
     const wrapper = mountTable([makeLink({ id: 'live', passwordName: 'Prod DB' })])
 
     await wrapper.find('[data-testid="revoke-live"]').trigger('click')
@@ -116,6 +121,7 @@ describe('OneTimeLinksTable', () => {
   })
 
   it('shows expiry as a duration, which cannot be misread as already past', () => {
+    i18n.global.locale.value = 'fr'
     const wrapper = mountTable([makeLink()])
 
     expect(wrapper.text()).toMatch(/dans \d+ (minute|heure|seconde)/)

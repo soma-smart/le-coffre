@@ -10,7 +10,7 @@ import {
 } from '@/domain/oneTimeLink/OneTimeLink'
 import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
-import { translateGroupName } from '@/utils/groupDisplayName'
+import { isPersonalGroupName, translateGroupName } from '@/utils/groupDisplayName'
 
 const { t } = useI18n()
 const pageReportTemplate = computed(() =>
@@ -42,7 +42,9 @@ const confirmQuestion = computed(() => {
 const confirmDescription = computed(() => {
   const link = pendingRevoke.value
   if (!link) return ''
-  const group = link.groupName ? translateGroupName(t, link.groupName) : t('common.unknownGroup')
+  const group = link.groupName
+    ? translateGroupName(t, link.groupName, isPersonalGroupName(link.groupName))
+    : t('common.unknownGroup')
   return [
     t('components.oneTimeLinksTable.revokeDescriptionGroup', { group }),
     t('components.oneTimeLinksTable.revokeDescriptionCreated', {
@@ -116,7 +118,7 @@ function confirmRevoke() {
     >
       <template #body="slotProps">
         <span v-if="slotProps.data.groupName" class="text-sm">{{
-          translateGroupName(t, slotProps.data.groupName)
+          translateGroupName(t, slotProps.data.groupName, isPersonalGroupName(slotProps.data.groupName))
         }}</span>
         <span v-else class="text-sm italic text-muted-color">{{ t('common.unknownGroup') }}</span>
       </template>

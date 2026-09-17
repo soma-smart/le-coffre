@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import OneTimeLinkModal from '@/components/modals/OneTimeLinkModal.vue'
@@ -82,7 +82,12 @@ async function openModal(repo: InMemoryOneTimeLinkRepository) {
 }
 
 describe('OneTimeLinkModal', () => {
+  afterEach(() => {
+    i18n.global.locale.value = 'en'
+  })
+
   it('shows when each link was created, not only its expiry', async () => {
+    i18n.global.locale.value = 'fr'
     const repo = new InMemoryOneTimeLinkRepository().seed(makeLink())
 
     const wrapper = await openModal(repo)
