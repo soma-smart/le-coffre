@@ -53,5 +53,7 @@ const ABSOLUTE_FORMAT: Intl.DateTimeFormatOptions = {
 /** Full timestamp, for the tooltip behind the relative label. */
 export const formatAbsoluteTime = (isoDate: string): string => {
   const target = new Date(isoDate)
-  return Number.isNaN(target.getTime()) ? '' : target.toLocaleString(activeLocale(), ABSOLUTE_FORMAT)
+  return Number.isNaN(target.getTime())
+    ? ''
+    : target.toLocaleString(activeLocale(), ABSOLUTE_FORMAT)
 }
