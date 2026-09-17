@@ -16,7 +16,6 @@
     "refresh": "Actualiser",
     "unknownUser": "Utilisateur inconnu",
     "unknownGroup": "groupe inconnu",
-    "personalGroupName": "Groupe personnel de {username}",
     "unknown": "Inconnu",
     "deletedPassword": "mot de passe supprimé",
     "vaultLockedSummary": "Coffre verrouillé",
