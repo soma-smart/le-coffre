@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import i18n from '@/i18n'
 
 afterEach(() => {
-  i18n.global.locale.value = 'fr'
+  i18n.global.locale.value = 'en'
 })
 
 describe('French plural rule', () => {

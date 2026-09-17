@@ -13,7 +13,7 @@ describe('translateGroupName', () => {
     )
   })
 
-  it('translates a personal group name even without the isPersonal flag, based on the pattern alone', () => {
+  it('treats an omitted isPersonal the same as true, trusting the caller', () => {
     expect(translateGroupName(t, "malvergnat's Personal Group")).toBe(
       'Groupe personnel de malvergnat',
     )
@@ -29,14 +29,16 @@ describe('translateGroupName', () => {
     expect(translateGroupName(t, 'Team Marketing', false)).toBe('Team Marketing')
   })
 
-  it('falls back to the raw name when it does not match the personal-group pattern', () => {
-    expect(translateGroupName(t, 'Some Random Group', true)).toBe('Some Random Group')
-  })
-
   it('extracts a username containing an apostrophe correctly', () => {
     expect(translateGroupName(t, "o'brien's Personal Group", true)).toBe(
       "Groupe personnel de o'brien",
     )
+  })
+
+  it('trusts an explicit isPersonal: true even against a name that does not match the pattern', () => {
+    // translateGroupName does not re-verify the name itself — a caller unsure
+    // whether isPersonal holds should check with isPersonalGroupName first.
+    expect(translateGroupName(t, 'Some Random Group', true)).toBe('Groupe personnel de ')
   })
 })
 

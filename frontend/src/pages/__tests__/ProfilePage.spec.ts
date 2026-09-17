@@ -49,14 +49,6 @@ function mountProfilePage() {
 }
 
 describe('ProfilePage', () => {
-  // i18n.global is the same singleton every component in the app (and every
-  // other test file's mounts, via test/setup.ts) reads from — leaving it on
-  // 'en' here would make unrelated French-text assertions elsewhere fail.
-  afterEach(() => {
-    i18n.global.locale.value = 'fr'
-    document.documentElement.lang = ''
-  })
-
   it('shows the language switcher once the user has loaded', async () => {
     const { wrapper } = mountProfilePage()
     await flushPromises()
@@ -66,24 +58,37 @@ describe('ProfilePage', () => {
     expect(wrapper.findAll('button').some((b) => b.text() === 'English')).toBe(true)
   })
 
-  it('switches the app to English and persists the choice when selected', async () => {
-    const { wrapper, container } = mountProfilePage()
-    await flushPromises()
+  // Scoped to this one test, which is the only one in this file that touches
+  // the shared i18n singleton — resets it so a failure partway through
+  // doesn't leave 'fr' leaking into unrelated tests elsewhere.
+  describe('language switch', () => {
+    afterEach(() => {
+      i18n.global.locale.value = 'en'
+      document.documentElement.lang = ''
+    })
 
-    const englishButton = wrapper.findAll('button').find((b) => b.text() === 'English')
-    expect(englishButton, 'expected an English option in the language switcher').toBeTruthy()
-    await englishButton!.trigger('click')
+    it('switches the app to English and persists the choice when selected', async () => {
+      // Start from French so clicking "English" actually exercises the switch,
+      // rather than the assertions trivially matching the app's own default.
+      i18n.global.locale.value = 'fr'
+      const { wrapper, container } = mountProfilePage()
+      await flushPromises()
 
-    // i18n drives every t() call app-wide; PrimeVue's own strings (filter
-    // labels, calendar names, ...) live on a separate config, so both must
-    // have switched together.
-    expect(i18n.global.locale.value).toBe('en')
-    expect(
-      (wrapper.vm.$primevue as { config: { locale: { weak: string } } }).config.locale.weak,
-    ).toBe(primevueLocaleEn.weak)
-    expect(document.documentElement.lang).toBe('en')
-    expect(container.preferences.read.execute<string>({ key: PREFERENCE_KEYS.UI_LOCALE })).toBe(
-      'en',
-    )
+      const englishButton = wrapper.findAll('button').find((b) => b.text() === 'English')
+      expect(englishButton, 'expected an English option in the language switcher').toBeTruthy()
+      await englishButton!.trigger('click')
+
+      // i18n drives every t() call app-wide; PrimeVue's own strings (filter
+      // labels, calendar names, ...) live on a separate config, so both must
+      // have switched together.
+      expect(i18n.global.locale.value).toBe('en')
+      expect(
+        (wrapper.vm.$primevue as { config: { locale: { weak: string } } }).config.locale.weak,
+      ).toBe(primevueLocaleEn.weak)
+      expect(document.documentElement.lang).toBe('en')
+      expect(container.preferences.read.execute<string>({ key: PREFERENCE_KEYS.UI_LOCALE })).toBe(
+        'en',
+      )
+    })
   })
 })

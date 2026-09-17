@@ -14,7 +14,7 @@ import { primevueLocaleFr } from '@/i18n/primevueLocaleFr'
 import { primevueLocaleEn } from '@/i18n/primevueLocaleEn'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 
-type UiLocale = 'fr' | 'en'
+type UiLocale = 'en' | 'fr'
 
 const toast = useToast()
 const router = useRouter()
@@ -24,8 +24,8 @@ const $primevue = usePrimeVue()
 // Language names are shown in their own language regardless of the current
 // UI locale (an autonym) — "Français" and "English" are never translated.
 const languageOptions: { label: string; value: UiLocale }[] = [
-  { label: 'Français', value: 'fr' },
   { label: 'English', value: 'en' },
+  { label: 'Français', value: 'fr' },
 ]
 // main.ts already applies the persisted locale before the app mounts, so
 // this only needs to reflect whatever is already live.
