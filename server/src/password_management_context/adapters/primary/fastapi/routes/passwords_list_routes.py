@@ -14,8 +14,8 @@ from password_management_context.domain.exceptions import (
     FolderNotFoundError,
     PasswordManagementDomainError,
 )
-from shared_kernel.adapters.primary.dependencies import get_current_user
-from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.adapters.primary.dependencies import get_current_principal
+from shared_kernel.domain.entities import ApiPrincipal
 from shared_kernel.domain.exceptions import AccessDeniedError
 
 logger = logging.getLogger(__name__)
@@ -46,14 +46,16 @@ class GetPasswordListResponse(BaseModel):
 )
 def list_passwords(
     folder: str | None = None,
-    current_user: ValidatedUser = Depends(get_current_user),
+    principal: ApiPrincipal = Depends(get_current_principal),
     usecase: ListPasswordsUseCase = Depends(get_list_passwords_usecase),
 ):
     """
     List all passwords for the authenticated user, optionally filtered by folder.
 
     - **folder**: Optional folder name to filter passwords
-    - **Authentication**: Requires authentication via access_token cookie
+    - **Authentication**: an access_token cookie, or a browser-extension bearer
+      token. An extension token is read-only and never carries the admin role,
+      so it reaches only what its own user can read.
 
     Returns a list of passwords accessible by the user.
 
@@ -62,7 +64,7 @@ def list_passwords(
     """
     try:
         command = ListPasswordsCommand(
-            requester=current_user.to_authenticated_user(),
+            requester=principal.user.to_authenticated_user(),
             folder=folder,
         )
         passwords = usecase.execute(command)

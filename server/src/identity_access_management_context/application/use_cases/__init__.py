@@ -4,6 +4,17 @@ from .create_group_use_case import CreateGroupUseCase
 from .create_user_use_case import CreateUserUseCase
 from .delete_group_use_case import DeleteGroupUseCase
 from .delete_user_use_case import DeleteUserUseCase
+from .extension import (
+    ApproveExtensionPairingUseCase,
+    DenyExtensionPairingUseCase,
+    ExchangeExtensionPairingUseCase,
+    GetExtensionPairingUseCase,
+    ListExtensionTokensUseCase,
+    RevokeAllExtensionTokensUseCase,
+    RevokeExtensionTokenUseCase,
+    StartExtensionPairingUseCase,
+    ValidateExtensionTokenUseCase,
+)
 from .get_group_use_case import GetGroupUseCase
 from .get_statistic_for_admin_use_case import GetStatisticForAdminUseCase
 from .get_user_me_use_case import GetUserMeUseCase
@@ -28,6 +39,15 @@ from .update_user_use_case import UpdateUserUseCase
 from .validate_user_token_use_case import ValidateUserTokenUseCase
 
 __all__ = [
+    "ApproveExtensionPairingUseCase",
+    "DenyExtensionPairingUseCase",
+    "ExchangeExtensionPairingUseCase",
+    "GetExtensionPairingUseCase",
+    "ListExtensionTokensUseCase",
+    "RevokeAllExtensionTokensUseCase",
+    "RevokeExtensionTokenUseCase",
+    "StartExtensionPairingUseCase",
+    "ValidateExtensionTokenUseCase",
     "CreateUserUseCase",
     "DeleteUserUseCase",
     "GetUserUseCase",

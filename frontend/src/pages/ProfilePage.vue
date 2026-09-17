@@ -136,7 +136,7 @@ onMounted(() => {
   <MainLayout>
     <Toast position="bottom-right" />
     <div class="max-w-4xl mx-auto">
-      <h1 class="text-3xl font-bold mb-6">Profil</h1>
+      <h1 class="text-3xl font-bold mb-6">Profile</h1>
 
       <!-- Loading state -->
       <div v-if="loading" class="rounded-lg p-6 text-center">
@@ -171,7 +171,7 @@ onMounted(() => {
           </div>
 
           <div>
-            <label class="block text-sm font-medium mb-1"> Rôles </label>
+            <label class="block text-sm font-medium mb-1"> Roles </label>
             <div class="flex flex-wrap gap-2">
               <span
                 v-for="role in user.roles"
@@ -186,7 +186,7 @@ onMounted(() => {
 
         <!-- Password Update Section - Only for non-SSO users -->
         <div v-if="!user.isSso" class="border-t pt-4 mt-6">
-          <h3 class="text-lg font-semibold mb-4">Sécurité</h3>
+          <h3 class="text-lg font-semibold mb-4">Security</h3>
           <Button
             label="Change Password"
             icon="pi pi-key"
@@ -195,9 +195,11 @@ onMounted(() => {
           />
         </div>
 
+        <ConnectedExtensionsSection />
+
         <!-- Theme switcher (mobile uniquement) -->
         <div class="md:hidden mb-6 border-t pt-4">
-          <h3 class="text-lg font-semibold mb-4">Apparence</h3>
+          <h3 class="text-lg font-semibold mb-4">Appearance</h3>
           <ThemeSwitcher />
         </div>
 
