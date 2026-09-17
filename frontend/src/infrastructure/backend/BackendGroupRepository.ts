@@ -3,6 +3,7 @@ import {
   addOwnerToGroupGroupsGroupIdOwnersPost,
   createGroupGroupsPost,
   deleteGroupGroupsGroupIdDelete,
+  demoteOwnerToMemberGroupsGroupIdOwnersUserIdDelete,
   getGroupGroupsGroupIdGet,
   listGroupEventsGroupsGroupIdEventsGet,
   listGroupsGroupsGet,
@@ -16,7 +17,12 @@ import type {
   ListGroupsFilters,
 } from '@/application/ports/GroupRepository'
 import type { Group, GroupEvent } from '@/domain/group/Group'
-import { GroupAccessDeniedError, GroupDomainError, GroupNotFoundError } from '@/domain/group/errors'
+import {
+  GroupAccessDeniedError,
+  GroupDomainError,
+  GroupLastOwnerError,
+  GroupNotFoundError,
+} from '@/domain/group/errors'
 
 /**
  * Backend adapter for GroupRepository. Wraps every /groups/* SDK
@@ -99,6 +105,19 @@ export class BackendGroupRepository implements GroupRepository {
     })
     this.throwIfError(response.error, response.response?.status, groupId)
     return (response.data?.events ?? []).map(toGroupEvent)
+  }
+
+  async demoteToMember(groupId: string, userId: string): Promise<void> {
+    const response = await demoteOwnerToMemberGroupsGroupIdOwnersUserIdDelete({
+      path: { group_id: groupId, user_id: userId },
+    })
+    // 409: distinguishes "would leave the group without an owner" from a plain
+    // bad request, so the caller can show a translated, name-bearing message
+    // instead of the backend's raw id-based detail string.
+    if (response.error && response.response?.status === 409) {
+      throw new GroupLastOwnerError(groupId, userId)
+    }
+    this.throwIfError(response.error, response.response?.status, groupId)
   }
 
   private throwIfError(error: unknown, status: number | undefined, groupId?: string): void {
