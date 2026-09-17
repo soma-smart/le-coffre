@@ -27,7 +27,7 @@ export function isPersonalGroupName(name: string): boolean {
 export function translateGroupName(
   t: (key: string, params?: Record<string, unknown>) => string,
   name: string,
-  isPersonal?: boolean,
+  isPersonal: boolean,
 ): string {
   if (isPersonal === false) return name
 
