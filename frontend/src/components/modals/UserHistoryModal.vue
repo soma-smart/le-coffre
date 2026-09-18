@@ -227,7 +227,7 @@ const props = defineProps<{
 const visible = defineModel<boolean>('visible', { required: true })
 
 const toast = useToast()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const pageReportTemplate = computed(() =>
   buildPageReportTemplate(t, t('components.userHistoryModal.rowsNoun')),
 )
@@ -247,7 +247,7 @@ const availableEventTypes = computed(() => {
   // backend query); only the displayed label is translated.
   return Array.from(types)
     .map((type) => ({ label: translateEventType(t, type), value: type }))
-    .sort((a, b) => a.label.localeCompare(b.label))
+    .sort((a, b) => a.label.localeCompare(b.label, locale.value))
 })
 
 const fetchEvents = async () => {
