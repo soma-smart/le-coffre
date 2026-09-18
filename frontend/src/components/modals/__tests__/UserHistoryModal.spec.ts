@@ -8,6 +8,9 @@ import { CONTAINER_KEY } from '@/plugins/container'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import type { User, UserPasswordEvent } from '@/domain/user/User'
 import { createTestContext } from '@/test/componentTestHelpers'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 const { toastAdd } = vi.hoisted(() => ({ toastAdd: vi.fn() }))
 vi.mock('primevue/usetoast', () => ({ useToast: () => ({ add: toastAdd }) }))
@@ -77,8 +80,8 @@ describe('UserHistoryModal', () => {
     await flushPromises()
 
     const text = wrapper.text()
-    expect(text).toContain('Access duration changed for group')
-    expect(text).toContain('now expires')
+    expect(text).toContain(t('common.passwordEvents.accessDurationChanged'))
+    expect(text).toContain(t('common.passwordEvents.nowExpiresLabel').trim())
     expect(text).not.toContain('sharedWithGroupId')
   })
 
@@ -93,7 +96,7 @@ describe('UserHistoryModal', () => {
     const wrapper = mountModal()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('now permanent')
+    expect(wrapper.text()).toContain(t('common.passwordEvents.nowPermanentLabel').trim())
   })
 
   it('shows the deadline of a time-limited share', async () => {
@@ -108,7 +111,7 @@ describe('UserHistoryModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Contractors')
-    expect(wrapper.text()).toContain('until')
+    expect(wrapper.text()).toContain(t('common.passwordEvents.untilLabel').trim())
   })
 
   it('labels one-time-link events, which the local severity copy used to miss', async () => {
@@ -121,6 +124,45 @@ describe('UserHistoryModal', () => {
     const wrapper = mountModal()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('One Time Link Read')
+    expect(wrapper.text()).toContain(t('common.eventTypes.OneTimeLinkReadEvent'))
+  })
+
+  it('shows translated labels in the event-type filter, keyed by the raw event type', async () => {
+    repo.seedPasswordEvents('user-1', [
+      makeEvent({ eventType: 'PasswordCreatedEvent' }),
+      makeEvent({ eventId: 'e2', eventType: 'PasswordUpdatedEvent' }),
+    ])
+
+    const wrapper = mountModal()
+    await flushPromises()
+
+    const multiSelect = wrapper.findComponent({ name: 'MultiSelect' })
+    const options = multiSelect.props('options') as { label: string; value: string }[]
+
+    expect(options).toEqual(
+      expect.arrayContaining([
+        { label: t('common.eventTypes.PasswordCreatedEvent'), value: 'PasswordCreatedEvent' },
+        { label: t('common.eventTypes.PasswordUpdatedEvent'), value: 'PasswordUpdatedEvent' },
+      ]),
+    )
+  })
+
+  it('queries by the raw event type when a translated filter option is selected', async () => {
+    repo.seedPasswordEvents('user-1', [makeEvent({ eventType: 'PasswordCreatedEvent' })])
+    const listEventsSpy = vi.spyOn(repo, 'listPasswordEvents')
+
+    const wrapper = mountModal()
+    await flushPromises()
+    listEventsSpy.mockClear()
+
+    const multiSelect = wrapper.findComponent({ name: 'MultiSelect' })
+    await multiSelect.vm.$emit('update:modelValue', ['PasswordCreatedEvent'])
+    await multiSelect.vm.$emit('change')
+    await flushPromises()
+
+    expect(listEventsSpy).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ eventTypes: ['PasswordCreatedEvent'] }),
+    )
   })
 })

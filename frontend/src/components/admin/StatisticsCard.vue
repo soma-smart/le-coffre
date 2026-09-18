@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import { useContainer } from '@/plugins/container'
 
 const toast = useToast()
+const { t } = useI18n()
 
 // Resolve the use case at setup time — inject() has no component context
 // inside async handlers after an await.
@@ -29,8 +31,8 @@ const fetchStatistics = async () => {
     console.error('Failed to fetch statistics:', error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to fetch statistics',
+      summary: t('common.error'),
+      detail: t('components.admin.statistics.fetchFailed'),
       life: 5000,
     })
   } finally {
@@ -45,7 +47,7 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto">
-    <h1 class="text-3xl font-bold mb-6">Statistics</h1>
+    <h1 class="text-3xl font-bold mb-6">{{ t('components.admin.statistics.title') }}</h1>
 
     <div v-if="loading" class="flex justify-center items-center py-12">
       <ProgressSpinner />
@@ -57,7 +59,9 @@ onMounted(() => {
           <span class="pi pi-users text-primary text-2xl" />
         </div>
         <div>
-          <div class="text-muted-color text-sm font-medium uppercase tracking-wide">Users</div>
+          <div class="text-muted-color text-sm font-medium uppercase tracking-wide">
+            {{ t('components.admin.statistics.users') }}
+          </div>
           <div class="text-4xl font-bold mt-1">{{ userCount ?? '—' }}</div>
         </div>
       </div>
@@ -67,7 +71,9 @@ onMounted(() => {
           <span class="pi pi-th-large text-primary text-2xl" />
         </div>
         <div>
-          <div class="text-muted-color text-sm font-medium uppercase tracking-wide">Groups</div>
+          <div class="text-muted-color text-sm font-medium uppercase tracking-wide">
+            {{ t('components.admin.statistics.groups') }}
+          </div>
           <div class="text-4xl font-bold mt-1">{{ groupCount ?? '—' }}</div>
         </div>
       </div>
@@ -77,7 +83,9 @@ onMounted(() => {
           <span class="pi pi-key text-primary text-2xl" />
         </div>
         <div>
-          <div class="text-muted-color text-sm font-medium uppercase tracking-wide">Passwords</div>
+          <div class="text-muted-color text-sm font-medium uppercase tracking-wide">
+            {{ t('components.admin.statistics.passwords') }}
+          </div>
           <div class="text-4xl font-bold mt-1">{{ passwordCount ?? '—' }}</div>
         </div>
       </div>
@@ -88,7 +96,7 @@ onMounted(() => {
         </div>
         <div>
           <div class="text-muted-color text-sm font-medium uppercase tracking-wide">
-            Active links
+            {{ t('components.admin.statistics.activeLinks') }}
           </div>
           <!-- Headline is the live count: it is the only number that says how
                much anonymous read access is currently open on the vault. The
@@ -97,7 +105,7 @@ onMounted(() => {
             {{ activeOneTimeLinkCount ?? '—' }}
           </div>
           <div class="text-muted-color text-xs mt-1" data-testid="total-one-time-links">
-            of {{ oneTimeLinkCount ?? '—' }} issued
+            {{ t('components.admin.statistics.ofIssued', { total: oneTimeLinkCount ?? '—' }) }}
           </div>
         </div>
       </div>

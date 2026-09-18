@@ -7,6 +7,9 @@ import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import type { Password } from '@/domain/password/Password'
 import type { OneTimeLink } from '@/domain/oneTimeLink/OneTimeLink'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 const HOUR = 3_600_000
 
@@ -84,8 +87,9 @@ describe('OneTimeLinkModal', () => {
 
     const wrapper = await openModal(repo)
 
+    const createdPrefix = t('components.oneTimeLinkModal.createdLabel', { relative: '' }).trim()
     expect(wrapper.find('[data-testid="created-label"]').text()).toMatch(
-      /created .*(hour|minute|second)/,
+      new RegExp(`${createdPrefix} .*(hour|minute|second)`),
     )
   })
 
@@ -94,7 +98,8 @@ describe('OneTimeLinkModal', () => {
     const revokeSpy = vi.spyOn(repo, 'revoke')
 
     const wrapper = await openModal(repo)
-    const revokeButton = wrapper.findAll('button').find((b) => b.text().includes('Revoke'))
+    const revokeLabel = t('components.oneTimeLinkModal.revokeButton')
+    const revokeButton = wrapper.findAll('button').find((b) => b.text().includes(revokeLabel))
     await revokeButton!.trigger('click')
 
     // The click opens the prompt; the use case has not run yet.

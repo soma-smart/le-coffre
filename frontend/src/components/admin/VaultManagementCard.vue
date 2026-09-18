@@ -2,12 +2,14 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from 'vue-i18n'
 import { VaultDomainError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { checkVaultStatus } from '@/plugins/vaultStatus'
 
 const toast = useToast()
 const confirm = useConfirm()
+const { t } = useI18n()
 const lockingVault = ref(false)
 
 // Resolve use cases at setup time — inject() has no component context
@@ -16,12 +18,11 @@ const { vault } = useContainer()
 
 const handleLockVault = () => {
   confirm.require({
-    message:
-      "Are you sure you want to lock the vault? All users won't be able to access their passwords.",
-    header: 'Lock Vault Confirmation',
+    message: t('components.admin.vaultManagement.confirmMessage'),
+    header: t('components.admin.vaultManagement.confirmHeader'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancel',
-    acceptLabel: 'Lock Vault',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('components.admin.vaultManagement.confirmAccept'),
     acceptClass: 'p-button-danger',
     accept: async () => {
       lockingVault.value = true
@@ -30,8 +31,8 @@ const handleLockVault = () => {
 
         toast.add({
           severity: 'success',
-          summary: 'Vault Locked',
-          detail: 'The vault has been locked successfully.',
+          summary: t('components.admin.vaultManagement.lockedSummary'),
+          detail: t('components.admin.vaultManagement.lockedDetail'),
           life: 5000,
         })
 
@@ -39,13 +40,14 @@ const handleLockVault = () => {
         await checkVaultStatus()
       } catch (error) {
         console.error('Failed to lock vault:', error)
+        // VaultDomainError's message is the backend's own wording — not ours to translate.
         const detail =
           error instanceof VaultDomainError
             ? error.message
-            : 'Failed to lock the vault. Please try again.'
+            : t('components.admin.vaultManagement.lockFailedFallback')
         toast.add({
           severity: 'error',
-          summary: 'Lock Failed',
+          summary: t('components.admin.vaultManagement.lockFailedSummary'),
           detail,
           life: 5000,
         })
@@ -62,28 +64,28 @@ const handleLockVault = () => {
     <template #title>
       <div class="flex items-center gap-2">
         <i class="pi pi-lock"></i>
-        Vault Management
+        {{ t('components.admin.vaultManagement.title') }}
       </div>
     </template>
     <template #content>
-      <p class="text-muted-color mb-4">Manage the vault state and security settings.</p>
+      <p class="text-muted-color mb-4">{{ t('components.admin.vaultManagement.description') }}</p>
 
       <Message severity="error" :closable="false" class="mb-4">
         <div class="flex items-start gap-3">
           <i class="pi pi-exclamation-triangle text-xl"></i>
           <div class="flex-1">
-            <h3 class="font-semibold mb-2">Warning: Locking the Vault</h3>
+            <h3 class="font-semibold mb-2">
+              {{ t('components.admin.vaultManagement.warningTitle') }}
+            </h3>
             <p class="text-sm">
-              Locking le coffre will clear the decrypted encryption key from memory. All users will
-              lose access to their passwords until the vault is unlocked again with the proper keys.
-              This action should only be performed when necessary for security reasons.
+              {{ t('components.admin.vaultManagement.warningBody') }}
             </p>
           </div>
         </div>
       </Message>
 
       <Button
-        label="Lock Vault"
+        :label="t('components.admin.vaultManagement.lockButton')"
         icon="pi pi-lock"
         severity="danger"
         @click="handleLockVault"

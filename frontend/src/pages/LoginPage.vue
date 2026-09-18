@@ -2,12 +2,14 @@
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import { useUserStore } from '@/stores/user'
 import BlankLayout from '../layouts/BlankLayout.vue'
 
 const route = useRoute()
 const toast = useToast()
 const userStore = useUserStore()
+const { t } = useI18n()
 
 onMounted(() => {
   // Clear user store when arriving at login page
@@ -16,17 +18,18 @@ onMounted(() => {
   if (route.query.reason === 'no_token' || route.query.reason === 'session_expired') {
     toast.add({
       severity: 'warn',
-      summary: 'Session Expired',
-      detail: 'Your session has expired. Please login again.',
+      summary: t('auth.session.expiredSummary'),
+      detail: t('auth.session.expiredDetail'),
       life: 5000,
     })
   }
 
   if (route.query.error === 'sso_failed') {
-    const message = (route.query.message as string) || 'SSO authentication failed'
+    // route.query.message is server/URL-controlled text, not ours to translate.
+    const message = (route.query.message as string) || t('auth.sso.errors.genericFailed')
     toast.add({
       severity: 'error',
-      summary: 'SSO Authentication Failed',
+      summary: t('auth.sso.authenticationFailedSummary'),
       detail: message,
       life: 5000,
     })

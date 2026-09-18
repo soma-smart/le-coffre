@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   clampThresholdToShares,
   isValidShamirConfig,
@@ -7,6 +8,8 @@ import {
   SHAMIR_MIN_SHARES,
   type ShamirConfig,
 } from '@/domain/vault/ShamirConfig'
+
+const { t } = useI18n()
 
 const state = reactive<ShamirConfig>({
   shares: 5,
@@ -38,6 +41,8 @@ watch(
 
 const isValidSSSConfig = computed(() => isValidShamirConfig(state))
 
+const losableParts = computed(() => Math.max(0, (state.shares ?? 0) - (state.threshold ?? 0)))
+
 defineExpose({
   isValidSSSConfig,
   state,
@@ -50,7 +55,7 @@ defineExpose({
       <div class="space-y-4">
         <div class="flex gap-4">
           <div class="flex flex-col gap-2 flex-1">
-            <label for="shares">Number of shares</label>
+            <label for="shares">{{ t('components.setup.shamirInputs.sharesLabel') }}</label>
             <InputNumber
               showButtons
               v-model="state.shares"
@@ -61,7 +66,7 @@ defineExpose({
           </div>
 
           <div class="flex flex-col gap-2 flex-1">
-            <label for="threshold">Threshold</label>
+            <label for="threshold">{{ t('components.setup.shamirInputs.thresholdLabel') }}</label>
             <InputNumber
               showButtons
               v-model="state.threshold"
@@ -83,20 +88,27 @@ defineExpose({
         </div>
 
         <p>
-          <span>You will need </span>
-          <span class="font-bold text-green-500">
-            {{ state.threshold }}
-          </span>
-          <span> parts out of </span>
-          <span class="font-bold">
-            {{ state.shares }}
-          </span>
-          <span> to reconstruct the key.</span>
-          <span> You can lose </span>
-          <span class="font-bold text-red-500">
-            {{ Math.max(0, (state.shares ?? 0) - (state.threshold ?? 0)) }}
-          </span>
-          <span> parts.</span>
+          <!-- One key for both sentences rather than two <i18n-t> joined by a
+               template-level space: the space between them then lives inside
+               the translated string itself, immune to Vue's whitespace
+               handling regardless of how this template gets reformatted. -->
+          <i18n-t
+            keypath="components.setup.shamirInputs.needAndCanLose"
+            :plural="losableParts"
+            tag="span"
+            scope="global"
+            data-testid="shamir-summary"
+          >
+            <template #threshold>
+              <span class="font-bold text-green-500">{{ state.threshold }}</span>
+            </template>
+            <template #shares>
+              <span class="font-bold">{{ state.shares }}</span>
+            </template>
+            <template #count>
+              <span class="font-bold text-red-500">{{ losableParts }}</span>
+            </template>
+          </i18n-t>
         </p>
       </div>
     </template>

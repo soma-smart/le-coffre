@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, toRef, watch, onMounted, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { type Password } from '@/domain/password/Password'
 import { PasswordDomainError } from '@/domain/password/errors'
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const { groupsForPasswordCreation } = storeToRefs(groupsStore)
 const passwordsStore = usePasswordsStore()
@@ -56,6 +58,11 @@ const folderSuggestions = ref<string[]>([])
 const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
+
+const selectedGroup = computed(() =>
+  groupsForPasswordCreation.value.find((g) => g.id === selectedGroupId.value),
+)
+const selectedGroupLabel = computed(() => selectedGroup.value?.name ?? '')
 
 const resolveDefaultGroupId = (): string => {
   const preferredGroupId = props.defaultGroupId
@@ -98,7 +105,7 @@ const searchFolders = (event: { query: string }) => {
 }
 
 const urlError = computed(() =>
-  !form.url || isSafeHttpUrl(form.url) ? '' : 'URL must start with http:// or https://',
+  !form.url || isSafeHttpUrl(form.url) ? '' : t('components.createPasswordModal.urlInvalid'),
 )
 
 // Display bullets when password field is not focused
@@ -153,8 +160,8 @@ const handleSubmit = async () => {
   if (!form.name) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Name is required',
+      summary: t('common.validationError'),
+      detail: t('components.createPasswordModal.nameRequired'),
       life: 5000,
     })
     return
@@ -163,7 +170,7 @@ const handleSubmit = async () => {
   if (urlError.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
+      summary: t('common.validationError'),
       detail: urlError.value,
       life: 5000,
     })
@@ -173,8 +180,8 @@ const handleSubmit = async () => {
   if (!isEditMode.value && !form.password) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Password is required',
+      summary: t('common.validationError'),
+      detail: t('components.createPasswordModal.passwordRequired'),
       life: 5000,
     })
     return
@@ -183,8 +190,8 @@ const handleSubmit = async () => {
   if (!isEditMode.value && !selectedGroupId.value) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Please select a group',
+      summary: t('common.validationError'),
+      detail: t('components.createPasswordModal.groupRequired'),
       life: 5000,
     })
     return
@@ -206,8 +213,8 @@ const handleSubmit = async () => {
 
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Password updated successfully',
+        summary: t('common.success'),
+        detail: t('components.createPasswordModal.updatedDetail'),
         life: 5000,
       })
 
@@ -225,8 +232,8 @@ const handleSubmit = async () => {
 
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Password created successfully',
+        summary: t('common.success'),
+        detail: t('components.createPasswordModal.createdDetail'),
         life: 5000,
       })
 
@@ -237,7 +244,11 @@ const handleSubmit = async () => {
     resetForm()
     selectedGroupId.value = resolveDefaultGroupId()
   } catch (err: unknown) {
-    const fallback = `Failed to ${isEditMode.value ? 'update' : 'create'} password`
+    const fallback = isEditMode.value
+      ? t('components.createPasswordModal.updateFailedFallback')
+      : t('components.createPasswordModal.createFailedFallback')
+    // PasswordDomainError/Error messages come from the backend or an unknown
+    // failure — not ours to translate. Only our own fallback text is.
     const errorMessage =
       err instanceof PasswordDomainError
         ? err.message
@@ -246,7 +257,7 @@ const handleSubmit = async () => {
           : fallback
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail: errorMessage,
       life: 5000,
     })
@@ -295,16 +306,22 @@ const handlePasswordBlur = () => {
   <Dialog
     v-model:visible="visible"
     modal
-    :header="isEditMode ? 'Edit Password' : 'Create New Password'"
+    :header="
+      isEditMode
+        ? t('components.createPasswordModal.editTitle')
+        : t('components.createPasswordModal.createTitle')
+    "
     :style="{ width: '32rem' }"
   >
     <div class="flex flex-col gap-4" @keydown.enter.prevent="!loading && handleSubmit()">
       <div class="flex flex-col gap-2">
-        <label for="password-name" class="font-semibold">Name</label>
+        <label for="password-name" class="font-semibold">{{
+          t('components.createPasswordModal.nameLabel')
+        }}</label>
         <InputText
           id="password-name"
           v-model="form.name"
-          placeholder="e.g., Gmail Account"
+          :placeholder="t('components.createPasswordModal.namePlaceholder')"
           :disabled="loading"
           autofocus
         />
@@ -312,14 +329,16 @@ const handlePasswordBlur = () => {
 
       <!-- Group Selection (only for create mode) -->
       <div v-if="!isEditMode" class="flex flex-col gap-2">
-        <label for="password-group" class="font-semibold">Owner</label>
+        <label for="password-group" class="font-semibold">{{
+          t('components.createPasswordModal.ownerLabel')
+        }}</label>
         <Select
           id="password-group"
           v-model="selectedGroupId"
           :options="groupsForPasswordCreation"
           optionLabel="name"
           optionValue="id"
-          placeholder="Select owner group"
+          :placeholder="t('components.createPasswordModal.ownerPlaceholder')"
           :disabled="loading"
           class="w-full"
         >
@@ -330,36 +349,36 @@ const handlePasswordBlur = () => {
                 class="text-sm"
               ></i>
               <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color"
-                >(Personal)</span
-              >
+              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color">
+                {{ t('components.createPasswordModal.personalSuffix') }}
+              </span>
             </div>
           </template>
           <template #value="slotProps">
             <div v-if="slotProps.value" class="flex items-center gap-2">
               <i
-                :class="
-                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.isPersonal
-                    ? 'pi pi-user'
-                    : 'pi pi-users'
-                "
+                :class="selectedGroup?.isPersonal ? 'pi pi-user' : 'pi pi-users'"
                 class="text-sm"
               ></i>
-              <span>{{
-                groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.name
-              }}</span>
+              <span>{{ selectedGroupLabel }}</span>
+              <span v-if="selectedGroup?.isPersonal" class="text-xs text-muted-color">
+                {{ t('components.createPasswordModal.personalSuffix') }}
+              </span>
             </div>
             <span v-else>{{ slotProps.placeholder }}</span>
           </template>
         </Select>
         <small class="text-muted-color">
-          Select the owner group for this password. Only groups you own are shown.
+          {{ t('components.createPasswordModal.ownerHelp') }}
         </small>
       </div>
 
       <div class="flex flex-col gap-2">
         <label for="password-value" class="font-semibold"
-          >Password{{ isEditMode ? ' (leave empty to keep current)' : '' }}</label
+          >{{ t('components.createPasswordModal.passwordLabel')
+          }}{{
+            isEditMode ? t('components.createPasswordModal.passwordLabelEditSuffix') : ''
+          }}</label
         >
         <InputText
           id="password-value"
@@ -368,7 +387,11 @@ const handlePasswordBlur = () => {
           @focus="handlePasswordFocus"
           @blur="handlePasswordBlur"
           type="text"
-          :placeholder="isEditMode ? 'Leave empty to keep current password' : 'Enter password'"
+          :placeholder="
+            isEditMode
+              ? t('components.createPasswordModal.passwordPlaceholderEdit')
+              : t('components.createPasswordModal.passwordPlaceholderCreate')
+          "
           :disabled="loading"
           autocomplete="off"
           autocorrect="off"
@@ -387,22 +410,26 @@ const handlePasswordBlur = () => {
       <PasswordGenerator @generate="handleGenerate" />
 
       <div class="flex flex-col gap-2">
-        <label for="password-login" class="font-semibold">Login (optional)</label>
+        <label for="password-login" class="font-semibold">{{
+          t('components.createPasswordModal.loginLabel')
+        }}</label>
         <InputText
           id="password-login"
           v-model="form.login"
-          placeholder="e.g., user@example.com"
+          :placeholder="t('components.createPasswordModal.loginPlaceholder')"
           :disabled="loading"
           autocomplete="off"
         />
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="password-url" class="font-semibold">URL (optional)</label>
+        <label for="password-url" class="font-semibold">{{
+          t('components.createPasswordModal.urlLabel')
+        }}</label>
         <InputText
           id="password-url"
           v-model="form.url"
-          placeholder="e.g., https://example.com"
+          :placeholder="t('components.createPasswordModal.urlPlaceholder')"
           :disabled="loading"
           :invalid="!!urlError"
           autocomplete="off"
@@ -411,7 +438,9 @@ const handlePasswordBlur = () => {
       </div>
 
       <div class="flex flex-col gap-2">
-        <label for="password-folder" class="font-semibold">Folder (optional)</label>
+        <label for="password-folder" class="font-semibold">{{
+          t('components.createPasswordModal.folderLabel')
+        }}</label>
         <AutoComplete
           id="password-folder"
           v-model="form.folder"
@@ -419,20 +448,23 @@ const handlePasswordBlur = () => {
           @complete="searchFolders"
           dropdown
           :disabled="loading"
-          placeholder="Select or type a folder name"
+          :placeholder="t('components.createPasswordModal.folderPlaceholder')"
           class="w-full"
           fluid
         />
-        <small class="text-muted-color"
-          >Choose an existing folder or type a new one. Leave empty for no folder.</small
-        >
+        <small class="text-muted-color">{{ t('components.createPasswordModal.folderHelp') }}</small>
       </div>
     </div>
 
     <template #footer>
-      <Button label="Cancel" severity="secondary" @click="handleCancel" :disabled="loading" />
       <Button
-        :label="isEditMode ? 'Update' : 'Create'"
+        :label="t('common.cancel')"
+        severity="secondary"
+        @click="handleCancel"
+        :disabled="loading"
+      />
+      <Button
+        :label="isEditMode ? t('common.update') : t('common.create')"
         @click="handleSubmit"
         :loading="loading"
         icon="pi pi-check"

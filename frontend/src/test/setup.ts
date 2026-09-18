@@ -4,6 +4,9 @@ import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 import { resetContainer } from '@/plugins/container'
+import i18n from '@/i18n'
+import primevueLocaleFr from '@/i18n/primevueLocaleFr'
+import primevueLocaleEn from '@/i18n/primevueLocaleEn'
 
 // jsdom doesn't implement window.matchMedia, but several PrimeVue
 // overlays (DatePicker, MultiSelect, AutoComplete) call it on mount for
@@ -41,7 +44,25 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 // Installed for every component mount in vitest — matches what main.ts
 // installs at runtime, so useToast() / useConfirm() don't throw
 // "No PrimeVue Toast provided!" when a component's setup calls them.
-config.global.plugins = [[PrimeVue, { unstyled: true }], ToastService, ConfirmationService]
+//
+// The locale ternary below runs once, when this file is first evaluated —
+// not per mount. It picks up whatever i18n's default locale is at that
+// moment (currently 'en'), but does NOT track later assignments to
+// i18n.global.locale.value: a test that switches locale before mounting
+// still gets this fixed value. A test that needs the two genuinely in sync
+// at mount time has to set wrapper.vm.$primevue.config.locale itself.
+config.global.plugins = [
+  [
+    PrimeVue,
+    {
+      unstyled: true,
+      locale: i18n.global.locale.value === 'en' ? primevueLocaleEn : primevueLocaleFr,
+    },
+  ],
+  ToastService,
+  ConfirmationService,
+  i18n,
+]
 
 // Reset the module-level container fallback between tests so a container
 // set by one test's createTestContext doesn't leak into the next one.
