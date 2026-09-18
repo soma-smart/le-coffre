@@ -102,7 +102,9 @@ const fetchUserDisplayName = async (userId: string): Promise<string> => {
 // Resolve a group name from the already-loaded group list, falling back to the id.
 const groupName = (groupId: string): string => {
   const group = allGroups.value.find((g) => g.id === groupId)
-  return group?.name ?? groupId
+  // Deliberately `||` rather than the `??` used elsewhere: an empty name is
+  // just as unhelpful to show as a missing one, so it also falls back to the id.
+  return group?.name || groupId
 }
 
 // Load the access links and fold the per-(user, group) rows into one card per user.
@@ -368,7 +370,7 @@ onMounted(async () => {
             id="group-select"
             v-model="selectedGroupId"
             :options="availableGroupsForSharing"
-            :optionLabel="(group) => group.name"
+            optionLabel="name"
             optionValue="id"
             :placeholder="t('components.sharePasswordModal.selectGroupPlaceholder')"
             :disabled="loading"

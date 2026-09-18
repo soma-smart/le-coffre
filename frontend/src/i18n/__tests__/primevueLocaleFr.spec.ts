@@ -45,6 +45,9 @@ describe('primevueLocaleFr', () => {
   })
 
   it("primevueLocaleEn is PrimeVue's own English locale, kept in sync with the installed version", () => {
-    expect(primevueLocaleEn).toBe(englishDefaults)
+    // Deep-cloned rather than the same reference — see primevueLocaleEn.ts —
+    // so this checks content parity, not identity.
+    expect(primevueLocaleEn).toStrictEqual(englishDefaults)
+    expect(primevueLocaleEn).not.toBe(englishDefaults)
   })
 })

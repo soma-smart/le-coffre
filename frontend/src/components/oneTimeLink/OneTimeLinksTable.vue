@@ -186,7 +186,7 @@ function confirmRevoke() {
     :title="t('components.oneTimeLinksTable.revokeConfirmTitle')"
     :question="confirmQuestion"
     :description="confirmDescription"
-    :confirm-label="t('components.oneTimeLinkModal.revokeConfirmLabel')"
+    :confirm-label="t('components.oneTimeLinksTable.revokeButton')"
     :cancel-label="t('common.cancel')"
     severity="danger"
     icon="pi pi-ban"

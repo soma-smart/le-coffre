@@ -755,11 +755,8 @@
       "shamirInputs": {
         "sharesLabel": "Number of shares",
         "thresholdLabel": "Threshold",
-        "needPrefix": "You will need",
-        "outOf": "parts out of",
-        "toReconstruct": "to reconstruct the key.",
-        "canLosePrefix": "You can lose",
-        "partsSuffix": "part. | parts."
+        "needParts": "You will need {threshold} parts out of {shares} to reconstruct the key.",
+        "canLose": "You can lose {count} part. | You can lose {count} parts."
       },
       "sharesModal": {
         "title": "Shares of the master key",

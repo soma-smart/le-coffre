@@ -87,21 +87,27 @@ defineExpose({
           </template>
         </div>
 
-        <p>
-          <span>{{ t('components.setup.shamirInputs.needPrefix') }} </span>
-          <span class="font-bold text-green-500">
-            {{ state.threshold }}
-          </span>
-          <span> {{ t('components.setup.shamirInputs.outOf') }} </span>
-          <span class="font-bold">
-            {{ state.shares }}
-          </span>
-          <span> {{ t('components.setup.shamirInputs.toReconstruct') }}</span>
-          <span> {{ t('components.setup.shamirInputs.canLosePrefix') }} </span>
-          <span class="font-bold text-red-500">
-            {{ losableParts }}
-          </span>
-          <span> {{ t('components.setup.shamirInputs.partsSuffix', losableParts) }}</span>
+        <p data-testid="need-parts">
+          <i18n-t keypath="components.setup.shamirInputs.needParts" tag="span" scope="global">
+            <template #threshold>
+              <span class="font-bold text-green-500">{{ state.threshold }}</span>
+            </template>
+            <template #shares>
+              <span class="font-bold">{{ state.shares }}</span>
+            </template>
+          </i18n-t>
+        </p>
+        <p data-testid="can-lose">
+          <i18n-t
+            keypath="components.setup.shamirInputs.canLose"
+            :plural="losableParts"
+            tag="span"
+            scope="global"
+          >
+            <template #count>
+              <span class="font-bold text-red-500">{{ losableParts }}</span>
+            </template>
+          </i18n-t>
         </p>
       </div>
     </template>
