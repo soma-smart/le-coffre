@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import i18n from '@/i18n'
 import ShamirInputs from '../ShamirInputs.vue'
 
 describe('ShamirInputs', () => {
@@ -7,12 +8,17 @@ describe('ShamirInputs', () => {
     const wrapper = mount(ShamirInputs)
 
     // Defaults: shares=5, threshold=3, so 2 parts are losable (plural).
-    // Asserted per-paragraph (not the whole wrapper's .text()) so a missing
-    // separator between the two sentences can't hide inside one big string.
-    expect(wrapper.get('[data-testid="need-parts"]').text()).toBe(
-      'You will need 3 parts out of 5 to reconstruct the key.',
+    // Expected string is resolved through the real i18n instance rather than
+    // hardcoded, so this proves the component passes the right params into
+    // the right slots without coupling the test to current wording or to
+    // the default locale staying 'en'.
+    expect(wrapper.get('[data-testid="shamir-summary"]').text()).toBe(
+      i18n.global.t(
+        'components.setup.shamirInputs.needAndCanLose',
+        { threshold: 3, shares: 5, count: 2 },
+        2,
+      ),
     )
-    expect(wrapper.get('[data-testid="can-lose"]').text()).toBe('You can lose 2 parts.')
   })
 
   it('uses the singular form when exactly one part is losable', async () => {
@@ -22,6 +28,12 @@ describe('ShamirInputs', () => {
     vm.state.threshold = 3
     await wrapper.vm.$nextTick()
 
-    expect(wrapper.get('[data-testid="can-lose"]').text()).toBe('You can lose 1 part.')
+    expect(wrapper.get('[data-testid="shamir-summary"]').text()).toBe(
+      i18n.global.t(
+        'components.setup.shamirInputs.needAndCanLose',
+        { threshold: 3, shares: 4, count: 1 },
+        1,
+      ),
+    )
   })
 })

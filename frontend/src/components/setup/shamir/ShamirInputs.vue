@@ -87,23 +87,24 @@ defineExpose({
           </template>
         </div>
 
-        <p data-testid="need-parts">
-          <i18n-t keypath="components.setup.shamirInputs.needParts" tag="span" scope="global">
+        <p>
+          <!-- One key for both sentences rather than two <i18n-t> joined by a
+               template-level space: the space between them then lives inside
+               the translated string itself, immune to Vue's whitespace
+               handling regardless of how this template gets reformatted. -->
+          <i18n-t
+            keypath="components.setup.shamirInputs.needAndCanLose"
+            :plural="losableParts"
+            tag="span"
+            scope="global"
+            data-testid="shamir-summary"
+          >
             <template #threshold>
               <span class="font-bold text-green-500">{{ state.threshold }}</span>
             </template>
             <template #shares>
               <span class="font-bold">{{ state.shares }}</span>
             </template>
-          </i18n-t>
-        </p>
-        <p data-testid="can-lose">
-          <i18n-t
-            keypath="components.setup.shamirInputs.canLose"
-            :plural="losableParts"
-            tag="span"
-            scope="global"
-          >
             <template #count>
               <span class="font-bold text-red-500">{{ losableParts }}</span>
             </template>

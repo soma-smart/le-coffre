@@ -755,8 +755,7 @@
       "shamirInputs": {
         "sharesLabel": "Nombre de parts",
         "thresholdLabel": "Seuil",
-        "needParts": "Vous aurez besoin de {threshold} parts sur {shares} pour reconstituer la clé.",
-        "canLose": "Vous pouvez perdre {count} part. | Vous pouvez perdre {count} parts."
+        "needAndCanLose": "Vous aurez besoin de {threshold} parts sur {shares} pour reconstituer la clé. Vous pouvez perdre {count} part. | Vous aurez besoin de {threshold} parts sur {shares} pour reconstituer la clé. Vous pouvez perdre {count} parts."
       },
       "sharesModal": {
         "title": "Parts de la clé maîtresse",
