@@ -1019,7 +1019,7 @@ export const addMemberToGroupGroupsGroupIdMembersPost = <ThrowOnError extends bo
  * - **group_id**: ID of the group (path parameter)
  * - **user_id**: ID of the user to promote to owner
  * - **Authorization**: Bearer token required (access_token cookie)
- * - **Permission**: Only group owners can add new owners
+ * - **Permission**: Only group owners or admins can add new owners
  *
  * The user must already be a member of the group before being promoted to owner.
  * Cannot add owners to personal groups.
@@ -1047,7 +1047,7 @@ export const addOwnerToGroupGroupsGroupIdOwnersPost = <ThrowOnError extends bool
  * - **group_id**: ID of the group (path parameter)
  * - **user_id**: ID of the owner to demote (path parameter)
  * - **Authorization**: Bearer token required (access_token cookie)
- * - **Permission**: Only group owners can demote an owner (including themselves)
+ * - **Permission**: Only group owners or admins can demote an owner (including themselves)
  *
  * Cannot demote the last remaining owner of a group.
  * Cannot demote owners of personal groups.
