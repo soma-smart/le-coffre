@@ -10,7 +10,6 @@ import type { Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
-import { translateGroupName } from '@/utils/groupDisplayName'
 import { GroupDomainError, GroupLastOwnerError } from '@/domain/group/errors'
 
 const visible = defineModel<boolean>('visible', { required: true })
@@ -177,7 +176,7 @@ const handleDemoteOwner = (user: User) => {
           actionError.value instanceof GroupLastOwnerError
             ? t('components.groupDetailsModal.demoteFailedLastOwner', {
                 user: user.name,
-                group: translateGroupName(t, group.name, group.isPersonal),
+                group: group.name,
               })
             : actionError.value instanceof GroupDomainError
               ? actionError.value.message
