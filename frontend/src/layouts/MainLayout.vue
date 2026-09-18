@@ -1,40 +1,60 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
+import { useResizableWidth } from '@/composables/useResizableWidth'
+
+withDefaults(defineProps<{ padded?: boolean }>(), { padded: true })
 
 const router = useRouter()
 const route = useRoute()
 
-const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords/'))
+const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords'))
 const isGroupsActive = computed(() => route.path === '/groups')
 const isProfileActive = computed(() => route.path === '/profile')
+
+const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizableWidth({
+  storageKey: 'le-coffre.sidebar-width',
+  defaultWidth: 320,
+  min: 220,
+  max: 480,
+})
 </script>
 
 <template>
   <div class="h-screen flex overflow-hidden">
-    <!-- Menu latéral -->
-    <aside class="hidden md:flex w-80 border-r border-surface flex flex-col">
-      <div class="p-4 border-b border-surface flex items-center gap-3">
+    <!-- Sidebar menu -->
+    <aside
+      class="hidden md:flex relative shrink-0 border-r border-surface flex-col"
+      :style="{ width: `${sidebarWidth}px` }"
+    >
+      <div class="h-18 px-4 border-b border-surface flex items-center gap-3">
         <img src="/img/le-coffre.png" alt="Le Coffre" class="h-10 w-auto" />
         <h1 class="text-2xl font-bold text-primary">Le Coffre</h1>
+        <ThemeSwitcher variant="icon" class="ml-auto" />
       </div>
-      <div class="flex-1 overflow-y-auto">
+      <div class="flex-1 min-h-0 flex">
         <MainMenu />
       </div>
+      <ResizeHandle @pointerdown="startSidebarResizing" />
     </aside>
 
-    <!-- Contenu principal -->
+    <!-- Main content -->
     <div class="flex-1 flex flex-col min-w-0">
-      <main class="flex-1 p-6 overflow-y-auto overflow-x-hidden pb-16 md:pb-0">
+      <main
+        class="flex-1 overflow-x-hidden pb-16 md:pb-0"
+        :class="padded ? 'p-6 overflow-y-auto' : 'overflow-hidden'"
+      >
         <slot />
       </main>
     </div>
   </div>
 
-  <!-- Barre de navigation (mobile uniquement) -->
-  <nav class="md:hidden fixed bottom-0 left-0 right-0 border-t border-surface bg-surface-0 flex">
+  <!-- Navigation bar (mobile only) -->
+  <nav
+    class="md:hidden fixed bottom-0 left-0 right-0 border-t border-surface bg-surface-0 dark:bg-surface-900 flex"
+  >
     <button
-      @click="router.push('/')"
+      @click="router.push({ name: 'PasswordsRoot' })"
       class="flex-1 flex flex-col items-center py-3 gap-1"
       :class="isPasswordsActive ? 'text-primary' : 'text-muted-color'"
     >

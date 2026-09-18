@@ -207,3 +207,55 @@ export function matchesPasswordQuery(
     (password.url?.toLowerCase().includes(needle) ?? false)
   )
 }
+
+/**
+ * The backend coerces any falsy folder to this literal string (see the
+ * server's `Password.__setattr__`), so it — and only it — means "at the
+ * group root, no folder". Any other value is a real folder name.
+ */
+export const ROOT_FOLDER = 'default'
+
+/** Matches the backend's own case/whitespace-insensitive treatment of "default". */
+export function isRootFolder(folder: string): boolean {
+  return folder.trim().toLowerCase() === ROOT_FOLDER
+}
+
+/** Display label for a folder name, e.g. for a sidebar or breadcrumb. */
+export function folderLabelOf(folder: string): string {
+  return isRootFolder(folder) ? 'No folder' : folder
+}
+
+/**
+ * Every distinct folder name across a set of passwords, sorted alphabetically
+ * with the root folder always pinned first (it represents "everything not in
+ * a folder", so it reads best as the top of the list rather than sorted by
+ * its literal name).
+ */
+export function folderNamesOf(passwords: readonly Password[]): string[] {
+  const names = new Set(passwords.map((password) => password.folder))
+  return Array.from(names).sort((a, b) => {
+    if (isRootFolder(a)) return isRootFolder(b) ? 0 : -1
+    if (isRootFolder(b)) return 1
+    return a.localeCompare(b)
+  })
+}
+
+/**
+ * The middle pane's row subtitle: "Group / Folder - login" when the password
+ * lives in a folder, "Group - login" at the group root, or just the login (or
+ * nothing) when no group name is available — e.g. in a single-group context
+ * where repeating the group name would be noise.
+ */
+export function passwordSubtitle(
+  password: Password,
+  context: { groupName?: string; showFolder?: boolean } = {},
+): string {
+  const { groupName, showFolder = true } = context
+  const parts: string[] = []
+  if (groupName) parts.push(groupName)
+  if (showFolder && !isRootFolder(password.folder)) parts.push(password.folder)
+
+  const breadcrumb = parts.join(' / ')
+  if (breadcrumb && password.login) return `${breadcrumb} - ${password.login}`
+  return breadcrumb || password.login || ''
+}

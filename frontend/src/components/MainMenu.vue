@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col w-full h-full">
-    <!-- Menu -->
-    <div class="flex-1">
+    <!-- Passwords + groups tree — the only part that scrolls -->
+    <div class="flex-1 min-h-0 overflow-y-auto">
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
         :class="isPasswordsActive ? 'bg-primary/10' : ''"
@@ -15,43 +15,22 @@
           >Passwords</span
         >
       </div>
-      <div class="pl-8 pb-2">
-        <div
+      <div>
+        <PasswordGroupNavItem
           v-for="group in myPasswordGroups"
           :key="group.id"
-          class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis rounded"
-          :class="isActivePasswordGroup(group.id) ? 'bg-primary/10' : ''"
-          @click="goToPasswordsGroup(group.id)"
-        >
-          <span
-            class="pi transition-colors text-sm"
-            :class="[
-              group.isPersonal ? 'pi-user' : 'pi-users',
-              isActivePasswordGroup(group.id)
-                ? 'text-primary'
-                : 'text-muted-color group-hover:text-primary',
-            ]"
-          />
-          <span
-            class="ml-2 transition-colors text-sm truncate"
-            :class="{ 'font-semibold': isActivePasswordGroup(group.id) }"
-            >{{ group.name }}</span
-          >
-          <div class="ml-auto flex items-center">
-            <div class="w-6 h-6 flex items-center justify-center">
-              <Button
-                v-if="isOwnerOfGroup(group)"
-                icon="pi pi-plus"
-                text
-                rounded
-                size="small"
-                class="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                @click.stop="goToCreatePasswordForGroup(group.id)"
-              />
-            </div>
-            <Badge class="ml-1" :value="passwordCountByGroupId[group.id] ?? 0" />
-          </div>
-        </div>
+          :group="group"
+          :active="isActivePasswordGroup(group.id)"
+          :active-folder="activeFolder"
+          :count="passwordCountByGroupId[group.id] ?? 0"
+          :can-create="isOwnerOfGroup(group)"
+          :expanded="isGroupExpanded(group.id)"
+          :folders="foldersByGroupId[group.id] ?? []"
+          @select="goToPasswordsGroup(group.id)"
+          @toggle="toggleGroupExpanded(group.id)"
+          @create="goToCreatePasswordForGroup(group.id)"
+          @select-folder="goToGroupFolder(group.id, $event)"
+        />
 
         <div v-if="isAdmin" class="px-4 py-2">
           <div class="border-t border-surface"></div>
@@ -74,44 +53,27 @@
             <span class="uppercase tracking-wide">Show admin groups</span>
           </button>
         </div>
-        <div
+        <PasswordGroupNavItem
           v-for="group in adminExtraPasswordGroups"
           v-show="isAdmin && adminPasswordViewEnabled"
           :key="`admin-${group.id}`"
-          class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis rounded"
-          :class="isActivePasswordGroup(group.id) ? 'bg-primary/10' : ''"
-          @click="goToPasswordsGroup(group.id)"
-        >
-          <span
-            class="pi transition-colors text-sm"
-            :class="[
-              group.isPersonal ? 'pi-user' : 'pi-users',
-              isActivePasswordGroup(group.id)
-                ? 'text-primary'
-                : 'text-muted-color group-hover:text-primary',
-            ]"
-          />
-          <span
-            class="ml-2 transition-colors text-sm truncate"
-            :class="{ 'font-semibold': isActivePasswordGroup(group.id) }"
-            >{{ group.name }}</span
-          >
-          <div class="ml-auto flex items-center">
-            <div class="w-6 h-6 flex items-center justify-center">
-              <Button
-                v-if="isOwnerOfGroup(group)"
-                icon="pi pi-plus"
-                text
-                rounded
-                size="small"
-                class="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                @click.stop="goToCreatePasswordForGroup(group.id)"
-              />
-            </div>
-            <Badge class="ml-1" :value="passwordCountByGroupId[group.id] ?? 0" />
-          </div>
-        </div>
+          :group="group"
+          :active="isActivePasswordGroup(group.id)"
+          :active-folder="activeFolder"
+          :count="passwordCountByGroupId[group.id] ?? 0"
+          :can-create="isOwnerOfGroup(group)"
+          :expanded="isGroupExpanded(group.id)"
+          :folders="foldersByGroupId[group.id] ?? []"
+          @select="goToPasswordsGroup(group.id)"
+          @toggle="toggleGroupExpanded(group.id)"
+          @create="goToCreatePasswordForGroup(group.id)"
+          @select-folder="goToGroupFolder(group.id, $event)"
+        />
       </div>
+    </div>
+
+    <!-- Groups / My links / Profile / Admin, pinned directly above the footer -->
+    <div class="shrink-0">
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
         :class="isGroupsActive ? 'bg-primary/10' : ''"
@@ -149,9 +111,6 @@
         />
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }"
           >Profile</span
-        >
-        <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1"
-          >⌘+W</span
         >
       </div>
       <div v-if="isAdmin">
@@ -248,8 +207,9 @@
         </div>
       </div>
     </div>
-    <!-- Logout Button and Theme Switcher at bottom -->
-    <div class="p-4 border-t border-surface flex flex-col gap-3">
+
+    <!-- Logout Button at bottom -->
+    <div class="p-4 border-t border-surface flex flex-col gap-3 shrink-0">
       <Button
         label="Logout"
         icon="pi pi-sign-out"
@@ -258,7 +218,6 @@
         outlined
         class="w-full"
       />
-      <ThemeSwitcher />
     </div>
   </div>
 </template>
@@ -284,6 +243,7 @@ const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 const toast = useToast()
 
 const passwordsStore = usePasswordsStore()
+const { foldersByGroupId } = storeToRefs(passwordsStore)
 
 const passwordAccessStore = usePasswordAccessStore()
 const { passwordCountByGroupId } = storeToRefs(passwordAccessStore)
@@ -302,8 +262,11 @@ const { adminPasswordViewEnabled: adminPasswordViewPreference } =
 // Admin menu state
 const adminMenuExpanded = ref(false)
 
+// Which groups currently show their folder list open.
+const expandedGroupIds = ref(new Set<string>())
+
 // Active state detection
-const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords/'))
+const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords'))
 const isGroupsActive = computed(() => route.path === '/groups')
 const isProfileActive = computed(() => route.path === '/profile')
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
@@ -316,6 +279,10 @@ const selectedGroupSlug = computed(() => (route.params.groupSlug as string | und
 const selectedGroupId = computed(() => findGroupIdBySlug(groups.value, selectedGroupSlug.value))
 const adminPasswordViewEnabled = computed(() => isAdmin.value && adminPasswordViewPreference.value)
 const currentUserId = computed(() => currentUser.value?.id ?? null)
+/** The `?folder=` query value — only meaningful for whichever group is `active`. */
+const activeFolder = computed<string | null>(
+  () => (route.query.folder as string | undefined) ?? null,
+)
 
 const {
   myPasswordGroups,
@@ -337,6 +304,16 @@ const {
 
 const isActivePasswordGroup = (groupId: string) =>
   isPasswordsActive.value && selectedGroupId.value === groupId
+
+const isGroupExpanded = (groupId: string) => expandedGroupIds.value.has(groupId)
+
+const toggleGroupExpanded = (groupId: string) => {
+  if (expandedGroupIds.value.has(groupId)) {
+    expandedGroupIds.value.delete(groupId)
+  } else {
+    expandedGroupIds.value.add(groupId)
+  }
+}
 
 const buildHomeQuery = (shouldOpenCreate = false) => {
   const query: Record<string, string> = {}
@@ -377,9 +354,9 @@ const goToGroupRoute = (groupId: string | null, shouldOpenCreate = false) => {
   })
 }
 
+/** Clears the group scope rather than picking a default one — the list then spans every group. */
 const goToAllPasswords = () => {
-  const defaultGroupId = getDefaultGroupId(myPasswordGroups.value)
-  goToGroupRoute(defaultGroupId)
+  router.push({ name: 'PasswordsRoot' })
 }
 
 const goToPasswordsGroup = (groupId: string) => {
@@ -388,6 +365,30 @@ const goToPasswordsGroup = (groupId: string) => {
 
 const goToCreatePasswordForGroup = (groupId: string) => {
   goToGroupRoute(groupId, true)
+}
+
+/** Navigate to a group narrowed to one folder, or to "All" when `folderName` is null. */
+const goToGroupFolder = (groupId: string, folderName: string | null) => {
+  const slug = getGroupSlugById(groupId)
+  if (!slug) {
+    router.push({ name: 'Home', query: buildHomeQuery() })
+    return
+  }
+
+  expandedGroupIds.value.add(groupId)
+
+  const query: Record<string, string> = { ...(route.query as Record<string, string>) }
+  if (folderName) {
+    query.folder = folderName
+  } else {
+    delete query.folder
+  }
+
+  const currentFolder = (route.query.folder as string | undefined) ?? null
+  const isSameScope = selectedGroupId.value === groupId && currentFolder === folderName
+  if (!isSameScope) delete query.password
+
+  router.push({ name: 'HomeGroup', params: { groupSlug: slug }, query })
 }
 
 const toggleAdminPasswordView = () => {
@@ -478,11 +479,20 @@ const handleLogout = async () => {
   })
 }
 
+// Auto-expand the folder list of whichever group the route currently selects.
+watch(
+  selectedGroupId,
+  (groupId) => {
+    if (groupId) expandedGroupIds.value.add(groupId)
+  },
+  { immediate: true },
+)
+
 // Watch for route changes and reload passwords when returning to home
 watch(
   () => route.path,
   (newPath) => {
-    if (newPath === '/' || newPath.startsWith('/passwords/')) {
+    if (newPath === '/' || newPath.startsWith('/passwords')) {
       passwordsStore.fetchPasswords()
       groupsStore.fetchAllGroups()
     }
