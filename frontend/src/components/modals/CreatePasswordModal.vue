@@ -59,10 +59,10 @@ const selectedGroupId = ref<string>('')
 const loading = ref(false)
 const passwordFieldFocused = ref(false)
 
-const selectedGroupLabel = computed(() => {
-  const group = groupsForPasswordCreation.value.find((g) => g.id === selectedGroupId.value)
-  return group?.name ?? ''
-})
+const selectedGroup = computed(() =>
+  groupsForPasswordCreation.value.find((g) => g.id === selectedGroupId.value),
+)
+const selectedGroupLabel = computed(() => selectedGroup.value?.name ?? '')
 
 const resolveDefaultGroupId = (): string => {
   const preferredGroupId = props.defaultGroupId
@@ -349,22 +349,21 @@ const handlePasswordBlur = () => {
                 class="text-sm"
               ></i>
               <span>{{ slotProps.option.name }}</span>
-              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color"
-                >(Personal)</span
-              >
+              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color">
+                {{ t('components.createPasswordModal.personalSuffix') }}
+              </span>
             </div>
           </template>
           <template #value="slotProps">
             <div v-if="slotProps.value" class="flex items-center gap-2">
               <i
-                :class="
-                  groupsForPasswordCreation.find((g) => g.id === slotProps.value)?.isPersonal
-                    ? 'pi pi-user'
-                    : 'pi pi-users'
-                "
+                :class="selectedGroup?.isPersonal ? 'pi pi-user' : 'pi pi-users'"
                 class="text-sm"
               ></i>
               <span>{{ selectedGroupLabel }}</span>
+              <span v-if="selectedGroup?.isPersonal" class="text-xs text-muted-color">
+                {{ t('components.createPasswordModal.personalSuffix') }}
+              </span>
             </div>
             <span v-else>{{ slotProps.placeholder }}</span>
           </template>

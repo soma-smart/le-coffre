@@ -225,6 +225,7 @@ import { VaultLockedError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { translateEventType } from '@/utils/eventTypeLabel'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
+import { activeLocale } from '@/utils/relativeTime'
 
 const props = defineProps<{
   password: Password | null
@@ -297,7 +298,7 @@ const fetchEvents = async () => {
 }
 
 const formatDateTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('en-GB', {
+  return new Date(dateString).toLocaleString(activeLocale(), {
     year: 'numeric',
     month: 'short',
     day: '2-digit',

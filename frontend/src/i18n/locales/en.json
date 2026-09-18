@@ -424,6 +424,7 @@
       "ownerLabel": "Owner",
       "ownerPlaceholder": "Select owner group",
       "ownerHelp": "Select the owner group for this password. Only groups you own are shown.",
+      "personalSuffix": "(Personal)",
       "passwordLabel": "Password",
       "passwordLabelEditSuffix": " (leave empty to keep current)",
       "passwordPlaceholderEdit": "Leave empty to keep current password",

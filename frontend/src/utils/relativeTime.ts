@@ -7,7 +7,11 @@ import i18n from '@/i18n'
 // en-GB rather than en-US because it is English while using a 24-hour clock
 // and a day-first date natively, so no per-call option has to override the
 // locale's own convention.
-const activeLocale = (): string => (i18n.global.locale.value === 'en' ? 'en-GB' : 'fr')
+//
+// Exported for other date/time formatting in the app (e.g. absolute
+// timestamps shown alongside a relative label on the same row) so they stay
+// in the same locale rather than drifting back to a hardcoded one.
+export const activeLocale = (): string => (i18n.global.locale.value === 'en' ? 'en-GB' : 'fr')
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['day', 86_400_000],
