@@ -755,11 +755,8 @@
       "shamirInputs": {
         "sharesLabel": "Nombre de parts",
         "thresholdLabel": "Seuil",
-        "needPrefix": "Vous aurez besoin de",
-        "outOf": "parts sur",
-        "toReconstruct": "pour reconstituer la clé.",
-        "canLosePrefix": "Vous pouvez perdre",
-        "partsSuffix": "part. | parts."
+        "needParts": "Vous aurez besoin de {threshold} parts sur {shares} pour reconstituer la clé.",
+        "canLose": "Vous pouvez perdre {count} part. | Vous pouvez perdre {count} parts."
       },
       "sharesModal": {
         "title": "Parts de la clé maîtresse",
