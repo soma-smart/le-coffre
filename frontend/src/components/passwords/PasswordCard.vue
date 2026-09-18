@@ -220,7 +220,7 @@ import { useContainer } from '@/plugins/container'
 import { useGroupsStore } from '@/stores/groups'
 import { usePasswordReveal } from '@/composables/usePasswordReveal'
 import { usePasswordSharedAccess } from '@/composables/usePasswordSharedAccess'
-import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
+import { activeLocale, formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
 import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const actorUsernameCache = new Map<string, string>()
@@ -287,7 +287,7 @@ const canReadInContext = computed(() => {
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-GB', {
+  return date.toLocaleDateString(activeLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

@@ -424,6 +424,7 @@
       "ownerLabel": "Propriétaire",
       "ownerPlaceholder": "Sélectionnez le groupe propriétaire",
       "ownerHelp": "Sélectionnez le groupe propriétaire de ce mot de passe. Seuls les groupes que vous possédez sont affichés.",
+      "personalSuffix": "(Personnel)",
       "passwordLabel": "Mot de passe",
       "passwordLabelEditSuffix": " (laisser vide pour conserver l'actuel)",
       "passwordPlaceholderEdit": "Laisser vide pour conserver le mot de passe actuel",
