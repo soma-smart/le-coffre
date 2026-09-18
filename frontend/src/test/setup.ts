@@ -43,9 +43,14 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 
 // Installed for every component mount in vitest — matches what main.ts
 // installs at runtime, so useToast() / useConfirm() don't throw
-// "No PrimeVue Toast provided!" when a component's setup calls them. The
-// PrimeVue locale is derived from i18n's own locale, same as main.ts, so a
-// test that switches i18n before mounting doesn't start the two out of sync.
+// "No PrimeVue Toast provided!" when a component's setup calls them.
+//
+// The locale ternary below runs once, when this file is first evaluated —
+// not per mount. It picks up whatever i18n's default locale is at that
+// moment (currently 'en'), but does NOT track later assignments to
+// i18n.global.locale.value: a test that switches locale before mounting
+// still gets this fixed value. A test that needs the two genuinely in sync
+// at mount time has to set wrapper.vm.$primevue.config.locale itself.
 config.global.plugins = [
   [
     PrimeVue,

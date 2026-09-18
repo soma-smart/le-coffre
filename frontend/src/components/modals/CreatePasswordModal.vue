@@ -349,6 +349,9 @@ const handlePasswordBlur = () => {
                 class="text-sm"
               ></i>
               <span>{{ slotProps.option.name }}</span>
+              <span v-if="slotProps.option.isPersonal" class="text-xs text-muted-color"
+                >(Personal)</span
+              >
             </div>
           </template>
           <template #value="slotProps">

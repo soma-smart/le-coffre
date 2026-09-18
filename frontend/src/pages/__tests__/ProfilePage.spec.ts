@@ -9,6 +9,7 @@ import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
 import type { User } from '@/domain/user/User'
 import i18n from '@/i18n'
 import { primevueLocaleEn } from '@/i18n/primevueLocaleEn'
+import { primevueLocaleFr } from '@/i18n/primevueLocaleFr'
 
 const t = i18n.global.t.bind(i18n.global)
 
@@ -74,6 +75,15 @@ describe('ProfilePage', () => {
       const { wrapper, container } = mountProfilePage()
       await flushPromises()
 
+      // setup.ts installs PrimeVue with its module-load-time default (always
+      // 'en', regardless of the line above) — pin it to fr here to mirror
+      // what main.ts would actually do on a French boot, so the assertion
+      // below is checking a real transition rather than comparing en to en.
+      const primevueConfig = (
+        wrapper.vm.$primevue as { config: { locale: typeof primevueLocaleFr } }
+      ).config
+      primevueConfig.locale = primevueLocaleFr
+
       const englishButton = wrapper.findAll('button').find((b) => b.text() === 'English')
       expect(englishButton, 'expected an English option in the language switcher').toBeTruthy()
       await englishButton!.trigger('click')
@@ -82,9 +92,7 @@ describe('ProfilePage', () => {
       // labels, calendar names, ...) live on a separate config, so both must
       // have switched together.
       expect(i18n.global.locale.value).toBe('en')
-      expect(
-        (wrapper.vm.$primevue as { config: { locale: { weak: string } } }).config.locale.weak,
-      ).toBe(primevueLocaleEn.weak)
+      expect(primevueConfig.locale.weak).toBe(primevueLocaleEn.weak)
       expect(document.documentElement.lang).toBe('en')
       expect(container.preferences.read.execute<string>({ key: PREFERENCE_KEYS.UI_LOCALE })).toBe(
         'en',
