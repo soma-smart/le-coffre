@@ -186,7 +186,7 @@ const handleDemoteOwner = (user: User) => {
           actionError.value instanceof GroupLastOwnerError
             ? t('components.groupDetailsModal.demoteFailedLastOwner', {
                 user: user.name,
-                group: translateGroupName(t, group.name, group.isPersonal),
+                group: group.name,
               })
             : actionError.value instanceof GroupDomainError
               ? actionError.value.message
