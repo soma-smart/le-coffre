@@ -461,6 +461,8 @@
       "promoteAria": "Promouvoir propriétaire",
       "removeTooltip": "Retirer le membre",
       "removeAria": "Retirer le membre",
+      "demoteTooltip": "Rétrograder à membre",
+      "demoteAria": "Rétrograder à membre",
       "addMemberTitle": "Ajouter un membre",
       "selectUserPlaceholder": "Sélectionnez un utilisateur à ajouter",
       "userRequired": "Veuillez sélectionner un utilisateur",
@@ -472,7 +474,13 @@
       "promoteConfirmHeader": "Promouvoir propriétaire",
       "promoteConfirmAccept": "Promouvoir",
       "promotedDetail": "{name} a été promu propriétaire",
-      "promoteFailed": "Échec de la promotion du membre en propriétaire"
+      "promoteFailed": "Échec de la promotion du membre en propriétaire",
+      "demoteConfirmMessage": "Êtes-vous sûr de vouloir rétrograder {name} en simple membre ?",
+      "demoteConfirmHeader": "Rétrograder à membre",
+      "demoteConfirmAccept": "Rétrograder",
+      "demotedDetail": "{name} rétrogradé en simple membre",
+      "demoteFailed": "Échec de la rétrogradation du membre",
+      "demoteFailedLastOwner": "Impossible de rétrograder {user} : {group} se retrouverait sans propriétaire"
     },
     "oneTimeLinkModal": {
       "title": "Lien à usage unique",

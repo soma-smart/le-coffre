@@ -461,6 +461,8 @@
       "promoteAria": "Promote to owner",
       "removeTooltip": "Remove member",
       "removeAria": "Remove member",
+      "demoteTooltip": "Demote to member",
+      "demoteAria": "Demote to member",
       "addMemberTitle": "Add Member",
       "selectUserPlaceholder": "Select a user to add",
       "userRequired": "Please select a user",
@@ -472,7 +474,13 @@
       "promoteConfirmHeader": "Promote to Owner",
       "promoteConfirmAccept": "Promote",
       "promotedDetail": "{name} promoted to owner",
-      "promoteFailed": "Failed to promote member to owner"
+      "promoteFailed": "Failed to promote member to owner",
+      "demoteConfirmMessage": "Are you sure you want to demote {name} to member?",
+      "demoteConfirmHeader": "Demote to Member",
+      "demoteConfirmAccept": "Demote",
+      "demotedDetail": "{name} demoted to member",
+      "demoteFailed": "Failed to demote member",
+      "demoteFailedLastOwner": "Cannot demote {user}: {group} would be left without an owner"
     },
     "oneTimeLinkModal": {
       "title": "One-time link",

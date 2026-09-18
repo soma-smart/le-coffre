@@ -23,6 +23,7 @@ import { DeleteGroupUseCase } from '@/application/group/DeleteGroup'
 import { GetGroupUseCase } from '@/application/group/GetGroup'
 import { ListGroupsUseCase } from '@/application/group/ListGroups'
 import { PromoteMemberToOwnerUseCase } from '@/application/group/PromoteMemberToOwner'
+import { DemoteOwnerToMemberUseCase } from '@/application/group/DemoteOwnerToMember'
 import { RemoveMemberFromGroupUseCase } from '@/application/group/RemoveMemberFromGroup'
 import { UpdateGroupUseCase } from '@/application/group/UpdateGroup'
 import { ConsumeOneTimeLinkUseCase } from '@/application/oneTimeLink/ConsumeOneTimeLink'
@@ -117,6 +118,7 @@ export interface Container {
     addMember: AddMemberToGroupUseCase
     removeMember: RemoveMemberFromGroupUseCase
     promoteToOwner: PromoteMemberToOwnerUseCase
+    demoteToMember: DemoteOwnerToMemberUseCase
   }
   vault: {
     getStatus: GetVaultStatusUseCase
@@ -193,6 +195,7 @@ export function buildContainer(ports: Ports): Container {
       addMember: new AddMemberToGroupUseCase(ports.groupRepository),
       removeMember: new RemoveMemberFromGroupUseCase(ports.groupRepository),
       promoteToOwner: new PromoteMemberToOwnerUseCase(ports.groupRepository),
+      demoteToMember: new DemoteOwnerToMemberUseCase(ports.groupRepository),
     },
     vault: {
       getStatus: new GetVaultStatusUseCase(ports.vaultRepository),

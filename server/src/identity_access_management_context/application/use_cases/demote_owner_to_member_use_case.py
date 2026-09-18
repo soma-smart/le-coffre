@@ -1,5 +1,5 @@
 from identity_access_management_context.application.commands import (
-    AddOwnerToGroupCommand,
+    DemoteOwnerToMemberCommand,
 )
 from identity_access_management_context.application.gateways import (
     GroupEventRepository,
@@ -7,8 +7,9 @@ from identity_access_management_context.application.gateways import (
     GroupRepository,
     UserRepository,
 )
-from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
+from identity_access_management_context.domain.events import OwnerDemotedToMemberEvent
 from identity_access_management_context.domain.exceptions import (
+    CannotDemoteLastOwnerException,
     CannotModifyPersonalGroupException,
     GroupNotFoundException,
     UserNotFoundException,
@@ -20,7 +21,7 @@ from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
 
-class AddOwnerToGroupUseCase(TracedUseCase):
+class DemoteOwnerToMemberUseCase(TracedUseCase):
     def __init__(
         self,
         user_repository: UserRepository,
@@ -35,7 +36,7 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         self._event_publisher = event_publisher
         self._group_event_repository = group_event_repository
 
-    def execute(self, command: AddOwnerToGroupCommand) -> None:
+    def execute(self, command: DemoteOwnerToMemberCommand) -> None:
         group = self.group_repository.get_by_id(command.group_id)
         if group is None:
             raise GroupNotFoundException(command.group_id)
@@ -56,12 +57,16 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_member(command.group_id, command.user_id):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
-        self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=True)
+        if self.group_member_repository.is_owner(command.group_id, command.user_id):
+            if self.group_member_repository.count_owners(command.group_id) <= 1:
+                raise CannotDemoteLastOwnerException(command.user_id, command.group_id)
 
-        event = OwnerAddedToGroupEvent(
+        self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=False)
+
+        event = OwnerDemotedToMemberEvent(
             group_id=command.group_id,
             user_id=command.user_id,
-            added_by_user_id=requester_id,
+            demoted_by_user_id=requester_id,
         )
         self._event_publisher.publish(event)
         self._group_event_repository.append_event(

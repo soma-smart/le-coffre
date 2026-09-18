@@ -5,15 +5,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
-    get_add_owner_to_group_usecase,
+    get_demote_owner_to_member_usecase,
 )
 from identity_access_management_context.application.commands import (
-    AddOwnerToGroupCommand,
+    DemoteOwnerToMemberCommand,
 )
 from identity_access_management_context.application.use_cases import (
-    AddOwnerToGroupUseCase,
+    DemoteOwnerToMemberUseCase,
 )
 from identity_access_management_context.domain.exceptions import (
+    CannotDemoteLastOwnerException,
     CannotModifyPersonalGroupException,
     GroupNotFoundException,
     UserNotFoundException,
@@ -28,53 +29,45 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/groups", tags=["Group Management"])
 
 
-class AddOwnerToGroupRequest(BaseModel):
-    user_id: UUID
-
-
-class AddOwnerToGroupResponse(BaseModel):
-    group_id: UUID
-    user_id: UUID
+class DemoteOwnerToMemberResponse(BaseModel):
     message: str
 
 
-@router.post(
-    "/{group_id}/owners",
-    status_code=201,
-    response_model=AddOwnerToGroupResponse,
-    summary="Add an owner to a group",
+@router.delete(
+    "/{group_id}/owners/{user_id}",
+    status_code=200,
+    response_model=DemoteOwnerToMemberResponse,
+    summary="Demote an owner to a regular member",
 )
-def add_owner_to_group(
+def demote_owner_to_member(
     group_id: UUID,
-    request: AddOwnerToGroupRequest,
+    user_id: UUID,
     current_user: ValidatedUser = Depends(get_current_user),
-    usecase: AddOwnerToGroupUseCase = Depends(get_add_owner_to_group_usecase),
+    usecase: DemoteOwnerToMemberUseCase = Depends(get_demote_owner_to_member_usecase),
 ):
     """
-    Promote an existing member to owner of a group.
+    Demote an owner back to a regular member of a group.
 
     - **group_id**: ID of the group (path parameter)
-    - **user_id**: ID of the user to promote to owner
+    - **user_id**: ID of the owner to demote (path parameter)
     - **Authorization**: Bearer token required (access_token cookie)
-    - **Permission**: Only group owners or admins can add new owners
+    - **Permission**: Only group owners or admins can demote an owner (including themselves)
 
-    The user must already be a member of the group before being promoted to owner.
-    Cannot add owners to personal groups.
-    Operation is idempotent - promoting an existing owner has no effect.
+    Cannot demote the last remaining owner of a group.
+    Cannot demote owners of personal groups.
+    The user to be demoted must be a member of the group.
     """
     try:
-        command = AddOwnerToGroupCommand(
+        command = DemoteOwnerToMemberCommand(
             requesting_user=current_user.to_authenticated_user(),
             group_id=group_id,
-            user_id=request.user_id,
+            user_id=user_id,
         )
 
         usecase.execute(command)
 
-        return AddOwnerToGroupResponse(
-            group_id=group_id,
-            user_id=request.user_id,
-            message="Owner added successfully",
+        return DemoteOwnerToMemberResponse(
+            message="Owner demoted to member successfully",
         )
 
     except UserNotFoundException as e:
@@ -87,6 +80,11 @@ def add_owner_to_group(
         raise HTTPException(status_code=403, detail=str(e)) from e
     except UserNotMemberOfGroupException as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except CannotDemoteLastOwnerException as e:
+        # 409 rather than 400: distinguishes "the group's current state forbids
+        # this" from a plain bad-request, so the frontend can tell this case
+        # apart from UserNotMemberOfGroupException without parsing the message.
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
-        logger.exception("Unexpected error in add owner to group")
+        logger.exception("Unexpected error in demote owner to member")
         raise HTTPException(status_code=500, detail="Internal server error") from e
