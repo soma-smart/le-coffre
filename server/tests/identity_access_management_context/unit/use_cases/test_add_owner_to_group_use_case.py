@@ -319,6 +319,8 @@ def test_given_user_already_owner_when_adding_as_owner_then_operation_is_idempot
     user_repository: FakeUserRepository,
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+    group_event_repository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -353,6 +355,10 @@ def test_given_user_already_owner_when_adding_as_owner_then_operation_is_idempot
     use_case.execute(command)
 
     assert group_member_repository.is_owner(group_id, existing_owner_id)
+    # No ownership ever changed, so this must not produce a false "promoted
+    # to owner" audit trail entry.
+    assert event_publisher.get_published_events_of_type(OwnerAddedToGroupEvent) == []
+    assert group_event_repository.events == []
 
 
 def test_given_owner_when_adding_existing_member_as_owner_then_should_publish_owner_added_to_group_event(

@@ -10,6 +10,7 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.domain.events import OwnerDemotedToMemberEvent
 from identity_access_management_context.domain.exceptions import (
     CannotDemoteLastOwnerException,
+    CannotDemoteOtherOwnerException,
     CannotModifyPersonalGroupException,
     GroupNotFoundException,
     UserNotFoundException,
@@ -50,6 +51,12 @@ class DemoteOwnerToMemberUseCase(TracedUseCase):
         if not (is_admin or is_owner):
             raise UserNotOwnerOfGroupException(requester_id, command.group_id)
 
+        # A regular owner may only step themselves down. Demoting someone
+        # else is an admin-only power — matching the UI, which only ever
+        # shows the demote button on another owner's card to an admin.
+        if not is_admin and requester_id != command.user_id:
+            raise CannotDemoteOtherOwnerException(requester_id, command.user_id, command.group_id)
+
         user = self.user_repository.get_by_id(command.user_id)
         if user is None:
             raise UserNotFoundException(command.user_id)
@@ -57,9 +64,23 @@ class DemoteOwnerToMemberUseCase(TracedUseCase):
         if not self.group_member_repository.is_member(command.group_id, command.user_id):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
-        if self.group_member_repository.is_owner(command.group_id, command.user_id):
-            if self.group_member_repository.count_owners(command.group_id) <= 1:
-                raise CannotDemoteLastOwnerException(command.user_id, command.group_id)
+        if not self.group_member_repository.is_owner(command.group_id, command.user_id):
+            # Already a plain member — idempotent no-op, mirroring
+            # AddOwnerToGroupUseCase's "already an owner" idempotency.
+            # Nothing actually changes, so nothing should be published or
+            # logged: doing so would record a false "owner demoted" audit
+            # entry for someone who was never an owner.
+            return
+
+        # count_owners_for_update() rather than count_owners(): this is a
+        # check-then-act on the same data the write below depends on. A
+        # plain read here would let two concurrent demotes of a two-owner
+        # group both see count == 2, both pass this check, and both commit —
+        # leaving the group with no owners. The locking read serializes
+        # concurrent callers on the same group so the second one re-checks
+        # against the first one's committed result.
+        if self.group_member_repository.count_owners_for_update(command.group_id) <= 1:
+            raise CannotDemoteLastOwnerException(command.user_id, command.group_id)
 
         self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=False)
 

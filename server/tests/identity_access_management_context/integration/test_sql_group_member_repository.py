@@ -240,6 +240,51 @@ def test_given_mix_of_owners_and_members_when_counting_then_only_counts_owners(
     assert count == 2
 
 
+# Method: count_owners_for_update
+#
+# These only exercise the counting logic, not the locking itself: the test
+# fixture runs against sqlite:///:memory:, where SQLAlchemy's SQLite dialect
+# silently ignores FOR UPDATE (SQLite has no row-level locking). The actual
+# concurrency guarantee only holds against Postgres, which every environment
+# outside this test suite runs; there is no cross-transaction integration
+# test here for the same reason two real, independently-committing sessions
+# aren't available against an in-memory SQLite database.
+def test_given_multiple_owners_when_counting_for_update_then_correct_count(
+    sql_group_member_repository,
+):
+    # Given
+    group_id = uuid4()
+    owner1_id = uuid4()
+    owner2_id = uuid4()
+
+    sql_group_member_repository.add_member(group_id, owner1_id, is_owner=True)
+    sql_group_member_repository.add_member(group_id, owner2_id, is_owner=True)
+
+    # When
+    count = sql_group_member_repository.count_owners_for_update(group_id)
+
+    # Then
+    assert count == 2
+
+
+def test_given_mix_of_owners_and_members_when_counting_for_update_then_only_counts_owners(
+    sql_group_member_repository,
+):
+    # Given
+    group_id = uuid4()
+    owner_id = uuid4()
+    member_id = uuid4()
+
+    sql_group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    sql_group_member_repository.add_member(group_id, member_id, is_owner=False)
+
+    # When
+    count = sql_group_member_repository.count_owners_for_update(group_id)
+
+    # Then
+    assert count == 1
+
+
 # Method: remove_user_from_all_groups
 def test_given_user_in_multiple_groups_when_removing_from_all_then_all_memberships_deleted(
     sql_group_member_repository,

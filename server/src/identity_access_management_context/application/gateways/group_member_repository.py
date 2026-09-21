@@ -29,6 +29,21 @@ class GroupMemberRepository(Protocol):
         """Count the number of owners in a group."""
         ...
 
+    def count_owners_for_update(self, group_id: UUID) -> int:
+        """Count the number of owners in a group, locking those owner rows
+        for the rest of the current transaction.
+
+        Use this instead of count_owners() immediately before a write whose
+        correctness depends on that count not changing before the write
+        commits (e.g. refusing to demote the last owner) — a plain SELECT
+        followed by a later write is a check-then-act race: two concurrent
+        callers can both read the same count before either writes, and both
+        proceed. The row lock serializes them: a second transaction's read
+        blocks until the first commits, then re-evaluates against the
+        now-current data.
+        """
+        ...
+
     def delete_by_group_id(self, group_id: UUID) -> None:
         """Delete all members of a group."""
         ...

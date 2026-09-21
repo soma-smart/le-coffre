@@ -56,6 +56,13 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_member(command.group_id, command.user_id):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
+        if self.group_member_repository.is_owner(command.group_id, command.user_id):
+            # Already an owner — idempotent no-op. Nothing actually changes,
+            # so nothing should be published or logged: doing so would
+            # record a false "promoted to owner" audit entry for someone
+            # who already was one.
+            return
+
         self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=True)
 
         event = OwnerAddedToGroupEvent(
