@@ -12,6 +12,7 @@ from identity_access_management_context.domain.entities import Group, User
 from identity_access_management_context.domain.events import OwnerDemotedToMemberEvent
 from identity_access_management_context.domain.exceptions import (
     CannotDemoteLastOwnerException,
+    CannotDemoteOtherOwnerException,
     CannotModifyPersonalGroupException,
     GroupNotFoundException,
     UserNotFoundException,
@@ -42,12 +43,16 @@ def use_case(
     )
 
 
-def test_given_owner_when_demoting_co_owner_then_co_owner_becomes_member(
+def test_given_non_admin_owner_when_demoting_co_owner_then_raise_cannot_demote_other_owner_exception(
     use_case: DemoteOwnerToMemberUseCase,
     user_repository: FakeUserRepository,
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
 ):
+    # A regular (non-admin) owner may only step themselves down — demoting
+    # someone else, even a fellow owner, is an admin-only power. Matches the
+    # UI, which only ever shows the demote button on another owner's card to
+    # an admin.
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
     co_owner_id = UUID("323e4567-e89b-12d3-a456-426614174002")
@@ -68,10 +73,10 @@ def test_given_owner_when_demoting_co_owner_then_co_owner_becomes_member(
         user_id=co_owner_id,
     )
 
-    use_case.execute(command)
+    with pytest.raises(CannotDemoteOtherOwnerException):
+        use_case.execute(command)
 
-    assert not group_member_repository.is_owner(group_id, co_owner_id)
-    assert group_member_repository.is_member(group_id, co_owner_id)
+    assert group_member_repository.is_owner(group_id, co_owner_id)
 
 
 def test_given_owner_when_demoting_self_then_becomes_member(
@@ -262,8 +267,12 @@ def test_given_user_not_found_when_demoting_owner_then_raise_user_not_found_exce
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
+    # Admin requester: a non-admin owner can only target themselves, which
+    # would never hit "user not found" (their own record exists by
+    # definition) — this scenario only arises for an admin targeting someone
+    # else.
     command = DemoteOwnerToMemberCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
         user_id=nonexistent_user_id,
     )
@@ -296,8 +305,10 @@ def test_given_user_not_member_when_demoting_owner_then_raise_user_not_member_ex
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
+    # Admin requester — see test_given_user_not_found_... above for why a
+    # non-admin owner can't reach this scenario.
     command = DemoteOwnerToMemberCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
         user_id=non_member_id,
     )
@@ -311,6 +322,8 @@ def test_given_owner_when_demoting_plain_member_then_operation_is_a_no_op(
     user_repository: FakeUserRepository,
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+    group_event_repository,
 ):
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -326,8 +339,10 @@ def test_given_owner_when_demoting_plain_member_then_operation_is_a_no_op(
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
     group_member_repository.add_member(group_id, member_id, is_owner=False)
 
+    # Admin requester — see test_given_user_not_found_... above for why a
+    # non-admin owner can't reach this scenario.
     command = DemoteOwnerToMemberCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
         user_id=member_id,
     )
@@ -336,6 +351,10 @@ def test_given_owner_when_demoting_plain_member_then_operation_is_a_no_op(
 
     assert group_member_repository.is_member(group_id, member_id)
     assert not group_member_repository.is_owner(group_id, member_id)
+    # No ownership ever changed, so this must not produce a false "owner
+    # demoted" audit trail entry.
+    assert event_publisher.get_published_events_of_type(OwnerDemotedToMemberEvent) == []
+    assert group_event_repository.events == []
 
 
 def test_given_owner_when_demoting_co_owner_then_should_publish_owner_demoted_to_member_event(
@@ -359,8 +378,12 @@ def test_given_owner_when_demoting_co_owner_then_should_publish_owner_demoted_to
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
     group_member_repository.add_member(group_id, co_owner_id, is_owner=True)
 
+    # Admin requester — see test_given_user_not_found_... above for why a
+    # non-admin owner can't reach this scenario.
     command = DemoteOwnerToMemberCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, user_id=co_owner_id
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
+        group_id=group_id,
+        user_id=co_owner_id,
     )
     use_case.execute(command)
 
@@ -392,8 +415,12 @@ def test_given_owner_when_demoting_co_owner_then_should_store_owner_demoted_to_m
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
     group_member_repository.add_member(group_id, co_owner_id, is_owner=True)
 
+    # Admin requester — see test_given_user_not_found_... above for why a
+    # non-admin owner can't reach this scenario.
     command = DemoteOwnerToMemberCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, user_id=co_owner_id
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
+        group_id=group_id,
+        user_id=co_owner_id,
     )
     use_case.execute(command)
 

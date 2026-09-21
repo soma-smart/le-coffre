@@ -15,6 +15,7 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.exceptions import (
     CannotDemoteLastOwnerException,
+    CannotDemoteOtherOwnerException,
     CannotModifyPersonalGroupException,
     GroupNotFoundException,
     UserNotFoundException,
@@ -51,7 +52,8 @@ def demote_owner_to_member(
     - **group_id**: ID of the group (path parameter)
     - **user_id**: ID of the owner to demote (path parameter)
     - **Authorization**: Bearer token required (access_token cookie)
-    - **Permission**: Only group owners or admins can demote an owner (including themselves)
+    - **Permission**: Group owners can only demote themselves; only admins can demote
+      an owner other than themselves
 
     Cannot demote the last remaining owner of a group.
     Cannot demote owners of personal groups.
@@ -75,6 +77,8 @@ def demote_owner_to_member(
     except GroupNotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except UserNotOwnerOfGroupException as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except CannotDemoteOtherOwnerException as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
     except CannotModifyPersonalGroupException as e:
         raise HTTPException(status_code=403, detail=str(e)) from e

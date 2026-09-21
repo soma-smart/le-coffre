@@ -173,6 +173,16 @@ class CannotDemoteLastOwnerException(IdentityAccessManagementDomainError):
         super().__init__(f"Cannot demote '{user_id}': group '{group_id}' would be left without an owner")
 
 
+class CannotDemoteOtherOwnerException(IdentityAccessManagementDomainError):
+    """Raised when a non-admin owner attempts to demote an owner other than themselves"""
+
+    def __init__(self, requesting_user_id: UUID, target_user_id: UUID, group_id: UUID):
+        super().__init__(
+            f"User '{requesting_user_id}' is not allowed to demote owner '{target_user_id}' "
+            f"of group '{group_id}'; only admins can demote an owner other than themselves"
+        )
+
+
 class CannotDeletePersonalGroupException(IdentityAccessManagementDomainError):
     """Raised when attempting to delete a personal group"""
 

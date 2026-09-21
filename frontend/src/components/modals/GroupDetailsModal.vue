@@ -319,6 +319,7 @@ watch(visible, (isVisible) => {
                     size="small"
                     :aria-label="t('components.groupDetailsModal.demoteAria')"
                     v-tooltip.top="t('components.groupDetailsModal.demoteTooltip')"
+                    :loading="isActing"
                     @click="handleDemoteOwner(user)"
                   />
                 </div>
