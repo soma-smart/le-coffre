@@ -19,12 +19,12 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "oidc-provider-mock>=0.4.6",
+  "oidc-provider-mock>=0.4.7",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.16.7",
+  "ruff>=0.16.8",
 ]
 monitoring = [
     "opentelemetry-instrumentation-fastapi>=0.65b0",
