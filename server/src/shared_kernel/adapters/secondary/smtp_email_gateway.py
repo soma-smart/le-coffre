@@ -35,13 +35,13 @@ class SmtpEmailGateway(EmailGateway):
         self._ssl_context = ssl_context
 
     def send(self, to: str, subject: str, body: str) -> None:
-        message = EmailMessage()
-        message["From"] = self._from_address
-        message["To"] = to
-        message["Subject"] = subject
-        message.set_content(body)
-
         try:
+            message = EmailMessage()
+            message["From"] = self._from_address
+            message["To"] = to
+            message["Subject"] = subject
+            message.set_content(body)
+
             if self._tls_mode == SmtpTlsMode.IMPLICIT:
                 context = self._ssl_context or ssl.create_default_context()
                 with smtplib.SMTP_SSL(self._host, self._port, timeout=self._timeout, context=context) as client:
@@ -51,7 +51,7 @@ class SmtpEmailGateway(EmailGateway):
                     if self._tls_mode == SmtpTlsMode.STARTTLS:
                         client.starttls(context=self._ssl_context or ssl.create_default_context())
                     self._authenticate_and_send(client, message)
-        except (smtplib.SMTPException, OSError) as error:
+        except (smtplib.SMTPException, OSError, ValueError) as error:
             raise EmailDeliveryError(str(error)) from error
 
     def _authenticate_and_send(self, client: smtplib.SMTP, message: EmailMessage) -> None:

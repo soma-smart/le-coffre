@@ -38,6 +38,15 @@ def test_given_smtp_server_unreachable_when_send_should_raise_email_delivery_err
         gateway.send(to="alice@example.com", subject="Welcome", body="Hello Alice")
 
 
+def test_given_subject_with_embedded_newline_when_send_should_raise_email_delivery_error(smtpd):
+    # Arrange
+    gateway = SmtpEmailGateway(host=smtpd.hostname, port=smtpd.port, from_address="noreply@le-coffre.local")
+
+    # Act & Assert
+    with pytest.raises(EmailDeliveryError):
+        gateway.send(to="alice@example.com", subject="Welcome\nBcc: attacker@evil.com", body="Hello Alice")
+
+
 def test_given_smtp_server_with_implicit_tls_when_send_should_deliver_message_to_recipient(smtpd):
     # Arrange
     smtpd.config.use_ssl = True
