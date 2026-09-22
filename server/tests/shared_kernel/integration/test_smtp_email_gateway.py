@@ -83,16 +83,20 @@ def test_given_smtp_server_with_starttls_when_send_should_deliver_message_to_rec
     assert len(smtpd.messages) == 1
 
 
-def test_given_smtp_server_requiring_auth_when_send_with_correct_credentials_should_deliver_message(smtpd):
+def test_given_smtp_server_requiring_auth_when_send_with_correct_credentials_over_starttls_should_deliver_message(
+    smtpd,
+):
     # Arrange
+    smtpd.config.use_starttls = True
     smtpd.config.enforce_auth = True
-    smtpd.config.auth_require_tls = False
     gateway = SmtpEmailGateway(
         host=smtpd.hostname,
         port=smtpd.port,
         from_address="noreply@le-coffre.local",
         username=smtpd.config.login_username,
         password=smtpd.config.login_password,
+        tls_mode=SmtpTlsMode.STARTTLS,
+        ssl_context=_trusting_ssl_context(),
     )
 
     # Act
@@ -102,18 +106,35 @@ def test_given_smtp_server_requiring_auth_when_send_with_correct_credentials_sho
     assert len(smtpd.messages) == 1
 
 
-def test_given_smtp_server_requiring_auth_when_send_with_wrong_credentials_should_raise_email_delivery_error(smtpd):
+def test_given_smtp_server_requiring_auth_when_send_with_wrong_credentials_over_starttls_should_raise_email_delivery_error(
+    smtpd,
+):
     # Arrange
+    smtpd.config.use_starttls = True
     smtpd.config.enforce_auth = True
-    smtpd.config.auth_require_tls = False
     gateway = SmtpEmailGateway(
         host=smtpd.hostname,
         port=smtpd.port,
         from_address="noreply@le-coffre.local",
         username=smtpd.config.login_username,
         password="wrong-password",
+        tls_mode=SmtpTlsMode.STARTTLS,
+        ssl_context=_trusting_ssl_context(),
     )
 
     # Act & Assert
     with pytest.raises(EmailDeliveryError):
         gateway.send(to="alice@example.com", subject="Welcome", body="Hello Alice")
+
+
+def test_given_credentials_configured_without_tls_when_constructing_gateway_should_raise_value_error():
+    # Act & Assert
+    with pytest.raises(ValueError, match="TLS"):
+        SmtpEmailGateway(
+            host="127.0.0.1",
+            port=25,
+            from_address="noreply@le-coffre.local",
+            username="smtp-user",
+            password="smtp-password",
+            tls_mode=SmtpTlsMode.NONE,
+        )

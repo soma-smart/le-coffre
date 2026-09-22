@@ -25,6 +25,9 @@ class SmtpEmailGateway(EmailGateway):
         timeout: float = 10,
         ssl_context: ssl.SSLContext | None = None,
     ):
+        if username is not None and tls_mode == SmtpTlsMode.NONE:
+            raise ValueError("SMTP credentials require TLS (implicit or starttls) to avoid sending them in cleartext")
+
         self._host = host
         self._port = port
         self._from_address = from_address
