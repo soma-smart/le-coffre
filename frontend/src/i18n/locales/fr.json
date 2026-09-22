@@ -569,7 +569,7 @@
     "passwordsWorkspace": {
       "searchResultsTitle": "Résultats de recherche",
       "allPasswordsTitle": "Tous les mots de passe",
-      "loadFailed": "Échec du chargement des mots de passe"      
+      "loadFailed": "Échec du chargement des mots de passe"
     },
     "oneTimeLinkModal": {
       "title": "Lien à usage unique",
