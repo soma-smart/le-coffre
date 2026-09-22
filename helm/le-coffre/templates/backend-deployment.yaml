@@ -17,7 +17,7 @@ spec:
     metadata:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-        {{- if .Values.config.jwt.secretKey }}
+        {{- if or .Values.config.jwt.secretKey .Values.config.smtp.password }}
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
         {{- end }}
         {{- with .Values.podAnnotations }}
@@ -53,6 +53,10 @@ spec:
                 name: {{ include "le-coffre.jwtSecretName" . }}
             - secretRef:
                 name: {{ required "config.database.existingSecretName is required. Create the secret first: kubectl create secret generic <name> --from-literal=DATABASE_URL=\"postgresql://...\" -n <namespace>" .Values.config.database.existingSecretName }}
+            {{- if .Values.config.smtp.username }}
+            - secretRef:
+                name: {{ include "le-coffre.smtpSecretName" . }}
+            {{- end }}
           env:
             - name: POD_NAME
               valueFrom:

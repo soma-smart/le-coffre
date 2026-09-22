@@ -34,3 +34,12 @@ data:
   {{- if .Values.config.logging.format }}
   LOG_FORMAT: {{ .Values.config.logging.format | quote }}
   {{- end }}
+  {{- if .Values.config.smtp.enabled }}
+  SMTP_HOST: {{ required "config.smtp.host is required when config.smtp.enabled is true" .Values.config.smtp.host | quote }}
+  SMTP_PORT: {{ .Values.config.smtp.port | quote }}
+  SMTP_FROM_ADDRESS: {{ .Values.config.smtp.fromAddress | quote }}
+  SMTP_TLS_MODE: {{ .Values.config.smtp.tlsMode | quote }}
+  {{- if .Values.config.smtp.username }}
+  SMTP_USERNAME: {{ .Values.config.smtp.username | quote }}
+  {{- end }}
+  {{- end }}

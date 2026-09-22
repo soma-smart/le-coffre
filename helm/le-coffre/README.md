@@ -70,6 +70,10 @@ The following table lists the main configurable parameters. See `values.yaml` fo
 | `config.jwt.secretKey` | Let Helm manage the JWT secret (not recommended for production) | `""` |
 | `config.database.existingSecretName` | Name of pre-existing secret containing `DATABASE_URL` | `"le-coffre-db"` |
 | `config.appBaseUrl` | Application base URL (required) | `""` |
+| `config.smtp.enabled` | Enable SMTP email sending | `false` |
+| `config.smtp.host` | SMTP relay hostname (required when enabled) | `""` |
+| `config.smtp.tlsMode` | TLS mode: `none`, `implicit`, or `starttls` | `"none"` |
+| `config.smtp.existingSecretName` | Name of pre-existing secret containing `SMTP_PASSWORD` (when `username` is set) | `""` |
 | `persistence.enabled` | Enable persistence for SQLite | `false` |
 | `backend.resources.limits.cpu` | Backend CPU limit | `500m` |
 | `backend.resources.limits.memory` | Backend memory limit | `512Mi` |
@@ -114,6 +118,35 @@ persistence:
 ```
 
 > **Note:** SQLite with `replicaCount > 1` is not supported (ReadWriteOnce PVC).
+
+## Email (SMTP)
+
+Disabled by default — nothing in the app sends email yet as of this chart version. To enable:
+
+```yaml
+config:
+  smtp:
+    enabled: true
+    host: "smtp.yourprovider.com"
+    port: 587
+    fromAddress: "noreply@yourdomain.com"
+    tlsMode: "starttls"
+```
+
+If your relay requires authentication, credentials must never be sent in cleartext — the backend refuses to start if `username` is set while `tlsMode: none`. Set `username` plus a password secret:
+
+```bash
+kubectl create secret generic le-coffre-smtp \
+  --from-literal=SMTP_PASSWORD="..." \
+  -n le-coffre
+```
+
+```yaml
+config:
+  smtp:
+    username: "smtp-user"
+    existingSecretName: "le-coffre-smtp"
+```
 
 ## Upgrading
 

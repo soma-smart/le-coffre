@@ -168,6 +168,19 @@
             "tracesSampler": { "type": "string" },
             "tracesSamplerArg": { "type": "string" }
           }
+        },
+        "smtp": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "host": { "type": "string" },
+            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "fromAddress": { "type": "string" },
+            "username": { "type": "string" },
+            "tlsMode": { "type": "string", "enum": ["none", "implicit", "starttls"] },
+            "existingSecretName": { "type": "string" },
+            "password": { "type": "string" }
+          }
         }
       },
       "required": ["environment", "appBaseUrl", "database", "jwt"]
