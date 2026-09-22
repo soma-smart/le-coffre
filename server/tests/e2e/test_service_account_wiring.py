@@ -23,7 +23,7 @@ def test_the_service_account_endpoints_are_reachable(authenticated_admin_client,
     assert [item["id"] for item in listed.json()["items"]] == [account["id"]]
     assert account["token"] not in listed.text
     assert listed.json()["active"] == 1
-    assert listed.json()["max_active"] == 3
+    assert listed.json()["max_active"] == 10
 
     rotated = client.post(f"{BASE}/{account['id']}/rotate")
     assert rotated.status_code == 200, rotated.text
