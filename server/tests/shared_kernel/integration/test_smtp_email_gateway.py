@@ -4,6 +4,7 @@ import ssl
 import pytest
 
 from shared_kernel.adapters.secondary import SmtpEmailGateway
+from shared_kernel.adapters.secondary.smtp_email_gateway import SmtpTlsMode
 from shared_kernel.domain.exceptions import EmailDeliveryError
 
 
@@ -37,14 +38,32 @@ def test_given_smtp_server_unreachable_when_send_should_raise_email_delivery_err
         gateway.send(to="alice@example.com", subject="Welcome", body="Hello Alice")
 
 
-def test_given_smtp_server_with_tls_when_send_should_deliver_message_to_recipient(smtpd):
+def test_given_smtp_server_with_implicit_tls_when_send_should_deliver_message_to_recipient(smtpd):
     # Arrange
     smtpd.config.use_ssl = True
     gateway = SmtpEmailGateway(
         host=smtpd.hostname,
         port=smtpd.port,
         from_address="noreply@le-coffre.local",
-        use_tls=True,
+        tls_mode=SmtpTlsMode.IMPLICIT,
+        ssl_context=_trusting_ssl_context(),
+    )
+
+    # Act
+    gateway.send(to="alice@example.com", subject="Welcome", body="Hello Alice")
+
+    # Assert
+    assert len(smtpd.messages) == 1
+
+
+def test_given_smtp_server_with_starttls_when_send_should_deliver_message_to_recipient(smtpd):
+    # Arrange
+    smtpd.config.use_starttls = True
+    gateway = SmtpEmailGateway(
+        host=smtpd.hostname,
+        port=smtpd.port,
+        from_address="noreply@le-coffre.local",
+        tls_mode=SmtpTlsMode.STARTTLS,
         ssl_context=_trusting_ssl_context(),
     )
 

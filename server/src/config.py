@@ -215,6 +215,8 @@ def get_smtp_password() -> str | None:
     return os.environ.get("SMTP_PASSWORD") or None
 
 
-def get_smtp_use_tls() -> bool:
-    """Whether to connect over implicit TLS (SMTPS, typically port 465). Default is False."""
-    return os.environ.get("SMTP_USE_TLS", "false").lower() == "true"
+def get_smtp_tls_mode() -> str:
+    """SMTP TLS mode: "none" (default), "implicit" (SMTPS, typically port 465, whole
+    connection wrapped in TLS from the start), or "starttls" (opportunistic upgrade
+    after connecting in plaintext, typically port 587)."""
+    return os.environ.get("SMTP_TLS_MODE", "none").lower()

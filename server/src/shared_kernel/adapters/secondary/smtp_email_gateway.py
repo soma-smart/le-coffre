@@ -1,9 +1,16 @@
 import smtplib
 import ssl
 from email.message import EmailMessage
+from enum import Enum
 
 from shared_kernel.application.gateways import EmailGateway
 from shared_kernel.domain.exceptions import EmailDeliveryError
+
+
+class SmtpTlsMode(str, Enum):
+    NONE = "none"
+    IMPLICIT = "implicit"
+    STARTTLS = "starttls"
 
 
 class SmtpEmailGateway(EmailGateway):
@@ -14,7 +21,7 @@ class SmtpEmailGateway(EmailGateway):
         from_address: str,
         username: str | None = None,
         password: str | None = None,
-        use_tls: bool = False,
+        tls_mode: SmtpTlsMode = SmtpTlsMode.NONE,
         timeout: float = 10,
         ssl_context: ssl.SSLContext | None = None,
     ):
@@ -23,7 +30,7 @@ class SmtpEmailGateway(EmailGateway):
         self._from_address = from_address
         self._username = username
         self._password = password
-        self._use_tls = use_tls
+        self._tls_mode = tls_mode
         self._timeout = timeout
         self._ssl_context = ssl_context
 
@@ -35,12 +42,14 @@ class SmtpEmailGateway(EmailGateway):
         message.set_content(body)
 
         try:
-            if self._use_tls:
+            if self._tls_mode == SmtpTlsMode.IMPLICIT:
                 context = self._ssl_context or ssl.create_default_context()
                 with smtplib.SMTP_SSL(self._host, self._port, timeout=self._timeout, context=context) as client:
                     self._authenticate_and_send(client, message)
             else:
                 with smtplib.SMTP(self._host, self._port, timeout=self._timeout) as client:
+                    if self._tls_mode == SmtpTlsMode.STARTTLS:
+                        client.starttls(context=self._ssl_context or ssl.create_default_context())
                     self._authenticate_and_send(client, message)
         except (smtplib.SMTPException, OSError) as error:
             raise EmailDeliveryError(str(error)) from error

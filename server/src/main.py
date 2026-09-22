@@ -43,7 +43,7 @@ from config import (
     get_smtp_host,
     get_smtp_password,
     get_smtp_port,
-    get_smtp_use_tls,
+    get_smtp_tls_mode,
     get_smtp_username,
     get_sso_allow_private_networks,
 )
@@ -84,6 +84,7 @@ from shared_kernel.adapters.primary.request_id_middleware import (
 from shared_kernel.adapters.secondary import (
     InMemoryDomainEventPublisher,
     SmtpEmailGateway,
+    SmtpTlsMode,
     UtcTimeGateway,
 )
 from vault_management_context.adapters.primary.fastapi.routes import (
@@ -210,7 +211,7 @@ async def lifespan(app: FastAPI):
         from_address=get_smtp_from_address(),
         username=get_smtp_username(),
         password=get_smtp_password(),
-        use_tls=get_smtp_use_tls(),
+        tls_mode=SmtpTlsMode(get_smtp_tls_mode()),
     )
     app.state.email_gateway = email_gateway
 
