@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddMemberToGroupGroupsGroupIdMembersPostData, AddMemberToGroupGroupsGroupIdMembersPostErrors, AddMemberToGroupGroupsGroupIdMembersPostResponses, AddOwnerToGroupGroupsGroupIdOwnersPostData, AddOwnerToGroupGroupsGroupIdOwnersPostErrors, AddOwnerToGroupGroupsGroupIdOwnersPostResponses, AdminLoginAuthLoginPostData, AdminLoginAuthLoginPostErrors, AdminLoginAuthLoginPostResponses, ClearPendingSharesVaultUnlockClearDeleteData, ClearPendingSharesVaultUnlockClearDeleteResponses, ConfigureSsoProviderAuthSsoConfigurePostData, ConfigureSsoProviderAuthSsoConfigurePostErrors, ConfigureSsoProviderAuthSsoConfigurePostResponses, ConsumeOneTimeLinkOneTimeLinksConsumePostData, ConsumeOneTimeLinkOneTimeLinksConsumePostErrors, ConsumeOneTimeLinkOneTimeLinksConsumePostResponses, CreateGroupGroupsPostData, CreateGroupGroupsPostErrors, CreateGroupGroupsPostResponses, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostData, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostErrors, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses, CreatePasswordPasswordsPostData, CreatePasswordPasswordsPostErrors, CreatePasswordPasswordsPostResponses, CreateUserUsersPostData, CreateUserUsersPostErrors, CreateUserUsersPostResponses, CreateVaultVaultSetupPostData, CreateVaultVaultSetupPostErrors, CreateVaultVaultSetupPostResponses, DeleteGroupGroupsGroupIdDeleteData, DeleteGroupGroupsGroupIdDeleteErrors, DeleteGroupGroupsGroupIdDeleteResponses, DeletePasswordPasswordsPasswordIdDeleteData, DeletePasswordPasswordsPasswordIdDeleteErrors, DeletePasswordPasswordsPasswordIdDeleteResponses, DeleteUserUsersUserIdDeleteData, DeleteUserUsersUserIdDeleteErrors, DeleteUserUsersUserIdDeleteResponses, GetCsrfTokenAuthCsrfTokenGetData, GetCsrfTokenAuthCsrfTokenGetResponses, GetGroupGroupsGroupIdGetData, GetGroupGroupsGroupIdGetErrors, GetGroupGroupsGroupIdGetResponses, GetPasswordPasswordsPasswordIdGetData, GetPasswordPasswordsPasswordIdGetErrors, GetPasswordPasswordsPasswordIdGetResponses, GetPasswordStatisticForAdminPasswordsStatisticsGetData, GetPasswordStatisticForAdminPasswordsStatisticsGetResponses, GetSsoUrlAuthSsoUrlGetData, GetSsoUrlAuthSsoUrlGetErrors, GetSsoUrlAuthSsoUrlGetResponses, GetStatisticForAdminIamStatisticsGetData, GetStatisticForAdminIamStatisticsGetResponses, GetUserMeUsersMeGetData, GetUserMeUsersMeGetResponses, GetUserUsersUserIdGetData, GetUserUsersUserIdGetErrors, GetUserUsersUserIdGetResponses, GetVaultStatusVaultStatusGetData, GetVaultStatusVaultStatusGetResponses, HealthCheckHealthGetData, HealthCheckHealthGetResponses, IsSsoConfigSetAuthSsoIsConfiguredGetData, IsSsoConfigSetAuthSsoIsConfiguredGetResponses, ListGroupEventsGroupsGroupIdEventsGetData, ListGroupEventsGroupsGroupIdEventsGetErrors, ListGroupEventsGroupsGroupIdEventsGetResponses, ListGroupsGroupsGetData, ListGroupsGroupsGetErrors, ListGroupsGroupsGetResponses, ListMyOneTimeLinksOneTimeLinksMineGetData, ListMyOneTimeLinksOneTimeLinksMineGetErrors, ListMyOneTimeLinksOneTimeLinksMineGetResponses, ListOneTimeLinksForAdminAdminOneTimeLinksGetData, ListOneTimeLinksForAdminAdminOneTimeLinksGetErrors, ListOneTimeLinksForAdminAdminOneTimeLinksGetResponses, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetData, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetErrors, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponses, ListPasswordAccessPasswordsPasswordIdAccessGetData, ListPasswordAccessPasswordsPasswordIdAccessGetErrors, ListPasswordAccessPasswordsPasswordIdAccessGetResponses, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetData, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetErrors, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses, ListPasswordEventsPasswordsPasswordIdEventsGetData, ListPasswordEventsPasswordsPasswordIdEventsGetErrors, ListPasswordEventsPasswordsPasswordIdEventsGetResponses, ListPasswordsPasswordsListGetData, ListPasswordsPasswordsListGetErrors, ListPasswordsPasswordsListGetResponses, ListUsersUsersGetData, ListUsersUsersGetResponses, LockVaultVaultLockPostData, LockVaultVaultLockPostResponses, LogoutAuthLogoutPostData, LogoutAuthLogoutPostErrors, LogoutAuthLogoutPostResponses, PromoteUserToAdminUsersUserIdPromoteAdminPostData, PromoteUserToAdminUsersUserIdPromoteAdminPostErrors, PromoteUserToAdminUsersUserIdPromoteAdminPostResponses, ReadinessCheckHealthReadyGetData, ReadinessCheckHealthReadyGetResponses, RefreshAccessTokenAuthRefreshTokenPostData, RefreshAccessTokenAuthRefreshTokenPostErrors, RefreshAccessTokenAuthRefreshTokenPostResponses, RegisterAdminAuthRegisterAdminPostData, RegisterAdminAuthRegisterAdminPostErrors, RegisterAdminAuthRegisterAdminPostResponses, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteData, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteErrors, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponses, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponses, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponses, SharePasswordPasswordsPasswordIdSharePostData, SharePasswordPasswordsPasswordIdSharePostErrors, SharePasswordPasswordsPasswordIdSharePostResponses, SsoCallbackAuthSsoCallbackGetData, SsoCallbackAuthSsoCallbackGetErrors, SsoCallbackAuthSsoCallbackGetResponses, UnlockVaultVaultUnlockPostData, UnlockVaultVaultUnlockPostErrors, UnlockVaultVaultUnlockPostResponses, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteData, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteErrors, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses, UpdateGroupGroupsGroupIdPutData, UpdateGroupGroupsGroupIdPutErrors, UpdateGroupGroupsGroupIdPutResponses, UpdatePasswordPasswordsPasswordIdPutData, UpdatePasswordPasswordsPasswordIdPutErrors, UpdatePasswordPasswordsPasswordIdPutResponses, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchData, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchErrors, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponses, UpdateUserPasswordUsersMePasswordPutData, UpdateUserPasswordUsersMePasswordPutErrors, UpdateUserPasswordUsersMePasswordPutResponses, UpdateUserUsersUserIdPutData, UpdateUserUsersUserIdPutErrors, UpdateUserUsersUserIdPutResponses, ValidateVaultSetupVaultValidateSetupPostData, ValidateVaultSetupVaultValidateSetupPostErrors, ValidateVaultSetupVaultValidateSetupPostResponses } from './types.gen';
+import type { AddMemberToGroupGroupsGroupIdMembersPostData, AddMemberToGroupGroupsGroupIdMembersPostErrors, AddMemberToGroupGroupsGroupIdMembersPostResponses, AddOwnerToGroupGroupsGroupIdOwnersPostData, AddOwnerToGroupGroupsGroupIdOwnersPostErrors, AddOwnerToGroupGroupsGroupIdOwnersPostResponses, AdminLoginAuthLoginPostData, AdminLoginAuthLoginPostErrors, AdminLoginAuthLoginPostResponses, ClearPendingSharesVaultUnlockClearDeleteData, ClearPendingSharesVaultUnlockClearDeleteResponses, ConfigureSsoProviderAuthSsoConfigurePostData, ConfigureSsoProviderAuthSsoConfigurePostErrors, ConfigureSsoProviderAuthSsoConfigurePostResponses, ConsumeOneTimeLinkOneTimeLinksConsumePostData, ConsumeOneTimeLinkOneTimeLinksConsumePostErrors, ConsumeOneTimeLinkOneTimeLinksConsumePostResponses, CreateGroupGroupsPostData, CreateGroupGroupsPostErrors, CreateGroupGroupsPostResponses, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostData, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostErrors, CreateOneTimeLinkPasswordsPasswordIdOneTimeLinksPostResponses, CreatePasswordPasswordsPostData, CreatePasswordPasswordsPostErrors, CreatePasswordPasswordsPostResponses, CreateServiceAccountIamServiceAccountsPostData, CreateServiceAccountIamServiceAccountsPostErrors, CreateServiceAccountIamServiceAccountsPostResponses, CreateUserUsersPostData, CreateUserUsersPostErrors, CreateUserUsersPostResponses, CreateVaultVaultSetupPostData, CreateVaultVaultSetupPostErrors, CreateVaultVaultSetupPostResponses, DeleteGroupGroupsGroupIdDeleteData, DeleteGroupGroupsGroupIdDeleteErrors, DeleteGroupGroupsGroupIdDeleteResponses, DeletePasswordPasswordsPasswordIdDeleteData, DeletePasswordPasswordsPasswordIdDeleteErrors, DeletePasswordPasswordsPasswordIdDeleteResponses, DeleteUserUsersUserIdDeleteData, DeleteUserUsersUserIdDeleteErrors, DeleteUserUsersUserIdDeleteResponses, GetCsrfTokenAuthCsrfTokenGetData, GetCsrfTokenAuthCsrfTokenGetResponses, GetGroupGroupsGroupIdGetData, GetGroupGroupsGroupIdGetErrors, GetGroupGroupsGroupIdGetResponses, GetPasswordPasswordsPasswordIdGetData, GetPasswordPasswordsPasswordIdGetErrors, GetPasswordPasswordsPasswordIdGetResponses, GetPasswordStatisticForAdminPasswordsStatisticsGetData, GetPasswordStatisticForAdminPasswordsStatisticsGetResponses, GetSsoUrlAuthSsoUrlGetData, GetSsoUrlAuthSsoUrlGetErrors, GetSsoUrlAuthSsoUrlGetResponses, GetStatisticForAdminIamStatisticsGetData, GetStatisticForAdminIamStatisticsGetResponses, GetUserMeUsersMeGetData, GetUserMeUsersMeGetResponses, GetUserUsersUserIdGetData, GetUserUsersUserIdGetErrors, GetUserUsersUserIdGetResponses, GetVaultStatusVaultStatusGetData, GetVaultStatusVaultStatusGetResponses, HealthCheckHealthGetData, HealthCheckHealthGetResponses, IsSsoConfigSetAuthSsoIsConfiguredGetData, IsSsoConfigSetAuthSsoIsConfiguredGetResponses, ListGroupEventsGroupsGroupIdEventsGetData, ListGroupEventsGroupsGroupIdEventsGetErrors, ListGroupEventsGroupsGroupIdEventsGetResponses, ListGroupsGroupsGetData, ListGroupsGroupsGetErrors, ListGroupsGroupsGetResponses, ListMyOneTimeLinksOneTimeLinksMineGetData, ListMyOneTimeLinksOneTimeLinksMineGetErrors, ListMyOneTimeLinksOneTimeLinksMineGetResponses, ListOneTimeLinksForAdminAdminOneTimeLinksGetData, ListOneTimeLinksForAdminAdminOneTimeLinksGetErrors, ListOneTimeLinksForAdminAdminOneTimeLinksGetResponses, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetData, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetErrors, ListOneTimeLinksPasswordsPasswordIdOneTimeLinksGetResponses, ListPasswordAccessPasswordsPasswordIdAccessGetData, ListPasswordAccessPasswordsPasswordIdAccessGetErrors, ListPasswordAccessPasswordsPasswordIdAccessGetResponses, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetData, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetErrors, ListPasswordEventsByActorAdminUsersUserIdPasswordEventsGetResponses, ListPasswordEventsPasswordsPasswordIdEventsGetData, ListPasswordEventsPasswordsPasswordIdEventsGetErrors, ListPasswordEventsPasswordsPasswordIdEventsGetResponses, ListPasswordsPasswordsListGetData, ListPasswordsPasswordsListGetErrors, ListPasswordsPasswordsListGetResponses, ListServiceAccountsIamServiceAccountsGetData, ListServiceAccountsIamServiceAccountsGetErrors, ListServiceAccountsIamServiceAccountsGetResponses, ListUsersUsersGetData, ListUsersUsersGetResponses, LockVaultVaultLockPostData, LockVaultVaultLockPostResponses, LogoutAuthLogoutPostData, LogoutAuthLogoutPostErrors, LogoutAuthLogoutPostResponses, PromoteUserToAdminUsersUserIdPromoteAdminPostData, PromoteUserToAdminUsersUserIdPromoteAdminPostErrors, PromoteUserToAdminUsersUserIdPromoteAdminPostResponses, ReadinessCheckHealthReadyGetData, ReadinessCheckHealthReadyGetResponses, RefreshAccessTokenAuthRefreshTokenPostData, RefreshAccessTokenAuthRefreshTokenPostErrors, RefreshAccessTokenAuthRefreshTokenPostResponses, RegisterAdminAuthRegisterAdminPostData, RegisterAdminAuthRegisterAdminPostErrors, RegisterAdminAuthRegisterAdminPostResponses, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors, RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteData, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteErrors, RevokeAllOneTimeLinksForUserAdminUsersUserIdOneTimeLinksDeleteResponses, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkForAdminAdminOneTimeLinksLinkIdDeleteResponses, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteData, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteErrors, RevokeOneTimeLinkOneTimeLinksLinkIdDeleteResponses, RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteData, RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteErrors, RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteResponses, RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostData, RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostErrors, RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostResponses, SharePasswordPasswordsPasswordIdSharePostData, SharePasswordPasswordsPasswordIdSharePostErrors, SharePasswordPasswordsPasswordIdSharePostResponses, SsoCallbackAuthSsoCallbackGetData, SsoCallbackAuthSsoCallbackGetErrors, SsoCallbackAuthSsoCallbackGetResponses, UnlockVaultVaultUnlockPostData, UnlockVaultVaultUnlockPostErrors, UnlockVaultVaultUnlockPostResponses, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteData, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteErrors, UnsharePasswordPasswordsPasswordIdShareGroupIdDeleteResponses, UpdateGroupGroupsGroupIdPutData, UpdateGroupGroupsGroupIdPutErrors, UpdateGroupGroupsGroupIdPutResponses, UpdatePasswordPasswordsPasswordIdPutData, UpdatePasswordPasswordsPasswordIdPutErrors, UpdatePasswordPasswordsPasswordIdPutResponses, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchData, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchErrors, UpdateShareExpirationPasswordsPasswordIdShareGroupIdPatchResponses, UpdateUserPasswordUsersMePasswordPutData, UpdateUserPasswordUsersMePasswordPutErrors, UpdateUserPasswordUsersMePasswordPutResponses, UpdateUserUsersUserIdPutData, UpdateUserUsersUserIdPutErrors, UpdateUserUsersUserIdPutResponses, ValidateVaultSetupVaultValidateSetupPostData, ValidateVaultSetupVaultValidateSetupPostErrors, ValidateVaultSetupVaultValidateSetupPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -1185,6 +1185,92 @@ export const listGroupEventsGroupsGroupIdEventsGet = <ThrowOnError extends boole
             type: 'apiKey'
         }],
     url: '/groups/{group_id}/events',
+    ...options
+});
+
+/**
+ * List a group's service accounts
+ *
+ * List service accounts, revoked ones included.
+ *
+ * - **group_id**: Group to filter on. Omit it to list every group the caller
+ * can manage: those they own, or all of them for an administrator.
+ *
+ * `active` counts the usable accounts among those listed, and is only comparable
+ * with `max_active` when `group_id` is set: an unscoped listing spans several
+ * groups, each with its own budget.
+ *
+ * Only a group owner or an administrator may do this. No token is returned,
+ * hashed or otherwise.
+ */
+export const listServiceAccountsIamServiceAccountsGet = <ThrowOnError extends boolean = false>(options?: Options<ListServiceAccountsIamServiceAccountsGetData, ThrowOnError>): RequestResult<ListServiceAccountsIamServiceAccountsGetResponses, ListServiceAccountsIamServiceAccountsGetErrors, ThrowOnError> => (options?.client ?? client).get<ListServiceAccountsIamServiceAccountsGetResponses, ListServiceAccountsIamServiceAccountsGetErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/iam/service-accounts',
+    ...options
+});
+
+/**
+ * Create a service account on a group
+ *
+ * Create a service account owned by a group.
+ *
+ * - **group_id**: Group that will own the service account
+ * - **name**: Name to give the service account
+ *
+ * Only a group owner or an administrator may do this. The token is returned
+ * here and never again: only its hash is stored.
+ */
+export const createServiceAccountIamServiceAccountsPost = <ThrowOnError extends boolean = false>(options: Options<CreateServiceAccountIamServiceAccountsPostData, ThrowOnError>): RequestResult<CreateServiceAccountIamServiceAccountsPostResponses, CreateServiceAccountIamServiceAccountsPostErrors, ThrowOnError> => (options.client ?? client).post<CreateServiceAccountIamServiceAccountsPostResponses, CreateServiceAccountIamServiceAccountsPostErrors, ThrowOnError>({
+    security: [{ name: 'X-CSRF-Token', type: 'apiKey' }, {
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/iam/service-accounts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Rotate a service account's token
+ *
+ * Replace a service account's token, retiring the previous one.
+ *
+ * Only a group owner or an administrator may do this. The account keeps its
+ * id, name, group and history. The new token is returned here and never again.
+ */
+export const rotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePost = <ThrowOnError extends boolean = false>(options: Options<RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostData, ThrowOnError>): RequestResult<RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostResponses, RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostErrors, ThrowOnError> => (options.client ?? client).post<RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostResponses, RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostErrors, ThrowOnError>({
+    security: [{ name: 'X-CSRF-Token', type: 'apiKey' }, {
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/iam/service-accounts/{service_account_id}/rotate',
+    ...options
+});
+
+/**
+ * Revoke a service account
+ *
+ * Revoke a service account.
+ *
+ * Only a group owner or an administrator may do this. The account stops being
+ * active but its row survives, so the revocation stays auditable.
+ */
+export const revokeServiceAccountIamServiceAccountsServiceAccountIdDelete = <ThrowOnError extends boolean = false>(options: Options<RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteData, ThrowOnError>): RequestResult<RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteResponses, RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteResponses, RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteErrors, ThrowOnError>({
+    security: [{ name: 'X-CSRF-Token', type: 'apiKey' }, {
+            in: 'cookie',
+            name: 'access_token',
+            type: 'apiKey'
+        }],
+    url: '/iam/service-accounts/{service_account_id}',
     ...options
 });
 
