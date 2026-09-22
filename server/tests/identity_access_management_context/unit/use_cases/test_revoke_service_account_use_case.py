@@ -105,7 +105,7 @@ def test_given_a_revoked_account_when_listing_the_group_then_the_row_survives(
 ):
     _revoke(use_case, owner, account.id)
 
-    remaining = list(service_account_repository.list_for_group(GROUP_ID))
+    remaining = list(service_account_repository.list_for_groups((GROUP_ID,)))
     assert [a.id for a in remaining] == [account.id]
     assert remaining[0].name == "nightly-backup"
 
