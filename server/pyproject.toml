@@ -19,6 +19,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "aiosmtpd>=1.4.6",
   "oidc-provider-mock>=0.4.7",
   "pytest>=9.1.1",
   "pytest-asyncio>=1.4.0",
