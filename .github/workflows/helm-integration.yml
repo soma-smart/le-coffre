@@ -115,6 +115,17 @@ jobs:
         with:
           version: v3.17.3
 
+      - name: Lint chart with SMTP enabled
+        run: |
+          helm lint ./helm/le-coffre \
+            -f ./helm/le-coffre/values-ci.yaml \
+            --set config.smtp.enabled=true \
+            --set config.smtp.host=mailpit \
+            --set config.smtp.fromAddress=test@example.com \
+            --set config.smtp.username=test-user \
+            --set config.smtp.tlsMode=starttls \
+            --set config.smtp.existingSecretName=le-coffre-smtp
+
       - name: Enable Minikube ingress addon
         run: |
           minikube addons enable ingress
