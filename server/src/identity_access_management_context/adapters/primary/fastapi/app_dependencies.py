@@ -590,6 +590,9 @@ def get_delete_group_usecase(
     group_usage_gateway: GroupUsageGateway = Depends(get_group_usage_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return DeleteGroupUseCase(
         group_repository,
@@ -597,6 +600,9 @@ def get_delete_group_usecase(
         group_usage_gateway,
         event_publisher,
         group_event_repository,
+        service_account_repository,
+        service_account_event_repository,
+        time_provider,
     )
 
 
