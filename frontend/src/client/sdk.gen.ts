@@ -1200,8 +1200,10 @@ export const listGroupEventsGroupsGroupIdEventsGet = <ThrowOnError extends boole
  * with `max_active` when `group_id` is set: an unscoped listing spans several
  * groups, each with its own budget.
  *
- * Only a group owner or an administrator may do this. No token is returned,
- * hashed or otherwise.
+ * Filtering to one group requires being its owner. Leaving it unscoped also
+ * admits an administrator, who then sees every group's accounts — listing
+ * carries no token, so this is a metadata view, never a way to a credential.
+ * No token is returned, hashed or otherwise.
  */
 export const listServiceAccountsIamServiceAccountsGet = <ThrowOnError extends boolean = false>(options?: Options<ListServiceAccountsIamServiceAccountsGetData, ThrowOnError>): RequestResult<ListServiceAccountsIamServiceAccountsGetResponses, ListServiceAccountsIamServiceAccountsGetErrors, ThrowOnError> => (options?.client ?? client).get<ListServiceAccountsIamServiceAccountsGetResponses, ListServiceAccountsIamServiceAccountsGetErrors, ThrowOnError>({
     security: [{
@@ -1221,7 +1223,8 @@ export const listServiceAccountsIamServiceAccountsGet = <ThrowOnError extends bo
  * - **group_id**: Group that will own the service account
  * - **name**: Name to give the service account
  *
- * Only a group owner or an administrator may do this. The token is returned
+ * Only a group owner may do this, not even an administrator, since the
+ * token this returns can read the group's passwords. The token is returned
  * here and never again: only its hash is stored.
  */
 export const createServiceAccountIamServiceAccountsPost = <ThrowOnError extends boolean = false>(options: Options<CreateServiceAccountIamServiceAccountsPostData, ThrowOnError>): RequestResult<CreateServiceAccountIamServiceAccountsPostResponses, CreateServiceAccountIamServiceAccountsPostErrors, ThrowOnError> => (options.client ?? client).post<CreateServiceAccountIamServiceAccountsPostResponses, CreateServiceAccountIamServiceAccountsPostErrors, ThrowOnError>({
@@ -1243,7 +1246,8 @@ export const createServiceAccountIamServiceAccountsPost = <ThrowOnError extends 
  *
  * Replace a service account's token, retiring the previous one.
  *
- * Only a group owner or an administrator may do this. The account keeps its
+ * Only a group owner may do this — not even an administrator, since the new
+ * token this returns can read the group's passwords. The account keeps its
  * id, name, group and history. The new token is returned here and never again.
  */
 export const rotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePost = <ThrowOnError extends boolean = false>(options: Options<RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostData, ThrowOnError>): RequestResult<RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostResponses, RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostErrors, ThrowOnError> => (options.client ?? client).post<RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostResponses, RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostErrors, ThrowOnError>({
@@ -1261,8 +1265,8 @@ export const rotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePo
  *
  * Revoke a service account.
  *
- * Only a group owner or an administrator may do this. The account stops being
- * active but its row survives, so the revocation stays auditable.
+ * Only a group owner may do this. The account stops being active but its
+ * row survives, so the revocation stays auditable.
  */
 export const revokeServiceAccountIamServiceAccountsServiceAccountIdDelete = <ThrowOnError extends boolean = false>(options: Options<RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteData, ThrowOnError>): RequestResult<RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteResponses, RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteErrors, ThrowOnError> => (options.client ?? client).delete<RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteResponses, RevokeServiceAccountIamServiceAccountsServiceAccountIdDeleteErrors, ThrowOnError>({
     security: [{ name: 'X-CSRF-Token', type: 'apiKey' }, {
