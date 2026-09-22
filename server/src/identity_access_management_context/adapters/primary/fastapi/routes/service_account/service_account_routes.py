@@ -34,7 +34,7 @@ from identity_access_management_context.domain.exceptions import (
     TooManyActiveServiceAccountsError,
     UserNotOwnerOfGroupException,
 )
-from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.adapters.primary.dependencies import csrf_scheme, get_current_user
 from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
@@ -92,6 +92,7 @@ def _raise_for(error: Exception) -> None:
 @router.post(
     "",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(csrf_scheme)],
     response_model=CreatedServiceAccount,
     summary="Create a service account on a group",
 )
@@ -134,14 +135,15 @@ def create_service_account(
     summary="List a group's service accounts",
 )
 def list_service_accounts(
-    group_id: UUID = Query(description="Group whose service accounts to list"),
+    group_id: UUID | None = Query(default=None, description="Group to filter on; every reachable group when absent"),
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: ListServiceAccountsUseCase = Depends(get_list_service_accounts_usecase),
 ) -> ListServiceAccounts:
     """
-    List a group's service accounts, revoked ones included.
+    List service accounts, revoked ones included.
 
-    - **group_id**: Group whose service accounts to list
+    - **group_id**: Group to filter on. Omit it to list every group the caller
+      can manage: those they own, or all of them for an administrator.
 
     Only a group owner or an administrator may do this. No token is returned,
     hashed or otherwise.
@@ -174,6 +176,7 @@ def list_service_accounts(
 
 @router.post(
     "/{service_account_id}/rotate",
+    dependencies=[Depends(csrf_scheme)],
     response_model=RotatedServiceAccountToken,
     summary="Rotate a service account's token",
 )
@@ -204,6 +207,7 @@ def rotate_service_account_token(
 @router.delete(
     "/{service_account_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(csrf_scheme)],
     summary="Revoke a service account",
 )
 def revoke_service_account(

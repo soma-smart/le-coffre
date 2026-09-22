@@ -631,6 +631,8 @@ def get_list_service_accounts_usecase(
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
     user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
 ):
     return ListServiceAccountsUseCase(
         service_account_repository,
@@ -639,6 +641,8 @@ def get_list_service_accounts_usecase(
         service_account_event_repository,
         time_provider,
         user_repository,
+        group_repository,
+        group_member_repository,
     )
 
 

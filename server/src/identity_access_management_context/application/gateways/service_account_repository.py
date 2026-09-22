@@ -41,8 +41,8 @@ class ServiceAccountRepository(ABC):
         """Return accounts matching these ids."""
 
     @abstractmethod
-    def list_for_group(self, group_id: UUID) -> Iterable[ServiceAccount]:
-        """Return every account of a group, revoked ones included."""
+    def list_for_groups(self, group_ids: Sequence[UUID]) -> Iterable[ServiceAccount]:
+        """Return every account of these groups, revoked ones included."""
 
     @abstractmethod
     def rotate(self, ids: Sequence[UUID], hashes: Sequence[str]) -> None:

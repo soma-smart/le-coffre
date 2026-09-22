@@ -15,19 +15,21 @@ class ServiceAccountsListedEvent(ServiceAccountEvent):
     of them. Filed at LOW priority: it records a read, not a change.
     """
 
-    group_id: UUID
-    """ID of the group whose service accounts were listed."""
+    group_id: UUID | None
+    """ID of the group whose service accounts were listed, or None across every reachable group."""
 
     def __init__(
         self,
         event_id: UUID,
         occurred_on: datetime,
         user_id: UUID,
-        group_id: UUID,
+        group_id: UUID | None,
         priority: EventPriority = EventPriority.LOW,
     ) -> None:
         super().__init__(event_id, occurred_on, user_id, priority)
         self.group_id = group_id
 
     def _make_event_data(self) -> dict[str, str]:
+        if self.group_id is None:
+            return super()._make_event_data()
         return super()._make_event_data() | {"group_id": str(self.group_id)}

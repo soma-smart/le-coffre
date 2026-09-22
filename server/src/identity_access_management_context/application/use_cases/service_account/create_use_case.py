@@ -51,7 +51,8 @@ class CreateServiceAccountUseCase(
         name = ServiceAccount.validated_service_account_name(command.name)
 
         # Retrieve active service accounts of the group
-        active_service_accounts = list(filter(lambda a: a.is_active, self._repository.list_for_group(command.group_id)))
+        group_accounts = self._repository.list_for_groups((command.group_id,))
+        active_service_accounts = [account for account in group_accounts if account.is_active]
 
         # Check that there is not the maximum number of accounts created already
         if len(active_service_accounts) >= self._max_active_accounts:

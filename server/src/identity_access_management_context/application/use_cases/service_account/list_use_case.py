@@ -1,7 +1,10 @@
-from uuid import uuid4
+from collections.abc import Sequence
+from uuid import UUID, uuid4
 
 from identity_access_management_context.application.commands import ListServiceAccountsCommand
 from identity_access_management_context.application.gateways import (
+    GroupMemberRepository,
+    GroupRepository,
     ServiceAccountEventRepository,
     ServiceAccountRepository,
     UserRepository,
@@ -13,6 +16,7 @@ from identity_access_management_context.application.responses import (
 from identity_access_management_context.application.services import GroupManagementPermissionService
 from identity_access_management_context.domain.events import ServiceAccountsListedEvent
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
+from shared_kernel.domain.services import AdminPermissionChecker
 
 from ._use_case import ServiceAccountUseCase
 
@@ -21,6 +25,8 @@ class ListServiceAccountsUseCase(
     ServiceAccountUseCase[ListServiceAccountsCommand, ServiceAccountsListedEvent, ListServiceAccountsResponse]
 ):
     _user_repository: UserRepository
+    _group_repository: GroupRepository
+    _group_member_repository: GroupMemberRepository
 
     def __init__(
         self,
@@ -30,6 +36,8 @@ class ListServiceAccountsUseCase(
         service_account_event_repository: ServiceAccountEventRepository,
         time_provider: TimeGateway,
         user_repository: UserRepository,
+        group_repository: GroupRepository,
+        group_member_repository: GroupMemberRepository,
     ):
         super().__init__(
             service_account_repository,
@@ -39,15 +47,27 @@ class ListServiceAccountsUseCase(
             time_provider,
         )
         self._user_repository = user_repository
+        self._group_repository = group_repository
+        self._group_member_repository = group_member_repository
+
+    def _readable_group_ids(self, command: ListServiceAccountsCommand) -> Sequence[UUID]:
+        """Return the groups this listing covers, refusing one the caller cannot manage."""
+        if command.group_id is not None:
+            self._permissions.ensure_user_can_manage_group(command.requesting_user, command.group_id)
+            return (command.group_id,)
+
+        # An administrator manages every group, so an unscoped listing spans them all.
+        if AdminPermissionChecker.is_admin(command.requesting_user):
+            return [group.id for group in self._group_repository.get_all()]
+
+        return self._group_member_repository.get_group_ids_owned_by(command.requesting_user.user_id)
 
     def _execute(
         self, command: ListServiceAccountsCommand
     ) -> tuple[ServiceAccountsListedEvent, ListServiceAccountsResponse]:
-        # Check the user has permission to manage the service account
-        self._permissions.ensure_user_can_manage_group(command.requesting_user, command.group_id)
-
         # Retrieve the service accounts
-        accounts = tuple(self._repository.list_for_group(command.group_id))
+        group_ids = self._readable_group_ids(command)
+        accounts = tuple(self._repository.list_for_groups(group_ids))
         facts = self._event_repository.get_creation_facts(tuple(account.id for account in accounts))
 
         # Get user names
@@ -74,9 +94,9 @@ class ListServiceAccountsUseCase(
         # Sort summaries
         dated_summaries = sorted(
             filter(lambda s: s.created_at is not None, summaries),
-            key=lambda s: s.created_at,
+            key=lambda s: s.created_at,  # type: ignore
             reverse=True,
-        )
+        )  # pyright: ignore[reportCallIssue]
         undated_summaries = [s for s in summaries if s.created_at is None]
 
         event = ServiceAccountsListedEvent(
