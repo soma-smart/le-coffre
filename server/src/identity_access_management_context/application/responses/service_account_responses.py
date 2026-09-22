@@ -1,30 +1,61 @@
+from collections.abc import Hashable
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID
 
 
 @dataclass(frozen=True)
-class CreatedServiceAccountResponse:
-    """Returned once, at creation."""
+class ItemResponse[IdT: Hashable]:
+    """Response with an identified item."""
 
-    id: UUID
+    id: IdT
+
+
+@dataclass(frozen=True)
+class ListResponse[ItemT: ItemResponse]:
+    """Response with a sequence of identified items."""
+
+    items: tuple[ItemT, ...]
+
+
+# Service Account
+
+
+@dataclass(frozen=True, kw_only=True)
+class ServiceAccountResponse: ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class ServiceAccountItemResponse(ServiceAccountResponse, ItemResponse[UUID]): ...
+
+
+## Concrete responses
+
+
+@dataclass(frozen=True, kw_only=True)
+class CreateServiceAccountResponse(ServiceAccountItemResponse):
+    """Response on service account creation."""
+
     group_id: UUID
+    """The ID of the group related to the service account."""
+
     name: str
-    created_at: datetime
+    """The name given to the service account."""
+
     token: str = field(repr=False)
+    """The token generated for the service account."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class RotateServiceAccountTokenResponse(ServiceAccountItemResponse):
+    """Response on service account token rotation."""
+
+    token: str = field(repr=False)
+    """The new token generated for the service account."""
 
 
 @dataclass(frozen=True)
-class RegeneratedServiceAccountTokenResponse:
-    """Returned once, at regeneration. The account keeps its id, name and group."""
-
-    id: UUID
-    rotated_at: datetime
-    token: str = field(repr=False)
-
-
-@dataclass(frozen=True)
-class ServiceAccountSummaryResponse:
+class ServiceAccountSummaryResponse(ServiceAccountItemResponse):
     """Manager-facing view of an account. Deliberately carries no token, not even hashed.
 
     ``created_at`` and the creator fields are optional because they come from the
@@ -32,25 +63,30 @@ class ServiceAccountSummaryResponse:
     missing still lists, with those fields empty.
     """
 
-    id: UUID
     group_id: UUID
+    """The ID of the group related to the service account."""
+
     name: str
+    """The name given to the service account."""
+
     created_by_user_id: UUID | None
-    created_by_display_name: str | None
+    """ID of the user who created the service account."""
+
+    created_by_user_name: str | None
+    """Name of the user who created the service account."""
+
     created_at: datetime | None
+    """Time of creation of the service account."""
+
     revoked_at: datetime | None
-    is_active: bool
+    """Time of revocation of the service account."""
 
 
 @dataclass(frozen=True)
-class ListServiceAccountsResponse:
-    """A group's accounts, plus how much of the cap is used.
+class ListServiceAccountsResponse(ServiceAccountResponse, ListResponse[ServiceAccountSummaryResponse]):
+    """Response on service accounts retrieval."""
 
-    ``active`` and ``max_active`` let a caller show "2 of 3 used" without
-    re-deriving it from a list that may be filtered to active accounts only.
-    """
 
-    service_accounts: list[ServiceAccountSummaryResponse]
-    total: int
-    active: int
-    max_active: int
+@dataclass(frozen=True, kw_only=True)
+class RevokeServiceAccountResponse(ServiceAccountItemResponse):
+    """Response on service account revocation."""

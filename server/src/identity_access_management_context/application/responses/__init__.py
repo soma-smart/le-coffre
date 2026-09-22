@@ -7,9 +7,11 @@ from .list_group_events_response import GroupEventItem, ListGroupEventsResponse
 from .list_group_response import GroupResponse, ListGroupResponse
 from .refresh_access_token_response import RefreshAccessTokenResponse
 from .service_account_responses import (
-    CreatedServiceAccountResponse,
+    CreateServiceAccountResponse,
     ListServiceAccountsResponse,
-    RegeneratedServiceAccountTokenResponse,
+    RevokeServiceAccountResponse,
+    RotateServiceAccountTokenResponse,
+    ServiceAccountResponse,
     ServiceAccountSummaryResponse,
 )
 from .sso_login_response import SsoLoginResponse
@@ -30,8 +32,10 @@ __all__ = [
     "IsSsoConfigSetResponse",
     "GetUserMeResponse",
     "GetStatisticForAdminResponse",
-    "CreatedServiceAccountResponse",
-    "RegeneratedServiceAccountTokenResponse",
+    "ServiceAccountResponse",
+    "CreateServiceAccountResponse",
+    "RotateServiceAccountTokenResponse",
     "ServiceAccountSummaryResponse",
     "ListServiceAccountsResponse",
+    "RevokeServiceAccountResponse",
 ]

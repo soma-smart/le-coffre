@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from ._event import ServiceAccountEvent
+from ._event import ServiceAccountItemEvent
 
 
 @dataclass(init=False)
-class ServiceAccountTokenRotatedEvent(ServiceAccountEvent):
+class ServiceAccountTokenRotatedEvent(ServiceAccountItemEvent):
     """A service account's token was rotated."""
