@@ -27,7 +27,24 @@ services:
       - USER_UID=${USER_UID:-1000}
       - USER_GID=${USER_GID:-1000}
       - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8123}
+      - SMTP_HOST=${SMTP_HOST:-mailpit}
+      - SMTP_PORT=${SMTP_PORT:-1025}
     command: tail -f /dev/null
+
+  # Local SMTP catcher: every email the backend sends during local dev lands
+  # here instead of anywhere real — no per-recipient filtering, every message
+  # to any address shows up. Opt-in: only starts with the "mail" profile, e.g.
+  # `docker compose -f docker-compose.dev.yml --profile mail up -d mailpit`
+  # (or the "Run Mailpit (local SMTP catcher)" VS Code task). The devcontainer
+  # already points SMTP_HOST/SMTP_PORT at it, so starting it is enough — no
+  # restart needed. Web UI at http://localhost:8025; the backend (same
+  # compose network) reaches it at mailpit:1025.
+  mailpit:
+    image: axllent/mailpit
+    profiles: ["mail"]
+    ports:
+      - "8025:8025"  # Web UI — view captured emails
+      - "1025:1025"  # SMTP — where the backend sends
 
   # Local SSO provider for testing the OIDC flow. Opt-in: only starts with the
   # "sso" profile, e.g. `docker compose -f docker-compose.dev.yml --profile sso up -d keycloak`.
