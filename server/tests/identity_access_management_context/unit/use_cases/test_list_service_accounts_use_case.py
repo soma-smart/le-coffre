@@ -41,7 +41,7 @@ def groups(group_repository, group_member_repository, user_repository):
 @pytest.fixture
 def create_use_case(
     service_account_repository,
-    group_management_permission_service,
+    service_account_permission_service,
     event_publisher,
     service_account_event_repository,
     time_provider,
@@ -49,7 +49,7 @@ def create_use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
-        group_management_permission_service,
+        service_account_permission_service,
         event_publisher,
         service_account_event_repository,
         time_provider,
@@ -60,7 +60,7 @@ def create_use_case(
 @pytest.fixture
 def use_case(
     service_account_repository,
-    group_management_permission_service,
+    service_account_permission_service,
     event_publisher,
     service_account_event_repository,
     time_provider,
@@ -70,7 +70,7 @@ def use_case(
 ):
     return ListServiceAccountsUseCase(
         service_account_repository,
-        group_management_permission_service,
+        service_account_permission_service,
         event_publisher,
         service_account_event_repository,
         time_provider,
@@ -156,6 +156,12 @@ def test_given_accounts_with_and_without_creation_events_when_listing_then_undat
 def test_given_a_plain_member_when_listing_then_it_is_refused(use_case, groups):
     with pytest.raises(UserNotOwnerOfGroupException):
         _list(use_case, AuthenticatedUser(user_id=MEMBER_ID, roles=[]))
+
+
+def test_given_an_admin_who_is_not_an_owner_when_listing_a_group_then_it_is_refused(use_case, groups):
+    """Scoped-to-one-group listing requires ownership; admin only widens the unscoped case."""
+    with pytest.raises(UserNotOwnerOfGroupException):
+        _list(use_case, AuthenticatedUser(user_id=uuid4(), roles=["admin"]))
 
 
 def test_given_another_groups_account_when_listing_then_it_is_not_included(

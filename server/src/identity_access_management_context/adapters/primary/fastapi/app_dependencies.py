@@ -46,7 +46,7 @@ from identity_access_management_context.application.gateways import (
     UserPasswordRepository,
     UserRepository,
 )
-from identity_access_management_context.application.services import GroupManagementPermissionService
+from identity_access_management_context.application.services import ServiceAccountPermissionService
 from identity_access_management_context.application.use_cases import (
     AddOwnerToGroupUseCase,
     AddUserToGroupUseCase,
@@ -144,11 +144,11 @@ def get_group_member_repository(
     return SqlGroupMemberRepository(session)
 
 
-def get_group_management_permission_service(
+def get_service_account_permission_service(
     group_repository: GroupRepository = Depends(get_group_repository),
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
-) -> GroupManagementPermissionService:
-    return GroupManagementPermissionService(group_repository, group_member_repository)
+) -> ServiceAccountPermissionService:
+    return ServiceAccountPermissionService(group_repository, group_member_repository)
 
 
 def get_group_usage_gateway(
@@ -622,7 +622,7 @@ def get_statistic_for_admin_usecase(
 
 def get_create_service_account_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    permission_service: GroupManagementPermissionService = Depends(get_group_management_permission_service),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
@@ -639,7 +639,7 @@ def get_create_service_account_usecase(
 
 def get_list_service_accounts_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    permission_service: GroupManagementPermissionService = Depends(get_group_management_permission_service),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
@@ -662,7 +662,7 @@ def get_list_service_accounts_usecase(
 
 def get_rotate_service_account_token_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    permission_service: GroupManagementPermissionService = Depends(get_group_management_permission_service),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
@@ -678,7 +678,7 @@ def get_rotate_service_account_token_usecase(
 
 def get_revoke_service_account_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    permission_service: GroupManagementPermissionService = Depends(get_group_management_permission_service),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),

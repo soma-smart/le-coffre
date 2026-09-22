@@ -1,5 +1,5 @@
 from .admin_existence_service import AdminExistenceService
-from .group_management_permission_service import GroupManagementPermissionService
+from .service_account_permission_service import ServiceAccountPermissionService
 from .sso_configuration_decrypting_service import SsoConfigurationDecryptingService
 from .user_creation_service import UserCreationService
 from .user_management_service import UserManagementService
@@ -9,5 +9,5 @@ __all__ = [
     "UserCreationService",
     "UserManagementService",
     "SsoConfigurationDecryptingService",
-    "GroupManagementPermissionService",
+    "ServiceAccountPermissionService",
 ]

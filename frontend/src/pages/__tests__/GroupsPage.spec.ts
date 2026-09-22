@@ -130,11 +130,22 @@ describe('GroupsPage service accounts button', () => {
     expect(wrapper.find('[data-testid="service-accounts-button"]').exists()).toBe(false)
   })
 
-  it('appears on every group for an administrator', async () => {
+  it('is withheld from an administrator who does not own the group', async () => {
+    // A service account's token can read the group's passwords, so admin status
+    // alone must not grant it — only ownership does, unlike edit/delete.
     const wrapper = await mountPage(
       [sharedGroup({ id: 'g1', name: 'Platform', owners: ['someone-else'] })],
       { ...currentUser, roles: ['admin'] },
     )
+
+    expect(wrapper.find('[data-testid="service-accounts-button"]').exists()).toBe(false)
+  })
+
+  it('still appears for an administrator who does own the group', async () => {
+    const wrapper = await mountPage([sharedGroup({ id: 'g1', name: 'Platform' })], {
+      ...currentUser,
+      roles: ['admin'],
+    })
 
     expect(wrapper.find('[data-testid="service-accounts-button"]').exists()).toBe(true)
   })

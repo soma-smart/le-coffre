@@ -3,7 +3,7 @@ from uuid import UUID
 import pytest
 
 from identity_access_management_context.application.gateways import SsoUserInfo
-from identity_access_management_context.application.services import GroupManagementPermissionService
+from identity_access_management_context.application.services import ServiceAccountPermissionService
 from identity_access_management_context.domain.entities import SsoUser
 from tests.fakes import FakeDomainEventPublisher
 from tests.shared_kernel.fakes import FakeTimeGateway
@@ -183,5 +183,5 @@ def service_account_event_repository():
 
 
 @pytest.fixture
-def group_management_permission_service(group_repository, group_member_repository):
-    return GroupManagementPermissionService(group_repository, group_member_repository)
+def service_account_permission_service(group_repository, group_member_repository):
+    return ServiceAccountPermissionService(group_repository, group_member_repository)

@@ -9,8 +9,8 @@ from identity_access_management_context.application.gateways.service_account_eve
 )
 from identity_access_management_context.application.gateways.service_account_repository import ServiceAccountRepository
 from identity_access_management_context.application.responses.service_account_responses import ServiceAccountResponse
-from identity_access_management_context.application.services.group_management_permission_service import (
-    GroupManagementPermissionService,
+from identity_access_management_context.application.services.service_account_permission_service import (
+    ServiceAccountPermissionService,
 )
 from identity_access_management_context.domain.events.service_account._event import ServiceAccountEvent
 from shared_kernel.application.gateways.event_publisher_gateway import DomainEventPublisher
@@ -27,7 +27,7 @@ class ServiceAccountUseCase[
     """Service account use case."""
 
     _repository: ServiceAccountRepository
-    _permissions: GroupManagementPermissionService
+    _permissions: ServiceAccountPermissionService
     _event_publisher: DomainEventPublisher
     _event_repository: ServiceAccountEventRepository
     _time_provider: TimeGateway
@@ -35,7 +35,7 @@ class ServiceAccountUseCase[
     def __init__(
         self,
         service_account_repository: ServiceAccountRepository,
-        permission_service: GroupManagementPermissionService,
+        permission_service: ServiceAccountPermissionService,
         event_publisher: DomainEventPublisher,
         service_account_event_repository: ServiceAccountEventRepository,
         time_provider: TimeGateway,
