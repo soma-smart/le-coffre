@@ -13,7 +13,7 @@ from identity_access_management_context.application.responses import (
     ListServiceAccountsResponse,
     ServiceAccountSummaryResponse,
 )
-from identity_access_management_context.application.services import GroupManagementPermissionService
+from identity_access_management_context.application.services import ServiceAccountPermissionService
 from identity_access_management_context.domain.events import ServiceAccountsListedEvent
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.domain.services import AdminPermissionChecker
@@ -32,7 +32,7 @@ class ListServiceAccountsUseCase(
     def __init__(
         self,
         service_account_repository: ServiceAccountRepository,
-        permission_service: GroupManagementPermissionService,
+        permission_service: ServiceAccountPermissionService,
         event_publisher: DomainEventPublisher,
         service_account_event_repository: ServiceAccountEventRepository,
         time_provider: TimeGateway,

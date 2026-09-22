@@ -54,7 +54,7 @@ def groups(group_repository, group_member_repository):
 @pytest.fixture
 def use_case(
     service_account_repository,
-    group_management_permission_service,
+    service_account_permission_service,
     event_publisher,
     service_account_event_repository,
     time_provider,
@@ -62,7 +62,7 @@ def use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
-        group_management_permission_service,
+        service_account_permission_service,
         event_publisher,
         service_account_event_repository,
         time_provider,
@@ -103,8 +103,9 @@ def test_given_a_plain_member_when_creating_then_it_is_refused(use_case, member,
         _create(use_case, member)
 
 
-def test_given_an_admin_who_is_not_an_owner_when_creating_then_it_succeeds(use_case, admin, groups):
-    assert _create(use_case, admin).group_id == GROUP_ID
+def test_given_an_admin_who_is_not_an_owner_when_creating_then_it_is_refused(use_case, admin, groups):
+    with pytest.raises(UserNotOwnerOfGroupException):
+        _create(use_case, admin)
 
 
 def test_given_an_unknown_group_when_creating_then_it_is_refused(use_case, owner, groups):

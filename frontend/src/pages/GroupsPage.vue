@@ -65,6 +65,14 @@ const canEditGroup = (group: Group) => {
   return group.owners.includes(groupsStore.currentUserId)
 }
 
+// Service accounts are owner-only, even for admins: a service account's token
+// can read the group's passwords, and admins must not gain that for a group
+// they don't own just by virtue of being an admin.
+const canManageServiceAccounts = (group: Group) => {
+  if (!groupsStore.currentUserId) return false
+  return group.owners.includes(groupsStore.currentUserId)
+}
+
 // Check if group has passwords (for now we'll show an error when trying to delete)
 // In a future iteration, we could fetch this info from the API
 const groupHasPasswords = ref(false)
@@ -293,7 +301,7 @@ onMounted(async () => {
                    one member and cannot be renamed or removed. -->
               <div class="flex gap-2 mt-4">
                 <Button
-                  v-if="canEditGroup(personalCard)"
+                  v-if="canManageServiceAccounts(personalCard)"
                   label="Service Accounts"
                   icon="pi pi-key"
                   size="small"
@@ -373,7 +381,7 @@ onMounted(async () => {
                   @click="openGroupDetails(group)"
                 />
                 <Button
-                  v-if="canEditGroup(group)"
+                  v-if="canManageServiceAccounts(group)"
                   label="Service Accounts"
                   icon="pi pi-key"
                   size="small"

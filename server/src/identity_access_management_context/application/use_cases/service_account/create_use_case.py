@@ -6,7 +6,7 @@ from identity_access_management_context.application.gateways import (
     ServiceAccountRepository,
 )
 from identity_access_management_context.application.responses import CreateServiceAccountResponse
-from identity_access_management_context.application.services import GroupManagementPermissionService
+from identity_access_management_context.application.services import ServiceAccountPermissionService
 from identity_access_management_context.domain.entities import ServiceAccount
 from identity_access_management_context.domain.events import ServiceAccountCreatedEvent
 from identity_access_management_context.domain.exceptions import (
@@ -26,7 +26,7 @@ class CreateServiceAccountUseCase(
     def __init__(
         self,
         service_account_repository: ServiceAccountRepository,
-        permission_service: GroupManagementPermissionService,
+        permission_service: ServiceAccountPermissionService,
         event_publisher: DomainEventPublisher,
         service_account_event_repository: ServiceAccountEventRepository,
         time_provider: TimeGateway,

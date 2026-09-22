@@ -27,6 +27,7 @@ LATER = datetime(2026, 2, 1, 12, 0, 0, tzinfo=UTC)
 GROUP_ID = UUID("00000000-0000-0000-0000-0000000000b1")
 OWNER_ID = UUID("00000000-0000-0000-0000-0000000000a1")
 MEMBER_ID = UUID("00000000-0000-0000-0000-0000000000a2")
+ADMIN_ID = UUID("00000000-0000-0000-0000-0000000000a3")
 
 
 @pytest.fixture
@@ -44,7 +45,7 @@ def groups(group_repository, group_member_repository):
 @pytest.fixture
 def create_use_case(
     service_account_repository,
-    group_management_permission_service,
+    service_account_permission_service,
     event_publisher,
     service_account_event_repository,
     time_provider,
@@ -52,7 +53,7 @@ def create_use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
-        group_management_permission_service,
+        service_account_permission_service,
         event_publisher,
         service_account_event_repository,
         time_provider,
@@ -63,14 +64,14 @@ def create_use_case(
 @pytest.fixture
 def use_case(
     service_account_repository,
-    group_management_permission_service,
+    service_account_permission_service,
     event_publisher,
     service_account_event_repository,
     time_provider,
 ):
     return RevokeServiceAccountUseCase(
         service_account_repository,
-        group_management_permission_service,
+        service_account_permission_service,
         event_publisher,
         service_account_event_repository,
         time_provider,
@@ -132,6 +133,11 @@ def test_given_an_already_revoked_account_when_revoking_again_then_the_first_tim
 def test_given_a_plain_member_when_revoking_then_it_is_refused(use_case, account, groups):
     with pytest.raises(UserNotOwnerOfGroupException):
         _revoke(use_case, AuthenticatedUser(user_id=MEMBER_ID, roles=[]), account.id)
+
+
+def test_given_an_admin_who_is_not_an_owner_when_revoking_then_it_is_refused(use_case, account, groups):
+    with pytest.raises(UserNotOwnerOfGroupException):
+        _revoke(use_case, AuthenticatedUser(user_id=ADMIN_ID, roles=["admin"]), account.id)
 
 
 def test_given_an_unknown_account_when_revoking_then_it_is_not_found(use_case, owner, groups):
