@@ -1,7 +1,7 @@
 from typing import Generator
 
 from fastapi import Depends, HTTPException
-from fastapi.security.api_key import APIKeyCookie
+from fastapi.security.api_key import APIKeyCookie, APIKeyHeader
 from sqlmodel import Session
 from starlette.requests import Request
 
@@ -32,8 +32,9 @@ from .exceptions import (
     MissingTokenError,
 )
 
-# Security scheme for Swagger documentation
+# Security schemes for Swagger documentation
 cookie_scheme = APIKeyCookie(name="access_token", scheme_name="CookieAuth", auto_error=False)
+csrf_scheme = APIKeyHeader(name="X-CSRF-Token", scheme_name="CsrfToken", auto_error=False)
 
 
 def get_session(request: Request) -> Generator[Session, None, None]:
