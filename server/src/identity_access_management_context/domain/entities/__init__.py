@@ -2,6 +2,7 @@ from .auth_session import AuthSession
 from .group import Group
 from .group_member import GroupMember
 from .personal_group import PersonalGroup
+from .service_account import ServiceAccount
 from .sso_configuration import SsoConfiguration
 from .sso_user import SsoUser
 from .user import User
@@ -16,4 +17,5 @@ __all__ = [
     "PersonalGroup",
     "Group",
     "GroupMember",
+    "ServiceAccount",
 ]
