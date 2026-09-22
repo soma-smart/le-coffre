@@ -8,11 +8,7 @@ import { AuthDomainError, InvalidCredentialsError } from '@/domain/auth/errors'
 import { useContainer } from '@/plugins/container'
 import { usePasswordsStore } from '@/stores/passwords'
 import { useUserStore } from '@/stores/user'
-import { useGroupsStore } from '@/stores/groups'
 import { useCsrfStore } from '@/stores/csrf'
-import { pickDefaultGroupForUser } from '@/domain/group/Group'
-import { slugifyGroupName } from '@/utils/groupSlug'
-import { sortGroupsByName } from '@/utils/groupSort'
 import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 
 const router = useRouter()
@@ -20,7 +16,6 @@ const route = useRoute()
 const toast = useToast()
 const passwordsStore = usePasswordsStore()
 const userStore = useUserStore()
-const groupsStore = useGroupsStore()
 const csrfStore = useCsrfStore()
 
 // Resolve use cases at setup time — inject() has no component context
@@ -44,26 +39,6 @@ const resolver = ref(
 )
 
 const loading = ref(false)
-
-const resolveDefaultGroupRoute = async () => {
-  await Promise.all([userStore.fetchCurrentUser(), groupsStore.fetchAllGroups()])
-
-  const personalGroupId = userStore.currentUser?.personalGroupId ?? null
-  const defaultGroup = pickDefaultGroupForUser(
-    groupsStore.userBelongingGroups,
-    personalGroupId,
-    sortGroupsByName,
-  )
-
-  if (!defaultGroup) {
-    return { name: 'Home' as const }
-  }
-
-  return {
-    name: 'HomeGroup' as const,
-    params: { groupSlug: slugifyGroupName(defaultGroup.name) },
-  }
-}
 
 // ── Rate limit / lockout countdown ─────────────────────────────
 // Two reasons share the same countdown machinery:
@@ -155,7 +130,7 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       return
     }
 
-    await router.push(await resolveDefaultGroupRoute())
+    await router.push({ name: 'PasswordsRoot' })
   } catch (err) {
     console.error('Login error:', err)
     // The countdown Message (isRateLimited) already communicates the

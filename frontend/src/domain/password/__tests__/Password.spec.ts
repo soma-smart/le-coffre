@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   accessibleGroupIdsFor,
   eventSeverity,
+  folderLabelOf,
+  folderNamesOf,
   humanizeEventType,
   isPasswordStale,
+  isRootFolder,
   isValidPasswordUrl,
   matchesPasswordQuery,
+  passwordSubtitle,
   PASSWORD_STALE_AFTER_DAYS,
   type Password,
+  ROOT_FOLDER,
   severityForShareStatus,
   shareStatusOf,
 } from '@/domain/password/Password'
@@ -187,5 +192,86 @@ describe('severityForShareStatus', () => {
     expect(severityForShareStatus('permanent')).toBe('info')
     expect(severityForShareStatus('active')).toBe('warn')
     expect(severityForShareStatus('expired')).toBe('danger')
+  })
+})
+
+describe('isRootFolder', () => {
+  it('recognizes the literal "default" as the root folder', () => {
+    expect(isRootFolder(ROOT_FOLDER)).toBe(true)
+    expect(isRootFolder('default')).toBe(true)
+  })
+
+  it('is case- and whitespace-insensitive, matching the backend coercion', () => {
+    expect(isRootFolder('Default')).toBe(true)
+    expect(isRootFolder('  default  ')).toBe(true)
+    expect(isRootFolder('DEFAULT')).toBe(true)
+  })
+
+  it('treats any other folder name as a real folder', () => {
+    expect(isRootFolder('Work')).toBe(false)
+    expect(isRootFolder('')).toBe(false)
+  })
+})
+
+describe('folderLabelOf', () => {
+  it('labels the root folder as "No folder"', () => {
+    expect(folderLabelOf('default')).toBe('No folder')
+  })
+
+  it('passes through any other folder name unchanged', () => {
+    expect(folderLabelOf('Work')).toBe('Work')
+  })
+})
+
+describe('folderNamesOf', () => {
+  it('collects distinct folder names, pinning the root folder first', () => {
+    const passwords = [
+      makePassword({ folder: 'Work' }),
+      makePassword({ folder: 'default' }),
+      makePassword({ folder: 'Banking' }),
+    ]
+    expect(folderNamesOf(passwords)).toEqual(['default', 'Banking', 'Work'])
+  })
+
+  it('deduplicates repeated folder names', () => {
+    const passwords = [makePassword({ folder: 'Work' }), makePassword({ folder: 'Work' })]
+    expect(folderNamesOf(passwords)).toEqual(['Work'])
+  })
+
+  it('returns an empty list for no passwords', () => {
+    expect(folderNamesOf([])).toEqual([])
+  })
+})
+
+describe('passwordSubtitle', () => {
+  it('shows "Group / Folder - login" when both are present', () => {
+    const password = makePassword({ folder: 'AWS', login: 'root@soma-smart.com' })
+    expect(passwordSubtitle(password, { groupName: 'Engineering' })).toBe(
+      'Engineering / AWS - root@soma-smart.com',
+    )
+  })
+
+  it('omits the folder segment at the group root', () => {
+    const password = makePassword({ folder: 'default', login: 'alice@example.com' })
+    expect(passwordSubtitle(password, { groupName: 'Engineering' })).toBe(
+      'Engineering - alice@example.com',
+    )
+  })
+
+  it('falls back to just the login with no group name', () => {
+    const password = makePassword({ folder: 'default', login: 'alice@example.com' })
+    expect(passwordSubtitle(password)).toBe('alice@example.com')
+  })
+
+  it('drops the folder segment entirely when showFolder is false', () => {
+    const password = makePassword({ folder: 'AWS', login: 'root@soma-smart.com' })
+    expect(passwordSubtitle(password, { groupName: 'Engineering', showFolder: false })).toBe(
+      'Engineering - root@soma-smart.com',
+    )
+  })
+
+  it('returns an empty string when there is nothing to show', () => {
+    const password = makePassword({ folder: 'default', login: null })
+    expect(passwordSubtitle(password)).toBe('')
   })
 })
