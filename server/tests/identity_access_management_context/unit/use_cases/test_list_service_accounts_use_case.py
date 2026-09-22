@@ -65,6 +65,8 @@ def use_case(
     service_account_event_repository,
     time_provider,
     user_repository,
+    group_repository,
+    group_member_repository,
 ):
     return ListServiceAccountsUseCase(
         service_account_repository,
@@ -73,11 +75,13 @@ def use_case(
         service_account_event_repository,
         time_provider,
         user_repository,
+        group_repository,
+        group_member_repository,
     )
 
 
-def _list(use_case, user):
-    return use_case.execute(ListServiceAccountsCommand(requesting_user=user, group_id=GROUP_ID))
+def _list(use_case, user, group_id=GROUP_ID):
+    return use_case.execute(ListServiceAccountsCommand(requesting_user=user, group_id=group_id))
 
 
 def test_given_an_account_when_listing_then_the_creation_facts_come_from_the_event(
@@ -161,3 +165,55 @@ def test_given_another_groups_account_when_listing_then_it_is_not_included(
     )
 
     assert _list(use_case, owner).items == ()
+
+
+def test_given_no_group_when_listing_then_every_owned_group_is_covered(
+    create_use_case, use_case, owner, groups, group_repository, group_member_repository, service_account_repository
+):
+    other_group_id = uuid4()
+    group_repository.save_group(Group(id=other_group_id, name="Other", is_personal=False))
+    group_member_repository.add_member(other_group_id, OWNER_ID, is_owner=True)
+    create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="here"))
+    create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=other_group_id, name="there"))
+
+    names = {summary.name for summary in _list(use_case, owner, group_id=None).items}
+
+    assert names == {"here", "there"}
+
+
+def test_given_no_group_when_listing_then_groups_the_caller_only_belongs_to_are_excluded(
+    create_use_case, use_case, owner, groups, service_account_repository
+):
+    """Membership is not management: a plain member must not see the group's credentials."""
+    create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="here"))
+    member = AuthenticatedUser(user_id=MEMBER_ID, roles=[])
+
+    assert _list(use_case, member, group_id=None).items == ()
+
+
+def test_given_no_group_when_an_admin_lists_then_every_group_is_covered(
+    create_use_case, use_case, owner, groups, group_repository, service_account_repository
+):
+    other_group_id = uuid4()
+    group_repository.save_group(Group(id=other_group_id, name="Other", is_personal=False))
+    create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="here"))
+    service_account_repository.create(
+        [ServiceAccount.create(group_id=other_group_id, name="theirs", token=ServiceAccountToken.generate())]
+    )
+    admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
+
+    names = {summary.name for summary in _list(use_case, admin, group_id=None).items}
+
+    assert names == {"here", "theirs"}
+
+
+def test_given_no_group_when_listing_then_the_audit_event_names_no_group(
+    create_use_case, use_case, owner, groups, service_account_event_repository
+):
+    create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="here"))
+
+    _list(use_case, owner, group_id=None)
+
+    event = service_account_event_repository.events[-1]
+    assert event["event_type"] == "ServiceAccountsListedEvent"
+    assert "group_id" not in event["event_data"]

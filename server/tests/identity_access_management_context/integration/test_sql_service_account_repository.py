@@ -63,7 +63,7 @@ def test_given_accounts_in_several_groups_when_listing_then_only_the_groups_own_
     mine = [_account(group_id, "a"), _account(group_id, "b")]
     sql_service_account_repository.create([*mine, _account(uuid4(), "elsewhere")])
 
-    listed = list(sql_service_account_repository.list_for_group(group_id))
+    listed = list(sql_service_account_repository.list_for_groups((group_id,)))
 
     assert {a.id for a in listed} == {a.id for a in mine}
 
@@ -74,7 +74,7 @@ def test_given_a_revoked_account_when_listing_then_it_still_comes_back(sql_servi
     sql_service_account_repository.create([account])
     sql_service_account_repository.revoke([account.id], NOW)
 
-    (listed,) = list(sql_service_account_repository.list_for_group(group_id))
+    (listed,) = list(sql_service_account_repository.list_for_groups((group_id,)))
 
     assert not listed.is_active
 

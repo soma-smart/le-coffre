@@ -28,8 +28,9 @@ class FakeServiceAccountRepository(ServiceAccountRepository):
         # One slot per requested id, empty where there is no such account.
         return [self.accounts.get(account_id) for account_id in ids]
 
-    def list_for_group(self, group_id: UUID) -> Iterable[ServiceAccount]:
-        return [account for account in self.accounts.values() if account.group_id == group_id]
+    def list_for_groups(self, group_ids: Sequence[UUID]) -> Iterable[ServiceAccount]:
+        wanted = set(group_ids)
+        return [account for account in self.accounts.values() if account.group_id in wanted]
 
     def rotate(self, ids: Sequence[UUID], hashes: Sequence[str]) -> None:
         for account_id in ids:

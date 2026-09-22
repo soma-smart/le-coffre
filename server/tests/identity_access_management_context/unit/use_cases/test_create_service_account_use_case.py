@@ -79,7 +79,7 @@ def test_given_an_owner_when_creating_then_returns_a_token_and_stores_only_its_h
 ):
     response = _create(use_case, owner)
 
-    stored = list(service_account_repository.list_for_group(GROUP_ID))
+    stored = list(service_account_repository.list_for_groups((GROUP_ID,)))
     assert len(stored) == 1
     assert stored[0].token_hash == hashlib.sha256(response.token.encode()).hexdigest()
     assert response.token not in [account.token_hash for account in stored]
