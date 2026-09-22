@@ -80,11 +80,13 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
   await page.locator('#password').fill(ADMIN_PASSWORD)
   await page.getByRole('button', { name: 'Login', exact: true }).click()
 
-  // Vault is auto-unlocked after setup → Password Manager shown
-  await expect(page.getByText('Password Manager')).toBeVisible({ timeout: 15000 })
+  // Vault is auto-unlocked after setup → passwords workspace shown
+  await expect(page.getByRole('button', { name: 'New Password', exact: true })).toBeVisible({
+    timeout: 15000,
+  })
 
   // ── Create password ──────────────────────────────────────────
-  await page.getByRole('button', { name: 'New Password' }).click()
+  await page.getByRole('button', { name: 'New Password', exact: true }).click()
   await expect(page.getByText('Create New Password')).toBeVisible({ timeout: 10000 })
 
   await page.locator('#password-name').fill(TEST_PASSWORD_NAME)
@@ -93,7 +95,9 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
   await page.locator('#password-url').fill(TEST_PASSWORD_URL)
   await page.getByRole('button', { name: 'Create' }).click()
 
-  await expect(page.getByText(TEST_PASSWORD_NAME)).toBeVisible({ timeout: 15000 })
+  await expect(page.getByRole('heading', { name: TEST_PASSWORD_NAME })).toBeVisible({
+    timeout: 15000,
+  })
 
   // ── Read / Reveal password ───────────────────────────────────
   await page.getByRole('button', { name: 'Show password' }).click()
@@ -122,6 +126,8 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
   await page.locator('#share-1').fill(storedShares[1])
   await page.getByRole('button', { name: 'Submit Shares' }).click()
 
-  // After unlock, app reloads → Password Manager is visible
-  await expect(page.getByText('Password Manager')).toBeVisible({ timeout: 30000 })
+  // After unlock, app reloads → passwords workspace is visible
+  await expect(page.getByRole('button', { name: 'New Password', exact: true })).toBeVisible({
+    timeout: 30000,
+  })
 })

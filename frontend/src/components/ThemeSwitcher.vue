@@ -1,6 +1,17 @@
 <template>
   <div>
     <Button
+      v-if="variant === 'icon'"
+      icon="pi pi-palette"
+      @click="drawerVisible = true"
+      severity="secondary"
+      text
+      rounded
+      aria-label="Open Theme Customizer"
+      v-tooltip.bottom="'Customize Theme'"
+    />
+    <Button
+      v-else
       label="Customize Theme"
       icon="pi pi-palette"
       @click="drawerVisible = true"
@@ -102,6 +113,8 @@ import { AppStateKey, type AppState } from '@/plugins/appState'
 import { primaryColors, surfaces } from '@/config/colorThemes'
 import { useContainer } from '@/plugins/container'
 import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
+
+withDefaults(defineProps<{ variant?: 'button' | 'icon' }>(), { variant: 'button' })
 
 type ThemePresetName = keyof typeof themePresetsData
 

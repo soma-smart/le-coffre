@@ -1,3 +1,22 @@
 @import 'tailwindcss';
 @import 'tailwindcss-primeui';
 @import 'primeicons/primeicons.css';
+
+/* Dark mode is driven by the `.p-dark` class that ThemeSwitcher toggles on
+ * <html> (and that PrimeVue's `darkModeSelector` is configured with in main.ts).
+ * Tailwind v4 has no JS config, so without this the `dark:` variant would fall
+ * back to `prefers-color-scheme` and ignore the in-app toggle entirely. */
+@custom-variant dark (&:where(.p-dark, .p-dark *));
+
+/* The toast container is `position: fixed` over a large slice of the viewport
+ * whether or not a toast is showing, so it swallows clicks on whatever sits
+ * underneath it. Most visible at the `top-center` position App.vue switches to
+ * below 768px, where the box spans the full height of the screen. Let clicks
+ * through the empty container, but keep the toasts themselves interactive. */
+.p-toast {
+  pointer-events: none;
+}
+
+.p-toast .p-toast-message {
+  pointer-events: auto;
+}

@@ -1,0 +1,394 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createRouter, createMemoryHistory } from 'vue-router'
+import { mount, flushPromises } from '@vue/test-utils'
+import HomePage from '@/pages/HomePage.vue'
+import { CONTAINER_KEY } from '@/plugins/container'
+import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
+import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
+import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
+import { useUserStore } from '@/stores/user'
+import type { Group } from '@/domain/group/Group'
+import type { Password } from '@/domain/password/Password'
+import type { User } from '@/domain/user/User'
+import { createTestContext } from '@/test/componentTestHelpers'
+
+const { toastAdd } = vi.hoisted(() => ({ toastAdd: vi.fn() }))
+vi.mock('primevue/usetoast', () => ({ useToast: () => ({ add: toastAdd }) }))
+
+const CURRENT_USER: User = {
+  id: 'u1',
+  username: 'alice',
+  email: 'alice@example.com',
+  name: 'Alice',
+  roles: [],
+  personalGroupId: 'g2',
+  isSso: false,
+}
+
+const ENGINEERING: Group = {
+  id: 'g1',
+  name: 'Engineering',
+  isPersonal: false,
+  userId: null,
+  owners: ['u1'],
+  members: [],
+}
+
+const PERSONAL: Group = {
+  id: 'g2',
+  name: 'Alice',
+  isPersonal: true,
+  userId: 'u1',
+  owners: ['u1'],
+  members: [],
+}
+
+function makePassword(overrides: Partial<Password> = {}): Password {
+  return {
+    id: 'p1',
+    name: 'Gmail',
+    folder: 'default',
+    groupId: 'g1',
+    createdAt: '2026-01-01T00:00:00Z',
+    lastUpdatedAt: '2026-01-01T00:00:00Z',
+    canRead: true,
+    canWrite: true,
+    login: 'alice@example.com',
+    url: null,
+    // Empty, not ['g1'] — accessibleGroupIdsFor() falls back to the
+    // password's own groupId, so overriding groupId without also touching
+    // accessibleGroupIds still resolves to the right group.
+    accessibleGroupIds: [],
+    accessExpiresAt: null,
+    ...overrides,
+  }
+}
+
+async function mountWorkspace(passwords: Password[], initialPath: string) {
+  const passwordRepository = new InMemoryPasswordRepository()
+  for (const password of passwords) {
+    passwordRepository.seed(password, `secret-for-${password.id}`)
+  }
+  const groupRepository = new InMemoryGroupRepository().seed(ENGINEERING).seed(PERSONAL)
+  const userRepository = new InMemoryUserRepository().setCurrent(CURRENT_USER)
+
+  const { pinia, container } = createTestContext({
+    passwordRepository,
+    groupRepository,
+    userRepository,
+  })
+
+  // PasswordsWorkspace doesn't fetch the current user itself (MainMenu does,
+  // in the real app) — prime it directly so userBelongingGroups is non-empty.
+  await useUserStore().fetchCurrentUser()
+
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', name: 'Home', component: HomePage },
+      { path: '/passwords', name: 'PasswordsRoot', component: HomePage },
+      { path: '/passwords/:groupSlug', name: 'HomeGroup', component: HomePage },
+    ],
+  })
+  router.push(initialPath)
+  await router.isReady()
+
+  const wrapper = mount(HomePage, {
+    global: {
+      plugins: [router, pinia],
+      provide: { [CONTAINER_KEY as symbol]: container },
+    },
+  })
+  await flushPromises()
+
+  return { wrapper, router }
+}
+
+/**
+ * `useIsMobile` reads `matchMedia('(max-width: 767px)').matches` during setup.
+ * The jsdom polyfill in test/setup.ts always answers `false`, which is what
+ * keeps the desktop specs on the two-pane path; force it on to get the mobile
+ * layout. Returns a restore function.
+ */
+function stubViewportAsMobile() {
+  const original = window.matchMedia
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: query.includes('max-width: 767px'),
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  })
+  return () => Object.defineProperty(window, 'matchMedia', { writable: true, value: original })
+}
+
+describe('PasswordsWorkspace (via HomePage)', () => {
+  beforeEach(() => {
+    toastAdd.mockClear()
+  })
+
+  describe('unscoped /passwords route', () => {
+    it('lists every password across groups, rather than defaulting to one group', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      expect(wrapper.text()).toContain('All passwords')
+      expect(wrapper.text()).toContain('Gmail')
+      expect(wrapper.text()).toContain('Personal Note')
+    })
+
+    it("names each row's group, since the list spans groups", async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).props('mode')).toBe('all')
+      expect(wrapper.text()).toContain('Engineering')
+      expect(wrapper.text()).toContain('Alice')
+    })
+  })
+
+  describe('mobile layout', () => {
+    let restoreViewport: () => void
+
+    beforeEach(() => {
+      restoreViewport = stubViewportAsMobile()
+    })
+    afterEach(() => {
+      restoreViewport()
+    })
+
+    it('opens on the list with nothing auto-selected, leaving the detail pane unmounted', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail' }),
+        makePassword({ id: 'p2', name: 'GitHub' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      expect(wrapper.text()).toContain('Gmail')
+      expect(wrapper.text()).toContain('GitHub')
+      expect(wrapper.find('[aria-current="true"]').exists()).toBe(false)
+      expect(wrapper.findComponent({ name: 'PasswordDetailPane' }).exists()).toBe(false)
+      expect(router.currentRoute.value.query.password).toBeUndefined()
+    })
+
+    it('replaces the list with a full-width detail pane once a row is picked', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail' }),
+        makePassword({ id: 'p2', name: 'GitHub' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      const row = wrapper.findAll('.cursor-pointer').find((el) => el.text().includes('GitHub'))
+      expect(row).toBeDefined()
+      await row!.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query.password).toBe('p2')
+      expect(wrapper.findComponent({ name: 'PasswordDetailPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('••••••••')
+    })
+
+    it('returns to the list from the detail pane back button', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail' }),
+        makePassword({ id: 'p2', name: 'GitHub' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(
+        passwords,
+        '/passwords/Engineering?password=p2',
+      )
+
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(false)
+
+      await wrapper.get('[data-testid="detail-back"]').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.query.password).toBeUndefined()
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordDetailPane' }).exists()).toBe(false)
+    })
+
+    it('shows the group list at /passwords, standing in for the hidden sidebar', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('Engineering')
+      expect(wrapper.text()).toContain('Alice')
+    })
+
+    it('drills from a group into its password list', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords')
+
+      const groupRow = wrapper
+        .findComponent({ name: 'PasswordGroupListPane' })
+        .findAll('.cursor-pointer')
+        .find((el) => el.text().includes('Engineering'))
+      expect(groupRow).toBeDefined()
+      await groupRow!.trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.params.groupSlug).toBe('Engineering')
+      expect(wrapper.findComponent({ name: 'PasswordListPane' }).exists()).toBe(true)
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('Gmail')
+    })
+
+    it('returns from a password list to the group list', async () => {
+      const passwords = [makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' })]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      await wrapper.get('[data-testid="list-back"]').trigger('click')
+      await flushPromises()
+
+      expect(router.currentRoute.value.name).toBe('PasswordsRoot')
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(true)
+    })
+
+    it('shows search results rather than the group list while searching', async () => {
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+        makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+      ]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords')
+
+      const search = wrapper.get('input[placeholder="Search all passwords..."]')
+      await search.setValue('personal')
+      await flushPromises()
+
+      expect(wrapper.findComponent({ name: 'PasswordGroupListPane' }).exists()).toBe(false)
+      expect(wrapper.text()).toContain('Search results')
+      expect(wrapper.text()).toContain('Personal Note')
+    })
+
+    it('hides the list resize handle, which has no full-width equivalent', async () => {
+      const passwords = [makePassword({ id: 'p1', name: 'Gmail' })]
+      const { wrapper } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+      // Scoped to the list pane: MainLayout's sidebar has a handle of its own.
+      const listPaneWrapper = wrapper.findComponent({ name: 'PasswordListPane' }).element
+        .parentElement
+      expect(listPaneWrapper?.querySelector('.cursor-col-resize')).toBeNull()
+    })
+  })
+
+  it("selects the password named by the route's ?password= query", async () => {
+    const passwords = [
+      makePassword({ id: 'p1', name: 'Gmail' }),
+      makePassword({ id: 'p2', name: 'GitHub' }),
+    ]
+    const { wrapper } = await mountWorkspace(passwords, '/passwords/Engineering?password=p2')
+
+    expect(wrapper.get('[aria-current="true"]').text()).toContain('GitHub')
+    expect(wrapper.text()).toContain('••••••••') // detail pane rendered for GitHub
+  })
+
+  it('auto-selects the first password in scope when no ?password= is given', async () => {
+    const passwords = [
+      makePassword({ id: 'p1', name: 'Gmail' }),
+      makePassword({ id: 'p2', name: 'GitHub' }),
+    ]
+    const { wrapper } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+    expect(wrapper.get('[aria-current="true"]').text()).toContain('Gmail')
+  })
+
+  it('drops a stale ?password= (deleted / inaccessible) and falls back to the first row', async () => {
+    const passwords = [makePassword({ id: 'p1', name: 'Gmail' })]
+    const { wrapper, router } = await mountWorkspace(
+      passwords,
+      '/passwords/Engineering?password=does-not-exist',
+    )
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.password).toBeUndefined()
+    expect(wrapper.get('[aria-current="true"]').text()).toContain('Gmail')
+  })
+
+  it('follows a ?password= that resolves in a different group to where it actually lives', async () => {
+    const passwords = [
+      makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+      makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+    ]
+    const { wrapper, router } = await mountWorkspace(
+      passwords,
+      '/passwords/Engineering?password=p2',
+    )
+    await flushPromises()
+
+    expect(router.currentRoute.value.params.groupSlug).toBe('Alice')
+    expect(wrapper.get('[aria-current="true"]').text()).toContain('Personal Note')
+  })
+
+  it('widens the middle pane to every visible group when searching', async () => {
+    const passwords = [
+      makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+      makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+    ]
+    const { wrapper } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+    const search = wrapper.get('input[placeholder="Search all passwords..."]')
+    await search.setValue('personal')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Search results')
+    expect(wrapper.text()).toContain('Personal Note')
+    expect(wrapper.text()).not.toContain('Gmail')
+  })
+
+  it('clicking a search result navigates to its own group and selects it', async () => {
+    const passwords = [
+      makePassword({ id: 'p1', name: 'Gmail', groupId: 'g1' }),
+      makePassword({ id: 'p2', name: 'Personal Note', groupId: 'g2', folder: 'default' }),
+    ]
+    const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+    const search = wrapper.get('input[placeholder="Search all passwords..."]')
+    await search.setValue('personal')
+    await flushPromises()
+
+    const resultRow = wrapper
+      .findAll('.cursor-pointer')
+      .find((el) => el.text().includes('Personal Note'))
+    expect(resultRow).toBeDefined()
+    await resultRow!.trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.params.groupSlug).toBe('Alice')
+    expect(router.currentRoute.value.query.password).toBe('p2')
+  })
+
+  it('opens the history modal from the detail pane\'s "View All"', async () => {
+    const passwords = [makePassword({ id: 'p1', name: 'Gmail' })]
+    const { wrapper } = await mountWorkspace(passwords, '/passwords/Engineering')
+
+    expect(wrapper.findComponent({ name: 'PasswordHistoryModal' }).props('visible')).toBe(false)
+
+    const viewAllButton = wrapper.findAll('button').find((el) => el.text() === 'View All')
+    expect(viewAllButton).toBeDefined()
+    await viewAllButton!.trigger('click')
+
+    expect(wrapper.findComponent({ name: 'PasswordHistoryModal' }).props('visible')).toBe(true)
+  })
+})
