@@ -84,7 +84,18 @@ class ServiceAccountSummaryResponse(ServiceAccountItemResponse):
 
 @dataclass(frozen=True)
 class ListServiceAccountsResponse(ServiceAccountResponse, ListResponse[ServiceAccountSummaryResponse]):
-    """Response on service accounts retrieval."""
+    """Response on service accounts retrieval, with how much of the cap the listing uses.
+
+    ``active`` only makes sense against ``max_active`` when the listing was scoped
+    to a single group: an unscoped listing spans several groups, each with its own
+    budget, so the two numbers then describe different things.
+    """
+
+    active: int
+    """How many of the listed accounts are still usable."""
+
+    max_active: int
+    """How many accounts may be active at once in one group."""
 
 
 @dataclass(frozen=True, kw_only=True)

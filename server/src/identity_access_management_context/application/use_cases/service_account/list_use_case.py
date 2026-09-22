@@ -27,6 +27,7 @@ class ListServiceAccountsUseCase(
     _user_repository: UserRepository
     _group_repository: GroupRepository
     _group_member_repository: GroupMemberRepository
+    _max_active_accounts: int
 
     def __init__(
         self,
@@ -38,6 +39,7 @@ class ListServiceAccountsUseCase(
         user_repository: UserRepository,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
+        max_active_accounts: int,
     ):
         super().__init__(
             service_account_repository,
@@ -49,6 +51,7 @@ class ListServiceAccountsUseCase(
         self._user_repository = user_repository
         self._group_repository = group_repository
         self._group_member_repository = group_member_repository
+        self._max_active_accounts = max_active_accounts
 
     def _readable_group_ids(self, command: ListServiceAccountsCommand) -> Sequence[UUID]:
         """Return the groups this listing covers, refusing one the caller cannot manage."""
@@ -105,6 +108,14 @@ class ListServiceAccountsUseCase(
             user_id=command.requesting_user.user_id,
             group_id=command.group_id,
         )
-        response = ListServiceAccountsResponse(items=tuple(dated_summaries + undated_summaries))
+        # Counted on the accounts rather than the summaries: the account row is the
+        # credential itself, while a summary depends on a creation event that may be missing.
+        active = sum(1 for account in accounts if account.is_active)
+
+        response = ListServiceAccountsResponse(
+            items=tuple(dated_summaries + undated_summaries),
+            active=active,
+            max_active=self._max_active_accounts,
+        )
 
         return event, response
