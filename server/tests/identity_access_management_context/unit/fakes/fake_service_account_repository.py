@@ -13,10 +13,8 @@ from identity_access_management_context.domain.entities import ServiceAccount
 class FakeServiceAccountRepository(ServiceAccountRepository):
     """In-memory service account repository for testing.
 
-    Reproduces the refusals the SQL adapter makes rather than accepting every
-    write: rotating or revoking an already-revoked account raises, and the whole
-    batch is refused before anything is applied. A fake that let those through
-    would keep the unit suite green while production behaved differently.
+    Refuses the same writes the SQL adapter refuses, or the unit suite would stay
+    green while production behaved differently.
     """
 
     def __init__(self):
@@ -27,8 +25,7 @@ class FakeServiceAccountRepository(ServiceAccountRepository):
             self.accounts[account.id] = account
 
     def get_by_ids(self, ids: Sequence[UUID]) -> Sequence[ServiceAccount | None]:
-        # One slot per requested id, None where there is no such account, so a
-        # caller can destructure the result positionally.
+        # One slot per requested id, empty where there is no such account.
         return [self.accounts.get(account_id) for account_id in ids]
 
     def list_for_group(self, group_id: UUID) -> Iterable[ServiceAccount]:

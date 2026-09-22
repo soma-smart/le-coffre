@@ -16,9 +16,8 @@ from identity_access_management_context.domain.events.service_account import (
 class FakeServiceAccountEventRepository(ServiceAccountEventRepository):
     """In-memory service account event repository for testing.
 
-    Derives creation facts by folding its own appended events, exactly as the
-    SQL adapter derives them from the IamEvent rows, so the unit tests exercise
-    the real derivation rather than a lookup table.
+    Folds its own appended events like the SQL adapter folds IamEvent rows, so the
+    tests exercise the real derivation rather than a lookup table.
     """
 
     def __init__(self):
@@ -42,9 +41,7 @@ class FakeServiceAccountEventRepository(ServiceAccountEventRepository):
             )
 
     def get_creation_facts(self, service_account_ids: Sequence[UUID]) -> Sequence[ServiceAccountCreationFacts]:
-        # One entry per requested id, in order, so a caller can pair it with the
-        # accounts it asked about. An account with no creation event still gets
-        # a slot, with its fields left empty.
+        # One slot per requested id, empty where no creation event was found.
         by_account = {event["service_account_id"]: event for event in self.events if event["is_creation"]}
         facts = []
         for account_id in service_account_ids:
