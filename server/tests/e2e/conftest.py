@@ -392,10 +392,14 @@ def admin_token(e2e_client):
 
 
 @pytest.fixture
-def client_factory(database, env_vars):
+def client_factory(database, env_vars, e2e_client):
     """
     Factory to create CsrfTestClient instances that share the same database and env_vars.
     All clients created by this factory will use the same DATABASE_URL and JWT settings.
+
+    Depends on `e2e_client` so the app's lifespan has run: clients built here do
+    not enter it themselves, and middleware reads state it populates, such as
+    `app.state.rate_limiter`.
     """
 
     def _make_client():

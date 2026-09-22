@@ -45,6 +45,7 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_admin_management_router,
     get_authentication_router,
     get_group_management_router,
+    get_service_account_router,
     get_user_management_router,
 )
 from identity_access_management_context.adapters.secondary import (
@@ -365,4 +366,5 @@ app.include_router(get_password_management_router())
 app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
+app.include_router(get_service_account_router())
 app.include_router(get_admin_management_router())
