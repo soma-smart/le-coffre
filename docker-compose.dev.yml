@@ -27,8 +27,13 @@ services:
       - USER_UID=${USER_UID:-1000}
       - USER_GID=${USER_GID:-1000}
       - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8123}
+      # SMTP_* have no defaults in config.py (email delivery must actually work
+      # in production, so nothing silently falls back) — the backend refuses
+      # to start without them, so local dev needs its own explicit values here.
       - SMTP_HOST=${SMTP_HOST:-mailpit}
       - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_FROM_ADDRESS=${SMTP_FROM_ADDRESS:-noreply@le-coffre.local}
+      - SMTP_TLS_MODE=${SMTP_TLS_MODE:-none}
     command: tail -f /dev/null
 
   # Local SMTP catcher: every email the backend sends during local dev lands
