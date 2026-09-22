@@ -26,7 +26,7 @@ kubectl create secret generic le-coffre-db \
   -n le-coffre
 ```
 
-Then install:
+Then install (`config.smtp.*` is required — see [Email (SMTP)](#email-smtp) below):
 
 ```bash
 helm install le-coffre ./helm/le-coffre \
@@ -37,6 +37,10 @@ helm install le-coffre ./helm/le-coffre \
   --set "ingress.tls[0].secretName=le-coffre-tls" \
   --set "ingress.tls[0].hosts[0]=le-coffre.yourdomain.com" \
   --set config.appBaseUrl=https://le-coffre.yourdomain.com \
+  --set config.smtp.host=smtp.yourprovider.com \
+  --set config.smtp.port=587 \
+  --set config.smtp.fromAddress=noreply@le-coffre.yourdomain.com \
+  --set config.smtp.tlsMode=starttls \
   -n le-coffre
 ```
 
@@ -70,9 +74,10 @@ The following table lists the main configurable parameters. See `values.yaml` fo
 | `config.jwt.secretKey` | Let Helm manage the JWT secret (not recommended for production) | `""` |
 | `config.database.existingSecretName` | Name of pre-existing secret containing `DATABASE_URL` | `"le-coffre-db"` |
 | `config.appBaseUrl` | Application base URL (required) | `""` |
-| `config.smtp.enabled` | Enable SMTP email sending | `false` |
-| `config.smtp.host` | SMTP relay hostname (required when enabled) | `""` |
-| `config.smtp.tlsMode` | TLS mode: `none`, `implicit`, or `starttls` | `"none"` |
+| `config.smtp.host` | SMTP relay hostname (required) | `""` |
+| `config.smtp.port` | SMTP relay port (required) | `""` |
+| `config.smtp.fromAddress` | From address for outgoing emails (required) | `""` |
+| `config.smtp.tlsMode` | TLS mode: `none`, `implicit`, or `starttls` (required) | `""` |
 | `config.smtp.existingSecretName` | Name of pre-existing secret containing `SMTP_PASSWORD` (when `username` is set) | `""` |
 | `persistence.enabled` | Enable persistence for SQLite | `false` |
 | `backend.resources.limits.cpu` | Backend CPU limit | `500m` |
@@ -121,12 +126,11 @@ persistence:
 
 ## Email (SMTP)
 
-Disabled by default — nothing in the app sends email yet as of this chart version. To enable:
+Required — `host`, `port`, `fromAddress` and `tlsMode` must all be set explicitly. There is no default (e.g. `localhost`) that would let the backend start while silently pointing at a relay that isn't there.
 
 ```yaml
 config:
   smtp:
-    enabled: true
     host: "smtp.yourprovider.com"
     port: 587
     fromAddress: "noreply@yourdomain.com"

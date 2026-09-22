@@ -172,18 +172,18 @@
         "smtp": {
           "type": "object",
           "properties": {
-            "enabled": { "type": "boolean" },
             "host": { "type": "string" },
-            "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+            "port": { "type": ["integer", "string"] },
             "fromAddress": { "type": "string" },
             "username": { "type": "string" },
-            "tlsMode": { "type": "string", "enum": ["none", "implicit", "starttls"] },
+            "tlsMode": { "type": "string" },
             "existingSecretName": { "type": "string" },
             "password": { "type": "string" }
-          }
+          },
+          "required": ["host", "port", "fromAddress", "tlsMode"]
         }
       },
-      "required": ["environment", "appBaseUrl", "database", "jwt"]
+      "required": ["environment", "appBaseUrl", "database", "jwt", "smtp"]
     },
     "ingress": {
       "type": "object",
