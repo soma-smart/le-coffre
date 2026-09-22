@@ -130,3 +130,16 @@ def test_given_no_state_parameter_when_calling_callback_should_log_the_missing_p
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid SSO state"
     assert "state query parameter missing" in caplog.text
+
+
+def test_given_an_invalid_state_when_calling_callback_should_revoke_the_sso_state_cookie(e2e_client, configured_sso):
+    # The stale state must not survive a rejected callback: the route stages the
+    # deletion before raising, so it has to outlive the HTTPException.
+    e2e_client.get("/api/auth/sso/url")
+    assert e2e_client.cookies.get("sso_state")
+
+    response = e2e_client.get("/api/auth/sso/callback?code=anything&state=forged-state")
+
+    assert response.status_code == 400
+    assert "sso_state=" in " ".join(response.headers.get_list("set-cookie"))
+    assert e2e_client.cookies.get("sso_state") is None
