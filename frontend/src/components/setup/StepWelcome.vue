@@ -13,7 +13,7 @@ const { t } = useI18n()
     <h1 class="text-2xl font-bold">{{ t('components.setup.welcome.title') }}</h1>
     <img
       src="/img/intro/information.png"
-      alt="Informative illustration"
+      :alt="t('components.setup.illustrationAlt')"
       class="mt-4 h-48 mx-auto"
     />
     <p class="mt-4">

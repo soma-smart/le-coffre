@@ -22,7 +22,10 @@ import { GroupAccessDeniedError, GroupDomainError, GroupNotFoundError } from '@/
  * Backend adapter for GroupRepository. Wraps every /groups/* SDK
  * function and maps snake_case DTOs → camelCase domain Group. 404
  * becomes GroupNotFoundError; anything else bubbles up as a
- * GroupDomainError carrying the backend detail string.
+ * GroupDomainError carrying the backend detail string, or an empty
+ * message when none was parsed — callers must treat a non-empty
+ * message as backend wording (not theirs to translate) and fall back
+ * to their own translated default when it's empty.
  */
 export class BackendGroupRepository implements GroupRepository {
   async list(filters?: ListGroupsFilters): Promise<Group[]> {
@@ -42,7 +45,10 @@ export class BackendGroupRepository implements GroupRepository {
   async create(name: string): Promise<string> {
     const response = await createGroupGroupsPost({ body: { name } })
     this.throwIfError(response.error, response.response?.status)
-    if (!response.data) throw new GroupDomainError('Empty response from create group')
+    // No detail to carry — the caller's own translated fallback applies (see
+    // GroupDomainError's docstring: an empty message means "not backend
+    // wording", so callers must not display it verbatim).
+    if (!response.data) throw new GroupDomainError('')
     return response.data.id
   }
 
@@ -99,7 +105,10 @@ export class BackendGroupRepository implements GroupRepository {
     if (!error) return
     if (status === 404 && groupId) throw new GroupNotFoundError(groupId)
     if (status === 403 && groupId) throw new GroupAccessDeniedError(groupId)
-    throw new GroupDomainError(extractDetail(error) ?? 'Group operation failed')
+    // No detail parsed off the response — leave the message empty rather
+    // than inventing English wording, so callers fall back to their own
+    // translated default instead of displaying it verbatim.
+    throw new GroupDomainError(extractDetail(error) ?? '')
   }
 }
 

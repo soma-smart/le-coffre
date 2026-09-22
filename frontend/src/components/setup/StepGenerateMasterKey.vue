@@ -47,7 +47,7 @@ async function generateMasterKey() {
     <h1 class="text-2xl font-bold">{{ t('components.setup.generateMasterKey.title') }}</h1>
     <img
       src="/img/intro/shamir.png"
-      alt="Shamir's Secret Sharing diagram"
+      :alt="t('components.setup.generateMasterKey.diagramAlt')"
       class="mt-4 h-48 mx-auto"
     />
     <p class="mt-4">

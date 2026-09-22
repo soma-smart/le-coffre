@@ -214,12 +214,14 @@ describe('isRootFolder', () => {
 })
 
 describe('folderLabelOf', () => {
+  const t = (key: string) => (key === 'common.noFolderLabel' ? 'No folder' : key)
+
   it('labels the root folder as "No folder"', () => {
-    expect(folderLabelOf('default')).toBe('No folder')
+    expect(folderLabelOf(t, 'default')).toBe('No folder')
   })
 
   it('passes through any other folder name unchanged', () => {
-    expect(folderLabelOf('Work')).toBe('Work')
+    expect(folderLabelOf(t, 'Work')).toBe('Work')
   })
 })
 

@@ -11,7 +11,6 @@ import type { User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
 import GroupHistoryModal from '@/components/modals/GroupHistoryModal.vue'
-import { translateGroupName } from '@/utils/groupDisplayName'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -194,7 +193,7 @@ watch(visible, (isVisible) => {
         <!-- History button (only for owners of the group or admins) -->
         <Button
           v-if="!group.isPersonal && canViewHistory"
-          label="History"
+          :label="t('components.groupDetailsModal.historyButton')"
           icon="pi pi-history"
           size="small"
           outlined

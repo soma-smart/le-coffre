@@ -43,6 +43,8 @@ export interface PasswordFiltersDeps {
   routeGroupSlug: Ref<string | undefined>
   /** Route query: narrow the view to a single folder, or undefined. */
   routeFolderFilter: Ref<string | undefined>
+  /** Translation function, for the root-folder's "No folder" label. */
+  t: (key: string) => string
 }
 
 /**
@@ -177,7 +179,7 @@ export function usePasswordFilters(deps: PasswordFiltersDeps) {
 
   /** Middle pane header: the folder name when narrowed, else the group name. */
   const paneTitle = computed<string>(() => {
-    if (selectedFolderName.value) return folderLabelOf(selectedFolderName.value)
+    if (selectedFolderName.value) return folderLabelOf(deps.t, selectedFolderName.value)
     return selectedGroupSection.value?.name ?? ''
   })
 

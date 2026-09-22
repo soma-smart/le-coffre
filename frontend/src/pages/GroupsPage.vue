@@ -152,7 +152,7 @@ const handleSubmit = async () => {
       const err = error as Record<string, unknown>
       if (typeof err.detail === 'string') {
         errorMessage = err.detail
-      } else if (typeof err.message === 'string') {
+      } else if (typeof err.message === 'string' && err.message) {
         errorMessage = err.message
       }
     }
@@ -206,7 +206,7 @@ const handleDeleteGroup = async () => {
         errorMessage = err.detail
       } else if (Array.isArray(err.detail) && err.detail[0]?.msg) {
         errorMessage = err.detail[0].msg
-      } else if (typeof err.message === 'string') {
+      } else if (typeof err.message === 'string' && err.message) {
         errorMessage = err.message
       } else if (err.error && typeof err.error === 'object') {
         const nestedError = err.error as Record<string, unknown>

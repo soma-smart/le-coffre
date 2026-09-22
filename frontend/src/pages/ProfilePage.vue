@@ -254,23 +254,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Language -->
-        <div class="border-t pt-4 mt-6">
-          <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.language') }}</h3>
-          <div
-            class="inline-flex p-[0.28rem] items-start gap-[0.28rem] rounded-[0.71rem] border border-[#00000003]"
-          >
-            <SelectButton
-              v-model="languageModel"
-              @update:modelValue="onLanguageChange"
-              :options="languageOptions"
-              optionLabel="label"
-              optionValue="value"
-              :allowEmpty="false"
-            />
-          </div>
-        </div>
-
         <!-- Theme switcher (mobile only) -->
         <div class="md:hidden mb-6 border-t pt-4">
           <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.appearance') }}</h3>

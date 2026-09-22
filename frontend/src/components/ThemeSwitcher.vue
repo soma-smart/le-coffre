@@ -7,8 +7,8 @@
       severity="secondary"
       text
       rounded
-      aria-label="Open Theme Customizer"
-      v-tooltip.bottom="'Customize Theme'"
+      :aria-label="t('components.themeSwitcher.openThemeCustomizer')"
+      v-tooltip.bottom="t('components.themeSwitcher.customizeTheme')"
     />
     <Button
       v-else

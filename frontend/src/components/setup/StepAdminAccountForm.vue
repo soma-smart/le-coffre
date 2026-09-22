@@ -139,7 +139,7 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
       <h1 class="text-2xl font-bold">{{ t('components.setup.adminAccountForm.title') }}</h1>
       <img
         src="/img/intro/admin.png"
-        alt="Informative illustration"
+        :alt="t('components.setup.illustrationAlt')"
         class="mt-4 h-48 mx-auto sm:mx-0"
       />
       <p class="mt-4">

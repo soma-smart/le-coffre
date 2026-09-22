@@ -1,6 +1,6 @@
 <template>
   <div v-if="!password" class="h-full flex items-center justify-center text-muted-color">
-    <p>Select a password to view its details.</p>
+    <p>{{ t('components.passwordDetailPane.selectPrompt') }}</p>
   </div>
 
   <div v-else :key="password.id" class="flex flex-col gap-4">
@@ -12,7 +12,7 @@
           text
           rounded
           severity="secondary"
-          aria-label="Back to list"
+          :aria-label="t('components.passwordDetailPane.backToList')"
           data-testid="detail-back"
           @click="emit('back')"
         />
@@ -34,18 +34,18 @@
           severity="secondary"
           :aria-label="
             !canReadInContext
-              ? 'You don\'t have read access to this password'
+              ? t('common.noReadAccessToPassword')
               : !canWriteInContext
-                ? 'View sharing access'
-                : 'Manage sharing'
+                ? t('components.passwordDetailPane.viewSharingAccess')
+                : t('components.passwordDetailPane.manageSharing')
           "
           :disabled="!canReadInContext"
           v-tooltip.top="
             !canReadInContext
-              ? 'You don\'t have read access to this password'
+              ? t('common.noReadAccessToPassword')
               : !canWriteInContext
-                ? 'View who has access to this password'
-                : 'Manage sharing'
+                ? t('components.passwordDetailPane.viewSharingAccessTooltip')
+                : t('components.passwordDetailPane.manageSharing')
           "
           @click="emit('share', password)"
         />
@@ -54,12 +54,12 @@
           text
           rounded
           severity="secondary"
-          aria-label="One-time link"
+          :aria-label="t('components.passwordDetailPane.oneTimeLink')"
           :disabled="!canWriteInContext"
           v-tooltip.top="
             !canWriteInContext
-              ? 'Only an owner can create a one-time link'
-              : 'Create a one-time link'
+              ? t('components.passwordDetailPane.onlyOwnerCanCreateLink')
+              : t('components.passwordDetailPane.createOneTimeLink')
           "
           @click="emit('oneTimeLink', password)"
         />
@@ -68,11 +68,9 @@
           text
           rounded
           severity="secondary"
-          aria-label="Edit"
+          :aria-label="t('common.edit')"
           :disabled="!canWriteInContext"
-          v-tooltip.top="
-            !canWriteInContext ? 'You don\'t have write access to this password' : undefined
-          "
+          v-tooltip.top="!canWriteInContext ? t('common.noWriteAccessToPassword') : undefined"
           @click="emit('edit', password)"
         />
         <Button
@@ -80,12 +78,10 @@
           text
           rounded
           severity="danger"
-          aria-label="Delete"
+          :aria-label="t('common.delete')"
           :loading="isDeleting"
           :disabled="!canWriteInContext"
-          v-tooltip.top="
-            !canWriteInContext ? 'You don\'t have write access to this password' : undefined
-          "
+          v-tooltip.top="!canWriteInContext ? t('common.noWriteAccessToPassword') : undefined"
           @click="handleDelete"
         />
       </div>
@@ -100,6 +96,7 @@
 import { computed, ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useConfirm } from 'primevue/useconfirm'
+import { useI18n } from 'vue-i18n'
 import { severityForShareStatus, shareStatusOf, type Password } from '@/domain/password/Password'
 import { useContainer } from '@/plugins/container'
 import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
@@ -123,6 +120,7 @@ const emit = defineEmits<{
 
 const toast = useToast()
 const confirm = useConfirm()
+const { t } = useI18n()
 const { passwords: passwordUseCases } = useContainer()
 
 const isDeleting = ref(false)
@@ -141,8 +139,10 @@ const accessExpiry = computed(() => props.password?.accessExpiresAt ?? null)
 const accessExpiryStatus = computed(() => shareStatusOf(accessExpiry.value))
 const accessExpiryLabel = computed(() =>
   accessExpiryStatus.value === 'expired'
-    ? 'Access expired'
-    : `Expires ${formatRelativeTime(accessExpiry.value ?? '')}`,
+    ? t('components.passwordDetailPane.accessExpired')
+    : t('components.passwordDetailPane.expiresLabel', {
+        time: formatRelativeTime(accessExpiry.value ?? ''),
+      }),
 )
 
 const handleDelete = () => {
@@ -150,11 +150,11 @@ const handleDelete = () => {
   if (!password) return
 
   confirm.require({
-    message: `Are you sure you want to delete "${password.name}"?`,
-    header: 'Confirm Deletion',
+    message: t('components.passwordDetailPane.deleteConfirmMessage', { name: password.name }),
+    header: t('components.passwordDetailPane.deleteConfirmHeader'),
     icon: 'pi pi-exclamation-triangle',
-    rejectLabel: 'Cancel',
-    acceptLabel: 'Delete',
+    rejectLabel: t('common.cancel'),
+    acceptLabel: t('common.delete'),
     acceptClass: 'p-button-danger',
     accept: async () => {
       isDeleting.value = true
@@ -162,8 +162,8 @@ const handleDelete = () => {
         await passwordUseCases.delete.execute({ passwordId: password.id })
         toast.add({
           severity: 'success',
-          summary: 'Deleted',
-          detail: 'Password deleted successfully',
+          summary: t('components.passwordDetailPane.deletedSummary'),
+          detail: t('components.passwordDetailPane.deletedDetail'),
           life: 3000,
         })
         emit('deleted')
@@ -171,8 +171,8 @@ const handleDelete = () => {
         console.error('Error deleting password:', error)
         toast.add({
           severity: 'error',
-          summary: 'Error',
-          detail: 'Failed to delete password',
+          summary: t('common.error'),
+          detail: t('components.passwordDetailPane.deleteFailedDetail'),
           life: 3000,
         })
       } finally {

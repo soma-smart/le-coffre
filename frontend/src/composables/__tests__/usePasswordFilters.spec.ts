@@ -45,6 +45,7 @@ function makeDeps(overrides: Partial<PasswordFiltersDeps> = {}): PasswordFilters
     adminPasswordViewEnabled: ref(false),
     routeGroupSlug: ref<string | undefined>(undefined),
     routeFolderFilter: ref<string | undefined>(undefined),
+    t: (key: string) => (key === 'common.noFolderLabel' ? 'No folder' : key),
   }
   return { ...defaults, ...overrides }
 }

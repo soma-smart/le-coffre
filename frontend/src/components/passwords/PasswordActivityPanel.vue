@@ -2,8 +2,13 @@
   <Card>
     <template #title>
       <div class="flex items-center justify-between">
-        <span>Recent Activity</span>
-        <Button label="View All" text size="small" @click="emit('viewAll')" />
+        <span>{{ t('components.passwordActivityPanel.title') }}</span>
+        <Button
+          :label="t('components.passwordActivityPanel.viewAll')"
+          text
+          size="small"
+          @click="emit('viewAll')"
+        />
       </div>
     </template>
     <template #content>
@@ -11,11 +16,11 @@
            screen, so a fast failure or a fast empty result can't flash past
            the skeleton rows either. -->
       <p v-if="!showPlaceholder && isError" class="text-sm text-muted-color">
-        Failed to load recent activity.
+        {{ t('components.passwordActivityPanel.loadFailed') }}
       </p>
 
       <p v-else-if="!showPlaceholder && events.length === 0" class="text-sm text-muted-color">
-        No recent activity.
+        {{ t('components.passwordActivityPanel.noActivity') }}
       </p>
 
       <!-- One Timeline renders both states: while loading it holds
@@ -53,15 +58,15 @@
           <div v-if="item" class="flex items-center justify-between gap-3">
             <Tag
               class="shrink-0"
-              :value="humanizeEventType(item.eventType)"
+              :value="translateEventType(t, item.eventType)"
               :severity="eventSeverity(item.eventType)"
-              :title="humanizeEventType(item.eventType)"
+              :title="translateEventType(t, item.eventType)"
             />
             <span
               class="shrink-0 text-sm text-muted-color whitespace-nowrap"
-              :title="item.actorEmail || 'Unknown user'"
+              :title="item.actorEmail || t('common.unknownUser')"
             >
-              {{ item.actorEmail || 'Unknown user' }}
+              {{ item.actorEmail || t('common.unknownUser') }}
             </span>
           </div>
           <div v-else class="flex items-center justify-between gap-3">
@@ -81,9 +86,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { eventSeverity, humanizeEventType, type PasswordEvent } from '@/domain/password/Password'
+import { useI18n } from 'vue-i18n'
+import { eventSeverity, type PasswordEvent } from '@/domain/password/Password'
 import { useContainer } from '@/plugins/container'
 import { useRecentPasswordActivity } from '@/composables/useRecentPasswordActivity'
+import { translateEventType } from '@/utils/eventTypeLabel'
+import { activeLocale } from '@/utils/relativeTime'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   passwordId: string | null
@@ -117,14 +127,14 @@ const rows = computed<(PasswordEvent | null)[]>(() =>
 )
 
 const formatEventDate = (dateString: string): string =>
-  new Date(dateString).toLocaleDateString('en-GB', {
+  new Date(dateString).toLocaleDateString(activeLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
   })
 
 const formatEventTime = (dateString: string): string =>
-  new Date(dateString).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  new Date(dateString).toLocaleTimeString(activeLocale(), { hour: '2-digit', minute: '2-digit' })
 </script>
 
 <style scoped>

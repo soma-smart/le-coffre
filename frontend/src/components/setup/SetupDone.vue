@@ -13,7 +13,11 @@ const handleLogin = async () => {
 <template>
   <div class="flex flex-col">
     <h1 class="text-2xl font-bold">{{ t('components.setup.done.title') }}</h1>
-    <img src="/img/intro/done.png" alt="Informative illustration" class="mt-4 h-48 mx-auto" />
+    <img
+      src="/img/intro/done.png"
+      :alt="t('components.setup.illustrationAlt')"
+      class="mt-4 h-48 mx-auto"
+    />
     <p class="mt-4">
       {{ t('components.setup.done.congrats') }}
     </p>

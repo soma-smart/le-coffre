@@ -2,7 +2,7 @@
   <Dialog
     v-model:visible="visible"
     modal
-    :header="`History: ${group?.name || ''}`"
+    :header="t('components.groupHistoryModal.title', { name: group?.name || '' })"
     :style="{ width: '90vw', maxWidth: '1200px' }"
     :closable="true"
   >
@@ -10,7 +10,9 @@
       <!-- Filters -->
       <div class="flex flex-col gap-4 md:flex-row md:items-end">
         <div class="flex-1">
-          <label for="group-history-date-range" class="block mb-2 font-medium">Date Range</label>
+          <label for="group-history-date-range" class="block mb-2 font-medium">{{
+            t('components.groupHistoryModal.dateRange')
+          }}</label>
           <DatePicker
             id="group-history-date-range"
             v-model="dateRange"
@@ -27,14 +29,16 @@
           />
         </div>
         <div class="flex-1">
-          <label for="group-history-event-types" class="block mb-2 font-medium"
-            >Filter by Event Type</label
-          >
+          <label for="group-history-event-types" class="block mb-2 font-medium">{{
+            t('components.groupHistoryModal.filterByEventType')
+          }}</label>
           <MultiSelect
             id="group-history-event-types"
             v-model="selectedEventTypes"
             :options="availableEventTypes"
-            placeholder="All Event Types"
+            optionLabel="label"
+            optionValue="value"
+            :placeholder="t('components.groupHistoryModal.allEventTypes')"
             :maxSelectedLabels="2"
             class="w-full"
             @change="fetchEvents"
@@ -42,7 +46,7 @@
         </div>
         <Button
           icon="pi pi-refresh"
-          label="Refresh"
+          :label="t('common.refresh')"
           outlined
           @click="fetchEvents"
           :loading="loading"
@@ -59,16 +63,21 @@
         stripedRows
         responsiveLayout="scroll"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} events"
+        :currentPageReportTemplate="pageReportTemplate"
       >
         <template #empty>
           <div class="text-center py-6 text-muted-color">
             <i class="pi pi-inbox text-4xl mb-3"></i>
-            <p>No events found for this group.</p>
+            <p>{{ t('components.groupHistoryModal.noEvents') }}</p>
           </div>
         </template>
 
-        <Column field="occurredOn" header="Date & Time" sortable :style="{ width: '20%' }">
+        <Column
+          field="occurredOn"
+          :header="t('components.groupHistoryModal.dateTime')"
+          sortable
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <span class="text-sm">
               {{ formatDateTime(slotProps.data.occurredOn) }}
@@ -76,7 +85,12 @@
           </template>
         </Column>
 
-        <Column field="eventType" header="Event Type" sortable :style="{ width: '20%' }">
+        <Column
+          field="eventType"
+          :header="t('components.groupHistoryModal.eventType')"
+          sortable
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <Tag
               :value="formatEventType(slotProps.data.eventType)"
@@ -85,33 +99,58 @@
           </template>
         </Column>
 
-        <Column field="actorUserId" header="Actor" :style="{ width: '20%' }">
+        <Column
+          field="actorUserId"
+          :header="t('components.groupHistoryModal.actor')"
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <div class="flex items-center gap-2">
               <i class="pi pi-user text-sm"></i>
-              <span class="text-sm">{{ slotProps.data.actorEmail || 'Unknown User' }}</span>
+              <span class="text-sm">{{
+                slotProps.data.actorEmail || t('common.unknownUser')
+              }}</span>
             </div>
           </template>
         </Column>
 
-        <Column field="eventData" header="Details" :style="{ width: '40%' }">
+        <Column
+          field="eventData"
+          :header="t('components.groupHistoryModal.details')"
+          :style="{ width: '40%' }"
+        >
           <template #body="slotProps">
             <div class="text-sm">
-              <span v-if="slotProps.data.eventType === 'UserAddedToGroupEvent'">
-                Added
-                <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
-                as a member
-              </span>
-              <span v-else-if="slotProps.data.eventType === 'OwnerAddedToGroupEvent'">
-                Promoted
-                <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
-                to owner
-              </span>
-              <span v-else-if="slotProps.data.eventType === 'UserRemovedFromGroupEvent'">
-                Removed
-                <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
-                from the group
-              </span>
+              <i18n-t
+                v-if="slotProps.data.eventType === 'UserAddedToGroupEvent'"
+                keypath="components.groupHistoryModal.addedAsMember"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
+              <i18n-t
+                v-else-if="slotProps.data.eventType === 'OwnerAddedToGroupEvent'"
+                keypath="components.groupHistoryModal.promotedToOwner"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
+              <i18n-t
+                v-else-if="slotProps.data.eventType === 'UserRemovedFromGroupEvent'"
+                keypath="components.groupHistoryModal.removedFromGroup"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
               <span v-else>
                 {{ JSON.stringify(slotProps.data.eventData) }}
               </span>
@@ -126,13 +165,12 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import {
-  groupEventSeverity,
-  humanizeGroupEventType,
-  type Group,
-  type GroupEvent,
-} from '@/domain/group/Group'
+import { useI18n } from 'vue-i18n'
+import { groupEventSeverity, type Group, type GroupEvent } from '@/domain/group/Group'
 import { useContainer } from '@/plugins/container'
+import { translateEventType } from '@/utils/eventTypeLabel'
+import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
+import { activeLocale } from '@/utils/relativeTime'
 
 const props = defineProps<{
   group: Group | null
@@ -140,6 +178,10 @@ const props = defineProps<{
 
 const visible = defineModel<boolean>('visible', { required: true })
 
+const { t } = useI18n()
+const pageReportTemplate = computed(() =>
+  buildPageReportTemplate(t, t('components.groupHistoryModal.rowsNoun')),
+)
 const toast = useToast()
 
 // Resolve use cases at setup time — inject() has no active instance
@@ -153,7 +195,9 @@ const selectedEventTypes = ref<string[]>([])
 
 const availableEventTypes = computed(() => {
   const types = new Set(events.value.map((event) => event.eventType))
-  return Array.from(types).sort()
+  return Array.from(types)
+    .map((eventType) => ({ label: translateEventType(t, eventType), value: eventType }))
+    .sort((a, b) => a.label.localeCompare(b.label))
 })
 
 const fetchEvents = async () => {
@@ -185,8 +229,8 @@ const fetchEvents = async () => {
     console.error('Failed to fetch group events:', error)
     toast.add({
       severity: 'error',
-      summary: 'Load Failed',
-      detail: 'Failed to load group history.',
+      summary: t('components.groupHistoryModal.loadFailedSummary'),
+      detail: t('components.groupHistoryModal.loadFailedDetail'),
       life: 5000,
     })
   } finally {
@@ -195,7 +239,7 @@ const fetchEvents = async () => {
 }
 
 const formatDateTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('en-GB', {
+  return new Date(dateString).toLocaleString(activeLocale(), {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
@@ -208,10 +252,10 @@ const formatDateTime = (dateString: string): string => {
 const targetUserLabel = (eventData: Record<string, unknown>): string => {
   if (typeof eventData.userEmail === 'string') return eventData.userEmail
   const userId = eventData.userId
-  return typeof userId === 'string' ? `${userId.substring(0, 8)}...` : 'Unknown user'
+  return typeof userId === 'string' ? `${userId.substring(0, 8)}...` : t('common.unknownUser')
 }
 
-const formatEventType = humanizeGroupEventType
+const formatEventType = (eventType: string): string => translateEventType(t, eventType)
 const getEventSeverity = groupEventSeverity
 
 // Fetch events when modal opens and group changes

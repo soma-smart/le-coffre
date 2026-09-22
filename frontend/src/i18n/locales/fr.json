@@ -32,6 +32,10 @@
     "minutesAgo": "il y a {count} min",
     "hoursAgo": "il y a {count} h",
     "passwordCount": "{count} mot de passe | {count} mots de passe",
+    "groupCount": "{count} groupe | {count} groupes",
+    "noFolderLabel": "Aucun dossier",
+    "noReadAccessToPassword": "Vous n'avez pas accès en lecture à ce mot de passe",
+    "noWriteAccessToPassword": "Vous n'avez pas accès en écriture à ce mot de passe",
     "oneTimeLinkStatus": {
       "active": "actif",
       "read": "lu",
@@ -47,7 +51,10 @@
       "PasswordAccessedEvent": "Mot de passe consulté",
       "PasswordDeletedEvent": "Mot de passe supprimé",
       "OneTimeLinkCreatedEvent": "Lien à usage unique créé",
-      "OneTimeLinkReadEvent": "Lien à usage unique ouvert"
+      "OneTimeLinkReadEvent": "Lien à usage unique ouvert",
+      "UserAddedToGroupEvent": "Utilisateur ajouté au groupe",
+      "OwnerAddedToGroupEvent": "Propriétaire ajouté au groupe",
+      "UserRemovedFromGroupEvent": "Utilisateur retiré du groupe"
     },
     "passwordEvents": {
       "createdInFolder": "Créé dans le dossier :",
@@ -472,7 +479,89 @@
       "promoteConfirmHeader": "Promouvoir propriétaire",
       "promoteConfirmAccept": "Promouvoir",
       "promotedDetail": "{name} a été promu propriétaire",
-      "promoteFailed": "Échec de la promotion du membre en propriétaire"
+      "promoteFailed": "Échec de la promotion du membre en propriétaire",
+      "historyButton": "Historique"
+    },
+    "groupHistoryModal": {
+      "title": "Historique : {name}",
+      "dateRange": "Période",
+      "filterByEventType": "Filtrer par type d'événement",
+      "allEventTypes": "Tous les types d'événements",
+      "rowsNoun": "événements",
+      "noEvents": "Aucun événement trouvé pour ce groupe.",
+      "dateTime": "Date et heure",
+      "eventType": "Type d'événement",
+      "actor": "Auteur",
+      "details": "Détails",
+      "addedAsMember": "{name} ajouté comme membre",
+      "promotedToOwner": "{name} promu propriétaire",
+      "removedFromGroup": "{name} retiré du groupe",
+      "loadFailedSummary": "Échec du chargement",
+      "loadFailedDetail": "Échec du chargement de l'historique du groupe."
+    },
+    "passwordGroupNavItem": {
+      "collapseGroup": "Réduire {name}",
+      "expandGroup": "Développer {name}",
+      "newPasswordIn": "Nouveau mot de passe dans {name}",
+      "all": "Tous"
+    },
+    "passwordActivityPanel": {
+      "title": "Activité récente",
+      "viewAll": "Tout voir",
+      "loadFailed": "Échec du chargement de l'activité récente.",
+      "noActivity": "Aucune activité récente."
+    },
+    "passwordDetailPane": {
+      "selectPrompt": "Sélectionnez un mot de passe pour voir ses détails.",
+      "backToList": "Retour à la liste",
+      "viewSharingAccess": "Voir les accès de partage",
+      "manageSharing": "Gérer le partage",
+      "viewSharingAccessTooltip": "Voir qui a accès à ce mot de passe",
+      "oneTimeLink": "Lien à usage unique",
+      "onlyOwnerCanCreateLink": "Seul un propriétaire peut créer un lien à usage unique",
+      "createOneTimeLink": "Créer un lien à usage unique",
+      "accessExpired": "Accès expiré",
+      "expiresLabel": "Expire {time}",
+      "deleteConfirmMessage": "Êtes-vous sûr de vouloir supprimer « {name} » ?",
+      "deleteConfirmHeader": "Confirmer la suppression",
+      "deletedSummary": "Supprimé",
+      "deletedDetail": "Mot de passe supprimé avec succès",
+      "deleteFailedDetail": "Échec de la suppression du mot de passe"
+    },
+    "passwordGroupListPane": {
+      "title": "Groupes",
+      "empty": "Aucun groupe à afficher."
+    },
+    "passwordIdentityPanel": {
+      "username": "Nom d'utilisateur",
+      "none": "Aucun",
+      "copyUsername": "Copier le nom d'utilisateur",
+      "password": "Mot de passe",
+      "hidePassword": "Masquer le mot de passe",
+      "showPassword": "Afficher le mot de passe",
+      "copyPassword": "Copier le mot de passe",
+      "website": "Site web",
+      "urlNotHttp": "L'URL n'est pas ouverte car elle n'est pas http(s)",
+      "copyWebsite": "Copier le site web",
+      "lastModified": "Dernière modification {date}",
+      "fetchFailedDetail": "Échec de la récupération du mot de passe",
+      "copiedSummary": "Copié",
+      "copiedDetail": "{label} copié dans le presse-papiers",
+      "copyFailedDetail": "Échec de la copie de {label}"
+    },
+    "passwordListPane": {
+      "backToGroups": "Retour aux groupes",
+      "empty": "Aucun mot de passe à afficher."
+    },
+    "passwordsHeaderBar": {
+      "searchPlaceholder": "Rechercher tous les mots de passe...",
+      "newPassword": "Nouveau mot de passe",
+      "noWriteAccessAnyGroup": "Vous n'avez accès en écriture à aucun groupe"
+    },
+    "passwordsWorkspace": {
+      "searchResultsTitle": "Résultats de recherche",
+      "allPasswordsTitle": "Tous les mots de passe",
+      "loadFailed": "Échec du chargement des mots de passe"
     },
     "oneTimeLinkModal": {
       "title": "Lien à usage unique",
@@ -704,6 +793,7 @@
       "permanentHint": "L'accès dure jusqu'à ce qu'il soit révoqué."
     },
     "setup": {
+      "illustrationAlt": "Illustration informative",
       "welcome": {
         "title": "Bienvenue à bord !",
         "intro": "Voici la page de configuration de Le Coffre. Cette page ne s'affiche qu'une seule fois, au premier lancement de l'application. Le Coffre est un coffre-fort sécurisé conçu pour protéger vos secrets dans un environnement collaboratif.",
@@ -720,7 +810,8 @@
         "description2": "Si vous perdez le nombre de parts requis, vous perdrez l'accès à votre coffre. Veuillez conserver les parts en lieu sûr, dans des emplacements différents.",
         "description3": "Veuillez choisir le nombre total de parts et le seuil requis pour reconstituer la clé.",
         "generateButton": "Générer les parts de la clé maîtresse",
-        "errorFallback": "Une erreur inattendue s'est produite."
+        "errorFallback": "Une erreur inattendue s'est produite.",
+        "diagramAlt": "Schéma du partage de secret de Shamir"
       },
       "adminAccountForm": {
         "title": "Créer le compte administrateur",
