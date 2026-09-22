@@ -16,6 +16,39 @@ export interface Group {
   members: string[]
 }
 
+export interface GroupEvent {
+  eventId: string
+  eventType: string
+  occurredOn: string
+  actorUserId: string
+  actorEmail: string | null
+  eventData: Record<string, unknown>
+}
+
+export type GroupEventSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary'
+
+/**
+ * Strips the "Event" suffix and inserts a space before every capital so
+ * `UserAddedToGroupEvent` becomes `User Added To Group`. Mirrors
+ * humanizeEventType in the password domain — driven by the backend's group
+ * membership event types, currently: UserAddedToGroupEvent,
+ * OwnerAddedToGroupEvent, UserRemovedFromGroupEvent.
+ */
+export function humanizeGroupEventType(eventType: string): string {
+  return eventType
+    .replace('Event', '')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+}
+
+/** Business-level importance of a group event, used to pick the PrimeVue tag colour. */
+export function groupEventSeverity(eventType: string): GroupEventSeverity {
+  if (eventType === 'UserAddedToGroupEvent') return 'success'
+  if (eventType === 'OwnerAddedToGroupEvent') return 'info'
+  if (eventType === 'UserRemovedFromGroupEvent') return 'danger'
+  return 'secondary'
+}
+
 export function isUserOwnerOf(group: Group, userId: string | null): boolean {
   return !!userId && group.owners.includes(userId)
 }

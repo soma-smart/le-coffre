@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref, toRef, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { useToast } from 'primevue'
 import { useConfirm } from 'primevue/useconfirm'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
-import type { Group } from '@/domain/group/Group'
+import { useUserStore } from '@/stores/user'
+import { isUserOwnerOf, type Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
+import GroupHistoryModal from '@/components/modals/GroupHistoryModal.vue'
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -24,6 +26,17 @@ const toast = useToast()
 const confirm = useConfirm()
 const groupsStore = useGroupsStore()
 const { currentUserId } = storeToRefs(groupsStore)
+const userStore = useUserStore()
+const { isAdmin } = storeToRefs(userStore)
+
+const showHistoryModal = ref(false)
+
+// isOwner from useGroupMembers depends on a users.list call that's admin-only,
+// so it stays false for a real non-admin owner. Compute ownership from the
+// group prop directly (unrestricted) so History stays visible for them.
+const canViewHistory = computed(
+  () => props.group != null && (isAdmin.value || isUserOwnerOf(props.group, currentUserId.value)),
+)
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
@@ -164,12 +177,22 @@ watch(visible, (isVisible) => {
 
     <div v-else class="flex flex-col gap-4">
       <!-- Group Name and Type -->
-      <div class="pb-3 border-b">
+      <div class="pb-3 border-b flex items-center justify-between">
         <div class="flex items-center gap-2 text-muted-color">
           <i class="pi pi-tag"></i>
           <span v-if="group.isPersonal" class="font-medium">Personal Group</span>
           <span v-else class="font-medium">Shared Group</span>
         </div>
+
+        <!-- History button (only for owners of the group or admins) -->
+        <Button
+          v-if="!group.isPersonal && canViewHistory"
+          label="History"
+          icon="pi pi-history"
+          size="small"
+          outlined
+          @click="showHistoryModal = true"
+        />
       </div>
 
       <div v-if="isFetching" class="text-center py-4">
@@ -346,4 +369,6 @@ watch(visible, (isVisible) => {
       />
     </template>
   </Dialog>
+
+  <GroupHistoryModal v-model:visible="showHistoryModal" :group="group ?? null" />
 </template>

@@ -56,6 +56,7 @@ from identity_access_management_context.application.use_cases import (
     GetUserMeUseCase,
     GetUserUseCase,
     IsSsoConfigSetUseCase,
+    ListGroupEventsUseCase,
     ListGroupsUseCase,
     ListUserUseCase,
     LogoutUseCase,
@@ -510,6 +511,20 @@ def get_get_group_usecase(
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
 ):
     return GetGroupUseCase(group_repository, group_member_repository)
+
+
+def get_list_group_events_usecase(
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+):
+    return ListGroupEventsUseCase(
+        group_repository,
+        group_member_repository,
+        user_repository,
+        group_event_repository,
+    )
 
 
 def get_user_info_api(
