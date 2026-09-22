@@ -185,3 +185,36 @@ def get_login_max_failed_attempts() -> int:
 def get_login_lockout_seconds() -> int:
     """Duration in seconds an account stays locked after hitting the failure threshold. Default 300."""
     return int(os.environ.get("LOGIN_LOCKOUT_SECONDS", "300"))
+
+
+# ── Email (SMTP) ────────────────────────────────────────────────
+
+
+def get_smtp_host() -> str:
+    """SMTP relay hostname. Default is localhost (a local relay or dev mailcatcher)."""
+    return os.environ.get("SMTP_HOST", "localhost")
+
+
+def get_smtp_port() -> int:
+    """SMTP relay port. Default is 25."""
+    return int(os.environ.get("SMTP_PORT", "25"))
+
+
+def get_smtp_from_address() -> str:
+    """From address used for all outgoing emails. Override in production."""
+    return os.environ.get("SMTP_FROM_ADDRESS", "noreply@le-coffre.local")
+
+
+def get_smtp_username() -> str | None:
+    """SMTP auth username. Unset means the relay does not require authentication."""
+    return os.environ.get("SMTP_USERNAME") or None
+
+
+def get_smtp_password() -> str | None:
+    """SMTP auth password. Unset means the relay does not require authentication."""
+    return os.environ.get("SMTP_PASSWORD") or None
+
+
+def get_smtp_use_tls() -> bool:
+    """Whether to connect over implicit TLS (SMTPS, typically port 465). Default is False."""
+    return os.environ.get("SMTP_USE_TLS", "false").lower() == "true"
