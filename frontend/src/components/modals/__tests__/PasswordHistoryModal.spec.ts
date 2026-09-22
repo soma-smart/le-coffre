@@ -9,6 +9,9 @@ import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryP
 import type { Password } from '@/domain/password/Password'
 import { VaultLockedError } from '@/domain/vault/errors'
 import { createTestContext } from '@/test/componentTestHelpers'
+import i18n from '@/i18n'
+
+const t = i18n.global.t.bind(i18n.global)
 
 // Whether a load failure surfaces a toast is the behaviour under test for the
 // vault-locked case, so we capture toast.add() through a module mock.
@@ -83,8 +86,8 @@ describe('PasswordHistoryModal', () => {
 
     const text = wrapper.text()
     expect(text).toContain('alice@example.com')
-    expect(text).toContain('Created')
-    expect(text).toContain('Updated')
+    expect(text).toContain(t('common.eventTypes.PasswordCreatedEvent'))
+    expect(text).toContain(t('common.eventTypes.PasswordUpdatedEvent'))
   })
 
   it('clears the rendered events when the modal closes', async () => {
@@ -184,10 +187,10 @@ describe('PasswordHistoryModal', () => {
     await flushPromises()
 
     const text = wrapper.text()
-    expect(text).toContain('One-time link created')
+    expect(text).toContain(t('common.eventTypes.OneTimeLinkCreatedEvent'))
     // The actor column names the issuer, so the row has to say the reader was
     // anonymous or it reads as if that user opened it themselves.
-    expect(text).toContain('anonymous recipient')
+    expect(text).toContain(t('common.passwordEvents.oneTimeLinkReadAnon'))
     expect(text).not.toContain('linkId')
     expect(text).not.toContain('{"')
   })
@@ -218,7 +221,7 @@ describe('PasswordHistoryModal', () => {
 
     const text = wrapper.text()
     expect(text).toContain('Contractors')
-    expect(text).toContain('until')
+    expect(text).toContain(t('common.passwordEvents.untilLabel').trim())
   })
 
   it('shows no deadline for a permanent share', async () => {
@@ -244,6 +247,52 @@ describe('PasswordHistoryModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Platform')
-    expect(wrapper.text()).not.toContain('until')
+    expect(wrapper.text()).not.toContain(t('common.passwordEvents.untilLabel').trim())
+  })
+
+  it('shows translated labels in the event-type filter, keyed by the raw event type', async () => {
+    const wrapper = mount(PasswordHistoryModal, {
+      props: { visible: true, password: samplePassword },
+      global: {
+        plugins: [pinia],
+        provide: { [CONTAINER_KEY as symbol]: container },
+        stubs: { Dialog: DialogStub },
+      },
+    })
+    await flushPromises()
+
+    const multiSelect = wrapper.findComponent({ name: 'MultiSelect' })
+    const options = multiSelect.props('options') as { label: string; value: string }[]
+
+    expect(options).toEqual(
+      expect.arrayContaining([
+        { label: t('common.eventTypes.PasswordCreatedEvent'), value: 'PasswordCreatedEvent' },
+        { label: t('common.eventTypes.PasswordUpdatedEvent'), value: 'PasswordUpdatedEvent' },
+      ]),
+    )
+  })
+
+  it('queries by the raw event type when a translated filter option is selected', async () => {
+    const listEventsSpy = vi.spyOn(repo, 'listEvents')
+    const wrapper = mount(PasswordHistoryModal, {
+      props: { visible: true, password: samplePassword },
+      global: {
+        plugins: [pinia],
+        provide: { [CONTAINER_KEY as symbol]: container },
+        stubs: { Dialog: DialogStub },
+      },
+    })
+    await flushPromises()
+    listEventsSpy.mockClear()
+
+    const multiSelect = wrapper.findComponent({ name: 'MultiSelect' })
+    await multiSelect.vm.$emit('update:modelValue', ['PasswordCreatedEvent'])
+    await multiSelect.vm.$emit('change')
+    await flushPromises()
+
+    expect(listEventsSpy).toHaveBeenCalledWith(
+      'pwd-1',
+      expect.objectContaining({ eventTypes: ['PasswordCreatedEvent'] }),
+    )
   })
 })

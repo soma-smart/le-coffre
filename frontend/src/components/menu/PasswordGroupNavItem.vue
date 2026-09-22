@@ -9,7 +9,11 @@
         <button
           type="button"
           class="w-6 h-6 flex items-center justify-center text-muted-color hover:text-primary"
-          :aria-label="expanded ? `Collapse ${group.name}` : `Expand ${group.name}`"
+          :aria-label="
+            expanded
+              ? t('components.passwordGroupNavItem.collapseGroup', { name: group.name })
+              : t('components.passwordGroupNavItem.expandGroup', { name: group.name })
+          "
           @click.stop="emit('toggle')"
         >
           <span class="pi text-xs" :class="expanded ? 'pi-chevron-down' : 'pi-chevron-right'" />
@@ -34,7 +38,7 @@
             rounded
             size="small"
             class="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            :aria-label="`New password in ${group.name}`"
+            :aria-label="t('components.passwordGroupNavItem.newPasswordIn', { name: group.name })"
             @click.stop="emit('create')"
           />
         </div>
@@ -59,7 +63,7 @@
         <span
           class="ml-2 transition-colors text-xs truncate"
           :class="{ 'font-semibold': active && activeFolder === null }"
-          >All</span
+          >{{ t('components.passwordGroupNavItem.all') }}</span
         >
         <Badge class="ml-auto" severity="secondary" :value="count" />
       </div>
@@ -81,7 +85,7 @@
         <span
           class="ml-2 transition-colors text-xs truncate"
           :class="{ 'font-semibold': active && activeFolder === folder.name }"
-          >{{ folderLabelOf(folder.name) }}</span
+          >{{ folderLabelOf(t, folder.name) }}</span
         >
         <Badge class="ml-auto" severity="secondary" :value="folder.count" />
       </div>
@@ -90,8 +94,11 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Group } from '@/domain/group/Group'
 import { folderLabelOf } from '@/domain/password/Password'
+
+const { t } = useI18n()
 
 defineProps<{
   group: Group

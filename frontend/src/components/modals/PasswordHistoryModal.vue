@@ -2,7 +2,7 @@
   <Dialog
     v-model:visible="visible"
     modal
-    :header="`History: ${password?.name || ''}`"
+    :header="t('components.passwordHistoryModal.titleWithPassword', { name: password?.name || '' })"
     :style="{ width: '90vw', maxWidth: '1200px' }"
     :closable="true"
   >
@@ -10,7 +10,9 @@
       <!-- Filters -->
       <div class="flex flex-col gap-4 md:flex-row md:items-end">
         <div class="flex-1">
-          <label for="date-range" class="block mb-2 font-medium">Date Range</label>
+          <label for="date-range" class="block mb-2 font-medium">{{
+            t('components.passwordHistoryModal.dateRangeLabel')
+          }}</label>
           <DatePicker
             id="date-range"
             v-model="dateRange"
@@ -27,12 +29,16 @@
           />
         </div>
         <div class="flex-1">
-          <label for="event-types" class="block mb-2 font-medium">Filter by Event Type</label>
+          <label for="event-types" class="block mb-2 font-medium">{{
+            t('components.passwordHistoryModal.eventTypeFilterLabel')
+          }}</label>
           <MultiSelect
             id="event-types"
             v-model="selectedEventTypes"
             :options="availableEventTypes"
-            placeholder="All Event Types"
+            optionLabel="label"
+            optionValue="value"
+            :placeholder="t('components.passwordHistoryModal.allEventTypesPlaceholder')"
             :maxSelectedLabels="2"
             class="w-full"
             @change="fetchEvents"
@@ -40,7 +46,7 @@
         </div>
         <Button
           icon="pi pi-refresh"
-          label="Refresh"
+          :label="t('components.passwordHistoryModal.refreshButton')"
           outlined
           @click="fetchEvents"
           :loading="loading"
@@ -57,16 +63,21 @@
         stripedRows
         responsiveLayout="scroll"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} events"
+        :currentPageReportTemplate="pageReportTemplate"
       >
         <template #empty>
           <div class="text-center py-6 text-muted-color">
             <i class="pi pi-inbox text-4xl mb-3"></i>
-            <p>No events found for this password.</p>
+            <p>{{ t('components.passwordHistoryModal.noEvents') }}</p>
           </div>
         </template>
 
-        <Column field="occurredOn" header="Date & Time" sortable :style="{ width: '20%' }">
+        <Column
+          field="occurredOn"
+          :header="t('components.passwordHistoryModal.dateTimeHeader')"
+          sortable
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <span class="text-sm">
               {{ formatDateTime(slotProps.data.occurredOn) }}
@@ -74,7 +85,12 @@
           </template>
         </Column>
 
-        <Column field="eventType" header="Event Type" sortable :style="{ width: '20%' }">
+        <Column
+          field="eventType"
+          :header="t('components.passwordHistoryModal.eventTypeHeader')"
+          sortable
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <Tag
               :value="formatEventType(slotProps.data.eventType)"
@@ -83,89 +99,111 @@
           </template>
         </Column>
 
-        <Column field="actorUserId" header="Actor" :style="{ width: '20%' }">
+        <Column
+          field="actorUserId"
+          :header="t('components.passwordHistoryModal.actorHeader')"
+          :style="{ width: '20%' }"
+        >
           <template #body="slotProps">
             <div class="flex items-center gap-2">
               <i class="pi pi-user text-sm"></i>
-              <span class="text-sm">{{ slotProps.data.actorEmail || 'Unknown User' }}</span>
+              <span class="text-sm">{{
+                slotProps.data.actorEmail || t('common.unknownUser')
+              }}</span>
             </div>
           </template>
         </Column>
 
-        <Column field="eventData" header="Details" :style="{ width: '40%' }">
+        <Column
+          field="eventData"
+          :header="t('components.passwordHistoryModal.detailsHeader')"
+          :style="{ width: '40%' }"
+        >
           <template #body="slotProps">
             <div class="text-sm">
               <span v-if="slotProps.data.eventType === 'PasswordCreatedEvent'">
-                Created in folder:
-                <strong>{{ slotProps.data.eventData.folder || 'default' }}</strong>
+                {{ t('common.passwordEvents.createdInFolder') }}
+                <strong>{{
+                  slotProps.data.eventData.folder || t('common.passwordEvents.defaultFolder')
+                }}</strong>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordUpdatedEvent'">
-                Updated:
-                <span v-if="slotProps.data.eventData.hasNameChanged"> name</span>
-                <span v-if="slotProps.data.eventData.hasPasswordChanged"> password</span>
-                <span v-if="slotProps.data.eventData.hasFolderChanged"> folder</span>
-                <span v-if="slotProps.data.eventData.hasLoginChanged"> login</span>
-                <span v-if="slotProps.data.eventData.hasUrlChanged"> url</span>
+                {{ t('common.passwordEvents.updatedLabel') }}
+                <span v-if="slotProps.data.eventData.hasNameChanged">
+                  {{ t('common.passwordEvents.fieldName') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasPasswordChanged">
+                  {{ t('common.passwordEvents.fieldPassword') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasFolderChanged">
+                  {{ t('common.passwordEvents.fieldFolder') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasLoginChanged">
+                  {{ t('common.passwordEvents.fieldLogin') }}</span
+                >
+                <span v-if="slotProps.data.eventData.hasUrlChanged">
+                  {{ t('common.passwordEvents.fieldUrl') }}</span
+                >
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordSharedEvent'">
-                Shared with group:
+                {{ t('common.passwordEvents.sharedWithGroup') }}
                 <strong>{{
                   slotProps.data.eventData.sharedWithGroupName ||
                   (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
                     0,
                     8,
                   ) + '...' ||
-                  'Unknown'
+                  t('common.unknown')
                 }}</strong>
                 <template v-if="slotProps.data.eventData.expiresAt">
-                  , until
+                  {{ t('common.passwordEvents.untilLabel') }}
                   <strong>{{
                     formatDateTime(slotProps.data.eventData.expiresAt as string)
                   }}</strong>
                 </template>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordUnsharedEvent'">
-                Unshared from group:
+                {{ t('common.passwordEvents.unsharedFromGroup') }}
                 <strong>{{
                   slotProps.data.eventData.unsharedWithGroupName ||
                   (slotProps.data.eventData.unsharedWithGroupId as string | undefined)?.substring(
                     0,
                     8,
                   ) + '...' ||
-                  'Unknown'
+                  t('common.unknown')
                 }}</strong>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordShareExpirationUpdatedEvent'">
-                Access duration changed for group
+                {{ t('common.passwordEvents.accessDurationChanged') }}
                 <strong>{{
                   (slotProps.data.eventData.sharedWithGroupId as string | undefined)?.substring(
                     0,
                     8,
-                  ) + '...' || 'Unknown'
+                  ) + '...' || t('common.unknown')
                 }}</strong>
                 <template v-if="slotProps.data.eventData.expiresAt">
-                  , now expires
+                  {{ t('common.passwordEvents.nowExpiresLabel') }}
                   <strong>{{
                     formatDateTime(slotProps.data.eventData.expiresAt as string)
                   }}</strong>
                 </template>
-                <template v-else>, now permanent</template>
+                <template v-else>{{ t('common.passwordEvents.nowPermanentLabel') }}</template>
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordAccessedEvent'">
-                Password accessed
+                {{ t('common.passwordEvents.accessed') }}
               </span>
               <span v-else-if="slotProps.data.eventType === 'PasswordDeletedEvent'">
-                Password deleted
+                {{ t('common.passwordEvents.deleted') }}
               </span>
               <span v-else-if="slotProps.data.eventType === 'OneTimeLinkCreatedEvent'">
-                One-time link created, expires
+                {{ t('common.passwordEvents.oneTimeLinkCreatedExpires') }}
                 <strong>{{ formatDateTime(slotProps.data.eventData.expiresAt as string) }}</strong>
               </span>
               <span v-else-if="slotProps.data.eventType === 'OneTimeLinkReadEvent'">
                 <!-- The actor column names the person who issued the link, since
                      an anonymous reader has no user id to attribute it to. Say so
                      here, or the row reads as if that user opened it themselves. -->
-                One-time link opened by an anonymous recipient
+                {{ t('common.passwordEvents.oneTimeLinkReadAnon') }}
               </span>
               <span v-else>
                 {{ JSON.stringify(slotProps.data.eventData) }}
@@ -181,14 +219,13 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
-import {
-  eventSeverity,
-  humanizeEventType,
-  type Password,
-  type PasswordEvent,
-} from '@/domain/password/Password'
+import { useI18n } from 'vue-i18n'
+import { eventSeverity, type Password, type PasswordEvent } from '@/domain/password/Password'
 import { VaultLockedError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
+import { translateEventType } from '@/utils/eventTypeLabel'
+import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
+import { activeLocale } from '@/utils/relativeTime'
 
 const props = defineProps<{
   password: Password | null
@@ -197,6 +234,10 @@ const props = defineProps<{
 const visible = defineModel<boolean>('visible', { required: true })
 
 const toast = useToast()
+const { t, locale } = useI18n()
+const pageReportTemplate = computed(() =>
+  buildPageReportTemplate(t, t('components.passwordHistoryModal.rowsNoun')),
+)
 
 // Resolve use cases at setup time — inject() has no active instance
 // inside async handlers after an await.
@@ -209,7 +250,11 @@ const selectedEventTypes = ref<string[]>([])
 
 const availableEventTypes = computed(() => {
   const types = new Set(events.value.map((event) => event.eventType))
-  return Array.from(types).sort()
+  // The filter's underlying value must stay the raw event type (sent to the
+  // backend query); only the displayed label is translated.
+  return Array.from(types)
+    .map((type) => ({ label: translateEventType(t, type), value: type }))
+    .sort((a, b) => a.label.localeCompare(b.label, locale.value))
 })
 
 const fetchEvents = async () => {
@@ -243,8 +288,8 @@ const fetchEvents = async () => {
     if (error instanceof VaultLockedError) return
     toast.add({
       severity: 'error',
-      summary: 'Load Failed',
-      detail: 'Failed to load password history.',
+      summary: t('components.passwordHistoryModal.loadFailedSummary'),
+      detail: t('components.passwordHistoryModal.loadFailedDetail'),
       life: 5000,
     })
   } finally {
@@ -253,7 +298,7 @@ const fetchEvents = async () => {
 }
 
 const formatDateTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('en-GB', {
+  return new Date(dateString).toLocaleString(activeLocale(), {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
@@ -263,7 +308,7 @@ const formatDateTime = (dateString: string): string => {
   })
 }
 
-const formatEventType = humanizeEventType
+const formatEventType = (eventType: string) => translateEventType(t, eventType)
 const getEventSeverity = eventSeverity
 
 // Fetch events when modal opens and password changes

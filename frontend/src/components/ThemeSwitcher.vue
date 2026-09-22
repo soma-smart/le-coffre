@@ -7,47 +7,47 @@
       severity="secondary"
       text
       rounded
-      aria-label="Open Theme Customizer"
-      v-tooltip.bottom="'Customize Theme'"
+      :aria-label="t('components.themeSwitcher.openThemeCustomizer')"
+      v-tooltip.bottom="t('components.themeSwitcher.customizeTheme')"
     />
     <Button
       v-else
-      label="Customize Theme"
+      :label="t('components.themeSwitcher.customizeTheme')"
       icon="pi pi-palette"
       @click="drawerVisible = true"
       severity="secondary"
       outlined
       class="w-full"
-      aria-label="Open Theme Customizer"
+      :aria-label="t('components.themeSwitcher.openThemeCustomizer')"
     />
 
     <Drawer
       v-model:visible="drawerVisible"
       position="right"
-      header="Theme Customizer"
+      :header="t('components.themeSwitcher.themeCustomizer')"
       class="!w-full md:!w-80 lg:!w-[34rem]"
     >
       <div class="flex flex-col gap-6">
         <div class="flex items-center">
-          <span class="font-medium flex-1">Dark Theme</span>
+          <span class="font-medium flex-1">{{ t('components.themeSwitcher.darkTheme') }}</span>
           <button
             type="button"
             class="inline-flex w-8 h-8 p-0 items-center justify-center border rounded cursor-pointer transition-all hover:bg-emphasis active:scale-95"
             @click="onThemeToggler"
-            aria-label="Toggle Dark Theme"
+            :aria-label="t('components.themeSwitcher.toggleDarkTheme')"
           >
             <i :class="`pi ${iconClass}`" />
           </button>
         </div>
 
         <div class="flex-col justify-start items-start gap-2 flex">
-          <span class="text-sm font-medium">Primary Colors</span>
+          <span class="text-sm font-medium">{{ t('components.themeSwitcher.primaryColors') }}</span>
           <div class="self-stretch justify-start items-start gap-2 inline-flex flex-wrap">
             <button
               v-for="primaryColor of primaryColors"
               :key="primaryColor.name"
               type="button"
-              :title="primaryColor.name"
+              :title="translateColorName(t, primaryColor.name)"
               @click="updateColors('primary', primaryColor)"
               class="outline outline-2 outline-offset-1 outline-transparent cursor-pointer p-0 rounded-[50%] w-5 h-5"
               :style="{
@@ -59,13 +59,13 @@
         </div>
 
         <div class="flex-col justify-start items-start gap-2 flex">
-          <span class="text-sm font-medium">Surface Colors</span>
+          <span class="text-sm font-medium">{{ t('components.themeSwitcher.surfaceColors') }}</span>
           <div class="self-stretch justify-start items-start gap-2 inline-flex">
             <button
               v-for="surface of surfaces"
               :key="surface.name"
               type="button"
-              :title="surface.name"
+              :title="translateColorName(t, surface.name)"
               @click="updateColors('surface', surface)"
               class="outline outline-2 outline-offset-1 outline-transparent cursor-pointer p-0 rounded-[50%] w-5 h-5"
               :style="{
@@ -77,7 +77,7 @@
         </div>
 
         <div class="flex-col justify-start items-start gap-2 flex w-full">
-          <span class="text-sm font-medium">Preset</span>
+          <span class="text-sm font-medium">{{ t('components.themeSwitcher.preset') }}</span>
           <div
             class="inline-flex p-[0.28rem] items-start gap-[0.28rem] rounded-[0.71rem] border border-[#00000003] w-full"
           >
@@ -92,7 +92,7 @@
         </div>
 
         <div class="flex items-center">
-          <span class="font-medium flex-1">Ripple Effect</span>
+          <span class="font-medium flex-1">{{ t('components.themeSwitcher.rippleEffect') }}</span>
           <ToggleSwitch :modelValue="rippleActive" @update:modelValue="onRippleChange" />
         </div>
       </div>
@@ -102,6 +102,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, inject } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { $t, updatePreset, updateSurfacePalette } from '@primeuix/themes'
 import Aura from '@primeuix/themes/aura'
 import Lara from '@primeuix/themes/lara'
@@ -113,6 +114,7 @@ import { AppStateKey, type AppState } from '@/plugins/appState'
 import { primaryColors, surfaces } from '@/config/colorThemes'
 import { useContainer } from '@/plugins/container'
 import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
+import { translateColorName } from '@/utils/colorLabel'
 
 withDefaults(defineProps<{ variant?: 'button' | 'icon' }>(), { variant: 'button' })
 
@@ -127,6 +129,7 @@ interface ThemeSettings {
 }
 
 const { preferences } = useContainer()
+const { t } = useI18n()
 
 // Access global properties
 const $primevue = usePrimeVue()

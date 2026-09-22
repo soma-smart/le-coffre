@@ -3,19 +3,23 @@
     <template #content>
       <div class="flex flex-col gap-4">
         <div>
-          <label class="text-xs uppercase tracking-wide text-muted-color">Username</label>
+          <label class="text-xs uppercase tracking-wide text-muted-color">{{
+            t('components.passwordIdentityPanel.username')
+          }}</label>
           <div class="flex items-center gap-2 mt-1 w-full min-w-0">
             <span v-if="password.login" class="text-sm flex-1 min-w-0 truncate">{{
               password.login
             }}</span>
-            <span v-else class="text-sm flex-1 min-w-0 italic text-muted-color">None</span>
+            <span v-else class="text-sm flex-1 min-w-0 italic text-muted-color">{{
+              t('components.passwordIdentityPanel.none')
+            }}</span>
             <Button
               icon="pi pi-copy"
               text
               rounded
               size="small"
               severity="secondary"
-              aria-label="Copy username"
+              :aria-label="t('components.passwordIdentityPanel.copyUsername')"
               :disabled="!password.login"
               @click="copyUsername"
             />
@@ -23,7 +27,9 @@
         </div>
 
         <div>
-          <label class="text-xs uppercase tracking-wide text-muted-color">Password</label>
+          <label class="text-xs uppercase tracking-wide text-muted-color">{{
+            t('components.passwordIdentityPanel.password')
+          }}</label>
           <div class="flex items-center gap-2 mt-1 w-full min-w-0">
             <code
               class="text-sm px-3 py-1 rounded border border-surface font-mono flex-1 min-w-0 truncate"
@@ -37,10 +43,14 @@
               rounded
               size="small"
               severity="secondary"
-              :aria-label="isVisible ? 'Hide password' : 'Show password'"
+              :aria-label="
+                isVisible
+                  ? t('components.passwordIdentityPanel.hidePassword')
+                  : t('components.passwordIdentityPanel.showPassword')
+              "
               :loading="isLoading"
               :disabled="!canRead"
-              v-tooltip.top="!canRead ? 'You don\'t have read access to this password' : undefined"
+              v-tooltip.top="!canRead ? t('common.noReadAccessToPassword') : undefined"
               @click="toggleVisibility"
             />
             <Button
@@ -49,16 +59,18 @@
               rounded
               size="small"
               severity="secondary"
-              aria-label="Copy password"
+              :aria-label="t('components.passwordIdentityPanel.copyPassword')"
               :disabled="!canRead"
-              v-tooltip.top="!canRead ? 'You don\'t have read access to this password' : undefined"
+              v-tooltip.top="!canRead ? t('common.noReadAccessToPassword') : undefined"
               @click="copyPassword"
             />
           </div>
         </div>
 
         <div>
-          <label class="text-xs uppercase tracking-wide text-muted-color">Website</label>
+          <label class="text-xs uppercase tracking-wide text-muted-color">{{
+            t('components.passwordIdentityPanel.website')
+          }}</label>
           <div class="flex items-center gap-2 mt-1 w-full min-w-0">
             <a
               v-if="password.url && safePasswordUrl"
@@ -71,17 +83,19 @@
             <span
               v-else-if="password.url"
               class="text-sm text-muted-color truncate flex-1 min-w-0"
-              v-tooltip.top="'URL is not opened because it is not http(s)'"
+              v-tooltip.top="t('components.passwordIdentityPanel.urlNotHttp')"
               >{{ password.url }}</span
             >
-            <span v-else class="text-sm flex-1 min-w-0 italic text-muted-color">None</span>
+            <span v-else class="text-sm flex-1 min-w-0 italic text-muted-color">{{
+              t('components.passwordIdentityPanel.none')
+            }}</span>
             <Button
               icon="pi pi-copy"
               text
               rounded
               size="small"
               severity="secondary"
-              aria-label="Copy website"
+              :aria-label="t('components.passwordIdentityPanel.copyWebsite')"
               :disabled="!password.url"
               @click="copyWebsite"
             />
@@ -89,7 +103,11 @@
         </div>
 
         <p class="text-xs text-muted-color">
-          Last modified {{ formatDate(password.lastUpdatedAt) }}
+          {{
+            t('components.passwordIdentityPanel.lastModified', {
+              date: formatDate(password.lastUpdatedAt),
+            })
+          }}
         </p>
       </div>
     </template>
@@ -99,11 +117,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { useI18n } from 'vue-i18n'
 import type { Password } from '@/domain/password/Password'
 import { VaultLockedError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { usePasswordReveal } from '@/composables/usePasswordReveal'
 import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
+import { activeLocale } from '@/utils/relativeTime'
 
 const props = defineProps<{
   password: Password
@@ -112,6 +132,7 @@ const props = defineProps<{
 }>()
 
 const toast = useToast()
+const { t } = useI18n()
 const { passwords: passwordUseCases } = useContainer()
 
 const safePasswordUrl = computed(() => normalizeExternalHttpUrl(props.password.url))
@@ -126,8 +147,8 @@ const { passwordValue, isVisible, isLoading, toggleVisibility, revealAndCopy } =
     if (error instanceof VaultLockedError) return
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: 'Failed to fetch password',
+      summary: t('common.error'),
+      detail: t('components.passwordIdentityPanel.fetchFailedDetail'),
       life: 3000,
     })
   },
@@ -135,7 +156,7 @@ const { passwordValue, isVisible, isLoading, toggleVisibility, revealAndCopy } =
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-GB', {
+  return date.toLocaleDateString(activeLocale(), {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -149,32 +170,36 @@ async function copyText(value: string, label: string) {
     await navigator.clipboard.writeText(value)
     toast.add({
       severity: 'success',
-      summary: 'Copied',
-      detail: `${label} copied to clipboard`,
+      summary: t('components.passwordIdentityPanel.copiedSummary'),
+      detail: t('components.passwordIdentityPanel.copiedDetail', { label }),
       life: 3000,
     })
   } catch (error) {
     console.error(`Error copying ${label.toLowerCase()} to clipboard:`, error)
     toast.add({
       severity: 'error',
-      summary: 'Error',
-      detail: `Failed to copy ${label.toLowerCase()}`,
+      summary: t('common.error'),
+      detail: t('components.passwordIdentityPanel.copyFailedDetail', {
+        label: label.toLowerCase(),
+      }),
       life: 3000,
     })
   }
 }
 
 const copyUsername = () => {
-  if (props.password.login) copyText(props.password.login, 'Username')
+  if (props.password.login)
+    copyText(props.password.login, t('components.passwordIdentityPanel.username'))
 }
 
 const copyWebsite = () => {
-  if (props.password.url) copyText(props.password.url, 'Website')
+  if (props.password.url)
+    copyText(props.password.url, t('components.passwordIdentityPanel.website'))
 }
 
 const copyPassword = async () => {
   const value = await revealAndCopy()
   if (value === null) return
-  await copyText(value, 'Password')
+  await copyText(value, t('components.passwordIdentityPanel.password'))
 }
 </script>

@@ -11,7 +11,7 @@
     </div>
 
     <div v-else-if="error" class="p-4">
-      <Message severity="error">{{ error }}</Message>
+      <Message severity="error">{{ t('components.passwordsWorkspace.loadFailed') }}</Message>
     </div>
 
     <div v-else class="flex-1 min-h-0 flex">
@@ -82,6 +82,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { accessibleGroupIdsFor, isRootFolder, type Password } from '@/domain/password/Password'
 import { usePasswordsStore } from '@/stores/passwords'
@@ -97,6 +98,7 @@ import { useIsMobile } from '@/composables/useIsMobile'
 import { VaultStatusKey, type VaultStatus } from '@/plugins/vaultStatus'
 import { slugifyGroupName } from '@/utils/groupSlug'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
@@ -148,6 +150,7 @@ const {
   adminPasswordViewEnabled,
   routeGroupSlug,
   routeFolderFilter,
+  t,
 })
 
 // 'scope' = one group (the route names it); 'all' = no group selected, every
@@ -164,8 +167,8 @@ const panePasswords = computed<Password[]>(() => {
 })
 
 const paneTitle = computed(() => {
-  if (paneMode.value === 'search') return 'Search results'
-  if (paneMode.value === 'all') return 'All passwords'
+  if (paneMode.value === 'search') return t('components.passwordsWorkspace.searchResultsTitle')
+  if (paneMode.value === 'all') return t('components.passwordsWorkspace.allPasswordsTitle')
   return scopePaneTitle.value
 })
 

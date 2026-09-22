@@ -1,8 +1,17 @@
-// Pinned so the browser's own locale never leaks in: an undefined locale would
-// drop "dans 24 heures" into an otherwise English screen. en-GB rather than
-// en-US because it is English while using a 24-hour clock and a day-first date
-// natively, so no per-call option has to override the locale's own convention.
-const LOCALE = 'en-GB'
+import i18n from '@/i18n'
+
+// Driven by the active UI locale rather than the browser's, so this always
+// matches the language the rest of the screen is rendered in: an undefined
+// locale would drop "in 24 hours" into an otherwise French screen (or vice
+// versa) whenever it differs from the browser's own. English resolves to
+// en-GB rather than en-US because it is English while using a 24-hour clock
+// and a day-first date natively, so no per-call option has to override the
+// locale's own convention.
+//
+// Exported for other date/time formatting in the app (e.g. absolute
+// timestamps shown alongside a relative label on the same row) so they stay
+// in the same locale rather than drifting back to a hardcoded one.
+export const activeLocale = (): string => (i18n.global.locale.value === 'en' ? 'en-GB' : 'fr')
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['day', 86_400_000],
@@ -26,7 +35,7 @@ export const formatRelativeTime = (isoDate: string, now: Date = new Date()): str
   if (Number.isNaN(target.getTime())) return ''
 
   const diffMs = target.getTime() - now.getTime()
-  const formatter = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'always' })
+  const formatter = new Intl.RelativeTimeFormat(activeLocale(), { numeric: 'always' })
 
   for (const [unit, unitMs] of UNITS) {
     if (Math.abs(diffMs) >= unitMs) {
@@ -48,5 +57,7 @@ const ABSOLUTE_FORMAT: Intl.DateTimeFormatOptions = {
 /** Full timestamp, for the tooltip behind the relative label. */
 export const formatAbsoluteTime = (isoDate: string): string => {
   const target = new Date(isoDate)
-  return Number.isNaN(target.getTime()) ? '' : target.toLocaleString(LOCALE, ABSOLUTE_FORMAT)
+  return Number.isNaN(target.getTime())
+    ? ''
+    : target.toLocaleString(activeLocale(), ABSOLUTE_FORMAT)
 }

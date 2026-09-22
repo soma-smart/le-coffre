@@ -1,14 +1,16 @@
 <template>
   <div class="flex flex-col h-full">
     <div class="px-4 py-3 border-b border-surface shrink-0">
-      <h2 class="font-semibold truncate">Groups</h2>
+      <h2 class="font-semibold truncate">{{ t('components.passwordGroupListPane.title') }}</h2>
       <p class="text-xs text-muted-color">
-        {{ groups.length }} {{ groups.length === 1 ? 'group' : 'groups' }}
+        {{ t('common.groupCount', { count: groups.length }, groups.length) }}
       </p>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto">
-      <p v-if="groups.length === 0" class="p-4 text-sm text-muted-color">No groups to display.</p>
+      <p v-if="groups.length === 0" class="p-4 text-sm text-muted-color">
+        {{ t('components.passwordGroupListPane.empty') }}
+      </p>
       <div
         v-for="group in groups"
         :key="group.id"
@@ -28,7 +30,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Group } from '@/domain/group/Group'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   groups: readonly Group[]

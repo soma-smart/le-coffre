@@ -11,9 +11,9 @@
           class="pi pi-key transition-colors"
           :class="isPasswordsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }"
-          >Passwords</span
-        >
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isPasswordsActive }">{{
+          t('components.mainMenu.passwords')
+        }}</span>
       </div>
       <div>
         <PasswordGroupNavItem
@@ -50,7 +50,9 @@
               class="pi text-xs"
               :class="adminPasswordViewEnabled ? 'pi-eye' : 'pi-eye-slash'"
             />
-            <span class="uppercase tracking-wide">Show admin groups</span>
+            <span class="uppercase tracking-wide">{{
+              t('components.mainMenu.showAdminGroups')
+            }}</span>
           </button>
         </div>
         <PasswordGroupNavItem
@@ -83,9 +85,9 @@
           class="pi pi-users transition-colors"
           :class="isGroupsActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }"
-          >Groups</span
-        >
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isGroupsActive }">{{
+          t('components.mainMenu.groups')
+        }}</span>
       </div>
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
@@ -96,9 +98,9 @@
           class="pi pi-link transition-colors"
           :class="isMyLinksActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isMyLinksActive }"
-          >My links</span
-        >
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isMyLinksActive }">{{
+          t('components.mainMenu.myLinks')
+        }}</span>
       </div>
       <div
         class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
@@ -109,8 +111,11 @@
           class="pi pi-user transition-colors"
           :class="isProfileActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
         />
-        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }"
-          >Profile</span
+        <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }">{{
+          t('components.mainMenu.profile')
+        }}</span>
+        <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1"
+          >⌘+W</span
         >
       </div>
       <div v-if="isAdmin">
@@ -123,9 +128,9 @@
             class="pi pi-shield transition-colors"
             :class="isAdminActive ? 'text-primary' : 'text-muted-color group-hover:text-primary'"
           />
-          <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }"
-            >Admin</span
-          >
+          <span class="ml-2 transition-colors" :class="{ 'font-semibold': isAdminActive }">{{
+            t('components.mainMenu.admin')
+          }}</span>
           <span
             class="ml-auto pi transition-transform"
             :class="adminMenuExpanded ? 'pi-chevron-down' : 'pi-chevron-right'"
@@ -146,7 +151,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminConfigActive }"
-              >Config</span
+              >{{ t('components.mainMenu.config') }}</span
             >
           </div>
           <div
@@ -163,7 +168,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminUsersActive }"
-              >Users</span
+              >{{ t('components.mainMenu.users') }}</span
             >
           </div>
           <div
@@ -182,7 +187,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminOneTimeLinksActive }"
-              >One-time links</span
+              >{{ t('components.mainMenu.oneTimeLinks') }}</span
             >
           </div>
           <div
@@ -201,7 +206,7 @@
             <span
               class="ml-2 transition-colors text-sm"
               :class="{ 'font-semibold': isAdminStatisticsActive }"
-              >Statistics</span
+              >{{ t('components.mainMenu.statistics') }}</span
             >
           </div>
         </div>
@@ -211,7 +216,7 @@
     <!-- Logout Button at bottom -->
     <div class="p-4 border-t border-surface flex flex-col gap-3 shrink-0">
       <Button
-        label="Logout"
+        :label="t('components.mainMenu.logout')"
         icon="pi pi-sign-out"
         @click="handleLogout"
         severity="secondary"
@@ -226,6 +231,7 @@
 import { onMounted, watch, computed, ref, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { usePasswordsStore } from '@/stores/passwords'
 import { usePasswordAccessStore } from '../stores/passwordAccess'
@@ -241,6 +247,7 @@ const router = useRouter()
 const route = useRoute()
 const vaultStatus = inject<VaultStatus>(VaultStatusKey)
 const toast = useToast()
+const { t } = useI18n()
 
 const passwordsStore = usePasswordsStore()
 const { foldersByGroupId } = storeToRefs(passwordsStore)
@@ -472,8 +479,8 @@ const handleLogout = async () => {
   router.push('/login').then(() => {
     toast.add({
       severity: 'success',
-      summary: 'Logout Successful',
-      detail: 'You have been logged out successfully.',
+      summary: t('components.mainMenu.logoutSuccessSummary'),
+      detail: t('components.mainMenu.logoutSuccessDetail'),
       life: 5000,
     })
   })

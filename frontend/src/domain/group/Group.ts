@@ -27,20 +27,6 @@ export interface GroupEvent {
 
 export type GroupEventSeverity = 'success' | 'info' | 'warn' | 'danger' | 'secondary'
 
-/**
- * Strips the "Event" suffix and inserts a space before every capital so
- * `UserAddedToGroupEvent` becomes `User Added To Group`. Mirrors
- * humanizeEventType in the password domain — driven by the backend's group
- * membership event types, currently: UserAddedToGroupEvent,
- * OwnerAddedToGroupEvent, UserRemovedFromGroupEvent.
- */
-export function humanizeGroupEventType(eventType: string): string {
-  return eventType
-    .replace('Event', '')
-    .replace(/([A-Z])/g, ' $1')
-    .trim()
-}
-
 /** Business-level importance of a group event, used to pick the PrimeVue tag colour. */
 export function groupEventSeverity(eventType: string): GroupEventSeverity {
   if (eventType === 'UserAddedToGroupEvent') return 'success'

@@ -5,6 +5,7 @@ import router from '@/router'
 import { useCsrfStore } from '@/stores/csrf'
 import { triggerVaultUnlock } from '@/plugins/vaultStatus'
 import { logout } from '@/utils/logout'
+import i18n from '@/i18n'
 
 // Apply runtime configuration (injected via /config.js before app load)
 const runtimeConfig = (window as unknown as { __APP_CONFIG__?: { apiBaseUrl?: string } })
@@ -115,8 +116,8 @@ client.interceptors.response.use(async (response: Response, request: Request, op
         try {
           useToast().add({
             severity: 'warn',
-            summary: 'Vault Locked',
-            detail: 'The vault is locked. Please unlock it to continue.',
+            summary: i18n.global.t('common.vaultLockedSummary'),
+            detail: i18n.global.t('common.vaultLockedDetail'),
             life: 6000,
           })
         } catch {
@@ -188,8 +189,8 @@ client.interceptors.error.use(async (error: unknown, response: Response | undefi
     const seconds = retryAfter ? parseInt(retryAfter, 10) : 0
     const detail =
       seconds > 0
-        ? `Too many requests. Please try again in ${seconds} seconds.`
-        : 'Too many requests. Please try again later.'
+        ? i18n.global.t('common.rateLimitedDetailWithSeconds', { seconds })
+        : i18n.global.t('common.rateLimitedDetail')
 
     // Dispatch a custom event so components can react (e.g. LoginForm countdown).
     // reason=rate-limited signals the global per-IP quota was hit, distinct
@@ -206,7 +207,7 @@ client.interceptors.error.use(async (error: unknown, response: Response | undefi
         const toast = useToast()
         toast.add({
           severity: 'warn',
-          summary: 'Rate Limited',
+          summary: i18n.global.t('common.rateLimitedSummary'),
           detail,
           life: 5000,
         })

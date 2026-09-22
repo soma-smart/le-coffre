@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import CreateUserModal from '@/components/modals/CreateUserModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import UserHistoryModal from '@/components/modals/UserHistoryModal.vue'
@@ -8,8 +9,13 @@ import type { User } from '@/domain/user/User'
 import { isUserAdmin as isUserAdminFromDomain } from '@/domain/user/User'
 import { UserDomainError } from '@/domain/user/errors'
 import { useContainer } from '@/plugins/container'
+import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
 
 const toast = useToast()
+const { t } = useI18n()
+const pageReportTemplate = computed(() =>
+  buildPageReportTemplate(t, t('components.admin.users.rowsNoun')),
+)
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async event handlers after an await.
@@ -38,19 +44,19 @@ const openUserHistory = (user: User) => {
 }
 
 const promoteModalQuestion = computed(() => {
-  return `Are you sure you want to promote "${userToPromote.value?.username}" to ADMIN?`
+  return t('components.admin.users.promoteQuestion', { username: userToPromote.value?.username })
 })
 
 const promoteModalDescription = computed(() => {
-  return `This will grant them full administrative privileges.\nThey will be able to manage users, groups, and system settings.`
+  return t('components.admin.users.promoteDescription')
 })
 
 const deleteModalQuestion = computed(() => {
-  return `Are you sure you want to delete user "${userToDelete.value?.username}"?`
+  return t('components.admin.users.deleteQuestion', { username: userToDelete.value?.username })
 })
 
 const deleteModalDescription = computed(() => {
-  return `This action cannot be undone.\nAll data associated with this user will be permanently removed.`
+  return t('components.admin.users.deleteDescription')
 })
 
 // Fetch users
@@ -60,10 +66,11 @@ const fetchUsers = async () => {
     users.value = await userUseCases.list.execute()
   } catch (error) {
     console.error('Failed to fetch users:', error)
-    const detail = error instanceof UserDomainError ? error.message : 'Failed to fetch users'
+    const detail =
+      error instanceof UserDomainError ? error.message : t('components.admin.users.fetchFailed')
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail,
       life: 5000,
     })
@@ -89,17 +96,18 @@ const handlePromoteConfirmed = async () => {
     await userUseCases.promoteToAdmin.execute({ userId })
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: `User ${username} has been promoted to ADMIN`,
+      summary: t('common.success'),
+      detail: t('components.admin.users.promotedDetail', { username }),
       life: 5000,
     })
     await fetchUsers()
   } catch (error: unknown) {
     console.error('Failed to promote user:', error)
-    const detail = error instanceof UserDomainError ? error.message : 'Failed to promote user'
+    const detail =
+      error instanceof UserDomainError ? error.message : t('components.admin.users.promoteFailed')
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail,
       life: 5000,
     })
@@ -126,17 +134,18 @@ const handleDeleteConfirmed = async () => {
     await userUseCases.delete.execute({ userId })
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: `User ${username} has been deleted`,
+      summary: t('common.success'),
+      detail: t('components.admin.users.deletedDetail', { username }),
       life: 5000,
     })
     await fetchUsers()
   } catch (error: unknown) {
     console.error('Failed to delete user:', error)
-    const detail = error instanceof UserDomainError ? error.message : 'Failed to delete user'
+    const detail =
+      error instanceof UserDomainError ? error.message : t('components.admin.users.deleteFailed')
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail,
       life: 5000,
     })
@@ -165,10 +174,10 @@ onMounted(() => {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
           <i class="pi pi-users"></i>
-          User Management
+          {{ t('components.admin.users.title') }}
         </div>
         <Button
-          label="Create User"
+          :label="t('components.admin.users.createButton')"
           icon="pi pi-user-plus"
           size="small"
           @click="showCreateUserModal = true"
@@ -176,7 +185,7 @@ onMounted(() => {
       </div>
     </template>
     <template #content>
-      <p class="text-muted-color mb-4">Manage users and their access to the system.</p>
+      <p class="text-muted-color mb-4">{{ t('components.admin.users.description') }}</p>
 
       <div v-if="loading" class="flex justify-center items-center py-8">
         <ProgressSpinner />
@@ -184,7 +193,7 @@ onMounted(() => {
 
       <div v-else-if="users.length === 0" class="text-center py-8">
         <i class="pi pi-users text-4xl text-muted-color mb-4"></i>
-        <p class="text-muted-color">No users found. Create your first user!</p>
+        <p class="text-muted-color">{{ t('components.admin.users.noUsers') }}</p>
       </div>
 
       <DataTable
@@ -197,9 +206,9 @@ onMounted(() => {
         dataKey="id"
         responsiveLayout="scroll"
         paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} users"
+        :currentPageReportTemplate="pageReportTemplate"
       >
-        <Column field="username" header="Username" sortable>
+        <Column field="username" :header="t('components.admin.users.usernameHeader')" sortable>
           <template #body="slotProps">
             <div class="flex items-center gap-2">
               <i v-if="isAdmin(slotProps.data)" class="pi pi-shield text-red-500"></i>
@@ -212,13 +221,13 @@ onMounted(() => {
           </template>
         </Column>
 
-        <Column field="name" header="Name" sortable>
+        <Column field="name" :header="t('components.admin.users.nameHeader')" sortable>
           <template #body="slotProps">
             <span>{{ slotProps.data.name }}</span>
           </template>
         </Column>
 
-        <Column field="email" header="Email" sortable>
+        <Column field="email" :header="t('components.admin.users.emailHeader')" sortable>
           <template #body="slotProps">
             <div class="flex items-center gap-2">
               <i class="pi pi-envelope text-muted-color text-sm"></i>
@@ -227,13 +236,13 @@ onMounted(() => {
           </template>
         </Column>
 
-        <Column field="id" header="User ID" sortable>
+        <Column field="id" :header="t('components.admin.users.idHeader')" sortable>
           <template #body="slotProps">
             <span class="font-mono text-sm text-muted-color">{{ slotProps.data.id }}</span>
           </template>
         </Column>
 
-        <Column field="roles" header="Role" sortable>
+        <Column field="roles" :header="t('components.admin.users.roleHeader')" sortable>
           <template #body="slotProps">
             <Tag
               v-if="isAdmin(slotProps.data)"
@@ -245,12 +254,12 @@ onMounted(() => {
           </template>
         </Column>
 
-        <Column header="Actions" :exportable="false">
+        <Column :header="t('components.admin.users.actionsHeader')" :exportable="false">
           <template #body="slotProps">
             <div class="flex gap-2">
               <Button
                 icon="pi pi-shield"
-                label="Promote to Admin"
+                :label="t('components.admin.users.promoteButton')"
                 size="small"
                 severity="warning"
                 outlined
@@ -260,7 +269,7 @@ onMounted(() => {
               />
               <Button
                 icon="pi pi-history"
-                label="History"
+                :label="t('components.admin.users.historyButton')"
                 size="small"
                 severity="info"
                 outlined
@@ -268,7 +277,7 @@ onMounted(() => {
               />
               <Button
                 icon="pi pi-trash"
-                label="Delete"
+                :label="t('components.admin.users.deleteButton')"
                 size="small"
                 severity="danger"
                 outlined
@@ -287,11 +296,11 @@ onMounted(() => {
       <!-- Promote Admin Confirmation Modal -->
       <ConfirmationModal
         v-model:visible="showPromoteAdminModal"
-        title="Promote User to Admin"
+        :title="t('components.admin.users.promoteDialogTitle')"
         :question="promoteModalQuestion"
         :description="promoteModalDescription"
-        confirm-label="Promote to Admin"
-        cancel-label="Cancel"
+        :confirm-label="t('components.admin.users.promoteToAdminLabel')"
+        :cancel-label="t('common.cancel')"
         severity="warning"
         icon="pi pi-shield"
         :countdown-seconds="3"
@@ -301,11 +310,11 @@ onMounted(() => {
       <!-- Delete User Confirmation Modal -->
       <ConfirmationModal
         v-model:visible="showDeleteUserModal"
-        title="Delete User"
+        :title="t('components.admin.users.deleteDialogTitle')"
         :question="deleteModalQuestion"
         :description="deleteModalDescription"
-        confirm-label="Delete User"
-        cancel-label="Cancel"
+        :confirm-label="t('components.admin.users.deleteButton')"
+        :cancel-label="t('common.cancel')"
         severity="danger"
         icon="pi pi-trash"
         :countdown-seconds="3"

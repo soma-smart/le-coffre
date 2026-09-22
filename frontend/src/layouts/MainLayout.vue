@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useRouter, useRoute } from 'vue-router'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useResizableWidth } from '@/composables/useResizableWidth'
 
 withDefaults(defineProps<{ padded?: boolean }>(), { padded: true })
 
 const router = useRouter()
 const route = useRoute()
+const { t } = useI18n()
 
 const isPasswordsActive = computed(() => route.path === '/' || route.path.startsWith('/passwords'))
 const isGroupsActive = computed(() => route.path === '/groups')
@@ -59,7 +61,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
       :class="isPasswordsActive ? 'text-primary' : 'text-muted-color'"
     >
       <span class="pi pi-key text-xl" />
-      <span class="text-xs">Passwords</span>
+      <span class="text-xs">{{ t('layouts.mainNav.passwords') }}</span>
     </button>
 
     <button
@@ -68,7 +70,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
       :class="isGroupsActive ? 'text-primary' : 'text-muted-color'"
     >
       <span class="pi pi-users text-xl" />
-      <span class="text-xs">Groups</span>
+      <span class="text-xs">{{ t('layouts.mainNav.groups') }}</span>
     </button>
 
     <button
@@ -77,7 +79,7 @@ const { width: sidebarWidth, startResizing: startSidebarResizing } = useResizabl
       :class="isProfileActive ? 'text-primary' : 'text-muted-color'"
     >
       <span class="pi pi-user text-xl" />
-      <span class="text-xs">Profile</span>
+      <span class="text-xs">{{ t('layouts.mainNav.profile') }}</span>
     </button>
   </nav>
 </template>

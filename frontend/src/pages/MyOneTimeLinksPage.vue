@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import MainLayout from '@/layouts/MainLayout.vue'
 import OneTimeLinksTable from '@/components/oneTimeLink/OneTimeLinksTable.vue'
 import { useContainer } from '@/plugins/container'
@@ -11,6 +12,7 @@ import { OneTimeLinkDomainError } from '@/domain/oneTimeLink/errors'
 // inside async handlers after an await.
 const { oneTimeLinks } = useContainer()
 const toast = useToast()
+const { t } = useI18n()
 
 const links = ref<AuditedOneTimeLink[]>([])
 const showHistory = ref(false)
@@ -22,9 +24,12 @@ const fetchLinks = async () => {
   try {
     links.value = (await oneTimeLinks.listMine.execute(showHistory.value)).links
   } catch (error) {
+    // A domain error's message is the backend's own wording — not ours to translate.
     const detail =
-      error instanceof OneTimeLinkDomainError ? error.message : 'Failed to fetch your links'
-    toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 })
+      error instanceof OneTimeLinkDomainError
+        ? error.message
+        : t('pages.oneTimeLinks.errors.fetchFailed')
+    toast.add({ severity: 'error', summary: t('common.error'), detail, life: 5000 })
   } finally {
     loading.value = false
   }
@@ -40,12 +45,14 @@ const handleRevoke = async (link: AuditedOneTimeLink) => {
     // they lose ownership of the password. That is the point: you can always
     // take back a link you handed out.
     await oneTimeLinks.revoke.execute(link.id)
-    toast.add({ severity: 'success', summary: 'Link revoked', life: 3000 })
+    toast.add({ severity: 'success', summary: t('pages.oneTimeLinks.revokedSummary'), life: 3000 })
     await fetchLinks()
   } catch (error) {
     const detail =
-      error instanceof OneTimeLinkDomainError ? error.message : 'Failed to revoke the link'
-    toast.add({ severity: 'error', summary: 'Error', detail, life: 5000 })
+      error instanceof OneTimeLinkDomainError
+        ? error.message
+        : t('pages.oneTimeLinks.errors.revokeFailed')
+    toast.add({ severity: 'error', summary: t('common.error'), detail, life: 5000 })
   } finally {
     revokingId.value = null
   }
@@ -58,12 +65,12 @@ onMounted(() => fetchLinks())
   <MainLayout>
     <Toast position="bottom-right" />
     <div class="mx-auto max-w-5xl">
-      <h1 class="mb-6 text-3xl font-bold">My one-time links</h1>
+      <h1 class="mb-6 text-3xl font-bold">{{ t('pages.oneTimeLinks.title') }}</h1>
 
       <Card>
         <template #content>
           <Message severity="warn" :closable="false" class="mb-4">
-            Anyone holding one of these URLs can read the password once, without signing in.
+            {{ t('pages.oneTimeLinks.disclaimer') }}
           </Message>
 
           <div class="flex gap-2 items-center mb-4">
@@ -73,7 +80,7 @@ onMounted(() => fetchLinks())
               data-testid="history-toggle"
             />
             <label for="otl-mine-history" class="text-sm text-muted-color">
-              Show used, revoked and expired links
+              {{ t('pages.oneTimeLinks.showHistoryLabel') }}
             </label>
           </div>
 

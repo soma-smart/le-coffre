@@ -221,8 +221,8 @@ export function isRootFolder(folder: string): boolean {
 }
 
 /** Display label for a folder name, e.g. for a sidebar or breadcrumb. */
-export function folderLabelOf(folder: string): string {
-  return isRootFolder(folder) ? 'No folder' : folder
+export function folderLabelOf(t: (key: string) => string, folder: string): string {
+  return isRootFolder(folder) ? t('common.noFolderLabel') : folder
 }
 
 /**

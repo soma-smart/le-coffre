@@ -7,21 +7,21 @@
         text
         rounded
         severity="secondary"
-        aria-label="Back to groups"
+        :aria-label="t('components.passwordListPane.backToGroups')"
         data-testid="list-back"
         @click="emit('back')"
       />
       <div class="min-w-0">
         <h2 class="font-semibold truncate">{{ title }}</h2>
         <p class="text-xs text-muted-color">
-          {{ passwords.length }} {{ passwords.length === 1 ? 'password' : 'passwords' }}
+          {{ t('common.passwordCount', { count: passwords.length }, passwords.length) }}
         </p>
       </div>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto">
       <p v-if="passwords.length === 0" class="p-4 text-sm text-muted-color">
-        No passwords to display.
+        {{ t('components.passwordListPane.empty') }}
       </p>
       <PasswordListRow
         v-for="password in passwords"
@@ -37,8 +37,11 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Group } from '@/domain/group/Group'
 import type { Password } from '@/domain/password/Password'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   title: string

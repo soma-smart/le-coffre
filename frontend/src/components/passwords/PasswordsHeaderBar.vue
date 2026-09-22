@@ -7,21 +7,27 @@
       <InputText
         :modelValue="modelValue"
         @update:modelValue="emit('update:modelValue', $event ?? '')"
-        placeholder="Search all passwords..."
+        :placeholder="t('components.passwordsHeaderBar.searchPlaceholder')"
         class="w-full"
       />
     </IconField>
     <Button
-      label="New Password"
+      :label="t('components.passwordsHeaderBar.newPassword')"
       icon="pi pi-plus"
       :disabled="!canCreate"
-      v-tooltip.top="!canCreate ? 'You don\'t have write access to any group' : undefined"
+      v-tooltip.top="
+        !canCreate ? t('components.passwordsHeaderBar.noWriteAccessAnyGroup') : undefined
+      "
       @click="emit('create')"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 defineProps<{
   modelValue: string
   canCreate: boolean

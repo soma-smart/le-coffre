@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { normalizeExternalHttpUrl } from '@/utils/safeUrl'
 import BlankLayout from '../layouts/BlankLayout.vue'
 import { useContainer } from '@/plugins/container'
@@ -7,6 +8,7 @@ import { readTokenFromFragment, type RevealedSecret } from '@/domain/oneTimeLink
 import { OneTimeLinkDomainError } from '@/domain/oneTimeLink/errors'
 
 const { oneTimeLinks } = useContainer()
+const { t } = useI18n()
 
 type CopyableField = 'login' | 'password' | 'url'
 
@@ -31,7 +33,7 @@ onMounted(() => {
   // out of access logs and out of the Referer of any page visited afterwards.
   token.value = readTokenFromFragment(window.location.hash)
   if (!token.value) {
-    error.value = 'This link is incomplete. Please check the URL you were given.'
+    error.value = t('pages.oneTimeLink.errors.incompleteLink')
   }
 })
 
@@ -45,8 +47,11 @@ async function reveal() {
     // surfer or a shared screenshot does not carry it away.
     window.history.replaceState(null, '', window.location.pathname)
   } catch (err) {
+    // A domain error's message is a fixed, deliberately generic wording
+    // chosen upstream (or, for some subclasses, the backend's own detail) —
+    // not ours to translate. Only our own fallback text is.
     error.value =
-      err instanceof OneTimeLinkDomainError ? err.message : 'Could not open this link right now.'
+      err instanceof OneTimeLinkDomainError ? err.message : t('pages.oneTimeLink.errors.openFailed')
   } finally {
     loading.value = false
   }
@@ -77,7 +82,7 @@ async function copyField(field: CopyableField) {
             <img src="/img/le-coffre.png" alt="Le Coffre" class="w-auto h-10" />
             <h1 class="text-3xl font-bold text-primary">Le Coffre</h1>
           </div>
-          <h2 class="mb-4 text-2xl font-bold text-center">Shared secret</h2>
+          <h2 class="mb-4 text-2xl font-bold text-center">{{ t('pages.oneTimeLink.title') }}</h2>
         </template>
 
         <template #content>
@@ -87,11 +92,10 @@ async function copyField(field: CopyableField) {
 
           <div v-if="!secret && !error">
             <Message severity="warn" :closable="false" class="mb-4">
-              This link can only be opened once. Make sure you can store the secret before revealing
-              it.
+              {{ t('pages.oneTimeLink.onceWarning') }}
             </Message>
             <Button
-              label="Reveal the secret"
+              :label="t('pages.oneTimeLink.revealButton')"
               icon="pi pi-eye"
               class="w-full"
               :loading="loading"
@@ -102,16 +106,16 @@ async function copyField(field: CopyableField) {
 
           <div v-if="secret" class="flex flex-col gap-3" data-testid="revealed-secret">
             <Message severity="info" :closable="false">
-              This link has now been used and will not open again.
+              {{ t('pages.oneTimeLink.usedInfo') }}
             </Message>
 
             <div>
-              <div class="text-sm text-muted-color">Name</div>
+              <div class="text-sm text-muted-color">{{ t('pages.oneTimeLink.name') }}</div>
               <div class="font-medium">{{ secret.name }}</div>
             </div>
 
             <div v-if="secret.login">
-              <div class="text-sm text-muted-color">Login</div>
+              <div class="text-sm text-muted-color">{{ t('pages.oneTimeLink.login') }}</div>
               <div class="flex gap-2 items-stretch">
                 <code
                   class="grow p-2 rounded border border-surface break-all"
@@ -123,7 +127,11 @@ async function copyField(field: CopyableField) {
                   :icon="copiedField === 'login' ? 'pi pi-check' : 'pi pi-copy'"
                   severity="secondary"
                   class="shrink-0"
-                  :aria-label="copiedField === 'login' ? 'Copied' : 'Copy login'"
+                  :aria-label="
+                    copiedField === 'login'
+                      ? t('pages.oneTimeLink.copied')
+                      : t('pages.oneTimeLink.copyLogin')
+                  "
                   data-testid="copy-login"
                   @click="copyField('login')"
                 />
@@ -131,7 +139,7 @@ async function copyField(field: CopyableField) {
             </div>
 
             <div v-if="secret.url">
-              <div class="text-sm text-muted-color">URL</div>
+              <div class="text-sm text-muted-color">{{ t('pages.oneTimeLink.url') }}</div>
               <div class="flex gap-2 items-stretch">
                 <code
                   class="grow p-2 rounded border border-surface break-all"
@@ -154,7 +162,7 @@ async function copyField(field: CopyableField) {
                     icon="pi pi-external-link"
                     severity="secondary"
                     class="shrink-0 h-full"
-                    aria-label="Open in a new tab"
+                    :aria-label="t('pages.oneTimeLink.openInNewTab')"
                   />
                 </a>
                 <Button
@@ -163,15 +171,19 @@ async function copyField(field: CopyableField) {
                   severity="secondary"
                   class="shrink-0"
                   disabled
-                  aria-label="This URL is not http(s) and cannot be opened"
-                  v-tooltip.top="'This URL is not http(s), so it is not opened'"
+                  :aria-label="t('pages.oneTimeLink.unsafeUrlAria')"
+                  v-tooltip.top="t('pages.oneTimeLink.unsafeUrlTooltip')"
                   data-testid="unsafe-url"
                 />
                 <Button
                   :icon="copiedField === 'url' ? 'pi pi-check' : 'pi pi-copy'"
                   severity="secondary"
                   class="shrink-0"
-                  :aria-label="copiedField === 'url' ? 'Copied' : 'Copy URL'"
+                  :aria-label="
+                    copiedField === 'url'
+                      ? t('pages.oneTimeLink.copied')
+                      : t('pages.oneTimeLink.copyUrl')
+                  "
                   data-testid="copy-url"
                   @click="copyField('url')"
                 />
@@ -179,7 +191,7 @@ async function copyField(field: CopyableField) {
             </div>
 
             <div>
-              <div class="text-sm text-muted-color">Password</div>
+              <div class="text-sm text-muted-color">{{ t('pages.oneTimeLink.password') }}</div>
               <div class="flex gap-2 items-stretch">
                 <code
                   class="grow p-2 rounded border border-surface break-all"
@@ -191,7 +203,11 @@ async function copyField(field: CopyableField) {
                   :icon="passwordVisible ? 'pi pi-eye-slash' : 'pi pi-eye'"
                   severity="secondary"
                   class="shrink-0"
-                  :aria-label="passwordVisible ? 'Hide password' : 'Show password'"
+                  :aria-label="
+                    passwordVisible
+                      ? t('pages.oneTimeLink.hidePassword')
+                      : t('pages.oneTimeLink.showPassword')
+                  "
                   data-testid="toggle-password"
                   @click="passwordVisible = !passwordVisible"
                 />
@@ -199,7 +215,11 @@ async function copyField(field: CopyableField) {
                   :icon="copiedField === 'password' ? 'pi pi-check' : 'pi pi-copy'"
                   severity="secondary"
                   class="shrink-0"
-                  :aria-label="copiedField === 'password' ? 'Copied' : 'Copy password'"
+                  :aria-label="
+                    copiedField === 'password'
+                      ? t('pages.oneTimeLink.copied')
+                      : t('pages.oneTimeLink.copyPassword')
+                  "
                   data-testid="copy-password"
                   @click="copyField('password')"
                 />

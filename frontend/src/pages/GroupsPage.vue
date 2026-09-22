@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import MainLayout from '../layouts/MainLayout.vue'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
@@ -11,6 +12,7 @@ import type { Group } from '@/domain/group/Group'
 import { sortGroups } from '../utils/groupSort'
 
 const toast = useToast()
+const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
 const { sharedGroups, loading } = storeToRefs(groupsStore)
@@ -51,19 +53,21 @@ const groupHasPasswords = ref(false)
 
 // Computed properties for delete modal
 const deleteModalQuestion = computed(() => {
-  return `Are you sure you want to delete "${selectedGroup.value?.name}"?`
+  const group = selectedGroup.value
+  const name = group?.name
+  return t('pages.groups.deleteQuestion', { name })
 })
 
 const deleteModalDescription = computed(() => {
-  return `This action cannot be undone.\nAll group members will lose access.`
+  return t('pages.groups.deleteDescription')
 })
 
 const deleteWarningMessage = computed(() => {
   if (!selectedGroup.value) return undefined
   if (!canEditGroup(selectedGroup.value) && groupHasPasswords.value) {
-    return 'This group contains passwords and cannot be deleted. Please remove or reassign all passwords before deleting this group.'
+    return t('pages.groups.warnings.hasPasswords')
   } else if (!canEditGroup(selectedGroup.value)) {
-    return "You don't have permission to delete this group. Only admins and group owners can delete groups."
+    return t('pages.groups.warnings.noPermission')
   }
   return undefined
 })
@@ -99,8 +103,8 @@ const handleSubmit = async () => {
   if (!newGroupName.value.trim()) {
     toast.add({
       severity: 'error',
-      summary: 'Validation Error',
-      detail: 'Group name is required',
+      summary: t('pages.groups.errors.validationSummary'),
+      detail: t('pages.groups.errors.nameRequired'),
       life: 5000,
     })
     return
@@ -113,8 +117,8 @@ const handleSubmit = async () => {
 
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Group updated successfully',
+        summary: t('common.success'),
+        detail: t('pages.groups.updatedDetail'),
         life: 5000,
       })
     } else {
@@ -123,8 +127,8 @@ const handleSubmit = async () => {
 
       toast.add({
         severity: 'success',
-        summary: 'Success',
-        detail: 'Group created successfully',
+        summary: t('common.success'),
+        detail: t('pages.groups.createdDetail'),
         life: 5000,
       })
     }
@@ -136,22 +140,26 @@ const handleSubmit = async () => {
   } catch (error) {
     console.error('Failed to save group:', error)
 
-    // Extract error message
-    let errorMessage = `Failed to ${isEditMode.value ? 'update' : 'create'} group`
+    // Extract error message. Only the fallback below is our own text; a
+    // message or detail pulled off the error object is the backend's
+    // wording and isn't ours to translate.
+    let errorMessage = isEditMode.value
+      ? t('pages.groups.errors.saveFailedUpdate')
+      : t('pages.groups.errors.saveFailedCreate')
     if (error instanceof Error && error.message) {
       errorMessage = error.message
     } else if (error && typeof error === 'object') {
       const err = error as Record<string, unknown>
       if (typeof err.detail === 'string') {
         errorMessage = err.detail
-      } else if (typeof err.message === 'string') {
+      } else if (typeof err.message === 'string' && err.message) {
         errorMessage = err.message
       }
     }
 
     toast.add({
       severity: 'error',
-      summary: 'Error',
+      summary: t('common.error'),
       detail: errorMessage,
       life: 5000,
     })
@@ -178,8 +186,8 @@ const handleDeleteGroup = async () => {
     await groupsStore.deleteGroup(selectedGroup.value.id)
     toast.add({
       severity: 'success',
-      summary: 'Success',
-      detail: 'Group deleted successfully',
+      summary: t('common.success'),
+      detail: t('pages.groups.deletedDetail'),
       life: 5000,
     })
     showDeleteGroupModal.value = false
@@ -187,8 +195,10 @@ const handleDeleteGroup = async () => {
   } catch (error: unknown) {
     console.error('Failed to delete group:', error)
 
-    // Extract error message from various error structures
-    let errorMessage = 'Failed to delete group'
+    // Extract error message from various error structures. Anything pulled
+    // off the error object below is the backend's own wording (in English,
+    // matched against below by substring) — not ours to translate.
+    let errorMessage = t('pages.groups.errors.deleteFailed')
 
     if (error && typeof error === 'object') {
       const err = error as Record<string, unknown>
@@ -196,7 +206,7 @@ const handleDeleteGroup = async () => {
         errorMessage = err.detail
       } else if (Array.isArray(err.detail) && err.detail[0]?.msg) {
         errorMessage = err.detail[0].msg
-      } else if (typeof err.message === 'string') {
+      } else if (typeof err.message === 'string' && err.message) {
         errorMessage = err.message
       } else if (err.error && typeof err.error === 'object') {
         const nestedError = err.error as Record<string, unknown>
@@ -210,15 +220,14 @@ const handleDeleteGroup = async () => {
       groupHasPasswords.value = true
       toast.add({
         severity: 'error',
-        summary: 'Cannot Delete Group',
-        detail:
-          'This group contains passwords and cannot be deleted. Please remove all passwords first.',
+        summary: t('pages.groups.cannotDeleteSummary'),
+        detail: t('pages.groups.cannotDeleteHasPasswords'),
         life: 7000,
       })
     } else {
       toast.add({
         severity: 'error',
-        summary: 'Error',
+        summary: t('common.error'),
         detail: errorMessage,
         life: 5000,
       })
@@ -237,15 +246,19 @@ onMounted(async () => {
   <MainLayout>
     <div class="container mx-auto p-6">
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">Groups</h1>
-        <Button label="New Group" icon="pi pi-plus" @click="openCreateDialog" />
+        <h1 class="text-3xl font-bold">{{ t('pages.groups.title') }}</h1>
+        <Button :label="t('pages.groups.newGroup')" icon="pi pi-plus" @click="openCreateDialog" />
       </div>
 
       <!-- Search field -->
       <div class="mb-4">
         <IconField>
           <InputIcon class="pi pi-search" />
-          <InputText v-model="searchQuery" placeholder="Search groups…" class="w-full md:w-80" />
+          <InputText
+            v-model="searchQuery"
+            :placeholder="t('pages.groups.searchPlaceholder')"
+            class="w-full md:w-80"
+          />
         </IconField>
       </div>
 
@@ -255,11 +268,11 @@ onMounted(async () => {
       </div>
 
       <div v-else-if="sharedGroups.length === 0" class="text-center py-8">
-        <p class="text-muted-color">No groups found. Create your first group!</p>
+        <p class="text-muted-color">{{ t('pages.groups.noGroups') }}</p>
       </div>
 
       <div v-else-if="filteredGroups.length === 0" class="text-center py-8">
-        <p class="text-muted-color">No groups match "{{ searchQuery }}".</p>
+        <p class="text-muted-color">{{ t('pages.groups.noMatch', { query: searchQuery }) }}</p>
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -283,7 +296,7 @@ onMounted(async () => {
                   severity="secondary"
                   size="small"
                   @click="openEditDialog(group)"
-                  v-tooltip.top="'Edit group'"
+                  v-tooltip.top="t('pages.groups.editGroup')"
                 />
                 <Button
                   v-if="canEditGroup(group)"
@@ -293,7 +306,7 @@ onMounted(async () => {
                   severity="danger"
                   size="small"
                   @click="openDeleteGroupDialog(group)"
-                  v-tooltip.top="'Delete group'"
+                  v-tooltip.top="t('pages.groups.deleteGroup')"
                 />
               </div>
             </div>
@@ -302,12 +315,12 @@ onMounted(async () => {
             <div class="flex flex-col gap-2">
               <div class="flex items-center gap-2 text-sm text-muted-color">
                 <i class="pi pi-tag"></i>
-                <span v-if="group.isPersonal">Personal Group</span>
-                <span v-else>Shared Group</span>
+                <span v-if="group.isPersonal">{{ t('pages.groups.personalGroup') }}</span>
+                <span v-else>{{ t('pages.groups.sharedGroup') }}</span>
               </div>
               <div class="flex gap-2 mt-4">
                 <Button
-                  label="View Members"
+                  :label="t('pages.groups.viewMembers')"
                   icon="pi pi-users"
                   size="small"
                   outlined
@@ -322,26 +335,33 @@ onMounted(async () => {
       <!-- Create/Edit Group Dialog -->
       <Dialog
         v-model:visible="showCreateDialog"
-        :header="isEditMode ? 'Edit Group' : 'Create New Group'"
+        :header="isEditMode ? t('pages.groups.editGroup') : t('pages.groups.createDialogTitle')"
         :modal="true"
         :style="{ width: '30rem' }"
       >
         <div class="flex flex-col gap-4 py-4">
           <div class="flex flex-col gap-2">
-            <label for="group-name" class="font-semibold">Group Name</label>
+            <label for="group-name" class="font-semibold">{{
+              t('pages.groups.groupNameLabel')
+            }}</label>
             <InputText
               id="group-name"
               v-model="newGroupName"
-              placeholder="Enter group name"
+              :placeholder="t('pages.groups.groupNamePlaceholder')"
               @keyup.enter="handleSubmit"
               autofocus
             />
           </div>
         </div>
         <template #footer>
-          <Button label="Cancel" icon="pi pi-times" text @click="showCreateDialog = false" />
           <Button
-            :label="isEditMode ? 'Update' : 'Create'"
+            :label="t('common.cancel')"
+            icon="pi pi-times"
+            text
+            @click="showCreateDialog = false"
+          />
+          <Button
+            :label="isEditMode ? t('common.update') : t('common.create')"
             :icon="isEditMode ? 'pi pi-check' : 'pi pi-plus'"
             @click="handleSubmit"
           />
@@ -359,12 +379,12 @@ onMounted(async () => {
       <!-- Delete Group Confirmation Modal -->
       <ConfirmationModal
         v-model:visible="showDeleteGroupModal"
-        title="Delete Group"
+        :title="t('pages.groups.deleteGroup')"
         :question="deleteModalQuestion"
         :description="deleteModalDescription"
         :warning-message="deleteWarningMessage"
-        confirm-label="Delete Group"
-        cancel-label="Cancel"
+        :confirm-label="t('pages.groups.deleteGroup')"
+        :cancel-label="t('common.cancel')"
         severity="danger"
         icon="pi pi-exclamation-triangle"
         :countdown-seconds="6"

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import i18n from '@/i18n'
 import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
 
 const NOW = new Date('2026-07-21T12:40:00Z')
@@ -10,8 +11,8 @@ describe('formatRelativeTime', () => {
     // "2:37" and concluded it had expired, missing that the date was tomorrow.
     const expiresAt = '2026-07-22T12:37:00Z'
 
-    // Just under 24h of remaining time, so hours rather than days: "in 24 hours"
-    // says the same thing more precisely than "in 1 day" would.
+    // Just under 24h of remaining time, so hours rather than days: "in 24
+    // hours" says the same thing more precisely than "tomorrow" would.
     expect(formatRelativeTime(expiresAt, NOW)).toBe('in 24 hours')
   })
 
@@ -30,11 +31,19 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime('2026-07-21T12:39:30Z', NOW)).toBe('30 seconds ago')
   })
 
-  it('stays English whatever the browser locale is', () => {
-    // Without a pinned locale this follows the browser and renders "dans 24
-    // heures" in an interface that is English everywhere else. A reviewer on an
-    // English browser would never see the regression, so assert the locale the
-    // formatter is built with rather than the string it happens to produce.
+  it('switches to French when the UI locale is French', () => {
+    i18n.global.locale.value = 'fr'
+
+    expect(formatRelativeTime('2026-07-22T12:37:00Z', NOW)).toBe('dans 24 heures')
+    expect(formatRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('il y a 5 minutes')
+
+    i18n.global.locale.value = 'en'
+  })
+
+  it('follows the active UI locale rather than the browser locale', () => {
+    // A hardcoded or undefined locale would drift from the language the rest
+    // of the screen renders in, so assert the locale the formatter is built
+    // with rather than just the string it happens to produce.
     const intl = Intl as unknown as { RelativeTimeFormat: typeof Intl.RelativeTimeFormat }
     const original = intl.RelativeTimeFormat
     const localesUsed: unknown[] = []
@@ -47,16 +56,22 @@ describe('formatRelativeTime', () => {
     } as unknown as typeof Intl.RelativeTimeFormat
 
     try {
-      expect(formatRelativeTime('2026-07-22T12:37:00Z', NOW)).toBe('in 24 hours')
-      expect(localesUsed).toEqual(['en-GB'])
+      i18n.global.locale.value = 'fr'
+      formatRelativeTime('2026-07-22T12:37:00Z', NOW)
+      i18n.global.locale.value = 'en'
+      formatRelativeTime('2026-07-22T12:37:00Z', NOW)
+
+      expect(localesUsed).toEqual(['fr', 'en-GB'])
     } finally {
       intl.RelativeTimeFormat = original
     }
   })
 
-  it('renders the tooltip on a 24-hour clock, with no AM/PM', () => {
-    // en-GB is English and 24-hour natively, so this needs no hour12 override.
-    // Falling back to en-US would silently reintroduce the AM/PM suffix.
+  it('renders the English tooltip on a 24-hour clock, with no AM/PM', () => {
+    // English resolves to en-GB rather than en-US: it is English while using a
+    // 24-hour clock and a day-first date natively, so this needs no hour12
+    // override. Falling back to en-US would silently reintroduce AM/PM.
+    i18n.global.locale.value = 'en'
     const absolute = formatAbsoluteTime('2026-07-22T12:37:00Z')
 
     expect(absolute).not.toMatch(/AM|PM/)
