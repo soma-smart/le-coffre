@@ -185,3 +185,11 @@ def get_login_max_failed_attempts() -> int:
 def get_login_lockout_seconds() -> int:
     """Duration in seconds an account stays locked after hitting the failure threshold. Default 300."""
     return int(os.environ.get("LOGIN_LOCKOUT_SECONDS", "300"))
+
+
+# ── Service Accounts ─────────────────────────────────────────────
+
+
+def get_max_active_service_accounts_per_group() -> int:
+    """How many service accounts may be active at once in one group. Default 3."""
+    return int(os.environ.get("MAX_ACTIVE_SERVICE_ACCOUNTS_PER_GROUP", "3"))
