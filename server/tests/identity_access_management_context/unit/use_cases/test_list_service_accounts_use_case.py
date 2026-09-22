@@ -77,6 +77,7 @@ def use_case(
         user_repository,
         group_repository,
         group_member_repository,
+        MAX_ACTIVE,
     )
 
 
@@ -205,6 +206,40 @@ def test_given_no_group_when_an_admin_lists_then_every_group_is_covered(
     names = {summary.name for summary in _list(use_case, admin, group_id=None).items}
 
     assert names == {"here", "theirs"}
+
+
+def test_given_active_accounts_when_listing_then_the_counters_report_the_cap(create_use_case, use_case, owner, groups):
+    for name in ("one", "two"):
+        create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name=name))
+
+    response = _list(use_case, owner)
+
+    assert response.active == 2
+    assert response.max_active == MAX_ACTIVE
+
+
+def test_given_a_revoked_account_when_listing_then_it_is_listed_but_not_counted_as_active(
+    create_use_case, use_case, owner, groups, service_account_repository
+):
+    created = create_use_case.execute(
+        CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="nightly")
+    )
+    service_account_repository.revoke([created.id], LATER)
+
+    response = _list(use_case, owner)
+
+    assert len(response.items) == 1
+    assert response.active == 0
+
+
+def test_given_an_account_with_no_creation_event_when_listing_then_it_still_counts_as_active(
+    use_case, owner, groups, service_account_repository
+):
+    """The counter guards the cap, so it must follow the rows rather than the events."""
+    orphan = ServiceAccount.create(group_id=GROUP_ID, name="orphan", token=ServiceAccountToken.generate())
+    service_account_repository.create([orphan])
+
+    assert _list(use_case, owner).active == 1
 
 
 def test_given_no_group_when_listing_then_the_audit_event_names_no_group(

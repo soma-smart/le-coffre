@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette import status
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
@@ -71,6 +71,8 @@ class ServiceAccountSummary(BaseModel):
 
 class ListServiceAccounts(BaseModel):
     items: list[ServiceAccountSummary]
+    active: int = Field(description="How many of the listed accounts are still usable.")
+    max_active: int = Field(description="How many accounts may be active at once in one group.")
 
 
 def _raise_for(error: Exception) -> None:
@@ -145,6 +147,10 @@ def list_service_accounts(
     - **group_id**: Group to filter on. Omit it to list every group the caller
       can manage: those they own, or all of them for an administrator.
 
+    `active` counts the usable accounts among those listed, and is only comparable
+    with `max_active` when `group_id` is set: an unscoped listing spans several
+    groups, each with its own budget.
+
     Only a group owner or an administrator may do this. No token is returned,
     hashed or otherwise.
     """
@@ -166,7 +172,9 @@ def list_service_accounts(
                     revoked_at=item.revoked_at,
                 )
                 for item in response.items
-            ]
+            ],
+            active=response.active,
+            max_active=response.max_active,
         )
     except Exception as e:
         _raise_for(e)

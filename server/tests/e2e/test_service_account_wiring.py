@@ -22,6 +22,8 @@ def test_the_service_account_endpoints_are_reachable(authenticated_admin_client,
     assert listed.status_code == 200, listed.text
     assert [item["id"] for item in listed.json()["items"]] == [account["id"]]
     assert account["token"] not in listed.text
+    assert listed.json()["active"] == 1
+    assert listed.json()["max_active"] == 3
 
     rotated = client.post(f"{BASE}/{account['id']}/rotate")
     assert rotated.status_code == 200, rotated.text
@@ -32,6 +34,7 @@ def test_the_service_account_endpoints_are_reachable(authenticated_admin_client,
 
     after = client.get(BASE, params={"group_id": str(admin_personal_group_id)})
     assert after.json()["items"][0]["revoked_at"] is not None
+    assert after.json()["active"] == 0
 
 
 def test_listing_without_a_group_covers_every_reachable_group(

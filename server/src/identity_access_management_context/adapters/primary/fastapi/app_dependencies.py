@@ -649,6 +649,7 @@ def get_list_service_accounts_usecase(
         user_repository,
         group_repository,
         group_member_repository,
+        get_max_active_service_accounts_per_group(),
     )
 
 
