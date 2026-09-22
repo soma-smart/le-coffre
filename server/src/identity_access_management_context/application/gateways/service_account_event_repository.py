@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from identity_access_management_context.domain.events import ServiceAccountEvent
+from identity_access_management_context.domain.events.service_account._event import ServiceAccountEvent
 
 
 @dataclass(frozen=True)
@@ -15,8 +15,8 @@ class ServiceAccountCreationFacts:
     ``ServiceAccountCreatedEvent``, which is the system of record for them.
     """
 
-    created_at: datetime
-    created_by_user_id: UUID
+    created_at: datetime | None
+    created_by_user_id: UUID | None
 
 
 class ServiceAccountEventRepository(ABC):

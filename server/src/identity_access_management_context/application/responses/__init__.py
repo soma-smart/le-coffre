@@ -8,9 +8,11 @@ from .list_group_response import GroupResponse, ListGroupResponse
 from .refresh_access_token_response import RefreshAccessTokenResponse
 from .search_user_response import SearchUserResponse
 from .service_account_responses import (
-    CreatedServiceAccountResponse,
+    CreateServiceAccountResponse,
     ListServiceAccountsResponse,
-    RegeneratedServiceAccountTokenResponse,
+    RevokeServiceAccountResponse,
+    RotateServiceAccountTokenResponse,
+    ServiceAccountResponse,
     ServiceAccountSummaryResponse,
 )
 from .sso_login_response import SsoLoginResponse
@@ -32,8 +34,10 @@ __all__ = [
     "GetUserMeResponse",
     "GetStatisticForAdminResponse",
     "SearchUserResponse",
-    "CreatedServiceAccountResponse",
-    "RegeneratedServiceAccountTokenResponse",
+    "ServiceAccountResponse",
+    "CreateServiceAccountResponse",
+    "RotateServiceAccountTokenResponse",
     "ServiceAccountSummaryResponse",
     "ListServiceAccountsResponse",
+    "RevokeServiceAccountResponse",
 ]

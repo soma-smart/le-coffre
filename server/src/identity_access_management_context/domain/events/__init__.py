@@ -9,6 +9,7 @@ from .owner_added_to_group_event import OwnerAddedToGroupEvent
 from .service_account import (
     ServiceAccountCreatedEvent,
     ServiceAccountRevokedEvent,
+    ServiceAccountsListedEvent,
     ServiceAccountTokenRotatedEvent,
 )
 from .sso_configured_event import SsoConfiguredEvent
@@ -38,4 +39,5 @@ __all__ = [
     "ServiceAccountCreatedEvent",
     "ServiceAccountTokenRotatedEvent",
     "ServiceAccountRevokedEvent",
+    "ServiceAccountsListedEvent",
 ]
