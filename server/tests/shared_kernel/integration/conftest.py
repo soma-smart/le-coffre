@@ -37,7 +37,11 @@ def another_test_event():
 
 @pytest.fixture
 def unreachable_smtp_port():
-    """A TCP port with nothing listening on it, to simulate an unreachable SMTP server."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return probe.getsockname()[1]
+    """A TCP port with nothing listening on it, to simulate an unreachable SMTP server.
+
+    The socket stays bound (but never listens) for the test's lifetime so no other
+    process can claim the port between allocation and the connection attempt.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reserved:
+        reserved.bind(("127.0.0.1", 0))
+        yield reserved.getsockname()[1]
