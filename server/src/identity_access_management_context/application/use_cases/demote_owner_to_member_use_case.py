@@ -65,20 +65,11 @@ class DemoteOwnerToMemberUseCase(TracedUseCase):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
         if not self.group_member_repository.is_owner(command.group_id, command.user_id):
-            # Already a plain member — idempotent no-op, mirroring
-            # AddOwnerToGroupUseCase's "already an owner" idempotency.
-            # Nothing actually changes, so nothing should be published or
-            # logged: doing so would record a false "owner demoted" audit
-            # entry for someone who was never an owner.
+            # Already a plain member — idempotent no-op, no event to avoid a false audit entry.
             return
 
-        # count_owners_for_update() rather than count_owners(): this is a
-        # check-then-act on the same data the write below depends on. A
-        # plain read here would let two concurrent demotes of a two-owner
-        # group both see count == 2, both pass this check, and both commit —
-        # leaving the group with no owners. The locking read serializes
-        # concurrent callers on the same group so the second one re-checks
-        # against the first one's committed result.
+        # Locking read: prevents two concurrent demotes on a two-owner group
+        # from both passing this check and leaving the group ownerless.
         if self.group_member_repository.count_owners_for_update(command.group_id) <= 1:
             raise CannotDemoteLastOwnerException(command.user_id, command.group_id)
 

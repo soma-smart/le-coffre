@@ -54,7 +54,8 @@
       "OneTimeLinkReadEvent": "Lien à usage unique ouvert",
       "UserAddedToGroupEvent": "Utilisateur ajouté au groupe",
       "OwnerAddedToGroupEvent": "Propriétaire ajouté au groupe",
-      "UserRemovedFromGroupEvent": "Utilisateur retiré du groupe"
+      "UserRemovedFromGroupEvent": "Utilisateur retiré du groupe",
+      "OwnerDemotedToMemberEvent": "Propriétaire rétrogradé en membre"
     },
     "passwordEvents": {
       "createdInFolder": "Créé dans le dossier :",
@@ -504,6 +505,7 @@
       "addedAsMember": "{name} ajouté comme membre",
       "promotedToOwner": "{name} promu propriétaire",
       "removedFromGroup": "{name} retiré du groupe",
+      "demotedToMember": "{name} rétrogradé en membre",
       "loadFailedSummary": "Échec du chargement",
       "loadFailedDetail": "Échec du chargement de l'historique du groupe."
     },

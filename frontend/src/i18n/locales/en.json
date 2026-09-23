@@ -54,7 +54,8 @@
       "OneTimeLinkReadEvent": "One-Time Link Opened",
       "UserAddedToGroupEvent": "User Added To Group",
       "OwnerAddedToGroupEvent": "Owner Added To Group",
-      "UserRemovedFromGroupEvent": "User Removed From Group"
+      "UserRemovedFromGroupEvent": "User Removed From Group",
+      "OwnerDemotedToMemberEvent": "Owner Demoted To Member"
     },
     "passwordEvents": {
       "createdInFolder": "Created in folder:",
@@ -504,6 +505,7 @@
       "addedAsMember": "Added {name} as a member",
       "promotedToOwner": "Promoted {name} to owner",
       "removedFromGroup": "Removed {name} from the group",
+      "demotedToMember": "Demoted {name} to member",
       "loadFailedSummary": "Load Failed",
       "loadFailedDetail": "Failed to load group history."
     },

@@ -5,6 +5,7 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlAuthSessionRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
+    SqlIamEventRepository,
     SqlRevokedTokenRepository,
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
@@ -62,3 +63,8 @@ def sql_group_repository(session):
 @pytest.fixture(scope="function")
 def sql_auth_session_repository(session):
     return SqlAuthSessionRepository(session)
+
+
+@pytest.fixture(scope="function")
+def sql_iam_event_repository(session):
+    return SqlIamEventRepository(session)
