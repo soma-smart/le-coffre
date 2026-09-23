@@ -44,6 +44,8 @@ class SmtpEmailGateway(EmailGateway):
             message = EmailMessage()
             message["From"] = self._from_address
             message["To"] = to
+            if len(message["To"].addresses) != 1:
+                raise ValueError("Recipient must be exactly one email address")
             message["Subject"] = subject
             message.set_content(body)
 
