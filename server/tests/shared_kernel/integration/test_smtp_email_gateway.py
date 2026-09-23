@@ -138,3 +138,21 @@ def test_given_credentials_configured_without_tls_when_constructing_gateway_shou
             password="smtp-password",
             tls_mode=SmtpTlsMode.NONE,
         )
+
+
+@pytest.mark.parametrize(
+    ("username", "password"),
+    [("smtp-user", None), (None, "smtp-password")],
+    ids=["username-without-password", "password-without-username"],
+)
+def test_given_incomplete_credentials_when_constructing_gateway_should_raise_value_error(username, password):
+    # Act & Assert
+    with pytest.raises(ValueError, match="username and password"):
+        SmtpEmailGateway(
+            host="127.0.0.1",
+            port=587,
+            from_address="noreply@le-coffre.local",
+            username=username,
+            password=password,
+            tls_mode=SmtpTlsMode.STARTTLS,
+        )

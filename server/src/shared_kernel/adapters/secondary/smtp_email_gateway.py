@@ -25,6 +25,8 @@ class SmtpEmailGateway(EmailGateway):
         timeout: float = 10,
         ssl_context: ssl.SSLContext | None = None,
     ):
+        if (username is None) != (password is None):
+            raise ValueError("SMTP username and password must be configured together")
         if username is not None and tls_mode == SmtpTlsMode.NONE:
             raise ValueError("SMTP credentials require TLS (implicit or starttls) to avoid sending them in cleartext")
 
@@ -58,6 +60,6 @@ class SmtpEmailGateway(EmailGateway):
             raise EmailDeliveryError(str(error)) from error
 
     def _authenticate_and_send(self, client: smtplib.SMTP, message: EmailMessage) -> None:
-        if self._username:
-            client.login(self._username, self._password or "")
+        if self._username is not None and self._password is not None:
+            client.login(self._username, self._password)
         client.send_message(message)
