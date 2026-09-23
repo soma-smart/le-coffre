@@ -50,6 +50,7 @@ from identity_access_management_context.application.use_cases import (
     CreateUserUseCase,
     DeleteGroupUseCase,
     DeleteUserUseCase,
+    DemoteOwnerToMemberUseCase,
     GetGroupUseCase,
     GetSsoAuthorizeUrlUseCase,
     GetStatisticForAdminUseCase,
@@ -482,6 +483,22 @@ def get_add_owner_to_group_usecase(
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
 ):
     return AddOwnerToGroupUseCase(
+        user_repository,
+        group_repository,
+        group_member_repository,
+        event_publisher,
+        group_event_repository,
+    )
+
+
+def get_demote_owner_to_member_usecase(
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+):
+    return DemoteOwnerToMemberUseCase(
         user_repository,
         group_repository,
         group_member_repository,

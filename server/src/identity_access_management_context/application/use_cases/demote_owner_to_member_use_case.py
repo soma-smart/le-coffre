@@ -1,5 +1,5 @@
 from identity_access_management_context.application.commands import (
-    AddOwnerToGroupCommand,
+    DemoteOwnerToMemberCommand,
 )
 from identity_access_management_context.application.gateways import (
     GroupEventRepository,
@@ -7,8 +7,10 @@ from identity_access_management_context.application.gateways import (
     GroupRepository,
     UserRepository,
 )
-from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
+from identity_access_management_context.domain.events import OwnerDemotedToMemberEvent
 from identity_access_management_context.domain.exceptions import (
+    CannotDemoteLastOwnerException,
+    CannotDemoteOtherOwnerException,
     CannotModifyPersonalGroupException,
     GroupNotFoundException,
     UserNotFoundException,
@@ -20,7 +22,7 @@ from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
 
-class AddOwnerToGroupUseCase(TracedUseCase):
+class DemoteOwnerToMemberUseCase(TracedUseCase):
     def __init__(
         self,
         user_repository: UserRepository,
@@ -35,7 +37,7 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         self._event_publisher = event_publisher
         self._group_event_repository = group_event_repository
 
-    def execute(self, command: AddOwnerToGroupCommand) -> None:
+    def execute(self, command: DemoteOwnerToMemberCommand) -> None:
         group = self.group_repository.get_by_id(command.group_id)
         if group is None:
             raise GroupNotFoundException(command.group_id)
@@ -49,6 +51,12 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         if not (is_admin or is_owner):
             raise UserNotOwnerOfGroupException(requester_id, command.group_id)
 
+        # A regular owner may only step themselves down. Demoting someone
+        # else is an admin-only power — matching the UI, which only ever
+        # shows the demote button on another owner's card to an admin.
+        if not is_admin and requester_id != command.user_id:
+            raise CannotDemoteOtherOwnerException(requester_id, command.user_id, command.group_id)
+
         user = self.user_repository.get_by_id(command.user_id)
         if user is None:
             raise UserNotFoundException(command.user_id)
@@ -56,19 +64,21 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_member(command.group_id, command.user_id):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
-        if self.group_member_repository.is_owner(command.group_id, command.user_id):
-            # Already an owner — idempotent no-op. Nothing actually changes,
-            # so nothing should be published or logged: doing so would
-            # record a false "promoted to owner" audit entry for someone
-            # who already was one.
+        if not self.group_member_repository.is_owner(command.group_id, command.user_id):
+            # Already a plain member — idempotent no-op, no event to avoid a false audit entry.
             return
 
-        self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=True)
+        # Locking read: prevents two concurrent demotes on a two-owner group
+        # from both passing this check and leaving the group ownerless.
+        if self.group_member_repository.count_owners_for_update(command.group_id) <= 1:
+            raise CannotDemoteLastOwnerException(command.user_id, command.group_id)
 
-        event = OwnerAddedToGroupEvent(
+        self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=False)
+
+        event = OwnerDemotedToMemberEvent(
             group_id=command.group_id,
             user_id=command.user_id,
-            added_by_user_id=requester_id,
+            demoted_by_user_id=requester_id,
         )
         self._event_publisher.publish(event)
         self._group_event_repository.append_event(

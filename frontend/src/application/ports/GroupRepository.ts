@@ -20,4 +20,5 @@ export interface GroupRepository {
   removeMember(groupId: string, userId: string): Promise<void>
   promoteToOwner(groupId: string, userId: string): Promise<void>
   listEvents(groupId: string, filters?: ListGroupEventsFilters): Promise<GroupEvent[]>
+  demoteToMember(groupId: string, userId: string): Promise<void>
 }

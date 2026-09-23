@@ -91,6 +91,23 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         results = self._session.exec(statement).all()
         return len(results)
 
+    def count_owners_for_update(self, group_id: UUID) -> int:
+        """Count the number of owners in a group, locking those rows for the
+        rest of the current transaction (SELECT ... FOR UPDATE). No-ops on
+        SQLite (used for local dev/tests), which doesn't support row locks;
+        the transactional protection only applies against Postgres.
+        """
+        statement = (
+            select(GroupMemberTable)
+            .where(
+                GroupMemberTable.group_id == group_id,
+                GroupMemberTable.is_owner.is_(True),
+            )
+            .with_for_update()
+        )
+        results = self._session.exec(statement).all()
+        return len(results)
+
     def delete_by_group_id(self, group_id: UUID) -> None:
         statement = select(GroupMemberTable).where(GroupMemberTable.group_id == group_id)
         members = self._session.exec(statement).all()

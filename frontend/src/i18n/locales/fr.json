@@ -54,7 +54,8 @@
       "OneTimeLinkReadEvent": "Lien à usage unique ouvert",
       "UserAddedToGroupEvent": "Utilisateur ajouté au groupe",
       "OwnerAddedToGroupEvent": "Propriétaire ajouté au groupe",
-      "UserRemovedFromGroupEvent": "Utilisateur retiré du groupe"
+      "UserRemovedFromGroupEvent": "Utilisateur retiré du groupe",
+      "OwnerDemotedToMemberEvent": "Propriétaire rétrogradé en membre"
     },
     "passwordEvents": {
       "createdInFolder": "Créé dans le dossier :",
@@ -468,6 +469,8 @@
       "promoteAria": "Promouvoir propriétaire",
       "removeTooltip": "Retirer le membre",
       "removeAria": "Retirer le membre",
+      "demoteTooltip": "Rétrograder à membre",
+      "demoteAria": "Rétrograder à membre",
       "addMemberTitle": "Ajouter un membre",
       "selectUserPlaceholder": "Sélectionnez un utilisateur à ajouter",
       "userRequired": "Veuillez sélectionner un utilisateur",
@@ -480,7 +483,13 @@
       "promoteConfirmAccept": "Promouvoir",
       "promotedDetail": "{name} a été promu propriétaire",
       "promoteFailed": "Échec de la promotion du membre en propriétaire",
-      "historyButton": "Historique"
+      "historyButton": "Historique",
+      "demoteConfirmMessage": "Êtes-vous sûr de vouloir rétrograder {name} en simple membre ?",
+      "demoteConfirmHeader": "Rétrograder à membre",
+      "demoteConfirmAccept": "Rétrograder",
+      "demotedDetail": "{name} rétrogradé en simple membre",
+      "demoteFailed": "Échec de la rétrogradation du membre",
+      "demoteFailedLastOwner": "Impossible de rétrograder {user} : {group} se retrouverait sans propriétaire"
     },
     "groupHistoryModal": {
       "title": "Historique : {name}",
@@ -496,6 +505,7 @@
       "addedAsMember": "{name} ajouté comme membre",
       "promotedToOwner": "{name} promu propriétaire",
       "removedFromGroup": "{name} retiré du groupe",
+      "demotedToMember": "{name} rétrogradé en membre",
       "loadFailedSummary": "Échec du chargement",
       "loadFailedDetail": "Échec du chargement de l'historique du groupe."
     },

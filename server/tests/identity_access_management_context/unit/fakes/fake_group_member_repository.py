@@ -32,6 +32,12 @@ class FakeGroupMemberRepository:
     def count_owners(self, group_id: UUID) -> int:
         return sum(1 for m in self._members.values() if m.group_id == group_id and m.is_owner)
 
+    def count_owners_for_update(self, group_id: UUID) -> int:
+        # No real transaction/locking to simulate in-memory; same result as
+        # count_owners(). The locking behavior is only meaningful against a
+        # real database and is covered by the SQL integration tests.
+        return self.count_owners(group_id)
+
     def delete_by_group_id(self, group_id: UUID):
         self._members = {key: member for key, member in self._members.items() if member.group_id != group_id}
 
