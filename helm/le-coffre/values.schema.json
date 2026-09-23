@@ -187,7 +187,7 @@
             "port": { "type": ["integer", "string"] },
             "fromAddress": { "type": "string" },
             "username": { "type": "string" },
-            "tlsMode": { "type": "string" },
+            "tlsMode": { "type": "string", "enum": ["", "none", "implicit", "starttls"] },
             "existingSecretName": { "type": "string" },
             "password": { "type": "string" }
           },
