@@ -76,7 +76,7 @@ class ListServiceAccounts(BaseModel):
 
 
 def _raise_for(error: Exception) -> None:
-    """Map a domain or repository failure onto its HTTP status."""
+    """Map a domain or repository failure onto its HTTP status, if it has one."""
     if isinstance(error, GroupNotFoundException | ServiceAccountNotFoundException):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     if isinstance(error, UserNotOwnerOfGroupException):
@@ -88,7 +88,6 @@ def _raise_for(error: Exception) -> None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     if isinstance(error, InvalidServiceAccountNameError | IdentityAccessManagementDomainError):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
-    raise error
 
 
 @router.post(
