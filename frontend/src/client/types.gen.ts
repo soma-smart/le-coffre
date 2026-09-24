@@ -996,17 +996,9 @@ export type SearchUserResponse = {
      */
     username: string;
     /**
-     * Email
-     */
-    email: string;
-    /**
      * Name
      */
     name: string;
-    /**
-     * Roles
-     */
-    roles?: Array<string>;
 };
 
 /**
