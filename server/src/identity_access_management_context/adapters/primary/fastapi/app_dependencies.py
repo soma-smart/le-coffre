@@ -2,7 +2,7 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
-from config import get_session_max_lifetime_seconds
+from config import get_max_active_service_accounts_per_group, get_session_max_lifetime_seconds
 from identity_access_management_context.adapters.primary.private_api import (
     UserInfoApi,
 )
@@ -16,6 +16,8 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
     SqlIamEventRepository,
     SqlRevokedTokenRepository,
+    SqlServiceAccountEventRepository,
+    SqlServiceAccountRepository,
     SqlSsoConfigurationRepository,
     SqlSsoUserRepository,
     SqlUserPasswordRepository,
@@ -32,6 +34,8 @@ from identity_access_management_context.application.gateways import (
     OneTimeLinkRevocationGateway,
     PasswordHashingGateway,
     RevokedTokenRepository,
+    ServiceAccountEventRepository,
+    ServiceAccountRepository,
     SsoConfigurationRepository,
     SsoEncryptionGateway,
     SsoEventRepository,
@@ -42,11 +46,13 @@ from identity_access_management_context.application.gateways import (
     UserPasswordRepository,
     UserRepository,
 )
+from identity_access_management_context.application.services import ServiceAccountPermissionService
 from identity_access_management_context.application.use_cases import (
     AddOwnerToGroupUseCase,
     AddUserToGroupUseCase,
     ConfigureSsoProviderUseCase,
     CreateGroupUseCase,
+    CreateServiceAccountUseCase,
     CreateUserUseCase,
     DeleteGroupUseCase,
     DeleteUserUseCase,
@@ -58,6 +64,7 @@ from identity_access_management_context.application.use_cases import (
     IsSsoConfigSetUseCase,
     ListGroupEventsUseCase,
     ListGroupsUseCase,
+    ListServiceAccountsUseCase,
     ListUserUseCase,
     LogoutUseCase,
     PasswordLoginUseCase,
@@ -65,6 +72,8 @@ from identity_access_management_context.application.use_cases import (
     RefreshAccessTokenUseCase,
     RegisterAdminWithPasswordUseCase,
     RemoveUserFromGroupUseCase,
+    RevokeServiceAccountUseCase,
+    RotateServiceAccountTokenUseCase,
     SsoLoginUseCase,
     UpdateGroupUseCase,
     UpdateUserPasswordUseCase,
@@ -100,6 +109,18 @@ def get_group_event_repository(
     return SqlIamEventRepository(session)
 
 
+def get_service_account_repository(
+    session: Session = Depends(get_session),
+) -> ServiceAccountRepository:
+    return SqlServiceAccountRepository(session)
+
+
+def get_service_account_event_repository(
+    session: Session = Depends(get_session),
+) -> ServiceAccountEventRepository:
+    return SqlServiceAccountEventRepository(session)
+
+
 def get_sso_event_repository(
     session: Session = Depends(get_session),
 ) -> SsoEventRepository:
@@ -120,6 +141,13 @@ def get_group_member_repository(
     session: Session = Depends(get_session),
 ) -> GroupMemberRepository:
     return SqlGroupMemberRepository(session)
+
+
+def get_service_account_permission_service(
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+) -> ServiceAccountPermissionService:
+    return ServiceAccountPermissionService(group_repository, group_member_repository)
 
 
 def get_group_usage_gateway(
@@ -562,6 +590,9 @@ def get_delete_group_usecase(
     group_usage_gateway: GroupUsageGateway = Depends(get_group_usage_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return DeleteGroupUseCase(
         group_repository,
@@ -569,6 +600,9 @@ def get_delete_group_usecase(
         group_usage_gateway,
         event_publisher,
         group_event_repository,
+        service_account_repository,
+        service_account_event_repository,
+        time_provider,
     )
 
 
@@ -577,3 +611,75 @@ def get_statistic_for_admin_usecase(
     group_repository: GroupRepository = Depends(get_group_repository),
 ):
     return GetStatisticForAdminUseCase(user_repository, group_repository)
+
+
+def get_create_service_account_usecase(
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return CreateServiceAccountUseCase(
+        service_account_repository,
+        permission_service,
+        event_publisher,
+        service_account_event_repository,
+        time_provider,
+        get_max_active_service_accounts_per_group(),
+    )
+
+
+def get_list_service_accounts_usecase(
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+    user_repository: UserRepository = Depends(get_user_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+    group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
+):
+    return ListServiceAccountsUseCase(
+        service_account_repository,
+        permission_service,
+        event_publisher,
+        service_account_event_repository,
+        time_provider,
+        user_repository,
+        group_repository,
+        group_member_repository,
+        get_max_active_service_accounts_per_group(),
+    )
+
+
+def get_rotate_service_account_token_usecase(
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return RotateServiceAccountTokenUseCase(
+        service_account_repository,
+        permission_service,
+        event_publisher,
+        service_account_event_repository,
+        time_provider,
+    )
+
+
+def get_revoke_service_account_usecase(
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return RevokeServiceAccountUseCase(
+        service_account_repository,
+        permission_service,
+        event_publisher,
+        service_account_event_repository,
+        time_provider,
+    )

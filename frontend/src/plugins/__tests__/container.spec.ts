@@ -9,6 +9,7 @@ import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGrou
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
+import { InMemoryServiceAccountRepository } from '@/infrastructure/in_memory/InMemoryServiceAccountRepository'
 import { InMemoryStatisticsGateway } from '@/infrastructure/in_memory/InMemoryStatisticsGateway'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
@@ -24,6 +25,7 @@ function makeTestContainer(): Container {
     preferencesGateway: new InMemoryPreferencesGateway(),
     statisticsGateway: new InMemoryStatisticsGateway(),
     oneTimeLinkRepository: new InMemoryOneTimeLinkRepository(),
+    serviceAccountRepository: new InMemoryServiceAccountRepository(),
   })
 }
 

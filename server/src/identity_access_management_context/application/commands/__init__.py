@@ -20,6 +20,10 @@ from .promote_admin_command import PromoteAdminCommand
 from .refresh_access_token_command import RefreshAccessTokenCommand
 from .register_admin_with_password_command import RegisterAdminWithPasswordCommand
 from .remove_user_from_group_command import RemoveUserFromGroupCommand
+from .service_account.create_command import CreateServiceAccountCommand
+from .service_account.list_command import ListServiceAccountsCommand
+from .service_account.revoke_command import RevokeServiceAccountCommand
+from .service_account.rotate_command import RotateServiceAccountTokenCommand
 from .sso_login_command import SsoLoginCommand
 from .update_group_command import UpdateGroupCommand
 from .update_user_command import UpdateUserCommand
@@ -54,4 +58,8 @@ __all__ = [
     "ConfigureSsoProviderCommand",
     "PromoteAdminCommand",
     "GetStatisticForAdminCommand",
+    "CreateServiceAccountCommand",
+    "ListServiceAccountsCommand",
+    "RotateServiceAccountTokenCommand",
+    "RevokeServiceAccountCommand",
 ]

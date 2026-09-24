@@ -25,6 +25,10 @@ class GroupMemberRepository(Protocol):
         """Get all members of a group."""
         ...
 
+    def get_group_ids_owned_by(self, user_id: UUID) -> list[UUID]:
+        """Return the ids of every group this user owns."""
+        ...
+
     def count_owners(self, group_id: UUID) -> int:
         """Count the number of owners in a group."""
         ...

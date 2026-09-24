@@ -17,6 +17,7 @@ from .group import (
     group_update_router,
     list_groups_router,
 )
+from .service_account import service_account_router
 from .sso import (
     configure_sso_provider_route,
     get_sso_url_route,
@@ -87,3 +88,11 @@ def get_admin_management_router():
     admin_management_router.include_router(admin_statistic_route.router)
 
     return admin_management_router
+
+
+def get_service_account_router():
+    service_account_management_router = APIRouter()
+
+    service_account_management_router.include_router(service_account_router)
+
+    return service_account_management_router

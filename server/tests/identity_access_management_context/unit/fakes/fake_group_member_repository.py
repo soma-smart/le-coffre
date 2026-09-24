@@ -29,6 +29,9 @@ class FakeGroupMemberRepository:
     def get_members(self, group_id: UUID) -> list[GroupMember]:
         return [m for m in self._members.values() if m.group_id == group_id]
 
+    def get_group_ids_owned_by(self, user_id: UUID) -> list[UUID]:
+        return [m.group_id for m in self._members.values() if m.user_id == user_id and m.is_owner]
+
     def count_owners(self, group_id: UUID) -> int:
         return sum(1 for m in self._members.values() if m.group_id == group_id and m.is_owner)
 
