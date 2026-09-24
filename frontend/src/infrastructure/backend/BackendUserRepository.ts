@@ -24,7 +24,7 @@ import type {
   UpdateUserPasswordInput,
   UserRepository,
 } from '@/application/ports/UserRepository'
-import type { User, UserPasswordEvent } from '@/domain/user/User'
+import type { SearchUser, User, UserPasswordEvent } from '@/domain/user/User'
 import { IncorrectOldPasswordError, UserDomainError, UserNotFoundError } from '@/domain/user/errors'
 
 /**
@@ -54,10 +54,10 @@ export class BackendUserRepository implements UserRepository {
     return (response.data ?? []).map(listItemToUser)
   }
 
-  async search(query: string): Promise<User[]> {
+  async search(query: string): Promise<SearchUser[]> {
     const response = await searchUsersUsersSearchGet({ query: { q: query } })
     this.throwIfError(response.error, response.response?.status)
-    return (response.data ?? []).map(searchItemToUser)
+    return (response.data ?? []).map(searchItemToSearchUser)
   }
 
   async create(input: CreateUserInput): Promise<string> {
@@ -164,15 +164,11 @@ function basicToUser(dto: GetUserResponse): User {
   }
 }
 
-function searchItemToUser(dto: SearchUserResponse): User {
+function searchItemToSearchUser(dto: SearchUserResponse): SearchUser {
   return {
     id: dto.id,
     username: dto.username,
-    email: dto.email,
     name: dto.name,
-    roles: dto.roles ?? [],
-    personalGroupId: null,
-    isSso: false,
   }
 }
 

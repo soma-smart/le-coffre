@@ -1,12 +1,12 @@
 import { computed, ref, type Ref } from 'vue'
 import type { Group } from '@/domain/group/Group'
-import type { User } from '@/domain/user/User'
+import type { SearchUser, User } from '@/domain/user/User'
 import { useAsyncStatus } from '@/composables/useAsyncStatus'
 
 export interface GroupMembersUseCases {
   users: {
     get: { execute(command: { userId: string }): Promise<User> }
-    search: { execute(command: { query: string }): Promise<User[]> }
+    search: { execute(command: { query: string }): Promise<SearchUser[]> }
   }
   groups: { get: { execute(command: { groupId: string }): Promise<Group> } }
   /**
@@ -47,7 +47,7 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
 
   const fetch = useAsyncStatus<void>()
   const action = useAsyncStatus<void>()
-  const search = useAsyncStatus<User[]>()
+  const search = useAsyncStatus<SearchUser[]>()
 
   const isOwner = computed(() => {
     if (!groupDetails.value || !options.currentUserId.value) return false
@@ -55,7 +55,7 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
   })
 
   /** Resolves to [] below MIN_SEARCH_QUERY_LENGTH, without hitting the API. */
-  async function searchAvailableUsers(query: string): Promise<User[]> {
+  async function searchAvailableUsers(query: string): Promise<SearchUser[]> {
     if (query.trim().length < MIN_SEARCH_QUERY_LENGTH) return []
 
     const results = await search.run(() => options.useCases.users.search.execute({ query }))

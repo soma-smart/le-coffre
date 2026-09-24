@@ -1,4 +1,4 @@
-import type { User, UserPasswordEvent } from '@/domain/user/User'
+import type { SearchUser, User, UserPasswordEvent } from '@/domain/user/User'
 
 export interface CreateUserInput {
   username: string
@@ -36,7 +36,7 @@ export interface UserRepository {
   get(userId: string): Promise<User>
   list(): Promise<User[]>
   /** `query` is expected to be at least 3 characters; matches id/name/username. */
-  search(query: string): Promise<User[]>
+  search(query: string): Promise<SearchUser[]>
   create(input: CreateUserInput): Promise<string>
   update(input: UpdateUserInput): Promise<void>
   updatePassword(input: UpdateUserPasswordInput): Promise<void>

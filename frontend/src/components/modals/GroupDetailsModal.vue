@@ -7,7 +7,7 @@ import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { isUserOwnerOf, type Group } from '@/domain/group/Group'
-import type { User } from '@/domain/user/User'
+import type { SearchUser, User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
 import { debounce } from '@/lib/debounce'
@@ -48,8 +48,8 @@ const canViewHistory = computed(
 const { users: userUseCases, groups: groupUseCases } = useContainer()
 
 const showAddMemberDialog = ref(false)
-const selectedUser = ref<User | null>(null)
-const availableUserSuggestions = ref<User[]>([])
+const selectedUser = ref<SearchUser | null>(null)
+const availableUserSuggestions = ref<SearchUser[]>([])
 
 const {
   ownerUsers,
@@ -379,7 +379,7 @@ watch(visible, (isVisible) => {
         <template #option="slotProps">
           <div class="flex flex-col">
             <span class="font-semibold">{{ slotProps.option.name }}</span>
-            <span class="text-sm text-muted-color">{{ slotProps.option.email }}</span>
+            <span class="text-sm text-muted-color">{{ slotProps.option.username }}</span>
           </div>
         </template>
       </AutoComplete>
