@@ -8,6 +8,7 @@ class FakeEmailGateway:
 
     def send(self, to: str, subject: str, body: str) -> None:
         if self._should_fail:
+            self._should_fail = False
             raise EmailDeliveryError("simulated SMTP failure")
         self.sent_emails.append({"to": to, "subject": subject, "body": body})
 
