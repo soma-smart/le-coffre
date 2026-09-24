@@ -347,7 +347,9 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     assert owner_user_id in group_before["members"]
     assert owner_user_id not in group_before["owners"]
 
-    # Step 6.4: Promote owner_user to owner
+    # Step 6.4: Promote owner_user to owner. This also fires a reactive, swallow-on-failure
+    # owner-promotion email via OwnerAddedToGroupEvent — a broken swallow would turn this 201
+    # into a 500, so this assertion doubles as that regression check.
     add_owner_response = authenticated_admin_client.post(
         f"/api/groups/{ownership_group_id}/owners", json={"user_id": owner_user_id}
     )
