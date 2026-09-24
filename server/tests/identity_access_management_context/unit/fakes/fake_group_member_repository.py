@@ -26,6 +26,14 @@ class FakeGroupMemberRepository:
         member = self._members.get(key)
         return member is not None and member.is_owner
 
+    def promote_to_owner(self, group_id: UUID, user_id: UUID) -> bool:
+        key = (group_id, user_id)
+        member = self._members.get(key)
+        if member is None or member.is_owner:
+            return False
+        self._members[key] = GroupMember(group_id=group_id, user_id=user_id, is_owner=True)
+        return True
+
     def get_members(self, group_id: UUID) -> list[GroupMember]:
         return [m for m in self._members.values() if m.group_id == group_id]
 
