@@ -3,6 +3,7 @@ from uuid import UUID
 import pytest
 
 from identity_access_management_context.application.commands import SearchUsersCommand
+from identity_access_management_context.application.responses import SearchUserResponse
 from identity_access_management_context.application.use_cases import SearchUsersUseCase
 from identity_access_management_context.domain.entities import User
 
@@ -27,6 +28,10 @@ def _seed(user_repository: FakeUserRepository, **overrides) -> User:
     return user
 
 
+def _as_response(user: User) -> SearchUserResponse:
+    return SearchUserResponse(id=user.id, username=user.username, name=user.name)
+
+
 def test_given_matching_name_when_searching_should_return_user(
     use_case: SearchUsersUseCase, user_repository: FakeUserRepository
 ):
@@ -34,7 +39,7 @@ def test_given_matching_name_when_searching_should_return_user(
 
     result = use_case.execute(SearchUsersCommand(query="Jane"))
 
-    assert result == [user]
+    assert result == [_as_response(user)]
 
 
 def test_given_matching_username_when_searching_should_return_user(
@@ -44,7 +49,7 @@ def test_given_matching_username_when_searching_should_return_user(
 
     result = use_case.execute(SearchUsersCommand(query="jdo"))
 
-    assert result == [user]
+    assert result == [_as_response(user)]
 
 
 def test_given_matching_id_substring_when_searching_should_return_user(
@@ -54,7 +59,7 @@ def test_given_matching_id_substring_when_searching_should_return_user(
 
     result = use_case.execute(SearchUsersCommand(query="123e4567"))
 
-    assert result == [user]
+    assert result == [_as_response(user)]
 
 
 def test_given_no_match_when_searching_should_return_empty_list(

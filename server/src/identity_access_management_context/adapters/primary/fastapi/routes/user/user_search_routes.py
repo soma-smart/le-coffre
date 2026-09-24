@@ -20,9 +20,7 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 class SearchUserResponse(BaseModel):
     id: UUID
     username: str
-    email: str
     name: str
-    roles: list[str] = []
 
 
 @router.get(
@@ -51,9 +49,7 @@ def search_users(
             SearchUserResponse(
                 id=user.id,
                 username=user.username,
-                email=user.email,
                 name=user.name,
-                roles=user.roles,
             )
             for user in users
         ]
