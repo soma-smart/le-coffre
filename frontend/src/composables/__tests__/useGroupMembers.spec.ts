@@ -84,12 +84,17 @@ describe('useGroupMembers', () => {
     expect(m.isOwner.value).toBe(false)
   })
 
-  it('marks fetchStatus as error when resolving a user fails', async () => {
+  it('keeps fetchStatus ready and drops the failed user when resolving one user fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const useCases = makeUseCases({
+      groups: {
+        get: { execute: vi.fn(async () => makeGroup({ owners: ['u1'], members: ['u2'] })) },
+      },
       users: {
         get: {
-          execute: vi.fn(async () => {
-            throw new Error('user-get-failed')
+          execute: vi.fn(async ({ userId }: { userId: string }) => {
+            if (userId === 'u2') throw new Error('user-get-failed')
+            return makeUser({ id: userId, name: `User ${userId}` })
           }),
         },
         search: { execute: vi.fn(async () => []) },
@@ -103,12 +108,17 @@ describe('useGroupMembers', () => {
 
     await m.loadAll()
 
-    // Promise.all rejects; ownerUsers / memberUsers stay empty;
-    // fetchStatus reflects the failure.
-    expect(m.fetchStatus.value).toBe('error')
-    expect(m.fetchError.value).toBeInstanceOf(Error)
-    expect(m.ownerUsers.value).toEqual([])
+    // The failed member is silently dropped, the rest of the group still loads.
+    expect(m.fetchStatus.value).toBe('ready')
+    expect(m.fetchError.value).toBeNull()
+    expect(m.ownerUsers.value.map((u) => u.id)).toEqual(['u1'])
     expect(m.memberUsers.value).toEqual([])
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Failed to resolve group member u2:',
+      expect.any(Error),
+    )
+
+    consoleErrorSpy.mockRestore()
   })
 
   it('isOwner is false when the current user is not in owners[]', async () => {
