@@ -58,7 +58,9 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
   async function searchAvailableUsers(query: string): Promise<SearchUser[]> {
     if (query.trim().length < MIN_SEARCH_QUERY_LENGTH) return []
 
-    const results = await search.run(() => options.useCases.users.search.execute({ query }))
+    const results = await search.run(() =>
+      options.useCases.users.search.execute({ query: query.trim() }),
+    )
     if (!results) return []
 
     if (!groupDetails.value) return results
@@ -74,10 +76,17 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
       const details = await options.useCases.groups.get.execute({ groupId })
 
       const memberIds = [...new Set([...details.owners, ...details.members])]
-      const fetchedUsers = await Promise.all(
+      const results = await Promise.allSettled(
         memberIds.map((userId) => options.useCases.users.get.execute({ userId })),
       )
-      const userById = new Map(fetchedUsers.map((u) => [u.id, u]))
+      const userById = new Map<string, User>()
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled') {
+          userById.set(r.value.id, r.value)
+        } else {
+          console.error(`Failed to resolve group member ${memberIds[i]}:`, r.reason)
+        }
+      })
 
       groupDetails.value = details
       ownerUsers.value = details.owners.flatMap((id) => userById.get(id) ?? [])
