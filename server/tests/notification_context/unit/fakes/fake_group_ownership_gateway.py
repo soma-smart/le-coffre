@@ -13,6 +13,7 @@ class FakeGroupOwnershipGateway:
 
     def get_owner_promotion_details(self, user_id: UUID, group_id: UUID) -> OwnerPromotionNotification | None:
         if self._should_fail:
+            self._should_fail = False
             raise RuntimeError("simulated lookup failure")
         return self._details.get((user_id, group_id))
 

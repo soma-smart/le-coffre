@@ -73,6 +73,28 @@ def test_given_email_delivery_fails_when_notifying_should_swallow_error_and_log(
     assert errors[0].exc_info is not None
 
 
+def test_given_email_delivery_failed_once_when_notifying_again_should_send_normally(
+    group_ownership_gateway,
+    email_gateway,
+):
+    user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    added_by_user_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+    group_ownership_gateway.set_owner_promotion_details(
+        user_id,
+        group_id,
+        OwnerPromotionNotification(email="alice@example.com", display_name="Alice", group_name="Development Team"),
+    )
+    email_gateway.fail_next_send()
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
+    use_case.execute(command)  # first call: swallowed failure, per fail_next_send()
+
+    use_case.execute(command)  # second call: must succeed, "next" means once, not forever
+
+    assert len(email_gateway.sent_emails) == 1
+
+
 def test_given_gateway_lookup_raises_when_notifying_should_swallow_error_and_log(
     group_ownership_gateway,
     email_gateway,
@@ -98,3 +120,25 @@ def test_given_gateway_lookup_raises_when_notifying_should_swallow_error_and_log
     ]
     assert errors, "an unexpected lookup failure must be logged at ERROR, not raised"
     assert errors[0].exc_info is not None
+
+
+def test_given_lookup_failed_once_when_notifying_again_should_send_normally(
+    group_ownership_gateway,
+    email_gateway,
+):
+    user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    added_by_user_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+    group_ownership_gateway.set_owner_promotion_details(
+        user_id,
+        group_id,
+        OwnerPromotionNotification(email="alice@example.com", display_name="Alice", group_name="Development Team"),
+    )
+    group_ownership_gateway.fail_next_lookup()
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
+    use_case.execute(command)  # first call: swallowed failure, per fail_next_lookup()
+
+    use_case.execute(command)  # second call: must succeed, "next" means once, not forever
+
+    assert len(email_gateway.sent_emails) == 1
