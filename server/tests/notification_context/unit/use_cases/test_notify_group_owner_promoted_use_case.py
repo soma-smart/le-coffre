@@ -71,3 +71,30 @@ def test_given_email_delivery_fails_when_notifying_should_swallow_error_and_log(
     errors = [rec for rec in caplog.records if rec.levelname == "ERROR" and "alice@example.com" in rec.getMessage()]
     assert errors, "EmailDeliveryError must be logged at ERROR so operators can see the delivery failure"
     assert errors[0].exc_info is not None
+
+
+def test_given_gateway_lookup_raises_when_notifying_should_swallow_error_and_log(
+    group_ownership_gateway,
+    email_gateway,
+    caplog: pytest.LogCaptureFixture,
+):
+    user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    added_by_user_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+    group_ownership_gateway.fail_next_lookup()
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
+
+    with caplog.at_level(
+        "ERROR", logger="notification_context.application.use_cases.notify_group_owner_promoted_use_case"
+    ):
+        use_case.execute(command)  # must not raise
+
+    assert email_gateway.sent_emails == []
+    errors = [
+        rec
+        for rec in caplog.records
+        if rec.levelname == "ERROR" and "look up owner-promotion details" in rec.getMessage()
+    ]
+    assert errors, "an unexpected lookup failure must be logged at ERROR, not raised"
+    assert errors[0].exc_info is not None
