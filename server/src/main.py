@@ -53,6 +53,7 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_group_management_router,
     get_user_management_router,
 )
+from identity_access_management_context.adapters.primary.private_api import GroupOwnershipInfoApi
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
     InMemoryLoginLockoutGateway,
@@ -61,7 +62,11 @@ from identity_access_management_context.adapters.secondary import (
     PrivateApiSsoEncryptionGateway,
     SsoUrlValidator,
 )
+from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
 from monitoring import setup_logging, setup_monitoring
+from notification_context.adapters.primary.events import GroupOwnerPromotedEventSubscriber
+from notification_context.adapters.secondary import PrivateApiGroupOwnershipGateway
+from notification_context.application.use_cases import NotifyGroupOwnerPromotedUseCase
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
@@ -214,6 +219,13 @@ async def lifespan(app: FastAPI):
         tls_mode=SmtpTlsMode(get_smtp_tls_mode()),
     )
     app.state.email_gateway = email_gateway
+
+    # Notification: group-owner-promotion email (reactive, subscribes to OwnerAddedToGroupEvent)
+    group_ownership_info_api = GroupOwnershipInfoApi(session_maker=SessionLocal)
+    group_ownership_gateway = PrivateApiGroupOwnershipGateway(group_ownership_info_api)
+    notify_owner_promoted_use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    owner_promoted_subscriber = GroupOwnerPromotedEventSubscriber(notify_owner_promoted_use_case)
+    domain_event_publisher.subscribe(OwnerAddedToGroupEvent, owner_promoted_subscriber.handle)
 
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()
