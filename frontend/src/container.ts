@@ -59,6 +59,7 @@ import { GetUserUseCase } from '@/application/user/GetUser'
 import { ListUserPasswordEventsUseCase } from '@/application/user/ListUserPasswordEvents'
 import { ListUsersUseCase } from '@/application/user/ListUsers'
 import { PromoteUserToAdminUseCase } from '@/application/user/PromoteUserToAdmin'
+import { SearchUsersUseCase } from '@/application/user/SearchUsers'
 import { UpdateUserUseCase } from '@/application/user/UpdateUser'
 import { UpdateUserPasswordUseCase } from '@/application/user/UpdateUserPassword'
 
@@ -102,6 +103,7 @@ export interface Container {
     getCurrent: GetCurrentUserUseCase
     get: GetUserUseCase
     list: ListUsersUseCase
+    search: SearchUsersUseCase
     create: CreateUserUseCase
     update: UpdateUserUseCase
     updatePassword: UpdateUserPasswordUseCase
@@ -179,6 +181,7 @@ export function buildContainer(ports: Ports): Container {
       getCurrent: new GetCurrentUserUseCase(ports.userRepository),
       get: new GetUserUseCase(ports.userRepository),
       list: new ListUsersUseCase(ports.userRepository),
+      search: new SearchUsersUseCase(ports.userRepository),
       create: new CreateUserUseCase(ports.userRepository),
       update: new UpdateUserUseCase(ports.userRepository),
       updatePassword: new UpdateUserPasswordUseCase(ports.userRepository),

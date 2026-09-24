@@ -7,10 +7,13 @@ import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { isUserOwnerOf, type Group } from '@/domain/group/Group'
-import type { User } from '@/domain/user/User'
+import type { SearchUser, User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
+import { debounce } from '@/lib/debounce'
 import GroupHistoryModal from '@/components/modals/GroupHistoryModal.vue'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 const visible = defineModel<boolean>('visible', { required: true })
 
@@ -45,16 +48,18 @@ const canViewHistory = computed(
 const { users: userUseCases, groups: groupUseCases } = useContainer()
 
 const showAddMemberDialog = ref(false)
-const selectedUserId = ref<string>('')
+const selectedUser = ref<SearchUser | null>(null)
+const availableUserSuggestions = ref<SearchUser[]>([])
 
 const {
   ownerUsers,
   memberUsers,
-  availableUsers,
   isOwner,
   isFetching,
   isActing,
+  isSearching,
   loadAll,
+  searchAvailableUsers,
   addMember: addMemberCore,
   removeMember: removeMemberCore,
   promoteToOwner: promoteToOwnerCore,
@@ -72,8 +77,12 @@ const {
   },
 })
 
+const handleSearchAvailableUsers = debounce(async (event: { query: string }) => {
+  availableUserSuggestions.value = await searchAvailableUsers(event.query)
+}, SEARCH_DEBOUNCE_MS)
+
 const handleAddMember = async () => {
-  if (!selectedUserId.value) {
+  if (!selectedUser.value) {
     toast.add({
       severity: 'error',
       summary: t('common.validationError'),
@@ -83,7 +92,7 @@ const handleAddMember = async () => {
     return
   }
 
-  const ok = await addMemberCore(selectedUserId.value)
+  const ok = await addMemberCore(selectedUser.value.id)
   if (ok) {
     toast.add({
       severity: 'success',
@@ -92,7 +101,8 @@ const handleAddMember = async () => {
       life: 5000,
     })
     showAddMemberDialog.value = false
-    selectedUserId.value = ''
+    selectedUser.value = null
+    availableUserSuggestions.value = []
     emit('memberAdded')
   } else {
     toast.add({
@@ -350,24 +360,29 @@ watch(visible, (isVisible) => {
   >
     <div
       class="flex flex-col gap-3"
-      @keydown.enter.prevent="selectedUserId && !isActing && handleAddMember()"
+      @keydown.enter.prevent="selectedUser && !isActing && handleAddMember()"
     >
-      <Select
-        v-model="selectedUserId"
-        :options="availableUsers"
+      <AutoComplete
+        v-model="selectedUser"
+        :suggestions="availableUserSuggestions"
+        @complete="handleSearchAvailableUsers"
         optionLabel="name"
-        optionValue="id"
-        :placeholder="t('components.groupDetailsModal.selectUserPlaceholder')"
+        :min-length="3"
+        :loading="isSearching"
+        force-selection
+        dropdown
+        :placeholder="t('components.groupDetailsModal.searchUserPlaceholder')"
         :disabled="isActing"
         class="w-full"
+        fluid
       >
         <template #option="slotProps">
           <div class="flex flex-col">
             <span class="font-semibold">{{ slotProps.option.name }}</span>
-            <span class="text-sm text-muted-color">{{ slotProps.option.email }}</span>
+            <span class="text-sm text-muted-color">{{ slotProps.option.username }}</span>
           </div>
         </template>
-      </Select>
+      </AutoComplete>
     </div>
 
     <template #footer>
@@ -381,7 +396,7 @@ watch(visible, (isVisible) => {
         icon="pi pi-user-plus"
         @click="handleAddMember"
         :loading="isActing"
-        :disabled="!selectedUserId || isActing"
+        :disabled="!selectedUser || isActing"
       />
     </template>
   </Dialog>

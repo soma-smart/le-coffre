@@ -469,7 +469,7 @@
       "removeTooltip": "Remove member",
       "removeAria": "Remove member",
       "addMemberTitle": "Add Member",
-      "selectUserPlaceholder": "Select a user to add",
+      "searchUserPlaceholder": "Search for a user (min. 3 characters)",
       "userRequired": "Please select a user",
       "memberAddedDetail": "Member added successfully",
       "addMemberFailed": "Failed to add member to group",

@@ -22,15 +22,28 @@ function makeUser(overrides: Partial<User> = {}): User {
     name: 'Alice',
     email: 'alice@example.com',
     username: 'alice',
-    isAdmin: false,
-    personalGroupId: 'p-u1',
+    roles: [],
+    personalGroupId: null,
+    isSso: false,
     ...overrides,
-  } as User
+  }
+}
+
+/** Resolves a user named after its id, e.g. 'u1' -> 'User u1'. */
+function makeGetUser(): GroupMembersUseCases['users']['get'] {
+  return {
+    execute: vi.fn(async ({ userId }: { userId: string }) =>
+      makeUser({ id: userId, name: `User ${userId}` }),
+    ),
+  }
 }
 
 function makeUseCases(overrides: Partial<GroupMembersUseCases> = {}): GroupMembersUseCases {
   return {
-    users: { list: { execute: vi.fn(async () => [] as User[]) } },
+    users: {
+      get: makeGetUser(),
+      search: { execute: vi.fn(async () => [] as User[]) },
+    },
     groups: { get: { execute: vi.fn(async () => makeGroup()) } },
     store: {
       addMemberToGroup: vi.fn(async () => {}),
@@ -42,14 +55,8 @@ function makeUseCases(overrides: Partial<GroupMembersUseCases> = {}): GroupMembe
 }
 
 describe('useGroupMembers', () => {
-  it('loadAll fetches users + group details and partitions them by role', async () => {
-    const allUsers = [
-      makeUser({ id: 'u1', name: 'Owner' }),
-      makeUser({ id: 'u2', name: 'Member' }),
-      makeUser({ id: 'u3', name: 'Outsider' }),
-    ]
+  it('loadAll fetches group details and resolves owner/member ids to users', async () => {
     const useCases = makeUseCases({
-      users: { list: { execute: vi.fn(async () => allUsers) } },
       groups: {
         get: { execute: vi.fn(async () => makeGroup({ owners: ['u1'], members: ['u2'] })) },
       },
@@ -65,7 +72,6 @@ describe('useGroupMembers', () => {
     expect(m.fetchStatus.value).toBe('ready')
     expect(m.ownerUsers.value.map((u) => u.id)).toEqual(['u1'])
     expect(m.memberUsers.value.map((u) => u.id)).toEqual(['u2'])
-    expect(m.availableUsers.value.map((u) => u.id)).toEqual(['u3'])
     expect(m.isOwner.value).toBe(true)
   })
 
@@ -78,14 +84,15 @@ describe('useGroupMembers', () => {
     expect(m.isOwner.value).toBe(false)
   })
 
-  it('marks fetchStatus as error when listing users fails', async () => {
+  it('marks fetchStatus as error when resolving a user fails', async () => {
     const useCases = makeUseCases({
       users: {
-        list: {
+        get: {
           execute: vi.fn(async () => {
-            throw new Error('users-list-failed')
+            throw new Error('user-get-failed')
           }),
         },
+        search: { execute: vi.fn(async () => []) },
       },
     })
     const m = useGroupMembers({
@@ -96,7 +103,7 @@ describe('useGroupMembers', () => {
 
     await m.loadAll()
 
-    // The Promise.all rejects; ownerUsers / memberUsers stay empty;
+    // Promise.all rejects; ownerUsers / memberUsers stay empty;
     // fetchStatus reflects the failure.
     expect(m.fetchStatus.value).toBe('error')
     expect(m.fetchError.value).toBeInstanceOf(Error)
@@ -106,7 +113,6 @@ describe('useGroupMembers', () => {
 
   it('isOwner is false when the current user is not in owners[]', async () => {
     const useCases = makeUseCases({
-      users: { list: { execute: vi.fn(async () => []) } },
       groups: { get: { execute: vi.fn(async () => makeGroup({ owners: ['u1'] })) } },
     })
 
@@ -127,11 +133,9 @@ describe('useGroupMembers', () => {
       .mockResolvedValueOnce(initial)
       .mockResolvedValueOnce(updated)
 
-    const list = vi.fn(async () => [makeUser({ id: 'u3' })])
     const addMemberToGroup = vi.fn(async () => {})
 
     const useCases = makeUseCases({
-      users: { list: { execute: list } },
       groups: { get: { execute: get } },
       store: {
         addMemberToGroup,
@@ -157,8 +161,6 @@ describe('useGroupMembers', () => {
 
   it('addMember returns false (and surfaces actionError) when the store throws', async () => {
     const useCases = makeUseCases({
-      users: { list: { execute: vi.fn(async () => []) } },
-      groups: { get: { execute: vi.fn(async () => makeGroup()) } },
       store: {
         addMemberToGroup: vi.fn(async () => {
           throw new Error('boom')
@@ -246,5 +248,69 @@ describe('useGroupMembers', () => {
     expect(ok).toBe(true)
     expect(promoteToOwner).toHaveBeenCalledWith('g1', 'u2')
     expect(get).toHaveBeenCalledTimes(2)
+  })
+
+  describe('searchAvailableUsers', () => {
+    it('does not call the API and returns [] below the minimum query length', async () => {
+      const search = vi.fn(async () => [makeUser()])
+      const useCases = makeUseCases({ users: { get: makeGetUser(), search: { execute: search } } })
+
+      const m = useGroupMembers({
+        group: ref(makeGroup()),
+        currentUserId: ref('u1'),
+        useCases,
+      })
+
+      expect(await m.searchAvailableUsers('ab')).toEqual([])
+      expect(search).not.toHaveBeenCalled()
+    })
+
+    it('calls users.search and filters out ids already in the group', async () => {
+      const search = vi.fn(async () => [
+        makeUser({ id: 'u1', name: 'Already Owner' }),
+        makeUser({ id: 'u2', name: 'Already Member' }),
+        makeUser({ id: 'u3', name: 'Outsider' }),
+      ])
+      const useCases = makeUseCases({
+        groups: {
+          get: { execute: vi.fn(async () => makeGroup({ owners: ['u1'], members: ['u2'] })) },
+        },
+        users: { get: makeGetUser(), search: { execute: search } },
+      })
+
+      const m = useGroupMembers({
+        group: ref(makeGroup()),
+        currentUserId: ref('u1'),
+        useCases,
+      })
+      await m.loadAll()
+
+      const results = await m.searchAvailableUsers('out')
+      expect(search).toHaveBeenCalledWith({ query: 'out' })
+      expect(results.map((u) => u.id)).toEqual(['u3'])
+    })
+
+    it('surfaces searchError and returns [] when the search call throws', async () => {
+      const useCases = makeUseCases({
+        users: {
+          get: makeGetUser(),
+          search: {
+            execute: vi.fn(async () => {
+              throw new Error('search-failed')
+            }),
+          },
+        },
+      })
+
+      const m = useGroupMembers({
+        group: ref(makeGroup()),
+        currentUserId: ref('u1'),
+        useCases,
+      })
+
+      const results = await m.searchAvailableUsers('abcdef')
+      expect(results).toEqual([])
+      expect(m.searchError.value).toBeInstanceOf(Error)
+    })
   })
 })

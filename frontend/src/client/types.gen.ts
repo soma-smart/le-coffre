@@ -984,6 +984,24 @@ export type RevokeAllOneTimeLinksResponse = {
 };
 
 /**
+ * SearchUserResponse
+ */
+export type SearchUserResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Username
+     */
+    username: string;
+    /**
+     * Name
+     */
+    name: string;
+};
+
+/**
  * SharePasswordRequest
  */
 export type SharePasswordRequest = {
@@ -2130,6 +2148,40 @@ export type UpdateUserPasswordUsersMePasswordPutResponses = {
 };
 
 export type UpdateUserPasswordUsersMePasswordPutResponse = UpdateUserPasswordUsersMePasswordPutResponses[keyof UpdateUserPasswordUsersMePasswordPutResponses];
+
+export type SearchUsersUsersSearchGetData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Q
+         *
+         * Search term (id/name/username substring match)
+         */
+        q: string;
+    };
+    url: '/users/search';
+};
+
+export type SearchUsersUsersSearchGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SearchUsersUsersSearchGetError = SearchUsersUsersSearchGetErrors[keyof SearchUsersUsersSearchGetErrors];
+
+export type SearchUsersUsersSearchGetResponses = {
+    /**
+     * Response Search Users Users Search Get
+     *
+     * Successful Response
+     */
+    200: Array<SearchUserResponse>;
+};
+
+export type SearchUsersUsersSearchGetResponse = SearchUsersUsersSearchGetResponses[keyof SearchUsersUsersSearchGetResponses];
 
 export type DeleteUserUsersUserIdDeleteData = {
     body?: never;

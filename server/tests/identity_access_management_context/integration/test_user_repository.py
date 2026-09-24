@@ -143,3 +143,50 @@ def test_should_retrieve_admin_user_when_admin_exists(sql_user_repository):
     assert retrieved_admin.email == admin_user.email
     assert retrieved_admin.name == admin_user.name
     assert retrieved_admin.roles == admin_user.roles
+
+
+def test_should_find_user_by_name_substring_case_insensitive_when_searching(sql_user_repository):
+    user = User(id=uuid4(), username="jdoe", email="jdoe@test.fr", name="Jane Doe", roles=[])
+    sql_user_repository.save(user)
+    results = sql_user_repository.search("jane")
+    assert [u.id for u in results] == [user.id]
+
+
+def test_should_find_user_by_username_substring_when_searching(sql_user_repository):
+    user = User(id=uuid4(), username="jdoe", email="jdoe@test.fr", name="Jane Doe", roles=[])
+    sql_user_repository.save(user)
+    results = sql_user_repository.search("jdo")
+    assert [u.id for u in results] == [user.id]
+
+
+def test_should_find_user_by_id_substring_when_searching(sql_user_repository):
+    user = User(id=uuid4(), username="jdoe", email="jdoe@test.fr", name="Jane Doe", roles=[])
+    sql_user_repository.save(user)
+    results = sql_user_repository.search(str(user.id)[:8])
+    assert [u.id for u in results] == [user.id]
+
+
+def test_should_return_empty_list_when_no_user_matches_search(sql_user_repository):
+    user = User(id=uuid4(), username="jdoe", email="jdoe@test.fr", name="Jane Doe", roles=[])
+    sql_user_repository.save(user)
+    assert sql_user_repository.search("zzz-does-not-match") == []
+
+
+def test_should_treat_percent_and_underscore_as_literal_characters_when_searching(
+    sql_user_repository,
+):
+    # A user whose name contains no wildcard characters at all.
+    plain_user = User(id=uuid4(), username="plain", email="plain@test.fr", name="Plain Name", roles=[])
+    # A user whose name legitimately contains a percent sign.
+    percent_user = User(id=uuid4(), username="percent", email="percent@test.fr", name="100% Done", roles=[])
+    sql_user_repository.save(plain_user)
+    sql_user_repository.save(percent_user)
+
+    # "%" must match only names that literally contain "%", not act as an
+    # SQL LIKE wildcard matching every row.
+    results = sql_user_repository.search("100%")
+    assert [u.id for u in results] == [percent_user.id]
+
+    # "_" must match literally too, not as a single-character wildcard.
+    results = sql_user_repository.search("_")
+    assert results == []

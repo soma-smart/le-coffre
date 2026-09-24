@@ -5,7 +5,7 @@ import type {
   UpdateUserPasswordInput,
   UserRepository,
 } from '@/application/ports/UserRepository'
-import { ADMIN_ROLE, type User, type UserPasswordEvent } from '@/domain/user/User'
+import { ADMIN_ROLE, type SearchUser, type User, type UserPasswordEvent } from '@/domain/user/User'
 import { IncorrectOldPasswordError, UserNotFoundError } from '@/domain/user/errors'
 
 /**
@@ -67,6 +67,18 @@ export class InMemoryUserRepository implements UserRepository {
 
   async list(): Promise<User[]> {
     return Array.from(this.storage.values())
+  }
+
+  async search(query: string): Promise<SearchUser[]> {
+    const needle = query.toLowerCase()
+    return Array.from(this.storage.values())
+      .filter(
+        (u) =>
+          u.id.toLowerCase().includes(needle) ||
+          u.name.toLowerCase().includes(needle) ||
+          u.username.toLowerCase().includes(needle),
+      )
+      .map((u) => ({ id: u.id, username: u.username, name: u.name }))
   }
 
   async create(input: CreateUserInput): Promise<string> {

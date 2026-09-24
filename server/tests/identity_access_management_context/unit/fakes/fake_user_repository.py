@@ -26,6 +26,14 @@ class FakeUserRepository(UserRepository):
     def list_all(self) -> list[User]:
         return list(self.storage.values())
 
+    def search(self, query: str) -> list[User]:
+        needle = query.lower()
+        return [
+            user
+            for user in self.storage.values()
+            if needle in str(user.id).lower() or needle in user.name.lower() or needle in user.username.lower()
+        ]
+
     def count(self) -> int:
         return len(self.storage)
 

@@ -19,6 +19,18 @@ export interface User {
   isSso: boolean
 }
 
+/**
+ * Minimal shape returned by the user-search endpoint. Deliberately not a
+ * subset of User via optional fields — search doesn't know a user's
+ * email, roles or SSO status, so it must not be handed out as a full User
+ * with those fields faked (empty email, no roles, isSso: false).
+ */
+export interface SearchUser {
+  id: string
+  username: string
+  name: string
+}
+
 export const ADMIN_ROLE = 'admin'
 
 /**

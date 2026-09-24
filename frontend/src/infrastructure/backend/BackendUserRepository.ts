@@ -6,6 +6,7 @@ import {
   listPasswordEventsByActorAdminUsersUserIdPasswordEventsGet,
   listUsersUsersGet,
   promoteUserToAdminUsersUserIdPromoteAdminPost,
+  searchUsersUsersSearchGet,
   updateUserPasswordUsersMePasswordPut,
   updateUserUsersUserIdPut,
 } from '@/client/sdk.gen'
@@ -14,6 +15,7 @@ import type {
   GetUserResponse,
   ListUserResponse,
   PasswordEventByActorResponseItem,
+  SearchUserResponse,
 } from '@/client/types.gen'
 import type {
   CreateUserInput,
@@ -22,7 +24,7 @@ import type {
   UpdateUserPasswordInput,
   UserRepository,
 } from '@/application/ports/UserRepository'
-import type { User, UserPasswordEvent } from '@/domain/user/User'
+import type { SearchUser, User, UserPasswordEvent } from '@/domain/user/User'
 import { IncorrectOldPasswordError, UserDomainError, UserNotFoundError } from '@/domain/user/errors'
 
 /**
@@ -50,6 +52,12 @@ export class BackendUserRepository implements UserRepository {
     const response = await listUsersUsersGet()
     this.throwIfError(response.error, response.response?.status)
     return (response.data ?? []).map(listItemToUser)
+  }
+
+  async search(query: string): Promise<SearchUser[]> {
+    const response = await searchUsersUsersSearchGet({ query: { q: query } })
+    this.throwIfError(response.error, response.response?.status)
+    return (response.data ?? []).map(searchItemToSearchUser)
   }
 
   async create(input: CreateUserInput): Promise<string> {
@@ -153,6 +161,14 @@ function basicToUser(dto: GetUserResponse): User {
     roles: dto.roles ?? [],
     personalGroupId: null,
     isSso: false,
+  }
+}
+
+function searchItemToSearchUser(dto: SearchUserResponse): SearchUser {
+  return {
+    id: dto.id,
+    username: dto.username,
+    name: dto.name,
   }
 }
 
