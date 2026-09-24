@@ -114,9 +114,6 @@
         <span class="ml-2 transition-colors" :class="{ 'font-semibold': isProfileActive }">{{
           t('components.mainMenu.profile')
         }}</span>
-        <span class="ml-auto border border-surface rounded bg-emphasis text-muted-color text-xs p-1"
-          >⌘+W</span
-        >
       </div>
       <div v-if="isAdmin">
         <div
