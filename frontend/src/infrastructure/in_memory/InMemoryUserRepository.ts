@@ -69,6 +69,16 @@ export class InMemoryUserRepository implements UserRepository {
     return Array.from(this.storage.values())
   }
 
+  async search(query: string): Promise<User[]> {
+    const needle = query.toLowerCase()
+    return Array.from(this.storage.values()).filter(
+      (u) =>
+        u.id.toLowerCase().includes(needle) ||
+        u.name.toLowerCase().includes(needle) ||
+        u.username.toLowerCase().includes(needle),
+    )
+  }
+
   async create(input: CreateUserInput): Promise<string> {
     const id = this.idGenerator()
     const user: User = {

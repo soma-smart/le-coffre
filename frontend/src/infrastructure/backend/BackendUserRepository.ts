@@ -6,6 +6,7 @@ import {
   listPasswordEventsByActorAdminUsersUserIdPasswordEventsGet,
   listUsersUsersGet,
   promoteUserToAdminUsersUserIdPromoteAdminPost,
+  searchUsersUsersSearchGet,
   updateUserPasswordUsersMePasswordPut,
   updateUserUsersUserIdPut,
 } from '@/client/sdk.gen'
@@ -14,6 +15,7 @@ import type {
   GetUserResponse,
   ListUserResponse,
   PasswordEventByActorResponseItem,
+  SearchUserResponse,
 } from '@/client/types.gen'
 import type {
   CreateUserInput,
@@ -50,6 +52,12 @@ export class BackendUserRepository implements UserRepository {
     const response = await listUsersUsersGet()
     this.throwIfError(response.error, response.response?.status)
     return (response.data ?? []).map(listItemToUser)
+  }
+
+  async search(query: string): Promise<User[]> {
+    const response = await searchUsersUsersSearchGet({ query: { q: query } })
+    this.throwIfError(response.error, response.response?.status)
+    return (response.data ?? []).map(searchItemToUser)
   }
 
   async create(input: CreateUserInput): Promise<string> {
@@ -145,6 +153,18 @@ function meToUser(dto: GetUserMeResponse): User {
 }
 
 function basicToUser(dto: GetUserResponse): User {
+  return {
+    id: dto.id,
+    username: dto.username,
+    email: dto.email,
+    name: dto.name,
+    roles: dto.roles ?? [],
+    personalGroupId: null,
+    isSso: false,
+  }
+}
+
+function searchItemToUser(dto: SearchUserResponse): User {
   return {
     id: dto.id,
     username: dto.username,

@@ -35,6 +35,8 @@ export interface UserRepository {
   getCurrent(): Promise<User | null>
   get(userId: string): Promise<User>
   list(): Promise<User[]>
+  /** `query` is expected to be at least 3 characters; matches id/name/username. */
+  search(query: string): Promise<User[]>
   create(input: CreateUserInput): Promise<string>
   update(input: UpdateUserInput): Promise<void>
   updatePassword(input: UpdateUserPasswordInput): Promise<void>

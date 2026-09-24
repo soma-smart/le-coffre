@@ -30,6 +30,7 @@ from .user import (
     user_list_routes,
     user_me_routes,
     user_promote_admin_routes,
+    user_search_routes,
     user_update_password_routes,
     user_update_routes,
 )
@@ -40,6 +41,9 @@ def get_user_management_router():
 
     user_management_router.include_router(user_me_routes.router)
     user_management_router.include_router(user_update_password_routes.router)
+    # Must come before user_get_routes: otherwise GET /users/{user_id} would
+    # swallow /users/search as a user_id path param.
+    user_management_router.include_router(user_search_routes.router)
     user_management_router.include_router(user_get_routes.router)
     user_management_router.include_router(user_create_routes.router)
     user_management_router.include_router(user_promote_admin_routes.router)

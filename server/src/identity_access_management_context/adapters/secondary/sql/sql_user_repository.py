@@ -2,7 +2,7 @@ import json
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import String, cast, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -78,6 +78,29 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             for row in results
         ]
 
+    def search(self, query: str) -> list[User]:
+        pattern = f"%{self._escape_like(query)}%"
+        statement = select(UserTable).where(
+            or_(
+                UserTable.name.ilike(pattern, escape="\\"),
+                UserTable.username.ilike(pattern, escape="\\"),
+                cast(UserTable.id, String).ilike(pattern, escape="\\"),
+            )
+        )
+        results = self._session.exec(statement).all()
+        return [
+            User(
+                id=row.id,
+                username=row.username,
+                email=row.email,
+                name=row.name,
+                roles=json.loads(row.roles),
+                current_refresh_token_jti=row.current_refresh_token_jti,
+                session_invalid_before=self._normalize_datetime(row.session_invalid_before),
+            )
+            for row in results
+        ]
+
     def save(self, user: User) -> None:
         user_dict = vars(user).copy()
         user_dict["roles"] = json.dumps(user.roles)
@@ -129,3 +152,8 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
         if value.tzinfo is None:
             return value.replace(tzinfo=UTC)
         return value
+
+    @staticmethod
+    def _escape_like(value: str) -> str:
+        """Escape LIKE/ILIKE wildcards so `search()` matches `query` literally."""
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
