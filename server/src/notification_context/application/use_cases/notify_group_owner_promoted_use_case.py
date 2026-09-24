@@ -15,7 +15,17 @@ class NotifyGroupOwnerPromotedUseCase(TracedUseCase):
         self._email_gateway = email_gateway
 
     def execute(self, command: NotifyGroupOwnerPromotedCommand) -> None:
-        details = self._group_ownership_gateway.get_owner_promotion_details(command.user_id, command.group_id)
+        try:
+            details = self._group_ownership_gateway.get_owner_promotion_details(command.user_id, command.group_id)
+        except Exception:  # noqa: BLE001 - reactive/courtesy send: an unexpected lookup failure must never surface as an error on the already-successful promotion request
+            logger.error(
+                "Failed to look up owner-promotion details for user=%s group=%s",
+                command.user_id,
+                command.group_id,
+                exc_info=True,
+            )
+            return
+
         if details is None:
             logger.warning(
                 "No owner-promotion details found for user=%s group=%s; skipping notification email",
