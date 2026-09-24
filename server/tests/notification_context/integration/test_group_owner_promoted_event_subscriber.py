@@ -4,6 +4,7 @@ from identity_access_management_context.adapters.primary.private_api import (
     GroupOwnershipInfoApi,
 )
 from identity_access_management_context.adapters.secondary.sql import (
+    SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlUserRepository,
 )
@@ -23,6 +24,7 @@ def test_given_promotion_event_when_handled_should_send_owner_promotion_email_en
     added_by_user_id = uuid4()
     SqlUserRepository(session).save(User(id=user_id, username="alice", email="alice@example.com", name="Alice"))
     SqlGroupRepository(session).save_group(Group(id=group_id, name="Development Team", is_personal=False))
+    SqlGroupMemberRepository(session).add_member(group_id, user_id, is_owner=True)
 
     group_ownership_info_api = GroupOwnershipInfoApi(session_maker=session_maker)
     group_ownership_gateway = PrivateApiGroupOwnershipGateway(group_ownership_info_api)

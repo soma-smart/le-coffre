@@ -43,11 +43,14 @@ class GroupOwnershipInfoApi:
 
     def get_owner_info(self, user_id: UUID, group_id: UUID) -> GroupOwnerInfo | None:
         with self._session_maker() as session:
+            group_member_repository = SqlGroupMemberRepository(session)
+            if not group_member_repository.is_owner(group_id, user_id):
+                return None
             try:
                 user = GetUserUseCase(SqlUserRepository(session)).execute(GetUserCommand(user_id=user_id))
-                group_response = GetGroupUseCase(
-                    SqlGroupRepository(session), SqlGroupMemberRepository(session)
-                ).execute(GetGroupCommand(group_id=group_id))
+                group_response = GetGroupUseCase(SqlGroupRepository(session), group_member_repository).execute(
+                    GetGroupCommand(group_id=group_id)
+                )
             except (UserNotFoundError, GroupNotFoundException):
                 return None
             return GroupOwnerInfo(email=user.email, display_name=user.name, group_name=group_response.group.name)
