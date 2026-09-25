@@ -10,9 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class NotifyGroupOwnerPromotedUseCase(TracedUseCase):
-    def __init__(self, group_ownership_gateway: GroupOwnershipGateway, email_gateway: EmailGateway):
+    def __init__(self, group_ownership_gateway: GroupOwnershipGateway, email_gateway: EmailGateway, app_base_url: str):
         self._group_ownership_gateway = group_ownership_gateway
         self._email_gateway = email_gateway
+        self._app_base_url = app_base_url
 
     def execute(self, command: NotifyGroupOwnerPromotedCommand) -> None:
         try:
@@ -35,7 +36,11 @@ class NotifyGroupOwnerPromotedUseCase(TracedUseCase):
             return
 
         subject = f'You\'re now an owner of "{details.group_name}"'
-        body = f'Hi {details.display_name}, you\'ve been made an owner of the group "{details.group_name}".'
+        body = (
+            f"Hello {details.display_name},\n\n"
+            f'You\'ve been made an owner of the group "{details.group_name}".\n\n'
+            f"{self._app_base_url}/groups"
+        )
 
         try:
             self._email_gateway.send(to=details.email, subject=subject, body=body)

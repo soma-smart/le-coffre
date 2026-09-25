@@ -29,7 +29,9 @@ def test_given_promotion_event_when_handled_should_send_owner_promotion_email_en
     group_ownership_info_api = GroupOwnershipInfoApi(session_maker=session_maker)
     group_ownership_gateway = PrivateApiGroupOwnershipGateway(group_ownership_info_api)
     email_gateway = SmtpEmailGateway(host=smtpd.hostname, port=smtpd.port, from_address="noreply@le-coffre.local")
-    notify_use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    notify_use_case = NotifyGroupOwnerPromotedUseCase(
+        group_ownership_gateway, email_gateway, app_base_url="https://le-coffre.example.com"
+    )
     subscriber = GroupOwnerPromotedEventSubscriber(notify_use_case)
 
     event = OwnerAddedToGroupEvent(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
@@ -39,5 +41,7 @@ def test_given_promotion_event_when_handled_should_send_owner_promotion_email_en
     message = smtpd.messages[0]
     assert message["To"] == "alice@example.com"
     assert message["Subject"] == 'You\'re now an owner of "Development Team"'
-    assert "Alice" in message.get_payload()
-    assert "Development Team" in message.get_payload()
+    payload = message.get_payload()
+    assert "Alice" in payload
+    assert "Development Team" in payload
+    assert "https://le-coffre.example.com/groups" in payload
