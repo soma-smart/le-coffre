@@ -90,6 +90,7 @@ Open with VSCode and reopen in the devcontainer when prompted. The unified devco
 3. Use VS Code tasks to start services (`Ctrl+Shift+P` → "Tasks: Run Task"):
    - **Start All Services** — nginx + backend + frontend (runs inside the dev container)
    - **Run Keycloak (local SSO)** — starts a local Keycloak for testing the SSO flow and prints the credentials on every run. Works from inside the dev container (the `docker-outside-of-docker` feature gives it the Docker CLI + host socket) or from a host terminal.
+   - **Run Mailpit (local SMTP catcher)** — starts a local Mailpit instance that captures every outgoing email (any recipient) for viewing in its web UI. Works from inside the dev container or from a host terminal.
 
 See [.devcontainer/README.md](.devcontainer/README.md) for detailed instructions.
 
@@ -105,6 +106,14 @@ Run the **Run Keycloak (local SSO)** VS Code task — or, from the host, `docker
 - Then "Login with SSO" using the seeded user: `testuser` / `password`
 
 > The discovery URL uses `keycloak:8080` because the **backend** reaches Keycloak over the Docker network, while the **browser** is redirected to `http://localhost:8180` to log in — Keycloak is configured to keep the issuer consistent across both. It runs in-memory (`start-dev`), so the realm re-imports on each start. The realm lives in `dev/keycloak/lecoffre-realm.json` and the `keycloak` service in `docker-compose.dev.yml` (behind the `sso` compose profile). Stop it with `docker compose -f docker-compose.dev.yml --profile sso down`.
+
+### Testing emails locally (Mailpit)
+
+Run the **Run Mailpit (local SMTP catcher)** VS Code task — or, from the host, `docker compose -f docker-compose.dev.yml --profile mail up -d mailpit`. The devcontainer already points `SMTP_HOST`/`SMTP_PORT` at it, so starting it is all you need — no restart:
+
+- Mailpit web UI: <http://localhost:8025> — every email the backend sends shows up here, for any recipient address (nothing is delivered for real, so there's no "test inbox" address to remember)
+
+> The backend (same Docker network) reaches it at `mailpit:1025`; the browser reaches the web UI at `localhost:8025`, published directly to the host the same way Keycloak's console is. The `mailpit` service in `docker-compose.dev.yml` sits behind the `mail` compose profile. Stop it with `docker compose -f docker-compose.dev.yml --profile mail down`.
 
 **Access Points:**
 

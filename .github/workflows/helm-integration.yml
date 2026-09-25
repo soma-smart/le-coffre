@@ -115,6 +115,23 @@ jobs:
         with:
           version: v3.17.3
 
+      - name: Lint chart
+        run: helm lint ./helm/le-coffre -f ./helm/le-coffre/values-ci.yaml
+
+      - name: Validate chart renders with SMTP auth configured
+        # helm lint doesn't fail on missing `required` values (it only prints
+        # INFO), so the required-field checks are covered by the real
+        # "Deploy with Helm" step below instead. This step covers the one
+        # remaining optional SMTP path that step doesn't exercise: a relay
+        # that needs credentials (username + an external secret).
+        run: |
+          helm template le-coffre ./helm/le-coffre \
+            -f ./helm/le-coffre/values-ci.yaml \
+            --set config.smtp.username=test-user \
+            --set config.smtp.tlsMode=starttls \
+            --set config.smtp.existingSecretName=le-coffre-smtp \
+            > /dev/null
+
       - name: Enable Minikube ingress addon
         run: |
           minikube addons enable ingress

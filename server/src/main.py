@@ -39,6 +39,12 @@ from config import (
     get_rate_limit_vault_sensitive_max_requests,
     get_rate_limit_vault_sensitive_window_seconds,
     get_rate_limit_window_seconds,
+    get_smtp_from_address,
+    get_smtp_host,
+    get_smtp_password,
+    get_smtp_port,
+    get_smtp_tls_mode,
+    get_smtp_username,
     get_sso_allow_private_networks,
 )
 from identity_access_management_context.adapters.primary.fastapi.routes import (
@@ -77,6 +83,8 @@ from shared_kernel.adapters.primary.request_id_middleware import (
 )
 from shared_kernel.adapters.secondary import (
     InMemoryDomainEventPublisher,
+    SmtpEmailGateway,
+    SmtpTlsMode,
     UtcTimeGateway,
 )
 from vault_management_context.adapters.primary.fastapi.routes import (
@@ -195,6 +203,17 @@ async def lifespan(app: FastAPI):
     # Domain event publisher (stateless)
     domain_event_publisher = InMemoryDomainEventPublisher()
     app.state.domain_event_publisher = domain_event_publisher
+
+    # Email gateway (stateless)
+    email_gateway = SmtpEmailGateway(
+        host=get_smtp_host(),
+        port=get_smtp_port(),
+        from_address=get_smtp_from_address(),
+        username=get_smtp_username(),
+        password=get_smtp_password(),
+        tls_mode=SmtpTlsMode(get_smtp_tls_mode()),
+    )
+    app.state.email_gateway = email_gateway
 
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()

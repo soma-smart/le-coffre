@@ -30,6 +30,13 @@ config:
     existingSecretName: "le-coffre-db"
   rateLimit:
     enabled: false
+  # No mail server runs in this CI cluster — nothing sends email yet, so these
+  # just need to be present (.invalid is IANA-reserved, guaranteed non-resolving).
+  smtp:
+    host: "smtp.ci.invalid"
+    port: 25
+    fromAddress: "noreply@ci.invalid"
+    tlsMode: "none"
 
 persistence:
   enabled: true

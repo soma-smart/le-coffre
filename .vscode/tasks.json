@@ -81,6 +81,24 @@
       }
     },
     {
+      "label": "Run Mailpit (local SMTP catcher)",
+      "detail": "Start the local Mailpit SMTP catcher. Works from inside the dev container (via docker-outside-of-docker) or from a host terminal.",
+      "type": "shell",
+      "command": "docker compose -f docker-compose.dev.yml --profile mail up -d mailpit && echo '' && echo '==================== Le Coffre local SMTP catcher (Mailpit) ====================' && echo ' Web UI : http://localhost:8025   (every outgoing email lands here, any recipient)' && echo '' && echo ' The backend already points at it (SMTP_HOST=mailpit, SMTP_PORT=1025) — no restart needed.' && echo '=================================================================================='",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": true
+      }
+    },
+    {
       "label": "Run Keycloak (local SSO)",
       "detail": "Start the local Keycloak SSO provider and print its credentials. Works from inside the dev container (via docker-outside-of-docker) or from a host terminal.",
       "type": "shell",
