@@ -10,6 +10,7 @@ from notification_context.domain.value_objects import OwnerPromotionNotification
 def test_given_promoted_user_when_notifying_should_send_email_to_new_owner(
     group_ownership_gateway,
     email_gateway,
+    app_base_url,
 ):
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -19,7 +20,7 @@ def test_given_promoted_user_when_notifying_should_send_email_to_new_owner(
         group_id,
         OwnerPromotionNotification(email="alice@example.com", display_name="Alice", group_name="Development Team"),
     )
-    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway, app_base_url)
     command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
 
     use_case.execute(command)
@@ -28,17 +29,22 @@ def test_given_promoted_user_when_notifying_should_send_email_to_new_owner(
     sent = email_gateway.sent_emails[0]
     assert sent["to"] == "alice@example.com"
     assert sent["subject"] == 'You\'re now an owner of "Development Team"'
-    assert sent["body"] == 'Hi Alice, you\'ve been made an owner of the group "Development Team".'
+    assert sent["body"] == (
+        "Hello Alice,\n\n"
+        'You\'ve been made an owner of the group "Development Team".\n\n'
+        "https://le-coffre.example.com/groups"
+    )
 
 
 def test_given_gateway_returns_no_details_when_notifying_should_not_send_email(
     group_ownership_gateway,
     email_gateway,
+    app_base_url,
 ):
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
     added_by_user_id = UUID("323e4567-e89b-12d3-a456-426614174002")
-    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway, app_base_url)
     command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
 
     use_case.execute(command)
@@ -49,6 +55,7 @@ def test_given_gateway_returns_no_details_when_notifying_should_not_send_email(
 def test_given_email_delivery_fails_when_notifying_should_swallow_error_and_log(
     group_ownership_gateway,
     email_gateway,
+    app_base_url,
     caplog: pytest.LogCaptureFixture,
 ):
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
@@ -60,7 +67,7 @@ def test_given_email_delivery_fails_when_notifying_should_swallow_error_and_log(
         OwnerPromotionNotification(email="alice@example.com", display_name="Alice", group_name="Development Team"),
     )
     email_gateway.fail_next_send()
-    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway, app_base_url)
     command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
 
     with caplog.at_level(
@@ -76,6 +83,7 @@ def test_given_email_delivery_fails_when_notifying_should_swallow_error_and_log(
 def test_given_email_delivery_failed_once_when_notifying_again_should_send_normally(
     group_ownership_gateway,
     email_gateway,
+    app_base_url,
 ):
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -86,7 +94,7 @@ def test_given_email_delivery_failed_once_when_notifying_again_should_send_norma
         OwnerPromotionNotification(email="alice@example.com", display_name="Alice", group_name="Development Team"),
     )
     email_gateway.fail_next_send()
-    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway, app_base_url)
     command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
     use_case.execute(command)  # first call: swallowed failure, per fail_next_send()
 
@@ -98,13 +106,14 @@ def test_given_email_delivery_failed_once_when_notifying_again_should_send_norma
 def test_given_gateway_lookup_raises_when_notifying_should_swallow_error_and_log(
     group_ownership_gateway,
     email_gateway,
+    app_base_url,
     caplog: pytest.LogCaptureFixture,
 ):
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
     added_by_user_id = UUID("323e4567-e89b-12d3-a456-426614174002")
     group_ownership_gateway.fail_next_lookup()
-    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway, app_base_url)
     command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
 
     with caplog.at_level(
@@ -125,6 +134,7 @@ def test_given_gateway_lookup_raises_when_notifying_should_swallow_error_and_log
 def test_given_lookup_failed_once_when_notifying_again_should_send_normally(
     group_ownership_gateway,
     email_gateway,
+    app_base_url,
 ):
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
@@ -135,7 +145,7 @@ def test_given_lookup_failed_once_when_notifying_again_should_send_normally(
         OwnerPromotionNotification(email="alice@example.com", display_name="Alice", group_name="Development Team"),
     )
     group_ownership_gateway.fail_next_lookup()
-    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway)
+    use_case = NotifyGroupOwnerPromotedUseCase(group_ownership_gateway, email_gateway, app_base_url)
     command = NotifyGroupOwnerPromotedCommand(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
     use_case.execute(command)  # first call: swallowed failure, per fail_next_lookup()
 

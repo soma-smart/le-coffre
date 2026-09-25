@@ -13,3 +13,8 @@ def group_ownership_gateway():
 @pytest.fixture
 def email_gateway():
     return FakeEmailGateway()
+
+
+@pytest.fixture
+def app_base_url():
+    return "https://le-coffre.example.com"
