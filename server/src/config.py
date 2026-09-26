@@ -7,6 +7,12 @@ def get_database_url():
     return os.environ.get("DATABASE_URL", "sqlite:///local_db.sqlite")
 
 
+def get_app_base_url() -> str:
+    """External base URL of the application, used for SSO callbacks and for
+    building absolute links back into the app (e.g. in emails)."""
+    return os.environ.get("APP_BASE_URL", "http://localhost:8123")
+
+
 def get_jwt_secret_key() -> str:
     """
     Get JWT secret key from environment variable.

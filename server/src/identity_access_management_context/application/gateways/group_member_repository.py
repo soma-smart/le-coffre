@@ -21,6 +21,15 @@ class GroupMemberRepository(Protocol):
         """Check if a user is an owner of a group."""
         ...
 
+    def promote_to_owner(self, group_id: UUID, user_id: UUID) -> bool:
+        """Atomically mark an existing member as owner.
+
+        Returns True only for the call that actually performed the non-owner -> owner
+        transition, so concurrent duplicate promotion requests resolve to exactly one
+        winner instead of racing on a separate is_owner() check + add_member() write.
+        """
+        ...
+
     def get_members(self, group_id: UUID) -> list[GroupMember]:
         """Get all members of a group."""
         ...

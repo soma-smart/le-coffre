@@ -13,7 +13,7 @@ This test covers the entire group management system in one comprehensive workflo
 from uuid import uuid4
 
 
-def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, client_factory):
+def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, client_factory, caplog):
     """
     Complete groups workflow covering all group management features step by step.
     """
@@ -347,15 +347,25 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     assert owner_user_id in group_before["members"]
     assert owner_user_id not in group_before["owners"]
 
-    # Step 6.4: Promote owner_user to owner
-    add_owner_response = authenticated_admin_client.post(
-        f"/api/groups/{ownership_group_id}/owners", json={"user_id": owner_user_id}
-    )
+    # Step 6.4: Promote owner_user to owner. This also fires a reactive, swallow-on-failure
+    # owner-promotion email via OwnerAddedToGroupEvent — a broken swallow would turn this 201
+    # into a 500, so this assertion doubles as that regression check.
+    with caplog.at_level(
+        "ERROR", logger="notification_context.application.use_cases.notify_group_owner_promoted_use_case"
+    ):
+        add_owner_response = authenticated_admin_client.post(
+            f"/api/groups/{ownership_group_id}/owners", json={"user_id": owner_user_id}
+        )
     assert add_owner_response.status_code == 201
     add_owner_result = add_owner_response.json()
     assert add_owner_result["group_id"] == ownership_group_id
     assert add_owner_result["user_id"] == owner_user_id
     assert add_owner_result["message"] == "Owner added successfully"
+    # SMTP is deliberately unreachable in the test environment, so this ERROR log line proves
+    # the reactive notification subscriber actually ran end to end, not just that the HTTP call succeeded.
+    assert any("owner-promotion email" in rec.getMessage() for rec in caplog.records), (
+        "expected the reactive notification handler to have run and logged the swallowed SMTP failure"
+    )
 
     # Step 6.5: Verify owner_user is now an owner and no longer in members
     get_group_after = authenticated_admin_client.get(f"/api/groups/{ownership_group_id}")
