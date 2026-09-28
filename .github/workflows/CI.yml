@@ -294,6 +294,7 @@ jobs:
           SMTP_PORT: "25"
           SMTP_FROM_ADDRESS: noreply@ci.invalid
           SMTP_TLS_MODE: none
+          APP_BASE_URL: http://localhost:8123
         run: |
           # Start FastAPI in background
           uv run fastapi dev src/main.py --host 0.0.0.0 --port 8000 &

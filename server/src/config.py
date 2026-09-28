@@ -9,8 +9,14 @@ def get_database_url():
 
 def get_app_base_url() -> str:
     """External base URL of the application, used for SSO callbacks and for
-    building absolute links back into the app (e.g. in emails)."""
-    return os.environ.get("APP_BASE_URL", "http://localhost:8123")
+    building absolute links back into the app (e.g. in emails). Required — a
+    localhost fallback would silently ship broken links and SSO redirects."""
+    base_url = os.environ.get("APP_BASE_URL")
+    if not base_url:
+        raise ValueError(
+            "APP_BASE_URL is required. Set it to your application's public URL (e.g. https://le-coffre.yourdomain.com)."
+        )
+    return base_url.rstrip("/")
 
 
 def get_jwt_secret_key() -> str:

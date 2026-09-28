@@ -60,6 +60,7 @@ def env_vars():
     os.environ["SMTP_PORT"] = "25"
     os.environ["SMTP_FROM_ADDRESS"] = "noreply@test.invalid"
     os.environ["SMTP_TLS_MODE"] = "none"
+    os.environ["APP_BASE_URL"] = "http://localhost:8123"
     yield
     for key in (
         "JWT_SECRET_KEY",
@@ -75,5 +76,6 @@ def env_vars():
         "SMTP_PORT",
         "SMTP_FROM_ADDRESS",
         "SMTP_TLS_MODE",
+        "APP_BASE_URL",
     ):
         os.environ.pop(key, None)
