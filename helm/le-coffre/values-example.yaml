@@ -152,6 +152,27 @@ config:
     # otlpEndpoint: "http://otel-collector.monitoring.svc.cluster.local:4318"
     # serviceName: "le-coffre"
 
+  # Email (SMTP) — required. host, port, fromAddress and tlsMode must all be
+  # set explicitly; there is no default that would silently point nowhere.
+  smtp:
+    host: "smtp.yourprovider.com"
+    port: 587
+    fromAddress: "noreply@yourdomain.com"
+    # username: "smtp-user"
+    # TLS mode: "none", "implicit" (SMTPS), or "starttls". MUST be "implicit"
+    # or "starttls" if username is set — the backend refuses to start
+    # otherwise (credentials must never be sent in cleartext).
+    tlsMode: "starttls"
+    #
+    # SMTP_PASSWORD is managed via an external Kubernetes secret (required
+    # when username is set and password below isn't):
+    #   kubectl create secret generic le-coffre-smtp \
+    #     --from-literal=SMTP_PASSWORD="..." \
+    #     -n le-coffre
+    # existingSecretName: "le-coffre-smtp"
+    # Alternatively, pass it at deploy time (not recommended for production):
+    # password: ""
+
 # =============================================================================
 # Image pull secrets
 # =============================================================================

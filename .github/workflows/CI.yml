@@ -284,6 +284,16 @@ jobs:
 
       - name: Start FastAPI server
         working-directory: server/
+        env:
+          # SMTP_* have no defaults (email delivery must actually work in
+          # production, so config.py refuses to fall back silently) — the app
+          # crashes at startup without them. Nothing here sends email, so
+          # these just need to be present (.invalid is IANA-reserved, guaranteed
+          # non-resolving).
+          SMTP_HOST: smtp.ci.invalid
+          SMTP_PORT: "25"
+          SMTP_FROM_ADDRESS: noreply@ci.invalid
+          SMTP_TLS_MODE: none
         run: |
           # Start FastAPI in background
           uv run fastapi dev src/main.py --host 0.0.0.0 --port 8000 &

@@ -140,6 +140,7 @@
             },
             "accessTokenExpirationMinutes": { "type": "integer", "minimum": 1 },
             "refreshTokenExpirationHours": { "type": "integer", "minimum": 1 },
+            "sessionMaxLifetimeHours": { "type": "integer", "minimum": 1 },
             "existingSecretName": { "type": "string" },
             "secretKey": { "type": "string" }
           }
@@ -148,9 +149,19 @@
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
+            "windowSeconds": { "type": "integer", "minimum": 1 },
+            "userMaxRequests": { "type": "integer", "minimum": 1 },
+            "unauthMaxRequests": { "type": "integer", "minimum": 1 },
             "authMaxRequests": { "type": "integer", "minimum": 1 },
-            "apiMaxRequests": { "type": "integer", "minimum": 1 },
-            "windowSeconds": { "type": "integer", "minimum": 1 }
+            "trustedProxies": { "type": "string" },
+            "trustedProxyHops": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "loginLockout": {
+          "type": "object",
+          "properties": {
+            "maxFailedAttempts": { "type": "integer", "minimum": 1 },
+            "lockoutSeconds": { "type": "integer", "minimum": 1 }
           }
         },
         "logging": {
@@ -168,9 +179,22 @@
             "tracesSampler": { "type": "string" },
             "tracesSamplerArg": { "type": "string" }
           }
+        },
+        "smtp": {
+          "type": "object",
+          "properties": {
+            "host": { "type": "string" },
+            "port": { "type": ["integer", "string"] },
+            "fromAddress": { "type": "string" },
+            "username": { "type": "string" },
+            "tlsMode": { "type": "string", "enum": ["", "none", "implicit", "starttls"] },
+            "existingSecretName": { "type": "string" },
+            "password": { "type": "string" }
+          },
+          "required": ["host", "port", "fromAddress", "tlsMode"]
         }
       },
-      "required": ["environment", "appBaseUrl", "database", "jwt"]
+      "required": ["environment", "appBaseUrl", "database", "jwt", "smtp"]
     },
     "ingress": {
       "type": "object",

@@ -11,6 +11,14 @@ data:
   JWT_REFRESH_TOKEN_EXPIRATION_HOURS: {{ .Values.config.jwt.refreshTokenExpirationHours | quote }}
   SESSION_MAX_LIFETIME_HOURS: {{ .Values.config.jwt.sessionMaxLifetimeHours | quote }}
   APP_BASE_URL: {{ required "config.appBaseUrl is required. Set it to your application's public URL (e.g. https://le-coffre.yourdomain.com)" .Values.config.appBaseUrl | quote }}
+  # Email (SMTP)
+  SMTP_HOST: {{ required "config.smtp.host is required. Set it to your SMTP relay's hostname." .Values.config.smtp.host | quote }}
+  SMTP_PORT: {{ required "config.smtp.port is required. Set it to your SMTP relay's port." .Values.config.smtp.port | quote }}
+  SMTP_FROM_ADDRESS: {{ required "config.smtp.fromAddress is required. Set it to the address outgoing emails should come from." .Values.config.smtp.fromAddress | quote }}
+  SMTP_TLS_MODE: {{ required "config.smtp.tlsMode is required. Set it to \"none\", \"implicit\", or \"starttls\"." .Values.config.smtp.tlsMode | quote }}
+  {{- if .Values.config.smtp.username }}
+  SMTP_USERNAME: {{ .Values.config.smtp.username | quote }}
+  {{- end }}
   # Rate limiting
   RATE_LIMIT_ENABLED: {{ .Values.config.rateLimit.enabled | toString | quote }}
   RATE_LIMIT_WINDOW_SECONDS: {{ .Values.config.rateLimit.windowSeconds | quote }}

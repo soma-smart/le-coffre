@@ -189,6 +189,29 @@ config:
     otlpEndpoint: ""
     serviceName: "le-coffre"
 
+  # Email (SMTP) — required. host, port, fromAddress and tlsMode must all be
+  # set explicitly: email delivery must actually work, so the chart refuses
+  # to fall back to a value (e.g. "localhost") that would silently point
+  # nowhere.
+  smtp:
+    host: ""
+    port: ""
+    fromAddress: ""
+    username: ""
+    # TLS mode: "none", "implicit" (SMTPS), or "starttls". Required — no
+    # default, so a deployment can't end up unencrypted by omission.
+    # MUST be "implicit" or "starttls" if username is set — the backend
+    # refuses to start otherwise (credentials must never be sent in cleartext).
+    tlsMode: ""
+    # Option 1 (recommended): provide an external secret created before deploying.
+    #   kubectl create secret generic le-coffre-smtp \
+    #     --from-literal=SMTP_PASSWORD="..." \
+    #     -n <namespace>
+    # Then set existingSecretName to the name of that secret.
+    existingSecretName: ""
+    # Option 2 (not recommended for production): let Helm manage the secret.
+    # password: ""
+
 # =============================================================================
 # Image pull secrets
 # =============================================================================

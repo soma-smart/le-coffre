@@ -53,6 +53,13 @@ def env_vars():
     # The e2e OIDC mock is bound to http://localhost; relax the SSRF guard so the
     # SSO discovery/token/userinfo flow can reach it. Production defaults to strict.
     os.environ["SSO_ALLOW_PRIVATE_NETWORKS"] = "true"
+    # SMTP_* have no defaults (email delivery must actually work in production, so
+    # config.py refuses to silently fall back) — the app boots SmtpEmailGateway
+    # unconditionally, so these must be set even though no test ever sends mail.
+    os.environ["SMTP_HOST"] = "smtp.test.invalid"
+    os.environ["SMTP_PORT"] = "25"
+    os.environ["SMTP_FROM_ADDRESS"] = "noreply@test.invalid"
+    os.environ["SMTP_TLS_MODE"] = "none"
     yield
     for key in (
         "JWT_SECRET_KEY",
@@ -64,5 +71,9 @@ def env_vars():
         "RATE_LIMIT_VAULT_SENSITIVE_MAX_REQUESTS",
         "LOGIN_LOCKOUT_SECONDS",
         "SSO_ALLOW_PRIVATE_NETWORKS",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_FROM_ADDRESS",
+        "SMTP_TLS_MODE",
     ):
         os.environ.pop(key, None)
