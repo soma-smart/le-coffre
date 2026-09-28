@@ -73,7 +73,7 @@ The following table lists the main configurable parameters. See `values.yaml` fo
 | `config.jwt.existingSecretName` | Name of pre-existing secret containing `JWT_SECRET_KEY` | `""` (required) |
 | `config.jwt.secretKey` | Let Helm manage the JWT secret (not recommended for production) | `""` |
 | `config.database.existingSecretName` | Name of pre-existing secret containing `DATABASE_URL` | `"le-coffre-db"` |
-| `config.appBaseUrl` | Application base URL (required) | `""` |
+| `config.appBaseUrl` | Application public base URL, used for SSO callbacks and email links (required, must start with `http://` or `https://`) | `""` |
 | `config.smtp.host` | SMTP relay hostname (required) | `""` |
 | `config.smtp.port` | SMTP relay port (required) | `""` |
 | `config.smtp.fromAddress` | From address for outgoing emails (required) | `""` |
