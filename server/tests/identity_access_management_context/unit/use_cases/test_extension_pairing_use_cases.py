@@ -244,6 +244,16 @@ class TestApprovalPage:
         assert details.expires_at == NOW + timedelta(seconds=PAIRING_LIFETIME)
         assert details.access_lifetime_seconds == TOKEN_LIFETIME
 
+    def test_should_measure_the_time_left_by_the_server_clock(self, start_use_case, get_use_case, time_provider, user):
+        # The page counts this down instead of comparing expires_at with its
+        # own clock, which may be minutes off either way.
+        started = _start(start_use_case, PkceVerifier.generate())
+        time_provider.set_current_time(NOW + timedelta(seconds=100))
+
+        result = get_use_case.execute(GetExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+        assert result.seconds_left == PAIRING_LIFETIME - 100
+
     def test_should_report_missing_when_the_pairing_has_expired(
         self, start_use_case, get_use_case, time_provider, user
     ):
