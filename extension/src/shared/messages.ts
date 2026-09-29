@@ -119,4 +119,5 @@ export type OffscreenRequest =
   | { type: 'OFFSCREEN_CLEAR' }
 
 /** Offscreen document → service worker, one per request, on the same port. */
-export type OffscreenReply = { ok: true } | { ok: false; error: 'MALFORMED_REQUEST' }
+export type OffscreenReply =
+  { ok: true } | { ok: false; error: 'MALFORMED_REQUEST' | 'COPY_FAILED' }

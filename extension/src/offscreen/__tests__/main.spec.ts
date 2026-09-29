@@ -133,6 +133,23 @@ describe('handling a request', () => {
     expect(port.postMessage).toHaveBeenCalledWith({ ok: true })
   })
 
+  it('should say so when the browser refused the copy, and schedule no clear', () => {
+    // execCommand returns false when the copy did not happen. Reporting ok
+    // regardless made the popup say "Copied" over an unchanged clipboard;
+    // now it shows its CLIPBOARD_UNAVAILABLE panel and the user retries.
+    vi.useFakeTimers()
+    const port = fakePort()
+    connect(port)
+    execCommand.mockReturnValue(false)
+
+    port.send({ type: 'OFFSCREEN_COPY', value: 's3cret', clearAfterSeconds: 30 })
+
+    expect(port.postMessage).toHaveBeenCalledWith({ ok: false, error: 'COPY_FAILED' })
+    vi.advanceTimersByTime(60_000)
+    expect(execCommand).toHaveBeenCalledTimes(1)
+    expect(sendMessage).not.toHaveBeenCalled()
+  })
+
   it('should overwrite with a single space when asked to clear', () => {
     // Not '': copying from an empty textarea is a no-op on some platforms.
     const port = fakePort()

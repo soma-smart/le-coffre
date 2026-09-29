@@ -22,25 +22,32 @@ const sink = document.getElementById('sink') as HTMLTextAreaElement
 
 let clearTimer: ReturnType<typeof setTimeout> | undefined
 
-function writeToClipboard(value: string): void {
+/**
+ * Returns what `execCommand` reports. It answers false when the copy did not
+ * happen (no clipboard access, a platform without one), and a false that is
+ * dropped becomes a popup saying "Copied" over an unchanged clipboard.
+ */
+function writeToClipboard(value: string): boolean {
   sink.value = value
   sink.select()
   // Deprecated, but the only clipboard write available without document focus.
-  document.execCommand('copy')
+  const copied = document.execCommand('copy')
   sink.value = ''
+  return copied
 }
 
-function clearClipboard(): void {
+function clearClipboard(): boolean {
   // A single space, not '', copying from an empty textarea is a no-op on some
   // platforms, which would leave the secret sitting in the clipboard.
-  writeToClipboard(' ')
+  return writeToClipboard(' ')
 }
 
 function handle(request: OffscreenRequest): OffscreenReply {
   clearTimeout(clearTimer)
 
   if (request.type === 'OFFSCREEN_COPY') {
-    writeToClipboard(request.value)
+    // Nothing to schedule a clear for when nothing was written.
+    if (!writeToClipboard(request.value)) return { ok: false, error: 'COPY_FAILED' }
 
     if (request.clearAfterSeconds !== null) {
       clearTimer = setTimeout(() => {
@@ -51,8 +58,7 @@ function handle(request: OffscreenRequest): OffscreenReply {
     return { ok: true }
   }
 
-  clearClipboard()
-  return { ok: true }
+  return clearClipboard() ? { ok: true } : { ok: false, error: 'COPY_FAILED' }
 }
 
 /**
