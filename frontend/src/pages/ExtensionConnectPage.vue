@@ -1,37 +1,40 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useToast } from 'primevue'
+import { useToast } from 'primevue/usetoast'
 import type { ExtensionPairingDetails } from '@/domain/extension/Extension'
 import { ExtensionDomainError, TooManyConnectedExtensionsError } from '@/domain/extension/errors'
 import { useContainer } from '@/plugins/container'
-import { useCsrfStore } from '@/stores/csrf'
-import { isAuthenticated } from '@/utils/auth'
 import BlankLayout from '../layouts/BlankLayout.vue'
 
-// The pairing code arrives in the URL fragment, never the query string. The
-// router guard redirects unauthenticated visitors with `redirect=to.fullPath`,
-// and fullPath includes the query, so a `?code=` would end up written into the
-// SPA host's nginx access log on the way to /login. The fragment never leaves
-// the browser.
+// The pairing code is typed here, off the extension popup. It used to arrive
+// in the URL and the page asked the user to check it against the extension,
+// which let whoever wrote the link supply the reference value: an attacker
+// could register a pairing and send the victim a link on the real vault
+// domain. Nothing about this page is reachable from a link now: it takes no
+// query, no fragment, and a code the user has to read off their own popup.
 const router = useRouter()
 const toast = useToast()
 const { extensions } = useContainer()
-const handoff = extensions.handoff
-const csrfStore = useCsrfStore()
 
-const status = ref<'loading' | 'signed-out' | 'ready' | 'error' | 'done'>('loading')
+const status = ref<'enter-code' | 'ready' | 'done'>('enter-code')
+const codeInput = ref('')
+const codeError = ref<string | null>(null)
+const lookingUp = ref(false)
 const pairing = ref<ExtensionPairingDetails | null>(null)
-const errorMessage = ref<string | null>(null)
 const submitting = ref(false)
 const outcome = ref<'approved' | 'denied' | null>(null)
 
-const userCode = ref<string | null>(null)
-
 // Ticks the countdown below. A deadline the user cannot see is one they can
-// only discover by having Approve fail, after they have already signed in.
+// only discover by having Approve fail.
 const now = ref(Date.now())
 let ticker: ReturnType<typeof setInterval> | undefined
+
+onMounted(() => {
+  ticker = setInterval(() => (now.value = Date.now()), 1000)
+})
+
+onUnmounted(() => clearInterval(ticker))
 
 const secondsLeft = computed(() => {
   if (!pairing.value) return 0
@@ -59,8 +62,8 @@ const requestedAgo = computed(() => {
  * How long the credential would last, in the plainest terms available.
  *
  * Deliberately the granted lifetime and not `pairing.expiresAt`, which is when
- * this request stops being approvable, five minutes away. Showing that here
- * told the user they were authorising five minutes of access when they were
+ * this request stops being approvable, minutes away. Showing that here told
+ * the user they were authorising ten minutes of access when they were
  * authorising thirty days, on the one screen whose whole job is informed
  * consent.
  */
@@ -74,87 +77,35 @@ const accessLifetimeLabel = computed(() => {
   return minutes === 1 ? '1 minute' : `${minutes} minutes`
 })
 
-function readCodeFromFragment(): string | null {
-  const fragment = window.location.hash.replace(/^#/, '')
-  if (!fragment) return null
-  const parsed = new URLSearchParams(fragment)
-  return parsed.get('code')
-}
-
-onMounted(async () => {
-  ticker = setInterval(() => (now.value = Date.now()), 1000)
-
-  // Read and stash the code before anything can navigate away, then scrub the
-  // fragment so a shoulder-surfer or a screenshot does not carry it.
-  const fromFragment = readCodeFromFragment()
-  if (fromFragment) {
-    handoff.rememberPairingCode(fromFragment)
-    window.history.replaceState(null, '', window.location.pathname)
-  }
-
-  userCode.value = fromFragment ?? handoff.recallPairingCode()
-
-  if (!userCode.value) {
-    status.value = 'error'
-    errorMessage.value =
-      'No pairing code was supplied. Start the connection again from your extension.'
-    return
-  }
-
-  if (!isAuthenticated()) {
-    // The redirect target deliberately carries no fragment: the handoff port
-    // already holds the code, and reads it back when this page mounts again.
-    status.value = 'signed-out'
-    return
-  }
-
-  // This route is `meta.public`, so router.beforeEach returns before reaching
-  // the block that primes the CSRF token for authenticated routes. Approve and
-  // Refuse are POSTs, and the request interceptor in customClient.ts attaches
-  // X-CSRF-Token only from an already-cached value: it deliberately never
-  // fetches from inside an interceptor, to avoid a nested request during login.
-  // Nothing else on this page would fill that cache, so without this call the
-  // first Approve fails with "CSRF token missing".
-  if (!(await csrfStore.getToken())) {
-    status.value = 'error'
-    errorMessage.value = 'Could not establish a secure session. Reload the page and try again.'
-    return
-  }
-
-  await loadPairing()
-})
-
-async function loadPairing() {
-  status.value = 'loading'
+async function lookUp() {
+  if (lookingUp.value) return
+  codeError.value = null
+  lookingUp.value = true
   try {
-    pairing.value = await extensions.getPairing.execute({ userCode: userCode.value as string })
-    if (pairing.value.isResolved) {
-      status.value = 'error'
-      errorMessage.value = 'This connection request has already been handled.'
+    // The use case normalises what was typed and refuses anything that is not
+    // a code before it reaches the network.
+    const found = await extensions.getPairing.execute({ userCode: codeInput.value })
+    if (found.isResolved) {
+      codeError.value = 'This connection request has already been handled.'
       return
     }
+    pairing.value = found
     status.value = 'ready'
   } catch (error) {
-    status.value = 'error'
-    errorMessage.value =
+    codeError.value =
       error instanceof ExtensionDomainError
         ? error.message
         : 'This pairing request is invalid or has expired'
+  } finally {
+    lookingUp.value = false
   }
 }
 
-onUnmounted(() => clearInterval(ticker))
-
-function goToSignIn() {
-  router.push({ path: '/login', query: { redirect: '/extension/connect' } })
-}
-
 async function approve() {
-  if (!userCode.value) return
+  if (!pairing.value) return
   submitting.value = true
   try {
-    await extensions.approvePairing.execute({ userCode: userCode.value })
-    handoff.forgetPairingCode()
+    await extensions.approvePairing.execute({ userCode: pairing.value.userCode })
     outcome.value = 'approved'
     status.value = 'done'
   } catch (error) {
@@ -179,11 +130,10 @@ async function approve() {
 }
 
 async function deny() {
-  if (!userCode.value) return
+  if (!pairing.value) return
   submitting.value = true
   try {
-    await extensions.denyPairing.execute({ userCode: userCode.value })
-    handoff.forgetPairingCode()
+    await extensions.denyPairing.execute({ userCode: pairing.value.userCode })
     outcome.value = 'denied'
     status.value = 'done'
   } catch (error) {
@@ -210,18 +160,63 @@ async function deny() {
         <template #title>Connect a browser extension</template>
 
         <template #content>
-          <div v-if="status === 'loading'" class="flex justify-center py-10">
-            <ProgressSpinner style="width: 42px; height: 42px" />
-          </div>
+          <form
+            v-if="status === 'enter-code'"
+            class="flex flex-col gap-5"
+            data-testid="code-form"
+            @submit.prevent="lookUp"
+          >
+            <p>
+              When you click <strong>Connect</strong> in your Le Coffre extension, it shows a
+              pairing code. Type that code here to review the request.
+            </p>
 
-          <div v-else-if="status === 'signed-out'" class="flex flex-col gap-4 py-4">
-            <p>Sign in to decide whether to connect this extension to your account.</p>
-            <Button label="Sign in to continue" @click="goToSignIn" />
-          </div>
+            <div class="flex flex-col gap-2">
+              <label for="pairing-code" class="text-sm font-medium"
+                >Code shown in your extension</label
+              >
+              <InputText
+                id="pairing-code"
+                v-model="codeInput"
+                placeholder="XXXX-XXXX"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                class="font-mono text-2xl tracking-widest uppercase"
+                :disabled="lookingUp"
+                :invalid="codeError !== null"
+                data-testid="pairing-code-input"
+              />
+              <Message
+                v-if="codeError"
+                severity="error"
+                size="small"
+                variant="simple"
+                data-testid="pairing-code-error"
+              >
+                {{ codeError }}
+              </Message>
+            </div>
 
-          <Message v-else-if="status === 'error'" severity="error" :closable="false">
-            {{ errorMessage }}
-          </Message>
+            <!-- The anti-phishing rule, stated where the code goes in. A code
+                 that reached the user any other way than their own popup is
+                 someone else's pairing. -->
+            <Message severity="warn" :closable="false" data-testid="phishing-warning">
+              Only type a code you are reading off your own extension right now. If someone sent you
+              a code, or a link to this page, do not enter it: approving it would connect
+              <em>their</em> extension to your account.
+            </Message>
+
+            <div class="flex justify-end">
+              <Button
+                type="submit"
+                label="Review request"
+                :loading="lookingUp"
+                :disabled="!codeInput.trim()"
+                data-testid="lookup-button"
+              />
+            </div>
+          </form>
 
           <div v-else-if="status === 'done'" class="flex flex-col gap-4 py-4">
             <Message :severity="outcome === 'approved' ? 'success' : 'info'" :closable="false">
@@ -234,21 +229,16 @@ async function deny() {
           </div>
 
           <div v-else-if="pairing" class="flex flex-col gap-5">
-            <!-- The whole anti-phishing ceremony. Nothing else in this flow lets
-                 the user tell "my extension asked for this" from "some page
-                 asked for this", so the code is the loudest thing on screen. -->
             <div
               class="flex flex-col items-center gap-2 rounded-lg bg-surface-100 p-5 dark:bg-surface-800"
             >
-              <p class="text-center text-sm">
-                Check that this code matches the one shown in your extension:
-              </p>
+              <p class="text-center text-sm">Request for the code you entered:</p>
               <p class="font-mono text-3xl font-bold tracking-widest" data-testid="pairing-code">
                 {{ pairing.userCode }}
               </p>
               <!-- The deadline, where the user is already looking. Without it,
-                   the only way to find out the request timed out during sign-in
-                   is to have Approve fail. -->
+                   the only way to find out the request timed out is to have
+                   Approve fail. -->
               <p
                 v-if="!hasExpired"
                 class="text-xs text-surface-500"
@@ -261,6 +251,9 @@ async function deny() {
               </p>
             </div>
 
+            <!-- What gives away a request that is not the user's own: a foreign
+                 address, a device name they do not recognise. The name is
+                 self-reported by the extension and labelled as such. -->
             <div class="flex flex-col gap-2 text-sm">
               <p>
                 Requested <strong>{{ requestedAgo }}</strong>
@@ -293,8 +286,8 @@ async function deny() {
             </Message>
 
             <Message severity="warn" :closable="false" data-testid="phishing-warning">
-              If you did not just click Connect in your Le Coffre extension, close this page and do
-              not approve.
+              If the address or device above is not yours, or you did not just click Connect in your
+              own Le Coffre extension, refuse: this request came from somewhere else.
             </Message>
 
             <div class="flex justify-end gap-2">

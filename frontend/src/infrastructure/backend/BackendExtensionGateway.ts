@@ -12,6 +12,8 @@ import {
   ConnectedExtensionNotFoundError,
   ExtensionDomainError,
   ExtensionPairingUnavailableError,
+  ExtensionServerError,
+  ExtensionSessionLostError,
   TooManyConnectedExtensionsError,
 } from '@/domain/extension/errors'
 
@@ -52,7 +54,7 @@ export class BackendExtensionGateway implements ExtensionGateway {
       if (response.response?.status === 409) {
         throw new TooManyConnectedExtensionsError(extractDetail(response.error) ?? undefined)
       }
-      throw new ExtensionPairingUnavailableError(extractDetail(response.error) ?? undefined)
+      throw toDecisionError(response.response?.status, response.error)
     }
   }
 
@@ -62,7 +64,7 @@ export class BackendExtensionGateway implements ExtensionGateway {
     })
 
     if (response.error) {
-      throw new ExtensionPairingUnavailableError(extractDetail(response.error) ?? undefined)
+      throw toDecisionError(response.response?.status, response.error)
     }
   }
 
@@ -113,6 +115,21 @@ export class BackendExtensionGateway implements ExtensionGateway {
 
     return response.data.revoked_count
   }
+}
+
+/**
+ * Approve and Refuse share this. Two statuses mean something other than "the
+ * pairing is gone", and telling the user to start again from the extension
+ * would be wrong for both: a 403 is the CSRF token, which only a reload
+ * restores, and a 5xx is the backend, which a retry may get past. Everything
+ * else (400, 404) is the deliberately indistinguishable "invalid or expired".
+ */
+function toDecisionError(status: number | undefined, error: unknown): ExtensionDomainError {
+  // The backend's own wording ("CSRF token missing", "Internal Server Error")
+  // names the cause, not the remedy, so these two keep their fixed message.
+  if (status === 403) return new ExtensionSessionLostError()
+  if (status !== undefined && status >= 500) return new ExtensionServerError()
+  return new ExtensionPairingUnavailableError(extractDetail(error) ?? undefined)
 }
 
 function extractDetail(error: unknown): string | null {
