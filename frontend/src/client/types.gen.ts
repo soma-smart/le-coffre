@@ -510,6 +510,12 @@ export type GetExtensionPairingResponse = {
      */
     expires_at: string;
     /**
+     * Seconds Left
+     *
+     * Seconds until the request expires, by the server's clock
+     */
+    seconds_left: number;
+    /**
      * Access Lifetime Seconds
      */
     access_lifetime_seconds: number;
@@ -1271,6 +1277,16 @@ export type RemoveMemberFromGroupResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * RevokeAllExtensionTokensForUserResponse
+ */
+export type RevokeAllExtensionTokensForUserResponse = {
+    /**
+     * Revoked Count
+     */
+    revoked_count: number;
 };
 
 /**
@@ -3639,3 +3655,33 @@ export type RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses = {
 };
 
 export type RevokeExtensionTokenExtensionTokensTokenIdDeleteResponse = RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses[keyof RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses];
+
+export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * User Id
+         */
+        user_id: string;
+    };
+    query?: never;
+    url: '/admin/users/{user_id}/extension-tokens';
+};
+
+export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteError = RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteErrors[keyof RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteErrors];
+
+export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: RevokeAllExtensionTokensForUserResponse;
+};
+
+export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponse = RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses[keyof RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses];
