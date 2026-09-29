@@ -109,7 +109,14 @@ export type PushEvent =
   | { type: 'EVENT'; event: 'CONNECTION_CHANGED' }
   | { type: 'EVENT'; event: 'CLIPBOARD_CLEARED' }
 
-/** Service worker → offscreen document. Separate channel, carries the secret. */
+/**
+ * Service worker → offscreen document, over the named port in
+ * messageSchemas.ts rather than `runtime.sendMessage`: OFFSCREEN_COPY carries
+ * the secret, and a broadcast reaches every listener in the extension.
+ */
 export type OffscreenRequest =
   | { type: 'OFFSCREEN_COPY'; value: string; clearAfterSeconds: number | null }
   | { type: 'OFFSCREEN_CLEAR' }
+
+/** Offscreen document → service worker, one per request, on the same port. */
+export type OffscreenReply = { ok: true } | { ok: false; error: 'MALFORMED_REQUEST' }

@@ -6,6 +6,9 @@
  * method to the `Browser` port instead, that is what keeps the Firefox port a
  * second adapter rather than a rewrite.
  */
+import { OFFSCREEN_PORT_NAME, offscreenReplySchema } from '@/shared/messageSchemas'
+import type { OffscreenRequest } from '@/shared/messages'
+
 import type { Browser, StorageArea } from '../browser'
 
 function area(storage: chrome.storage.StorageArea): StorageArea {
@@ -56,24 +59,12 @@ export const chromeBrowser: Browser = {
   clipboard: {
     async copy(value: string, clearAfterSeconds: number | null): Promise<boolean> {
       if (!(await ensureOffscreenDocument())) return false
-      try {
-        await chrome.runtime.sendMessage({
-          type: 'OFFSCREEN_COPY',
-          value,
-          clearAfterSeconds,
-        })
-        return true
-      } catch {
-        return false
-      }
+      return askOffscreen({ type: 'OFFSCREEN_COPY', value, clearAfterSeconds })
     },
     async clear(): Promise<void> {
       if (!(await ensureOffscreenDocument())) return
-      try {
-        await chrome.runtime.sendMessage({ type: 'OFFSCREEN_CLEAR' })
-      } catch {
-        // Nothing to recover: the clipboard already holds whatever it holds.
-      }
+      // Nothing to recover on failure: the clipboard holds whatever it holds.
+      await askOffscreen({ type: 'OFFSCREEN_CLEAR' })
     },
   },
 
@@ -81,7 +72,9 @@ export const chromeBrowser: Browser = {
     getUrl: (path) => chrome.runtime.getURL(path),
     sendMessage: <T>(message: unknown) => chrome.runtime.sendMessage(message) as Promise<T>,
     onMessage(handler) {
-      chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (!isOwnPage(sender)) return false
+
         // Returning `true` keeps the channel open for the async reply. Without
         // it Chrome closes the port the moment this listener returns and the
         // caller's promise resolves with undefined.
@@ -90,6 +83,52 @@ export const chromeBrowser: Browser = {
       })
     },
   },
+}
+
+/**
+ * Only this extension's own pages get an answer: the popup and the offscreen
+ * document. Another extension can address ours by id if the manifest ever
+ * grows `externally_connectable`, and a message carrying a tab comes from a
+ * content script, of which this extension has none. Neither is a caller.
+ */
+function isOwnPage(sender: chrome.runtime.MessageSender): boolean {
+  return sender.id === chrome.runtime.id && sender.tab === undefined
+}
+
+/**
+ * One request to the offscreen document, one reply, over a named port.
+ *
+ * Not `runtime.sendMessage`: that is a broadcast to every listener in the
+ * extension, and OFFSCREEN_COPY carries the secret. A port connects to the
+ * document that accepted it and nothing else. Chrome disconnects it at once
+ * when nobody is listening, which is the "no offscreen document" failure.
+ */
+function askOffscreen(request: OffscreenRequest): Promise<boolean> {
+  return new Promise((resolve) => {
+    let port: chrome.runtime.Port
+    try {
+      port = chrome.runtime.connect({ name: OFFSCREEN_PORT_NAME })
+    } catch {
+      resolve(false)
+      return
+    }
+
+    const settle = (outcome: boolean) => {
+      resolve(outcome)
+      try {
+        port.disconnect()
+      } catch {
+        // Already gone.
+      }
+    }
+
+    port.onMessage.addListener((reply: unknown) => {
+      const parsed = offscreenReplySchema.safeParse(reply)
+      settle(parsed.success && parsed.data.ok)
+    })
+    port.onDisconnect.addListener(() => settle(false))
+    port.postMessage(request)
+  })
 }
 
 /**

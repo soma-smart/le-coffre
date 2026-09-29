@@ -6,7 +6,8 @@
  * switch would only surface at runtime, as a popup that hangs.
  */
 import { err, type Result } from '@/domain/errors'
-import type { Request, RequestType } from '@/shared/messages'
+import { requestSchema } from '@/shared/messageSchemas'
+import type { RequestType } from '@/shared/messages'
 
 import type { Deps } from './deps'
 import { copyToClipboard } from './handlers/clipboard'
@@ -37,17 +38,23 @@ const HANDLERS: Record<RequestType, Handler> = {
  * Run one request. Never throws across the message boundary: an exception here
  * would reach the popup as a bare "message port closed" with no diagnostic
  * value, so everything becomes a Result.
+ *
+ * The message is validated, not cast. Anything on the runtime channel reaches
+ * this function, and a handler given `{ type: 'ENTRIES_LIST' }` with no
+ * groupId would otherwise fail somewhere far from the cause.
  */
 export async function route(deps: Deps, message: unknown): Promise<Result<unknown>> {
-  const request = message as Request
-  const handler = request?.type ? HANDLERS[request.type] : undefined
-
-  if (!handler) {
+  const parsed = requestSchema.safeParse(message)
+  if (!parsed.success) {
+    const type = (message as { type?: unknown } | null)?.type
     return err({
       kind: 'PROTOCOL_MISMATCH',
-      detail: `unknown request "${String((request as { type?: unknown })?.type)}"`,
+      detail: typeof type === 'string' ? `malformed request "${type}"` : 'malformed request',
     })
   }
+
+  const request = parsed.data
+  const handler = HANDLERS[request.type]
 
   try {
     return await handler(deps, request as never)

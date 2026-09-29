@@ -11,7 +11,8 @@
  * `document.execCommand('copy')` is the working path, and the reason
  * `clipboardWrite` is declared in the manifest.
  */
-import type { OffscreenRequest } from '@/shared/messages'
+import { OFFSCREEN_PORT_NAME, offscreenRequestSchema } from '@/shared/messageSchemas'
+import type { OffscreenReply, OffscreenRequest } from '@/shared/messages'
 
 // This document is itself a Chrome-specific adapter (Firefox has no offscreen
 // API), so eslint.config.ts exempts src/offscreen/ from the browser-globals
@@ -35,27 +36,47 @@ function clearClipboard(): void {
   writeToClipboard(' ')
 }
 
-chrome.runtime.onMessage.addListener((message: OffscreenRequest, _sender, sendResponse) => {
-  if (message.type === 'OFFSCREEN_COPY') {
-    clearTimeout(clearTimer)
-    writeToClipboard(message.value)
+function handle(request: OffscreenRequest): OffscreenReply {
+  clearTimeout(clearTimer)
 
-    if (message.clearAfterSeconds !== null) {
+  if (request.type === 'OFFSCREEN_COPY') {
+    writeToClipboard(request.value)
+
+    if (request.clearAfterSeconds !== null) {
       clearTimer = setTimeout(() => {
         clearClipboard()
         void chrome.runtime.sendMessage({ type: 'EVENT', event: 'CLIPBOARD_CLEARED' })
-      }, message.clearAfterSeconds * 1000)
+      }, request.clearAfterSeconds * 1000)
     }
-    sendResponse({ ok: true })
-    return true
+    return { ok: true }
   }
 
-  if (message.type === 'OFFSCREEN_CLEAR') {
-    clearTimeout(clearTimer)
-    clearClipboard()
-    sendResponse({ ok: true })
-    return true
+  clearClipboard()
+  return { ok: true }
+}
+
+/**
+ * Requests arrive over a named port from the service worker, never as a
+ * broadcast: OFFSCREEN_COPY carries the secret. Anything else that connects,
+ * another extension, a page, a port under another name, is dropped without a
+ * reply, and a message that does not parse gets a typed refusal rather than a
+ * handler reading fields that are not there.
+ */
+chrome.runtime.onConnect.addListener((port) => {
+  const ownWorker =
+    port.name === OFFSCREEN_PORT_NAME &&
+    port.sender?.id === chrome.runtime.id &&
+    port.sender?.tab === undefined
+  if (!ownWorker) {
+    port.disconnect()
+    return
   }
 
-  return false
+  port.onMessage.addListener((message: unknown) => {
+    const parsed = offscreenRequestSchema.safeParse(message)
+    const reply: OffscreenReply = parsed.success
+      ? handle(parsed.data)
+      : { ok: false, error: 'MALFORMED_REQUEST' }
+    port.postMessage(reply)
+  })
 })

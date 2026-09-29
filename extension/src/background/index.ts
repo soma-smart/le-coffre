@@ -30,9 +30,9 @@ const deps: Deps = {
 }
 
 deps.browser.runtime.onMessage(async (message) => {
-  // Offscreen traffic shares the runtime channel. Leave it to that document.
-  const type = (message as { type?: string })?.type
-  if (type?.startsWith('OFFSCREEN_') || type === 'EVENT') return undefined
+  // The offscreen document announces a clipboard clear on this channel; there
+  // is nothing to answer it with. Everything else is a popup request.
+  if ((message as { type?: unknown } | null)?.type === 'EVENT') return undefined
 
   return route(deps, message)
 })
