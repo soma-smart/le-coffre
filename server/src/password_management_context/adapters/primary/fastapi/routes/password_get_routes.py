@@ -49,7 +49,11 @@ def get_password(
       so it reaches only what its own user can read.
     """
     try:
-        command = GetPasswordCommand(requester_id=principal.user.user_id, password_id=password_id)
+        command = GetPasswordCommand(
+            requester_id=principal.user.user_id,
+            password_id=password_id,
+            credential_kind=principal.kind,
+        )
         decrypted_password = usecase.execute(command)
 
         return GetPasswordResponse(password=decrypted_password)
