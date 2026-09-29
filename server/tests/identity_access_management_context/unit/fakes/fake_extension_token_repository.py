@@ -5,8 +5,12 @@ from identity_access_management_context.domain.entities import ExtensionToken
 
 
 class FakeExtensionTokenRepository:
-    def __init__(self):
+    def __init__(self, dormant_after: timedelta | None = None):
         self.tokens: dict[UUID, ExtensionToken] = {}
+        # Mirrors the SQL repository: inactivity is part of what "active"
+        # means for the count and the cap. None keeps the older behaviour for
+        # tests that do not care.
+        self.dormant_after = dormant_after
         # Records every touch_last_used call, including the ones the coarsening
         # window swallows, so a test can assert on the attempt as well as the
         # effect.
@@ -40,7 +44,9 @@ class FakeExtensionTokenRepository:
         )
 
     def count_active_for_user(self, user_id: UUID, now: datetime) -> int:
-        return sum(1 for token in self.tokens.values() if token.user_id == user_id and token.is_active(now))
+        return sum(
+            1 for token in self.tokens.values() if token.user_id == user_id and token.is_active(now, self.dormant_after)
+        )
 
     def revoke(self, token_id: UUID, now: datetime) -> bool:
         token = self.tokens.get(token_id)

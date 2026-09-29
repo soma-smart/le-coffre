@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, cast
 from uuid import UUID
 
-from sqlalchemy import insert, literal
+from sqlalchemy import and_, insert, literal, or_
 from sqlmodel import Session, col, func, select, update
 
 from identity_access_management_context.adapters.secondary.sql.model.extension_token_model import (
@@ -16,8 +16,15 @@ from shared_kernel.utils import as_utc, to_naive_utc
 
 
 class SqlExtensionTokenRepository(SQLBaseRepository, ExtensionTokenRepository):
-    def __init__(self, session: Session):
+    def __init__(self, session: Session, dormant_after: timedelta | None = None):
+        """`dormant_after` is the inactivity limit, see ExtensionToken.is_active.
+
+        A repository parameter rather than one on every method: it is a policy
+        of what "active" means, fixed for the deployment, and the callers that
+        count active tokens should not each have to carry it.
+        """
         super().__init__(session)
+        self._dormant_after = dormant_after
 
     def add(self, token: ExtensionToken, max_active_tokens: int, now: datetime) -> ExtensionToken | None:
         """Insert the token unless the user is already at the device cap.
@@ -92,16 +99,21 @@ class SqlExtensionTokenRepository(SQLBaseRepository, ExtensionTokenRepository):
     def _active_token_count(self, user_id: UUID, now: datetime):
         # Shared with `add`, where the same predicate becomes the WHERE clause
         # of the insert. One definition of "active" for the count the user is
-        # shown and for the cap that is enforced.
-        return (
-            select(func.count())
-            .select_from(ExtensionTokenTable)
-            .where(
-                cast(Any, ExtensionTokenTable.user_id) == user_id,
-                cast(Any, ExtensionTokenTable.revoked_at).is_(None),
-                cast(Any, ExtensionTokenTable.expires_at) > to_naive_utc(now),
+        # shown and for the cap that is enforced, and the same one the entity
+        # applies in memory: not revoked, not expired, not dormant.
+        predicates = [
+            cast(Any, ExtensionTokenTable.user_id) == user_id,
+            cast(Any, ExtensionTokenTable.revoked_at).is_(None),
+            cast(Any, ExtensionTokenTable.expires_at) > to_naive_utc(now),
+        ]
+        if self._dormant_after is not None:
+            activity_cutoff = to_naive_utc(now - self._dormant_after)
+            last_used_at = cast(Any, ExtensionTokenTable.last_used_at)
+            created_at = cast(Any, ExtensionTokenTable.created_at)
+            predicates.append(
+                or_(last_used_at > activity_cutoff, and_(last_used_at.is_(None), created_at > activity_cutoff))
             )
-        )
+        return select(func.count()).select_from(ExtensionTokenTable).where(*predicates)
 
     def revoke(self, token_id: UUID, now: datetime) -> bool:
         # Conditional UPDATE, so a second revoke leaves the original timestamp

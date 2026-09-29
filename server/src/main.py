@@ -22,6 +22,7 @@ from alembic import command
 from config import (
     get_app_base_url,
     get_database_url,
+    get_extension_token_inactivity_seconds,
     get_jwt_access_token_expiration_seconds,
     get_jwt_algorithm,
     get_jwt_refresh_token_expiration_seconds,
@@ -246,6 +247,7 @@ async def lifespan(app: FastAPI):
     app.state.rate_limit_one_time_link_max_requests = get_rate_limit_one_time_link_max_requests()
     app.state.rate_limit_extension_pairing_max_requests = get_rate_limit_extension_pairing_max_requests()
     app.state.rate_limit_bearer_miss_max_requests = get_rate_limit_bearer_miss_max_requests()
+    app.state.extension_token_inactivity_seconds = get_extension_token_inactivity_seconds()
     app.state.rate_limit_window_seconds = get_rate_limit_window_seconds()
     app.state.rate_limit_trusted_proxies = get_rate_limit_trusted_proxies()
     app.state.rate_limit_trusted_proxy_hops = get_rate_limit_trusted_proxy_hops()

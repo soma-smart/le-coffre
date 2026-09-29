@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
@@ -5,6 +7,7 @@ from starlette.requests import Request
 from config import (
     get_extension_pairing_lifetime_seconds,
     get_extension_pairing_poll_interval_seconds,
+    get_extension_token_inactivity_seconds,
     get_extension_token_lifetime_seconds,
     get_max_active_service_accounts_per_group,
     get_rate_limit_trusted_proxies,
@@ -168,7 +171,9 @@ def get_extension_pairing_repository(
 def get_extension_token_repository(
     session: Session = Depends(get_session),
 ) -> ExtensionTokenRepository:
-    return SqlExtensionTokenRepository(session)
+    return SqlExtensionTokenRepository(
+        session, dormant_after=timedelta(seconds=get_extension_token_inactivity_seconds())
+    )
 
 
 def get_group_repository(session: Session = Depends(get_session)) -> GroupRepository:
@@ -833,7 +838,9 @@ def get_list_extension_tokens_usecase(
     extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
-    return ListExtensionTokensUseCase(extension_token_repository, time_provider)
+    return ListExtensionTokensUseCase(
+        extension_token_repository, time_provider, get_extension_token_inactivity_seconds()
+    )
 
 
 def get_revoke_extension_token_usecase(
