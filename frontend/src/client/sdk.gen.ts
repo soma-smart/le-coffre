@@ -143,9 +143,10 @@ export const lockVaultVaultLockPost = <ThrowOnError extends boolean = false>(opt
  * This endpoint provides information about the vault's operational state:
  * NOT_SETUP, LOCKED, PENDING_UNLOCK, or UNLOCKED.
  *
- * PENDING_UNLOCK is only reported for the given **unlock_session_id**, when that
- * session already holds shares; last_share_timestamp then indicates when the last
- * share was submitted to it. Without a session id, a locked vault is LOCKED.
+ * PENDING_UNLOCK is only reported for the unlock session given in the
+ * **X-Unlock-Session-Id** header, when that session already holds shares;
+ * last_share_timestamp then indicates when the last share was submitted to it.
+ * Without a session id, a locked vault is LOCKED.
  */
 export const getVaultStatusVaultStatusGet = <ThrowOnError extends boolean = false>(options?: Options<GetVaultStatusVaultStatusGetData, ThrowOnError>): RequestResult<GetVaultStatusVaultStatusGetResponses, GetVaultStatusVaultStatusGetErrors, ThrowOnError> => (options?.client ?? client).get<GetVaultStatusVaultStatusGetResponses, GetVaultStatusVaultStatusGetErrors, ThrowOnError>({ url: '/vault/status', ...options });
 

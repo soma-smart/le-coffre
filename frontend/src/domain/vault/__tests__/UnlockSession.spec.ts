@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { generateUnlockSessionId, isValidUnlockSessionId } from '@/domain/vault/UnlockSession'
+import {
+  generateUnlockSessionId,
+  isValidUnlockSessionId,
+  readUnlockSessionIdFromFragment,
+  unlockSessionFragment,
+} from '@/domain/vault/UnlockSession'
 
 describe('generateUnlockSessionId', () => {
   it('generates ids the backend accepts', () => {
@@ -30,4 +35,18 @@ describe('isValidUnlockSessionId', () => {
   ])('rejects %s', (value) => {
     expect(isValidUnlockSessionId(value)).toBe(false)
   })
+})
+
+describe('unlock session fragment', () => {
+  it('round-trips a session id through the URL fragment', () => {
+    expect(unlockSessionFragment('ZOJRGBIZK4XQ7M2P')).toBe('#id=ZOJRGBIZK4XQ7M2P')
+    expect(readUnlockSessionIdFromFragment('#id=ZOJRGBIZK4XQ7M2P')).toBe('ZOJRGBIZK4XQ7M2P')
+  })
+
+  it.each(['', '#', '#id=', '#id=short', '#other=ZOJRGBIZK4XQ7M2P', 'ZOJRGBIZK4XQ7M2P'])(
+    'finds no session id in %j',
+    (fragment) => {
+      expect(readUnlockSessionIdFromFragment(fragment)).toBeNull()
+    },
+  )
 })

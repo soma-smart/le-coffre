@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
 from vault_management_context.adapters.primary.fastapi.app_dependencies import (
@@ -28,8 +28,11 @@ class VaultStatusResponse(BaseModel):
     summary="Get the current status of the vault",
 )
 def get_vault_status(
-    unlock_session_id: str | None = Query(
+    # A header rather than a query parameter: the id is polled every few seconds
+    # and must stay out of access logs, since whoever knows it can add shares.
+    unlock_session_id: str | None = Header(
         default=None,
+        alias="X-Unlock-Session-Id",
         pattern=UNLOCK_SESSION_ID_PATTERN,
         description="Unlock session to report the progress of",
     ),
@@ -41,9 +44,10 @@ def get_vault_status(
     This endpoint provides information about the vault's operational state:
     NOT_SETUP, LOCKED, PENDING_UNLOCK, or UNLOCKED.
 
-    PENDING_UNLOCK is only reported for the given **unlock_session_id**, when that
-    session already holds shares; last_share_timestamp then indicates when the last
-    share was submitted to it. Without a session id, a locked vault is LOCKED.
+    PENDING_UNLOCK is only reported for the unlock session given in the
+    **X-Unlock-Session-Id** header, when that session already holds shares;
+    last_share_timestamp then indicates when the last share was submitted to it.
+    Without a session id, a locked vault is LOCKED.
     """
     try:
         session_id = UnlockSessionId(unlock_session_id) if unlock_session_id is not None else None

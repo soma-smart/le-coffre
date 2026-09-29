@@ -115,12 +115,12 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
   await lockResponse
 
   // Navigate home — router guard calls checkVaultStatus → redirected to the unlock page,
-  // which opens a new unlock session and puts its id in the URL
+  // which opens a new unlock session and puts its id in the URL fragment
   await page.goto('/', { waitUntil: 'commit' })
   await expect(page.getByRole('heading', { name: 'Unlock Vault' })).toBeVisible({
     timeout: 15000,
   })
-  await expect(page).toHaveURL(/\/unlock\?id=[0-9A-Z]{16}$/)
+  await expect(page).toHaveURL(/\/unlock#id=[0-9A-Z]{16}$/)
   const unlockUrl = page.url()
 
   // ── Unlock vault: one share holder, then another joining through the link ──

@@ -10,8 +10,9 @@ from vault_management_context.domain.value_objects import UnlockSessionId
 logger = logging.getLogger(__name__)
 
 # Hard cap on the number of pending unlock shares held in memory for one session.
-# Legitimate accumulation never exceeds the vault's share count (a handful); the cap
-# bounds memory against an anonymous flood on the unauthenticated /vault/unlock endpoint.
+# Legitimate accumulation never exceeds the vault's share count, which UnlockVaultUseCase
+# already enforces; this is a backstop bounding memory against an anonymous flood on the
+# unauthenticated /vault/unlock endpoint.
 # (Deduplication is a domain concern enforced upstream in UnlockVaultUseCase.)
 # When full, newly submitted shares are dropped rather than evicting existing ones:
 # eviction would let an attacker flush already-submitted legitimate shares.
@@ -20,7 +21,14 @@ MAX_PENDING_SHARES_PER_SESSION = 64
 # Hard cap on the number of concurrent unlock sessions. Legitimately there is one,
 # maybe a few abandoned ones. When full, the least recently active session is evicted:
 # refusing new sessions instead would let a flood block every unlock until a restart.
-MAX_PENDING_SESSIONS = 64
+# Eviction is what an attacker can abuse (flooding new sessions pushes out the ceremony
+# in progress), so the cap is set high to make it expensive: with the vault rate limit
+# (30 requests per IP per minute), evicting a session idle for a few minutes takes tens
+# of IPs. Memory stays bounded: the unlock route caps a share at 128 chars and the use
+# case caps a session at the vault's share count, so a full pool holds ~10 MB for a
+# 10-share vault and at most ~65 MB (64 shares per session, the backstop below).
+# See SECURITY.md.
+MAX_PENDING_SESSIONS = 4096
 
 
 @dataclass

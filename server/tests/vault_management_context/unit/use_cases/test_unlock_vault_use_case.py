@@ -381,3 +381,20 @@ def test_given_valid_shares_when_unlocking_vault_should_clear_pending_shares_of_
 
     assert share_repository.get_all(SESSION) == []
     assert share_repository.get_all(OTHER_SESSION) == []
+
+
+def test_given_session_holding_as_many_shares_as_the_vault_when_adding_more_should_drop_them(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    share_repository: FakeShareRepository,
+):
+    # Reconstruction fails (no shamir result configured): shares are stored, up to nb_shares.
+    vault_repository.save_vault_with_shares(nb_shares=3, threshold=2)
+    share_repository.add(SESSION, [Share("0:aa"), Share("1:bb")])
+
+    with pytest.raises(ShareReconstructionError):
+        use_case.execute(UnlockVaultCommand(session_id=SESSION, shares=[Share("2:cc"), Share("3:dd")]))
+    with pytest.raises(ShareReconstructionError):
+        use_case.execute(UnlockVaultCommand(session_id=SESSION, shares=[Share("4:ee")]))
+
+    assert [s.secret for s in share_repository.get_all(SESSION)] == ["0:aa", "1:bb", "2:cc"]

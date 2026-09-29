@@ -19,7 +19,7 @@ import { VaultDomainError } from '@/domain/vault/errors'
 export class BackendVaultRepository implements VaultRepository {
   async getStatus(unlockSessionId?: string): Promise<VaultState> {
     const response = await getVaultStatusVaultStatusGet(
-      unlockSessionId ? { query: { unlock_session_id: unlockSessionId } } : undefined,
+      unlockSessionId ? { headers: { 'X-Unlock-Session-Id': unlockSessionId } } : undefined,
     )
     this.throwIfError(response.error)
     // An empty body on a 200 response is a server bug, not "vault not
