@@ -110,10 +110,6 @@ def _create_app(
     async def vault_unlock():
         return PlainTextResponse("unlock", status_code=202)
 
-    @app.delete("/vault/unlock/clear")
-    async def vault_clear():
-        return PlainTextResponse("clear", status_code=200)
-
     @app.post("/vault/setup")
     async def vault_setup():
         return PlainTextResponse("setup", status_code=201)
@@ -318,14 +314,7 @@ def test_given_vault_status_when_flooded_should_stay_exempt():
             assert c.get("/api/vault/status").status_code == 200
 
 
-# ── Global destructive-op throttle (clear / setup, once per window) ───
-
-
-def test_given_clear_second_call_within_window_should_hit_global_throttle():
-    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, sensitive_window=60)
-    with TestClient(app) as c:
-        assert c.delete("/api/vault/unlock/clear").status_code == 200
-        assert c.delete("/api/vault/unlock/clear").status_code == 429
+# ── Global destructive-op throttle (setup, once per window) ───
 
 
 def test_given_setup_second_call_within_window_should_hit_global_throttle():
@@ -335,22 +324,14 @@ def test_given_setup_second_call_within_window_should_hit_global_throttle():
         assert c.post("/api/vault/setup", json={"nb_shares": 3, "threshold": 2}).status_code == 429
 
 
-def test_given_clear_throttle_is_global_across_ips():
-    # A single shared bucket: a second clear from a DIFFERENT IP is still throttled,
+def test_given_setup_throttle_is_global_across_ips():
+    # A single shared bucket: a second setup from a DIFFERENT IP is still throttled,
     # so rotating IPs does not bypass the once-per-window limit.
     app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, trusted_proxies={"testclient"})
     with TestClient(app) as c:
-        assert c.delete("/api/vault/unlock/clear", headers={"X-Forwarded-For": "203.0.113.1"}).status_code == 200
-        assert c.delete("/api/vault/unlock/clear", headers={"X-Forwarded-For": "203.0.113.2"}).status_code == 429
-
-
-def test_given_clear_and_setup_share_the_same_global_bucket():
-    # clear and setup contend for ONE bucket, so a clear consumes the window for a
-    # subsequent setup (at most one destructive op per window across both routes).
-    app = _create_app(user_max=100, unauth_max=100, vault_max=100, sensitive_max=1, sensitive_window=60)
-    with TestClient(app) as c:
-        assert c.delete("/api/vault/unlock/clear").status_code == 200
-        assert c.post("/api/vault/setup", json={"nb_shares": 3, "threshold": 2}).status_code == 429
+        body = {"nb_shares": 3, "threshold": 2}
+        assert c.post("/api/vault/setup", json=body, headers={"X-Forwarded-For": "203.0.113.1"}).status_code == 201
+        assert c.post("/api/vault/setup", json=body, headers={"X-Forwarded-For": "203.0.113.2"}).status_code == 429
 
 
 def test_given_unlock_when_flooded_should_not_consume_global_throttle():

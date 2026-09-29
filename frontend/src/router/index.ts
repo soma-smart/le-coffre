@@ -61,6 +61,13 @@ const router = createRouter({
       meta: { skipSetupCheck: true },
     },
     {
+      // Share holders pass the link of this page (its `id` query parameter names
+      // the unlock session) to each other to pool their shares.
+      path: '/unlock',
+      name: 'Unlock',
+      component: () => import('@/pages/UnlockPage.vue'),
+    },
+    {
       path: '/login',
       name: 'Login',
       component: () => import('@/pages/LoginPage.vue'),
@@ -163,11 +170,18 @@ router.beforeEach(async (to, from) => {
     await checkVaultStatus()
   }
 
-  // If the vault is locked, stop here and let the global UnlockVaultModal handle it.
+  // If the vault is locked, stop here and send the user to the unlock page.
   // No other backend requests should be made while the vault is locked — most
   // endpoints will fail and cause errors / slow down the page.
-  if (setupStore.isLocked && to.name !== 'Login') {
-    return true
+  // That includes /login: nothing can be done once logged in while locked, and the
+  // 401 interceptor sends expired sessions there.
+  if (setupStore.isLocked) {
+    return to.name === 'Unlock' ? true : { name: 'Unlock' }
+  }
+
+  // An unlock link opened once the vault is already unlocked has nothing left to do.
+  if (to.name === 'Unlock') {
+    return { name: 'Home' }
   }
 
   // If we are not logged in, attempt a silent token refresh before giving up.

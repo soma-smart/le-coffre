@@ -7,7 +7,6 @@ export const VaultStatusKey = Symbol('vaultStatus')
 export type VaultStatus = {
   isLocked: boolean
   isChecking: boolean
-  showUnlockModal: boolean
   status: DomainVaultStatus | null
   lastShareTimestamp: string | null
 }
@@ -16,7 +15,6 @@ export type VaultStatus = {
 const vaultStatus: VaultStatus = reactive({
   isLocked: false,
   isChecking: false,
-  showUnlockModal: false,
   status: null,
   lastShareTimestamp: null,
 })
@@ -47,13 +45,7 @@ export const checkVaultStatus = async (force = false) => {
       vaultStatus.lastShareTimestamp = setupStore.lastShareTimestamp
 
       // Update lock state based on vault status
-      if (setupStore.isLocked) {
-        vaultStatus.isLocked = true
-        vaultStatus.showUnlockModal = true
-      } else {
-        vaultStatus.isLocked = false
-        vaultStatus.showUnlockModal = false
-      }
+      vaultStatus.isLocked = setupStore.isLocked
     } catch (err) {
       console.error('Failed to check vault status:', err)
     } finally {
@@ -68,16 +60,33 @@ export const checkVaultStatus = async (force = false) => {
 // Function to mark vault as unlocked
 export const markVaultUnlocked = () => {
   vaultStatus.isLocked = false
-  vaultStatus.showUnlockModal = false
   vaultStatus.status = 'UNLOCKED'
   vaultStatus.lastShareTimestamp = null
 }
 
-// Function to signal that the vault is locked and the unlock modal should appear.
-// Called by the global HTTP interceptor when a 503 is received mid-session.
-export const triggerVaultUnlock = () => {
-  vaultStatus.isLocked = true
-  vaultStatus.showUnlockModal = true
+// Function to signal that the vault is locked and send the user to the unlock page.
+// Called by the global HTTP interceptor when a 503 is received mid-session, and
+// after an admin locks the vault.
+// Shared pending promise: a burst of 503s must trigger a single status check.
+let pendingUnlockTrigger: Promise<void> | null = null
+
+export const triggerVaultUnlock = (): Promise<void> => {
+  pendingUnlockTrigger ??= (async () => {
+    try {
+      // Refresh first: the router guard only lets a locked vault into the unlock
+      // page, and the cached status may still say UNLOCKED.
+      await checkVaultStatus(true)
+      if (!vaultStatus.isLocked) return
+      // Imported lazily: the router itself depends on this module.
+      const { default: router } = await import('@/router')
+      if (router.currentRoute.value.name !== 'Unlock') {
+        await router.push({ name: 'Unlock' })
+      }
+    } finally {
+      pendingUnlockTrigger = null
+    }
+  })()
+  return pendingUnlockTrigger
 }
 
 export default {

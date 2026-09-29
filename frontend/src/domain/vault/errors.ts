@@ -25,6 +25,13 @@ export class VaultSharesRequiredError extends VaultDomainError {
   }
 }
 
+export class VaultUnlockSessionInvalidError extends VaultDomainError {
+  constructor() {
+    super('The unlock link is invalid')
+    this.name = 'VaultUnlockSessionInvalidError'
+  }
+}
+
 export class VaultThresholdInvalidError extends VaultDomainError {
   constructor() {
     super('Threshold must be between 2 and the total number of shares')

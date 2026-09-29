@@ -47,7 +47,9 @@ class UnlockVaultUseCase(TracedUseCase):
         if vault is None:
             raise VaultNotSetupException()
 
-        existing_shares = self._share_repository.get_all()
+        # Only the shares of this unlock session take part in the reconstruction:
+        # a bad share submitted to another session cannot spoil this one.
+        existing_shares = self._share_repository.get_all(command.session_id)
         # Domain invariant: a share must not count twice toward the threshold.
         # Dedupe the submission against the already-pending pool (and against
         # itself) here, in the application layer, so the store stays a dumb sink.
@@ -64,6 +66,7 @@ class UnlockVaultUseCase(TracedUseCase):
                 master_secret,
             )
 
+            # Once unlocked, every pending session is obsolete, not only this one.
             self._share_repository.clear()
             logger.info("Vault unlocked", extra={"share_count": len(all_shares)})
             event = VaultUnlockedEvent()
@@ -78,7 +81,7 @@ class UnlockVaultUseCase(TracedUseCase):
         except VaultUnlockedError as e:
             raise e
         except Exception as e:
-            self._share_repository.add(new_shares)
+            self._share_repository.add(command.session_id, new_shares)
             raise ShareReconstructionError() from e
 
     @staticmethod
