@@ -1539,15 +1539,16 @@ export type LockVaultVaultLockPostResponse = LockVaultVaultLockPostResponses[key
 
 export type GetVaultStatusVaultStatusGetData = {
     body?: never;
-    path?: never;
-    query?: {
+    headers?: {
         /**
-         * Unlock Session Id
+         * X-Unlock-Session-Id
          *
          * Unlock session to report the progress of
          */
-        unlock_session_id?: string | null;
+        'X-Unlock-Session-Id'?: string | null;
     };
+    path?: never;
+    query?: never;
     url: '/vault/status';
 };
 

@@ -282,7 +282,10 @@
       "shareLinkHelp": "Envoyez ce lien aux autres détenteurs de parts : ils ajouteront leurs parts à ce même déverrouillage.",
       "copyLink": "Copier le lien",
       "linkCopied": "Lien copié",
-      "newSessionButton": "Démarrer un nouveau déverrouillage"
+      "newSessionButton": "Démarrer un nouveau déverrouillage",
+      "newSessionConfirmAccept": "Démarrer un nouveau déverrouillage",
+      "newSessionConfirmHeader": "Démarrer un nouveau déverrouillage",
+      "newSessionConfirmMessage": "Les parts déjà soumises restent dans le déverrouillage en cours et ne seront pas reprises : chaque détenteur devra soumettre à nouveau sa part, via le nouveau lien. Continuer ?"
     }
   },
   "layouts": {

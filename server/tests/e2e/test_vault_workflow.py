@@ -140,7 +140,7 @@ def test_vault_workflow(e2e_client, client_factory):
     assert "More shares needed" in unlock_response.json()["message"]
 
     # Status is PENDING_UNLOCK with a timestamp, for that session only
-    status_response = e2e_client.get("/api/vault/status", params={"unlock_session_id": first_session})
+    status_response = e2e_client.get("/api/vault/status", headers={"X-Unlock-Session-Id": first_session})
     assert status_response.status_code == 200
     status_data = status_response.json()
     assert status_data["status"] == "PENDING_UNLOCK"
@@ -162,7 +162,7 @@ def test_vault_workflow(e2e_client, client_factory):
 
     # A new session is untouched by the pending shares of the others
     new_session = "NEWSESSION000001"
-    status_response = e2e_client.get("/api/vault/status", params={"unlock_session_id": new_session})
+    status_response = e2e_client.get("/api/vault/status", headers={"X-Unlock-Session-Id": new_session})
     status_data = status_response.json()
     assert status_data["status"] == "LOCKED"
     assert status_data.get("last_share_timestamp") is None
@@ -190,7 +190,7 @@ def test_vault_workflow(e2e_client, client_factory):
     e2e_client.post("/api/vault/lock")
 
     # Unlocking discarded the pending shares of every session
-    status_response = e2e_client.get("/api/vault/status", params={"unlock_session_id": first_session})
+    status_response = e2e_client.get("/api/vault/status", headers={"X-Unlock-Session-Id": first_session})
     assert status_response.json()["status"] == "LOCKED"
 
     # === INVALID SHARES: corrupted secrets ===
@@ -212,5 +212,18 @@ def test_vault_workflow(e2e_client, client_factory):
     )
     assert short_session.status_code == 422
 
-    invalid_status = e2e_client.get("/api/vault/status", params={"unlock_session_id": "not valid!"})
+    # === SHARE SIZE LIMITS: bound what an anonymous caller can pile up in memory ===
+    too_long_share = e2e_client.post(
+        "/api/vault/unlock",
+        json={"unlock_session_id": "SIZELIMITS000001", "shares": ["0:" + "a" * 200]},
+    )
+    assert too_long_share.status_code == 422
+
+    too_many_shares = e2e_client.post(
+        "/api/vault/unlock",
+        json={"unlock_session_id": "SIZELIMITS000001", "shares": [f"{i}:aa" for i in range(65)]},
+    )
+    assert too_many_shares.status_code == 422
+
+    invalid_status = e2e_client.get("/api/vault/status", headers={"X-Unlock-Session-Id": "not valid!"})
     assert invalid_status.status_code == 422

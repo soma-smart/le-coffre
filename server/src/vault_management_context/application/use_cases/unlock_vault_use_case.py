@@ -54,6 +54,9 @@ class UnlockVaultUseCase(TracedUseCase):
         # Dedupe the submission against the already-pending pool (and against
         # itself) here, in the application layer, so the store stays a dumb sink.
         new_shares = self._deduplicate(command.shares, existing_shares)
+        # A legitimate session never holds more distinct shares than the vault has:
+        # anything beyond is dropped, bounding what a flood can pile into a session.
+        new_shares = new_shares[: max(vault.nb_shares - len(existing_shares), 0)]
         all_shares = existing_shares + new_shares
 
         try:

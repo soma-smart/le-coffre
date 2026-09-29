@@ -282,7 +282,10 @@
       "shareLinkHelp": "Send this link to the other share holders: they add their shares to this same unlock.",
       "copyLink": "Copy link",
       "linkCopied": "Link copied",
-      "newSessionButton": "Start a new unlock"
+      "newSessionButton": "Start a new unlock",
+      "newSessionConfirmAccept": "Start a new unlock",
+      "newSessionConfirmHeader": "Start a new unlock",
+      "newSessionConfirmMessage": "The shares already submitted stay in the current unlock and will not be carried over: every share holder will have to submit their share again, through the new link. Continue?"
     }
   },
   "layouts": {

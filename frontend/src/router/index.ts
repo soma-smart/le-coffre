@@ -61,8 +61,8 @@ const router = createRouter({
       meta: { skipSetupCheck: true },
     },
     {
-      // Share holders pass the link of this page (its `id` query parameter names
-      // the unlock session) to each other to pool their shares.
+      // Share holders pass the link of this page (its `#id=` fragment names the
+      // unlock session) to each other to pool their shares.
       path: '/unlock',
       name: 'Unlock',
       component: () => import('@/pages/UnlockPage.vue'),

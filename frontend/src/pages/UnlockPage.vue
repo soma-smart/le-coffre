@@ -2,10 +2,15 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
+import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from 'vue-i18n'
 import BlankLayout from '../layouts/BlankLayout.vue'
 import type { VaultState } from '@/domain/vault/Vault'
-import { generateUnlockSessionId, isValidUnlockSessionId } from '@/domain/vault/UnlockSession'
+import {
+  generateUnlockSessionId,
+  readUnlockSessionIdFromFragment,
+  unlockSessionFragment,
+} from '@/domain/vault/UnlockSession'
 import { VaultDomainError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 import { markVaultUnlocked } from '@/plugins/vaultStatus'
@@ -19,6 +24,7 @@ const STATUS_POLL_INTERVAL_MS = 5000
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const confirm = useConfirm()
 const { t } = useI18n()
 const passwordsStore = usePasswordsStore()
 
@@ -42,7 +48,8 @@ const lastShareTimestamp = computed(() => sessionState.value?.lastShareTimestamp
 // shares to this same unlock session.
 const unlockUrl = computed(() => {
   if (!unlockSessionId.value) return ''
-  const href = router.resolve({ name: 'Unlock', query: { id: unlockSessionId.value } }).href
+  const hash = unlockSessionFragment(unlockSessionId.value)
+  const href = router.resolve({ name: 'Unlock', hash }).href
   return new URL(href, window.location.origin).toString()
 })
 
@@ -67,11 +74,11 @@ const lastShareAge = computed(() => {
   return t('common.hoursAgo', { count: ageHours })
 })
 
-// Joins the session named in the URL, or opens a new one and puts its id in
-// the URL so that the address bar is the link to share.
+// Joins the session named in the URL fragment, or opens a new one and puts its
+// id there so that the address bar is the link to share.
 async function useSessionFromUrl(): Promise<void> {
-  const id = route.query.id
-  if (isValidUnlockSessionId(id)) {
+  const id = readUnlockSessionIdFromFragment(route.hash)
+  if (id) {
     unlockSessionId.value = id
   } else {
     await startNewSession()
@@ -82,7 +89,20 @@ async function startNewSession(): Promise<void> {
   unlockSessionId.value = generateUnlockSessionId()
   sessionState.value = null
   resetForm()
-  await router.replace({ name: 'Unlock', query: { id: unlockSessionId.value } })
+  await router.replace({ name: 'Unlock', hash: unlockSessionFragment(unlockSessionId.value) })
+}
+
+// Always offered once the session holds shares, so the share holders can start
+// over whenever they want — but it leaves behind what the others submitted.
+function confirmNewSession(): void {
+  confirm.require({
+    header: t('pages.unlock.newSessionConfirmHeader'),
+    message: t('pages.unlock.newSessionConfirmMessage'),
+    icon: 'pi pi-exclamation-triangle',
+    acceptLabel: t('pages.unlock.newSessionConfirmAccept'),
+    rejectLabel: t('common.cancel'),
+    accept: () => startNewSession(),
+  })
 }
 
 async function refreshSessionState(): Promise<void> {
@@ -100,8 +120,9 @@ function completeUnlock(): void {
   markVaultUnlocked()
   // Invalidate passwords cache to force refetch
   passwordsStore.invalidateCache()
-  // Reload the app to fetch fresh data, away from the unlock link
-  window.location.replace('/')
+  // Reload the app to fetch fresh data, away from the unlock link. BASE_URL,
+  // like the router's history, keeps this working under a sub-path.
+  window.location.replace(import.meta.env.BASE_URL)
 }
 
 function stopPolling(): void {
@@ -201,7 +222,8 @@ const handleSubmit = async () => {
     await refreshSessionState()
 
     if (sessionState.value?.status === 'PENDING_UNLOCK') {
-      // Backend returned 202: shares accepted but not yet enough.
+      // The status refreshed above tells the outcome: the session still waits
+      // for more shares (an UNLOCKED status already left the page).
       toast.add({
         severity: 'info',
         summary: t('pages.unlock.sharesAddedSummary'),
@@ -312,15 +334,6 @@ function resetForm() {
                   <p class="text-sm">
                     {{ t('pages.unlock.staleSharesBody', { age: lastShareAge }) }}
                   </p>
-                  <Button
-                    :label="t('pages.unlock.newSessionButton')"
-                    icon="pi pi-refresh"
-                    size="small"
-                    severity="warn"
-                    outlined
-                    :disabled="loading"
-                    @click="startNewSession"
-                  />
                 </div>
               </div>
             </Message>
@@ -403,7 +416,19 @@ function resetForm() {
               {{ t('pages.unlock.thresholdInfo') }}
             </Message>
 
-            <div class="flex justify-end gap-2">
+            <div class="flex justify-between gap-2">
+              <Button
+                v-if="isPendingUnlock"
+                :label="t('pages.unlock.newSessionButton')"
+                icon="pi pi-refresh"
+                severity="secondary"
+                outlined
+                :disabled="loading"
+                data-testid="new-session"
+                @click="confirmNewSession"
+              />
+              <div v-else></div>
+              <!-- Spacer to push the submit button to the right when no new-session button -->
               <Button
                 :label="
                   isPendingUnlock
