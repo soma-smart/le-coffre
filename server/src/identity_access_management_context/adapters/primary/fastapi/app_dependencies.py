@@ -502,6 +502,9 @@ def get_refresh_access_token_usecase(
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     revoked_token_repository: RevokedTokenRepository = Depends(get_revoked_token_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
     return RefreshAccessTokenUseCase(
         token_gateway,
@@ -510,6 +513,9 @@ def get_refresh_access_token_usecase(
         revoked_token_repository,
         time_provider,
         get_session_max_lifetime_seconds(),
+        extension_token_repository,
+        event_publisher,
+        admin_event_repository,
     )
 
 
