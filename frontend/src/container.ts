@@ -26,6 +26,7 @@ import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
 import { ApprovePairingUseCase } from '@/application/extension/ApprovePairing'
 import { DenyPairingUseCase } from '@/application/extension/DenyPairing'
 import { DisconnectAllExtensionsUseCase } from '@/application/extension/DisconnectAllExtensions'
+import { DisconnectAllExtensionsOfUserUseCase } from '@/application/extension/DisconnectAllExtensionsOfUser'
 import { DisconnectExtensionUseCase } from '@/application/extension/DisconnectExtension'
 import { GetPairingUseCase } from '@/application/extension/GetPairing'
 import { ListConnectedExtensionsUseCase } from '@/application/extension/ListConnectedExtensions'
@@ -121,6 +122,7 @@ export interface Container {
     listConnected: ListConnectedExtensionsUseCase
     disconnect: DisconnectExtensionUseCase
     disconnectAll: DisconnectAllExtensionsUseCase
+    disconnectAllOfUser: DisconnectAllExtensionsOfUserUseCase
   }
   users: {
     getCurrent: GetCurrentUserUseCase
@@ -212,6 +214,7 @@ export function buildContainer(ports: Ports): Container {
       listConnected: new ListConnectedExtensionsUseCase(ports.extensionGateway),
       disconnect: new DisconnectExtensionUseCase(ports.extensionGateway),
       disconnectAll: new DisconnectAllExtensionsUseCase(ports.extensionGateway),
+      disconnectAllOfUser: new DisconnectAllExtensionsOfUserUseCase(ports.extensionGateway),
     },
     users: {
       getCurrent: new GetCurrentUserUseCase(ports.userRepository),

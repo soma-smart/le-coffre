@@ -21,4 +21,11 @@ export interface ExtensionGateway {
 
   /** Returns how many were still active. */
   disconnectAllExtensions(): Promise<number>
+
+  /**
+   * Administrator only: disconnect every extension of another account, for a
+   * user who cannot or will not do it themselves. Returns how many were
+   * still active.
+   */
+  disconnectAllExtensionsOfUser(userId: string): Promise<number>
 }

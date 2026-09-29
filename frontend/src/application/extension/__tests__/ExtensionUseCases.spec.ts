@@ -2,11 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { ApprovePairingUseCase } from '@/application/extension/ApprovePairing'
 import { DenyPairingUseCase } from '@/application/extension/DenyPairing'
 import { DisconnectAllExtensionsUseCase } from '@/application/extension/DisconnectAllExtensions'
+import { DisconnectAllExtensionsOfUserUseCase } from '@/application/extension/DisconnectAllExtensionsOfUser'
 import { DisconnectExtensionUseCase } from '@/application/extension/DisconnectExtension'
 import { GetPairingUseCase } from '@/application/extension/GetPairing'
 import { ListConnectedExtensionsUseCase } from '@/application/extension/ListConnectedExtensions'
 import type { ConnectedExtension } from '@/domain/extension/Extension'
 import {
+  ExtensionDomainError,
   ExtensionPairingUnavailableError,
   InvalidPairingUserCodeError,
 } from '@/domain/extension/errors'
@@ -20,6 +22,7 @@ function pairing(overrides: Partial<Parameters<InMemoryExtensionGateway['seedPai
     deviceName: 'Chrome on macOS',
     createdAt: NOW,
     expiresAt: new Date(NOW.getTime() + 300_000),
+    secondsLeft: 300,
     accessLifetimeSeconds: 30 * 86400,
     createdFromIp: '203.0.113.5',
     isResolved: false,
@@ -170,5 +173,28 @@ describe('DisconnectAllExtensionsUseCase', () => {
 
     const remaining = await gateway.listConnectedExtensions()
     expect(remaining[0].revokedAt).toEqual(earlier)
+  })
+})
+
+describe('DisconnectAllExtensionsOfUserUseCase', () => {
+  it('should disconnect the given user and report how many were still active', async () => {
+    const gateway = new InMemoryExtensionGateway().seedActiveCountForUser('user-1', 2)
+
+    const revoked = await new DisconnectAllExtensionsOfUserUseCase(gateway).execute({
+      userId: 'user-1',
+    })
+
+    expect(revoked).toBe(2)
+    expect(gateway.disconnectedUsers).toEqual(['user-1'])
+  })
+
+  it('should refuse an empty user id before reaching the gateway', async () => {
+    // A blank id would target a path segment that is simply missing.
+    const gateway = new InMemoryExtensionGateway()
+
+    await expect(
+      new DisconnectAllExtensionsOfUserUseCase(gateway).execute({ userId: '  ' }),
+    ).rejects.toBeInstanceOf(ExtensionDomainError)
+    expect(gateway.disconnectedUsers).toEqual([])
   })
 })

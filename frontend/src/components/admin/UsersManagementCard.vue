@@ -8,6 +8,7 @@ import UserHistoryModal from '@/components/modals/UserHistoryModal.vue'
 import type { User } from '@/domain/user/User'
 import { isUserAdmin as isUserAdminFromDomain } from '@/domain/user/User'
 import { UserDomainError } from '@/domain/user/errors'
+import { ExtensionDomainError } from '@/domain/extension/errors'
 import { useContainer } from '@/plugins/container'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
 
@@ -19,7 +20,7 @@ const pageReportTemplate = computed(() =>
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async event handlers after an await.
-const { users: userUseCases } = useContainer()
+const { users: userUseCases, extensions: extensionUseCases } = useContainer()
 
 // State
 const users = ref<User[]>([])
@@ -33,6 +34,11 @@ const userToPromote = ref<User | null>(null)
 const showDeleteUserModal = ref(false)
 const deletingUserId = ref<string | null>(null)
 const userToDelete = ref<User | null>(null)
+
+// Disconnect extensions state
+const showDisconnectExtensionsModal = ref(false)
+const disconnectingExtensionsUserId = ref<string | null>(null)
+const userToDisconnectExtensions = ref<User | null>(null)
 
 // User history state
 const showUserHistoryModal = ref(false)
@@ -53,6 +59,12 @@ const promoteModalDescription = computed(() => {
 
 const deleteModalQuestion = computed(() => {
   return t('components.admin.users.deleteQuestion', { username: userToDelete.value?.username })
+})
+
+const disconnectExtensionsModalQuestion = computed(() => {
+  return t('components.admin.users.disconnectExtensionsQuestion', {
+    username: userToDisconnectExtensions.value?.username,
+  })
 })
 
 const deleteModalDescription = computed(() => {
@@ -152,6 +164,47 @@ const handleDeleteConfirmed = async () => {
   } finally {
     deletingUserId.value = null
     userToDelete.value = null
+  }
+}
+
+// Disconnect every browser extension of a user. The administrator's lever for
+// an account disabled in the identity provider but still in the vault, or a
+// device its owner cannot reach; deleting the account is a different decision.
+const openDisconnectExtensionsModal = (user: User) => {
+  userToDisconnectExtensions.value = user
+  showDisconnectExtensionsModal.value = true
+}
+
+const handleDisconnectExtensionsConfirmed = async () => {
+  if (!userToDisconnectExtensions.value) return
+
+  const userId = userToDisconnectExtensions.value.id
+  const username = userToDisconnectExtensions.value.username
+
+  disconnectingExtensionsUserId.value = userId
+  try {
+    const count = await extensionUseCases.disconnectAllOfUser.execute({ userId })
+    toast.add({
+      severity: 'success',
+      summary: t('common.success'),
+      detail: t('components.admin.users.disconnectedExtensionsDetail', { username, count }),
+      life: 5000,
+    })
+  } catch (error: unknown) {
+    console.error('Failed to disconnect extensions:', error)
+    const detail =
+      error instanceof ExtensionDomainError
+        ? error.message
+        : t('components.admin.users.disconnectExtensionsFailed')
+    toast.add({
+      severity: 'error',
+      summary: t('common.error'),
+      detail,
+      life: 5000,
+    })
+  } finally {
+    disconnectingExtensionsUserId.value = null
+    userToDisconnectExtensions.value = null
   }
 }
 
@@ -276,6 +329,16 @@ onMounted(() => {
                 @click="openUserHistory(slotProps.data)"
               />
               <Button
+                icon="pi pi-power-off"
+                :label="t('components.admin.users.disconnectExtensionsButton')"
+                size="small"
+                severity="secondary"
+                outlined
+                :loading="disconnectingExtensionsUserId === slotProps.data.id"
+                data-testid="disconnect-extensions-button"
+                @click="openDisconnectExtensionsModal(slotProps.data)"
+              />
+              <Button
                 icon="pi pi-trash"
                 :label="t('components.admin.users.deleteButton')"
                 size="small"
@@ -319,6 +382,20 @@ onMounted(() => {
         icon="pi pi-trash"
         :countdown-seconds="3"
         @confirm="handleDeleteConfirmed"
+      />
+
+      <!-- Disconnect Extensions Confirmation Modal -->
+      <ConfirmationModal
+        v-model:visible="showDisconnectExtensionsModal"
+        :title="t('components.admin.users.disconnectExtensionsDialogTitle')"
+        :question="disconnectExtensionsModalQuestion"
+        :description="t('components.admin.users.disconnectExtensionsDescription')"
+        :confirm-label="t('components.admin.users.disconnectExtensionsButton')"
+        :cancel-label="t('common.cancel')"
+        severity="warning"
+        icon="pi pi-power-off"
+        :countdown-seconds="3"
+        @confirm="handleDisconnectExtensionsConfirmed"
       />
 
       <!-- User History Modal -->

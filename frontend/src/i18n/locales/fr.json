@@ -398,7 +398,13 @@
         "promotedDetail": "L'utilisateur {username} a été promu ADMIN",
         "promoteFailed": "Échec de la promotion de l'utilisateur",
         "deletedDetail": "L'utilisateur {username} a été supprimé",
-        "deleteFailed": "Échec de la suppression de l'utilisateur"
+        "deleteFailed": "Échec de la suppression de l'utilisateur",
+        "disconnectExtensionsButton": "Déconnecter les extensions",
+        "disconnectExtensionsDialogTitle": "Déconnecter les extensions navigateur",
+        "disconnectExtensionsQuestion": "Déconnecter toutes les extensions navigateur reliées à \"{username}\" ?",
+        "disconnectExtensionsDescription": "Ses extensions cesseront de lire le coffre dès leur prochaine requête.\nIl pourra relier une extension depuis son propre navigateur.",
+        "disconnectedExtensionsDetail": "Extensions navigateur déconnectées pour {username} : {count}",
+        "disconnectExtensionsFailed": "Échec de la déconnexion des extensions navigateur de l'utilisateur"
       }
     },
     "createUserModal": {
