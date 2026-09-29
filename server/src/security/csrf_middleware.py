@@ -56,7 +56,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # Browser-extension pairing. Both are anonymous: the extension has no
         # session yet, so there is no ambient authority for CSRF to protect.
         # Deliberately mounted under /extension/device, disjoint from
-        # /extension/pairing: this list is prefix-matched, so a bare
+        # /extension/pairing: this list matches whole path segments, so a bare
         # "/api/extension" would also exempt the approve and deny routes, which
         # are cookie-authenticated and must keep their CSRF check.
         "/api/extension/device",
@@ -177,6 +177,13 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # CSRF token is valid, proceed with request
         return await call_next(request)
 
-    def _is_exempt_route(self, path: str) -> bool:
-        """Check if the route is exempt from CSRF protection."""
-        return any(path.startswith(route) for route in self.EXEMPT_ROUTES)
+    @classmethod
+    def _is_exempt_route(cls, path: str) -> bool:
+        """Is this path, or a path nested under an exempt one, exempt?
+
+        Matched on segment boundaries, not on a raw prefix: "/api/extension/device"
+        must cover "/api/extension/device/exchange" and must NOT cover a future
+        "/api/extension/devices", which a bare startswith would have silently
+        exempted along with anything else that happened to share the letters.
+        """
+        return any(path == route or path.startswith(route + "/") for route in cls.EXEMPT_ROUTES)
