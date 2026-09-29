@@ -53,9 +53,18 @@ jobs:
         working-directory: frontend/
         run: bunx prettier --check src/
 
+      # The script's own tests run here, next to its first use, so a change to
+      # how it reads `bun audit --json` is checked before the audit itself.
+      # Node 20 has no built-in glob for --test, hence the shell-expanded
+      # pattern rather than a directory.
+      - name: Test the dependency audit script
+        if: (success() || failure()) && steps.install.outcome == 'success'
+        run: node --test .github/scripts/__tests__/*.test.mjs
+
       # Shared with the extension job. The script exists so that "the audit
       # found something" and "the audit could not reach the advisory API" stay
       # two different outcomes; inline, they were the same JSON.parse crash.
+      # It fails on any advisory at or above BUN_AUDIT_LEVEL (default high).
       - name: Check Dependencies Security
         if: (success() || failure()) && steps.install.outcome == 'success'
         run: node .github/scripts/check-bun-audit.mjs frontend
@@ -124,6 +133,7 @@ jobs:
       # Shared with the frontend job. The script exists so that "the audit
       # found something" and "the audit could not reach the advisory API" stay
       # two different outcomes; inline, they were the same JSON.parse crash.
+      # It fails on any advisory at or above BUN_AUDIT_LEVEL (default high).
       - name: Check Dependencies Security
         if: (success() || failure()) && steps.install.outcome == 'success'
         run: node .github/scripts/check-bun-audit.mjs extension
