@@ -312,6 +312,35 @@ def test_given_user_already_owner_when_adding_as_owner_then_operation_is_idempot
     assert group_member_repository.is_owner(group_id, existing_owner_id)
 
 
+def test_given_user_already_owner_when_adding_as_owner_should_not_publish_duplicate_event(
+    use_case: AddOwnerToGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    existing_owner_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+
+    owner = User(id=owner_id, username="owner", email="owner@example.com", name="Owner User")
+    existing_owner = User(
+        id=existing_owner_id, username="existingowner", email="existingowner@example.com", name="Existing Owner User"
+    )
+    user_repository.save(owner)
+    user_repository.save(existing_owner)
+
+    group = Group(id=group_id, name="Development Team", is_personal=False)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, existing_owner_id, is_owner=True)
+
+    command = AddOwnerToGroupCommand(requester_id=owner_id, group_id=group_id, user_id=existing_owner_id)
+    use_case.execute(command)
+
+    assert event_publisher.get_published_events_of_type(OwnerAddedToGroupEvent) == []
+
+
 def test_given_owner_when_adding_existing_member_as_owner_then_should_publish_owner_added_to_group_event(
     use_case: AddOwnerToGroupUseCase,
     user_repository: FakeUserRepository,

@@ -117,3 +117,17 @@ Resolve the name of the Kubernetes secret that holds JWT_SECRET_KEY.
 {{- required "config.jwt.existingSecretName is required when config.jwt.secretKey is not set. Create the secret first: kubectl create secret generic <name> --from-literal=JWT_SECRET_KEY=\"$(openssl rand -base64 32)\" -n <namespace>" .Values.config.jwt.existingSecretName -}}
 {{- end -}}
 {{- end }}
+
+{{/*
+Resolve the name of the Kubernetes secret that holds SMTP_PASSWORD. Only
+called when config.smtp.username is set (i.e. the relay needs credentials).
+- If config.smtp.password is set, Helm manages the secret (named after the release).
+- Otherwise config.smtp.existingSecretName must point to a pre-existing secret.
+*/}}
+{{- define "le-coffre.smtpSecretName" -}}
+{{- if .Values.config.smtp.password -}}
+{{- include "le-coffre.fullname" . -}}
+{{- else -}}
+{{- required "config.smtp.existingSecretName is required when config.smtp.username is set and config.smtp.password is not. Create the secret first: kubectl create secret generic <name> --from-literal=SMTP_PASSWORD=\"...\" -n <namespace>" .Values.config.smtp.existingSecretName -}}
+{{- end -}}
+{{- end }}
