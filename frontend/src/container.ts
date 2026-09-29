@@ -13,6 +13,7 @@ import type { VaultRepository } from '@/application/ports/VaultRepository'
 import { GetAdminStatisticsUseCase } from '@/application/statistics/GetAdminStatistics'
 import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
 import { ConsumeLoginRedirectUseCase } from '@/application/auth/ConsumeLoginRedirect'
+import { ForgetLoginRedirectUseCase } from '@/application/auth/ForgetLoginRedirect'
 import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
 import { HandleSsoCallbackUseCase } from '@/application/auth/HandleSsoCallback'
 import { IsSsoConfiguredUseCase } from '@/application/auth/IsSsoConfigured'
@@ -21,6 +22,7 @@ import { LogoutUseCase } from '@/application/auth/Logout'
 import { RefreshAccessTokenUseCase } from '@/application/auth/RefreshAccessToken'
 import { RegisterAdminUseCase } from '@/application/auth/RegisterAdmin'
 import { RememberLoginRedirectUseCase } from '@/application/auth/RememberLoginRedirect'
+import { ResolveLoginRedirectUseCase } from '@/application/auth/ResolveLoginRedirect'
 import { FetchCsrfTokenUseCase } from '@/application/csrf/FetchCsrfToken'
 import { ApprovePairingUseCase } from '@/application/extension/ApprovePairing'
 import { DenyPairingUseCase } from '@/application/extension/DenyPairing'
@@ -167,6 +169,8 @@ export interface Container {
     isSsoConfigured: IsSsoConfiguredUseCase
     rememberLoginRedirect: RememberLoginRedirectUseCase
     consumeLoginRedirect: ConsumeLoginRedirectUseCase
+    resolveLoginRedirect: ResolveLoginRedirectUseCase
+    forgetLoginRedirect: ForgetLoginRedirectUseCase
   }
   preferences: {
     read: ReadPreferenceUseCase
@@ -257,6 +261,8 @@ export function buildContainer(ports: Ports): Container {
       isSsoConfigured: new IsSsoConfiguredUseCase(ports.authGateway),
       rememberLoginRedirect: new RememberLoginRedirectUseCase(ports.loginRedirectGateway),
       consumeLoginRedirect: new ConsumeLoginRedirectUseCase(ports.loginRedirectGateway),
+      resolveLoginRedirect: new ResolveLoginRedirectUseCase(ports.loginRedirectGateway),
+      forgetLoginRedirect: new ForgetLoginRedirectUseCase(ports.loginRedirectGateway),
     },
     preferences: {
       read: new ReadPreferenceUseCase(ports.preferencesGateway),

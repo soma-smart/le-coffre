@@ -18,4 +18,13 @@ export class InMemoryLoginRedirectGateway implements LoginRedirectGateway {
     this.stored = null
     return path
   }
+
+  forget(): void {
+    this.stored = null
+  }
+
+  /** Test helper: what is held right now, without consuming it. */
+  peek(): string | null {
+    return this.stored
+  }
 }

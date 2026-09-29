@@ -12,4 +12,12 @@ export interface LoginRedirectGateway {
 
   /** Return the stored destination and forget it, or null when none is held. */
   consume(): string | null
+
+  /**
+   * Drop the stored destination without reading it. For the round trips that
+   * never complete: the user abandons SSO for a password login, or the
+   * callback fails, and the stash would otherwise wait for the next SSO login
+   * in the same tab, possibly by someone else.
+   */
+  forget(): void
 }
