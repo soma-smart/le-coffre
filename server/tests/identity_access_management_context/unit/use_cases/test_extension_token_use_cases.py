@@ -148,10 +148,19 @@ class TestValidate:
         with pytest.raises(ExtensionTokenNotFoundError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=ExtensionTokenSecret.generate().value))
 
-    def test_should_reject_when_the_value_is_too_short_to_have_been_issued(self, validate_use_case):
-        # Never reaches a database lookup.
+    @pytest.mark.parametrize(
+        "raw_token",
+        [
+            "short",
+            "v" * 44,  # generate() yields exactly 43 characters
+            "v" * 42 + "+",  # not the url-safe alphabet
+            "v" * 42 + " ",
+        ],
+    )
+    def test_should_reject_when_the_value_could_not_have_been_issued(self, validate_use_case, raw_token):
+        # Never reaches a hash or a database lookup.
         with pytest.raises(ExtensionTokenNotFoundError):
-            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token="short"))
+            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=raw_token))
 
     def test_should_reject_when_the_credential_is_revoked(
         self, validate_use_case, extension_token_repository, registered_user

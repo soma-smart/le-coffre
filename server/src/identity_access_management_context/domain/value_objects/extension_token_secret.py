@@ -1,4 +1,5 @@
 import hashlib
+import re
 import secrets
 from dataclasses import dataclass, field
 
@@ -11,9 +12,11 @@ from identity_access_management_context.domain.exceptions import (
 # what lets the exchange endpoint stay anonymous.
 TOKEN_BYTES = 32
 
-# token_urlsafe(32) yields 43 characters. Anything shorter did not come from
-# generate() and must not be trusted enough to reach a database lookup.
-MIN_TOKEN_LENGTH = 43
+# token_urlsafe(32) yields exactly 43 url-safe base64 characters. Anything of
+# another length or alphabet did not come from generate() and must not be
+# trusted enough to reach a hash, let alone a database lookup.
+TOKEN_LENGTH = 43
+_TOKEN_SHAPE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 
 
 @dataclass(frozen=True)
@@ -38,7 +41,7 @@ class ExtensionTokenSecret:
     value: str = field(repr=False)
 
     def __post_init__(self) -> None:
-        if len(self.value) < MIN_TOKEN_LENGTH:
+        if not _TOKEN_SHAPE.fullmatch(self.value):
             raise InvalidExtensionTokenError()
 
     def __str__(self) -> str:
