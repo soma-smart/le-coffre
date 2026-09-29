@@ -68,6 +68,23 @@ def get_session_max_lifetime_seconds() -> int:
     return int(os.environ.get("SESSION_MAX_LIFETIME_HOURS", "4")) * 3600
 
 
+def _positive_int(name: str, default: str) -> int:
+    """Read an integer setting that only makes sense above zero.
+
+    Read in the lifespan, so a bad value stops the application at startup with
+    the variable named, rather than surfacing later as every token being born
+    expired or every pairing timing out before the approval page has loaded.
+    """
+    raw = os.environ.get(name, default)
+    try:
+        value = int(raw)
+    except ValueError as error:
+        raise ValueError(f"{name} must be a positive integer, got {raw!r}") from error
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer, got {value}")
+    return value
+
+
 def get_extension_token_lifetime_seconds() -> int:
     """Absolute lifetime of a browser-extension token. Default 30 days.
 
@@ -75,7 +92,7 @@ def get_extension_token_lifetime_seconds() -> int:
     never expires as long as the thief keeps using it. Re-pairing is the
     recovery path, which is cheap because it reuses the normal web login.
     """
-    return int(os.environ.get("EXTENSION_TOKEN_LIFETIME_DAYS", "30")) * 86400
+    return _positive_int("EXTENSION_TOKEN_LIFETIME_DAYS", "30") * 86400
 
 
 def get_extension_pairing_lifetime_seconds() -> int:
@@ -87,7 +104,7 @@ def get_extension_pairing_lifetime_seconds() -> int:
     request that dies mid-login costs the user the whole flow. Both screens
     count the deadline down so nobody has to guess how long is left.
     """
-    return int(os.environ.get("EXTENSION_PAIRING_LIFETIME_SECONDS", "600"))
+    return _positive_int("EXTENSION_PAIRING_LIFETIME_SECONDS", "600")
 
 
 def get_extension_pairing_poll_interval_seconds() -> int:
@@ -97,7 +114,7 @@ def get_extension_pairing_poll_interval_seconds() -> int:
     tuned against the pairing rate-limit bucket without shipping a new
     extension build.
     """
-    return int(os.environ.get("EXTENSION_PAIRING_POLL_INTERVAL_SECONDS", "5"))
+    return _positive_int("EXTENSION_PAIRING_POLL_INTERVAL_SECONDS", "5")
 
 
 def get_extension_last_used_coarsening_seconds() -> int:

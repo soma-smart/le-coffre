@@ -3,7 +3,6 @@ from sqlmodel import Session
 from starlette.requests import Request
 
 from config import (
-    get_extension_last_used_coarsening_seconds,
     get_extension_pairing_lifetime_seconds,
     get_extension_pairing_poll_interval_seconds,
     get_extension_token_lifetime_seconds,
@@ -91,7 +90,6 @@ from identity_access_management_context.application.use_cases import (
     UpdateGroupUseCase,
     UpdateUserPasswordUseCase,
     UpdateUserUseCase,
-    ValidateExtensionTokenUseCase,
 )
 from password_management_context.adapters.primary.private_api import (
     GroupUsageApi,
@@ -737,23 +735,6 @@ def get_exchange_extension_pairing_usecase(
         time_provider,
         get_extension_token_lifetime_seconds(),
         get_extension_pairing_poll_interval_seconds(),
-    )
-
-
-def get_validate_extension_token_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
-    user_repository: UserRepository = Depends(get_user_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
-):
-    return ValidateExtensionTokenUseCase(
-        extension_token_repository,
-        user_password_repository,
-        sso_user_repository,
-        user_repository,
-        time_provider,
-        get_extension_last_used_coarsening_seconds(),
     )
 
 
