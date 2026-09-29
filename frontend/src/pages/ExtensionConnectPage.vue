@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import type { ExtensionPairingDetails } from '@/domain/extension/Extension'
@@ -15,6 +16,7 @@ import BlankLayout from '../layouts/BlankLayout.vue'
 // query, no fragment, and a code the user has to read off their own popup.
 const router = useRouter()
 const toast = useToast()
+const { t } = useI18n()
 const { extensions } = useContainer()
 
 const status = ref<'enter-code' | 'ready' | 'done'>('enter-code')
@@ -57,9 +59,9 @@ const timeLeftLabel = computed(() => {
 const requestedAgo = computed(() => {
   if (!pairing.value) return ''
   const seconds = Math.max(0, Math.round((Date.now() - pairing.value.createdAt.getTime()) / 1000))
-  if (seconds < 60) return `${seconds} second${seconds === 1 ? '' : 's'} ago`
+  if (seconds < 60) return t('pages.extensionConnect.secondsAgo', { count: seconds }, seconds)
   const minutes = Math.round(seconds / 60)
-  return `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  return t('pages.extensionConnect.minutesAgo', { count: minutes }, minutes)
 })
 
 /**
@@ -74,11 +76,11 @@ const requestedAgo = computed(() => {
 const accessLifetimeLabel = computed(() => {
   const seconds = pairing.value?.accessLifetimeSeconds ?? 0
   const days = Math.round(seconds / 86400)
-  if (days >= 1) return days === 1 ? '1 day' : `${days} days`
+  if (days >= 1) return t('pages.extensionConnect.lifetimeDays', { count: days }, days)
   const hours = Math.round(seconds / 3600)
-  if (hours >= 1) return hours === 1 ? '1 hour' : `${hours} hours`
+  if (hours >= 1) return t('pages.extensionConnect.lifetimeHours', { count: hours }, hours)
   const minutes = Math.max(1, Math.round(seconds / 60))
-  return minutes === 1 ? '1 minute' : `${minutes} minutes`
+  return t('pages.extensionConnect.lifetimeMinutes', { count: minutes }, minutes)
 })
 
 async function lookUp() {
@@ -90,7 +92,7 @@ async function lookUp() {
     // a code before it reaches the network.
     const found = await extensions.getPairing.execute({ userCode: codeInput.value })
     if (found.isResolved) {
-      codeError.value = 'This connection request has already been handled.'
+      codeError.value = t('pages.extensionConnect.alreadyHandled')
       return
     }
     pairing.value = found
@@ -100,7 +102,7 @@ async function lookUp() {
     codeError.value =
       error instanceof ExtensionDomainError
         ? error.message
-        : 'This pairing request is invalid or has expired'
+        : t('pages.extensionConnect.unavailable')
   } finally {
     lookingUp.value = false
   }
@@ -117,15 +119,15 @@ async function approve() {
     if (error instanceof TooManyConnectedExtensionsError) {
       toast.add({
         severity: 'warn',
-        summary: 'Too many extensions',
+        summary: t('pages.extensionConnect.tooManySummary'),
         detail: error.message,
         life: 6000,
       })
     } else {
       toast.add({
         severity: 'error',
-        summary: 'Could not connect',
-        detail: error instanceof ExtensionDomainError ? error.message : 'Please try again',
+        summary: t('pages.extensionConnect.connectFailed'),
+        detail: error instanceof ExtensionDomainError ? error.message : t('common.tryAgain'),
         life: 5000,
       })
     }
@@ -144,8 +146,8 @@ async function deny() {
   } catch (error) {
     toast.add({
       severity: 'error',
-      summary: 'Could not refuse',
-      detail: error instanceof ExtensionDomainError ? error.message : 'Please try again',
+      summary: t('pages.extensionConnect.refuseFailed'),
+      detail: error instanceof ExtensionDomainError ? error.message : t('common.tryAgain'),
       life: 5000,
     })
   } finally {
@@ -162,7 +164,7 @@ async function deny() {
          card-less 200px. Horizontal centering is all this wrapper owes. -->
     <div class="flex justify-center">
       <Card class="w-full max-w-xl">
-        <template #title>Connect a browser extension</template>
+        <template #title>{{ t('pages.extensionConnect.title') }}</template>
 
         <template #content>
           <form
@@ -171,19 +173,22 @@ async function deny() {
             data-testid="code-form"
             @submit.prevent="lookUp"
           >
-            <p>
-              When you click <strong>Connect</strong> in your Le Coffre extension, it shows a
-              pairing code. Type that code here to review the request.
-            </p>
+            <!-- The extension popup is English-only, so the button is named
+                 as the user will see it, in either language. -->
+            <i18n-t keypath="pages.extensionConnect.intro" tag="p" scope="global">
+              <template #connect>
+                <strong>{{ t('pages.extensionConnect.connectButtonName') }}</strong>
+              </template>
+            </i18n-t>
 
             <div class="flex flex-col gap-2">
-              <label for="pairing-code" class="text-sm font-medium"
-                >Code shown in your extension</label
-              >
+              <label for="pairing-code" class="text-sm font-medium">{{
+                t('pages.extensionConnect.codeLabel')
+              }}</label>
               <InputText
                 id="pairing-code"
                 v-model="codeInput"
-                placeholder="XXXX-XXXX"
+                :placeholder="t('pages.extensionConnect.codePlaceholder')"
                 autocomplete="off"
                 autocapitalize="characters"
                 spellcheck="false"
@@ -207,15 +212,17 @@ async function deny() {
                  that reached the user any other way than their own popup is
                  someone else's pairing. -->
             <Message severity="warn" :closable="false" data-testid="phishing-warning">
-              Only type a code you are reading off your own extension right now. If someone sent you
-              a code, or a link to this page, do not enter it: approving it would connect
-              <em>their</em> extension to your account.
+              <i18n-t keypath="pages.extensionConnect.codeWarning" tag="span" scope="global">
+                <template #their>
+                  <em>{{ t('pages.extensionConnect.codeWarningTheir') }}</em>
+                </template>
+              </i18n-t>
             </Message>
 
             <div class="flex justify-end">
               <Button
                 type="submit"
-                label="Review request"
+                :label="t('pages.extensionConnect.reviewButton')"
                 :loading="lookingUp"
                 :disabled="!codeInput.trim()"
                 data-testid="lookup-button"
@@ -226,33 +233,42 @@ async function deny() {
           <div v-else-if="status === 'done'" class="flex flex-col gap-4 py-4">
             <Message :severity="outcome === 'approved' ? 'success' : 'info'" :closable="false">
               <span v-if="outcome === 'approved'">
-                Extension connected. You can close this tab and return to it.
+                {{ t('pages.extensionConnect.approvedOutcome') }}
               </span>
-              <span v-else>Connection refused. Nothing was granted.</span>
+              <span v-else>{{ t('pages.extensionConnect.deniedOutcome') }}</span>
             </Message>
-            <Button label="Back to my vault" outlined @click="router.push('/')" />
+            <Button
+              :label="t('pages.extensionConnect.backToVault')"
+              outlined
+              @click="router.push('/')"
+            />
           </div>
 
           <div v-else-if="pairing" class="flex flex-col gap-5">
             <div
               class="flex flex-col items-center gap-2 rounded-lg bg-surface-100 p-5 dark:bg-surface-800"
             >
-              <p class="text-center text-sm">Request for the code you entered:</p>
+              <p class="text-center text-sm">{{ t('pages.extensionConnect.requestForCode') }}</p>
               <p class="font-mono text-3xl font-bold tracking-widest" data-testid="pairing-code">
                 {{ pairing.userCode }}
               </p>
               <!-- The deadline, where the user is already looking. Without it,
                    the only way to find out the request timed out is to have
                    Approve fail. -->
-              <p
+              <i18n-t
                 v-if="!hasExpired"
+                keypath="pages.extensionConnect.expiresIn"
+                tag="p"
+                scope="global"
                 class="text-xs text-surface-500"
                 data-testid="pairing-countdown"
               >
-                This request expires in <strong>{{ timeLeftLabel }}</strong>
-              </p>
+                <template #time>
+                  <strong>{{ timeLeftLabel }}</strong>
+                </template>
+              </i18n-t>
               <p v-else class="text-xs text-red-600" data-testid="pairing-countdown">
-                This request has expired. Start again from your extension.
+                {{ t('pages.extensionConnect.expired') }}
               </p>
             </div>
 
@@ -261,43 +277,69 @@ async function deny() {
                  self-reported by the extension and labelled as such. -->
             <div class="flex flex-col gap-2 text-sm">
               <p>
-                Requested <strong>{{ requestedAgo }}</strong>
-                <span v-if="pairing.createdFromIp">
-                  from <strong>{{ pairing.createdFromIp }}</strong>
-                </span>
+                <i18n-t keypath="pages.extensionConnect.requestedAgo" tag="span" scope="global">
+                  <template #when>
+                    <strong>{{ requestedAgo }}</strong>
+                  </template>
+                </i18n-t>
+                <!-- Two <i18n-t> siblings separated only by a line break lose
+                     the space between them to whitespace condensing, so the
+                     space is spelled out, glued to the tag so that no second
+                     whitespace node survives beside it. -->
+                <template v-if="pairing.createdFromIp">
+                  {{ ' '
+                  }}<i18n-t keypath="pages.extensionConnect.fromAddress" tag="span" scope="global">
+                    <template #address>
+                      <strong>{{ pairing.createdFromIp }}</strong>
+                    </template>
+                  </i18n-t>
+                </template>
               </p>
-              <p class="text-surface-500">
-                Device name reported by the extension:
-                <strong>{{ pairing.deviceName }}</strong>
-                <span class="italic"> (not verified)</span>
-              </p>
+              <i18n-t
+                keypath="pages.extensionConnect.deviceName"
+                tag="p"
+                scope="global"
+                class="text-surface-500"
+              >
+                <template #device>
+                  <strong>{{ pairing.deviceName }}</strong>
+                </template>
+                <template #unverified>
+                  <span class="italic">{{ t('pages.extensionConnect.notVerified') }}</span>
+                </template>
+              </i18n-t>
             </div>
 
             <Message severity="info" :closable="false">
-              <p class="font-semibold">If you approve, this extension will be able to:</p>
+              <p class="font-semibold">{{ t('pages.extensionConnect.willBeAbleTo') }}</p>
               <ul class="mt-1 list-inside list-disc">
-                <li>read the passwords you already have access to</li>
+                <li>{{ t('pages.extensionConnect.canRead') }}</li>
               </ul>
-              <p class="mt-2 font-semibold">It will not be able to:</p>
+              <p class="mt-2 font-semibold">{{ t('pages.extensionConnect.willNotBeAbleTo') }}</p>
               <ul class="mt-1 list-inside list-disc">
-                <li>create, modify, delete or share anything</li>
-                <li>see other people's passwords, even if you are an administrator</li>
-                <li>manage your other connected extensions</li>
+                <li>{{ t('pages.extensionConnect.cannotWrite') }}</li>
+                <li>{{ t('pages.extensionConnect.cannotSeeOthers') }}</li>
+                <li>{{ t('pages.extensionConnect.cannotManage') }}</li>
               </ul>
-              <p class="mt-2">
-                Access lasts <strong>{{ accessLifetimeLabel }}</strong
-                >. You can disconnect it at any time from your profile.
-              </p>
+              <i18n-t
+                keypath="pages.extensionConnect.accessLasts"
+                tag="p"
+                scope="global"
+                class="mt-2"
+              >
+                <template #duration>
+                  <strong>{{ accessLifetimeLabel }}</strong>
+                </template>
+              </i18n-t>
             </Message>
 
             <Message severity="warn" :closable="false" data-testid="phishing-warning">
-              If the address or device above is not yours, or you did not just click Connect in your
-              own Le Coffre extension, refuse: this request came from somewhere else.
+              {{ t('pages.extensionConnect.decisionWarning') }}
             </Message>
 
             <div class="flex justify-end gap-2">
               <Button
-                label="Refuse"
+                :label="t('pages.extensionConnect.refuse')"
                 severity="secondary"
                 outlined
                 :disabled="submitting || hasExpired"
@@ -305,7 +347,7 @@ async function deny() {
                 @click="deny"
               />
               <Button
-                label="Approve"
+                :label="t('pages.extensionConnect.approve')"
                 :loading="submitting"
                 :disabled="hasExpired"
                 data-testid="approve-button"
