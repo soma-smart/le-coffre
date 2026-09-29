@@ -16,9 +16,9 @@ const IN_FLIGHT: PairingInProgress = {
 
 describe('startPairing', () => {
   it('should register before opening the tab, so the code is a server-vouched fact', async () => {
-    // If the tab opened first, the approval page would be rendering a code the
-    // caller supplied rather than one the server issued, and matching it would
-    // prove nothing.
+    // If the tab opened first, the page would have nothing to look up when
+    // the user types the code, and a code the server has not issued proves
+    // nothing.
     const { deps, browser, client } = createTestDeps()
     await givenConfigured(browser)
     client.startPairingResult = {
@@ -36,9 +36,20 @@ describe('startPairing', () => {
       ok: true,
       data: { userCode: 'ABCD-1234', expiresAt: '2099-01-01T00:00:00Z', pollIntervalSeconds: 5 },
     })
-    expect(browser.openedTabs).toHaveLength(1)
-    expect(browser.openedTabs[0]).toContain('ABCD-1234')
+    expect(browser.openedTabs).toEqual([`${VAULT_URL}/extension/connect`])
     expect(await browser.session.get(SESSION_KEYS.pairing)).toMatchObject({ userCode: 'ABCD-1234' })
+  })
+
+  it('should keep the code out of the tab it opens', async () => {
+    // The user types it. A code in the URL is a code the URL's author can
+    // pre-fill, and it would land in access logs and screenshots besides.
+    const { deps, browser } = createTestDeps()
+    await givenConfigured(browser)
+
+    await startPairing(deps)
+
+    expect(browser.openedTabs[0]).not.toContain('K7QM-3XR9')
+    expect(browser.openedTabs[0]).not.toMatch(/[?#]/)
   })
 
   it('should schedule the alarm that redeems an approval after the popup is shut', async () => {

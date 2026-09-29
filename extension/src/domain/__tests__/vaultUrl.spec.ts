@@ -136,13 +136,19 @@ describe('toApiUrl', () => {
 })
 
 describe('deep links', () => {
-  it('puts the pairing code in the fragment, never the query', () => {
-    // The fragment is never sent to the server, so the code cannot reach an
-    // access log on the way to /login.
-    const link = toPairingApprovalLink('https://vault.example.com', 'K7QM-3XR9')
+  it('opens the approval page bare: the user types the code, it never travels', () => {
+    // A code in the URL is a code whoever built the URL can pre-fill, and the
+    // ceremony rests on the user matching the popup against the page. No
+    // query and no fragment also keeps it out of access logs and screenshots.
+    const link = toPairingApprovalLink('https://vault.example.com')
 
-    expect(link).toBe('https://vault.example.com/extension/connect#code=K7QM-3XR9')
-    expect(link).not.toContain('?')
+    expect(link).toBe('https://vault.example.com/extension/connect')
+  })
+
+  it('keeps the approval page under a sub-path deployment', () => {
+    expect(toPairingApprovalLink('https://intranet.example/coffre')).toBe(
+      'https://intranet.example/coffre/extension/connect',
+    )
   })
 
   it('builds the create link from the group name', () => {
@@ -168,7 +174,7 @@ describe('deep links', () => {
 
   it('refuses to build a link from an unusable stored url', () => {
     // Guards against a tampered storage value becoming a tab-open primitive.
-    expect(toPairingApprovalLink('javascript:alert(1)', 'K7QM-3XR9')).toBeNull()
+    expect(toPairingApprovalLink('javascript:alert(1)')).toBeNull()
     expect(toCreatePasswordLink('', 'Marketing')).toBeNull()
   })
 })

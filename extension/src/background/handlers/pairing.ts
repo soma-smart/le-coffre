@@ -23,9 +23,10 @@ const DEFAULT_DEVICE_NAME = 'Browser extension'
 /**
  * Register a pairing, then open the approval page.
  *
- * Registering first is what makes the code a server-vouched fact: the approval
- * page can then show something the user matches against this popup, rather than
- * rendering text the caller supplied.
+ * Registering first is what makes the code a server-vouched fact: the page can
+ * look up what the user types and show them what it stands for, rather than
+ * rendering text the caller supplied. The code itself stays in the popup; the
+ * user carries it across by typing it.
  */
 export async function startPairing(
   deps: Deps,
@@ -51,7 +52,7 @@ export async function startPairing(
     pollIntervalSeconds: started.data.poll_interval_seconds,
   })
 
-  const approvalLink = toPairingApprovalLink(vaultUrl, started.data.user_code)
+  const approvalLink = toPairingApprovalLink(vaultUrl)
   if (approvalLink) {
     await deps.browser.tabs.create(approvalLink)
   }

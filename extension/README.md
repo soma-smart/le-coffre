@@ -35,10 +35,13 @@ with the vault the way a device pairs with an account:
 1. **Register.** The popup asks the worker to `POST /api/extension/device` with a
    PKCE challenge and gets back a short `user_code` (`K7QM-3XR9`), the pairing's
    expiry (10 minutes) and a **poll interval** chosen by the server.
-2. **Approve.** The worker opens `{vault}/extension/connect#code=...` in a tab.
-   The user signs in there however they usually do (password or SSO, the web
-   app's own flows), sees the same code, the requesting IP and what the
-   credential will be able to do, and approves or refuses.
+2. **Approve.** The worker opens `{vault}/extension/connect` in a tab, with no
+   query and no fragment. The user signs in there however they usually do
+   (password or SSO, the web app's own flows), **types the code shown in the
+   popup**, sees the requesting IP and what the credential will be able to do,
+   and approves or refuses. The code never travels in the URL: a code in the
+   URL is a code the URL's author can pre-fill, and the ceremony rests on the
+   user carrying it across themselves.
 3. **Exchange.** The worker polls `POST /api/extension/device/exchange` with the
    PKCE verifier. Once approved, the exchange mints the credential **exactly
    once** and returns it; only its SHA-256 is ever stored server-side.

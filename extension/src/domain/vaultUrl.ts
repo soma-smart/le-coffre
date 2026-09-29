@@ -113,12 +113,15 @@ function toVaultLink(vaultUrl: string, pathAndQuery: string): string | null {
 }
 
 /**
- * Where the user approves a pairing. The code travels in the fragment, which
- * the browser never sends to the server and which therefore never reaches an
- * access log.
+ * Where the user approves a pairing. The code is not in the link: the user
+ * reads it off the popup and types it into the page. A code that travels in
+ * the URL is a code that can be pre-filled by whoever built the URL, and the
+ * whole ceremony rests on the user matching what the extension shows against
+ * what the page holds. No query and no fragment, so nothing reaches an access
+ * log or a screenshot either.
  */
-export function toPairingApprovalLink(vaultUrl: string, userCode: string): string | null {
-  return toVaultLink(vaultUrl, `/extension/connect#code=${encodeURIComponent(userCode)}`)
+export function toPairingApprovalLink(vaultUrl: string): string | null {
+  return toVaultLink(vaultUrl, '/extension/connect')
 }
 
 /**
