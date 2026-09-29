@@ -73,7 +73,11 @@ export async function getConnectionState(deps: Deps): Promise<Result<ConnectionS
  * Store a vault URL after checking something Le Coffre-shaped answers there.
  *
  * The host permission must already have been granted: `permissions.request()`
- * has to run inside a user gesture, which only the popup has.
+ * has to run inside a user gesture, which only the popup has. When the checks
+ * then fail, the grant is given back here rather than left to the popup: this
+ * is the one place that knows the exact pattern, and a grant that outlives a
+ * failed attempt is one `disconnect()` can never find, since nothing was
+ * stored to point at it.
  */
 export async function setVaultUrl(deps: Deps, rawUrl: string): Promise<Result<ConnectionState>> {
   const vaultUrl = normalizeVaultUrl(rawUrl)
@@ -89,12 +93,18 @@ export async function setVaultUrl(deps: Deps, rawUrl: string): Promise<Result<Co
   const client = deps.makeClient(vaultUrl, null)
 
   const health = await client.health()
-  if (!health.ok) return err(health.error)
+  if (!health.ok) {
+    await deps.browser.permissions.remove([pattern])
+    return err(health.error)
+  }
 
   // A locked vault is still a vault: store the URL so the popup can show the
   // locked state rather than sending the user back to the first screen.
   const status = await client.vaultStatus()
-  if (!status.ok && status.error.kind !== 'VAULT_LOCKED') return err(status.error)
+  if (!status.ok && status.error.kind !== 'VAULT_LOCKED') {
+    await deps.browser.permissions.remove([pattern])
+    return err(status.error)
+  }
 
   // A token is minted for one vault. Keeping it across a change of address
   // would send vault A's bearer token to vault B on the very next request, so

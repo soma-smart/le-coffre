@@ -122,6 +122,35 @@ describe('setVaultUrl', () => {
     await expect(browser.local.get('vaultUrl')).resolves.toBeUndefined()
   })
 
+  it.each([
+    ['health', 'healthResult', { kind: 'NOT_A_VAULT' }],
+    ['vault status', 'vaultStatusResult', { kind: 'NETWORK_UNREACHABLE' }],
+  ] as const)(
+    'should give back the host permission when the %s check fails',
+    async (_, field, error) => {
+      // The popup requested the grant inside the click, before anything could
+      // be checked. Left in place after a failure it is orphaned: nothing was
+      // stored to point at it, so Disconnect can never find it.
+      const { deps, browser, client } = createTestDeps()
+      browser.grantedOrigins.add(MATCH_PATTERN)
+      client[field] = { ok: false, error }
+
+      await setVaultUrl(deps, VAULT_URL)
+
+      expect(browser.grantedOrigins.has(MATCH_PATTERN)).toBe(false)
+    },
+  )
+
+  it('should keep the host permission when the vault is merely locked', async () => {
+    const { deps, browser, client } = createTestDeps()
+    browser.grantedOrigins.add(MATCH_PATTERN)
+    client.vaultStatusResult = { ok: false, error: { kind: 'VAULT_LOCKED' } }
+
+    await setVaultUrl(deps, VAULT_URL)
+
+    expect(browser.grantedOrigins.has(MATCH_PATTERN)).toBe(true)
+  })
+
   it('should drop the token when the address changes, since it was minted for the old vault', async () => {
     // Otherwise vault A's bearer token is sent to vault B on the next request.
     const { deps, browser } = createTestDeps()
