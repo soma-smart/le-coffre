@@ -32,10 +32,12 @@ from identity_access_management_context.application.use_cases import (
 from identity_access_management_context.domain.entities import (
     MAX_ACTIVE_TOKENS_PER_USER,
     ExtensionToken,
+    User,
     UserPassword,
 )
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
+    ExtensionPairingApprovalWithdrawnError,
     ExtensionPairingDeniedError,
     ExtensionPairingExpiredError,
     ExtensionPairingNotFoundError,
@@ -58,13 +60,22 @@ def user():
 
 
 @pytest.fixture
-def registered_user(user, user_password_repository):
+def registered_user(user, user_password_repository, user_repository):
     user_password_repository.save(
         UserPassword(
             id=user.user_id,
             email=user.email,
             display_name=user.display_name,
             password_hash=b"hashed",
+        )
+    )
+    user_repository.save(
+        User(
+            id=user.user_id,
+            username=user.email,
+            email=user.email,
+            name=user.display_name,
+            roles=["user"],
         )
     )
     return user
@@ -113,6 +124,7 @@ def exchange_use_case(
     extension_token_repository,
     user_password_repository,
     sso_user_repository,
+    user_repository,
     event_publisher,
     admin_event_repository,
     time_provider,
@@ -122,6 +134,7 @@ def exchange_use_case(
         extension_token_repository=extension_token_repository,
         user_password_repository=user_password_repository,
         sso_user_repository=sso_user_repository,
+        user_repository=user_repository,
         event_publisher=event_publisher,
         admin_event_repository=admin_event_repository,
         time_provider=time_provider,
@@ -574,6 +587,67 @@ class TestExchange:
         extension_token_repository.revoke(next(iter(extension_token_repository.tokens)), NOW)
 
         assert isinstance(exchange_use_case.execute(command), ExchangedExtensionTokenResponse)
+
+    def test_should_refuse_when_the_approver_was_deleted_after_approving(
+        self, start_use_case, approve_use_case, exchange_use_case, user_repository, registered_user
+    ):
+        # The one credential the deletion cascade could not reach: it revokes
+        # issued tokens, and this token is not issued yet. The SSO row would
+        # still resolve an identity, so the account row has to be the
+        # authority.
+        verifier = PkceVerifier.generate()
+        started = _start(start_use_case, verifier)
+        approve_use_case.execute(
+            ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=registered_user)
+        )
+        user_repository.delete(registered_user.user_id)
+
+        with pytest.raises(ExtensionPairingApprovalWithdrawnError):
+            exchange_use_case.execute(
+                ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
+            )
+
+    def test_should_refuse_when_the_sessions_were_cut_after_approving(
+        self, start_use_case, approve_use_case, exchange_use_case, user_repository, time_provider, registered_user
+    ):
+        # A password change (or refresh-token reuse detection) sets the cutoff
+        # and revokes issued tokens. An approval given before it must not be
+        # redeemable after it: the minted token would be dated after the cutoff
+        # and pass validation.
+        verifier = PkceVerifier.generate()
+        started = _start(start_use_case, verifier)
+        approve_use_case.execute(
+            ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=registered_user)
+        )
+        account = user_repository.get_by_id(registered_user.user_id)
+        account.session_invalid_before = NOW + timedelta(seconds=1)
+        user_repository.update(account)
+        time_provider.set_current_time(NOW + timedelta(seconds=2))
+
+        with pytest.raises(ExtensionPairingApprovalWithdrawnError):
+            exchange_use_case.execute(
+                ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
+            )
+
+    def test_should_redeem_when_the_approval_postdates_the_session_cutoff(
+        self, start_use_case, approve_use_case, exchange_use_case, user_repository, registered_user
+    ):
+        # An old cutoff must not block a fresh approval, or nobody who ever
+        # changed their password could pair an extension again.
+        account = user_repository.get_by_id(registered_user.user_id)
+        account.session_invalid_before = NOW - timedelta(days=1)
+        user_repository.update(account)
+        verifier = PkceVerifier.generate()
+        started = _start(start_use_case, verifier)
+        approve_use_case.execute(
+            ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=registered_user)
+        )
+
+        result = exchange_use_case.execute(
+            ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
+        )
+
+        assert isinstance(result, ExchangedExtensionTokenResponse)
 
     def test_should_record_an_audit_event_when_exchanging(
         self, start_use_case, approve_use_case, exchange_use_case, admin_event_repository, registered_user
