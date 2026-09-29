@@ -50,6 +50,39 @@ describe('startPairing', () => {
     expect(browser.scheduledAlarms.has(ALARMS.pairingPoll)).toBe(true)
   })
 
+  it('should tell the vault which browser and machine this is', async () => {
+    // The profile page lists paired browsers by this name. "Browser
+    // extension" three times over tells the user nothing about which one to
+    // revoke.
+    const { deps, browser, client } = createTestDeps()
+    await givenConfigured(browser)
+    browser.deviceDescription = 'Chrome on macOS'
+
+    await startPairing(deps)
+
+    expect(client.startPairingCalls).toEqual(['Chrome on macOS'])
+  })
+
+  it('should fall back to a generic name when the browser will not say', async () => {
+    const { deps, browser, client } = createTestDeps()
+    await givenConfigured(browser)
+
+    await startPairing(deps)
+
+    expect(client.startPairingCalls).toEqual(['Browser extension'])
+  })
+
+  it('should prefer a device name the user stored', async () => {
+    const { deps, browser, client } = createTestDeps()
+    await givenConfigured(browser)
+    browser.deviceDescription = 'Chrome on macOS'
+    await browser.local.set(LOCAL_KEYS.deviceName, 'Work laptop')
+
+    await startPairing(deps)
+
+    expect(client.startPairingCalls).toEqual(['Work laptop'])
+  })
+
   it('should refuse to start before a vault url exists', async () => {
     const { deps, browser } = createTestDeps()
 

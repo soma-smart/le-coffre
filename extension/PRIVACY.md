@@ -23,7 +23,11 @@ Persisted to disk, kept until you disconnect or uninstall:
 - the exact host permission you granted, so it can be checked and revoked
 - the group you selected in the settings
 - the read-only access token issued when you paired, and its expiry date
-- the device name reported at pairing, and your extension settings
+- your extension settings, and a device name if you ever set one (nothing
+  sets one today). The name reported at pairing, your browser and operating
+  system such as "Chrome on macOS", which is what the vault's profile page
+  lists next to the token, is derived from the browser at that moment and
+  not stored
 
 Kept in memory only, discarded when the browser closes:
 
