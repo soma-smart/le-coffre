@@ -341,6 +341,9 @@ export type DemoteOwnerToMemberResponse = {
      * Message
      */
     message: string;
+};
+
+/**
  * ExchangeExtensionDeviceRequest
  */
 export type ExchangeExtensionDeviceRequest = {
@@ -774,13 +777,6 @@ export type IsSsoConfigSetResponse = {
 };
 
 /**
- * ListGroupEventsResponse
- */
-export type ListGroupEventsResponse = {
-    /**
-     * Events
-     */
-    events: Array<GroupEventResponse>;
  * ListExtensionGroupsResponse
  */
 export type ListExtensionGroupsResponse = {
@@ -802,6 +798,16 @@ export type ListExtensionTokensResponseModel = {
      * Tokens
      */
     tokens: Array<ExtensionTokenItem>;
+};
+
+/**
+ * ListGroupEventsResponse
+ */
+export type ListGroupEventsResponse = {
+    /**
+     * Events
+     */
+    events: Array<GroupEventResponse>;
 };
 
 /**
