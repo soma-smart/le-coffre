@@ -99,27 +99,52 @@ describe('request', () => {
     expect(result).toEqual({ ok: false, error: expected })
   })
 
-  it('tells a locked vault apart from a starting server', async () => {
-    // Same status, opposite advice: one needs an admin, the other needs a wait.
-    fetchMock.mockResolvedValue(respond(503, { code: 'vault_locked' }))
-    await expect(request({ url: URL }, schema)).resolves.toEqual({
-      ok: false,
-      error: { kind: 'VAULT_LOCKED' },
-    })
-
-    fetchMock.mockResolvedValue(respond(503, { code: 'starting' }))
-    await expect(request({ url: URL }, schema)).resolves.toEqual({
-      ok: false,
-      error: { kind: 'SERVER_STARTING' },
-    })
-  })
-
-  it('assumes a locked vault when a 503 carries no code', async () => {
-    fetchMock.mockResolvedValue(respond(503, { detail: 'something' }))
+  it.each([
+    'Vault is locked: unlock the vault to perform this operation',
+    'Vault is locked: unlock the vault before performing cryptographic operations',
+  ])('recognises a locked vault from the detail "%s"', async (detail) => {
+    // FastAPI sends `{ detail }` and no code. These are the two messages the
+    // server's locked-vault errors carry, from the password routes and the
+    // vault routes respectively.
+    fetchMock.mockResolvedValue(respond(503, { detail }))
 
     const result = await request({ url: URL }, schema)
 
     expect(result).toEqual({ ok: false, error: { kind: 'VAULT_LOCKED' } })
+  })
+
+  it.each(['Service starting: database migrations in progress', 'Migrations in progress'])(
+    'recognises a starting server from the detail "%s"',
+    async (detail) => {
+      // Same status as a locked vault, opposite advice: one needs an admin,
+      // the other needs a wait.
+      fetchMock.mockResolvedValue(respond(503, { detail }))
+
+      const result = await request({ url: URL }, schema)
+
+      expect(result).toEqual({ ok: false, error: { kind: 'SERVER_STARTING' } })
+    },
+  )
+
+  it.each(['Service unavailable: database migrations failed', 'Database unreachable', 'something'])(
+    'reports any other 503 as unavailable rather than locked: "%s"',
+    async (detail) => {
+      // Sending the user to an administrator to unlock a vault whose database
+      // is down wastes everybody's time.
+      fetchMock.mockResolvedValue(respond(503, { detail }))
+
+      const result = await request({ url: URL }, schema)
+
+      expect(result).toEqual({ ok: false, error: { kind: 'SERVER_ERROR', status: 503, detail } })
+    },
+  )
+
+  it('reports a 503 with no readable body as unavailable', async () => {
+    fetchMock.mockResolvedValue(new Response('<html>502ish</html>', { status: 503 }))
+
+    const result = await request({ url: URL }, schema)
+
+    expect(result).toEqual({ ok: false, error: { kind: 'SERVER_ERROR', status: 503 } })
   })
 
   it('reads Retry-After in seconds', async () => {

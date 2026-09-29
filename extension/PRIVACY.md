@@ -21,7 +21,7 @@ Persisted to disk, kept until you disconnect or uninstall:
 
 - the vault address you entered
 - the exact host permission you granted, so it can be checked and revoked
-- the group you selected in the settings
+- the group you selected in the password list
 - the read-only access token issued when you paired, and its expiry date
 - your extension settings, and a device name if you ever set one (nothing
   sets one today). The name reported at pairing, your browser and operating
@@ -47,8 +47,7 @@ written to the clipboard, and dropped. They never enter the popup's UI code.
 ## The clipboard
 
 Copying a login or a password writes it to your system clipboard, then clears
-it after the delay configured in the extension by overwriting it with a single
-space. The extension requests `clipboardWrite` and never `clipboardRead`: it
+it thirty seconds later by overwriting it with a single space. The extension requests `clipboardWrite` and never `clipboardRead`: it
 cannot see anything you copy elsewhere. Because it cannot read the clipboard,
 it also cannot check whether its value is still there before clearing, so
 something you copied in the meantime may be overwritten.

@@ -18,9 +18,9 @@ export type AppError =
   | { kind: 'NOT_A_VAULT' }
   /** It is Le Coffre, but too old to know about extension pairing. */
   | { kind: 'VAULT_TOO_OLD'; detail: string }
-  /** 503 with code `vault_locked`, an admin must unlock it. */
+  /** 503 whose detail says the vault is locked, an admin must unlock it. */
   | { kind: 'VAULT_LOCKED' }
-  /** 503 with code `starting`, migrations in progress, retry shortly. */
+  /** 503 whose detail says migrations are in progress, retry shortly. */
   | { kind: 'SERVER_STARTING' }
   /** 401, the token is gone for good; re-pairing is the only way back. */
   | { kind: 'AUTH_LOST'; reason: 'expired' | 'revoked' }
@@ -30,6 +30,7 @@ export type AppError =
   | { kind: 'FORBIDDEN' }
   /** 404, the entry vanished or access was revoked since the list was cached. */
   | { kind: 'NOT_FOUND' }
+  /** Any other 5xx, including a 503 that is neither of the above. */
   | { kind: 'SERVER_ERROR'; status: number; detail?: string }
   /** The response parsed as JSON but not as the shape we expect. */
   | { kind: 'PROTOCOL_MISMATCH'; detail: string }

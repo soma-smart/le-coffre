@@ -12,6 +12,16 @@
  */
 import { z } from 'zod'
 
+/**
+ * A timestamp the extension will compare against the clock. Validated as ISO
+ * 8601 rather than accepted as any string: `new Date('garbage').getTime()` is
+ * NaN, and every comparison with NaN is false, so an unparsable expiry read
+ * as "never expires". Offsets and a bare local time are both allowed, since
+ * which one pydantic emits depends on whether the server's datetime carries a
+ * zone; only the shape is enforced.
+ */
+const isoTimestamp = z.iso.datetime({ offset: true, local: true })
+
 export const healthSchema = z.object({
   status: z.string(),
 })
@@ -22,13 +32,13 @@ export const vaultStatusSchema = z.object({
 
 export const startPairingSchema = z.object({
   user_code: z.string().min(1),
-  expires_at: z.string(),
+  expires_at: isoTimestamp,
   poll_interval_seconds: z.number().int().positive(),
 })
 
 export const exchangePairingSchema = z.object({
   status: z.enum(['approved', 'pending']),
-  expires_at: z.string(),
+  expires_at: isoTimestamp,
   poll_interval_seconds: z.number().int().positive().nullable().optional(),
   token: z.string().nullable().optional(),
   token_id: z.string().nullable().optional(),
@@ -64,7 +74,7 @@ export const entrySchema = z.object({
   can_read: z.boolean(),
   can_write: z.boolean(),
   accessible_group_ids: z.array(z.string()),
-  access_expires_at: z.string().nullable().optional(),
+  access_expires_at: isoTimestamp.nullable().optional(),
 })
 
 export const listEntriesSchema = z.array(entrySchema)

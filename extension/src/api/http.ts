@@ -32,13 +32,34 @@ function retryAfterSeconds(response: Response): number {
   return Math.max(1, Math.round((asDate - Date.now()) / 1000))
 }
 
-async function readErrorCode(response: Response): Promise<string | null> {
+/** FastAPI's error body is `{ detail: string }`; there is no machine-readable code. */
+async function readErrorDetail(response: Response): Promise<string | null> {
   try {
-    const body = (await response.clone().json()) as { code?: unknown }
-    return typeof body.code === 'string' ? body.code : null
+    const body = (await response.clone().json()) as { detail?: unknown }
+    return typeof body.detail === 'string' ? body.detail : null
   } catch {
     return null
   }
+}
+
+/**
+ * Which 503 this is, from the server's `detail` text.
+ *
+ * A locked vault answers "Vault is locked: ..." from every route that needs
+ * the key (PasswordEncryptionUnavailableError and VaultIsLockedError share
+ * that prefix); a server still migrating answers "Service starting: database
+ * migrations in progress" from its middleware, or "Migrations in progress"
+ * from the readiness probe. Anything else, a failed migration, a database
+ * that is down, a proxy with no upstream, is simply unavailable, and saying
+ * "locked" for it would send the user to an administrator for nothing.
+ */
+function classify503(detail: string | null): AppError {
+  const text = detail?.toLowerCase() ?? ''
+  if (text.startsWith('vault is locked')) return { kind: 'VAULT_LOCKED' }
+  if (text.includes('migrations in progress') || text.startsWith('service starting')) {
+    return { kind: 'SERVER_STARTING' }
+  }
+  return { kind: 'SERVER_ERROR', status: 503, ...(detail ? { detail } : {}) }
 }
 
 async function toAppError(response: Response): Promise<AppError> {
@@ -51,13 +72,12 @@ async function toAppError(response: Response): Promise<AppError> {
       return { kind: 'NOT_FOUND' }
     case 429:
       return { kind: 'RATE_LIMITED', retryAfterSeconds: retryAfterSeconds(response) }
-    case 503: {
-      // Two very different 503s share this status: the vault is locked (an
-      // admin must act) and the server is still running migrations (wait a
-      // moment). Telling the user the wrong one wastes their time.
-      const code = await readErrorCode(response)
-      return code === 'starting' ? { kind: 'SERVER_STARTING' } : { kind: 'VAULT_LOCKED' }
-    }
+    case 503:
+      // Three different 503s share this status: the vault is locked (an
+      // admin must act), the server is still running migrations (wait a
+      // moment), and everything else (the vault is simply not available).
+      // Telling the user the wrong one wastes their time.
+      return classify503(await readErrorDetail(response))
     default:
       return { kind: 'SERVER_ERROR', status: response.status }
   }
