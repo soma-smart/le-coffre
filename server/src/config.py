@@ -7,6 +7,18 @@ def get_database_url():
     return os.environ.get("DATABASE_URL", "sqlite:///local_db.sqlite")
 
 
+def get_app_base_url() -> str:
+    """External base URL of the application, used for SSO callbacks and for
+    building absolute links back into the app (e.g. in emails). Required — a
+    localhost fallback would silently ship broken links and SSO redirects."""
+    base_url = os.environ.get("APP_BASE_URL")
+    if not base_url:
+        raise ValueError(
+            "APP_BASE_URL is required. Set it to your application's public URL (e.g. https://le-coffre.yourdomain.com)."
+        )
+    return base_url.rstrip("/")
+
+
 def get_jwt_secret_key() -> str:
     """
     Get JWT secret key from environment variable.
@@ -185,3 +197,53 @@ def get_login_max_failed_attempts() -> int:
 def get_login_lockout_seconds() -> int:
     """Duration in seconds an account stays locked after hitting the failure threshold. Default 300."""
     return int(os.environ.get("LOGIN_LOCKOUT_SECONDS", "300"))
+
+
+# ── Email (SMTP) ────────────────────────────────────────────────
+
+
+def get_smtp_host() -> str:
+    """SMTP relay hostname. Required — email delivery must actually work, so
+    there is no fallback that would silently point at a relay that isn't there."""
+    host = os.environ.get("SMTP_HOST")
+    if not host:
+        raise ValueError("SMTP_HOST is required. Set it to your SMTP relay's hostname.")
+    return host
+
+
+def get_smtp_port() -> int:
+    """SMTP relay port. Required — no default, since the correct port depends
+    entirely on the relay and TLS mode (25/587/465 all being standard)."""
+    port = os.environ.get("SMTP_PORT")
+    if not port:
+        raise ValueError("SMTP_PORT is required. Set it to your SMTP relay's port.")
+    return int(port)
+
+
+def get_smtp_from_address() -> str:
+    """From address used for all outgoing emails. Required."""
+    from_address = os.environ.get("SMTP_FROM_ADDRESS")
+    if not from_address:
+        raise ValueError("SMTP_FROM_ADDRESS is required. Set it to the address outgoing emails should come from.")
+    return from_address
+
+
+def get_smtp_username() -> str | None:
+    """SMTP auth username. Unset means the relay does not require authentication."""
+    return os.environ.get("SMTP_USERNAME") or None
+
+
+def get_smtp_password() -> str | None:
+    """SMTP auth password. Unset means the relay does not require authentication."""
+    return os.environ.get("SMTP_PASSWORD") or None
+
+
+def get_smtp_tls_mode() -> str:
+    """SMTP TLS mode: "none", "implicit" (SMTPS, typically port 465, whole
+    connection wrapped in TLS from the start), or "starttls" (opportunistic upgrade
+    after connecting in plaintext, typically port 587). Required — no default,
+    so a deployment can't end up unencrypted by omission."""
+    tls_mode = os.environ.get("SMTP_TLS_MODE")
+    if not tls_mode:
+        raise ValueError('SMTP_TLS_MODE is required. Set it to "none", "implicit", or "starttls".')
+    return tls_mode.lower()

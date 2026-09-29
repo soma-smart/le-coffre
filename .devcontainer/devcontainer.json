@@ -8,9 +8,9 @@
     // from inside the dev container (it shells out to `docker compose`).
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   },
-  // 8180 (Keycloak) is intentionally NOT forwarded: its compose service
-  // publishes 8180->8080 directly to the host, and a VS Code forward would grab
-  // 127.0.0.1:8180 first and block Keycloak from binding the port.
+  // 8180 (Keycloak) and 8025/1025 (Mailpit) are intentionally NOT forwarded:
+  // those compose services publish their ports directly to the host, and a
+  // VS Code forward would grab the port first and block them from binding it.
   "forwardPorts": [8123, 8000, 5173],
   "portsAttributes": {
     "8123": { "label": "Le Coffre (nginx)" },

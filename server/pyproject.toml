@@ -25,6 +25,7 @@ dev = [
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
   "ruff>=0.16.8",
+  "smtpdfix>=0.5.3",
 ]
 monitoring = [
     "opentelemetry-instrumentation-fastapi>=0.65b0",
