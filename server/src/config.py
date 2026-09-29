@@ -197,6 +197,22 @@ def get_rate_limit_extension_pairing_max_requests() -> int:
     return int(os.environ.get("RATE_LIMIT_EXTENSION_PAIRING_MAX_REQUESTS", "30"))
 
 
+def get_rate_limit_bearer_miss_max_requests() -> int:
+    """Failed extension-token lookups allowed per window, per IP. Default 30.
+
+    Not a request budget. The rate-limit middleware has to read the database to
+    learn which bucket an extension belongs to, and that read happens before any
+    bucket is consulted, on a request whose credential may be worthless. This
+    counter is charged only when the lookup finds nothing, so a paired extension
+    never spends it however busy it is, while a caller sending made-up tokens
+    exhausts it in a handful of requests and stops reaching the database.
+
+    Raise it only if legitimate extensions behind one address are losing their
+    per-user bucket, which would mean their tokens are genuinely being rejected.
+    """
+    return int(os.environ.get("RATE_LIMIT_BEARER_MISS_MAX_REQUESTS", "30"))
+
+
 def get_expired_share_retention_seconds() -> int:
     """How long an expired share stays visible before being purged. Default 7 days.
 
