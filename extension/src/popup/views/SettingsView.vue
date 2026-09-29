@@ -88,9 +88,13 @@ async function disconnect() {
       </button>
     </div>
 
+    <!-- Two different things, not two doors to the same room: Disconnect only
+         forgets the token on this browser; the token itself is revoked from the
+         vault. Saying "here or there" once made people believe one implied the
+         other. -->
     <p class="text-xs leading-relaxed text-vault-text-muted">
-      This extension can only read passwords. Disconnect it here or from your vault profile, under
-      Connected extensions.
+      This extension can only read passwords. Disconnect forgets its token on this browser. To
+      revoke the token itself, use your vault profile page, under Connected extensions.
     </p>
 
     <div class="flex-1"></div>
