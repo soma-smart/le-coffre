@@ -33,6 +33,14 @@ def test_should_drop_a_pairing_code_without_losing_the_operation():
     assert sanitize_path_for_log("/api/extension/pairing/K7QM-3XR9/approve") == ("/api/extension/pairing/*/approve")
 
 
+@pytest.mark.parametrize("code", ["ab3d-x9kq", "k7qm-3xr9", "abcd-efgh"])
+def test_should_drop_a_pairing_code_sent_in_lowercase(code):
+    # The route uppercases what it is given, so a client chooses whether its
+    # code arrives as `K7QM-3XR9` or `k7qm-3xr9`. The lowercase form used to
+    # pass as route vocabulary and was logged in full.
+    assert sanitize_path_for_log(f"/api/extension/pairing/{code}/approve") == "/api/extension/pairing/*/approve"
+
+
 @pytest.mark.parametrize(
     "path",
     [
