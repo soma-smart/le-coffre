@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import { ALARMS } from '@/shared/storageKeys'
+
 import { disconnect, getConnectionState, setVaultUrl } from '../handlers/connection'
+import { ensureIdleSweepAlarm } from '../handlers/idleSweep'
 import { MATCH_PATTERN, VAULT_URL, createTestDeps, givenConfigured, givenPaired } from './testDeps'
 
 describe('getConnectionState', () => {
@@ -59,6 +62,25 @@ describe('getConnectionState', () => {
     const result = await getConnectionState(deps)
 
     expect(result).toEqual({ ok: true, data: { status: 'unpaired', vaultUrl: VAULT_URL } })
+  })
+
+  it('should forget a revoked token rather than resend it on every popup open', async () => {
+    // What vault.ts does on a 401. Reading state is the first thing every
+    // popup open does, so this is the path a revoked token actually takes.
+    const { deps, browser, client } = createTestDeps()
+    await givenPaired(browser)
+    await ensureIdleSweepAlarm(deps)
+    await browser.session.set('entriesCache', { entries: [], fetchedAt: 'x' })
+    client.sessionResult = { ok: false, error: { kind: 'AUTH_LOST', reason: 'revoked' } }
+
+    await getConnectionState(deps)
+
+    await expect(browser.local.get('token')).resolves.toBeUndefined()
+    await expect(browser.local.get('tokenExpiresAt')).resolves.toBeUndefined()
+    await expect(browser.session.get('entriesCache')).resolves.toBeUndefined()
+    expect(browser.scheduledAlarms.has(ALARMS.idleSweep)).toBe(false)
+    // Configuration survives: the user reconnects, not reconfigures.
+    await expect(browser.local.get('vaultUrl')).resolves.toBe(VAULT_URL)
   })
 
   it('should report a locked vault distinctly', async () => {
