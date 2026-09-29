@@ -139,6 +139,7 @@ Worth showing, in this order:
 1. The entry list with the copy buttons, the screen people spend their time on.
 2. The pairing screen next to the vault's approval page, which is the whole
    anti-phishing ceremony and the least obvious part of the product.
-3. The settings screen with the group picker.
+3. The settings screen, with the identity behind the token and the vault
+   address.
 4. The first screen, where the vault address is entered, since it is what makes
    the self-hosted requirement obvious.

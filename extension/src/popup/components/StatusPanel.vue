@@ -61,6 +61,16 @@ const message = computed(() => {
         action: 'retry' as const,
       }
     case 'SERVER_ERROR':
+      // A 503 that is neither "locked" nor "starting": the vault is not
+      // available, and nobody in particular has to act. Saying so beats
+      // "error", which reads as a bug.
+      if (props.error.status === 503) {
+        return {
+          title: 'Vault unavailable',
+          body: 'Your vault is not available right now. Try again in a moment.',
+          action: 'retry' as const,
+        }
+      }
       return { title: 'Vault error', body: 'The vault could not answer.', action: 'retry' as const }
     case 'PROTOCOL_MISMATCH':
       return {
