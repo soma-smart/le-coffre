@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 from uuid import UUID
 
 from identity_access_management_context.application.commands import ValidateExtensionTokenCommand
@@ -45,6 +46,7 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
         user_repository: UserRepository,
         time_provider: TimeGateway,
         last_used_coarsening_seconds: int,
+        inactivity_seconds: int,
     ):
         self.extension_token_repository = extension_token_repository
         self.user_password_repository = user_password_repository
@@ -52,6 +54,7 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
         self.user_repository = user_repository
         self.time_provider = time_provider
         self.last_used_coarsening_seconds = last_used_coarsening_seconds
+        self.dormant_after = timedelta(seconds=inactivity_seconds)
 
     def execute(self, command: ValidateExtensionTokenCommand) -> ValidatedExtensionTokenResponse:
         try:
@@ -66,8 +69,11 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
             raise ExtensionTokenNotFoundError()
 
         now = self.time_provider.get_current_time()
-        # Raises ExtensionTokenRevokedError / ExtensionTokenExpiredError.
-        token.ensure_usable(now)
+        # Raises ExtensionTokenRevokedError, ExtensionTokenExpiredError or
+        # ExtensionTokenDormantError. The absolute lifetime bounds a token in
+        # use; the inactivity limit bounds one that is not, so a laptop in a
+        # drawer does not hold a live grant for the rest of the month.
+        token.ensure_usable(now, self.dormant_after)
 
         authenticated_user = self.user_repository.get_by_id(token.user_id)
         if authenticated_user is None:

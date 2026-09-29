@@ -258,6 +258,13 @@ class ExtensionTokenExpiredError(ExtensionDomainError):
         super().__init__("Invalid extension token")
 
 
+class ExtensionTokenDormantError(ExtensionDomainError):
+    """Raised when a credential has gone unused for longer than the inactivity limit."""
+
+    def __init__(self):
+        super().__init__("Invalid extension token")
+
+
 class ExtensionTokenRevokedError(ExtensionDomainError):
     def __init__(self):
         super().__init__("Invalid extension token")

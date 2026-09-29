@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from identity_access_management_context.application.commands import ListExtensionTokensCommand
 from identity_access_management_context.application.gateways import ExtensionTokenRepository
 from identity_access_management_context.application.responses import (
@@ -19,9 +21,11 @@ class ListExtensionTokensUseCase(TracedUseCase):
         self,
         extension_token_repository: ExtensionTokenRepository,
         time_provider: TimeGateway,
+        inactivity_seconds: int,
     ):
         self.extension_token_repository = extension_token_repository
         self.time_provider = time_provider
+        self.dormant_after = timedelta(seconds=inactivity_seconds)
 
     def execute(self, command: ListExtensionTokensCommand) -> ListExtensionTokensResponse:
         now = self.time_provider.get_current_time()
@@ -37,7 +41,9 @@ class ListExtensionTokensUseCase(TracedUseCase):
                     last_used_at=token.last_used_at,
                     revoked_at=token.revoked_at,
                     created_from_ip=token.created_from_ip,
-                    is_active=token.is_active(now),
+                    # The same notion of active that validation applies, so a
+                    # token refused for inactivity is not listed as live.
+                    is_active=token.is_active(now, self.dormant_after),
                 )
                 for token in tokens
             ]

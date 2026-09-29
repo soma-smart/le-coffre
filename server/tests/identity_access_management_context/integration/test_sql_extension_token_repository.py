@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from identity_access_management_context.adapters.secondary.sql import SqlExtensionTokenRepository
 from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, ExtensionToken
 from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 
@@ -132,6 +133,29 @@ class TestActiveCount:
         _add(sql_extension_token_repository, _token(user_id=uuid4()))
 
         assert sql_extension_token_repository.count_active_for_user(user_id, NOW) == 0
+
+
+class TestDormancy:
+    """Inactivity is part of "active" for the count and the cap, as in memory."""
+
+    def test_should_not_count_a_token_unused_past_the_inactivity_limit(self, session):
+        repository = SqlExtensionTokenRepository(session, dormant_after=timedelta(days=14))
+        user_id = uuid4()
+        _add(repository, _token(user_id=user_id, now=NOW - timedelta(days=20)))  # never used, created long ago
+        recently_used = _token(user_id=user_id, now=NOW - timedelta(days=20))
+        recently_used.last_used_at = NOW - timedelta(days=1)
+        _add(repository, recently_used)
+        _add(repository, _token(user_id=user_id, now=NOW - timedelta(days=1)))  # never used, created recently
+
+        assert repository.count_active_for_user(user_id, NOW) == 2
+
+    def test_should_free_a_slot_when_a_token_goes_dormant(self, session):
+        repository = SqlExtensionTokenRepository(session, dormant_after=timedelta(days=14))
+        user_id = uuid4()
+        for _ in range(5):
+            _add(repository, _token(user_id=user_id, now=NOW - timedelta(days=20)))
+
+        assert repository.add(_token(user_id=user_id), max_active_tokens=5, now=NOW) is not None
 
 
 class TestRevocation:

@@ -69,6 +69,7 @@ def _create_app(
     app.state.rate_limit_one_time_link_max_requests = one_time_link_max
     app.state.rate_limit_extension_pairing_max_requests = extension_pairing_max
     app.state.rate_limit_bearer_miss_max_requests = bearer_miss_max
+    app.state.extension_token_inactivity_seconds = 14 * 86400
     app.state.rate_limit_window_seconds = window
     if session_maker is not None:
         app.state.session_maker = session_maker

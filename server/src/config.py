@@ -95,6 +95,20 @@ def get_extension_token_lifetime_seconds() -> int:
     return _positive_int("EXTENSION_TOKEN_LIFETIME_DAYS", "30") * 86400
 
 
+def get_extension_token_inactivity_seconds() -> int:
+    """How long an extension token may go unused before it stops working. Default 14 days.
+
+    The absolute lifetime bounds a token that is in use; this bounds one that
+    is not. A browser profile that has not opened the extension in two weeks
+    is a laptop in a drawer, a colleague who left, or a machine that was
+    reinstalled, and none of them should still hold a read grant on the vault
+    for the rest of the month. Re-pairing is the recovery path.
+
+    Set it to the token lifetime or above to disable the effect.
+    """
+    return _positive_int("EXTENSION_TOKEN_INACTIVITY_DAYS", "14") * 86400
+
+
 def get_extension_pairing_lifetime_seconds() -> int:
     """How long an unapproved pairing request stays redeemable. Default 10 minutes.
 

@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Literal
 
 from fastapi import Request
@@ -412,6 +413,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         try:
             rate_limiter = request.app.state.rate_limiter
             miss_max = request.app.state.rate_limit_bearer_miss_max_requests
+            dormant_after = timedelta(seconds=request.app.state.extension_token_inactivity_seconds)
             window = request.app.state.rate_limit_window_seconds
             time_provider = request.app.state.time_provider
             now = time_provider.get_current_time()
@@ -447,7 +449,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
             return Principal(kind="ip", id=client_ip)
 
-        if token_row is None or not token_row.is_active(now):
+        if token_row is None or not token_row.is_active(now, dormant_after):
             # The lookup was wasted. Charge it, so a caller producing nothing
             # but misses runs out of budget while a real extension never does.
             rate_limiter.check(miss_key, miss_max, window, now)

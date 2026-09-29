@@ -24,6 +24,7 @@ from identity_access_management_context.domain.entities import (
     UserPassword,
 )
 from identity_access_management_context.domain.exceptions import (
+    ExtensionTokenDormantError,
     ExtensionTokenExpiredError,
     ExtensionTokenNotFoundError,
     ExtensionTokenRevokedError,
@@ -34,6 +35,7 @@ from shared_kernel.domain.entities import ValidatedUser
 NOW = datetime(2026, 8, 26, 12, 0, 0, tzinfo=UTC)
 TOKEN_LIFETIME = timedelta(days=30)
 COARSENING = 300
+INACTIVITY = timedelta(days=14)
 
 
 @pytest.fixture
@@ -75,6 +77,7 @@ def validate_use_case(
         user_repository=user_repository,
         time_provider=time_provider,
         last_used_coarsening_seconds=COARSENING,
+        inactivity_seconds=int(INACTIVITY.total_seconds()),
     )
 
 
@@ -83,6 +86,7 @@ def list_use_case(extension_token_repository, time_provider):
     return ListExtensionTokensUseCase(
         extension_token_repository=extension_token_repository,
         time_provider=time_provider,
+        inactivity_seconds=int(INACTIVITY.total_seconds()),
     )
 
 
@@ -210,6 +214,28 @@ class TestValidate:
         with pytest.raises(ExtensionTokenRevokedError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
 
+    def test_should_reject_when_the_credential_has_gone_unused_past_the_inactivity_limit(
+        self, validate_use_case, extension_token_repository, time_provider, registered_user
+    ):
+        # A never-used token counts from its creation: an exchange whose
+        # response the extension lost must not leave a live grant behind.
+        secret, _ = _issue(extension_token_repository, registered_user.user_id)
+        time_provider.set_current_time(NOW + INACTIVITY)
+
+        with pytest.raises(ExtensionTokenDormantError):
+            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
+
+    def test_should_accept_when_the_credential_was_used_within_the_inactivity_limit(
+        self, validate_use_case, extension_token_repository, time_provider, registered_user
+    ):
+        secret, token = _issue(extension_token_repository, registered_user.user_id)
+        token.last_used_at = NOW + timedelta(days=10)
+        time_provider.set_current_time(NOW + INACTIVITY)
+
+        result = validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
+
+        assert result.user_id == registered_user.user_id
+
     def test_should_reject_when_the_account_row_is_gone(
         self, validate_use_case, extension_token_repository, user_repository, registered_user
     ):
@@ -271,6 +297,23 @@ class TestListDevices:
         by_name = {token.device_name: token for token in result.tokens}
         assert by_name["Live"].is_active is True
         assert by_name["Revoked"].is_active is False
+
+    def test_should_list_a_dormant_device_as_inactive(
+        self, list_use_case, extension_token_repository, time_provider, user
+    ):
+        # The same notion of active that validation applies: a device the
+        # vault would refuse must not be shown as connected.
+        time_provider.set_current_time(NOW)
+        _, dormant = _issue(extension_token_repository, user.user_id, device_name="Drawer")
+        _, live = _issue(extension_token_repository, user.user_id, device_name="Desk")
+        live.last_used_at = NOW + timedelta(days=13)
+        time_provider.set_current_time(NOW + INACTIVITY)
+
+        result = list_use_case.execute(ListExtensionTokensCommand(requesting_user=user))
+
+        by_name = {token.device_name: token for token in result.tokens}
+        assert by_name["Drawer"].is_active is False
+        assert by_name["Desk"].is_active is True
 
     def test_should_omit_devices_when_they_belong_to_another_user(
         self, list_use_case, extension_token_repository, user

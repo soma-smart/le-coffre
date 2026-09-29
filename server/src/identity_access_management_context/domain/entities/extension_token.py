@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 from identity_access_management_context.domain.exceptions import (
+    ExtensionTokenDormantError,
     ExtensionTokenExpiredError,
     ExtensionTokenRevokedError,
 )
@@ -63,10 +64,28 @@ class ExtensionToken:
     def is_revoked(self) -> bool:
         return self.revoked_at is not None
 
-    def is_active(self, now: datetime) -> bool:
-        return not self.is_revoked() and not self.is_expired(now)
+    def is_dormant(self, now: datetime, dormant_after: timedelta) -> bool:
+        """Has the credential gone unused for longer than the inactivity limit?
 
-    def ensure_usable(self, now: datetime) -> None:
+        A never-used token counts from its creation, so an exchange whose
+        response the extension lost does not leave a live grant behind.
+        """
+        last_activity = self.last_used_at or self.created_at
+        return now - last_activity >= dormant_after
+
+    def is_active(self, now: datetime, dormant_after: timedelta | None = None) -> bool:
+        """Live, in every sense the rest of the system relies on.
+
+        `dormant_after` is what makes inactivity part of "active": the
+        connected-devices screen, the device cap and the rate limiter all read
+        this, so a token that validation would refuse for inactivity must not
+        show as live, occupy a slot or keep its per-user bucket.
+        """
+        if self.is_revoked() or self.is_expired(now):
+            return False
+        return dormant_after is None or not self.is_dormant(now, dormant_after)
+
+    def ensure_usable(self, now: datetime, dormant_after: timedelta | None = None) -> None:
         """Raise the matching domain error unless the credential still works.
 
         Every arm carries the same message on purpose, see
@@ -77,6 +96,8 @@ class ExtensionToken:
             raise ExtensionTokenRevokedError()
         if self.is_expired(now):
             raise ExtensionTokenExpiredError()
+        if dormant_after is not None and self.is_dormant(now, dormant_after):
+            raise ExtensionTokenDormantError()
 
     def revoke(self, now: datetime) -> None:
         # Idempotent: re-revoking keeps the original timestamp, so the audit
