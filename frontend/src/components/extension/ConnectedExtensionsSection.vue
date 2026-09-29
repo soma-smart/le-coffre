@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useConfirm, useToast } from 'primevue'
+import { useConfirm } from 'primevue/useconfirm'
+import { useToast } from 'primevue/usetoast'
 import type { ConnectedExtension } from '@/domain/extension/Extension'
 import { ExtensionDomainError } from '@/domain/extension/errors'
 import { useContainer } from '@/plugins/container'
