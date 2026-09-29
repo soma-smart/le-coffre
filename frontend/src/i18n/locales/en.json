@@ -435,7 +435,13 @@
         "promotedDetail": "User {username} has been promoted to ADMIN",
         "promoteFailed": "Failed to promote user",
         "deletedDetail": "User {username} has been deleted",
-        "deleteFailed": "Failed to delete user"
+        "deleteFailed": "Failed to delete user",
+        "disconnectExtensionsButton": "Disconnect extensions",
+        "disconnectExtensionsDialogTitle": "Disconnect browser extensions",
+        "disconnectExtensionsQuestion": "Disconnect every browser extension connected to \"{username}\"?",
+        "disconnectExtensionsDescription": "Their extensions will stop reading the vault on their next request.\nThey can pair an extension again from their own browser.",
+        "disconnectedExtensionsDetail": "Browser extensions disconnected for {username}: {count}",
+        "disconnectExtensionsFailed": "Failed to disconnect the user's browser extensions"
       }
     },
     "createUserModal": {

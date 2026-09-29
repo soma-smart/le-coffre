@@ -18,6 +18,9 @@ export class InMemoryExtensionGateway implements ExtensionGateway {
   readonly approved: string[] = []
   readonly denied: string[] = []
   readonly disconnected: string[] = []
+  /** Users whose extensions an administrator disconnected. */
+  readonly disconnectedUsers: string[] = []
+  private activeCountByUser = new Map<string, number>()
 
   seedPairing(pairing: ExtensionPairingDetails): this {
     this.pairings.set(pairing.userCode, pairing)
@@ -26,6 +29,12 @@ export class InMemoryExtensionGateway implements ExtensionGateway {
 
   seedExtensions(extensions: ConnectedExtension[]): this {
     this.extensions = [...extensions]
+    return this
+  }
+
+  /** How many active extensions a user has, as seen by the administrative call. */
+  seedActiveCountForUser(userId: string, count: number): this {
+    this.activeCountByUser.set(userId, count)
     return this
   }
 
@@ -82,6 +91,14 @@ export class InMemoryExtensionGateway implements ExtensionGateway {
       isActive: false,
       revokedAt: extension.revokedAt ?? new Date(),
     }))
+    return active
+  }
+
+  async disconnectAllExtensionsOfUser(userId: string): Promise<number> {
+    this.throwIfFailing()
+    this.disconnectedUsers.push(userId)
+    const active = this.activeCountByUser.get(userId) ?? 0
+    this.activeCountByUser.set(userId, 0)
     return active
   }
 }

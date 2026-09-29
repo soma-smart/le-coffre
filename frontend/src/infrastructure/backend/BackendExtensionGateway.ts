@@ -4,6 +4,7 @@ import {
   getExtensionPairingExtensionPairingUserCodeGet,
   listExtensionTokensExtensionTokensGet,
   revokeAllExtensionTokensExtensionTokensDelete,
+  revokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDelete,
   revokeExtensionTokenExtensionTokensTokenIdDelete,
 } from '@/client/sdk.gen'
 import type { ExtensionGateway } from '@/application/ports/ExtensionGateway'
@@ -117,6 +118,19 @@ export class BackendExtensionGateway implements ExtensionGateway {
     return response.data.revoked_count
   }
 
+  async disconnectAllExtensionsOfUser(userId: string): Promise<number> {
+    const response = await revokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDelete({
+      path: { user_id: userId },
+    })
+
+    if (response.error || !response.data) {
+      throw new ExtensionDomainError(
+        extractDetail(response.error) ?? "Failed to disconnect the user's extensions",
+      )
+    }
+
+    return response.data.revoked_count
+  }
 }
 
 /**
