@@ -6,7 +6,7 @@ that make that safe, including which routes those four are.
 """
 
 from unittest.mock import Mock
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
@@ -22,6 +22,7 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.exceptions import ExtensionTokenRevokedError
 from shared_kernel.adapters.primary.dependencies import get_current_principal
+from shared_kernel.domain.entities import ApiPrincipal, ValidatedUser
 from shared_kernel.domain.value_objects import CredentialKind
 
 USER_ID = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -96,6 +97,17 @@ def test_should_strip_the_admin_role_when_authenticating_with_a_bearer():
     assert principal.kind is CredentialKind.EXTENSION
     assert principal.user.roles == ["user"]
     assert "admin" not in principal.user.roles
+
+
+def test_should_strip_the_roles_in_the_constructor_whatever_the_caller_passed():
+    # The dependency strips them too, but the constructor is the one place a
+    # future call site cannot forget.
+    admin = ValidatedUser(user_id=uuid4(), email="root@example.com", display_name="Root", roles=["admin", "user"])
+
+    principal = ApiPrincipal.extension(admin)
+
+    assert principal.user.roles == ["user"]
+    assert principal.kind is CredentialKind.EXTENSION
 
 
 def test_should_ignore_the_bearer_when_a_cookie_is_present():
