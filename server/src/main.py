@@ -22,6 +22,7 @@ from alembic import command
 from config import (
     get_app_base_url,
     get_database_url,
+    get_extension_token_inactivity_seconds,
     get_jwt_access_token_expiration_seconds,
     get_jwt_algorithm,
     get_jwt_refresh_token_expiration_seconds,
@@ -29,7 +30,9 @@ from config import (
     get_login_lockout_seconds,
     get_login_max_failed_attempts,
     get_rate_limit_auth_max_requests,
+    get_rate_limit_bearer_miss_max_requests,
     get_rate_limit_enabled,
+    get_rate_limit_extension_pairing_max_requests,
     get_rate_limit_one_time_link_max_requests,
     get_rate_limit_trusted_proxies,
     get_rate_limit_trusted_proxy_hops,
@@ -50,10 +53,11 @@ from config import (
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_admin_management_router,
     get_authentication_router,
+    get_extension_router,
     get_group_management_router,
     get_user_management_router,
 )
-from identity_access_management_context.adapters.primary.private_api import GroupOwnershipInfoApi
+from identity_access_management_context.adapters.primary.private_api import GroupOwnershipInfoApi, UserContactInfoApi
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
     InMemoryLoginLockoutGateway,
@@ -62,11 +66,20 @@ from identity_access_management_context.adapters.secondary import (
     PrivateApiSsoEncryptionGateway,
     SsoUrlValidator,
 )
-from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
+from identity_access_management_context.domain.events import ExtensionPairedEvent, OwnerAddedToGroupEvent
 from monitoring import setup_logging, setup_monitoring
-from notification_context.adapters.primary.events import GroupOwnerPromotedEventSubscriber
-from notification_context.adapters.secondary import PrivateApiGroupOwnershipGateway
-from notification_context.application.use_cases import NotifyGroupOwnerPromotedUseCase
+from notification_context.adapters.primary.events import (
+    ExtensionPairedEventSubscriber,
+    GroupOwnerPromotedEventSubscriber,
+)
+from notification_context.adapters.secondary import (
+    PrivateApiGroupOwnershipGateway,
+    PrivateApiUserContactGateway,
+)
+from notification_context.application.use_cases import (
+    NotifyExtensionPairedUseCase,
+    NotifyGroupOwnerPromotedUseCase,
+)
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
@@ -74,6 +87,7 @@ from password_management_context.adapters.secondary import (
     PrivateApiPasswordEncryptionGateway,
 )
 from security import (
+    BearerReadOnlyMiddleware,
     CsrfMiddleware,
     CsrfTokenManager,
     InMemoryRateLimiter,
@@ -229,6 +243,16 @@ async def lifespan(app: FastAPI):
     owner_promoted_subscriber = GroupOwnerPromotedEventSubscriber(notify_owner_promoted_use_case)
     domain_event_publisher.subscribe(OwnerAddedToGroupEvent, owner_promoted_subscriber.handle)
 
+    # Notification: a browser extension was paired (reactive, subscribes to
+    # ExtensionPairedEvent). The net under the approval page: whoever approved
+    # a pairing they did not start hears about it within minutes.
+    user_contact_gateway = PrivateApiUserContactGateway(UserContactInfoApi(session_maker=SessionLocal))
+    notify_extension_paired_use_case = NotifyExtensionPairedUseCase(
+        user_contact_gateway, email_gateway, app_base_url=base_url
+    )
+    extension_paired_subscriber = ExtensionPairedEventSubscriber(notify_extension_paired_use_case)
+    domain_event_publisher.subscribe(ExtensionPairedEvent, extension_paired_subscriber.handle)
+
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()
     app.state.rate_limiter = rate_limiter
@@ -239,6 +263,9 @@ async def lifespan(app: FastAPI):
     app.state.rate_limit_vault_sensitive_max_requests = get_rate_limit_vault_sensitive_max_requests()
     app.state.rate_limit_vault_sensitive_window_seconds = get_rate_limit_vault_sensitive_window_seconds()
     app.state.rate_limit_one_time_link_max_requests = get_rate_limit_one_time_link_max_requests()
+    app.state.rate_limit_extension_pairing_max_requests = get_rate_limit_extension_pairing_max_requests()
+    app.state.rate_limit_bearer_miss_max_requests = get_rate_limit_bearer_miss_max_requests()
+    app.state.extension_token_inactivity_seconds = get_extension_token_inactivity_seconds()
     app.state.rate_limit_window_seconds = get_rate_limit_window_seconds()
     app.state.rate_limit_trusted_proxies = get_rate_limit_trusted_proxies()
     app.state.rate_limit_trusted_proxy_hops = get_rate_limit_trusted_proxy_hops()
@@ -297,6 +324,7 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Add CSRF protection middleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CsrfMiddleware)
+app.add_middleware(BearerReadOnlyMiddleware)
 app.add_middleware(RequestIdMiddleware)
 
 # Add rate limiting middleware (runs before CSRF since middlewares execute in reverse order)
@@ -399,3 +427,4 @@ app.include_router(get_user_management_router())
 app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
 app.include_router(get_admin_management_router())
+app.include_router(get_extension_router())

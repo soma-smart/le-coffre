@@ -80,6 +80,16 @@ const router = createRouter({
       meta: { public: true, skipSetupCheck: true },
     },
     {
+      // An ordinary authenticated route. The pairing code is typed on the page
+      // rather than carried in the URL, so there is nothing for the guard's
+      // `?redirect=` to leak into an access log, and nothing to stash before
+      // sign-in. Going through the guard is also what primes the CSRF token
+      // that Approve and Refuse need.
+      path: '/extension/connect',
+      name: 'ExtensionConnect',
+      component: () => import('@/pages/ExtensionConnectPage.vue'),
+    },
+    {
       path: '/groups',
       name: 'Groups',
       component: () => import('@/pages/GroupsPage.vue'),

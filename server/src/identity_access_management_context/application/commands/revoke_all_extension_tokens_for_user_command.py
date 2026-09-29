@@ -1,0 +1,10 @@
+from dataclasses import dataclass
+from uuid import UUID
+
+from shared_kernel.domain.entities import AuthenticatedUser
+
+
+@dataclass
+class RevokeAllExtensionTokensForUserCommand:
+    requesting_user: AuthenticatedUser
+    target_user_id: UUID

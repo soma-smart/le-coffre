@@ -23,6 +23,7 @@
     "rateLimitedSummary": "Rate Limited",
     "rateLimitedDetailWithSeconds": "Too many requests. Please try again in {seconds} seconds.",
     "rateLimitedDetail": "Too many requests. Please try again later.",
+    "tryAgain": "Please try again",
     "pagination": {
       "showing": "Showing",
       "to": "to",
@@ -217,6 +218,46 @@
         "unexpected": "An unexpected error occurred"
       }
     },
+    "extensionConnect": {
+      "title": "Connect a browser extension",
+      "intro": "When you click {connect} in your Le Coffre extension, it shows a pairing code. Type that code here to review the request.",
+      "connectButtonName": "Connect",
+      "codeLabel": "Code shown in your extension",
+      "codePlaceholder": "XXXX-XXXX",
+      "codeWarning": "Only type a code you are reading off your own extension right now. If someone sent you a code, or a link to this page, do not enter it: approving it would connect {their} extension to your account.",
+      "codeWarningTheir": "their",
+      "reviewButton": "Review request",
+      "alreadyHandled": "This connection request has already been handled.",
+      "unavailable": "This pairing request is invalid or has expired",
+      "approvedOutcome": "Extension connected. You can close this tab and return to it.",
+      "deniedOutcome": "Connection refused. Nothing was granted.",
+      "backToVault": "Back to my vault",
+      "requestForCode": "Request for the code you entered:",
+      "expiresIn": "This request expires in {time}",
+      "expired": "This request has expired. Start again from your extension.",
+      "requestedAgo": "Requested {when}",
+      "fromAddress": "from {address}",
+      "secondsAgo": "{count} second ago | {count} seconds ago",
+      "minutesAgo": "{count} minute ago | {count} minutes ago",
+      "deviceName": "Device name reported by the extension: {device} {unverified}",
+      "notVerified": "(not verified)",
+      "willBeAbleTo": "If you approve, this extension will be able to:",
+      "canRead": "read the passwords you already have access to",
+      "willNotBeAbleTo": "It will not be able to:",
+      "cannotWrite": "create, modify, delete or share anything",
+      "cannotSeeOthers": "see other people's passwords, even if you are an administrator",
+      "cannotManage": "manage your other connected extensions",
+      "accessLasts": "Access lasts {duration}. You can disconnect it at any time from your profile.",
+      "lifetimeDays": "{count} day | {count} days",
+      "lifetimeHours": "{count} hour | {count} hours",
+      "lifetimeMinutes": "{count} minute | {count} minutes",
+      "decisionWarning": "If the address or device above is not yours, or you did not just click Connect in your own Le Coffre extension, refuse: this request came from somewhere else.",
+      "refuse": "Refuse",
+      "approve": "Approve",
+      "tooManySummary": "Too many extensions",
+      "connectFailed": "Could not connect",
+      "refuseFailed": "Could not refuse"
+    },
     "groups": {
       "title": "Groups",
       "newGroup": "New Group",
@@ -398,8 +439,37 @@
         "promotedDetail": "User {username} has been promoted to ADMIN",
         "promoteFailed": "Failed to promote user",
         "deletedDetail": "User {username} has been deleted",
-        "deleteFailed": "Failed to delete user"
+        "deleteFailed": "Failed to delete user",
+        "disconnectExtensionsButton": "Disconnect extensions",
+        "disconnectExtensionsDialogTitle": "Disconnect browser extensions",
+        "disconnectExtensionsQuestion": "Disconnect every browser extension connected to \"{username}\"?",
+        "disconnectExtensionsDescription": "Their extensions will stop reading the vault on their next request.\nThey can pair an extension again from their own browser.",
+        "disconnectedExtensionsDetail": "Browser extensions disconnected for {username}: {count}",
+        "disconnectExtensionsFailed": "Failed to disconnect the user's browser extensions"
       }
+    },
+    "connectedExtensions": {
+      "title": "Connected extensions",
+      "disconnectAll": "Disconnect all",
+      "loadFailed": "Failed to load connected extensions",
+      "never": "never",
+      "disconnectQuestion": "Disconnect \"{device}\"? It will stop being able to read your passwords immediately.",
+      "disconnectDialogTitle": "Disconnect extension",
+      "disconnect": "Disconnect",
+      "disconnectedSummary": "Disconnected",
+      "disconnectedDetail": "{device} can no longer read your passwords",
+      "disconnectFailed": "Could not disconnect",
+      "disconnectAllQuestion": "Disconnect every browser extension connected to your account?",
+      "disconnectAllDialogTitle": "Disconnect all extensions",
+      "disconnectedCount": "{count} extension disconnected | {count} extensions disconnected",
+      "empty": "No browser extension has been connected to this account.",
+      "activeTag": "Active",
+      "disconnectedTag": "Disconnected",
+      "connectedAt": "Connected {date}",
+      "fromAddress": "from {address}",
+      "lastUsed": "Last used {date}",
+      "expires": "Expires {date}",
+      "passwordChangeNote": "Changing your password disconnects every extension."
     },
     "createUserModal": {
       "title": "Create New User",
@@ -571,7 +641,13 @@
     "passwordsWorkspace": {
       "searchResultsTitle": "Search results",
       "allPasswordsTitle": "All passwords",
-      "loadFailed": "Failed to load passwords"
+      "loadFailed": "Failed to load passwords",
+      "editDeepLink": {
+        "readOnlySummary": "Read-only password",
+        "readOnlyDetail": "You do not have permission to edit this password",
+        "notFoundSummary": "Password not found",
+        "notFoundDetail": "That password is no longer available"
+      }
     },
     "oneTimeLinkModal": {
       "title": "One-time link",

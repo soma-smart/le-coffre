@@ -45,12 +45,15 @@ def _create_app(
     sensitive_max: int = 1,
     sensitive_window: int = 60,
     one_time_link_max: int = 10,
+    extension_pairing_max: int = 30,
+    bearer_miss_max: int = 30,
     window: int = 60,
     login_status_code: int = 401,
     token_gateway: _FakeTokenGateway | None = None,
     trusted_proxies: set[str] | None = None,
     trusted_proxy_hops: int = 1,
     time_provider: FakeTimeGateway | None = None,
+    session_maker=None,
 ) -> FastAPI:
     app = FastAPI(root_path="/api")
 
@@ -64,7 +67,12 @@ def _create_app(
     app.state.rate_limit_vault_sensitive_max_requests = sensitive_max
     app.state.rate_limit_vault_sensitive_window_seconds = sensitive_window
     app.state.rate_limit_one_time_link_max_requests = one_time_link_max
+    app.state.rate_limit_extension_pairing_max_requests = extension_pairing_max
+    app.state.rate_limit_bearer_miss_max_requests = bearer_miss_max
+    app.state.extension_token_inactivity_seconds = 14 * 86400
     app.state.rate_limit_window_seconds = window
+    if session_maker is not None:
+        app.state.session_maker = session_maker
     app.state.rate_limit_trusted_proxies = trusted_proxies if trusted_proxies is not None else {"127.0.0.1", "::1"}
     app.state.rate_limit_trusted_proxy_hops = trusted_proxy_hops
 
@@ -77,6 +85,20 @@ def _create_app(
     @app.get("/passwords")
     async def passwords():
         return PlainTextResponse("passwords")
+
+    # The bearer-reachable routes, the only ones where the middleware is allowed
+    # to spend a database lookup deciding which bucket to charge.
+    @app.get("/extension/session")
+    async def extension_session():
+        return PlainTextResponse("session")
+
+    @app.get("/passwords/list")
+    async def passwords_list():
+        return PlainTextResponse("list")
+
+    @app.post("/passwords/list")
+    async def passwords_list_post():
+        return PlainTextResponse("list")
 
     @app.post("/auth/login")
     async def login():
@@ -164,11 +186,28 @@ def test_given_docs_or_openapi_path_when_dispatching_should_pass_through(client:
         assert client.get("/api/openapi.json").status_code != 429
 
 
-def test_given_non_api_path_when_dispatching_should_pass_through():
+def test_given_path_without_the_api_prefix_when_dispatching_should_still_rate_limit():
+    """There is no "outside the API" once a root path is configured.
+
+    Starlette routes `/passwords` and `/api/passwords` to the same handler
+    when the app has root_path="/api", and an earlier version let the first
+    form through untouched: every floor, login included, could be skipped by
+    dropping the prefix on a direct connection to the backend port.
+    """
     app = _create_app(user_max=1, unauth_max=1, auth_max=1, window=60)
     with TestClient(app) as c:
-        for _ in range(5):
-            assert c.get("/other").status_code == 200
+        assert c.get("/passwords").status_code == 200
+        assert c.get("/passwords").status_code == 429
+        # The two spellings share one bucket, since they are one route.
+        assert c.get("/api/passwords").status_code == 429
+
+
+def test_given_login_without_the_api_prefix_when_flooded_should_hit_the_auth_floor():
+    app = _create_app(auth_max=2, unauth_max=100, window=60)
+    with TestClient(app) as c:
+        assert c.post("/auth/login").status_code == 401
+        assert c.post("/auth/login").status_code == 401
+        assert c.post("/auth/login").status_code == 429
 
 
 # ── Unauthenticated IP bucket ─────────────────────────────────────────
@@ -506,3 +545,288 @@ def test_given_concurrent_requests_on_shared_bucket_when_dispatching_should_seri
 
     assert len(allowed) == 3
     assert len(limited) == 7
+
+
+# ---------------------------------------------------------------------------
+# Anonymous floors that replace the principal bucket
+# ---------------------------------------------------------------------------
+
+
+def _create_app_with_pairing_routes(**kwargs) -> FastAPI:
+    app = _create_app(**kwargs)
+
+    @app.post("/extension/device")
+    async def register_device():
+        return PlainTextResponse("registered")
+
+    @app.post("/extension/device/exchange")
+    async def exchange_device():
+        return PlainTextResponse("pending")
+
+    @app.post("/one-time-links/consume")
+    async def consume_link():
+        return PlainTextResponse("consumed")
+
+    return app
+
+
+def test_should_charge_pairing_polls_to_their_own_floor_and_nowhere_else():
+    """Two colleagues pairing behind one NAT must not lock out a third.
+
+    The floor existed, but the request fell through to the anonymous bucket
+    afterwards, so every poll spent both. With a poll every five seconds per
+    device, two devices plus their registrations reached 26 of the 30 shared
+    requests per minute, and the next colleague on that address got 429s on
+    the whole API.
+    """
+    app = _create_app_with_pairing_routes(unauth_max=2, extension_pairing_max=100)
+    with TestClient(app) as c:
+        for _ in range(10):
+            assert c.post("/api/extension/device/exchange").status_code == 200
+
+        # The anonymous bucket is untouched: two ordinary requests still pass.
+        assert c.get("/api/passwords").status_code == 200
+        assert c.get("/api/passwords").status_code == 200
+        assert c.get("/api/passwords").status_code == 429
+
+
+def test_should_refuse_pairing_polls_past_their_floor_whatever_the_anonymous_bucket_holds():
+    app = _create_app_with_pairing_routes(unauth_max=100, extension_pairing_max=3)
+    with TestClient(app) as c:
+        for _ in range(3):
+            assert c.post("/api/extension/device").status_code == 200
+        response = c.post("/api/extension/device")
+
+    assert response.status_code == 429
+    assert response.headers["X-RateLimit-Limit"] == "3"
+
+
+def test_should_report_the_floor_in_the_headers_of_a_pairing_response():
+    app = _create_app_with_pairing_routes(unauth_max=100, extension_pairing_max=5)
+    with TestClient(app) as c:
+        response = c.post("/api/extension/device")
+
+    assert response.headers["X-RateLimit-Limit"] == "5"
+    assert response.headers["X-RateLimit-Remaining"] == "4"
+
+
+def test_should_charge_one_time_link_redemptions_to_their_own_floor_and_nowhere_else():
+    app = _create_app_with_pairing_routes(unauth_max=1, one_time_link_max=100)
+    with TestClient(app) as c:
+        for _ in range(5):
+            assert c.post("/api/one-time-links/consume").status_code == 200
+        assert c.get("/api/passwords").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Extension bearer keying
+#
+# The middleware reads the database to decide which bucket an extension belongs
+# to. That read happens before any bucket is consulted, on a request whose
+# credential may be worthless, so these tests pin both halves of the contract:
+# a paired extension really does get its own bucket, and nobody else can buy
+# database work with a made-up token.
+# ---------------------------------------------------------------------------
+
+
+class _CountingSessionMaker:
+    """A session_maker that records checkouts and serves one known token hash."""
+
+    def __init__(self, known_hash: str | None = None, user_id: str | None = None, active: bool = True):
+        self.checkouts = 0
+        self._known_hash = known_hash
+        self._user_id = user_id
+        self._active = active
+
+    def __call__(self):
+        self.checkouts += 1
+        return _FakeSession(self._known_hash, self._user_id, self._active)
+
+
+class _FakeSession:
+    def __init__(self, known_hash, user_id, active):
+        self._known_hash = known_hash
+        self._user_id = user_id
+        self._active = active
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def exec(self, statement):
+        """Answer the repository's SELECT without a database.
+
+        The middleware builds a real SqlExtensionTokenRepository, so the fake
+        has to sit one layer lower, at the session. `first()` is the only
+        accessor `get_by_token_hash` uses.
+        """
+        return _FakeResult(self._row_for(statement))
+
+    def _row_for(self, statement):
+        if self._known_hash is None:
+            return None
+        # The hash is bound into the statement's parameters; comparing the
+        # rendered SQL is enough to tell "the token we know" from any other.
+        if self._known_hash not in str(statement.compile(compile_kwargs={"literal_binds": True})):
+            return None
+        return _FakeTokenRow(self._user_id, self._active)
+
+
+class _FakeResult:
+    def __init__(self, row):
+        self._row = row
+
+    def first(self):
+        return self._row
+
+
+class _FakeTokenRow:
+    def __init__(self, user_id, active):
+        self.id = UUID("11111111-1111-1111-1111-111111111111")
+        self.user_id = UUID(user_id)
+        self.token_hash = ""
+        self.device_name = "Chrome"
+        self.created_at = datetime(2026, 1, 1, tzinfo=UTC)
+        self.expires_at = datetime(2026, 2, 1, tzinfo=UTC) if active else datetime(2026, 1, 1, tzinfo=UTC)
+        self.last_used_at = None
+        self.revoked_at = None if active else datetime(2026, 1, 1, tzinfo=UTC)
+        self.created_from_ip = None
+
+
+_VALID_TOKEN = "v" * 43
+_UNKNOWN_TOKEN = "u" * 43
+_USER_ID = "22222222-2222-2222-2222-222222222222"
+
+
+def _hash_of(token: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def test_should_key_an_extension_to_its_user_when_it_sends_a_bearer_and_no_cookie():
+    """The whole point of bearer keying, and it was dead.
+
+    An extension never sends a cookie: they are SameSite=strict. A version of
+    _resolve_principal that returned the IP principal as soon as the cookie was
+    absent made the bearer branch unreachable for its only caller, leaving every
+    extension in the shared anonymous bucket, which is what it exists to avoid.
+    """
+    maker = _CountingSessionMaker(known_hash=_hash_of(_VALID_TOKEN), user_id=_USER_ID)
+    app = _create_app(user_max=5, unauth_max=2, session_maker=maker)
+
+    with TestClient(app) as c:
+        responses = [
+            c.get("/api/extension/session", headers={"Authorization": f"Bearer {_VALID_TOKEN}"}) for _ in range(4)
+        ]
+
+    # Four requests with an anonymous limit of two: keyed on the IP they would
+    # have been refused, keyed on the user they all pass.
+    assert [r.status_code for r in responses] == [200, 200, 200, 200]
+    # And only the first one paid for a lookup; BearerPrincipalCache answered
+    # the rest, which is the difference between one query per extension request
+    # and one per token per minute.
+    assert maker.checkouts == 1
+
+
+def test_should_not_touch_the_database_when_a_bearer_reaches_a_route_it_cannot_authenticate():
+    """A bearer on any other route can only ever end in a 401.
+
+    Resolving it there is a connection checkout plus a SELECT bought by an
+    anonymous caller, on every request, including the ones already over their
+    limit. A junk cookie is what used to make this reachable.
+    """
+    maker = _CountingSessionMaker()
+    app = _create_app(unauth_max=3, session_maker=maker, token_gateway=_FakeTokenGateway())
+
+    with TestClient(app) as c:
+        for _ in range(6):
+            c.post(
+                "/api/auth/register-admin",
+                headers={"Authorization": f"Bearer {_UNKNOWN_TOKEN}", "Cookie": "access_token=garbage"},
+            )
+
+    assert maker.checkouts == 0
+
+
+def test_should_not_touch_the_database_when_a_bearer_arrives_on_a_mutating_request():
+    """BearerReadOnlyMiddleware 403s this, but it runs LATER.
+
+    main.py adds the rate limiter last, so it runs first, and without a method
+    check of its own it would pay for the lookup before the read-only guard
+    ever sees the request.
+    """
+    maker = _CountingSessionMaker()
+    app = _create_app(session_maker=maker)
+
+    with TestClient(app) as c:
+        for _ in range(4):
+            c.post("/api/passwords/list", headers={"Authorization": f"Bearer {_UNKNOWN_TOKEN}"})
+
+    assert maker.checkouts == 0
+
+
+def test_should_stop_querying_when_a_caller_spends_its_budget_of_failed_lookups():
+    maker = _CountingSessionMaker()
+    app = _create_app(unauth_max=1000, bearer_miss_max=3, session_maker=maker)
+
+    with TestClient(app) as c:
+        for _ in range(10):
+            c.get("/api/passwords/list", headers={"Authorization": f"Bearer {_UNKNOWN_TOKEN}"})
+
+    # Three misses are charged, the fourth request finds the budget already
+    # spent and skips the lookup entirely. Without the budget this is 10.
+    assert maker.checkouts == 3
+
+
+def test_should_still_key_a_working_extension_when_a_neighbour_spends_the_miss_budget():
+    """The guard must not become a sharper attack than the one it prevents.
+
+    The budget is charged per address, so somebody guessing tokens from behind
+    the same NAT spends it for everyone there. Without the cache being consulted
+    first, that would push a colleague's working extension into the anonymous
+    bucket the attacker has just filled: a targeted denial of service, handed
+    out by the very guard meant to bound database work.
+    """
+    maker = _CountingSessionMaker(known_hash=_hash_of(_VALID_TOKEN), user_id=_USER_ID)
+    app = _create_app(user_max=10, unauth_max=2, bearer_miss_max=2, session_maker=maker)
+
+    with TestClient(app) as c:
+        # The extension is in use, so its token is known.
+        assert c.get("/api/extension/session", headers={"Authorization": f"Bearer {_VALID_TOKEN}"}).status_code == 200
+
+        # A neighbour on the same address burns the miss budget.
+        for _ in range(5):
+            c.get("/api/passwords/list", headers={"Authorization": f"Bearer {_UNKNOWN_TOKEN}"})
+
+        responses = [
+            c.get("/api/extension/session", headers={"Authorization": f"Bearer {_VALID_TOKEN}"}) for _ in range(4)
+        ]
+
+    assert [r.status_code for r in responses] == [200, 200, 200, 200]
+
+
+def test_should_fall_back_to_ip_keying_when_a_first_contact_lands_on_a_spent_budget():
+    """The residual, stated rather than hidden.
+
+    The cache can only protect a token it has seen. An extension pairing for the
+    very first time while an attack is under way from the same address spends
+    that window in the anonymous bucket. It recovers on its own once the budget
+    refills, and this is the price of never letting an unknown token buy a query
+    once the budget is gone.
+    """
+    maker = _CountingSessionMaker(known_hash=_hash_of(_VALID_TOKEN), user_id=_USER_ID)
+    app = _create_app(user_max=10, unauth_max=2, bearer_miss_max=2, session_maker=maker)
+
+    with TestClient(app) as c:
+        for _ in range(5):
+            c.get("/api/passwords/list", headers={"Authorization": f"Bearer {_UNKNOWN_TOKEN}"})
+
+        first_contact = c.get("/api/extension/session", headers={"Authorization": f"Bearer {_VALID_TOKEN}"})
+
+    assert first_contact.status_code == 429
+    # Two misses charged, then nothing: the unknown token stopped costing
+    # queries, and the valid one was never looked up either.
+    assert maker.checkouts == 2

@@ -1,3 +1,4 @@
+from .extension_paired_event_subscriber import ExtensionPairedEventSubscriber
 from .group_owner_promoted_event_subscriber import GroupOwnerPromotedEventSubscriber
 
-__all__ = ["GroupOwnerPromotedEventSubscriber"]
+__all__ = ["ExtensionPairedEventSubscriber", "GroupOwnerPromotedEventSubscriber"]

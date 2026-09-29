@@ -2,7 +2,7 @@ import pytest
 
 from tests.shared_kernel.fakes import FakeEmailGateway
 
-from .fakes import FakeGroupOwnershipGateway
+from .fakes import FakeGroupOwnershipGateway, FakeUserContactGateway
 
 
 @pytest.fixture
@@ -18,3 +18,8 @@ def email_gateway():
 @pytest.fixture
 def app_base_url():
     return "https://le-coffre.example.com"
+
+
+@pytest.fixture
+def user_contact_gateway():
+    return FakeUserContactGateway()
