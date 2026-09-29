@@ -1,8 +1,8 @@
 """The opt-in bearer path, and its containment rules.
 
 `get_current_principal` is the only dependency that accepts a browser-extension
-bearer token, and only three read routes declare it. These tests pin the rules
-that make that safe.
+bearer token, and only four read routes declare it. These tests pin the rules
+that make that safe, including which routes those four are.
 """
 
 from unittest.mock import Mock
@@ -189,3 +189,59 @@ def test_should_report_a_generic_message_when_the_extension_token_is_revoked():
 
     assert error.value.status_code == 401
     assert error.value.detail == "Invalid extension token"
+
+
+def test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes():
+    """The list of bearer-reachable paths lives in two places. Keep them equal.
+
+    `RateLimitMiddleware` has to know which routes can authenticate a bearer, so
+    it does not spend a database lookup deciding the bucket of a request that is
+    going to 401 anyway. That knowledge really lives in the route declarations,
+    and a copy of it in the middleware is exactly the kind of restatement that
+    drifts in silence: adding a fifth bearer route would leave its callers in
+    the anonymous bucket with nothing logged.
+
+    Deriving the truth from the application's own dependency graph also pins the
+    containment rule itself, which until now rested on a sentence in CLAUDE.md:
+    if somebody adds `get_current_principal` to a route, this test says so.
+    """
+    from fastapi.routing import APIRoute
+
+    from main import app
+    from security.rate_limit_middleware import RateLimitMiddleware
+
+    def api_routes(routes):
+        # FastAPI 0.141 keeps an included router wrapped rather than flattening
+        # its routes into app.routes, so the real ones hang off original_router.
+        # If a future version changes that shape, this yields nothing and the
+        # assertion below fails loudly; it cannot quietly pass.
+        for route in routes:
+            if isinstance(route, APIRoute):
+                yield route
+            included = getattr(route, "original_router", None)
+            if included is not None:
+                yield from api_routes(included.routes)
+
+    def declares_current_principal(dependant) -> bool:
+        if dependant.call is get_current_principal:
+            return True
+        return any(declares_current_principal(child) for child in dependant.dependencies)
+
+    reachable = {route.path for route in api_routes(app.routes) if declares_current_principal(route.dependant)}
+
+    assert reachable == {
+        "/extension/session",
+        "/extension/groups",
+        "/passwords/list",
+        "/passwords/{password_id}",
+    }
+
+    # Every one of them must be covered by the middleware's filter. Paths here
+    # carry no /api prefix; the middleware sees the externally-visible path,
+    # because the application runs with root_path="/api" and uvicorn leaves it
+    # in the scope.
+    for path in reachable:
+        assert RateLimitMiddleware._is_bearer_reachable("GET", f"/api{path}"), (
+            f"{path} accepts a bearer but the rate limiter refuses to resolve one there, "
+            "so its callers silently fall into the anonymous bucket"
+        )

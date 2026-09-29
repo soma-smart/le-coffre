@@ -17,12 +17,24 @@ use :class:`UtcTimeGateway` directly, no monkeypatching needed.
 
 Principal resolution is inline: if the access-token cookie decodes against
 ``app.state.token_gateway``, the request is keyed on ``user:<id>:api``.  Failing
-that, a browser-extension bearer token is resolved the same way, since an
-extension cannot send cookies at all (they are ``SameSite=strict``) and would
+that, a browser-extension bearer token is resolved against the database, since
+an extension cannot send cookies at all (they are ``SameSite=strict``) and would
 otherwise be stuck in the anonymous bucket, which is unusable behind a NAT.
 Everything else keys on ``ip:<client_ip>:api``.  Keeping this inline avoids a
 dedicated cross-context private-API seam: the middleware is a primary adapter
 that's allowed to read primary-adapter state directly.
+
+That lookup is the only database access in this middleware, and it happens
+before any bucket has been consulted, on a request that may carry no valid
+credential at all.  Three guards bound it, all in
+``_resolve_bearer_principal``: it runs only on the handful of routes where a
+bearer can authenticate (``BEARER_REACHABLE_PATHS``); a token seen working in
+the last minute answers from :class:`BearerPrincipalCache` without any query;
+and a per-IP budget charged *only for lookups that find nothing* stops a caller
+guessing tokens from buying unlimited queries.  The cache is checked before the
+budget on purpose, so that spending the budget from a shared address cannot
+demote a colleague's working extension into the bucket the attacker just
+filled.
 """
 
 from __future__ import annotations
@@ -41,6 +53,7 @@ from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
 )
 from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
+from security.bearer_principal_cache import BearerPrincipalCache
 from security.client_ip import resolve_client_ip
 from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
 
@@ -55,6 +68,13 @@ class Principal:
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """See module docstring."""
+
+    def __init__(self, app, bearer_cache: BearerPrincipalCache | None = None) -> None:
+        super().__init__(app)
+        # Owned by the middleware rather than app.state: nothing else reads it,
+        # it needs no configuration, and one instance per application is exactly
+        # what BaseHTTPMiddleware construction already gives us.
+        self._bearer_cache = bearer_cache or BearerPrincipalCache()
 
     # Only password login consumes the auth-route floor.  Every other /auth/*
     # endpoint (register-admin, refresh-token, sso/callback, sso/url,
@@ -113,6 +133,26 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         "/api/docs",
         "/api/openapi",
     )
+
+    # The routes that declare `Depends(get_current_principal)`, i.e. the only
+    # ones where a bearer can authenticate anything. Resolving a bearer anywhere
+    # else is a database round trip for a request that is going to 401 no matter
+    # what the lookup says, and it is reachable without credentials, so it is
+    # free work an anonymous caller can ask for.
+    #
+    # `/api/passwords/` is a prefix because `GET /passwords/{password_id}` is
+    # parameterised. It therefore also covers a couple of sibling GETs that a
+    # bearer cannot actually reach; erring wide here is cheap, and the miss
+    # budget in _resolve_bearer_principal bounds the difference.
+    #
+    # Kept honest by test_bearer_reachable_paths_match_the_routes, which derives
+    # the real set from the application's dependency graph. Without it this is a
+    # second place stating a rule that lives in the route declarations.
+    BEARER_REACHABLE_PATHS: tuple[str, ...] = (
+        "/api/extension/session",
+        "/api/extension/groups",
+    )
+    BEARER_REACHABLE_PREFIXES: tuple[str, ...] = ("/api/passwords/",)
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
@@ -254,39 +294,58 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _is_exempt(self, path: str) -> bool:
         return any(path.startswith(p) for p in self.EXEMPT_PREFIXES)
 
+    @classmethod
+    def _is_bearer_reachable(cls, method: str, path: str) -> bool:
+        """Could a bearer authenticate this request at all?
+
+        The method half is not redundant with BearerReadOnlyMiddleware, which
+        403s a mutating bearer request: main.py adds this middleware last, so it
+        runs FIRST, and a POST carrying a bearer would otherwise pay for the
+        lookup before the other middleware ever sees it.
+        """
+        if method.upper() != "GET":
+            return False
+        return path in cls.BEARER_REACHABLE_PATHS or any(
+            path.startswith(prefix) for prefix in cls.BEARER_REACHABLE_PREFIXES
+        )
+
     def _is_vault_mutation(self, path: str) -> bool:
         return any(path.startswith(p) for p in self.VAULT_MUTATION_PREFIXES)
 
-    @staticmethod
-    def _resolve_principal(request: Request, client_ip: str) -> Principal:
+    def _resolve_principal(self, request: Request, client_ip: str) -> Principal:
         access_token = request.cookies.get("access_token")
-        if not access_token:
-            return Principal(kind="ip", id=client_ip)
         token_gateway = getattr(request.app.state, "token_gateway", None)
-        if token_gateway is None:
-            return Principal(kind="ip", id=client_ip)
-        try:
-            token = token_gateway.validate_token(access_token)
-        except InvalidTokenException:
-            # Expected path: domain-level "expired/tampered/unknown-issuer" signal.
-            # Bucket as anonymous silently — every user with an expired cookie
-            # traverses this code and we don't want to alert on normal traffic.
-            token = None
-        except Exception:  # noqa: BLE001 - fail-closed to IP keying; surface at WARNING
-            # Unexpected (JWT lib bug, secret rotation, future remote gateway).
-            # Silent swallowing hides key-rotation incidents that only manifest
-            # as "every authenticated user mysteriously rate-limited".
-            logger.warning(
-                "Token gateway raised non-validation error during rate-limit keying; bucketing as anonymous",
-                exc_info=True,
-            )
-            token = None
-        if token:
-            return Principal(kind="user", id=str(token.user_id))
-        return RateLimitMiddleware._resolve_bearer_principal(request, client_ip)
 
-    @staticmethod
-    def _resolve_bearer_principal(request: Request, client_ip: str) -> Principal:
+        if access_token and token_gateway is not None:
+            try:
+                token = token_gateway.validate_token(access_token)
+            except InvalidTokenException:
+                # Expected path: domain-level "expired/tampered/unknown-issuer" signal.
+                # Bucket as anonymous silently — every user with an expired cookie
+                # traverses this code and we don't want to alert on normal traffic.
+                token = None
+            except Exception:  # noqa: BLE001 - fail-closed to IP keying; surface at WARNING
+                # Unexpected (JWT lib bug, secret rotation, future remote gateway).
+                # Silent swallowing hides key-rotation incidents that only manifest
+                # as "every authenticated user mysteriously rate-limited".
+                logger.warning(
+                    "Token gateway raised non-validation error during rate-limit keying; bucketing as anonymous",
+                    exc_info=True,
+                )
+                token = None
+            if token:
+                return Principal(kind="user", id=str(token.user_id))
+
+        # No cookie at all is the EXTENSION's normal case, not an edge one: its
+        # requests carry a bearer and never a cookie, because cookies here are
+        # SameSite=strict. An earlier version returned the IP principal right
+        # here whenever the cookie was absent, which made the whole function
+        # below unreachable for the only caller it was written for, and left
+        # every extension in the shared anonymous bucket. Do not reinstate that
+        # early return: it looks free and costs the feature.
+        return self._resolve_bearer_principal(request, client_ip)
+
+    def _resolve_bearer_principal(self, request: Request, client_ip: str) -> Principal:
         """Key a browser-extension caller to its user, not to its IP.
 
         Without this the extension lands in the 30/min anonymous IP bucket
@@ -295,7 +354,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         Fails closed to IP keying in every doubtful case: this decides which
         bucket to charge, never whether the request is allowed.
+
+        Everything below the two guards is a database round trip on an
+        unauthenticated request, so both guards run before any header is even
+        parsed. See BEARER_REACHABLE_PATHS and the miss budget.
         """
+        if not self._is_bearer_reachable(request.method, request.url.path):
+            return Principal(kind="ip", id=client_ip)
+
         authorization = request.headers.get("Authorization", "")
         if not authorization.lower().startswith("bearer "):
             return Principal(kind="ip", id=client_ip)
@@ -315,11 +381,36 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # anonymous limit.
             return Principal(kind="ip", id=client_ip)
 
+        # A miss budget, not a request budget. Consumed only when the lookup
+        # comes back empty, so a caller guessing tokens spends it in a few
+        # requests and then stops reaching the database. Exhausting it degrades
+        # to IP keying rather than to a 429: this function decides which bucket
+        # to charge, never whether the request is allowed.
+        miss_key = f"ip:{client_ip}:bearer-miss"
+        token_hash = secret.hashed()
         try:
-            session_maker = request.app.state.session_maker
+            rate_limiter = request.app.state.rate_limiter
+            miss_max = request.app.state.rate_limit_bearer_miss_max_requests
+            window = request.app.state.rate_limit_window_seconds
             time_provider = request.app.state.time_provider
+            now = time_provider.get_current_time()
+
+            # Before the budget, deliberately. A token seen working recently
+            # must not be held hostage by somebody else on the same address
+            # spending that budget: without this, exhausting the budget from a
+            # shared NAT would push every colleague's extension into the
+            # anonymous bucket the attacker has just filled, turning the guard
+            # into a sharper attack than the one it prevents.
+            cached_user_id = self._bearer_cache.get(token_hash, now)
+            if cached_user_id is not None:
+                return Principal(kind="user", id=cached_user_id)
+
+            if rate_limiter.is_exhausted(miss_key, miss_max, window, now):
+                return Principal(kind="ip", id=client_ip)
+
+            session_maker = request.app.state.session_maker
             with session_maker() as session:
-                token_row = SqlExtensionTokenRepository(session).get_by_token_hash(secret.hashed())
+                token_row = SqlExtensionTokenRepository(session).get_by_token_hash(token_hash)
         except Exception:  # noqa: BLE001 - bucket selection must never fail a request
             logger.warning(
                 "Could not resolve an extension token for rate-limit keying; bucketing as anonymous",
@@ -327,9 +418,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
             return Principal(kind="ip", id=client_ip)
 
-        if token_row is None or not token_row.is_active(time_provider.get_current_time()):
+        if token_row is None or not token_row.is_active(now):
+            # The lookup was wasted. Charge it, so a caller producing nothing
+            # but misses runs out of budget while a real extension never does.
+            rate_limiter.check(miss_key, miss_max, window, now)
             return Principal(kind="ip", id=client_ip)
-        return Principal(kind="user", id=str(token_row.user_id))
+
+        user_id = str(token_row.user_id)
+        self._bearer_cache.put(token_hash, user_id, now)
+        return Principal(kind="user", id=user_id)
 
     @staticmethod
     def _build_429_response(result: RateLimitResult) -> JSONResponse:
