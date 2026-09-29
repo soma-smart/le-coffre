@@ -9,6 +9,7 @@ import { LOCAL_KEYS } from '@/shared/storageKeys'
 
 import type { Deps } from '../deps'
 import {
+  clearCredentials,
   clearEverything,
   readMatchPattern,
   readPairing,
@@ -94,6 +95,16 @@ export async function setVaultUrl(deps: Deps, rawUrl: string): Promise<Result<Co
   // locked state rather than sending the user back to the first screen.
   const status = await client.vaultStatus()
   if (!status.ok && status.error.kind !== 'VAULT_LOCKED') return err(status.error)
+
+  // A token is minted for one vault. Keeping it across a change of address
+  // would send vault A's bearer token to vault B on the very next request, so
+  // the credential goes first, and with it the cached listing, the in-flight
+  // pairing and the selected group, none of which mean anything elsewhere.
+  const previous = await readVaultUrl(deps.browser)
+  if (previous && previous !== vaultUrl) {
+    await clearCredentials(deps.browser)
+    await deps.browser.local.remove(LOCAL_KEYS.selectedGroupId)
+  }
 
   await deps.browser.local.set(LOCAL_KEYS.vaultUrl, vaultUrl)
   await deps.browser.local.set(LOCAL_KEYS.apiMatchPattern, pattern)

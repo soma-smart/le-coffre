@@ -122,6 +122,34 @@ describe('setVaultUrl', () => {
     await expect(browser.local.get('vaultUrl')).resolves.toBeUndefined()
   })
 
+  it('should drop the token when the address changes, since it was minted for the old vault', async () => {
+    // Otherwise vault A's bearer token is sent to vault B on the next request.
+    const { deps, browser } = createTestDeps()
+    await givenPaired(browser)
+    await browser.local.set('selectedGroupId', 'group-on-a')
+    await browser.session.set('entriesCache', { entries: [], fetchedAt: 'x' })
+    browser.grantedOrigins.add('https://other.example.com/api/*')
+
+    await setVaultUrl(deps, 'https://other.example.com')
+
+    await expect(browser.local.get('vaultUrl')).resolves.toBe('https://other.example.com')
+    await expect(browser.local.get('token')).resolves.toBeUndefined()
+    await expect(browser.local.get('tokenExpiresAt')).resolves.toBeUndefined()
+    await expect(browser.local.get('selectedGroupId')).resolves.toBeUndefined()
+    await expect(browser.session.get('entriesCache')).resolves.toBeUndefined()
+  })
+
+  it('should keep the token when the same address is entered again', async () => {
+    // Re-granting a revoked permission goes through here too; that is not a
+    // change of vault and must not cost a re-pairing.
+    const { deps, browser } = createTestDeps()
+    await givenPaired(browser)
+
+    await setVaultUrl(deps, VAULT_URL)
+
+    await expect(browser.local.get('token')).resolves.toBe('a'.repeat(43))
+  })
+
   it('should accept a locked vault, which is still a vault', async () => {
     // Otherwise the user is bounced back to the first screen for something an
     // administrator has to fix.
