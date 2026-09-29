@@ -308,14 +308,14 @@ onMounted(async () => {
             <div class="flex flex-col gap-2">
               <div class="flex items-center gap-2 text-sm text-muted-color">
                 <i class="pi pi-tag"></i>
-                <span>Personal Group</span>
+                <span>{{ t('pages.groups.personalGroup') }}</span>
               </div>
               <!-- No edit, delete or members here: a personal group has exactly
                    one member and cannot be renamed or removed. -->
               <div class="flex gap-2 mt-4">
                 <Button
                   v-if="canManageServiceAccounts(personalCard)"
-                  label="Service Accounts"
+                  :label="t('pages.groups.serviceAccounts')"
                   icon="pi pi-key"
                   size="small"
                   outlined
@@ -395,7 +395,7 @@ onMounted(async () => {
                 />
                 <Button
                   v-if="canManageServiceAccounts(group)"
-                  label="Service Accounts"
+                  :label="t('pages.groups.serviceAccounts')"
                   icon="pi pi-key"
                   size="small"
                   outlined

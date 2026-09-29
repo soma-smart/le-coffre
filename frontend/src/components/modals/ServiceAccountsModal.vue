@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useToast } from 'primevue'
+import { useI18n } from 'vue-i18n'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import { useContainer } from '@/plugins/container'
 import type { Group } from '@/domain/group/Group'
@@ -33,6 +34,7 @@ const emit = defineEmits<{
 
 const { serviceAccounts } = useContainer()
 const toast = useToast()
+const { t } = useI18n()
 
 const newName = ref('')
 const page = ref<ServiceAccountPage>({ accounts: [], active: 0, maxActive: 0 })
@@ -90,7 +92,7 @@ async function refresh() {
   try {
     page.value = await serviceAccounts.list.execute(props.group.id)
   } catch (err) {
-    handle(err, 'Could not load the service accounts')
+    handle(err, t('components.serviceAccountsModal.loadFailed'))
   }
 }
 
@@ -106,9 +108,13 @@ async function create() {
     reveal(created.token, created.name, false)
     newName.value = ''
     await refresh()
-    toast.add({ severity: 'success', summary: 'Service account created', life: 5000 })
+    toast.add({
+      severity: 'success',
+      summary: t('components.serviceAccountsModal.createdSummary'),
+      life: 5000,
+    })
   } catch (err) {
-    handle(err, 'Could not create the service account')
+    handle(err, t('components.serviceAccountsModal.createFailed'))
   } finally {
     loading.value = false
   }
@@ -131,21 +137,29 @@ async function copyToken() {
   if (!revealedToken.value) return
   await navigator.clipboard.writeText(revealedToken.value)
   copied.value = true
-  toast.add({ severity: 'success', summary: 'Token copied', life: 2000 })
+  toast.add({
+    severity: 'success',
+    summary: t('components.serviceAccountsModal.tokenCopiedSummary'),
+    life: 2000,
+  })
   setTimeout(() => (copied.value = false), 2000)
 }
 
 const pendingRotate = ref<ServiceAccount | null>(null)
 const showRotateConfirm = ref(false)
 
-const rotateQuestion = computed(
-  () => `Rotate the token for "${pendingRotate.value?.name ?? 'this service account'}"?`,
+const rotateQuestion = computed(() =>
+  t('components.serviceAccountsModal.rotateQuestion', {
+    name: pendingRotate.value?.name ?? t('components.serviceAccountsModal.questionFallback'),
+  }),
 )
-const rotateDescription = [
-  'A new token is generated and shown once — copy it before you close this dialog.',
-  'The current token stops working immediately: anything still using it starts failing the moment you confirm.',
-  'The account keeps its name, its group and its history. Only the credential changes.',
-].join('\n')
+const rotateDescription = computed(() =>
+  [
+    t('components.serviceAccountsModal.rotateDescriptionNewToken'),
+    t('components.serviceAccountsModal.rotateDescriptionOldToken'),
+    t('components.serviceAccountsModal.rotateDescriptionKept'),
+  ].join('\n'),
+)
 
 function askRotate(account: ServiceAccount) {
   pendingRotate.value = account
@@ -159,22 +173,30 @@ async function confirmRotate() {
     const rotated = await serviceAccounts.rotate.execute(account.id)
     reveal(rotated.token, account.name, true)
     await refresh()
-    toast.add({ severity: 'success', summary: 'Token rotated', life: 5000 })
+    toast.add({
+      severity: 'success',
+      summary: t('components.serviceAccountsModal.rotatedSummary'),
+      life: 5000,
+    })
   } catch (err) {
-    handle(err, 'Could not rotate the token')
+    handle(err, t('components.serviceAccountsModal.rotateFailed'))
   }
 }
 
 const pendingRevoke = ref<ServiceAccount | null>(null)
 const showRevokeConfirm = ref(false)
 
-const revokeQuestion = computed(
-  () => `Revoke "${pendingRevoke.value?.name ?? 'this service account'}"?`,
+const revokeQuestion = computed(() =>
+  t('components.serviceAccountsModal.revokeQuestion', {
+    name: pendingRevoke.value?.name ?? t('components.serviceAccountsModal.questionFallback'),
+  }),
 )
-const revokeDescription = [
-  'Its token stops working immediately and cannot be restored. Create a new service account if you need one again.',
-  "The account leaves the active list but stays in this group's history, with its revocation date.",
-].join('\n')
+const revokeDescription = computed(() =>
+  [
+    t('components.serviceAccountsModal.revokeDescriptionPermanent'),
+    t('components.serviceAccountsModal.revokeDescriptionHistory'),
+  ].join('\n'),
+)
 
 function askRevoke(account: ServiceAccount) {
   pendingRevoke.value = account
@@ -187,9 +209,13 @@ async function confirmRevoke() {
   try {
     await serviceAccounts.revoke.execute(account.id)
     await refresh()
-    toast.add({ severity: 'success', summary: 'Service account revoked', life: 5000 })
+    toast.add({
+      severity: 'success',
+      summary: t('components.serviceAccountsModal.revokedSummary'),
+      life: 5000,
+    })
   } catch (err) {
-    handle(err, 'Could not revoke the service account')
+    handle(err, t('components.serviceAccountsModal.revokeFailed'))
   }
 }
 
@@ -200,7 +226,12 @@ function handle(err: unknown, fallback: string) {
     emit('notOwner')
   }
   error.value = err instanceof ServiceAccountDomainError ? err.message : fallback
-  toast.add({ severity: 'error', summary: 'Service accounts', detail: error.value, life: 5000 })
+  toast.add({
+    severity: 'error',
+    summary: t('components.serviceAccountsModal.errorSummary'),
+    detail: error.value,
+    life: 5000,
+  })
 }
 
 function severityFor(account: ServiceAccount) {
@@ -213,7 +244,11 @@ function severityFor(account: ServiceAccount) {
     v-model:visible="isVisible"
     modal
     :draggable="false"
-    :header="`Service accounts${group ? ` - ${group.name}` : ''}`"
+    :header="
+      group
+        ? t('components.serviceAccountsModal.titleWithGroup', { name: group.name })
+        : t('components.serviceAccountsModal.title')
+    "
     :style="{ width: '42rem' }"
   >
     <!-- Dialog content is an overflow:auto box with no top padding, and Message
@@ -224,8 +259,7 @@ function severityFor(account: ServiceAccount) {
       <Message v-if="error" severity="error" :closable="false" class="mb-3">{{ error }}</Message>
 
       <Message severity="warn" :closable="false" class="mb-3">
-        A service account token acts for this group with no person behind it. Anyone holding it can
-        reach this group's secrets through the API.
+        {{ t('components.serviceAccountsModal.disclaimer') }}
       </Message>
     </div>
 
@@ -236,25 +270,26 @@ function severityFor(account: ServiceAccount) {
       class="mb-3"
       data-testid="cap-reached"
     >
-      This group already has {{ maxActiveCount }} active service accounts. Revoke one before
-      creating another.
+      {{ t('components.serviceAccountsModal.capReached', { max: maxActiveCount }) }}
     </Message>
 
     <div v-if="!revealedToken && canManage" class="flex gap-2 items-end mb-4">
       <div class="grow">
-        <label for="sa-name" class="block mb-1 text-sm">Name</label>
+        <label for="sa-name" class="block mb-1 text-sm">{{
+          t('components.serviceAccountsModal.nameLabel')
+        }}</label>
         <InputText
           id="sa-name"
           v-model="newName"
           class="w-full"
-          placeholder="nightly-backup"
+          :placeholder="t('components.serviceAccountsModal.namePlaceholder')"
           :maxlength="SERVICE_ACCOUNT_NAME_MAX_LENGTH"
           data-testid="new-account-name"
           @keyup.enter="create"
         />
       </div>
       <Button
-        label="Create"
+        :label="t('components.serviceAccountsModal.createButton')"
         icon="pi pi-plus"
         :loading="loading"
         :disabled="!canCreate || newName.trim().length === 0"
@@ -265,10 +300,14 @@ function severityFor(account: ServiceAccount) {
 
     <div v-else-if="revealedToken" class="mb-4" data-testid="revealed-token">
       <Message severity="success" :closable="false" class="mb-2">
-        Copy it now. This token is shown once and can never be retrieved again.
+        {{ t('components.serviceAccountsModal.copyOnceWarning') }}
       </Message>
       <p class="mb-2 text-sm">
-        {{ revealedTokenIsRotation ? 'New token for' : 'Token for' }}
+        {{
+          revealedTokenIsRotation
+            ? t('components.serviceAccountsModal.newTokenFor')
+            : t('components.serviceAccountsModal.tokenFor')
+        }}
         <strong>{{ revealedTokenFor }}</strong>
       </p>
       <!-- The token is only ever copied, never read: it is opaque noise. So it
@@ -285,7 +324,7 @@ function severityFor(account: ServiceAccount) {
         <Button
           :icon="copied ? 'pi pi-check' : 'pi pi-copy'"
           severity="secondary"
-          aria-label="Copy token"
+          :aria-label="t('components.serviceAccountsModal.copyTokenAria')"
           class="shrink-0"
           data-testid="copy-token"
           @click="copyToken"
@@ -294,7 +333,7 @@ function severityFor(account: ServiceAccount) {
       <!-- An owner often creates or rotates several in one sitting, so there has
            to be a way back to the form short of closing the dialog. -->
       <Button
-        label="Done"
+        :label="t('components.serviceAccountsModal.doneButton')"
         text
         size="small"
         class="mt-2"
@@ -305,20 +344,35 @@ function severityFor(account: ServiceAccount) {
 
     <div class="flex flex-wrap gap-2 justify-between items-baseline mb-2">
       <h4 class="font-medium">
-        {{ showHistory ? 'All service accounts' : 'Active service accounts' }}
+        {{
+          showHistory
+            ? t('components.serviceAccountsModal.allAccounts')
+            : t('components.serviceAccountsModal.activeAccountsTitle')
+        }}
       </h4>
       <span class="text-sm text-muted-color" data-testid="account-counters">
-        <span data-testid="active-accounts">{{ activeCount }}/{{ maxActiveCount }} active</span>
+        <span data-testid="active-accounts">{{
+          t('components.serviceAccountsModal.activeCount', {
+            active: activeCount,
+            max: maxActiveCount,
+          })
+        }}</span>
       </span>
     </div>
 
     <div v-if="revokedList.length > 0" class="flex gap-2 items-center mb-3">
       <ToggleSwitch v-model="showHistory" inputId="sa-history" data-testid="history-toggle" />
-      <label for="sa-history" class="text-sm text-muted-color">Show revoked accounts</label>
+      <label for="sa-history" class="text-sm text-muted-color">{{
+        t('components.serviceAccountsModal.showHistoryLabel')
+      }}</label>
     </div>
 
     <p v-if="visibleAccounts.length === 0" class="text-sm text-muted-color">
-      {{ showHistory ? 'No service account yet.' : 'No active service account.' }}
+      {{
+        showHistory
+          ? t('components.serviceAccountsModal.noAccountYet')
+          : t('components.serviceAccountsModal.noActiveAccount')
+      }}
     </p>
     <ul v-else class="flex flex-col gap-2">
       <li
@@ -329,7 +383,10 @@ function severityFor(account: ServiceAccount) {
         <div class="flex flex-col gap-1 min-w-0">
           <div class="flex gap-2 items-center min-w-0">
             <span class="font-medium truncate" data-testid="account-name">{{ account.name }}</span>
-            <Tag :value="statusOf(account)" :severity="severityFor(account)" />
+            <Tag
+              :value="t(`common.serviceAccountStatus.${statusOf(account)}`)"
+              :severity="severityFor(account)"
+            />
           </div>
           <div class="text-sm text-muted-color">
             <!-- Relative, with the exact timestamp on hover: an absolute date is
@@ -339,12 +396,24 @@ function severityFor(account: ServiceAccount) {
               :title="formatAbsoluteTime(account.createdAt)"
               data-testid="created-label"
             >
-              created {{ formatRelativeTime(account.createdAt) }}
+              {{
+                t('components.serviceAccountsModal.createdLabel', {
+                  relative: formatRelativeTime(account.createdAt),
+                })
+              }}
             </span>
             <!-- The creation event can be missing; the account still lists. -->
-            <span v-else data-testid="created-label">creation date unknown</span>
+            <span v-else data-testid="created-label">{{
+              t('components.serviceAccountsModal.createdUnknown')
+            }}</span>
             <span class="ml-2" data-testid="creator-label">
-              &middot; by {{ account.createdByUserName ?? 'unknown' }}
+              {{
+                t('components.serviceAccountsModal.creatorLabel', {
+                  name:
+                    account.createdByUserName ??
+                    t('components.serviceAccountsModal.creatorUnknown'),
+                })
+              }}
             </span>
             <span
               v-if="account.revokedAt"
@@ -352,13 +421,17 @@ function severityFor(account: ServiceAccount) {
               :title="formatAbsoluteTime(account.revokedAt)"
               data-testid="revoked-label"
             >
-              &middot; revoked {{ formatRelativeTime(account.revokedAt) }}
+              {{
+                t('components.serviceAccountsModal.revokedLabel', {
+                  relative: formatRelativeTime(account.revokedAt),
+                })
+              }}
             </span>
           </div>
         </div>
         <div v-if="isActive(account) && canManage" class="flex gap-1 shrink-0">
           <Button
-            label="Rotate"
+            :label="t('components.serviceAccountsModal.rotateButton')"
             icon="pi pi-refresh"
             size="small"
             severity="warn"
@@ -367,7 +440,7 @@ function severityFor(account: ServiceAccount) {
             @click="askRotate(account)"
           />
           <Button
-            label="Revoke"
+            :label="t('components.serviceAccountsModal.revokeButton')"
             size="small"
             severity="danger"
             text
@@ -381,12 +454,12 @@ function severityFor(account: ServiceAccount) {
 
   <ConfirmationModal
     v-model:visible="showRotateConfirm"
-    title="Rotate service account token"
+    :title="t('components.serviceAccountsModal.rotateConfirmTitle')"
     :question="rotateQuestion"
     :description="rotateDescription"
-    warning-message="Any script or integration holding the current token will break until you deploy the new one."
-    confirm-label="Rotate token"
-    cancel-label="Cancel"
+    :warning-message="t('components.serviceAccountsModal.rotateWarning')"
+    :confirm-label="t('components.serviceAccountsModal.rotateConfirmLabel')"
+    :cancel-label="t('common.cancel')"
     severity="warning"
     icon="pi pi-refresh"
     :countdown-seconds="3"
@@ -395,11 +468,11 @@ function severityFor(account: ServiceAccount) {
 
   <ConfirmationModal
     v-model:visible="showRevokeConfirm"
-    title="Revoke service account"
+    :title="t('components.serviceAccountsModal.revokeConfirmTitle')"
     :question="revokeQuestion"
     :description="revokeDescription"
-    confirm-label="Revoke"
-    cancel-label="Cancel"
+    :confirm-label="t('components.serviceAccountsModal.revokeConfirmLabel')"
+    :cancel-label="t('common.cancel')"
     severity="danger"
     icon="pi pi-ban"
     :countdown-seconds="3"
