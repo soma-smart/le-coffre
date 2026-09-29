@@ -28,7 +28,10 @@ class ExtensionPairing:
     credential was actually issued". Any future code that reads existence as
     validity is then correct by construction.
 
-    Rows are kept after resolution for audit, like OneTimeLink.
+    Rows are not an audit trail: every start purges whatever has expired,
+    resolved or not, since a pairing is only ever read by its code during its
+    ten-minute life. The durable record of a pairing is the ExtensionPairedEvent
+    the exchange appends to the admin event log.
     """
 
     id: UUID

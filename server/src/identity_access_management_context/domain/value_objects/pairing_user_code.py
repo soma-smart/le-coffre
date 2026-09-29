@@ -27,9 +27,9 @@ class PairingUserCode:
     the PKCE verifier, which never leaves the extension.
 
     8 characters over a 32-symbol alphabet is 40 bits. Guessing one inside its
-    5-minute window would also have to beat the per-IP rate-limit bucket on the
-    pairing routes, and would still yield only a pending pairing the attacker
-    cannot redeem.
+    ten-minute window (see EXTENSION_PAIRING_LIFETIME_SECONDS) would also have
+    to beat the per-IP rate-limit bucket on the pairing routes, and would still
+    yield only a pending pairing the attacker cannot redeem.
     """
 
     value: str
