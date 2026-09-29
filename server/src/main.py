@@ -58,7 +58,7 @@ from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_service_account_router,
     get_user_management_router,
 )
-from identity_access_management_context.adapters.primary.private_api import GroupOwnershipInfoApi
+from identity_access_management_context.adapters.primary.private_api import GroupOwnershipInfoApi, UserContactInfoApi
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
     InMemoryLoginLockoutGateway,
@@ -67,11 +67,20 @@ from identity_access_management_context.adapters.secondary import (
     PrivateApiSsoEncryptionGateway,
     SsoUrlValidator,
 )
-from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
+from identity_access_management_context.domain.events import ExtensionPairedEvent, OwnerAddedToGroupEvent
 from monitoring import setup_logging, setup_monitoring
-from notification_context.adapters.primary.events import GroupOwnerPromotedEventSubscriber
-from notification_context.adapters.secondary import PrivateApiGroupOwnershipGateway
-from notification_context.application.use_cases import NotifyGroupOwnerPromotedUseCase
+from notification_context.adapters.primary.events import (
+    ExtensionPairedEventSubscriber,
+    GroupOwnerPromotedEventSubscriber,
+)
+from notification_context.adapters.secondary import (
+    PrivateApiGroupOwnershipGateway,
+    PrivateApiUserContactGateway,
+)
+from notification_context.application.use_cases import (
+    NotifyExtensionPairedUseCase,
+    NotifyGroupOwnerPromotedUseCase,
+)
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
@@ -234,6 +243,16 @@ async def lifespan(app: FastAPI):
     )
     owner_promoted_subscriber = GroupOwnerPromotedEventSubscriber(notify_owner_promoted_use_case)
     domain_event_publisher.subscribe(OwnerAddedToGroupEvent, owner_promoted_subscriber.handle)
+
+    # Notification: a browser extension was paired (reactive, subscribes to
+    # ExtensionPairedEvent). The net under the approval page: whoever approved
+    # a pairing they did not start hears about it within minutes.
+    user_contact_gateway = PrivateApiUserContactGateway(UserContactInfoApi(session_maker=SessionLocal))
+    notify_extension_paired_use_case = NotifyExtensionPairedUseCase(
+        user_contact_gateway, email_gateway, app_base_url=base_url
+    )
+    extension_paired_subscriber = ExtensionPairedEventSubscriber(notify_extension_paired_use_case)
+    domain_event_publisher.subscribe(ExtensionPairedEvent, extension_paired_subscriber.handle)
 
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()

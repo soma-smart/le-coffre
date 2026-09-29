@@ -1,3 +1,4 @@
+from .notify_extension_paired_command import NotifyExtensionPairedCommand
 from .notify_group_owner_promoted_command import NotifyGroupOwnerPromotedCommand
 
-__all__ = ["NotifyGroupOwnerPromotedCommand"]
+__all__ = ["NotifyExtensionPairedCommand", "NotifyGroupOwnerPromotedCommand"]
