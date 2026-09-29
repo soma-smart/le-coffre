@@ -81,8 +81,10 @@ modify, delete or share anything, and it cannot manage your connected devices.
 
 ## Removing your data
 
-- **Disconnect** in the extension clears everything listed above and revokes
-  the host permission.
+- **Disconnect** in the extension clears everything listed above and gives
+  back the host permission. It forgets the token; it does not revoke it. The
+  token stays valid on the vault until it expires or you revoke it there, so
+  do both if the browser was not yours.
 - **Uninstalling** the extension deletes all of it with the extension.
 - **Revoking from the vault** (your profile page, or changing your account
   password, or deleting your account) invalidates the token server-side even if
