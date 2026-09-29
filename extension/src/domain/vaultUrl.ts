@@ -9,11 +9,37 @@
 import { parseWebUrl } from './webUrl'
 
 /**
+ * True for a host that never leaves the machine: `localhost`, anything under
+ * `.localhost`, the whole 127/8 block and the IPv6 loopback.
+ *
+ * `URL.hostname` keeps the brackets around an IPv6 literal, hence `[::1]`.
+ */
+export function isLoopbackHost(hostname: string): boolean {
+  const host = hostname.toLowerCase()
+  return (
+    host === 'localhost' ||
+    host.endsWith('.localhost') ||
+    host === '[::1]' ||
+    /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)
+  )
+}
+
+function withProtocol(typed: string): string {
+  return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(typed) ? typed : `https://${typed}`
+}
+
+/**
  * Normalise a typed vault URL, or return null.
  *
  * Accepts a bare host and assumes https, since that is what people type.
  * Rejects every protocol but http and https: a `javascript:` or `data:` value
  * reaching `tabs.create` later would be a real hole.
+ *
+ * Plain http is accepted for loopback hosts only, which is where a developer
+ * runs the vault. Anywhere else the bearer token and every password would
+ * cross the network in the clear, and a warning the user can click through
+ * is not a control: the address is refused, and `refusesPlainHttp` lets the
+ * onboarding screen say why.
  *
  * Ported in spirit from frontend/src/utils/safeUrl.ts.
  */
@@ -21,10 +47,9 @@ export function normalizeVaultUrl(value: string | null | undefined): string | nu
   const trimmed = value?.trim()
   if (!trimmed) return null
 
-  const withProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed) ? trimmed : `https://${trimmed}`
-
-  const url = parseWebUrl(withProtocol)
+  const url = parseWebUrl(withProtocol(trimmed))
   if (!url) return null
+  if (url.protocol === 'http:' && !isLoopbackHost(url.hostname)) return null
 
   // Drop query and fragment, and strip a trailing slash from the path, so the
   // same vault typed three different ways yields one stored value and one
@@ -33,13 +58,17 @@ export function normalizeVaultUrl(value: string | null | undefined): string | nu
   return `${url.origin}${path}`
 }
 
-/** True for a vault reachable over plain HTTP, which the UI must warn about. */
-export function isInsecureVaultUrl(vaultUrl: string): boolean {
-  try {
-    return new URL(vaultUrl).protocol === 'http:'
-  } catch {
-    return false
-  }
+/**
+ * True when the typed value is refused for the one reason worth explaining:
+ * plain http to a host that is not loopback. Every other refusal is "not a
+ * vault address", which the onboarding screen says generically.
+ */
+export function refusesPlainHttp(value: string | null | undefined): boolean {
+  const trimmed = value?.trim()
+  if (!trimmed) return false
+
+  const url = parseWebUrl(withProtocol(trimmed))
+  return !!url && url.protocol === 'http:' && !isLoopbackHost(url.hostname)
 }
 
 /**

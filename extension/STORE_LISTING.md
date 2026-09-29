@@ -5,8 +5,10 @@ not mean rewriting it. Permission justifications are **not** duplicated here:
 they live in `README.md`, section "Publishing to the Chrome Web Store", next to
 the code that explains them.
 
-Open decisions, to settle before submitting: whether to publish as `0.1.0` or
-`1.0.0`, and whether to keep `http://*/*` in the optional host permissions.
+Open decision, to settle before submitting: whether to publish as `0.1.0` or
+`1.0.0`. `http://*/*` stays in the optional host permissions: the extension
+only ever requests it for a loopback host, see the permission justifications
+in `README.md`.
 
 ## Summary
 

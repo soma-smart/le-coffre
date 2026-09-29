@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  isInsecureVaultUrl,
+  isLoopbackHost,
   normalizeVaultUrl,
+  refusesPlainHttp,
   toApiMatchPattern,
   toApiUrl,
   toCreatePasswordLink,
@@ -38,6 +39,41 @@ describe('normalizeVaultUrl', () => {
     expect(normalizeVaultUrl('http://127.0.0.1:8123')).toBe('http://127.0.0.1:8123')
   })
 
+  it.each([
+    'http://localhost',
+    'http://localhost:8123',
+    'http://vault.localhost',
+    'http://127.0.0.1:8123',
+    'http://127.1.2.3',
+    'http://[::1]:8000',
+  ])('accepts plain http for the loopback address %s', (local) => {
+    // Where a developer runs the vault. Nothing on these hosts leaves the
+    // machine, so there is nothing to intercept.
+    expect(normalizeVaultUrl(local)).not.toBeNull()
+    expect(refusesPlainHttp(local)).toBe(false)
+  })
+
+  it.each([
+    'http://vault.example.com',
+    'http://homelab.local',
+    'http://192.168.1.10:8123',
+    'http://10.0.0.5',
+    'http://localhost.example.com',
+    'http://127.0.0.1.example.com',
+    'http://notlocalhost',
+  ])('refuses plain http to %s, and says why', (remote) => {
+    // The bearer token and every password would cross the network in the
+    // clear. A warning the user can click through is not a control.
+    expect(normalizeVaultUrl(remote)).toBeNull()
+    expect(refusesPlainHttp(remote)).toBe(true)
+  })
+
+  it('does not blame plain http for a value that is refused for another reason', () => {
+    expect(refusesPlainHttp('javascript:alert(1)')).toBe(false)
+    expect(refusesPlainHttp('https://vault.example.com')).toBe(false)
+    expect(refusesPlainHttp('')).toBe(false)
+  })
+
   it('drops query and fragment', () => {
     expect(normalizeVaultUrl('https://vault.example.com/?a=1#x')).toBe('https://vault.example.com')
   })
@@ -56,10 +92,15 @@ describe('normalizeVaultUrl', () => {
   })
 })
 
-describe('isInsecureVaultUrl', () => {
-  it('flags plain http so the UI can warn', () => {
-    expect(isInsecureVaultUrl('http://homelab.local')).toBe(true)
-    expect(isInsecureVaultUrl('https://vault.example.com')).toBe(false)
+describe('isLoopbackHost', () => {
+  it('is case insensitive', () => {
+    expect(isLoopbackHost('LOCALHOST')).toBe(true)
+  })
+
+  it('needs the whole 127 prefix, not a substring', () => {
+    expect(isLoopbackHost('127.0.0.1')).toBe(true)
+    expect(isLoopbackHost('1127.0.0.1')).toBe(false)
+    expect(isLoopbackHost('127.0.0')).toBe(false)
   })
 })
 

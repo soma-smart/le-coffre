@@ -71,7 +71,9 @@ groups and entries reads metadata and is not audited as an access to a secret.
   extension therefore declares no host permission at install time and asks for
   the single narrowest pattern covering your vault's API once you have typed
   its address. You can withdraw it at any time from your browser's extension
-  settings.
+  settings. The address must use https; plain http is accepted only for a
+  vault running on your own machine (`localhost` or `127.0.0.1`), so the token
+  and your passwords never cross a network unencrypted.
 
 The credential the extension holds is read-only and never carries
 administrator rights, whatever your role in the vault is. It cannot create,
