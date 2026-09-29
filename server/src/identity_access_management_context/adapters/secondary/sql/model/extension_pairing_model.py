@@ -7,8 +7,10 @@ from sqlmodel import DateTime, Field, SQLModel
 class ExtensionPairingTable(SQLModel, table=True):
     """An in-flight request to connect one browser extension to one account.
 
-    Rows are kept after approval, denial or redemption so the pairing stays
-    auditable, which is why every outcome is a timestamp rather than a deletion.
+    Every outcome is a timestamp rather than a deletion so that, within the
+    pairing's life, the state can be told apart and guarded by conditional
+    updates. Rows are purged once expired whatever their outcome; the audit
+    record of a pairing is the event appended by the exchange, not this table.
     """
 
     __tablename__: str = "ExtensionPairing"
