@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class ExtensionPairingTable(SQLModel, table=True):
@@ -22,12 +22,12 @@ class ExtensionPairingTable(SQLModel, table=True):
     # started the pairing.
     code_challenge: str = Field(nullable=False)
     device_name: str = Field(nullable=False)
-    created_at: datetime = Field(nullable=False)
-    expires_at: datetime = Field(nullable=False, index=True)
-    approved_at: datetime | None = Field(default=None, nullable=True)
+    created_at: datetime = Field(sa_type=DateTime, nullable=False)
+    expires_at: datetime = Field(sa_type=DateTime, nullable=False, index=True)
+    approved_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True)
     approved_by_user_id: UUID | None = Field(default=None, nullable=True, index=True)
-    denied_at: datetime | None = Field(default=None, nullable=True)
-    consumed_at: datetime | None = Field(default=None, nullable=True)
+    denied_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True)
+    consumed_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True)
     # Shown on the approval page: a foreign address is what gives away a remote
     # attacker who started the pairing.
     created_from_ip: str | None = Field(default=None, nullable=True)

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class ExtensionTokenTable(SQLModel, table=True):
@@ -22,9 +22,9 @@ class ExtensionTokenTable(SQLModel, table=True):
     # Self-reported by the extension at pairing time, so it is untrusted input
     # and the approval page must label it as such.
     device_name: str = Field(nullable=False)
-    created_at: datetime = Field(nullable=False)
-    expires_at: datetime = Field(nullable=False, index=True)
-    last_used_at: datetime | None = Field(default=None, nullable=True)
+    created_at: datetime = Field(sa_type=DateTime, nullable=False)
+    expires_at: datetime = Field(sa_type=DateTime, nullable=False, index=True)
+    last_used_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True)
     # A timestamp rather than a deletion, so a revoked pairing stays auditable.
-    revoked_at: datetime | None = Field(default=None, nullable=True, index=True)
+    revoked_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True, index=True)
     created_from_ip: str | None = Field(default=None, nullable=True)
