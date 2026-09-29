@@ -1,5 +1,5 @@
 from .access_token import AccessToken
-from .extension_token_secret import MIN_TOKEN_LENGTH, ExtensionTokenSecret
+from .extension_token_secret import TOKEN_LENGTH, ExtensionTokenSecret
 from .pairing_user_code import PairingUserCode
 from .pkce_challenge import S256, PkceChallenge, PkceVerifier
 from .raw_password import MIN_PASSWORD_LENGTH, RawPassword
@@ -13,7 +13,7 @@ __all__ = [
     "RefreshToken",
     "ServiceAccountToken",
     "ExtensionTokenSecret",
-    "MIN_TOKEN_LENGTH",
+    "TOKEN_LENGTH",
     "PairingUserCode",
     "PkceChallenge",
     "PkceVerifier",

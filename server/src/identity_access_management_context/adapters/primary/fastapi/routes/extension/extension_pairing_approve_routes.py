@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_approve_extension_pairing_usecase,
@@ -30,7 +30,7 @@ router = APIRouter(prefix="/extension/pairing", tags=["Browser Extension"])
     },
 )
 def approve_extension_pairing(
-    user_code: str,
+    user_code: str = Path(max_length=16),
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: ApproveExtensionPairingUseCase = Depends(get_approve_extension_pairing_usecase),
 ) -> None:

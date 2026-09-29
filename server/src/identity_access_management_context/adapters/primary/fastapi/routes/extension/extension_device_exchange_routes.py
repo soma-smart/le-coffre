@@ -28,8 +28,9 @@ UNUSABLE_PAIRING_DETAIL = "This pairing request is invalid or has expired"
 
 
 class ExchangeExtensionDeviceRequest(BaseModel):
-    user_code: str
-    code_verifier: str = Field(description="The secret the extension kept when it registered")
+    # Bounded at the edge, see RegisterExtensionDeviceRequest.
+    user_code: str = Field(max_length=16)
+    code_verifier: str = Field(max_length=128, description="The secret the extension kept when it registered")
 
 
 class ExchangeExtensionDeviceResponse(BaseModel):

@@ -175,6 +175,30 @@ class TestStart:
                 )
             )
 
+    @pytest.mark.parametrize(
+        "challenge",
+        [
+            "",
+            "too-short",
+            "A" * 44,  # one character too many to be an unpadded SHA-256
+            "A" * 42 + "=",  # padded, which base64url without padding never is
+            "A" * 42 + "+",  # standard base64 alphabet, not url-safe
+        ],
+    )
+    def test_should_reject_when_the_challenge_cannot_be_a_sha256_digest(self, start_use_case, challenge):
+        # Such a pairing could never be redeemed, since no verifier hashes to
+        # it; refusing it up front is also what keeps the anonymous endpoint
+        # from storing arbitrary strings.
+        with pytest.raises(InvalidPkceVerifierError):
+            start_use_case.execute(
+                StartExtensionPairingCommand(
+                    code_challenge=challenge,
+                    code_challenge_method="S256",
+                    device_name="Chrome",
+                    created_from_ip=None,
+                )
+            )
+
     def test_should_return_different_codes_when_starting_two_pairings(self, start_use_case):
         first = _start(start_use_case, PkceVerifier.generate())
         second = _start(start_use_case, PkceVerifier.generate())
@@ -448,6 +472,30 @@ class TestExchange:
                 ExchangeExtensionPairingCommand(
                     user_code=started.user_code, code_verifier=PkceVerifier.generate().value
                 )
+            )
+
+    @pytest.mark.parametrize(
+        "verifier",
+        [
+            "a" * 42,  # below the RFC 7636 floor
+            "a" * 129,  # above its ceiling
+            "a" * 42 + "/",  # outside the unreserved alphabet
+            "a" * 42 + " ",
+        ],
+    )
+    def test_should_treat_a_malformed_verifier_as_unknown(
+        self, start_use_case, approve_use_case, exchange_use_case, registered_user, verifier
+    ):
+        # Indistinguishable from a wrong one, so the shape check cannot be used
+        # to probe which pairings exist.
+        started = _start(start_use_case, PkceVerifier.generate())
+        approve_use_case.execute(
+            ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=registered_user)
+        )
+
+        with pytest.raises(ExtensionPairingNotFoundError):
+            exchange_use_case.execute(
+                ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier)
             )
 
     def test_should_mint_nothing_when_the_verifier_is_wrong(

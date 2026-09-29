@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import re
 import secrets
 from dataclasses import dataclass, field
 
@@ -9,7 +10,17 @@ from identity_access_management_context.domain.exceptions import (
 )
 
 VERIFIER_BYTES = 32
+
+# RFC 7636 section 4.1: 43 to 128 characters from the unreserved set. The floor
+# is the entropy bound; the ceiling and the alphabet exist so that the anonymous
+# registration and exchange endpoints hash and compare bounded, well-formed
+# input rather than whatever a caller chose to send.
 MIN_VERIFIER_LENGTH = 43
+MAX_VERIFIER_LENGTH = 128
+_VERIFIER_SHAPE = re.compile(r"^[A-Za-z0-9._~-]{43,128}$")
+
+# base64url(SHA-256(...)) without padding is always exactly 43 characters.
+_CHALLENGE_SHAPE = re.compile(r"^[A-Za-z0-9_-]{43}$")
 
 # The only method this system accepts. `plain` is rejected explicitly rather
 # than left to a default, so a client cannot negotiate the protection away.
@@ -34,7 +45,7 @@ class PkceVerifier:
     value: str = field(repr=False)
 
     def __post_init__(self) -> None:
-        if len(self.value) < MIN_VERIFIER_LENGTH:
+        if not _VERIFIER_SHAPE.fullmatch(self.value):
             raise InvalidPkceVerifierError()
 
     def __str__(self) -> str:
@@ -55,7 +66,10 @@ class PkceChallenge:
     value: str
 
     def __post_init__(self) -> None:
-        if not self.value:
+        # A value of any other shape cannot be a SHA-256 digest, so it could
+        # never match a verifier; refusing it at registration says so up front
+        # instead of storing a pairing that no exchange can ever redeem.
+        if not _CHALLENGE_SHAPE.fullmatch(self.value):
             raise InvalidPkceVerifierError()
 
     @classmethod

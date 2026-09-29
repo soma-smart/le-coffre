@@ -21,9 +21,14 @@ router = APIRouter(prefix="/extension/device", tags=["Browser Extension"])
 
 
 class RegisterExtensionDeviceRequest(BaseModel):
-    code_challenge: str = Field(description="base64url(SHA-256(code_verifier))")
-    code_challenge_method: str = Field(default="S256", description="Only S256 is accepted")
-    device_name: str = Field(default="", description="Self-reported; shown as untrusted on the approval page")
+    # Bounded at the edge: this endpoint is anonymous, and the value objects
+    # validate shape, not size, so without these a caller could make the
+    # server hash and store arbitrarily long strings.
+    code_challenge: str = Field(max_length=128, description="base64url(SHA-256(code_verifier))")
+    code_challenge_method: str = Field(default="S256", max_length=16, description="Only S256 is accepted")
+    device_name: str = Field(
+        default="", max_length=200, description="Self-reported; shown as untrusted on the approval page"
+    )
 
 
 class RegisterExtensionDeviceResponse(BaseModel):

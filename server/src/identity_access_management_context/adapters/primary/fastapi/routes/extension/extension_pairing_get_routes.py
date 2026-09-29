@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from pydantic import BaseModel
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
@@ -39,7 +39,7 @@ class GetExtensionPairingResponse(BaseModel):
     responses={404: {"description": "The pairing is unknown or has expired"}},
 )
 def get_extension_pairing(
-    user_code: str,
+    user_code: str = Path(max_length=16),
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: GetExtensionPairingUseCase = Depends(get_get_extension_pairing_usecase),
 ):
