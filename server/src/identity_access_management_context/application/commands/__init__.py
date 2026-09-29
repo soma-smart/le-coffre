@@ -27,6 +27,7 @@ from .refresh_access_token_command import RefreshAccessTokenCommand
 from .register_admin_with_password_command import RegisterAdminWithPasswordCommand
 from .remove_user_from_group_command import RemoveUserFromGroupCommand
 from .revoke_all_extension_tokens_command import RevokeAllExtensionTokensCommand
+from .revoke_all_extension_tokens_for_user_command import RevokeAllExtensionTokensForUserCommand
 from .revoke_extension_token_command import RevokeExtensionTokenCommand
 from .search_users_command import SearchUsersCommand
 from .sso_login_command import SsoLoginCommand
@@ -44,6 +45,7 @@ __all__ = [
     "GetExtensionPairingCommand",
     "ListExtensionTokensCommand",
     "RevokeAllExtensionTokensCommand",
+    "RevokeAllExtensionTokensForUserCommand",
     "RevokeExtensionTokenCommand",
     "StartExtensionPairingCommand",
     "ValidateExtensionTokenCommand",

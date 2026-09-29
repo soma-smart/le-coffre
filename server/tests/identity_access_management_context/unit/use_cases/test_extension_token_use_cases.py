@@ -8,11 +8,14 @@ import pytest
 from identity_access_management_context.application.commands import (
     ListExtensionTokensCommand,
     RevokeAllExtensionTokensCommand,
+    RevokeAllExtensionTokensForUserCommand,
     RevokeExtensionTokenCommand,
     ValidateExtensionTokenCommand,
 )
+from identity_access_management_context.application.services import REVOCATION_REASON_ADMIN_REVOKED
 from identity_access_management_context.application.use_cases import (
     ListExtensionTokensUseCase,
+    RevokeAllExtensionTokensForUserUseCase,
     RevokeAllExtensionTokensUseCase,
     RevokeExtensionTokenUseCase,
     ValidateExtensionTokenUseCase,
@@ -23,6 +26,7 @@ from identity_access_management_context.domain.entities import (
     User,
     UserPassword,
 )
+from identity_access_management_context.domain.events import ExtensionTokenRevokedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionTokenDormantError,
     ExtensionTokenExpiredError,
@@ -30,7 +34,8 @@ from identity_access_management_context.domain.exceptions import (
     ExtensionTokenRevokedError,
 )
 from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
-from shared_kernel.domain.entities import ValidatedUser
+from shared_kernel.adapters.primary.exceptions import NotAdminError
+from shared_kernel.domain.entities import AuthenticatedUser, ValidatedUser
 
 NOW = datetime(2026, 8, 26, 12, 0, 0, tzinfo=UTC)
 TOKEN_LIFETIME = timedelta(days=30)
@@ -103,6 +108,16 @@ def revoke_use_case(extension_token_repository, event_publisher, admin_event_rep
 @pytest.fixture
 def revoke_all_use_case(extension_token_repository, event_publisher, admin_event_repository, time_provider):
     return RevokeAllExtensionTokensUseCase(
+        extension_token_repository=extension_token_repository,
+        event_publisher=event_publisher,
+        admin_event_repository=admin_event_repository,
+        time_provider=time_provider,
+    )
+
+
+@pytest.fixture
+def revoke_all_for_user_use_case(extension_token_repository, event_publisher, admin_event_repository, time_provider):
+    return RevokeAllExtensionTokensForUserUseCase(
         extension_token_repository=extension_token_repository,
         event_publisher=event_publisher,
         admin_event_repository=admin_event_repository,
@@ -383,4 +398,71 @@ class TestRevoke:
         time_provider.set_current_time(NOW)
 
         assert revoke_all_use_case.execute(RevokeAllExtensionTokensCommand(requesting_user=user)) == 0
+        assert admin_event_repository.events == []
+
+
+class TestAdminRevokeAll:
+    """An administrator's lever for an account whose owner they cannot reach."""
+
+    def test_should_disconnect_every_live_device_of_the_target_when_an_admin_asks(
+        self, revoke_all_for_user_use_case, extension_token_repository, event_publisher, time_provider, user
+    ):
+        time_provider.set_current_time(NOW)
+        admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
+        _issue(extension_token_repository, user.user_id)
+        _issue(extension_token_repository, user.user_id)
+        _, bystander = _issue(extension_token_repository, uuid4())
+
+        revoked = revoke_all_for_user_use_case.execute(
+            RevokeAllExtensionTokensForUserCommand(requesting_user=admin, target_user_id=user.user_id)
+        )
+
+        assert revoked == 2
+        assert extension_token_repository.tokens[bystander.id].revoked_at is None
+        event = next(e for e in event_publisher.published_events if isinstance(e, ExtensionTokenRevokedEvent))
+        assert event.user_id == user.user_id
+        assert event.reason == REVOCATION_REASON_ADMIN_REVOKED
+
+    def test_should_record_the_admin_as_actor_and_the_user_as_owner(
+        self, revoke_all_for_user_use_case, extension_token_repository, admin_event_repository, time_provider, user
+    ):
+        # A row that conflated the two could answer neither "who did it" nor
+        # "whose devices were cut".
+        time_provider.set_current_time(NOW)
+        admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
+        _issue(extension_token_repository, user.user_id)
+
+        revoke_all_for_user_use_case.execute(
+            RevokeAllExtensionTokensForUserCommand(requesting_user=admin, target_user_id=user.user_id)
+        )
+
+        (entry,) = admin_event_repository.events
+        assert entry["actor_user_id"] == admin.user_id
+        assert entry["event_data"]["user_id"] == str(user.user_id)
+
+    def test_should_refuse_when_the_caller_is_not_an_admin(
+        self, revoke_all_for_user_use_case, extension_token_repository, time_provider, user
+    ):
+        time_provider.set_current_time(NOW)
+        _, token = _issue(extension_token_repository, user.user_id)
+        someone = AuthenticatedUser(user_id=uuid4(), roles=["user"])
+
+        with pytest.raises(NotAdminError):
+            revoke_all_for_user_use_case.execute(
+                RevokeAllExtensionTokensForUserCommand(requesting_user=someone, target_user_id=user.user_id)
+            )
+
+        assert extension_token_repository.tokens[token.id].revoked_at is None
+
+    def test_should_report_zero_when_the_target_has_no_live_device(
+        self, revoke_all_for_user_use_case, admin_event_repository, time_provider
+    ):
+        time_provider.set_current_time(NOW)
+        admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
+
+        revoked = revoke_all_for_user_use_case.execute(
+            RevokeAllExtensionTokensForUserCommand(requesting_user=admin, target_user_id=uuid4())
+        )
+
+        assert revoked == 0
         assert admin_event_repository.events == []
