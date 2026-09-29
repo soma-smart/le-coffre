@@ -108,6 +108,10 @@ export const useGroupsStore = defineStore('groups', () => {
     await groupUseCases.promoteToOwner.execute({ groupId, userId })
   }
 
+  async function demoteToMember(groupId: string, userId: string): Promise<void> {
+    await groupUseCases.demoteToMember.execute({ groupId, userId })
+  }
+
   async function deleteGroup(groupId: string): Promise<void> {
     await groupUseCases.delete.execute({ groupId })
     invalidateCache()
@@ -159,6 +163,7 @@ export const useGroupsStore = defineStore('groups', () => {
     addMemberToGroup,
     removeMemberFromGroup,
     promoteToOwner,
+    demoteToMember,
     deleteGroup,
     invalidateCache,
     clear,
