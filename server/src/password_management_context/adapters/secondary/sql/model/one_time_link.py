@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class OneTimeLinkTable(SQLModel, table=True):
@@ -17,7 +17,7 @@ class OneTimeLinkTable(SQLModel, table=True):
     password_id: UUID = Field(nullable=False, index=True)
     token_hash: str = Field(nullable=False, unique=True, index=True, description="SHA-256 hex of the link token")
     created_by_user_id: UUID = Field(nullable=False, index=True)
-    created_at: datetime = Field(nullable=False)
-    expires_at: datetime = Field(nullable=False, index=True)
-    read_at: datetime | None = Field(default=None, description="When the link was consumed")
-    revoked_at: datetime | None = Field(default=None, description="When the owner revoked the link")
+    created_at: datetime = Field(sa_type=DateTime, nullable=False)
+    expires_at: datetime = Field(sa_type=DateTime, nullable=False, index=True)
+    read_at: datetime | None = Field(sa_type=DateTime, default=None, description="When the link was consumed")
+    revoked_at: datetime | None = Field(sa_type=DateTime, default=None, description="When the owner revoked the link")
