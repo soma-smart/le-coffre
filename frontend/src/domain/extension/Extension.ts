@@ -25,6 +25,14 @@ export interface ExtensionPairingDetails {
    * showing this in its place understated the grant by a factor of thousands.
    */
   expiresAt: Date
+  /**
+   * The same deadline as a duration, measured by the server when the page
+   * loaded the pairing. The countdown runs from this rather than from
+   * `expiresAt` and the local clock: a clock a minute fast disabled Approve a
+   * minute before the server would have refused it, and a slow one showed a
+   * live button that then failed.
+   */
+  secondsLeft: number
   /** How long the credential itself would last, which is what is consented to. */
   accessLifetimeSeconds: number
   /**

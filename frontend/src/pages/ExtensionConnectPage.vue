@@ -26,8 +26,12 @@ const submitting = ref(false)
 const outcome = ref<'approved' | 'denied' | null>(null)
 
 // Ticks the countdown below. A deadline the user cannot see is one they can
-// only discover by having Approve fail.
+// only discover by having Approve fail. The deadline itself is anchored on
+// the server's `secondsLeft` at lookup time, so only the elapsed time is
+// measured locally: comparing the server's expiry with this clock would move
+// the deadline by however far this clock is off.
 const now = ref(Date.now())
+const deadline = ref<number | null>(null)
 let ticker: ReturnType<typeof setInterval> | undefined
 
 onMounted(() => {
@@ -37,8 +41,8 @@ onMounted(() => {
 onUnmounted(() => clearInterval(ticker))
 
 const secondsLeft = computed(() => {
-  if (!pairing.value) return 0
-  return Math.max(0, Math.round((pairing.value.expiresAt.getTime() - now.value) / 1000))
+  if (deadline.value === null) return 0
+  return Math.max(0, Math.round((deadline.value - now.value) / 1000))
 })
 
 const hasExpired = computed(() => pairing.value !== null && secondsLeft.value === 0)
@@ -90,6 +94,7 @@ async function lookUp() {
       return
     }
     pairing.value = found
+    deadline.value = Date.now() + found.secondsLeft * 1000
     status.value = 'ready'
   } catch (error) {
     codeError.value =

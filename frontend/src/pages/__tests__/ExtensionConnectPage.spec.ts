@@ -23,6 +23,7 @@ function seededGateway(overrides = {}) {
     deviceName: 'Chrome on macOS',
     createdAt: NOW,
     expiresAt: new Date(NOW.getTime() + 300_000),
+    secondsLeft: 300,
     accessLifetimeSeconds: 30 * 86400,
     createdFromIp: '203.0.113.5',
     isResolved: false,
@@ -234,9 +235,11 @@ describe('ExtensionConnectPage', () => {
 
     it('should count the request deadline down so the user knows how long is left', async () => {
       // The pairing dies ten minutes after Connect. Without this the only way
-      // to learn the request timed out is to have Approve fail.
+      // to learn the request timed out is to have Approve fail. The figure is
+      // the server's: `expiresAt` is set a minute earlier than that here, and
+      // must not win, or a client clock a minute fast would cut the deadline.
       const wrapper = await mountAtDecision(
-        seededGateway({ expiresAt: new Date(NOW.getTime() + 600_000) }),
+        seededGateway({ expiresAt: new Date(NOW.getTime() + 540_000), secondsLeft: 600 }),
       )
 
       expect(wrapper.find('[data-testid="pairing-countdown"]').text()).toContain('10:00')
@@ -245,7 +248,7 @@ describe('ExtensionConnectPage', () => {
 
     it('should stop offering a decision once the request has expired', async () => {
       const wrapper = await mountAtDecision(
-        seededGateway({ expiresAt: new Date(NOW.getTime() - 1_000) }),
+        seededGateway({ expiresAt: new Date(NOW.getTime() - 1_000), secondsLeft: 0 }),
       )
 
       expect(wrapper.find('[data-testid="pairing-countdown"]').text()).toContain('has expired')
