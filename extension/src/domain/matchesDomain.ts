@@ -4,11 +4,20 @@
  * Ranked rather than boolean, because autofill has to order candidates: a
  * boolean would have to be replaced wholesale the moment two entries match.
  *
- * KNOWN LIMITATION: parent-domain matching uses a dot-prefixed suffix, not the
- * Public Suffix List. That means `foo.co.uk` and `bar.co.uk` are treated as
- * sharing a parent, which the PSL would refuse. Bundling the PSL is too heavy
- * for a popup; the autofill work should make that call deliberately rather than
- * inherit it by accident.
+ * Scheme and port take part in the match, not just the host. An entry saved
+ * for `https://intranet` must not be offered on `http://intranet`, where a
+ * page can be anyone on the network, and `https://host:8443` is not the same
+ * service as `https://host`. An entry with no scheme at all (`github.com`,
+ * which older rows carry) is taken to be https.
+ *
+ * KNOWN LIMITATION: the parent-domain rule is a dot-prefixed suffix test, not
+ * the Public Suffix List. The residual is an entry whose host is itself a
+ * public suffix: an entry saved for `github.io` matches every site under it,
+ * `evil.github.io` included, and the symmetric branch offers an entry saved
+ * for `me.github.io` on a page at `github.io`. Bundling the PSL is too heavy
+ * for a popup, and nothing calls this yet; the autofill work should make that
+ * call deliberately rather than inherit it by accident. Both cases are pinned
+ * in matchesDomain.spec.ts so the choice stays visible.
  */
 import { parseWebUrl } from './webUrl'
 
@@ -22,10 +31,22 @@ export const MATCH_RANK: Record<MatchQuality, number> = {
   none: 0,
 }
 
+/** An entry url may lack its scheme; a page url, coming from the browser, never does. */
+function parseEntryUrl(value: string | null): URL | null {
+  const trimmed = value?.trim()
+  if (!trimmed) return null
+  const withScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed) ? trimmed : `https://${trimmed}`
+  return parseWebUrl(withScheme)
+}
+
 export function matchesDomain(entryUrl: string | null, pageUrl: string): MatchQuality {
-  const entry = parseWebUrl(entryUrl)
+  const entry = parseEntryUrl(entryUrl)
   const page = parseWebUrl(pageUrl)
   if (!entry || !page) return 'none'
+
+  // `URL.port` is '' for the scheme's default, so `https://a:443` and
+  // `https://a` compare equal while `https://a:8443` does not.
+  if (entry.protocol !== page.protocol || entry.port !== page.port) return 'none'
 
   const entryHost = entry.hostname.toLowerCase()
   const pageHost = page.hostname.toLowerCase()
