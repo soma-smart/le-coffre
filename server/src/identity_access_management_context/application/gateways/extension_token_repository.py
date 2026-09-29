@@ -11,9 +11,11 @@ class ExtensionTokenRepository(Protocol):
 
         Returns None when the cap rejected it. The cap is a parameter of the
         write rather than a separate question asked beforehand: an implementation
-        must count and insert in one atomic step, because every caller mints the
-        token first and a read-then-write would let simultaneous exchanges, or
-        several approvals collected while under the cap, both pass the check.
+        must make the count and the insert one serialised step per user, because
+        every caller mints the token first and a read-then-write would let
+        simultaneous exchanges, or several approvals collected while under the
+        cap, both pass the check. Atomic is not enough on its own: a single
+        statement still reads a snapshot, so two of them can both count four.
         """
         ...
 

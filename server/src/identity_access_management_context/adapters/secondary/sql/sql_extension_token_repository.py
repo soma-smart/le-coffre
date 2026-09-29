@@ -8,6 +8,7 @@ from sqlmodel import Session, col, func, select, update
 from identity_access_management_context.adapters.secondary.sql.model.extension_token_model import (
     ExtensionTokenTable,
 )
+from identity_access_management_context.adapters.secondary.sql.model.users_model import UserTable
 from identity_access_management_context.application.gateways import ExtensionTokenRepository
 from identity_access_management_context.domain.entities import ExtensionToken
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
@@ -21,12 +22,24 @@ class SqlExtensionTokenRepository(SQLBaseRepository, ExtensionTokenRepository):
     def add(self, token: ExtensionToken, max_active_tokens: int, now: datetime) -> ExtensionToken | None:
         """Insert the token unless the user is already at the device cap.
 
-        One INSERT ... SELECT, so counting and inserting cannot be interleaved.
         The check in ApproveExtensionPairingUseCase runs minutes earlier and
         against a different pairing, so it bounds nothing on its own: a user at
         four tokens can approve any number of pairings, each seeing 4 < 5, then
-        redeem them all. The WHERE clause below is the guard that holds.
+        redeem them all. The guard that holds is below, in two parts.
+
+        The INSERT ... SELECT puts the count and the insert in one statement,
+        which is not the same as serialising them: under PostgreSQL's READ
+        COMMITTED two such statements for the same user both read a snapshot
+        with four rows and both insert. The counted rows are not locked, and an
+        insert only conflicts on a unique key. So the user's own row is locked
+        first, FOR UPDATE, for the rest of this transaction: the second
+        exchange waits on the first to commit, then counts five. SQLite has no
+        row locks and renders the clause away, which is fine, since its single
+        writer already serialises the two statements; that is also why the
+        integration tests cannot show the difference.
         """
+        self._session.exec(select(UserTable).where(UserTable.id == token.user_id).with_for_update())
+
         table = cast(Any, ExtensionTokenTable).__table__
         row = {
             "id": token.id,
