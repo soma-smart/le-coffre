@@ -5,9 +5,9 @@ const LOGIN_REDIRECT_KEY = 'login-redirect-path'
 /**
  * Production LoginRedirectGateway backed by `window.sessionStorage`.
  *
- * Guarded like its pairing sibling: sessionStorage throws in some privacy
- * modes, and losing the redirect must degrade to "land on the home page",
- * never to a blank page.
+ * Every access is guarded: sessionStorage throws in some privacy modes, and
+ * losing the redirect must degrade to "land on the home page", never to a
+ * blank page.
  */
 export class SessionStorageLoginRedirectGateway implements LoginRedirectGateway {
   remember(path: string): void {
@@ -25,6 +25,14 @@ export class SessionStorageLoginRedirectGateway implements LoginRedirectGateway 
       return path
     } catch {
       return null
+    }
+  }
+
+  forget(): void {
+    try {
+      window.sessionStorage.removeItem(LOGIN_REDIRECT_KEY)
+    } catch {
+      // Nothing to recover from: the value dies with the session anyway.
     }
   }
 }

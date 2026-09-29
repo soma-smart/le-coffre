@@ -63,6 +63,9 @@ onMounted(async () => {
     await router.push(auth.consumeLoginRedirect.execute() ?? '/')
   } catch (error) {
     console.error('SSO callback error:', error)
+    // The round trip is over and nothing will navigate to the stashed
+    // destination; leaving it would attach it to the next login in this tab.
+    auth.forgetLoginRedirect.execute()
     // AuthDomainError/Error messages come from the backend or an unknown
     // failure — not ours to translate. Only the final fallback we author
     // ourselves is.
