@@ -55,7 +55,13 @@ export async function getConnectionState(deps: Deps): Promise<Result<ConnectionS
 
   const session = await deps.makeClient(vaultUrl, token).session()
   if (!session.ok) {
-    if (session.error.kind === 'AUTH_LOST') return ok({ status: 'unpaired', vaultUrl })
+    if (session.error.kind === 'AUTH_LOST') {
+      // A 401 means the credential is gone for good, same as in vault.ts.
+      // Keeping it would resend a revoked token on every popup open and
+      // leave the idle sweep armed for nothing.
+      await clearCredentials(deps.browser)
+      return ok({ status: 'unpaired', vaultUrl })
+    }
     if (session.error.kind === 'VAULT_LOCKED') return ok({ status: 'locked', vaultUrl })
     return err(session.error)
   }
