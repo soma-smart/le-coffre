@@ -151,6 +151,16 @@ there; the hidden `<textarea>` plus `document.execCommand('copy')` is the workin
 path, and the reason `clipboardWrite` is declared. Firefox has no offscreen API
 and will take a popup fallback.
 
+The worker talks to the offscreen document over a **named port**
+(`runtime.connect`, `OFFSCREEN_PORT_NAME` in `shared/messageSchemas.ts`), not
+`runtime.sendMessage`: a message is a broadcast to every listener in the
+extension, and `OFFSCREEN_COPY` carries the secret. Both ends check who they are
+talking to. The worker's message listener and the offscreen document's port
+listener accept only this extension's own id and refuse anything carrying a
+tab, since there is no content script; and both validate what arrives with the
+Zod schemas in `shared/messageSchemas.ts`, answering a malformed request with a
+typed error rather than casting it and failing somewhere far from the cause.
+
 The clipboard is cleared by writing a **single space**, not `''`, copying from an
 empty textarea is a no-op on some platforms and would leave the secret in place.
 The extension deliberately does **not** check whether the clipboard still holds
