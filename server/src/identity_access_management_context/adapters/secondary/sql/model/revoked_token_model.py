@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class RevokedTokenTable(SQLModel, table=True):
@@ -11,6 +11,6 @@ class RevokedTokenTable(SQLModel, table=True):
     jti: str = Field(nullable=False, unique=True, index=True)
     user_id: UUID | None = Field(default=None, nullable=True, index=True)
     token_type: str = Field(nullable=False)
-    expires_at: datetime | None = Field(default=None, nullable=True, index=True)
-    revoked_at: datetime = Field(nullable=False)
+    expires_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True, index=True)
+    revoked_at: datetime = Field(sa_type=DateTime, nullable=False)
     reason: str = Field(nullable=False)

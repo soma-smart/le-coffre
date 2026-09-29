@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class PermissionsTable(SQLModel, table=True):
@@ -14,7 +14,7 @@ class PermissionsTable(SQLModel, table=True):
     # NULL means the share is permanent, which is what every row predating
     # temporary sharing is. Stored naive UTC like every other timestamp here:
     # go through shared_kernel.utils.naive_utc to read or write it.
-    expires_at: datetime | None = Field(default=None, nullable=True, index=True)
+    expires_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True, index=True)
 
 
 class OwnershipTable(SQLModel, table=True):
