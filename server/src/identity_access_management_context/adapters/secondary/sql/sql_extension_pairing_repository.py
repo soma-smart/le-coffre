@@ -41,23 +41,32 @@ class SqlExtensionPairingRepository(SQLBaseRepository, ExtensionPairingRepositor
         row = self._session.exec(statement).first()
         return self._to_entity(row) if row is not None else None
 
-    def save(self, pairing: ExtensionPairing) -> None:
-        statement = select(ExtensionPairingTable).where(ExtensionPairingTable.id == pairing.id)
-        row = self._session.exec(statement).first()
-        if row is None:
-            return
+    def approve(self, pairing_id: UUID, user_id: UUID, now: datetime) -> bool:
+        statement = (
+            update(ExtensionPairingTable)
+            .where(*self._still_pending(pairing_id, now))
+            .values(approved_at=to_naive_utc(now), approved_by_user_id=user_id)
+        )
+        result = self._session.exec(cast(Any, statement))
+        self.commit()
+        return cast(Any, result).rowcount == 1
 
-        row.approved_at = to_naive_utc(pairing.approved_at)
-        row.approved_by_user_id = pairing.approved_by_user_id
-        row.denied_at = to_naive_utc(pairing.denied_at)
-        row.consumed_at = to_naive_utc(pairing.consumed_at)
-        self._session.add(row)
-        self.commit_and_refresh(row)
+    def deny(self, pairing_id: UUID, now: datetime) -> bool:
+        statement = (
+            update(ExtensionPairingTable)
+            .where(*self._still_pending(pairing_id, now))
+            .values(denied_at=to_naive_utc(now))
+        )
+        result = self._session.exec(cast(Any, statement))
+        self.commit()
+        return cast(Any, result).rowcount == 1
 
     def consume(self, pairing_id: UUID, now: datetime) -> bool:
         # One conditional UPDATE, not a read-then-write. The WHERE clause is the
         # concurrency guard: whichever transaction gets rowcount 1 is the single
         # redeemer, so two simultaneous exchanges cannot both mint a credential.
+        # Expiry is repeated here although the use case checked it a moment
+        # ago, so that no caller can redeem past the deadline whatever it read.
         statement = (
             update(ExtensionPairingTable)
             .where(
@@ -65,12 +74,27 @@ class SqlExtensionPairingRepository(SQLBaseRepository, ExtensionPairingRepositor
                 cast(Any, ExtensionPairingTable.consumed_at).is_(None),
                 cast(Any, ExtensionPairingTable.denied_at).is_(None),
                 cast(Any, ExtensionPairingTable.approved_at).is_not(None),
+                cast(Any, ExtensionPairingTable.expires_at) > to_naive_utc(now),
             )
             .values(consumed_at=to_naive_utc(now))
         )
         result = self._session.exec(cast(Any, statement))
         self.commit()
         return cast(Any, result).rowcount == 1
+
+    @staticmethod
+    def _still_pending(pairing_id: UUID, now: datetime) -> list[Any]:
+        # The state approve() and deny() both expect to find. Read-then-write
+        # would let a transition that landed after the read be overwritten;
+        # naming the expected state in the WHERE clause makes the database the
+        # arbiter, and a rowcount of 0 tells the caller it lost.
+        return [
+            cast(Any, ExtensionPairingTable.id) == pairing_id,
+            cast(Any, ExtensionPairingTable.approved_at).is_(None),
+            cast(Any, ExtensionPairingTable.denied_at).is_(None),
+            cast(Any, ExtensionPairingTable.consumed_at).is_(None),
+            cast(Any, ExtensionPairingTable.expires_at) > to_naive_utc(now),
+        ]
 
     def purge_expired(self, cutoff: datetime) -> None:
         self._session.exec(

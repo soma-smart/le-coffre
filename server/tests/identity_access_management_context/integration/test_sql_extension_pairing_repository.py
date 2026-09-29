@@ -58,35 +58,78 @@ class TestPersistence:
 
 
 class TestResolution:
-    def test_should_persist_the_approver_when_saving_an_approval(self, sql_extension_pairing_repository):
+    """Approve and deny are conditional UPDATEs, like consume.
+
+    The entity decides on the copy it was handed; the row may have moved on
+    since. These pin that the database, not the copy, is the arbiter: a
+    transition that finds the row no longer pending writes nothing and says so.
+    """
+
+    def test_should_persist_the_approver_when_approving_a_pending_pairing(self, sql_extension_pairing_repository):
         stored = sql_extension_pairing_repository.add(_pairing())
         approver = uuid4()
 
-        stored.approve(approver, NOW)
-        sql_extension_pairing_repository.save(stored)
+        assert sql_extension_pairing_repository.approve(stored.id, approver, NOW) is True
 
         found = sql_extension_pairing_repository.get_by_user_code(stored.user_code)
         assert found.approved_at == NOW
         assert found.approved_by_user_id == approver
         assert found.denied_at is None
 
-    def test_should_persist_the_denial_when_saving_a_denial(self, sql_extension_pairing_repository):
+    def test_should_persist_the_denial_when_denying_a_pending_pairing(self, sql_extension_pairing_repository):
         stored = sql_extension_pairing_repository.add(_pairing())
 
-        stored.deny(NOW)
-        sql_extension_pairing_repository.save(stored)
+        assert sql_extension_pairing_repository.deny(stored.id, NOW) is True
 
         found = sql_extension_pairing_repository.get_by_user_code(stored.user_code)
         assert found.denied_at == NOW
         assert found.approved_at is None
 
-    def test_should_do_nothing_when_saving_an_unknown_pairing(self, sql_extension_pairing_repository):
-        orphan = _pairing()
-        orphan.approve(uuid4(), NOW)
+    def test_should_keep_the_denial_when_an_approval_lands_after_it(self, sql_extension_pairing_repository):
+        # Deny is the way out of a phishing attempt. An approval whose read
+        # predates the denial must lose, not overwrite denied_at with NULL.
+        stored = sql_extension_pairing_repository.add(_pairing())
+        sql_extension_pairing_repository.deny(stored.id, NOW)
 
-        sql_extension_pairing_repository.save(orphan)
+        assert sql_extension_pairing_repository.approve(stored.id, uuid4(), NOW) is False
 
-        assert sql_extension_pairing_repository.get_by_user_code(orphan.user_code) is None
+        found = sql_extension_pairing_repository.get_by_user_code(stored.user_code)
+        assert found.denied_at == NOW
+        assert found.approved_at is None
+
+    def test_should_keep_the_first_approver_when_approving_twice(self, sql_extension_pairing_repository):
+        stored = sql_extension_pairing_repository.add(_pairing())
+        first, second = uuid4(), uuid4()
+        sql_extension_pairing_repository.approve(stored.id, first, NOW)
+
+        assert sql_extension_pairing_repository.approve(stored.id, second, NOW) is False
+        assert sql_extension_pairing_repository.get_by_user_code(stored.user_code).approved_by_user_id == first
+
+    def test_should_keep_the_redemption_when_an_approval_lands_after_it(self, sql_extension_pairing_repository):
+        # The write that used to reopen a redeemed pairing: an approval read
+        # before the exchange, written after it, set consumed_at back to NULL
+        # and a second credential could be minted from one approval.
+        stored = sql_extension_pairing_repository.add(_pairing())
+        sql_extension_pairing_repository.approve(stored.id, uuid4(), NOW)
+        sql_extension_pairing_repository.consume(stored.id, NOW)
+
+        assert sql_extension_pairing_repository.approve(stored.id, uuid4(), NOW) is False
+        assert sql_extension_pairing_repository.deny(stored.id, NOW) is False
+
+        found = sql_extension_pairing_repository.get_by_user_code(stored.user_code)
+        assert found.consumed_at == NOW
+        assert sql_extension_pairing_repository.consume(stored.id, NOW) is False
+
+    def test_should_refuse_to_resolve_when_the_pairing_has_expired(self, sql_extension_pairing_repository):
+        stored = sql_extension_pairing_repository.add(_pairing())
+        later = NOW + FIVE_MINUTES
+
+        assert sql_extension_pairing_repository.approve(stored.id, uuid4(), later) is False
+        assert sql_extension_pairing_repository.deny(stored.id, later) is False
+
+    def test_should_report_no_change_when_resolving_an_unknown_pairing(self, sql_extension_pairing_repository):
+        assert sql_extension_pairing_repository.approve(uuid4(), uuid4(), NOW) is False
+        assert sql_extension_pairing_repository.deny(uuid4(), NOW) is False
 
 
 class TestConsume:
@@ -99,8 +142,7 @@ class TestConsume:
 
     def test_should_consume_only_once_when_the_pairing_is_approved(self, sql_extension_pairing_repository):
         stored = sql_extension_pairing_repository.add(_pairing())
-        stored.approve(uuid4(), NOW)
-        sql_extension_pairing_repository.save(stored)
+        sql_extension_pairing_repository.approve(stored.id, uuid4(), NOW)
 
         assert sql_extension_pairing_repository.consume(stored.id, NOW) is True
         # The second caller loses the race and must be told so, or it would mint
@@ -109,8 +151,7 @@ class TestConsume:
 
     def test_should_record_the_timestamp_when_consuming(self, sql_extension_pairing_repository):
         stored = sql_extension_pairing_repository.add(_pairing())
-        stored.approve(uuid4(), NOW)
-        sql_extension_pairing_repository.save(stored)
+        sql_extension_pairing_repository.approve(stored.id, uuid4(), NOW)
 
         sql_extension_pairing_repository.consume(stored.id, NOW)
 
@@ -125,10 +166,15 @@ class TestConsume:
 
     def test_should_refuse_to_consume_when_the_pairing_is_denied(self, sql_extension_pairing_repository):
         stored = sql_extension_pairing_repository.add(_pairing())
-        stored.deny(NOW)
-        sql_extension_pairing_repository.save(stored)
+        sql_extension_pairing_repository.deny(stored.id, NOW)
 
         assert sql_extension_pairing_repository.consume(stored.id, NOW) is False
+
+    def test_should_refuse_to_consume_when_the_pairing_has_expired(self, sql_extension_pairing_repository):
+        stored = sql_extension_pairing_repository.add(_pairing())
+        sql_extension_pairing_repository.approve(stored.id, uuid4(), NOW)
+
+        assert sql_extension_pairing_repository.consume(stored.id, NOW + FIVE_MINUTES) is False
 
     def test_should_refuse_to_consume_when_the_pairing_is_unknown(self, sql_extension_pairing_repository):
         assert sql_extension_pairing_repository.consume(uuid4(), NOW) is False

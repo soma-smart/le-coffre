@@ -306,6 +306,59 @@ class TestApprove:
             approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
 
 
+class TestResolutionRaces:
+    """The write, not the read, decides.
+
+    The use cases check state on the copy they read; the store may have moved
+    on by the time they write. The fake hands out copies for exactly this
+    reason: it lets a test change the store between the read and the write,
+    which is what two concurrent requests do to each other.
+    """
+
+    def test_should_refuse_the_approval_when_a_denial_landed_after_the_read(
+        self, start_use_case, approve_use_case, extension_pairing_repository, user
+    ):
+        started = _start(start_use_case, PkceVerifier.generate())
+        pairing_id = next(iter(extension_pairing_repository.pairings))
+        # The colleague's Deny lands after Approve read the row but before it
+        # wrote. The approval must lose: Deny is the escape from phishing, and
+        # a 204 on it has to mean what it says.
+        original = extension_pairing_repository.get_by_user_code
+
+        def read_then_deny(user_code):
+            pairing = original(user_code)
+            extension_pairing_repository.deny(pairing_id, NOW)
+            return pairing
+
+        extension_pairing_repository.get_by_user_code = read_then_deny
+
+        with pytest.raises(ExtensionPairingAlreadyResolvedError):
+            approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+        stored = extension_pairing_repository.pairings[pairing_id]
+        assert stored.denied_at == NOW
+        assert stored.approved_at is None
+
+    def test_should_refuse_the_denial_when_an_approval_landed_after_the_read(
+        self, start_use_case, deny_use_case, extension_pairing_repository, user
+    ):
+        started = _start(start_use_case, PkceVerifier.generate())
+        pairing_id = next(iter(extension_pairing_repository.pairings))
+        original = extension_pairing_repository.get_by_user_code
+
+        def read_then_approve(user_code):
+            pairing = original(user_code)
+            extension_pairing_repository.approve(pairing_id, user.user_id, NOW)
+            return pairing
+
+        extension_pairing_repository.get_by_user_code = read_then_approve
+
+        with pytest.raises(ExtensionPairingAlreadyResolvedError):
+            deny_use_case.execute(DenyExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+        assert extension_pairing_repository.pairings[pairing_id].approved_by_user_id == user.user_id
+
+
 class TestDeny:
     def test_should_mark_the_pairing_denied_when_denying(
         self, start_use_case, deny_use_case, extension_pairing_repository, user

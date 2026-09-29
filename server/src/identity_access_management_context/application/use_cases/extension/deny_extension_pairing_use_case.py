@@ -3,6 +3,7 @@ import logging
 from identity_access_management_context.application.commands import DenyExtensionPairingCommand
 from identity_access_management_context.application.gateways import ExtensionPairingRepository
 from identity_access_management_context.application.services import ExtensionPairingLookupService
+from identity_access_management_context.domain.exceptions import ExtensionPairingAlreadyResolvedError
 from shared_kernel.application.gateways import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
@@ -29,8 +30,12 @@ class DenyExtensionPairingUseCase(TracedUseCase):
         pairing = ExtensionPairingLookupService.get_or_raise(self.extension_pairing_repository, command.user_code)
         now = self.time_provider.get_current_time()
 
+        # See ApproveExtensionPairingUseCase: the entity check explains, the
+        # conditional write decides. A denial that loses to a concurrent
+        # approval must say so rather than report success.
         pairing.deny(now)
-        self.extension_pairing_repository.save(pairing)
+        if not self.extension_pairing_repository.deny(pairing.id, now):
+            raise ExtensionPairingAlreadyResolvedError()
 
         logger.info(
             "Extension pairing denied",
