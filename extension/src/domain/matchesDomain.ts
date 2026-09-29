@@ -10,6 +10,8 @@
  * for a popup; the autofill work should make that call deliberately rather than
  * inherit it by accident.
  */
+import { parseWebUrl } from './webUrl'
+
 export type MatchQuality = 'exact' | 'host' | 'parent-domain' | 'none'
 
 /** Ordering for candidate lists. Higher is a better match. */
@@ -20,19 +22,9 @@ export const MATCH_RANK: Record<MatchQuality, number> = {
   none: 0,
 }
 
-function parse(value: string | null | undefined): URL | null {
-  if (!value) return null
-  try {
-    const url = new URL(value)
-    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null
-  } catch {
-    return null
-  }
-}
-
 export function matchesDomain(entryUrl: string | null, pageUrl: string): MatchQuality {
-  const entry = parse(entryUrl)
-  const page = parse(pageUrl)
+  const entry = parseWebUrl(entryUrl)
+  const page = parseWebUrl(pageUrl)
   if (!entry || !page) return 'none'
 
   const entryHost = entry.hostname.toLowerCase()

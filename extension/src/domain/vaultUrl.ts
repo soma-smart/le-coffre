@@ -6,8 +6,7 @@
  * `chrome.permissions.request()` and `chrome.tabs.create()`, so a bad value
  * here is either an over-broad grant or an arbitrary tab-open primitive.
  */
-
-const ALLOWED_PROTOCOLS = new Set(['http:', 'https:'])
+import { parseWebUrl } from './webUrl'
 
 /**
  * Normalise a typed vault URL, or return null.
@@ -24,18 +23,14 @@ export function normalizeVaultUrl(value: string | null | undefined): string | nu
 
   const withProtocol = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed) ? trimmed : `https://${trimmed}`
 
-  try {
-    const url = new URL(withProtocol)
-    if (!ALLOWED_PROTOCOLS.has(url.protocol) || !url.hostname) return null
+  const url = parseWebUrl(withProtocol)
+  if (!url) return null
 
-    // Drop query and fragment, and strip a trailing slash from the path, so the
-    // same vault typed three different ways yields one stored value and one
-    // granted permission.
-    const path = url.pathname.replace(/\/+$/, '')
-    return `${url.origin}${path}`
-  } catch {
-    return null
-  }
+  // Drop query and fragment, and strip a trailing slash from the path, so the
+  // same vault typed three different ways yields one stored value and one
+  // granted permission.
+  const path = url.pathname.replace(/\/+$/, '')
+  return `${url.origin}${path}`
 }
 
 /** True for a vault reachable over plain HTTP, which the UI must warn about. */
