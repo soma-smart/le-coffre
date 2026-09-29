@@ -17,6 +17,12 @@ class ExtensionPairingDetailsResponse:
     #: When this *request* stops being approvable, minutes away. Not the
     #: lifetime of the credential it would create.
     expires_at: datetime
+    #: The same deadline as a duration, measured by the server's clock. The
+    #: page counts this down rather than subtracting expires_at from its own
+    #: clock: a client clock a minute fast would disable Approve a minute
+    #: before the server stops accepting it, and one a minute slow would show
+    #: a live button that then fails.
+    seconds_left: int
     #: How long the credential itself would last. The approval page states this
     #: one: it is what the user is actually consenting to.
     access_lifetime_seconds: int

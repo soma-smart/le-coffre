@@ -37,6 +37,7 @@ class GetExtensionPairingUseCase(TracedUseCase):
             device_name=pairing.device_name,
             created_at=pairing.created_at,
             expires_at=pairing.expires_at,
+            seconds_left=max(0, int((pairing.expires_at - now).total_seconds())),
             access_lifetime_seconds=self.token_lifetime_seconds,
             created_from_ip=pairing.created_from_ip,
             is_resolved=pairing.is_resolved(),

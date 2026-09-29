@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_get_extension_pairing_usecase,
@@ -26,6 +26,7 @@ class GetExtensionPairingResponse(BaseModel):
     device_name: str
     created_at: datetime
     expires_at: datetime
+    seconds_left: int = Field(description="Seconds until the request expires, by the server's clock")
     access_lifetime_seconds: int
     created_from_ip: str | None
     is_resolved: bool
@@ -64,6 +65,7 @@ def get_extension_pairing(
             device_name=result.device_name,
             created_at=result.created_at,
             expires_at=result.expires_at,
+            seconds_left=result.seconds_left,
             access_lifetime_seconds=result.access_lifetime_seconds,
             created_from_ip=result.created_from_ip,
             is_resolved=result.is_resolved,
