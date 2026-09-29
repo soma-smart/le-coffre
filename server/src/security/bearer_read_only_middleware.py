@@ -24,6 +24,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from security.log_paths import sanitize_path_for_log
+from security.request_path import api_path
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,10 @@ class BearerReadOnlyMiddleware(BaseHTTPMiddleware):
         if request.method.upper() in self.SAFE_METHODS:
             return await call_next(request)
 
-        if not request.url.path.startswith(self.PROTECTED_PREFIX):
+        # Normalised: the router serves a path without the /api prefix too, and
+        # this guard must not be the thing such a request walks past.
+        path = api_path(request)
+        if not path.startswith(self.PROTECTED_PREFIX):
             return await call_next(request)
 
         authorization = request.headers.get("Authorization", "")
@@ -50,7 +54,7 @@ class BearerReadOnlyMiddleware(BaseHTTPMiddleware):
         logger.warning(
             "Rejected a mutating request authenticated with a bearer token: %s %s",
             request.method,
-            sanitize_path_for_log(request.url.path),
+            sanitize_path_for_log(path),
         )
         return JSONResponse(
             status_code=403,

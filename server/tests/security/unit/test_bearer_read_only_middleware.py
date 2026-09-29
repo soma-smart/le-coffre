@@ -89,3 +89,21 @@ def test_should_ignore_a_non_bearer_authorization_header():
     response = _client().post("/api/passwords/abc", headers={"Authorization": "Basic dXNlcjpwYXNz"})
 
     assert response.status_code == 200
+
+
+def test_should_refuse_a_mutating_bearer_request_that_drops_the_root_path_prefix():
+    """The real app runs with root_path="/api", and Starlette serves the route
+    with and without that prefix. The guard used to key on the raw path, so
+    `POST /passwords/abc` with a bearer walked straight past it on a direct
+    connection to the backend port."""
+    app = FastAPI(root_path="/api")
+
+    @app.post("/passwords/{password_id}")
+    def mutate_password(password_id: str):
+        return {"ok": True}
+
+    app.add_middleware(BearerReadOnlyMiddleware)
+    client = TestClient(app)
+
+    assert client.post("/api/passwords/abc", headers={"Authorization": "Bearer some-token"}).status_code == 403
+    assert client.post("/passwords/abc", headers={"Authorization": "Bearer some-token"}).status_code == 403

@@ -181,11 +181,28 @@ def test_given_docs_or_openapi_path_when_dispatching_should_pass_through(client:
         assert client.get("/api/openapi.json").status_code != 429
 
 
-def test_given_non_api_path_when_dispatching_should_pass_through():
+def test_given_path_without_the_api_prefix_when_dispatching_should_still_rate_limit():
+    """There is no "outside the API" once a root path is configured.
+
+    Starlette routes `/passwords` and `/api/passwords` to the same handler
+    when the app has root_path="/api", and an earlier version let the first
+    form through untouched: every floor, login included, could be skipped by
+    dropping the prefix on a direct connection to the backend port.
+    """
     app = _create_app(user_max=1, unauth_max=1, auth_max=1, window=60)
     with TestClient(app) as c:
-        for _ in range(5):
-            assert c.get("/other").status_code == 200
+        assert c.get("/passwords").status_code == 200
+        assert c.get("/passwords").status_code == 429
+        # The two spellings share one bucket, since they are one route.
+        assert c.get("/api/passwords").status_code == 429
+
+
+def test_given_login_without_the_api_prefix_when_flooded_should_hit_the_auth_floor():
+    app = _create_app(auth_max=2, unauth_max=100, window=60)
+    with TestClient(app) as c:
+        assert c.post("/auth/login").status_code == 401
+        assert c.post("/auth/login").status_code == 401
+        assert c.post("/auth/login").status_code == 429
 
 
 # ── Unauthenticated IP bucket ─────────────────────────────────────────
@@ -508,6 +525,77 @@ def test_given_concurrent_requests_on_shared_bucket_when_dispatching_should_seri
 
     assert len(allowed) == 3
     assert len(limited) == 7
+
+
+# ---------------------------------------------------------------------------
+# Anonymous floors that replace the principal bucket
+# ---------------------------------------------------------------------------
+
+
+def _create_app_with_pairing_routes(**kwargs) -> FastAPI:
+    app = _create_app(**kwargs)
+
+    @app.post("/extension/device")
+    async def register_device():
+        return PlainTextResponse("registered")
+
+    @app.post("/extension/device/exchange")
+    async def exchange_device():
+        return PlainTextResponse("pending")
+
+    @app.post("/one-time-links/consume")
+    async def consume_link():
+        return PlainTextResponse("consumed")
+
+    return app
+
+
+def test_should_charge_pairing_polls_to_their_own_floor_and_nowhere_else():
+    """Two colleagues pairing behind one NAT must not lock out a third.
+
+    The floor existed, but the request fell through to the anonymous bucket
+    afterwards, so every poll spent both. With a poll every five seconds per
+    device, two devices plus their registrations reached 26 of the 30 shared
+    requests per minute, and the next colleague on that address got 429s on
+    the whole API.
+    """
+    app = _create_app_with_pairing_routes(unauth_max=2, extension_pairing_max=100)
+    with TestClient(app) as c:
+        for _ in range(10):
+            assert c.post("/api/extension/device/exchange").status_code == 200
+
+        # The anonymous bucket is untouched: two ordinary requests still pass.
+        assert c.get("/api/passwords").status_code == 200
+        assert c.get("/api/passwords").status_code == 200
+        assert c.get("/api/passwords").status_code == 429
+
+
+def test_should_refuse_pairing_polls_past_their_floor_whatever_the_anonymous_bucket_holds():
+    app = _create_app_with_pairing_routes(unauth_max=100, extension_pairing_max=3)
+    with TestClient(app) as c:
+        for _ in range(3):
+            assert c.post("/api/extension/device").status_code == 200
+        response = c.post("/api/extension/device")
+
+    assert response.status_code == 429
+    assert response.headers["X-RateLimit-Limit"] == "3"
+
+
+def test_should_report_the_floor_in_the_headers_of_a_pairing_response():
+    app = _create_app_with_pairing_routes(unauth_max=100, extension_pairing_max=5)
+    with TestClient(app) as c:
+        response = c.post("/api/extension/device")
+
+    assert response.headers["X-RateLimit-Limit"] == "5"
+    assert response.headers["X-RateLimit-Remaining"] == "4"
+
+
+def test_should_charge_one_time_link_redemptions_to_their_own_floor_and_nowhere_else():
+    app = _create_app_with_pairing_routes(unauth_max=1, one_time_link_max=100)
+    with TestClient(app) as c:
+        for _ in range(5):
+            assert c.post("/api/one-time-links/consume").status_code == 200
+        assert c.get("/api/passwords").status_code == 200
 
 
 # ---------------------------------------------------------------------------

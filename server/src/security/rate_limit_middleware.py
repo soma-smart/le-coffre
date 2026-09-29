@@ -1,13 +1,18 @@
 """Rate-limiting middleware for FastAPI.
 
-Three mutually-exclusive principal buckets plus an auth-route floor govern
-every non-exempt ``/api/*`` request:
+Two mutually-exclusive principal buckets govern every non-exempt ``/api/*``
+request that has no floor of its own:
 
 - ``user:<id>:api``   , requests with a valid ``access_token`` cookie, or a valid
   browser-extension bearer token (per-user bucket).
 - ``ip:<client_ip>:api`` — requests without a valid token (per-IP bucket).
-- ``ip:<client_ip>:auth`` — runs *in addition* on ``/api/auth/login`` only (the
-  auth-route volume floor).
+
+Some routes have a per-IP floor instead of, or on top of, the principal
+bucket. ``ip:<client_ip>:auth`` runs *in addition* on ``/api/auth/login``.
+The one-time link redemption and the extension pairing floors run *instead*:
+both endpoints are anonymous and polled, so charging them to the shared
+anonymous bucket as well would let two colleagues pairing behind one NAT lock
+each other, and everyone else on that address, out of the whole API.
 
 The client IP is extracted via :func:`resolve_client_ip`, which honors
 ``X-Forwarded-For`` only when the direct TCP peer is in
@@ -44,6 +49,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from fastapi import Request
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -56,6 +62,7 @@ from identity_access_management_context.domain.value_objects import ExtensionTok
 from security.bearer_principal_cache import BearerPrincipalCache
 from security.client_ip import resolve_client_ip
 from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
+from security.request_path import api_path
 
 logger = logging.getLogger(__name__)
 
@@ -103,13 +110,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     # Redeeming a one-time link is anonymous, so it would otherwise share the
     # generic unauthenticated per-IP bucket with the recipient's normal browsing.
-    # Its own per-IP floor keeps several recipients behind one NAT working while
-    # bounding abuse of the endpoint.
+    # Its own per-IP floor, charged INSTEAD of that bucket, keeps several
+    # recipients behind one NAT working while bounding abuse of the endpoint.
     ONE_TIME_LINK_CONSUME_OPS: tuple[tuple[str, str], ...] = (("POST", "/api/one-time-links/consume"),)
 
     # Anonymous browser-extension pairing. Same reasoning as the one-time link
-    # floor: no session exists yet, so without a bucket of its own the polling
-    # loop competes with every other unauthenticated caller behind the same NAT.
+    # floor: no session exists yet, so without a bucket of its own (and only
+    # that bucket) the polling loop competes with every other unauthenticated
+    # caller behind the same NAT.
     EXTENSION_PAIRING_OPS: tuple[tuple[str, str], ...] = (
         ("POST", "/api/extension/device"),
         ("POST", "/api/extension/device/exchange"),
@@ -119,12 +127,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # exempting them prevents the normal UI from burning through its IP bucket
     # on routine state checks.  Mutating or credential-submitting endpoints
     # obviously stay rate-limited.
-    # Paths are matched against ``request.url.path`` as it enters the middleware,
-    # which is the externally-visible path (the backend runs with
-    # ``root_path="/api"`` but uvicorn does not strip it from the scope), so
-    # every prefix here includes the ``/api`` prefix — including the FastAPI
-    # docs/openapi routes, which are served at ``/api/docs`` and
-    # ``/api/openapi.json`` in this deployment.
+    # Paths are matched against the request path with the ``/api`` root path
+    # guaranteed (see security.request_path), so every prefix here includes
+    # it, the FastAPI docs/openapi routes included, which are served at
+    # ``/api/docs`` and ``/api/openapi.json`` in this deployment.
     EXEMPT_PREFIXES: tuple[str, ...] = (
         "/api/health",
         "/api/vault/status",
@@ -145,8 +151,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # bearer cannot actually reach; erring wide here is cheap, and the miss
     # budget in _resolve_bearer_principal bounds the difference.
     #
-    # Kept honest by test_bearer_reachable_paths_match_the_routes, which derives
-    # the real set from the application's dependency graph. Without it this is a
+    # Kept honest by test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes
+    # (tests/shared_kernel/authentication), which derives the real set from the
+    # application's dependency graph. Without it this is a
     # second place stating a rule that lives in the route declarations.
     BEARER_REACHABLE_PATHS: tuple[str, ...] = (
         "/api/extension/session",
@@ -155,7 +162,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     BEARER_REACHABLE_PREFIXES: tuple[str, ...] = ("/api/passwords/",)
 
     async def dispatch(self, request: Request, call_next):
-        path = request.url.path
+        # Normalised, so that a request arriving without the /api prefix (which
+        # the router still serves) cannot walk past every table below.
+        path = api_path(request)
 
         if self._is_exempt(path):
             return await call_next(request)
@@ -238,37 +247,42 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
                 return self._build_429_response(vault_result)
 
-        # One-time link redemption floor: per-IP, checked before the principal
-        # bucket so a flood here does not also exhaust the caller's generic quota.
-        # Extension pairing floor: per-IP, same rationale as the one-time link
-        # floor below. Both pairing endpoints are anonymous by design.
+        # Anonymous, polled endpoints get a per-IP floor of their own and are
+        # charged nowhere else. An earlier version checked the floor and then
+        # fell through to the principal bucket, so every poll also spent the
+        # shared anonymous quota: two devices pairing behind one NAT, at one
+        # poll every five seconds each, were enough to push a third colleague
+        # on that address into 429s. The floor is the bound for these routes,
+        # so it is also where the X-RateLimit headers come from.
         if (request.method, path) in self.EXTENSION_PAIRING_OPS:
-            extension_pairing_key = f"ip:{client_ip}:extension-pairing"
-            extension_pairing_result = rate_limiter.check(extension_pairing_key, extension_pairing_max, window, now=now)
-            if extension_pairing_result.is_limited:
+            floor_key = f"ip:{client_ip}:extension-pairing"
+            floor_result = rate_limiter.check(floor_key, extension_pairing_max, window, now=now)
+            if floor_result.is_limited:
                 logger.warning(
                     "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
-                    extension_pairing_key,
+                    floor_key,
                     extension_pairing_max,
                     request.method,
                     path,
                 )
-                return self._build_429_response(extension_pairing_result)
+                return self._build_429_response(floor_result)
+            return await self._respond(request, call_next, floor_result)
 
         if (request.method, path) in self.ONE_TIME_LINK_CONSUME_OPS:
-            one_time_link_key = f"ip:{client_ip}:one-time-link"
-            one_time_link_result = rate_limiter.check(one_time_link_key, one_time_link_max, window, now=now)
-            if one_time_link_result.is_limited:
+            floor_key = f"ip:{client_ip}:one-time-link"
+            floor_result = rate_limiter.check(floor_key, one_time_link_max, window, now=now)
+            if floor_result.is_limited:
                 logger.warning(
                     "Rate limit exceeded: bucket=%s limit=%d method=%s path=%s",
-                    one_time_link_key,
+                    floor_key,
                     one_time_link_max,
                     request.method,
                     path,
                 )
-                return self._build_429_response(one_time_link_result)
+                return self._build_429_response(floor_result)
+            return await self._respond(request, call_next, floor_result)
 
-        principal = self._resolve_principal(request, client_ip)
+        principal = await self._resolve_principal(request, client_ip, path)
         if principal.kind == "user":
             principal_key = f"user:{principal.id}:api"
             principal_limit = user_max
@@ -286,9 +300,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
             return self._build_429_response(principal_result)
 
+        return await self._respond(request, call_next, principal_result)
+
+    @staticmethod
+    async def _respond(request: Request, call_next, result: RateLimitResult):
         response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(principal_result.limit)
-        response.headers["X-RateLimit-Remaining"] = str(principal_result.remaining)
+        response.headers["X-RateLimit-Limit"] = str(result.limit)
+        response.headers["X-RateLimit-Remaining"] = str(result.remaining)
         return response
 
     def _is_exempt(self, path: str) -> bool:
@@ -312,7 +330,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _is_vault_mutation(self, path: str) -> bool:
         return any(path.startswith(p) for p in self.VAULT_MUTATION_PREFIXES)
 
-    def _resolve_principal(self, request: Request, client_ip: str) -> Principal:
+    async def _resolve_principal(self, request: Request, client_ip: str, path: str) -> Principal:
         access_token = request.cookies.get("access_token")
         token_gateway = getattr(request.app.state, "token_gateway", None)
 
@@ -343,9 +361,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # below unreachable for the only caller it was written for, and left
         # every extension in the shared anonymous bucket. Do not reinstate that
         # early return: it looks free and costs the feature.
-        return self._resolve_bearer_principal(request, client_ip)
+        return await self._resolve_bearer_principal(request, client_ip, path)
 
-    def _resolve_bearer_principal(self, request: Request, client_ip: str) -> Principal:
+    async def _resolve_bearer_principal(self, request: Request, client_ip: str, path: str) -> Principal:
         """Key a browser-extension caller to its user, not to its IP.
 
         Without this the extension lands in the 30/min anonymous IP bucket
@@ -359,7 +377,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         unauthenticated request, so both guards run before any header is even
         parsed. See BEARER_REACHABLE_PATHS and the miss budget.
         """
-        if not self._is_bearer_reachable(request.method, request.url.path):
+        if not self._is_bearer_reachable(request.method, path):
             return Principal(kind="ip", id=client_ip)
 
         authorization = request.headers.get("Authorization", "")
@@ -408,9 +426,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             if rate_limiter.is_exhausted(miss_key, miss_max, window, now):
                 return Principal(kind="ip", id=client_ip)
 
+            # Off the event loop: this is a synchronous query inside an async
+            # dispatch, and with the budget above it is the one place a caller
+            # can make this middleware wait on the database. Every request in
+            # flight would wait with it.
             session_maker = request.app.state.session_maker
-            with session_maker() as session:
-                token_row = SqlExtensionTokenRepository(session).get_by_token_hash(token_hash)
+
+            def lookup():
+                with session_maker() as session:
+                    return SqlExtensionTokenRepository(session).get_by_token_hash(token_hash)
+
+            token_row = await run_in_threadpool(lookup)
         except Exception:  # noqa: BLE001 - bucket selection must never fail a request
             logger.warning(
                 "Could not resolve an extension token for rate-limit keying; bucketing as anonymous",
