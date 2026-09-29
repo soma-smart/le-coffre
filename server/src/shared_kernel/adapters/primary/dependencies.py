@@ -33,6 +33,7 @@ from identity_access_management_context.domain.exceptions import (
     UserNotFoundException,
 )
 from shared_kernel.domain.entities import ApiPrincipal, ValidatedUser
+from shared_kernel.domain.entities.api_principal import EXTENSION_ROLE
 from shared_kernel.domain.exceptions import ReadOnlyCredentialError
 
 from .exceptions import (
@@ -46,12 +47,6 @@ cookie_scheme = APIKeyCookie(name="access_token", scheme_name="CookieAuth", auto
 # origin: every session cookie is SameSite=strict, so the browser never
 # attaches it to a request initiated there.
 bearer_scheme = HTTPBearer(scheme_name="ExtensionBearer", auto_error=False)
-
-# The only role an extension principal ever carries. Never the user's own:
-# ListPasswordsUseCase hands an admin every password on the instance (metadata
-# only, but that is still every name, login and URL), and that list would end
-# up sitting in a browser profile.
-EXTENSION_PRINCIPAL_ROLE = "user"
 
 
 def get_session(request: Request) -> Generator[Session, None, None]:
@@ -213,10 +208,11 @@ def _validate_extension(
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service error") from e
 
-    # Roles are NOT echoed from the user. See get_current_principal.
+    # Roles are NOT echoed from the user, and ApiPrincipal.extension() replaces
+    # whatever is passed here anyway. See get_current_principal.
     return ValidatedUser(
         user_id=response.user_id,
         email=response.email,
         display_name=response.display_name,
-        roles=[EXTENSION_PRINCIPAL_ROLE],
+        roles=[EXTENSION_ROLE],
     )
