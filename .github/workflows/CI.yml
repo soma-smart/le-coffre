@@ -10,6 +10,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Nothing here writes back to GitHub: every job checks out, installs, tests
+# and builds. Read-only is the floor; a job that needs more grants it itself.
+permissions:
+  contents: read
+
 jobs:
   front-ci:
     timeout-minutes: 10
