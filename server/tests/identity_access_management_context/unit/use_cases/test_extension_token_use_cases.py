@@ -201,6 +201,19 @@ class TestValidate:
         with pytest.raises(ExtensionTokenRevokedError):
             validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
 
+    def test_should_reject_when_the_account_row_is_gone(
+        self, validate_use_case, extension_token_repository, user_repository, registered_user
+    ):
+        # Fail closed. The identity would still resolve (the password or SSO
+        # row may outlive the account), and a missing account has no cutoff to
+        # honour, which is exactly the gap that let a deleted account keep
+        # reading until its token expired.
+        secret, _ = _issue(extension_token_repository, registered_user.user_id)
+        user_repository.delete(registered_user.user_id)
+
+        with pytest.raises(ExtensionTokenRevokedError):
+            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=secret.value))
+
     def test_should_accept_when_the_credential_postdates_the_session_cutoff(
         self, validate_use_case, extension_token_repository, user_repository, registered_user
     ):

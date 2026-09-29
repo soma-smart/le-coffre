@@ -9,6 +9,7 @@ from identity_access_management_context.application.gateways import (
     ExtensionTokenRepository,
     SsoUserRepository,
     UserPasswordRepository,
+    UserRepository,
 )
 from identity_access_management_context.application.responses import (
     ExchangedExtensionTokenResponse,
@@ -19,6 +20,7 @@ from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS
 from identity_access_management_context.domain.events import ExtensionPairedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
+    ExtensionPairingApprovalWithdrawnError,
     ExtensionPairingNotApprovedError,
     ExtensionPairingNotFoundError,
     InvalidPkceVerifierError,
@@ -55,6 +57,7 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         extension_token_repository: ExtensionTokenRepository,
         user_password_repository: UserPasswordRepository,
         sso_user_repository: SsoUserRepository,
+        user_repository: UserRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
@@ -66,6 +69,7 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         self.extension_token_repository = extension_token_repository
         self.user_password_repository = user_password_repository
         self.sso_user_repository = sso_user_repository
+        self.user_repository = user_repository
         self.event_publisher = event_publisher
         self.admin_event_repository = admin_event_repository
         self.time_provider = time_provider
@@ -103,6 +107,30 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
                 extra={"pairing_id": str(pairing.id)},
             )
             raise
+
+        # An approval is only as good as the account that gave it. Revoking
+        # every issued token on a password change or a deletion leaves one
+        # thing standing: a pairing approved before the event and redeemed
+        # after it, which would mint a fresh credential dated after the cutoff.
+        # The account row is the authority here, not the SSO row, which
+        # outlives deletion.
+        approver = self.user_repository.get_by_id(approver_id)
+        if approver is None:
+            logger.warning(
+                "Extension pairing exchange refused: approver no longer exists",
+                extra={"pairing_id": str(pairing.id)},
+            )
+            raise ExtensionPairingApprovalWithdrawnError()
+        if (
+            approver.session_invalid_before is not None
+            and pairing.approved_at is not None
+            and pairing.approved_at < approver.session_invalid_before
+        ):
+            logger.warning(
+                "Extension pairing exchange refused: approval predates the session cutoff",
+                extra={"pairing_id": str(pairing.id), "user_id": str(approver_id)},
+            )
+            raise ExtensionPairingApprovalWithdrawnError()
 
         email, display_name = self._resolve_identity(approver_id)
 

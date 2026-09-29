@@ -70,7 +70,13 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
         token.ensure_usable(now)
 
         authenticated_user = self.user_repository.get_by_id(token.user_id)
-        if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
+        if authenticated_user is None:
+            # Fail closed. The identity lookup below would still succeed for an
+            # SSO user, whose row outlives the account, and a missing account
+            # has no cutoff to honour: an earlier version skipped the check and
+            # let a deleted account keep reading until the token expired.
+            raise ExtensionTokenRevokedError()
+        if authenticated_user.session_invalid_before is not None:
             # The same cutoff that kills cookie sessions on a password change or
             # on refresh-token reuse detection. Without honouring it here,
             # "change my password to log everything out" would silently leave

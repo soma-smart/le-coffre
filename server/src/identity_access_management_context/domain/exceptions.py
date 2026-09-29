@@ -367,6 +367,15 @@ class ExtensionPairingDeniedError(ExtensionDomainError):
         super().__init__("This pairing request is invalid or has expired")
 
 
+class ExtensionPairingApprovalWithdrawnError(ExtensionDomainError):
+    """Raised when the approval no longer stands: the approver's account was
+    deleted, or its sessions were cut (password change, refresh-token reuse)
+    after the approval was given."""
+
+    def __init__(self):
+        super().__init__("This pairing request is invalid or has expired")
+
+
 # Legacy aliases for backward compatibility during migration
 UserNotFoundError = UserNotFoundException
 UserAlreadyExistsError = UserAlreadyExistsException
