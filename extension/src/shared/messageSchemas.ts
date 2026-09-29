@@ -50,7 +50,7 @@ export const offscreenRequestSchema = z.discriminatedUnion('type', [
 
 export const offscreenReplySchema = z.discriminatedUnion('ok', [
   z.object({ ok: z.literal(true) }),
-  z.object({ ok: z.literal(false), error: z.enum(['MALFORMED_REQUEST']) }),
+  z.object({ ok: z.literal(false), error: z.enum(['MALFORMED_REQUEST', 'COPY_FAILED']) }),
 ])
 
 // Both directions, so a request type added to messages.ts without a schema
