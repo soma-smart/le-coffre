@@ -93,6 +93,7 @@ from identity_access_management_context.application.use_cases import (
     RefreshAccessTokenUseCase,
     RegisterAdminWithPasswordUseCase,
     RemoveUserFromGroupUseCase,
+    RevokeAllExtensionTokensForUserUseCase,
     RevokeAllExtensionTokensUseCase,
     RevokeExtensionTokenUseCase,
     RevokeServiceAccountUseCase,
@@ -880,6 +881,20 @@ def get_revoke_all_extension_tokens_usecase(
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RevokeAllExtensionTokensUseCase(
+        extension_token_repository,
+        event_publisher,
+        admin_event_repository,
+        time_provider,
+    )
+
+
+def get_revoke_all_extension_tokens_for_user_usecase(
+    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
+    time_provider: TimeGateway = Depends(get_time_provider),
+):
+    return RevokeAllExtensionTokensForUserUseCase(
         extension_token_repository,
         event_publisher,
         admin_event_repository,

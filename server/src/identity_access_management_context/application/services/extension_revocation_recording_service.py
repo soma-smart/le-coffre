@@ -11,6 +11,7 @@ REVOCATION_REASON_USER_REQUEST = "user_request"
 REVOCATION_REASON_USER_DELETED = "user_deleted"
 REVOCATION_REASON_PASSWORD_CHANGED = "password_changed"  # noqa: S105 - an audit label, not a secret
 REVOCATION_REASON_REFRESH_TOKEN_REUSE = "refresh_token_reuse"  # noqa: S105 - an audit label, not a secret
+REVOCATION_REASON_ADMIN_REVOKED = "admin_revoked"
 
 
 class ExtensionRevocationRecordingService:

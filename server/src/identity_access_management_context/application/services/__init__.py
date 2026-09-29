@@ -1,6 +1,7 @@
 from .admin_existence_service import AdminExistenceService
 from .extension_pairing_lookup_service import ExtensionPairingLookupService
 from .extension_revocation_recording_service import (
+    REVOCATION_REASON_ADMIN_REVOKED,
     REVOCATION_REASON_PASSWORD_CHANGED,
     REVOCATION_REASON_REFRESH_TOKEN_REUSE,
     REVOCATION_REASON_USER_DELETED,
@@ -15,6 +16,7 @@ from .user_management_service import UserManagementService
 __all__ = [
     "ExtensionPairingLookupService",
     "ExtensionRevocationRecordingService",
+    "REVOCATION_REASON_ADMIN_REVOKED",
     "REVOCATION_REASON_PASSWORD_CHANGED",
     "REVOCATION_REASON_REFRESH_TOKEN_REUSE",
     "REVOCATION_REASON_USER_DELETED",

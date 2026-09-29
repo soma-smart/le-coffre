@@ -8,6 +8,7 @@ from . import (
     extension_pairing_deny_routes,
     extension_pairing_get_routes,
     extension_session_get_routes,
+    extension_token_admin_routes,
     extension_token_list_routes,
     extension_token_revoke_all_routes,
     extension_token_revoke_routes,
@@ -30,5 +31,6 @@ def get_extension_router() -> APIRouter:
     extension_router.include_router(extension_token_list_routes.router)
     extension_router.include_router(extension_token_revoke_all_routes.router)
     extension_router.include_router(extension_token_revoke_routes.router)
+    extension_router.include_router(extension_token_admin_routes.router)
 
     return extension_router
