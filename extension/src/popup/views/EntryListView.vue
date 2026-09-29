@@ -68,6 +68,7 @@ function openEdit(entry: EntrySummary) {
   if (link) openTab(link)
 }
 
+/** The worker already reduced `url` to http(s) or null (`toSummary`), so this is safe as is. */
 function openSite(entry: EntrySummary) {
   if (entry.url) openTab(entry.url)
 }

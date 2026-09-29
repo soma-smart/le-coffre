@@ -109,6 +109,40 @@ describe('listEntries', () => {
     expect(client.revealCalls).toEqual([])
   })
 
+  it('should only offer a site to open when its url is http or https', async () => {
+    // The url reaches tabs.create from the popup's "Open site" button. It is
+    // filtered here, at the boundary, so a hostile value stored in the vault
+    // never becomes a navigation primitive: the summary carries null and the
+    // button is not shown.
+    const { deps, browser, client } = createTestDeps()
+    await givenPaired(browser)
+    client.entriesResult = {
+      ok: true,
+      data: [
+        entry({ id: 'fine', groupId: 'mine', url: 'https://db.example.com/' }),
+        entry({ id: 'plain', groupId: 'mine', url: 'http://intranet.example/' }),
+        entry({ id: 'script', groupId: 'mine', url: 'javascript:alert(1)' }),
+        entry({ id: 'data', groupId: 'mine', url: 'data:text/html,x' }),
+        entry({ id: 'file', groupId: 'mine', url: 'file:///etc/passwd' }),
+        entry({ id: 'chrome', groupId: 'mine', url: 'chrome://settings' }),
+        entry({ id: 'relative', groupId: 'mine', url: '/login' }),
+      ],
+    }
+
+    const result = await listEntries(deps, 'mine')
+
+    const urls = result.ok ? Object.fromEntries(result.data.entries.map((e) => [e.id, e.url])) : {}
+    expect(urls).toEqual({
+      fine: 'https://db.example.com/',
+      plain: 'http://intranet.example/',
+      script: null,
+      data: null,
+      file: null,
+      chrome: null,
+      relative: null,
+    })
+  })
+
   it('should apply the search query', async () => {
     const { deps, browser, client } = createTestDeps()
     await givenPaired(browser)

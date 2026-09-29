@@ -5,6 +5,7 @@ import { visibleEntriesForGroup, matchesEntryQuery, type Entry } from '@/domain/
 import { err, ok, type Result } from '@/domain/errors'
 import { sortGroups } from '@/domain/group'
 import { matchesDomain, MATCH_RANK } from '@/domain/matchesDomain'
+import { toSafeWebUrl } from '@/domain/webUrl'
 import type { ConnectionState, EntrySummary, GroupSummary } from '@/shared/messages'
 import { LOCAL_KEYS, SESSION_KEYS } from '@/shared/storageKeys'
 
@@ -140,13 +141,22 @@ export async function revealSecret(deps: Deps, entryId: string): Promise<Result<
   return secret
 }
 
+/**
+ * What the popup gets to see of an entry.
+ *
+ * The url is filtered here, at the boundary, rather than where the popup
+ * opens it: a `javascript:` or `data:` value stored in an entry reaches
+ * `tabs.create` otherwise, and the popup has no business deciding what is safe
+ * to navigate to. A refused url becomes null, so the "Open site" button is
+ * simply not offered.
+ */
 function toSummary(entry: Entry): EntrySummary {
   return {
     id: entry.id,
     name: entry.name,
     folder: entry.folder,
     login: entry.login,
-    url: entry.url,
+    url: toSafeWebUrl(entry.url),
     groupId: entry.groupId,
     accessibleGroupIds: entry.accessibleGroupIds,
     canRead: entry.canRead,
