@@ -5,7 +5,6 @@ import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGate
 import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryLoginRedirectGateway } from '@/infrastructure/in_memory/InMemoryLoginRedirectGateway'
-import { InMemoryPairingHandoffGateway } from '@/infrastructure/in_memory/InMemoryPairingHandoffGateway'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { InMemoryServiceAccountRepository } from '@/infrastructure/in_memory/InMemoryServiceAccountRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
@@ -48,7 +47,6 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
     serviceAccountRepository: new InMemoryServiceAccountRepository(),
 
     extensionGateway: new InMemoryExtensionGateway(),
-    pairingHandoffGateway: new InMemoryPairingHandoffGateway(),
     loginRedirectGateway: new InMemoryLoginRedirectGateway(),
     ...overrides,
   }

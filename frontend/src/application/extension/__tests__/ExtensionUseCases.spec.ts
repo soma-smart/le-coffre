@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ApprovePairingUseCase } from '@/application/extension/ApprovePairing'
 import { DenyPairingUseCase } from '@/application/extension/DenyPairing'
 import { DisconnectAllExtensionsUseCase } from '@/application/extension/DisconnectAllExtensions'
@@ -6,7 +6,10 @@ import { DisconnectExtensionUseCase } from '@/application/extension/DisconnectEx
 import { GetPairingUseCase } from '@/application/extension/GetPairing'
 import { ListConnectedExtensionsUseCase } from '@/application/extension/ListConnectedExtensions'
 import type { ConnectedExtension } from '@/domain/extension/Extension'
-import { ExtensionPairingUnavailableError } from '@/domain/extension/errors'
+import {
+  ExtensionPairingUnavailableError,
+  InvalidPairingUserCodeError,
+} from '@/domain/extension/errors'
 import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
 
 const NOW = new Date('2026-08-27T12:00:00Z')
@@ -55,6 +58,34 @@ describe('GetPairingUseCase', () => {
       new GetPairingUseCase(gateway).execute({ userCode: 'ZZZZ-ZZZZ' }),
     ).rejects.toBeInstanceOf(ExtensionPairingUnavailableError)
   })
+
+  it.each(['k7qm3xr9', ' K7QM 3XR9 ', 'k7qm-3xr9', 'K7QM3XR-9'])(
+    'should normalise %j to what the extension displays',
+    async (typed) => {
+      // The code is read off a popup and typed by hand: case, whitespace and
+      // the dash are not signal, and the backend is equally tolerant.
+      const gateway = new InMemoryExtensionGateway().seedPairing(pairing())
+
+      const result = await new GetPairingUseCase(gateway).execute({ userCode: typed })
+
+      expect(result.userCode).toBe('K7QM-3XR9')
+    },
+  )
+
+  it.each(['', 'K7QM', 'K7QM-3XR9-1', 'K7QM_3XR9', 'K7QM-3XR!'])(
+    'should refuse %j without asking the backend',
+    async (typed) => {
+      // The pairing routes are rate-limited per IP, and a malformed code can
+      // only ever be a 400, so the use case stops it before the gateway.
+      const gateway = new InMemoryExtensionGateway()
+      const spy = vi.spyOn(gateway, 'getPairing')
+
+      await expect(
+        new GetPairingUseCase(gateway).execute({ userCode: typed }),
+      ).rejects.toBeInstanceOf(InvalidPairingUserCodeError)
+      expect(spy).not.toHaveBeenCalled()
+    },
+  )
 })
 
 describe('ApprovePairingUseCase', () => {

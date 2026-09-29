@@ -2,7 +2,6 @@ import type { AuthGateway } from '@/application/ports/AuthGateway'
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { ExtensionGateway } from '@/application/ports/ExtensionGateway'
 import type { LoginRedirectGateway } from '@/application/ports/LoginRedirectGateway'
-import type { PairingHandoffGateway } from '@/application/ports/PairingHandoffGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
 import type { ServiceAccountRepository } from '@/application/ports/ServiceAccountRepository'
@@ -102,7 +101,6 @@ export interface Ports {
   serviceAccountRepository: ServiceAccountRepository
 
   extensionGateway: ExtensionGateway
-  pairingHandoffGateway: PairingHandoffGateway
   loginRedirectGateway: LoginRedirectGateway
 }
 
@@ -129,8 +127,6 @@ export interface Container {
     listConnected: ListConnectedExtensionsUseCase
     disconnect: DisconnectExtensionUseCase
     disconnectAll: DisconnectAllExtensionsUseCase
-    /** Not a use case: a direct port handle for the sign-in round trip. */
-    handoff: PairingHandoffGateway
   }
   users: {
     getCurrent: GetCurrentUserUseCase
@@ -227,7 +223,6 @@ export function buildContainer(ports: Ports): Container {
       listConnected: new ListConnectedExtensionsUseCase(ports.extensionGateway),
       disconnect: new DisconnectExtensionUseCase(ports.extensionGateway),
       disconnectAll: new DisconnectAllExtensionsUseCase(ports.extensionGateway),
-      handoff: ports.pairingHandoffGateway,
     },
     users: {
       getCurrent: new GetCurrentUserUseCase(ports.userRepository),

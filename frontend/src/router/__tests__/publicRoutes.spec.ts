@@ -14,21 +14,15 @@ describe('public routes', () => {
     expect(route?.meta.skipSetupCheck).toBe(true)
   })
 
-  it('marks the extension approval page as public', () => {
-    // Public so the page can render before authentication and stash the pairing
-    // code from the URL fragment itself. Going through the guard instead would
-    // redirect with `redirect=to.fullPath`, writing the code into the SPA
-    // host's access log. skipSetupCheck for the same reason as the one-time
-    // link: pairing involves no crypto and must work while the vault is locked.
-    //
-    // Being public grants nothing. The page shows only what a pairing code
-    // already identifies, and both approve and deny are cookie-authenticated
-    // and CSRF-protected on the backend.
+  it('keeps the extension approval page behind the session', () => {
+    // It was public while the pairing code rode the URL fragment and had to be
+    // stashed before sign-in. The code is typed on the page now, so nothing
+    // needs to happen before authentication, and going through the guard is
+    // what primes the CSRF token that Approve and Refuse need.
     const route = router.getRoutes().find((entry) => entry.name === 'ExtensionConnect')
 
     expect(route).toBeDefined()
-    expect(route?.meta.public).toBe(true)
-    expect(route?.meta.skipSetupCheck).toBe(true)
+    expect(route?.meta.public).toBeUndefined()
   })
 
   it('keeps every other route non-public', () => {
@@ -39,6 +33,6 @@ describe('public routes', () => {
       .filter((entry) => entry.meta.public)
       .map((entry) => entry.name)
 
-    expect(publicRoutes.sort()).toEqual(['ExtensionConnect', 'OneTimeLink'])
+    expect(publicRoutes.sort()).toEqual(['OneTimeLink'])
   })
 })

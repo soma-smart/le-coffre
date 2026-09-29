@@ -25,6 +25,39 @@ export class ExtensionPairingUnavailableError extends ExtensionDomainError {
   }
 }
 
+/** What was typed is not a pairing code, so nothing was asked of the backend. */
+export class InvalidPairingUserCodeError extends ExtensionDomainError {
+  constructor() {
+    super(
+      'Enter the code exactly as your extension shows it: four characters, a dash, four characters',
+    )
+    this.name = 'InvalidPairingUserCodeError'
+  }
+}
+
+/**
+ * The decision was refused for want of a valid CSRF token (403).
+ *
+ * The token lives in memory and is primed by the router; losing it means the
+ * page's session state is stale, and the only repair is a reload. Distinct
+ * from "invalid or expired" because that wording sends the user back to their
+ * extension to start over, which would not help.
+ */
+export class ExtensionSessionLostError extends ExtensionDomainError {
+  constructor() {
+    super('Your session could not be verified. Reload the page and try again.')
+    this.name = 'ExtensionSessionLostError'
+  }
+}
+
+/** The backend failed (5xx). The pairing may still be there, so: try again. */
+export class ExtensionServerError extends ExtensionDomainError {
+  constructor() {
+    super('The server could not handle the request. Please try again.')
+    this.name = 'ExtensionServerError'
+  }
+}
+
 /** The account already holds the maximum number of connected extensions. */
 export class TooManyConnectedExtensionsError extends ExtensionDomainError {
   constructor(detail?: string) {

@@ -8,7 +8,6 @@ import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGate
 import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryLoginRedirectGateway } from '@/infrastructure/in_memory/InMemoryLoginRedirectGateway'
-import { InMemoryPairingHandoffGateway } from '@/infrastructure/in_memory/InMemoryPairingHandoffGateway'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
@@ -31,7 +30,6 @@ function makeTestContainer(): Container {
     serviceAccountRepository: new InMemoryServiceAccountRepository(),
 
     extensionGateway: new InMemoryExtensionGateway(),
-    pairingHandoffGateway: new InMemoryPairingHandoffGateway(),
     loginRedirectGateway: new InMemoryLoginRedirectGateway(),
   })
 }
