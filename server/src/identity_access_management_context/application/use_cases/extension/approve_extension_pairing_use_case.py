@@ -7,7 +7,10 @@ from identity_access_management_context.application.gateways import (
 )
 from identity_access_management_context.application.services import ExtensionPairingLookupService
 from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER
-from identity_access_management_context.domain.exceptions import TooManyActiveExtensionTokensError
+from identity_access_management_context.domain.exceptions import (
+    ExtensionPairingAlreadyResolvedError,
+    TooManyActiveExtensionTokensError,
+)
 from shared_kernel.application.gateways import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
@@ -51,8 +54,13 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
         if active >= self.max_active_tokens:
             raise TooManyActiveExtensionTokensError(self.max_active_tokens)
 
+        # The entity check gives the precise refusal (expired, already
+        # resolved) on the copy just read. The repository call is the one that
+        # counts: it succeeds only if the row is still pending at write time,
+        # so a denial or a redemption that landed in between is never erased.
         pairing.approve(user_id, now)
-        self.extension_pairing_repository.save(pairing)
+        if not self.extension_pairing_repository.approve(pairing.id, user_id, now):
+            raise ExtensionPairingAlreadyResolvedError()
 
         logger.info(
             "Extension pairing approved",
