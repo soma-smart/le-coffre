@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlmodel import JSON, Column, Field, SQLModel
+from sqlmodel import JSON, Column, DateTime, Field, SQLModel
 
 
 class VaultEventTable(SQLModel, table=True):
@@ -11,6 +11,6 @@ class VaultEventTable(SQLModel, table=True):
 
     event_id: UUID = Field(primary_key=True)
     event_type: str = Field(index=True)
-    occurred_on: datetime = Field(index=True)
+    occurred_on: datetime = Field(sa_type=DateTime, index=True)
     actor_user_id: UUID | None = Field(default=None, index=True)
     event_data: dict = Field(default_factory=dict, sa_column=Column(JSON))
