@@ -55,9 +55,7 @@ const vaultHost = computed(() => {
  */
 const inFlight = computed(() => userCode.value !== null)
 
-const approvalLink = computed(() =>
-  vaultUrl.value && userCode.value ? toPairingApprovalLink(vaultUrl.value, userCode.value) : null,
-)
+const approvalLink = computed(() => (vaultUrl.value ? toPairingApprovalLink(vaultUrl.value) : null))
 
 function pollIntervalMs(seconds: number | undefined): number {
   return Math.max((seconds ?? 5) * 1000, MIN_POLL_INTERVAL_MS)
@@ -142,16 +140,18 @@ onUnmounted(() => {
       <div>
         <h2 class="text-base font-semibold text-vault-text-strong">Approve this extension</h2>
         <p class="mt-1 text-sm text-vault-text-muted">
-          A tab opened on your vault. Sign in there and approve the request.
+          A tab opened on your vault. Sign in there and type this code into the page.
         </p>
       </div>
 
       <div class="vault-row vault-row-open flex flex-col items-center gap-2 px-4 py-4">
-        <p class="text-xs text-vault-text-muted">This code must match the one on that page:</p>
-        <!-- The user matches this against the approval page. It is the only thing
-             that distinguishes "my extension asked" from "some page asked". -->
+        <p class="text-xs text-vault-text-muted">Type this code in the page that just opened:</p>
+        <!-- The code never travels in the link: the user carries it across by
+             typing it. Large and monospaced because it is read off this popup
+             and typed elsewhere, and because it is the only thing that
+             distinguishes "my extension asked" from "some page asked". -->
         <p
-          class="vault-mono !text-2xl font-bold tracking-widest text-vault-accent"
+          class="vault-mono !text-3xl font-bold tracking-[0.2em] text-vault-accent select-all"
           data-testid="pairing-code"
         >
           {{ userCode }}

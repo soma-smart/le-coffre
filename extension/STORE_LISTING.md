@@ -45,8 +45,8 @@ reviewer who does not read that line files it as broken.
 >
 > **It never sees your password.** Connecting it works like pairing a device:
 > the extension shows a code, your vault opens in a tab, you sign in there the
-> way you usually do, including through your company's single sign-on, and you
-> approve the request after checking that the code matches. The extension
+> way you usually do, including through your company's single sign-on, you
+> type the code, and you approve the request. The extension
 > receives a credential that lasts 30 days, that you can revoke at any moment
 > from your profile page, and that is revoked automatically if you change your
 > account password or your account is deleted.
@@ -109,8 +109,8 @@ self-hosted server the reviewer does not have.
 > - Test account: <email> / <password>
 >
 > Flow to follow: click Connect, the extension shows a code and opens a tab on
-> the vault, sign in with the account above, check that the code matches, click
-> Approve. The extension then lists the passwords of the selected group, and
+> the vault, sign in with the account above, type the code shown in the popup
+> into that page, click Approve. The extension then lists the passwords of the selected group, and
 > the copy buttons work.
 >
 > Notes on the permissions, detailed in the privacy policy:
