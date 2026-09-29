@@ -10,7 +10,7 @@ import { err, ok, type Result } from '@/domain/errors'
 import { SESSION_KEYS } from '@/shared/storageKeys'
 
 import type { Deps } from '../deps'
-import { readSettings } from '../session'
+import { readSettings, recordClipboardWrite } from '../session'
 import { revealSecret } from './vault'
 
 export interface ClipboardResult {
@@ -57,6 +57,16 @@ export async function copyToClipboard(
     // better trade than a weaker invariant.
     return err({ kind: 'CLIPBOARD_UNAVAILABLE' })
   }
+
+  // So the idle sweep knows the clipboard holds something of ours, and until
+  // when: it must not wipe what the user copied after the offscreen timer
+  // already cleared this.
+  await recordClipboardWrite(deps.browser, {
+    clearsAt:
+      clearAfterSeconds === null
+        ? null
+        : new Date(deps.clock.now().getTime() + clearAfterSeconds * 1000).toISOString(),
+  })
 
   return ok({ clearsInSeconds: clearAfterSeconds })
 }

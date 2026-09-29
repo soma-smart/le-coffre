@@ -14,7 +14,7 @@ import { ALARMS, LOCAL_KEYS } from '@/shared/storageKeys'
 
 import type { Deps } from '../deps'
 import { clearPairing, readPairing, readVaultUrl, storePairing, storeToken } from '../session'
-import { ensureAutoLockAlarm } from './autoLock'
+import { ensureIdleSweepAlarm } from './idleSweep'
 import { getConnectionState } from './connection'
 
 const DEFAULT_DEVICE_NAME = 'Browser extension'
@@ -116,7 +116,7 @@ export async function pollPairing(deps: Deps): Promise<Result<ConnectionState>> 
 
   await storeToken(deps.browser, exchanged.data.token, exchanged.data.expires_at)
   await cancelPairing(deps)
-  await ensureAutoLockAlarm(deps)
+  await ensureIdleSweepAlarm(deps)
   return getConnectionState(deps)
 }
 
