@@ -123,7 +123,7 @@
           "type": "string",
           "enum": ["development", "production"]
         },
-        "appBaseUrl": { "type": "string" },
+        "appBaseUrl": { "type": "string", "minLength": 1, "pattern": "^https?://" },
         "database": {
           "type": "object",
           "properties": {

@@ -67,7 +67,8 @@ backend:
 config:
   environment: production
 
-  # Application base URL — used for SSO callbacks and CORS.
+  # Application public base URL — used for SSO callbacks and absolute
+  # links in emails. Required.
   appBaseUrl: "https://le-coffre.yourdomain.com"
 
   # Database configuration

@@ -52,7 +52,9 @@ class AddOwnerToGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_member(command.group_id, command.user_id):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
-        self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=True)
+        promoted = self.group_member_repository.promote_to_owner(command.group_id, command.user_id)
+        if not promoted:
+            return
 
         event = OwnerAddedToGroupEvent(
             group_id=command.group_id,
