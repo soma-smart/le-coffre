@@ -35,13 +35,24 @@ export const SESSION_KEYS = {
    * list has no business being on disk.
    */
   entriesCache: 'entriesCache',
+  /** Stamp of the last authenticated call, which the idle sweep measures from. */
   lastActivityAt: 'lastActivityAt',
+  /**
+   * Set when this extension writes the clipboard, with the moment the
+   * offscreen document will clear it on its own. The idle sweep only
+   * overwrites the clipboard while this exists: without `clipboardRead` it is
+   * the only way to tell "still holds our secret" from "holds whatever the
+   * user copied since".
+   */
+  clipboardWrite: 'clipboardWrite',
   /** The in-flight pairing: its code, verifier and deadline. */
   pairing: 'pairing',
 } as const
 
 /** Alarm names. MV3 kills the worker on idle, so setTimeout is not an option. */
 export const ALARMS = {
-  autoLock: 'auto-lock',
+  idleSweep: 'idle-sweep',
   pairingPoll: 'pairing-poll',
+  /** The idle sweep's previous name. Cleared on every wake, never scheduled. */
+  legacyAutoLock: 'auto-lock',
 } as const

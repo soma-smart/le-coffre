@@ -32,7 +32,10 @@ Kept in memory only, discarded when the browser closes:
   folders, logins and URLs, never a password. It is deliberately kept out of
   disk storage because a login and a URL together reveal which sites you hold
   accounts on
-- the timestamp of your last authenticated call, which drives the idle lock
+- the timestamp of your last authenticated call. After fifteen minutes
+  without one, the cache above is dropped and the clipboard is cleared if the
+  extension had written to it. The token is kept: this is a cleanup, not a
+  lock, and you stay connected
 
 **Decrypted passwords are never stored, anywhere.** They are fetched on demand,
 written to the clipboard, and dropped. They never enter the popup's UI code.
@@ -61,7 +64,7 @@ groups and entries reads metadata and is not audited as an access to a secret.
 - **`storage`**: to keep the items listed above.
 - **`alarms`**: the extension's background worker is stopped by the browser
   after a few seconds of inactivity, so timers cannot be used. Alarms drive the
-  pairing poll and the idle lock.
+  pairing poll and the idle cleanup described above.
 - **`clipboardWrite`**: to copy a login or a password, and to clear it.
 - **`offscreen`**: the clipboard write needs a page that outlives the popup,
   otherwise the automatic clearing would not happen when you dismiss the popup,

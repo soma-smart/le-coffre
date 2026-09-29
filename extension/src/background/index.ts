@@ -1,8 +1,8 @@
 /**
  * Service-worker entry point.
  *
- * Owns all network I/O, the token lifecycle, the pairing poll and the auto-lock
- * alarm. Everything here must survive being torn down and restarted: MV3 kills
+ * Owns all network I/O, the token lifecycle, the pairing poll and the idle
+ * sweep alarm. Everything here must survive being torn down and restarted: MV3 kills
  * this worker after ~30s idle, so state lives in storage and timers are alarms,
  * never `setTimeout`.
  */
@@ -11,7 +11,7 @@ import { chromeBrowser } from '@/platform/chrome'
 import { ALARMS } from '@/shared/storageKeys'
 
 import type { Deps } from './deps'
-import { ensureAutoLockAlarm, handleAutoLockAlarm } from './handlers/autoLock'
+import { ensureIdleSweepAlarm, handleIdleSweepAlarm } from './handlers/idleSweep'
 import { pollPairing } from './handlers/pairing'
 import { route } from './router'
 import { clearCredentials } from './session'
@@ -45,14 +45,17 @@ deps.browser.alarms.onAlarm(async (name) => {
     return
   }
 
-  if (name === ALARMS.autoLock) {
-    await handleAutoLockAlarm(deps)
+  // The legacy name is what an install made before the rename may still
+  // carry; ensureIdleSweepAlarm clears it on wake, and a fire that slips in
+  // first is treated as the same check rather than ignored.
+  if (name === ALARMS.idleSweep || name === ALARMS.legacyAutoLock) {
+    await handleIdleSweepAlarm(deps)
   }
 })
 
-// Every worker wake-up re-ensures the idle watchdog, so it survives an
-// extension reload or update; the call is a no-op without a stored token.
-void ensureAutoLockAlarm(deps)
+// Every worker wake-up re-ensures the idle sweep, so it survives an extension
+// reload or update; the call is a no-op without a stored token.
+void ensureIdleSweepAlarm(deps)
 
 // Losing the host permission invalidates everything derived from it. The user
 // can revoke at any moment from chrome://extensions, with no other signal.

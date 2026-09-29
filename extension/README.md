@@ -128,12 +128,17 @@ Entry metadata sits in `session` rather than `local` because `login` + `url`
 together enumerate which sites the user has accounts on, that list does not
 belong on disk.
 
-**Idle lock.** After 15 minutes without an authenticated call, an alarm clears
-the session cache and the clipboard. It keeps the token, for the reason above:
-wiping it would force a full re-pairing after every coffee break, which is
-exactly the churn keeping it in `local` was chosen to avoid. The alarm is armed
-when a pairing mints a token, re-ensured every time the worker wakes, and
-disarmed when the credentials are cleared (`background/handlers/autoLock.ts`).
+**Idle sweep.** After 15 minutes without an authenticated call, an alarm
+removes the cached entry metadata and the activity stamp from `session`, and
+overwrites the clipboard if this extension is what last wrote to it and its
+own 30-second clear has not already run. It is not a lock and is not named
+one: it keeps the token, for the reason above (wiping it would force a full
+re-pairing after every coffee break, which is exactly the churn keeping it in
+`local` was chosen to avoid), and it leaves a pairing awaiting approval alone,
+so stepping away with the approval tab open does not destroy the verifier that
+approval needs. The alarm is armed when a pairing mints a token, re-ensured
+every time the worker wakes, and disarmed when the credentials are cleared
+(`background/handlers/idleSweep.ts`).
 
 ### Clipboard
 
@@ -292,7 +297,8 @@ Written once here so nobody has to reconstruct the argument at each submission.
 - **`storage`**: vault address, granted host pattern, selected group, and the
   read-only token. Detailed in `PRIVACY.md`.
 - **`alarms`**: MV3 stops the service worker after a few seconds idle, so
-  `setTimeout` cannot be used. Alarms drive the pairing poll and the idle lock.
+  `setTimeout` cannot be used. Alarms drive the pairing poll and the idle
+  sweep.
 - **`clipboardWrite`**: copying a login or a password, and clearing it after a
   delay. `clipboardRead` is deliberately not requested.
 - **`offscreen`**: the clipboard write needs a context that outlives the popup,

@@ -83,14 +83,14 @@ describe('createFakeBrowser', () => {
     const fired: string[] = []
     browser.alarms.onAlarm((name) => fired.push(name))
 
-    await browser.alarms.schedule('auto-lock', 1)
-    expect(browser.scheduledAlarms.get('auto-lock')).toBe(1)
+    await browser.alarms.schedule('idle-sweep', 1)
+    expect(browser.scheduledAlarms.get('idle-sweep')).toBe(1)
 
-    browser.triggerAlarm('auto-lock')
-    expect(fired).toEqual(['auto-lock'])
+    browser.triggerAlarm('idle-sweep')
+    expect(fired).toEqual(['idle-sweep'])
 
-    await browser.alarms.clear('auto-lock')
-    expect(browser.scheduledAlarms.has('auto-lock')).toBe(false)
+    await browser.alarms.clear('idle-sweep')
+    expect(browser.scheduledAlarms.has('idle-sweep')).toBe(false)
   })
 
   it('records opened tabs', async () => {
