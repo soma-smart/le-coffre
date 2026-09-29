@@ -44,6 +44,8 @@ export class FakeVaultClient implements VaultClientLike {
 
   /** Every reveal call, so a test can assert nothing was prefetched. */
   readonly revealCalls: string[] = []
+  /** The device name of every registration, so a test can assert what was sent. */
+  readonly startPairingCalls: string[] = []
 
   async health() {
     return this.healthResult
@@ -51,7 +53,8 @@ export class FakeVaultClient implements VaultClientLike {
   async vaultStatus() {
     return this.vaultStatusResult
   }
-  async startPairing() {
+  async startPairing(_codeChallenge: string, deviceName: string) {
+    this.startPairingCalls.push(deviceName)
     return this.startPairingResult
   }
   async exchangePairing() {

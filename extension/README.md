@@ -115,8 +115,10 @@ runs the idle check below.
 | nowhere | decrypted secrets, fetched on demand, written to the clipboard, dropped |
 
 `storage.local` also has `settings` and `deviceName` keys, but nothing writes
-them yet: settings are the compiled defaults and the device name is always
-"Browser extension" until a settings UI exists.
+them yet: settings are the compiled defaults, and the device name sent at
+pairing is "Chrome on macOS" derived from User-Agent Client Hints behind the
+Browser port (`device.describe()`), or "Browser extension" when the browser
+will not say, until a settings UI lets the user pick one.
 
 The token is in `local` deliberately. `session` is cleared on browser restart,
 which would mean re-pairing daily, and it buys **nothing** in confidentiality: an

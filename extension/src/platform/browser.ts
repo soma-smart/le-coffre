@@ -72,6 +72,17 @@ export interface Browser {
     clear(): Promise<void>
   }
 
+  readonly device: {
+    /**
+     * A label for this browser on this machine, "Chrome on macOS", or null
+     * when the platform will not say. Shown on the vault's profile page next
+     * to the token, so the user can tell one paired browser from another.
+     * Chrome derives it from `navigator.userAgentData`; Firefox has no such
+     * API and will need its own answer.
+     */
+    describe(): Promise<string | null>
+  }
+
   readonly runtime: {
     /** Absolute URL for a path inside the extension bundle. */
     getUrl(path: string): string

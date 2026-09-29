@@ -68,6 +68,10 @@ export const chromeBrowser: Browser = {
     },
   },
 
+  device: {
+    describe: describeDevice,
+  },
+
   runtime: {
     getUrl: (path) => chrome.runtime.getURL(path),
     sendMessage: <T>(message: unknown) => chrome.runtime.sendMessage(message) as Promise<T>,
@@ -83,6 +87,40 @@ export const chromeBrowser: Browser = {
       })
     },
   },
+}
+
+/** The slice of User-Agent Client Hints this needs; lib.dom does not type it yet. */
+interface UserAgentData {
+  brands: ReadonlyArray<{ brand: string }>
+  platform: string
+  getHighEntropyValues(hints: string[]): Promise<{ platform?: string }>
+}
+
+/**
+ * "<Browser> on <OS>" from User-Agent Client Hints, which a service worker
+ * has. The platform comes from `getHighEntropyValues`, the accurate source,
+ * with the low-entropy `platform` as the fallback; the browser comes from the
+ * brands list, skipping the "Chromium" every Chromium-based browser lists and
+ * the "Not A;Brand" GREASE entry, so Edge says Edge. Null when the API is
+ * missing, and the caller's constant takes over.
+ */
+async function describeDevice(): Promise<string | null> {
+  const data = (navigator as Navigator & { userAgentData?: UserAgentData }).userAgentData
+  if (!data) return null
+
+  const brands = data.brands ?? []
+  const named = brands.find((b) => b.brand !== 'Chromium' && !/not.?a.?brand/i.test(b.brand))
+  const browser = (named ?? brands.find((b) => b.brand === 'Chromium'))?.brand ?? null
+
+  let platform = data.platform || null
+  try {
+    platform = (await data.getHighEntropyValues(['platform'])).platform || platform
+  } catch {
+    // The low-entropy value will do.
+  }
+
+  if (browser && platform) return `${browser} on ${platform}`
+  return browser ?? (platform ? `Browser on ${platform}` : null)
 }
 
 /**

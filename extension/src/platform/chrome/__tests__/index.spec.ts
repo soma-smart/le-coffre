@@ -107,6 +107,51 @@ describe('runtime.onMessage', () => {
   })
 })
 
+describe('device.describe', () => {
+  function userAgentData(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      brands: [{ brand: 'Chromium' }, { brand: 'Google Chrome' }, { brand: 'Not=A?Brand' }],
+      platform: 'Linux',
+      getHighEntropyValues: vi.fn(async () => ({ platform: 'macOS' })),
+      ...overrides,
+    }
+  }
+
+  it('should name the browser and the platform, preferring the high-entropy platform', async () => {
+    vi.stubGlobal('navigator', { userAgentData: userAgentData() })
+
+    await expect((await adapter()).device.describe()).resolves.toBe('Google Chrome on macOS')
+  })
+
+  it('should skip Chromium and the GREASE brand, so Edge says Edge', async () => {
+    vi.stubGlobal('navigator', {
+      userAgentData: userAgentData({
+        brands: [{ brand: 'Not_A Brand' }, { brand: 'Chromium' }, { brand: 'Microsoft Edge' }],
+      }),
+    })
+
+    await expect((await adapter()).device.describe()).resolves.toBe('Microsoft Edge on macOS')
+  })
+
+  it('should fall back to the low-entropy platform when the hint is refused', async () => {
+    vi.stubGlobal('navigator', {
+      userAgentData: userAgentData({
+        getHighEntropyValues: vi.fn(async () => {
+          throw new Error('denied')
+        }),
+      }),
+    })
+
+    await expect((await adapter()).device.describe()).resolves.toBe('Google Chrome on Linux')
+  })
+
+  it('should answer null without client hints, leaving the caller its constant', async () => {
+    vi.stubGlobal('navigator', {})
+
+    await expect((await adapter()).device.describe()).resolves.toBeNull()
+  })
+})
+
 describe('clipboard.copy', () => {
   it('should send the secret over a named port, never as a broadcast', async () => {
     const browser = await adapter()

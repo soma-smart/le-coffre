@@ -49,6 +49,8 @@ export interface FakeBrowser extends Browser {
   readonly clipboardWrites: Array<{ value: string; clearAfterSeconds: number | null }>
   /** Set false to model an unavailable offscreen document. */
   clipboardAvailable: boolean
+  /** What `device.describe()` answers. Null models a platform that will not say. */
+  deviceDescription: string | null
   /** Alarm name → period in minutes. Named to avoid clashing with the port. */
   readonly scheduledAlarms: Map<string, number>
   /** Fire a scheduled alarm by name. */
@@ -77,6 +79,7 @@ export function createFakeBrowser(): FakeBrowser {
     scheduledAlarms: alarmPeriods,
     clipboardWrites,
     clipboardAvailable: true,
+    deviceDescription: null,
 
     permissions: {
       async contains(origins) {
@@ -122,6 +125,12 @@ export function createFakeBrowser(): FakeBrowser {
       },
       onAlarm(listener) {
         alarmListeners.push(listener)
+      },
+    },
+
+    device: {
+      async describe() {
+        return fake.deviceDescription
       },
     },
 

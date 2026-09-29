@@ -17,6 +17,7 @@ import { clearPairing, readPairing, readVaultUrl, storePairing, storeToken } fro
 import { ensureIdleSweepAlarm } from './idleSweep'
 import { getConnectionState } from './connection'
 
+/** What the vault's profile page lists when the browser will not describe itself. */
 const DEFAULT_DEVICE_NAME = 'Browser extension'
 
 /**
@@ -33,8 +34,12 @@ export async function startPairing(
   if (!vaultUrl) return err({ kind: 'NOT_CONFIGURED' })
 
   const { verifier, challenge } = await createPkcePair(deps.crypto)
+  // A name the user chose wins; otherwise "Chrome on macOS", so two paired
+  // browsers can be told apart on the profile page; otherwise the constant.
   const deviceName =
-    (await deps.browser.local.get<string>(LOCAL_KEYS.deviceName)) ?? DEFAULT_DEVICE_NAME
+    (await deps.browser.local.get<string>(LOCAL_KEYS.deviceName)) ??
+    (await deps.browser.device.describe()) ??
+    DEFAULT_DEVICE_NAME
 
   const started = await deps.makeClient(vaultUrl, null).startPairing(challenge, deviceName)
   if (!started.ok) return err(started.error)
