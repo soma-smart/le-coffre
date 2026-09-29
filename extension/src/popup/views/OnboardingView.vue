@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import { isInsecureVaultUrl, normalizeVaultUrl, toApiMatchPattern } from '@/domain/vaultUrl'
+import { normalizeVaultUrl, refusesPlainHttp, toApiMatchPattern } from '@/domain/vaultUrl'
 
 import { requestHostPermission, send } from '../bridge'
 import { refreshConnection, state } from '../state/session'
@@ -11,7 +11,7 @@ const busy = ref(false)
 const localError = ref<string | null>(null)
 
 const normalized = computed(() => normalizeVaultUrl(raw.value))
-const insecure = computed(() => !!normalized.value && isInsecureVaultUrl(normalized.value))
+const plainHttpRefused = computed(() => refusesPlainHttp(raw.value))
 
 /**
  * Connect.
@@ -28,7 +28,9 @@ function connect() {
   const vaultUrl = normalizeVaultUrl(raw.value)
   const pattern = vaultUrl ? toApiMatchPattern(vaultUrl) : null
   if (!vaultUrl || !pattern) {
-    localError.value = 'That does not look like a vault address.'
+    // The plain-http refusal has its own line under the field; this covers
+    // everything else.
+    if (!plainHttpRefused.value) localError.value = 'That does not look like a vault address.'
     return
   }
 
@@ -79,9 +81,13 @@ function connect() {
       @keyup.enter="connect"
     />
 
-    <p v-if="insecure" class="text-xs text-vault-warning" data-testid="insecure-warning">
-      This address is not encrypted. Your token and your passwords would travel in the clear over
-      the network.
+    <!-- A refusal, not a warning: a warning the user can click through is not
+         a control. Plain http stays possible for localhost and 127.0.0.1, which
+         never leave the machine. -->
+    <p v-if="plainHttpRefused" class="text-xs text-vault-danger" data-testid="plain-http-refused">
+      This address is refused: it is not encrypted, so your token and your passwords would travel in
+      the clear over the network. Use https. Plain http is only accepted for localhost and
+      127.0.0.1.
     </p>
 
     <p v-if="localError" class="text-xs text-vault-danger" data-testid="onboarding-error">

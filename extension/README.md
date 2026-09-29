@@ -303,10 +303,15 @@ Written once here so nobody has to reconstruct the argument at each submission.
   build time; the extension requests the single narrowest pattern covering the
   user's own API (`https://vault.example.com/api/*`) at runtime, after the user
   types the address. Nothing is granted at install.
-- **`http://*/*` in that list** will draw attention, and it is there for
-  home-lab vaults on a local network. The popup warns when the address is plain
-  HTTP (`OnboardingView.vue`, `data-testid="insecure-warning"`). Dropping it is a
-  one-line change if the discussion is not worth having.
+- **`http://*/*` in that list** will draw attention. Plain HTTP is accepted
+  for loopback hosts only (`localhost`, `*.localhost`, 127/8, `[::1]`), which
+  is where a developer runs the vault; `normalizeVaultUrl` refuses any other
+  http address and the first screen says why (`OnboardingView.vue`,
+  `data-testid="plain-http-refused"`), so the pattern can never be requested
+  for a network host. It stays as `http://*/*` because Chrome's match patterns
+  cannot express that set: `http://localhost/*` and `http://127.0.0.1/*` do
+  cover every port, but `[::1]` and the rest of 127/8 have no pattern. The
+  code is the narrower gate, and the one that is tested.
 - **No remote code**: the bundle loads no script, style, font or image from
   anywhere but itself, and `validate-manifest.ts` fails the build on an inline
   script or an `eval`. Worth stating in the submission; it is the policy that
