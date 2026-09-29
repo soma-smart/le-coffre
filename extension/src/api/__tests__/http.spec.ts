@@ -66,6 +66,16 @@ describe('request', () => {
     expect(fetchMock.mock.calls[0][1].credentials).toBe('omit')
   })
 
+  it('never follows a redirect', async () => {
+    // The API never redirects. Following one would replay the bearer token
+    // against whatever a misconfigured proxy or a hostile host points at.
+    fetchMock.mockResolvedValue(respond(200, { ok: true }))
+
+    await request({ url: URL }, schema)
+
+    expect(fetchMock.mock.calls[0][1].redirect).toBe('error')
+  })
+
   it('reports an unreachable vault when fetch throws', async () => {
     // Also what a fetch made without the host permission looks like, which is
     // why callers check permissions.contains first.

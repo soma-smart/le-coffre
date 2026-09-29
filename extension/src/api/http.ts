@@ -83,6 +83,10 @@ export async function request<T>(input: HttpRequest, schema: ZodType<T>): Promis
       // cookie is SameSite=strict), and asking for them muddies the intent:
       // this client authenticates with a bearer token or not at all.
       credentials: 'omit',
+      // The API never redirects, so a redirect is either a misconfigured
+      // proxy or a hostile host, and following it would replay the bearer
+      // token against whatever it points at. Failing is the right answer.
+      redirect: 'error',
     })
   } catch {
     // A fetch made without the host permission fails exactly like an offline
