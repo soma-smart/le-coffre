@@ -384,7 +384,9 @@ def test_given_user_already_owner_when_adding_as_owner_should_not_publish_duplic
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
     group_member_repository.add_member(group_id, existing_owner_id, is_owner=True)
 
-    command = AddOwnerToGroupCommand(requester_id=owner_id, group_id=group_id, user_id=existing_owner_id)
+    command = AddOwnerToGroupCommand(
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, user_id=existing_owner_id
+    )
     use_case.execute(command)
 
     assert event_publisher.get_published_events_of_type(OwnerAddedToGroupEvent) == []
