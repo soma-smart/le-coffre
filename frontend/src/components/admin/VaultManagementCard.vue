@@ -5,7 +5,7 @@ import { useConfirm } from 'primevue/useconfirm'
 import { useI18n } from 'vue-i18n'
 import { VaultDomainError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
-import { checkVaultStatus } from '@/plugins/vaultStatus'
+import { triggerVaultUnlock } from '@/plugins/vaultStatus'
 
 const toast = useToast()
 const confirm = useConfirm()
@@ -36,8 +36,8 @@ const handleLockVault = () => {
           life: 5000,
         })
 
-        // Refresh global vault status, which will show the unlock modal
-        await checkVaultStatus()
+        // Refresh global vault status, which opens the unlock page
+        await triggerVaultUnlock()
       } catch (error) {
         console.error('Failed to lock vault:', error)
         // VaultDomainError's message is the backend's own wording — not ours to translate.
