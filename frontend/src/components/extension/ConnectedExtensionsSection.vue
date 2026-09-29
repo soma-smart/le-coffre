@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useConfirm } from 'primevue/useconfirm'
 import { useToast } from 'primevue/usetoast'
 import type { ConnectedExtension } from '@/domain/extension/Extension'
 import { ExtensionDomainError } from '@/domain/extension/errors'
 import { useContainer } from '@/plugins/container'
+import { activeLocale } from '@/utils/relativeTime'
 
 const toast = useToast()
 const confirm = useConfirm()
+const { t } = useI18n()
 const { extensions: extensionUseCases } = useContainer()
 
 const extensions = ref<ConnectedExtension[]>([])
@@ -26,39 +29,43 @@ async function load() {
     error.value =
       caught instanceof ExtensionDomainError
         ? caught.message
-        : 'Failed to load connected extensions'
+        : t('components.connectedExtensions.loadFailed')
   } finally {
     loading.value = false
   }
 }
 
 function formatDate(value: Date | null): string {
-  return value ? value.toLocaleString() : 'never'
+  return value ? value.toLocaleString(activeLocale()) : t('components.connectedExtensions.never')
 }
 
 function disconnect(extension: ConnectedExtension) {
   confirm.require({
-    message: `Disconnect "${extension.deviceName}"? It will stop being able to read your passwords immediately.`,
-    header: 'Disconnect extension',
+    message: t('components.connectedExtensions.disconnectQuestion', {
+      device: extension.deviceName,
+    }),
+    header: t('components.connectedExtensions.disconnectDialogTitle'),
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Disconnect',
-    rejectLabel: 'Cancel',
+    acceptLabel: t('components.connectedExtensions.disconnect'),
+    rejectLabel: t('common.cancel'),
     accept: async () => {
       busyId.value = extension.id
       try {
         await extensionUseCases.disconnect.execute({ extensionId: extension.id })
         toast.add({
           severity: 'success',
-          summary: 'Disconnected',
-          detail: `${extension.deviceName} can no longer read your passwords`,
+          summary: t('components.connectedExtensions.disconnectedSummary'),
+          detail: t('components.connectedExtensions.disconnectedDetail', {
+            device: extension.deviceName,
+          }),
           life: 4000,
         })
         await load()
       } catch (caught) {
         toast.add({
           severity: 'error',
-          summary: 'Could not disconnect',
-          detail: caught instanceof ExtensionDomainError ? caught.message : 'Please try again',
+          summary: t('components.connectedExtensions.disconnectFailed'),
+          detail: caught instanceof ExtensionDomainError ? caught.message : t('common.tryAgain'),
           life: 5000,
         })
       } finally {
@@ -70,27 +77,31 @@ function disconnect(extension: ConnectedExtension) {
 
 function disconnectAll() {
   confirm.require({
-    message: 'Disconnect every browser extension connected to your account?',
-    header: 'Disconnect all extensions',
+    message: t('components.connectedExtensions.disconnectAllQuestion'),
+    header: t('components.connectedExtensions.disconnectAllDialogTitle'),
     icon: 'pi pi-exclamation-triangle',
-    acceptLabel: 'Disconnect all',
-    rejectLabel: 'Cancel',
+    acceptLabel: t('components.connectedExtensions.disconnectAll'),
+    rejectLabel: t('common.cancel'),
     accept: async () => {
       busyId.value = 'all'
       try {
         const revoked = await extensionUseCases.disconnectAll.execute()
         toast.add({
           severity: 'success',
-          summary: 'Disconnected',
-          detail: `${revoked} extension${revoked === 1 ? '' : 's'} disconnected`,
+          summary: t('components.connectedExtensions.disconnectedSummary'),
+          detail: t(
+            'components.connectedExtensions.disconnectedCount',
+            { count: revoked },
+            revoked,
+          ),
           life: 4000,
         })
         await load()
       } catch (caught) {
         toast.add({
           severity: 'error',
-          summary: 'Could not disconnect',
-          detail: caught instanceof ExtensionDomainError ? caught.message : 'Please try again',
+          summary: t('components.connectedExtensions.disconnectFailed'),
+          detail: caught instanceof ExtensionDomainError ? caught.message : t('common.tryAgain'),
           life: 5000,
         })
       } finally {
@@ -104,10 +115,10 @@ function disconnectAll() {
 <template>
   <div class="border-t pt-4 mt-6">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold">Connected extensions</h3>
+      <h3 class="text-lg font-semibold">{{ t('components.connectedExtensions.title') }}</h3>
       <Button
         v-if="extensions.some((extension) => extension.isActive)"
-        label="Disconnect all"
+        :label="t('components.connectedExtensions.disconnectAll')"
         icon="pi pi-times-circle"
         severity="danger"
         outlined
@@ -125,7 +136,7 @@ function disconnectAll() {
     <Message v-else-if="error" severity="error" :closable="false">{{ error }}</Message>
 
     <p v-else-if="extensions.length === 0" class="text-sm text-surface-500">
-      No browser extension has been connected to this account.
+      {{ t('components.connectedExtensions.empty') }}
     </p>
 
     <div v-else class="flex flex-col gap-3">
@@ -141,25 +152,48 @@ function disconnectAll() {
             <span class="font-medium">{{ extension.deviceName }}</span>
             <Tag
               v-if="extension.isActive"
-              value="Active"
+              :value="t('components.connectedExtensions.activeTag')"
               severity="success"
               data-testid="extension-active"
             />
-            <Tag v-else value="Disconnected" severity="secondary" />
+            <Tag
+              v-else
+              :value="t('components.connectedExtensions.disconnectedTag')"
+              severity="secondary"
+            />
           </div>
           <span class="text-surface-500">
-            Connected {{ formatDate(extension.createdAt) }}
-            <span v-if="extension.createdFromIp"> from {{ extension.createdFromIp }}</span>
+            {{
+              t('components.connectedExtensions.connectedAt', {
+                date: formatDate(extension.createdAt),
+              })
+            }}
+            <span v-if="extension.createdFromIp">
+              {{
+                t('components.connectedExtensions.fromAddress', {
+                  address: extension.createdFromIp,
+                })
+              }}
+            </span>
           </span>
           <span class="text-surface-500">
-            Last used {{ formatDate(extension.lastUsedAt) }} · Expires
-            {{ formatDate(extension.expiresAt) }}
+            {{
+              t('components.connectedExtensions.lastUsed', {
+                date: formatDate(extension.lastUsedAt),
+              })
+            }}
+            ·
+            {{
+              t('components.connectedExtensions.expires', {
+                date: formatDate(extension.expiresAt),
+              })
+            }}
           </span>
         </div>
 
         <Button
           v-if="extension.isActive"
-          label="Disconnect"
+          :label="t('components.connectedExtensions.disconnect')"
           icon="pi pi-times"
           severity="danger"
           text
@@ -170,6 +204,8 @@ function disconnectAll() {
       </div>
     </div>
 
-    <p class="mt-3 text-xs text-surface-500">Changing your password disconnects every extension.</p>
+    <p class="mt-3 text-xs text-surface-500">
+      {{ t('components.connectedExtensions.passwordChangeNote') }}
+    </p>
   </div>
 </template>
