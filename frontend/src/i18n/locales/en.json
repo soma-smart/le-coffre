@@ -215,6 +215,14 @@
         "passwordsDontMatch": "Passwords don't match",
         "passwordTooShort": "New password needs at least 8 characters",
         "unexpected": "An unexpected error occurred"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "vaultLockLabel": "Notify me when the vault is locked",
+        "vaultUnlockLabel": "Notify me when the vault is unlocked",
+        "loadFailed": "Could not load your notification preferences",
+        "retryButton": "Retry",
+        "saveFailed": "Could not save your notification preferences"
       }
     },
     "groups": {

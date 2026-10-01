@@ -36,8 +36,10 @@ const handleLockVault = () => {
           life: 5000,
         })
 
-        // Refresh global vault status, which will show the unlock modal
-        await checkVaultStatus()
+        // Refresh global vault status, bypassing the store's cache — otherwise
+        // it still holds the pre-lock UNLOCKED status and the unlock modal
+        // never appears until the next full page load.
+        await checkVaultStatus(true)
       } catch (error) {
         console.error('Failed to lock vault:', error)
         // VaultDomainError's message is the backend's own wording — not ours to translate.

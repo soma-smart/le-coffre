@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import event
 
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
@@ -190,3 +191,49 @@ def test_should_treat_percent_and_underscore_as_literal_characters_when_searchin
     # "_" must match literally too, not as a single-character wildcard.
     results = sql_user_repository.search("_")
     assert results == []
+
+
+def _count_sql_queries(database_engine) -> list[int]:
+    """Counts real SQL statements sent to the engine. Returns a single-element list
+    so the caller can read the live count as more statements execute."""
+    count = [0]
+
+    def on_execute(conn, cursor, statement, parameters, context, executemany):
+        count[0] += 1
+
+    event.listen(database_engine, "before_cursor_execute", on_execute)
+    return count
+
+
+def test_given_several_ids_when_getting_them_should_use_one_query_not_one_per_id(sql_user_repository, database_engine):
+    # Regression: get_by_ids() used to be implemented as get_by_id() in a loop —
+    # one SQL round trip per id, for every recipient of every vault notification.
+    users = [
+        User(id=uuid4(), username=f"user{i}", email=f"user{i}@test.fr", name=f"User {i}", roles=[]) for i in range(5)
+    ]
+    for user in users:
+        sql_user_repository.save(user)
+
+    queries = _count_sql_queries(database_engine)
+    result = sql_user_repository.get_by_ids([user.id for user in users])
+
+    assert {u.id for u in result} == {user.id for user in users}
+    assert queries == [1]
+
+
+def test_given_some_unknown_ids_when_getting_them_should_skip_them(sql_user_repository):
+    user = User(id=uuid4(), username="jdoe", email="jdoe@test.fr", name="Jane Doe", roles=[])
+    sql_user_repository.save(user)
+
+    result = sql_user_repository.get_by_ids([user.id, uuid4()])
+
+    assert [u.id for u in result] == [user.id]
+
+
+def test_given_an_empty_list_when_getting_them_should_return_no_users_without_querying(
+    sql_user_repository, database_engine
+):
+    queries = _count_sql_queries(database_engine)
+
+    assert sql_user_repository.get_by_ids([]) == []
+    assert queries == [0]

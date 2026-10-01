@@ -7,6 +7,9 @@ import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
 import type { StatisticsGateway } from '@/application/ports/StatisticsGateway'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
+import type { NotificationPreferencesRepository } from '@/application/ports/NotificationPreferencesRepository'
+import { GetNotificationPreferencesUseCase } from '@/application/notification/GetNotificationPreferences'
+import { UpdateNotificationPreferencesUseCase } from '@/application/notification/UpdateNotificationPreferences'
 import { GetAdminStatisticsUseCase } from '@/application/statistics/GetAdminStatistics'
 import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
 import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
@@ -82,6 +85,7 @@ export interface Ports {
   preferencesGateway: PreferencesGateway
   statisticsGateway: StatisticsGateway
   oneTimeLinkRepository: OneTimeLinkRepository
+  notificationPreferencesRepository: NotificationPreferencesRepository
 }
 
 export interface Container {
@@ -159,6 +163,10 @@ export interface Container {
     listMine: ListMyOneTimeLinksUseCase
     revokeAsAdmin: RevokeOneTimeLinkAsAdminUseCase
     revokeAllForUser: RevokeAllOneTimeLinksForUserUseCase
+  }
+  notifications: {
+    getPreferences: GetNotificationPreferencesUseCase
+    updatePreferences: UpdateNotificationPreferencesUseCase
   }
 }
 
@@ -238,6 +246,14 @@ export function buildContainer(ports: Ports): Container {
       listMine: new ListMyOneTimeLinksUseCase(ports.oneTimeLinkRepository),
       revokeAsAdmin: new RevokeOneTimeLinkAsAdminUseCase(ports.oneTimeLinkRepository),
       revokeAllForUser: new RevokeAllOneTimeLinksForUserUseCase(ports.oneTimeLinkRepository),
+    },
+    notifications: {
+      getPreferences: new GetNotificationPreferencesUseCase(
+        ports.notificationPreferencesRepository,
+      ),
+      updatePreferences: new UpdateNotificationPreferencesUseCase(
+        ports.notificationPreferencesRepository,
+      ),
     },
   }
 }

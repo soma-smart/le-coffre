@@ -193,7 +193,66 @@ position: <https://github.com/hashicorp/vault/issues/1446>).
 
 ---
 
-### Scenario 3: Insider Threats & Access Abuse
+### Scenario 3: Lock/Unlock State Not Shared Across Backend Replicas
+
+**Classification**: Known limitation, not currently exploitable — only a
+single backend replica is deployed today (`replicaCount: 1` in
+`helm/le-coffre/values.yaml`). Documented ahead of enabling horizontal
+scaling, which the Helm chart already supports (`values-example.yaml` sets
+`replicaCount: 2` and enables autoscaling up to 5, as a documented example
+for production).
+
+**Risk**: The decrypted vault key and the locked/unlocked state both live in
+each backend process's own memory (`InMemoryVaultSessionGateway`), with no
+shared store or cross-instance signal. If more than one backend replica runs
+behind the load balancer, each replica has its own independent copy of this
+state:
+
+- An administrator locking the vault only clears the key on whichever replica
+  handled that request. Every other replica keeps serving decrypted
+  passwords as if nothing happened, until it is separately locked (or
+  restarted).
+- Symmetrically, two replicas can each independently reconstruct the key
+  from concurrently-submitted Shamir shares and each publish their own
+  unlock event.
+- Every replica also independently locks the vault on its own startup
+  (`_record_vault_locked_on_startup` in `main.py`), since the decrypted key
+  never survives a restart. A rolling restart with `replicaCount: 2` means
+  two replicas start in short succession, so this is not a one-off: each of
+  the two "server start" locks emails opted-in users again, and — because
+  the read of the last recorded event and the write of the new one aren't
+  atomic — the two replicas' `get_last_event_type` reads can both land before
+  either has appended its own `VaultLockedEvent`, so both conclude the vault
+  was last unlocked and both report a lock, even though only the very first
+  replica up actually changed anything.
+
+This defeats the operational purpose of "lock the vault" as an emergency
+control (e.g. during a suspected intrusion or an offboarding): the
+administrator has no way to know, from the UI, that the vault is still
+usable through other replicas, and the lock action gives no such warning.
+
+Per-request atomicity fixes (e.g. the check-and-clear on
+`InMemoryVaultSessionGateway.clear_decrypted_key`) do not address this: they
+only serialize concurrent requests handled by the *same* process, which
+shares nothing with sibling replicas.
+
+**Mitigation required before scaling past one replica** (not implemented):
+move the decrypted key and the lock state out of per-process memory into a
+store shared by every replica (e.g. Redis, or a locked SQL row), and/or add a
+cross-instance signal (pub/sub, polling a shared flag) so that a lock on one
+replica causes every replica to drop its in-memory key immediately. The
+startup-lock bookkeeping needs its own fix along the same lines: make the
+read of the last vault event and the append of the new one atomic (e.g. a
+row lock or a unique constraint on "one server-start lock per boot"), so a
+rolling restart records and emails one lock, not one per replica.
+
+**Interim mitigation**: keep `replicaCount: 1` (and `autoscaling.enabled:
+false`) for the backend until the above is implemented. Scaling the
+*frontend* independently is unaffected, since it holds no vault state.
+
+---
+
+### Scenario 4: Insider Threats & Access Abuse
 
 **Classification**: Partially in scope.
 
@@ -225,7 +284,7 @@ controls, monitoring, and least-privilege access policies.
 
 ---
 
-### Scenario 4: Session Hijacking
+### Scenario 5: Session Hijacking
 
 **Classification**: In scope.
 
@@ -245,7 +304,7 @@ checks as vulnerabilities.
 
 ---
 
-### Scenario 5: Shamir Share Compromise
+### Scenario 6: Shamir Share Compromise
 
 **Assumption**: Fewer than N shares are compromised.
 
@@ -277,7 +336,7 @@ of share holders.
 
 ---
 
-### Scenario 6: Database Compromise (Read-Only)
+### Scenario 7: Database Compromise (Read-Only)
 
 **Classification**: In scope - this is a primary design goal.
 
@@ -301,7 +360,7 @@ encryption guarantees should be reported as high-severity vulnerabilities.
 
 ---
 
-### Scenario 7: Supply Chain & Dependency Attacks
+### Scenario 8: Supply Chain & Dependency Attacks
 
 **Classification**: Partially in scope.
 
