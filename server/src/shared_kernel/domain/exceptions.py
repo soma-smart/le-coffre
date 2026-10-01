@@ -22,3 +22,7 @@ class ReadOnlyCredentialError(Exception):
     def __init__(self, method: str):
         super().__init__(f"This credential is read-only and cannot perform a {method.upper()} request")
         self.method = method
+
+
+class AuthenticationError(Exception):
+    """Raised when an `Authentication` proves no principal."""
