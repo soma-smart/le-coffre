@@ -5,6 +5,7 @@ from .pkce_challenge import S256, PkceChallenge, PkceVerifier
 from .raw_password import MIN_PASSWORD_LENGTH, RawPassword
 from .refresh_token import RefreshToken
 from .service_account_token import ServiceAccountToken
+from .session_token import SessionToken
 
 __all__ = [
     "AccessToken",
@@ -18,4 +19,5 @@ __all__ = [
     "PkceChallenge",
     "PkceVerifier",
     "S256",
+    "SessionToken",
 ]

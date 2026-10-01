@@ -58,6 +58,11 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
         # One slot per requested id, empty where there is no such account.
         return [accounts_by_id.get(account_id) for account_id in ids]
 
+    def get_by_token_hash(self, token_hash: str) -> ServiceAccount | None:
+        query = select(ServiceAccountTable).where(ServiceAccountTable.token_hash == token_hash)
+        row = self._session.exec(query).first()
+        return self._to_entity(row) if row is not None else None
+
     def list_for_groups(self, group_ids: Sequence[UUID]) -> Iterable[ServiceAccount]:
         query = select(ServiceAccountTable).where(ServiceAccountTable.group_id.in_(group_ids))  # type: ignore[attr-defined]
         rows = self._session.exec(query).all()

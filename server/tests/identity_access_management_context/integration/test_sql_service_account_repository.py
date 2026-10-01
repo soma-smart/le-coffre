@@ -152,3 +152,34 @@ def test_given_a_duplicate_token_hash_when_creating_then_the_unique_index_refuse
 
     with pytest.raises(IntegrityError):
         sql_service_account_repository.create([second])
+
+
+def test_given_an_account_when_looking_up_its_token_hash_then_it_is_found(sql_service_account_repository, session):
+    token = ServiceAccountToken.generate()
+    account = ServiceAccount.create(group_id=uuid4(), name="nightly-backup", token=token)
+    sql_service_account_repository.create([account, _account(name="other")])
+    session.expunge_all()
+
+    assert sql_service_account_repository.get_by_token_hash(token.hash) == account
+
+
+def test_given_a_revoked_account_when_looking_up_its_token_hash_then_it_is_still_found(
+    sql_service_account_repository, session
+):
+    """Telling "revoked" from "unknown" is the authenticator's job, so the lookup must not hide it."""
+    token = ServiceAccountToken.generate()
+    account = ServiceAccount.create(group_id=uuid4(), name="nightly-backup", token=token)
+    sql_service_account_repository.create([account])
+    sql_service_account_repository.revoke([account.id], NOW)
+    session.expunge_all()
+
+    found = sql_service_account_repository.get_by_token_hash(token.hash)
+
+    assert found is not None
+    assert not found.is_active
+
+
+def test_given_no_matching_hash_when_looking_up_then_nothing_is_found(sql_service_account_repository):
+    sql_service_account_repository.create([_account()])
+
+    assert sql_service_account_repository.get_by_token_hash(ServiceAccountToken.generate().hash) is None
