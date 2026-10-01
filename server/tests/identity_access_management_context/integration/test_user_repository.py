@@ -3,6 +3,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import event
 
+from identity_access_management_context.adapters.secondary.sql import PrincipalKind, PrincipalTable
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyExistsError,
@@ -237,3 +238,32 @@ def test_given_an_empty_list_when_getting_them_should_return_no_users_without_qu
 
     assert sql_user_repository.get_by_ids([]) == []
     assert queries == [0]
+
+
+def test_given_a_saved_user_then_it_is_registered_as_a_user_principal(sql_user_repository, session):
+    user = User(id=uuid4(), username="alice", email="alice@test.fr", name="Alice", roles=[])
+
+    sql_user_repository.save(user)
+
+    principal = session.get(PrincipalTable, user.id)
+    assert principal is not None
+    assert principal.kind == PrincipalKind.USER
+
+
+def test_given_a_deleted_user_then_its_principal_registration_is_gone(sql_user_repository, session):
+    user = User(id=uuid4(), username="alice", email="alice@test.fr", name="Alice", roles=[])
+    sql_user_repository.save(user)
+
+    sql_user_repository.delete(user.id)
+
+    assert session.get(PrincipalTable, user.id) is None
+
+
+def test_given_an_id_already_registered_when_saving_a_user_then_it_is_refused(sql_user_repository, session):
+    """Ids are unique across every kind of principal, not only among users."""
+    taken_id = uuid4()
+    session.add(PrincipalTable(id=taken_id, kind=PrincipalKind.SERVICE_ACCOUNT))
+    session.commit()
+
+    with pytest.raises(UserAlreadyExistsError):
+        sql_user_repository.save(User(id=taken_id, username="alice", email="alice@test.fr", name="Alice", roles=[]))

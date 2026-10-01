@@ -4,12 +4,13 @@ from .model.extension_token_model import ExtensionTokenTable
 from .model.group_member_model import GroupMemberTable
 from .model.group_model import GroupTable
 from .model.iam_event import IamEventTable
+from .model.principal_model import PrincipalKind, PrincipalTable
 from .model.revoked_token_model import RevokedTokenTable
-from .model.service_account_model import ServiceAccountTable
+from .model.service_account_model import ServiceAccountPrincipalTable
 from .model.sso_configuration_model import SsoConfigurationTable
 from .model.sso_users_model import SsoUsersTable
 from .model.user_password_model import UserPasswordTable
-from .model.users_model import UserTable
+from .model.users_model import UserPrincipalTable
 from .sql_auth_session_repository import SqlAuthSessionRepository
 from .sql_extension_pairing_repository import SqlExtensionPairingRepository
 from .sql_extension_token_repository import SqlExtensionTokenRepository
@@ -45,9 +46,11 @@ __all__ = [
     "RevokedTokenTable",
     "SsoConfigurationTable",
     "SsoUsersTable",
-    "UserTable",
+    "UserPrincipalTable",
     "UserPasswordTable",
-    "ServiceAccountTable",
+    "ServiceAccountPrincipalTable",
+    "PrincipalKind",
+    "PrincipalTable",
     "SqlServiceAccountRepository",
     "SqlServiceAccountEventRepository",
 ]

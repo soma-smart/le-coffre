@@ -67,7 +67,8 @@ def test_deleting_a_group_revokes_its_service_accounts(authenticated_admin_clien
     # listing, so the database is the only place its fate is observable.
     with sqlite3.connect(database_path) as connection:
         rows = connection.execute(
-            'SELECT revoked_at FROM "ServiceAccount" WHERE id = ?', (account_id.replace("-", ""),)
+            "SELECT revoked_at FROM iam__principal__service_account WHERE principal_id = ?",
+            (account_id.replace("-", ""),),
         ).fetchall()
 
     assert rows, "the account row must survive the group's deletion"
