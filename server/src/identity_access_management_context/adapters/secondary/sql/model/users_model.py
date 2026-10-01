@@ -1,26 +1,18 @@
-import json
 from datetime import datetime
-from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+
+from .principal_model import PrincipalDetailsTable
 
 
-class UserTable(SQLModel, table=True):
-    __tablename__: str = "User"
+class UserPrincipalTable(PrincipalDetailsTable, table=True):
+    """A user's details, keyed by its row in the principal registry."""
 
-    id: UUID = Field(default_factory=uuid4, nullable=False, primary_key=True, index=True)
+    __table_suffix__ = "user"
+
     username: str = Field(nullable=False)
     email: str = Field(nullable=False)
     name: str = Field(nullable=False)
     roles: str = Field(default="[]", description="Roles as JSON string")
-    password_hash: bytes | None = Field(nullable=True)
     current_refresh_token_jti: str | None = Field(default=None, nullable=True)
     session_invalid_before: datetime | None = Field(default=None, nullable=True)
-
-    @property
-    def roles_list(self):
-        return json.loads(self.roles)
-
-    @roles_list.setter
-    def roles_list(self, value):
-        self.roles = json.dumps(value)

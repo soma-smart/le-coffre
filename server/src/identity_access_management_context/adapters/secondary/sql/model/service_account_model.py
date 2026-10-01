@@ -1,15 +1,16 @@
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field
+
+from .principal_model import PrincipalDetailsTable
 
 
-class ServiceAccountTable(SQLModel, table=True):
-    """Table for group-owned service accounts."""
+class ServiceAccountPrincipalTable(PrincipalDetailsTable, table=True):
+    """A service account's details, keyed by its row in the principal registry."""
 
-    __tablename__: str = "ServiceAccount"
+    __table_suffix__ = "service_account"
 
-    id: UUID = Field(default_factory=uuid4, nullable=False, primary_key=True, index=True)
     group_id: UUID = Field(nullable=False, index=True)
     name: str = Field(nullable=False)
     token_hash: str = Field(

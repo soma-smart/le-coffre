@@ -8,11 +8,12 @@ from config import get_database_url
 from identity_access_management_context.adapters.secondary.sql import (
     GroupMemberTable,
     GroupTable,
-    ServiceAccountTable,
+    PrincipalTable,
+    ServiceAccountPrincipalTable,
     SsoConfigurationTable,
     SsoUsersTable,
     UserPasswordTable,
-    UserTable,
+    UserPrincipalTable,
 )
 from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
 from password_management_context.adapters.secondary.sql import (
@@ -27,7 +28,8 @@ from vault_management_context.adapters.secondary.sql.models.vault_event import V
 
 # Silence ruff unused-import warnings for model registration
 _ = (
-    UserTable,
+    PrincipalTable,
+    UserPrincipalTable,
     GroupTable,
     GroupMemberTable,
     SsoConfigurationTable,
@@ -41,8 +43,7 @@ _ = (
     VaultTable,
     VaultEventTable,
     IamEventTable,
-    ServiceAccountTable,
-    ServiceAccountTable,
+    ServiceAccountPrincipalTable,
 )
 
 # this is the Alembic Config object, which provides

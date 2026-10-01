@@ -4,6 +4,7 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from identity_access_management_context.adapters.secondary.sql import PrincipalKind, PrincipalTable
 from identity_access_management_context.application.gateways import (
     CannotRevokeServiceAccount,
     CannotRotateServiceAccount,
@@ -183,3 +184,16 @@ def test_given_no_matching_hash_when_looking_up_then_nothing_is_found(sql_servic
     sql_service_account_repository.create([_account()])
 
     assert sql_service_account_repository.get_by_token_hash(ServiceAccountToken.generate().hash) is None
+
+
+def test_given_created_accounts_then_each_is_registered_as_a_service_account_principal(
+    sql_service_account_repository, session
+):
+    accounts = [_account(name="one"), _account(name="two")]
+
+    sql_service_account_repository.create(accounts)
+
+    for account in accounts:
+        principal = session.get(PrincipalTable, account.id)
+        assert principal is not None
+        assert principal.kind == PrincipalKind.SERVICE_ACCOUNT
