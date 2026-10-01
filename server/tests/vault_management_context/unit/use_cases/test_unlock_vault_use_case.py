@@ -315,3 +315,48 @@ def test_given_valid_shares_when_unlocking_vault_should_store_vault_unlocked_eve
     stored = vault_event_repository.events[0]
     assert stored["event_type"] == "VaultUnlockedEvent"
     assert stored["actor_user_id"] is None
+
+
+def test_given_recording_the_unlock_fails_should_not_publish_it(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    shamir_gateway: FakeShamirGateway,
+    encryption_gateway: FakeEncryptionGateway,
+    event_publisher: FakeDomainEventPublisher,
+    vault_event_repository,
+):
+    # Regression: append_event() must run before publish(), not after — same
+    # reasoning as LockVaultUseCase / RecordVaultLockedOnStartupUseCase. If the
+    # write fails, no email must go out for an unlock that was never durably
+    # recorded.
+    #
+    # Note: this append failure is still caught by this method's own broad
+    # `except Exception`, which re-queues the shares and raises
+    # ShareReconstructionError even though the vault was in fact unlocked —
+    # a separate, pre-existing quirk this test documents but does not fix.
+    vault_key = "test_vault_key_12345678"
+    master_key = "master_key"
+    encrypted_key = "encrypted_vault_key_hex"
+    shares = [Share("share0"), Share("share1")]
+
+    vault_repository.save(
+        Vault(
+            nb_shares=3,
+            threshold=2,
+            encrypted_key=encrypted_key,
+            setup_id="test-setup-id",
+            status=VaultStatus.SETUPED.value,
+        )
+    )
+
+    shamir_gateway.set_shamir_result(ShamirResult(shares, master_key))
+    encryption_gateway.set_decrypted_data(vault_key)
+    encryption_gateway.set_encrypted_data(encrypted_key)
+    encryption_gateway.set_master_key(master_key)
+    vault_event_repository.fail_next_append()
+
+    command = UnlockVaultCommand(shares=shares)
+    with pytest.raises(ShareReconstructionError):
+        use_case.execute(command)
+
+    assert event_publisher.get_published_events_of_type(VaultUnlockedEvent) == []

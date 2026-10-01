@@ -67,7 +67,9 @@ class UnlockVaultUseCase(TracedUseCase):
             self._share_repository.clear()
             logger.info("Vault unlocked", extra={"share_count": len(all_shares)})
             event = VaultUnlockedEvent()
-            self._event_publisher.publish(event)
+            # append_event() before publish(): if the write fails, this raises before
+            # any notification email goes out for an unlock that was never durably
+            # recorded (same reasoning as LockVaultUseCase / RecordVaultLockedOnStartupUseCase).
             self._vault_event_repository.append_event(
                 event_id=event.event_id,
                 event_type=type(event).__name__,
@@ -75,6 +77,7 @@ class UnlockVaultUseCase(TracedUseCase):
                 actor_user_id=None,
                 event_data={},
             )
+            self._event_publisher.publish(event)
         except VaultUnlockedError as e:
             raise e
         except Exception as e:

@@ -21,8 +21,14 @@ class VaultSessionGateway(Protocol):
         """
         ...
 
-    def clear_decrypted_key(self) -> None:
-        """Clear the decrypted vault key"""
+    def clear_decrypted_key(self) -> bool:
+        """Clear the decrypted vault key
+
+        Returns:
+            True if a key was cleared, False if the vault was already locked.
+            The check and the clear are atomic, so of concurrent callers only
+            one gets True.
+        """
         ...
 
     def is_vault_locked(self) -> bool:

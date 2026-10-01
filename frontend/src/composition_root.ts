@@ -5,6 +5,7 @@ import { BackendOneTimeLinkRepository } from '@/infrastructure/backend/BackendOn
 import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPasswordRepository'
 import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepository'
 import { BackendVaultRepository } from '@/infrastructure/backend/BackendVaultRepository'
+import { BackendNotificationPreferencesRepository } from '@/infrastructure/backend/BackendNotificationPreferencesRepository'
 import { BackendStatisticsGateway } from '@/infrastructure/backend/BackendStatisticsGateway'
 import { LocalStoragePreferencesGateway } from '@/infrastructure/local_storage/LocalStoragePreferencesGateway'
 import { buildContainer, type Container } from '@/container'
@@ -26,5 +27,6 @@ export function installProductionContainer(): Container {
     preferencesGateway: new LocalStoragePreferencesGateway(),
     statisticsGateway: new BackendStatisticsGateway(),
     oneTimeLinkRepository: new BackendOneTimeLinkRepository(),
+    notificationPreferencesRepository: new BackendNotificationPreferencesRepository(),
   })
 }
