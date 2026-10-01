@@ -41,6 +41,10 @@ class ServiceAccountRepository(ABC):
         """Return accounts matching these ids."""
 
     @abstractmethod
+    def get_by_token_hash(self, token_hash: str) -> ServiceAccount | None:
+        """Return the account holding this token hash, revoked or not."""
+
+    @abstractmethod
     def list_for_groups(self, group_ids: Sequence[UUID]) -> Iterable[ServiceAccount]:
         """Return every account of these groups, revoked ones included."""
 
