@@ -7,10 +7,11 @@ from identity_access_management_context.domain.exceptions import (
     InvalidServiceAccountNameError,
 )
 from identity_access_management_context.domain.value_objects import ServiceAccountToken
+from shared_kernel.domain.entities.principal import Principal
 
 
 @dataclass
-class ServiceAccount:
+class ServiceAccount(Principal):
     """A group-owned machine identity, holding a rotatable token.
 
     Rows survive revocation so the group's credential history stays auditable,
@@ -26,7 +27,6 @@ class ServiceAccount:
     # Long enough for a descriptive name ("nightly-backup-prod"), short enough that a
     # listing stays readable and that the column cannot be used as free storage.
 
-    id: UUID
     group_id: UUID
     name: str
     token_hash: str
