@@ -1,8 +1,8 @@
 """rename user columns to principal
 
 Columns that hold any principal, not only a user, are named for it:
-group membership, the personal-group owner, sessions, revoked tokens and
-event actors. Stored event payloads keep their keys until the API follows.
+group membership, the personal-group owner, sessions, revoked tokens,
+event actors and one-time-link creators. Stored event payloads keep their keys until the API follows.
 
 Revision ID: 83cc85f63482
 Revises: 528c0676a893
@@ -27,6 +27,8 @@ RENAMES = (
     ('AuthSession', 'user_id', 'principal_id'),
     ('RevokedToken', 'user_id', 'principal_id'),
     ('IamEvent', 'actor_user_id', 'actor_principal_id'),
+    ('PasswordEvent', 'actor_user_id', 'actor_principal_id'),
+    ('OneTimeLink', 'created_by_user_id', 'created_by_principal_id'),
 )
 
 

@@ -90,7 +90,7 @@ def list_password_access(
         for user_access in result.user_accesses:
             ret.user_access_list.append(
                 UserAccessItem(
-                    user_id=user_access.user_id,
+                    user_id=user_access.principal_id,
                     group_id=user_access.group_id,
                     role_in_group=AccessRoleEnum(user_access.role_in_group.value),
                     group_role=AccessRoleEnum(user_access.group_role.value),

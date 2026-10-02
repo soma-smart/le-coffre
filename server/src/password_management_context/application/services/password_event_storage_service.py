@@ -21,6 +21,6 @@ class PasswordEventStorageService:
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
             password_id=event.password_id,
-            actor_user_id=event.get_actor_user_id(),
+            actor_principal_id=event.get_actor_principal_id(),
             event_data=cast(dict[str, Any], event.to_event_data()),
         )

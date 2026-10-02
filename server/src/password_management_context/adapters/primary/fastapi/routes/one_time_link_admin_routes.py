@@ -68,7 +68,7 @@ def _to_model(result: ListOneTimeLinkAuditResponse) -> ListOneTimeLinkAuditRespo
                 password_id=link.password_id,
                 password_name=link.password_name,
                 group_name=link.group_name,
-                created_by_user_id=link.created_by_user_id,
+                created_by_user_id=link.created_by_principal_id,
                 created_by_display_name=link.created_by_display_name,
                 created_at=link.created_at,
                 expires_at=link.expires_at,
@@ -102,7 +102,7 @@ def list_my_one_time_links(
     """
     try:
         command = ListMyOneTimeLinksCommand(
-            requesting_user_id=current_user.user_id,
+            requesting_principal_id=current_user.user_id,
             include_inactive=include_inactive,
         )
         return _to_model(usecase.execute(command))

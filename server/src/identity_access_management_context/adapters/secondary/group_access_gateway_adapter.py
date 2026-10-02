@@ -21,11 +21,11 @@ class GroupAccessGatewayAdapter:
         self._group_repository = group_repository
         self._group_member_repository = group_member_repository
 
-    def is_user_owner_of_group(self, user_id: UUID, group_id: UUID) -> bool:
+    def is_principal_owner_of_group(self, principal_id: UUID, group_id: UUID) -> bool:
         """Check if a user is the owner of a group.
 
         Args:
-            user_id: The ID of the user to check
+            principal_id: The ID of the user to check
             group_id: The ID of the group to check
 
         Returns:
@@ -35,24 +35,24 @@ class GroupAccessGatewayAdapter:
         if group is None:
             return False
 
-        # For personal groups, check if the user_id matches
-        if group.is_personal and group.principal_id == user_id:
+        # For personal groups, check if the principal_id matches
+        if group.is_personal and group.principal_id == principal_id:
             return True
 
         # For shared groups, check membership
-        return self._group_member_repository.is_owner(group_id, user_id)
+        return self._group_member_repository.is_owner(group_id, principal_id)
 
-    def is_user_member_of_group(self, user_id: UUID, group_id: UUID) -> bool:
+    def is_principal_member_of_group(self, principal_id: UUID, group_id: UUID) -> bool:
         group = self._group_repository.get_by_id(group_id)
         if group is None:
             return False
 
-        # For personal groups, check if the user_id matches
-        if group.is_personal and group.principal_id == user_id:
+        # For personal groups, check if the principal_id matches
+        if group.is_personal and group.principal_id == principal_id:
             return True
 
         # For shared groups, check membership
-        return self._group_member_repository.is_member(group_id, user_id)
+        return self._group_member_repository.is_member(group_id, principal_id)
 
     def group_exists(self, group_id: UUID) -> bool:
         """Check if a group exists.
@@ -65,7 +65,7 @@ class GroupAccessGatewayAdapter:
         """
         return self._group_repository.get_by_id(group_id) is not None
 
-    def get_group_owner_users(self, group_id: UUID) -> list[UUID]:
+    def get_group_owner_principals(self, group_id: UUID) -> list[UUID]:
         """Get all users who own this group.
 
         Args:
@@ -78,7 +78,7 @@ class GroupAccessGatewayAdapter:
         if group is None:
             return []
 
-        # For personal groups, return the user_id
+        # For personal groups, return the principal_id
         if group.is_personal and group.principal_id:
             return [group.principal_id]
 
@@ -86,7 +86,7 @@ class GroupAccessGatewayAdapter:
         members = self._group_member_repository.get_members(group_id)
         return [member.principal_id for member in members if member.is_owner]
 
-    def get_group_member_users(self, group_id: UUID) -> list[UUID]:
+    def get_group_member_principals(self, group_id: UUID) -> list[UUID]:
         """Get the users who belong to this group as members (not owners).
 
         Args:

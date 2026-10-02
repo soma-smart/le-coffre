@@ -33,7 +33,7 @@ def _seed_events(repo: FakePasswordEventRepository):
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         password_id=PASSWORD_ID_A,
-        actor_user_id=TARGET_USER_ID,
+        actor_principal_id=TARGET_USER_ID,
         event_data={"title": "Gmail"},
     )
     repo.append_event(
@@ -41,7 +41,7 @@ def _seed_events(repo: FakePasswordEventRepository):
         event_type="PasswordAccessedEvent",
         occurred_on=datetime(2026, 2, 6, 12, 0, 0),
         password_id=PASSWORD_ID_B,
-        actor_user_id=TARGET_USER_ID,
+        actor_principal_id=TARGET_USER_ID,
         event_data={},
     )
     # Action by another user — must not be returned
@@ -50,7 +50,7 @@ def _seed_events(repo: FakePasswordEventRepository):
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2026, 2, 6, 11, 0, 0),
         password_id=PASSWORD_ID_A,
-        actor_user_id=OTHER_USER_ID,
+        actor_principal_id=OTHER_USER_ID,
         event_data={},
     )
 
@@ -63,7 +63,7 @@ def test_admin_lists_all_actions_of_a_given_user(
 
     response = use_case.execute(
         ListPasswordEventsByActorCommand(
-            actor_user_id=TARGET_USER_ID,
+            actor_principal_id=TARGET_USER_ID,
             requesting_user=ADMIN_USER,
         )
     )
@@ -74,7 +74,7 @@ def test_admin_lists_all_actions_of_a_given_user(
     assert response.events[0].password_id == str(PASSWORD_ID_B)
     assert response.events[1].event_type == "PasswordCreatedEvent"
     assert response.events[1].password_id == str(PASSWORD_ID_A)
-    assert all(e.actor_user_id == str(TARGET_USER_ID) for e in response.events)
+    assert all(e.actor_principal_id == str(TARGET_USER_ID) for e in response.events)
 
 
 def test_non_admin_is_rejected(
@@ -86,7 +86,7 @@ def test_non_admin_is_rejected(
     with pytest.raises(NotAdminError):
         use_case.execute(
             ListPasswordEventsByActorCommand(
-                actor_user_id=TARGET_USER_ID,
+                actor_principal_id=TARGET_USER_ID,
                 requesting_user=REGULAR_USER,
             )
         )
@@ -100,7 +100,7 @@ def test_filter_by_event_type_and_date_range(
 
     response = use_case.execute(
         ListPasswordEventsByActorCommand(
-            actor_user_id=TARGET_USER_ID,
+            actor_principal_id=TARGET_USER_ID,
             requesting_user=ADMIN_USER,
             event_types=["PasswordCreatedEvent"],
             start_date=datetime(2026, 2, 6, 0, 0, 0),
@@ -118,7 +118,7 @@ def test_returns_empty_when_actor_has_no_events(
 ):
     response = use_case.execute(
         ListPasswordEventsByActorCommand(
-            actor_user_id=TARGET_USER_ID,
+            actor_principal_id=TARGET_USER_ID,
             requesting_user=ADMIN_USER,
         )
     )

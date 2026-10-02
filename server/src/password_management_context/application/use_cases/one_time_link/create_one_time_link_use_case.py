@@ -46,7 +46,7 @@ class CreateOneTimeLinkUseCase(TracedUseCase):
         self.time_gateway = time_gateway
 
     def execute(self, command: CreateOneTimeLinkCommand) -> CreatedOneTimeLinkResponse:
-        self.ownership_service.ensure_user_owns_password(command.requesting_user_id, command.password_id)
+        self.ownership_service.ensure_principal_owns_password(command.requesting_principal_id, command.password_id)
 
         lifetime = (
             OneTimeLinkLifetime.default()
@@ -66,7 +66,7 @@ class CreateOneTimeLinkUseCase(TracedUseCase):
         token = OneTimeLinkToken.generate()
         link = OneTimeLink.create(
             password_id=command.password_id,
-            created_by_user_id=command.requesting_user_id,
+            created_by_principal_id=command.requesting_principal_id,
             token=token,
             lifetime=lifetime,
             now=now,
@@ -78,7 +78,7 @@ class CreateOneTimeLinkUseCase(TracedUseCase):
             extra={
                 "password_id": str(command.password_id),
                 "link_id": str(link.id),
-                "by_user_id": str(command.requesting_user_id),
+                "by_user_id": str(command.requesting_principal_id),
             },
         )
 
@@ -86,7 +86,7 @@ class CreateOneTimeLinkUseCase(TracedUseCase):
             password_id=command.password_id,
             link_id=link.id,
             expires_at=link.expires_at.isoformat(),
-            created_by_user_id=command.requesting_user_id,
+            created_by_principal_id=command.requesting_principal_id,
         )
         PasswordEventStorageService(self.password_event_repository).store_event(event)
 

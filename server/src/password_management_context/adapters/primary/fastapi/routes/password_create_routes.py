@@ -71,7 +71,7 @@ def create_password(
         password_id = uuid4()
         command = CreatePasswordCommand(
             id=password_id,
-            user_id=current_user.user_id,
+            principal_id=current_user.user_id,
             group_id=UUID(request_body.group_id),
             name=request_body.name,
             decrypted_password=request_body.password,

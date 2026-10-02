@@ -49,7 +49,7 @@ class ListPasswordEventsUseCase(TracedUseCase):
             raise PasswordNotFoundError(command.password_id)
 
         if not AdminPermissionChecker.is_admin(command.requesting_user):
-            if not self._user_has_access_through_groups(command.requesting_user.user_id, command.password_id):
+            if not self._principal_has_access_through_groups(command.requesting_user.user_id, command.password_id):
                 raise PasswordAccessDeniedError(command.requesting_user.user_id, command.password_id)
 
         self.password_vault_access_gateway.ensure_vault_is_unlocked()
@@ -86,15 +86,15 @@ class ListPasswordEventsUseCase(TracedUseCase):
                     occurred_on=event["occurred_on"].isoformat()
                     if hasattr(event["occurred_on"], "isoformat")
                     else event["occurred_on"],
-                    actor_user_id=str(event["actor_user_id"]),
-                    actor_email=self.user_info_gateway.get_user_email(UUID(str(event["actor_user_id"]))),
+                    actor_principal_id=str(event["actor_principal_id"]),
+                    actor_email=self.user_info_gateway.get_user_email(UUID(str(event["actor_principal_id"]))),
                     event_data=enriched_event_data,
                 )
             )
 
         return ListPasswordEventsResponse(events=event_items)
 
-    def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
+    def _principal_has_access_through_groups(self, principal_id: UUID, password_id: UUID) -> bool:
         all_permissions = self.password_permissions_repository.list_all_permissions_for(password_id)
         now = self.time_gateway.get_current_time()
 
@@ -105,10 +105,10 @@ class ListPasswordEventsUseCase(TracedUseCase):
             if not access.grants_read(now):
                 continue
 
-            is_user_owner = self.group_access_gateway.is_user_owner_of_group(user_id, group_id)
-            is_user_member = self.group_access_gateway.is_user_member_of_group(user_id, group_id)
+            is_owner = self.group_access_gateway.is_principal_owner_of_group(principal_id, group_id)
+            is_member = self.group_access_gateway.is_principal_member_of_group(principal_id, group_id)
 
-            if is_user_owner or is_user_member:
+            if is_owner or is_member:
                 return True
 
         return False

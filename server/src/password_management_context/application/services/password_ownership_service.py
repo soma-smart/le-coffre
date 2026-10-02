@@ -11,7 +11,7 @@ from password_management_context.domain.exceptions import NotPasswordOwnerError
 
 
 class PasswordOwnershipService:
-    """Answers "does this user own this password".
+    """Answers "does this principal own this password".
 
     Ownership is held by a group, not a user: a password has one owning group
     (the Ownership table), and a user owns the password when they own that
@@ -29,18 +29,18 @@ class PasswordOwnershipService:
         self.password_permissions_repository = password_permissions_repository
         self.group_access_gateway = group_access_gateway
 
-    def ensure_user_owns_password(self, user_id: UUID, password_id: UUID) -> UUID:
-        """Return the owning group id, or raise if the user is not an owner."""
+    def ensure_principal_owns_password(self, principal_id: UUID, password_id: UUID) -> UUID:
+        """Return the owning group id, or raise if the principal is not an owner."""
         # Raises PasswordNotFoundError itself when the password is gone; called
         # for that check alone, so a missing password never reads as "not owner".
         self.password_repository.get_by_id(password_id)
 
         owner_group_id = self._find_owner_group_id(password_id)
         if owner_group_id is None:
-            raise NotPasswordOwnerError(user_id, password_id)
+            raise NotPasswordOwnerError(principal_id, password_id)
 
-        if not self.group_access_gateway.is_user_owner_of_group(user_id, owner_group_id):
-            raise NotPasswordOwnerError(user_id, password_id)
+        if not self.group_access_gateway.is_principal_owner_of_group(principal_id, owner_group_id):
+            raise NotPasswordOwnerError(principal_id, password_id)
 
         return owner_group_id
 

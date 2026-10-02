@@ -63,7 +63,7 @@ def list_password_events_by_actor(
     """
     try:
         command = ListPasswordEventsByActorCommand(
-            actor_user_id=user_id,
+            actor_principal_id=user_id,
             requesting_user=current_user.to_authenticated_user(),
             event_types=event_type,
             start_date=start_date,
@@ -78,7 +78,7 @@ def list_password_events_by_actor(
                     event_type=event.event_type,
                     occurred_on=event.occurred_on,
                     password_id=event.password_id,
-                    actor_user_id=event.actor_user_id,
+                    actor_user_id=event.actor_principal_id,
                     event_data=event.event_data,
                 )
                 for event in response.events

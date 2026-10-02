@@ -16,11 +16,11 @@ class PasswordDeletedEventData(TypedDict):
 class PasswordDeletedEvent(BasePasswordEvent):
     """Domain event for password deletion"""
 
-    deleted_by_user_id: UUID
+    deleted_by_principal_id: UUID
     owner_group_id: UUID
 
-    def get_actor_user_id(self) -> UUID:
-        return self.deleted_by_user_id
+    def get_actor_principal_id(self) -> UUID:
+        return self.deleted_by_principal_id
 
     def to_event_data(self) -> PasswordDeletedEventData:
         return {

@@ -506,6 +506,14 @@ def test_principal_columns_migration_keeps_every_value(alembic_config, temp_data
             "event_id, event_type, occurred_on, actor_user_id, event_data",
             f"'{uuid4().hex}', 'GroupCreatedEvent', '2026-01-01 12:00:00', '{principal_id}', '{{}}'",
         ),
+        "PasswordEvent": (
+            "event_id, event_type, occurred_on, password_id, actor_user_id, event_data",
+            f"'{uuid4().hex}', 'PasswordCreatedEvent', '2026-01-01 12:00:00', '{uuid4().hex}', '{principal_id}', '{{}}'",
+        ),
+        "OneTimeLink": (
+            "id, password_id, token_hash, created_by_user_id, created_at, expires_at",
+            f"'{uuid4().hex}', '{uuid4().hex}', 'hash-1', '{principal_id}', '2026-01-01 12:00:00', '2026-01-02 12:00:00'",
+        ),
     }
     renamed = {
         "Group": "principal_id",
@@ -513,6 +521,8 @@ def test_principal_columns_migration_keeps_every_value(alembic_config, temp_data
         "AuthSession": "principal_id",
         "RevokedToken": "principal_id",
         "IamEvent": "actor_principal_id",
+        "PasswordEvent": "actor_principal_id",
+        "OneTimeLink": "created_by_principal_id",
     }
 
     command.upgrade(alembic_config, REVOKED_TOKENS_REVISION)

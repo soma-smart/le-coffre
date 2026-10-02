@@ -20,7 +20,7 @@ CREATOR_ID = uuid4()
 def _build_link(password_id=PASSWORD_ID, now=T0) -> OneTimeLink:
     return OneTimeLink.create(
         password_id=password_id,
-        created_by_user_id=CREATOR_ID,
+        created_by_principal_id=CREATOR_ID,
         token=OneTimeLinkToken.generate(),
         lifetime=OneTimeLinkLifetime.default(),
         now=now,
@@ -198,7 +198,7 @@ def test_active_count_excludes_read_revoked_and_expired_links(
     revoked = _build_link()
     expired = OneTimeLink.create(
         password_id=PASSWORD_ID,
-        created_by_user_id=CREATOR_ID,
+        created_by_principal_id=CREATOR_ID,
         token=OneTimeLinkToken.generate(),
         lifetime=OneTimeLinkLifetime(seconds=600),
         now=T0,
@@ -281,7 +281,7 @@ def test_active_listing_drops_expired_links(
 ):
     short_lived = OneTimeLink.create(
         password_id=PASSWORD_ID,
-        created_by_user_id=CREATOR_ID,
+        created_by_principal_id=CREATOR_ID,
         token=OneTimeLinkToken.generate(),
         lifetime=OneTimeLinkLifetime(seconds=600),
         now=T0,
@@ -304,7 +304,7 @@ def test_writes_normalise_a_non_utc_instant_before_storing_it(
     created_at = datetime(2026, 1, 1, 14, 0, 0, tzinfo=paris)  # 12:00 UTC
     link = OneTimeLink.create(
         password_id=PASSWORD_ID,
-        created_by_user_id=CREATOR_ID,
+        created_by_principal_id=CREATOR_ID,
         token=OneTimeLinkToken.generate(),
         lifetime=OneTimeLinkLifetime(seconds=600),
         now=created_at,
@@ -369,7 +369,7 @@ def test_listing_for_creator_is_scoped_to_that_user(
     other_creator = uuid4()
     mine = _build_link()
     theirs = _build_link()
-    theirs.created_by_user_id = other_creator
+    theirs.created_by_principal_id = other_creator
     sql_one_time_link_repository.add(mine)
     sql_one_time_link_repository.add(theirs)
 
@@ -387,7 +387,7 @@ def test_bulk_revoke_spares_read_links_and_other_users(
     live = _build_link()
     read = _build_link()
     theirs = _build_link()
-    theirs.created_by_user_id = other_creator
+    theirs.created_by_principal_id = other_creator
     for link in (live, read, theirs):
         sql_one_time_link_repository.add(link)
     sql_one_time_link_repository.consume(read.id, T0)
