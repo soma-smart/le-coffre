@@ -6,6 +6,7 @@ This module tests that migrations can be applied and rolled back successfully.
 
 import importlib
 import inspect
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -552,3 +553,61 @@ def test_principal_columns_migration_keeps_every_value(alembic_config, temp_data
 
     assert upgraded == dict.fromkeys(renamed, principal_id)
     assert downgraded == dict.fromkeys(renamed, principal_id)
+
+
+PAYLOAD_KEYS_REVISION = "76b9210560fd"
+"""Revision renaming the user keys that hold any principal in stored event payloads."""
+
+
+def test_payload_keys_migration_renames_only_principal_keys(alembic_config, temp_database):
+    """Principal keys are renamed and come back on downgrade; a user-only payload keeps user_id."""
+    database_url, _ = temp_database
+    principal_id = uuid4().hex
+    iam_events = {
+        "UserAddedToGroupEvent": {"group_id": "g-1", "user_id": principal_id},
+        "ServiceAccountCreatedEvent": {"user_id": principal_id, "service_account_id": "sa-1"},
+        "UserCreatedEvent": {"user_id": principal_id, "username": "alice"},
+    }
+    password_event = {"password_id": "p-1", "by_user_id": principal_id, "issued_by_user_id": principal_id}
+
+    command.upgrade(alembic_config, PRINCIPAL_COLUMNS_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for event_type, data in iam_events.items():
+            conn.execute(
+                text(
+                    'INSERT INTO "IamEvent" (event_id, event_type, occurred_on, event_data) '
+                    "VALUES (:id, :type, '2026-01-01 12:00:00', :data)"
+                ),
+                {"id": uuid4().hex, "type": event_type, "data": json.dumps(data)},
+            )
+        conn.execute(
+            text(
+                'INSERT INTO "PasswordEvent" (event_id, event_type, occurred_on, password_id, actor_principal_id, event_data) '
+                "VALUES (:id, 'OneTimeLinkRevokedEvent', '2026-01-01 12:00:00', :password_id, :actor, :data)"
+            ),
+            {"id": uuid4().hex, "password_id": uuid4().hex, "actor": principal_id, "data": json.dumps(password_event)},
+        )
+    engine.dispose()
+
+    def payloads() -> tuple[dict, dict]:
+        engine = create_engine(database_url)
+        with engine.connect() as conn:
+            iam = {
+                t: json.loads(d) for t, d in conn.execute(text('SELECT event_type, event_data FROM "IamEvent"')).all()
+            }
+            password = json.loads(conn.execute(text('SELECT event_data FROM "PasswordEvent"')).scalar_one())
+        engine.dispose()
+        return iam, password
+
+    command.upgrade(alembic_config, PAYLOAD_KEYS_REVISION)
+    iam, password = payloads()
+    assert iam["UserAddedToGroupEvent"] == {"group_id": "g-1", "principal_id": principal_id}
+    assert iam["ServiceAccountCreatedEvent"] == {"principal_id": principal_id, "service_account_id": "sa-1"}
+    assert iam["UserCreatedEvent"] == {"user_id": principal_id, "username": "alice"}
+    assert password == {"password_id": "p-1", "by_principal_id": principal_id, "issued_by_principal_id": principal_id}
+
+    command.downgrade(alembic_config, PRINCIPAL_COLUMNS_REVISION)
+    iam, password = payloads()
+    assert iam == iam_events
+    assert password == password_event

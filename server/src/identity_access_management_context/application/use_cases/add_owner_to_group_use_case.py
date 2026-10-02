@@ -65,5 +65,5 @@ class AddOwnerToGroupUseCase(TracedUseCase):
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
             actor_principal_id=command.requester_id,
-            event_data={"group_id": str(command.group_id), "user_id": str(command.principal_id)},
+            event_data={"group_id": str(command.group_id), "principal_id": str(command.principal_id)},
         )

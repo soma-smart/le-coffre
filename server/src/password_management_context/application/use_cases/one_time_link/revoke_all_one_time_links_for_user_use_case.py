@@ -36,7 +36,7 @@ class RevokeAllOneTimeLinksForUserUseCase(TracedUseCase):
             extra={
                 "target_user_id": str(command.target_user_id),
                 "revoked_count": revoked,
-                "by_user_id": str(command.requesting_user.user_id),
+                "by_principal_id": str(command.requesting_user.user_id),
             },
         )
         return revoked

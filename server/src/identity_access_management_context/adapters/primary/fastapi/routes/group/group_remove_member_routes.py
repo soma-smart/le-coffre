@@ -33,14 +33,14 @@ class RemoveMemberFromGroupResponse(BaseModel):
 
 
 @router.delete(
-    "/{group_id}/members/{user_id}",
+    "/{group_id}/members/{principal_id}",
     status_code=200,
     response_model=RemoveMemberFromGroupResponse,
     summary="Remove a member from a group",
 )
 def remove_member_from_group(
     group_id: UUID,
-    user_id: UUID,
+    principal_id: UUID,
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: RemoveUserFromGroupUseCase = Depends(get_remove_user_from_group_usecase),
 ):
@@ -48,7 +48,7 @@ def remove_member_from_group(
     Remove a member from a group.
 
     - **group_id**: ID of the group (path parameter)
-    - **user_id**: ID of the user to remove (path parameter)
+    - **principal_id**: ID of the principal to remove (path parameter)
     - **Authorization**: Bearer token required (access_token cookie)
     - **Permission**: Only group owners can remove members
 
@@ -60,7 +60,7 @@ def remove_member_from_group(
         command = RemoveUserFromGroupCommand(
             requester_id=current_user.user_id,
             group_id=group_id,
-            principal_id=user_id,
+            principal_id=principal_id,
         )
 
         usecase.execute(command)

@@ -88,7 +88,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     assert retrieved_group["id"] == sso_group_id
     assert retrieved_group["name"] == "Engineering Team"
     assert retrieved_group["is_personal"] is False
-    assert retrieved_group["user_id"] is None
+    assert retrieved_group["principal_id"] is None
     assert "owners" in retrieved_group
     assert "members" in retrieved_group
     assert isinstance(retrieved_group["owners"], list)
@@ -106,7 +106,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     retrieved_personal = get_personal_response.json()
     assert retrieved_personal["id"] == personal_group["id"]
     assert retrieved_personal["is_personal"] is True
-    assert retrieved_personal["user_id"] is not None
+    assert retrieved_personal["principal_id"] is not None
 
     # Step 1.9: Verify owners/members structure on a fresh group
     fresh_group_response = user1_client.post("/api/groups/", json={"name": "Test Team"})
@@ -199,7 +199,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     # Step 3.5: Add non-owner as member so we can test update authorization
     authenticated_admin_client.post(
         f"/api/groups/{updatable_group_id}/members",
-        json={"user_id": non_owner_user_id},
+        json={"principal_id": non_owner_user_id},
     )
 
     # Step 3.6: Non-owner cannot update the group
@@ -254,23 +254,23 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
 
     # Step 4.2: Add user1 to the group
     add_user1_response = authenticated_admin_client.post(
-        f"/api/groups/{members_group_id}/members", json={"user_id": user1_id}
+        f"/api/groups/{members_group_id}/members", json={"principal_id": user1_id}
     )
     assert add_user1_response.status_code == 201
     add_user1_result = add_user1_response.json()
     assert add_user1_result["group_id"] == members_group_id
-    assert add_user1_result["user_id"] == user1_id
+    assert add_user1_result["principal_id"] == user1_id
     assert add_user1_result["message"] == "Member added successfully"
 
     # Step 4.3: Add user2 to the group
     add_user2_response = authenticated_admin_client.post(
-        f"/api/groups/{members_group_id}/members", json={"user_id": user2_id}
+        f"/api/groups/{members_group_id}/members", json={"principal_id": user2_id}
     )
     assert add_user2_response.status_code == 201
 
     # Step 4.4: Idempotency - adding user1 again should succeed
     add_user1_again_response = authenticated_admin_client.post(
-        f"/api/groups/{members_group_id}/members", json={"user_id": user1_id}
+        f"/api/groups/{members_group_id}/members", json={"principal_id": user1_id}
     )
     assert add_user1_again_response.status_code == 201
 
@@ -288,7 +288,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     fake_user_id = "00000000-0000-0000-0000-000000000000"
     add_fake_user_response = authenticated_admin_client.post(
         f"/api/groups/{members_group_id}/members",
-        json={"user_id": fake_user_id},
+        json={"principal_id": fake_user_id},
     )
     assert add_fake_user_response.status_code == 404
     assert "was not found" in add_fake_user_response.json()["detail"]
@@ -303,12 +303,12 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     admin_group_id = auth_group_response.json()["id"]
 
     # Step 5.2: Add user1 as a member
-    authenticated_admin_client.post(f"/api/groups/{admin_group_id}/members", json={"user_id": user1_id})
+    authenticated_admin_client.post(f"/api/groups/{admin_group_id}/members", json={"principal_id": user1_id})
 
     # Step 5.3: Non-owner (non_owner_user) cannot add members to the group
     add_as_non_owner_response = non_owner_client.post(
         f"/api/groups/{admin_group_id}/members",
-        json={"user_id": non_owner_user_id},
+        json={"principal_id": non_owner_user_id},
     )
     assert add_as_non_owner_response.status_code == 403
     assert "is not an owner of group" in add_as_non_owner_response.json()["detail"]
@@ -338,7 +338,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     ownership_group_id = ownership_group_data["id"]
 
     # Step 6.2: Add owner_user as a member (not an owner yet)
-    authenticated_admin_client.post(f"/api/groups/{ownership_group_id}/members", json={"user_id": owner_user_id})
+    authenticated_admin_client.post(f"/api/groups/{ownership_group_id}/members", json={"principal_id": owner_user_id})
 
     # Step 6.3: Verify owner_user is a member but not an owner
     get_group_before = authenticated_admin_client.get(f"/api/groups/{ownership_group_id}")
@@ -349,12 +349,12 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
 
     # Step 6.4: Promote owner_user to owner
     add_owner_response = authenticated_admin_client.post(
-        f"/api/groups/{ownership_group_id}/owners", json={"user_id": owner_user_id}
+        f"/api/groups/{ownership_group_id}/owners", json={"principal_id": owner_user_id}
     )
     assert add_owner_response.status_code == 201
     add_owner_result = add_owner_response.json()
     assert add_owner_result["group_id"] == ownership_group_id
-    assert add_owner_result["user_id"] == owner_user_id
+    assert add_owner_result["principal_id"] == owner_user_id
     assert add_owner_result["message"] == "Owner added successfully"
 
     # Step 6.5: Verify owner_user is now an owner and no longer in members
@@ -366,23 +366,23 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
 
     # Step 6.6: Idempotency - promoting owner_user again should succeed
     add_owner_again_response = authenticated_admin_client.post(
-        f"/api/groups/{ownership_group_id}/owners", json={"user_id": owner_user_id}
+        f"/api/groups/{ownership_group_id}/owners", json={"principal_id": owner_user_id}
     )
     assert add_owner_again_response.status_code == 201
 
     # Step 6.7: Cannot promote a non-member to owner
     add_nonmember_as_owner_response = authenticated_admin_client.post(
-        f"/api/groups/{ownership_group_id}/owners", json={"user_id": user2_id}
+        f"/api/groups/{ownership_group_id}/owners", json={"principal_id": user2_id}
     )
     assert add_nonmember_as_owner_response.status_code == 400
     assert "not a member" in add_nonmember_as_owner_response.json()["detail"].lower()
 
     # Step 6.8: Add user2 as a member so owner_user can promote them
-    authenticated_admin_client.post(f"/api/groups/{ownership_group_id}/members", json={"user_id": user2_id})
+    authenticated_admin_client.post(f"/api/groups/{ownership_group_id}/members", json={"principal_id": user2_id})
 
     # Step 6.9: owner_user (who is now an owner) can promote user2
     promote_user2_response = owner_user_client.post(
-        f"/api/groups/{ownership_group_id}/owners", json={"user_id": user2_id}
+        f"/api/groups/{ownership_group_id}/owners", json={"principal_id": user2_id}
     )
     assert promote_user2_response.status_code == 201
 
@@ -402,14 +402,16 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     restricted_group_id = restricted_group_response.json()["id"]
 
     # Add non_owner and owner_user as plain members
-    authenticated_admin_client.post(f"/api/groups/{restricted_group_id}/members", json={"user_id": non_owner_user_id})
+    authenticated_admin_client.post(
+        f"/api/groups/{restricted_group_id}/members", json={"principal_id": non_owner_user_id}
+    )
     user3 = sso_user_factory("target@example.com", "Target User")
     user3_id = user3["user_id"]
-    authenticated_admin_client.post(f"/api/groups/{restricted_group_id}/members", json={"user_id": user3_id})
+    authenticated_admin_client.post(f"/api/groups/{restricted_group_id}/members", json={"principal_id": user3_id})
 
     # Step 7.2: Non-owner cannot promote members to owner
     non_owner_promote_response = non_owner_client.post(
-        f"/api/groups/{restricted_group_id}/owners", json={"user_id": user3_id}
+        f"/api/groups/{restricted_group_id}/owners", json={"principal_id": user3_id}
     )
     assert non_owner_promote_response.status_code == 403
     assert "not an owner" in non_owner_promote_response.json()["detail"].lower()
@@ -422,7 +424,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
 
     add_owner_to_personal_response = authenticated_admin_client.post(
         f"/api/groups/{admin_personal_group['id']}/owners",
-        json={"user_id": non_owner_user_id},
+        json={"principal_id": non_owner_user_id},
     )
     assert add_owner_to_personal_response.status_code == 403
     assert (

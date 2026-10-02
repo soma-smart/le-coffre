@@ -43,7 +43,7 @@ class ServiceAccountEvent(DomainEvent, ABC):
         self.principal_id = principal_id
 
     def _make_event_data(self) -> dict[str, str]:
-        return {"user_id": str(self.principal_id)}
+        return {"principal_id": str(self.principal_id)}
 
     @property
     def event_data(self) -> dict[str, str]:

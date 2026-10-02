@@ -14,9 +14,9 @@ export type AccessRoleEnum = 'owner' | 'member';
  */
 export type AddMemberToGroupRequest = {
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
 };
 
 /**
@@ -28,9 +28,9 @@ export type AddMemberToGroupResponse = {
      */
     group_id: string;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
     /**
      * Message
      */
@@ -42,9 +42,9 @@ export type AddMemberToGroupResponse = {
  */
 export type AddOwnerToGroupRequest = {
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
 };
 
 /**
@@ -56,9 +56,9 @@ export type AddOwnerToGroupResponse = {
      */
     group_id: string;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
     /**
      * Message
      */
@@ -386,9 +386,9 @@ export type GetGroupResponse = {
      */
     is_personal: boolean;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string | null;
+    principal_id: string | null;
     /**
      * Owners
      */
@@ -559,9 +559,9 @@ export type GroupEventResponse = {
      */
     occurred_on: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Actor Email
      */
@@ -591,9 +591,9 @@ export type GroupItem = {
      */
     is_personal: boolean;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string | null;
+    principal_id: string | null;
     /**
      * Owners
      */
@@ -825,9 +825,9 @@ export type OneTimeLinkAuditItem = {
      */
     group_name: string | null;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string;
+    created_by_principal_id: string;
     /**
      * Created By Display Name
      */
@@ -863,9 +863,9 @@ export type OneTimeLinkSummary = {
      */
     password_id: string;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string;
+    created_by_principal_id: string;
     /**
      * Created At
      */
@@ -905,9 +905,9 @@ export type PasswordEventByActorResponseItem = {
      */
     password_id: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Event Data
      */
@@ -933,9 +933,9 @@ export type PasswordEventResponse = {
      */
     occurred_on: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Actor Email
      */
@@ -1090,9 +1090,9 @@ export type ServiceAccountSummary = {
      */
     name: string;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string | null;
+    created_by_principal_id: string | null;
     /**
      * Created By User Name
      */
@@ -1313,9 +1313,9 @@ export type UpdateUserRequest = {
  */
 export type UserAccessItem = {
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
     /**
      * Group Id
      */
@@ -2751,7 +2751,7 @@ export type AddOwnerToGroupGroupsGroupIdOwnersPostResponses = {
 
 export type AddOwnerToGroupGroupsGroupIdOwnersPostResponse = AddOwnerToGroupGroupsGroupIdOwnersPostResponses[keyof AddOwnerToGroupGroupsGroupIdOwnersPostResponses];
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -2759,31 +2759,31 @@ export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData = {
          */
         group_id: string;
         /**
-         * User Id
+         * Principal Id
          */
-        user_id: string;
+        principal_id: string;
     };
     query?: never;
-    url: '/groups/{group_id}/members/{user_id}';
+    url: '/groups/{group_id}/members/{principal_id}';
 };
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteError = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors];
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteError = RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors[keyof RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors];
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses = {
     /**
      * Successful Response
      */
     200: RemoveMemberFromGroupResponse;
 };
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponse = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses];
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponse = RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses[keyof RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses];
 
 export type DeleteGroupGroupsGroupIdDeleteData = {
     body?: never;

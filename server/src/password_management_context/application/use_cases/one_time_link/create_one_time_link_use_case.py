@@ -78,7 +78,7 @@ class CreateOneTimeLinkUseCase(TracedUseCase):
             extra={
                 "password_id": str(command.password_id),
                 "link_id": str(link.id),
-                "by_user_id": str(command.requesting_principal_id),
+                "by_principal_id": str(command.requesting_principal_id),
             },
         )
 

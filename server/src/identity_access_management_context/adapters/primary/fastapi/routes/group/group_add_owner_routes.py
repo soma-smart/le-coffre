@@ -29,12 +29,12 @@ router = APIRouter(prefix="/groups", tags=["Group Management"])
 
 
 class AddOwnerToGroupRequest(BaseModel):
-    user_id: UUID
+    principal_id: UUID
 
 
 class AddOwnerToGroupResponse(BaseModel):
     group_id: UUID
-    user_id: UUID
+    principal_id: UUID
     message: str
 
 
@@ -54,7 +54,7 @@ def add_owner_to_group(
     Promote an existing member to owner of a group.
 
     - **group_id**: ID of the group (path parameter)
-    - **user_id**: ID of the user to promote to owner
+    - **principal_id**: ID of the principal to promote to owner
     - **Authorization**: Bearer token required (access_token cookie)
     - **Permission**: Only group owners can add new owners
 
@@ -66,14 +66,14 @@ def add_owner_to_group(
         command = AddOwnerToGroupCommand(
             requester_id=current_user.user_id,
             group_id=group_id,
-            principal_id=request.user_id,
+            principal_id=request.principal_id,
         )
 
         usecase.execute(command)
 
         return AddOwnerToGroupResponse(
             group_id=group_id,
-            user_id=request.user_id,
+            principal_id=request.principal_id,
             message="Owner added successfully",
         )
 

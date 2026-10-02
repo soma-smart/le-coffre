@@ -129,7 +129,7 @@ function toAuditedOneTimeLink(dto: OneTimeLinkAuditItem): AuditedOneTimeLink {
     passwordId: dto.password_id,
     passwordName: dto.password_name ?? null,
     groupName: dto.group_name ?? null,
-    createdByUserId: dto.created_by_user_id,
+    createdByPrincipalId: dto.created_by_principal_id,
     createdByDisplayName: dto.created_by_display_name ?? null,
     createdAt: dto.created_at,
     expiresAt: dto.expires_at,
@@ -149,7 +149,7 @@ function toOneTimeLink(dto: OneTimeLinkSummary): OneTimeLink {
   return {
     id: dto.id,
     passwordId: dto.password_id,
-    createdByUserId: dto.created_by_user_id,
+    createdByPrincipalId: dto.created_by_principal_id,
     createdAt: dto.created_at,
     expiresAt: dto.expires_at,
     readAt: dto.read_at ?? null,

@@ -28,12 +28,12 @@ router = APIRouter(prefix="/groups", tags=["Group Management"])
 
 
 class AddMemberToGroupRequest(BaseModel):
-    user_id: UUID
+    principal_id: UUID
 
 
 class AddMemberToGroupResponse(BaseModel):
     group_id: UUID
-    user_id: UUID
+    principal_id: UUID
     message: str
 
 
@@ -53,7 +53,7 @@ def add_member_to_group(
     Add a user as a member to a group.
 
     - **group_id**: ID of the group (path parameter)
-    - **user_id**: ID of the user to add as a member
+    - **principal_id**: ID of the principal to add as a member
     - **Authorization**: Bearer token required (access_token cookie)
     - **Permission**: Only group owners can add members
 
@@ -65,14 +65,14 @@ def add_member_to_group(
         command = AddUserToGroupCommand(
             requester_id=current_user.user_id,
             group_id=group_id,
-            principal_id=request.user_id,
+            principal_id=request.principal_id,
         )
 
         usecase.execute(command)
 
         return AddMemberToGroupResponse(
             group_id=group_id,
-            user_id=request.user_id,
+            principal_id=request.principal_id,
             message="Member added successfully",
         )
 

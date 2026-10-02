@@ -56,7 +56,7 @@ function makeGroup(overrides: Partial<Group> = {}): Group {
     id: 'g1',
     name: 'Team',
     isPersonal: false,
-    userId: null,
+    principalId: null,
     owners: [],
     members: [],
     ...overrides,
@@ -81,7 +81,7 @@ describe('useGroupsStore', () => {
 
   it('partitions fetched groups into personal vs shared and identifies the user personal group', async () => {
     groupRepo.seed(
-      makeGroup({ id: 'personal-1', name: 'My Stuff', isPersonal: true, userId: 'u1' }),
+      makeGroup({ id: 'personal-1', name: 'My Stuff', isPersonal: true, principalId: 'u1' }),
     )
     groupRepo.seed(makeGroup({ id: 'shared-1', name: 'Engineering' }))
     groupRepo.seed(makeGroup({ id: 'shared-2', name: 'Ops' }))
@@ -103,7 +103,9 @@ describe('useGroupsStore', () => {
     // Personal groups still need u1 in owners[] for membership predicates;
     // userId is a domain field that flags personal vs shared but doesn't
     // imply membership on its own.
-    groupRepo.seed(makeGroup({ id: 'personal-1', isPersonal: true, userId: 'u1', owners: ['u1'] }))
+    groupRepo.seed(
+      makeGroup({ id: 'personal-1', isPersonal: true, principalId: 'u1', owners: ['u1'] }),
+    )
     groupRepo.seed(makeGroup({ id: 'owned', name: 'Owned', owners: ['u1'] }))
     groupRepo.seed(makeGroup({ id: 'member', name: 'Member', members: ['u1'] }))
     groupRepo.seed(makeGroup({ id: 'outside', name: 'Outside', owners: ['u2'] }))
@@ -239,7 +241,7 @@ describe('useGroupsStore', () => {
   })
 
   it('clear() wipes every state ref and the cache', async () => {
-    groupRepo.seed(makeGroup({ id: 'personal-1', isPersonal: true, userId: 'u1' }))
+    groupRepo.seed(makeGroup({ id: 'personal-1', isPersonal: true, principalId: 'u1' }))
     groupRepo.seed(makeGroup({ id: 'shared-1' }))
     const { stores } = mountWithContext(container, pinia)
     await stores.groups.fetchAllGroups()

@@ -40,7 +40,7 @@ function makeEvent(overrides: Partial<UserPasswordEvent>): UserPasswordEvent {
     eventType: 'PasswordCreatedEvent',
     occurredOn: yesterday.toISOString(),
     passwordId: 'pwd-1',
-    actorUserId: 'user-1',
+    actorPrincipalId: 'user-1',
     eventData: {},
     ...overrides,
   }

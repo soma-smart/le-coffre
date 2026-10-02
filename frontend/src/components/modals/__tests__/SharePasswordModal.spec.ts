@@ -57,7 +57,7 @@ function seedGroups() {
       id: 'owner-group',
       name: 'Owner',
       isPersonal: true,
-      userId: 'user-1',
+      principalId: 'user-1',
       owners: ['user-1'],
       members: [],
     },
@@ -65,7 +65,7 @@ function seedGroups() {
       id: 'team-group',
       name: 'Team',
       isPersonal: false,
-      userId: null,
+      principalId: null,
       owners: ['user-1'],
       members: ['user-1', 'user-2'],
     },
@@ -126,7 +126,7 @@ describe('SharePasswordModal', () => {
       resourceId: 'pwd-1',
       users: [
         {
-          userId: 'user-1',
+          principalId: 'user-1',
           groupId: 'owner-group',
           roleInGroup: 'owner',
           groupRole: 'owner',
@@ -134,7 +134,7 @@ describe('SharePasswordModal', () => {
           expiresAt: null,
         },
         {
-          userId: 'user-2',
+          principalId: 'user-2',
           groupId: 'team-group',
           roleInGroup: 'member',
           groupRole: 'member',

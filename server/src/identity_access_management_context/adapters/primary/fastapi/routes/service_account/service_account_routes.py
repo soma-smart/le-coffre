@@ -63,7 +63,7 @@ class ServiceAccountSummary(BaseModel):
     id: UUID
     group_id: UUID
     name: str
-    created_by_user_id: UUID | None
+    created_by_principal_id: UUID | None
     created_by_user_name: str | None
     created_at: datetime | None
     revoked_at: datetime | None
@@ -168,7 +168,7 @@ def list_service_accounts(
                     id=item.id,
                     group_id=item.group_id,
                     name=item.name,
-                    created_by_user_id=item.created_by_principal_id,
+                    created_by_principal_id=item.created_by_principal_id,
                     created_by_user_name=item.created_by_user_name,
                     created_at=item.created_at,
                     revoked_at=item.revoked_at,

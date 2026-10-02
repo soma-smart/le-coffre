@@ -9,7 +9,7 @@ describe('DeleteGroupUseCase', () => {
       id: 'g1',
       name: 'Team',
       isPersonal: false,
-      userId: null,
+      principalId: null,
       owners: [],
       members: [],
     })

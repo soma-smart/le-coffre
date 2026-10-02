@@ -7,7 +7,7 @@
 export interface OneTimeLink {
   id: string
   passwordId: string
-  createdByUserId: string
+  createdByPrincipalId: string
   createdAt: string
   expiresAt: string
   readAt: string | null

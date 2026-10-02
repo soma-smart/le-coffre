@@ -65,7 +65,7 @@ class CreateOneTimeLinkResponse(BaseModel):
 class OneTimeLinkSummary(BaseModel):
     id: UUID
     password_id: UUID
-    created_by_user_id: UUID
+    created_by_principal_id: UUID
     created_at: datetime
     expires_at: datetime
     read_at: datetime | None
@@ -174,7 +174,7 @@ def list_one_time_links(
                 OneTimeLinkSummary(
                     id=link.id,
                     password_id=link.password_id,
-                    created_by_user_id=link.created_by_principal_id,
+                    created_by_principal_id=link.created_by_principal_id,
                     created_at=link.created_at,
                     expires_at=link.expires_at,
                     read_at=link.read_at,

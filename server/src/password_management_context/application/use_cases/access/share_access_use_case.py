@@ -83,7 +83,7 @@ class ShareAccessUseCase(TracedUseCase):
             extra={
                 "password_id": str(command.password_id),
                 "shared_with_group_id": str(command.group_id),
-                "by_user_id": str(command.owner_id),
+                "by_principal_id": str(command.owner_id),
                 "expires_at": expires_at.isoformat() if expires_at else None,
             },
         )

@@ -10,8 +10,8 @@ export interface Group {
   id: string
   name: string
   isPersonal: boolean
-  /** For personal groups, the id of the owning user; null for shared groups. */
-  userId: string | null
+  /** For personal groups, the id of the owning principal; null for shared groups. */
+  principalId: string | null
   owners: string[]
   members: string[]
 }
@@ -20,7 +20,7 @@ export interface GroupEvent {
   eventId: string
   eventType: string
   occurredOn: string
-  actorUserId: string
+  actorPrincipalId: string
   actorEmail: string | null
   eventData: Record<string, unknown>
 }

@@ -119,7 +119,11 @@ const loadAccessList = async () => {
 
     const byUser = new Map<string, UserAccessView>()
     for (const link of access.users) {
-      const view = byUser.get(link.userId) ?? { userId: link.userId, loadingName: true, links: [] }
+      const view = byUser.get(link.principalId) ?? {
+        userId: link.principalId,
+        loadingName: true,
+        links: [],
+      }
       view.links.push({
         groupId: link.groupId,
         groupName: groupName(link.groupId),
@@ -127,7 +131,7 @@ const loadAccessList = async () => {
         groupRole: link.groupRole,
         expiresAt: link.expiresAt,
       })
-      byUser.set(link.userId, view)
+      byUser.set(link.principalId, view)
     }
     userAccessList.value = Array.from(byUser.values())
 
