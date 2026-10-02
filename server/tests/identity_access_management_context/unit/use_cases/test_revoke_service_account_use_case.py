@@ -45,7 +45,7 @@ def groups(group_repository, group_member_repository):
 @pytest.fixture
 def create_use_case(
     service_account_repository,
-    service_account_token_credential_record_repository,
+    token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -54,7 +54,7 @@ def create_use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
-        service_account_token_credential_record_repository,
+        token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -66,7 +66,7 @@ def create_use_case(
 @pytest.fixture
 def use_case(
     service_account_repository,
-    service_account_token_credential_record_repository,
+    token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -74,7 +74,7 @@ def use_case(
 ):
     return RevokeServiceAccountUseCase(
         service_account_repository,
-        service_account_token_credential_record_repository,
+        token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -106,11 +106,11 @@ def test_given_an_active_account_when_revoking_then_it_becomes_inactive(
 
 
 def test_given_an_active_account_when_revoking_then_its_token_records_are_deleted(
-    use_case, owner, account, service_account_token_credential_record_repository
+    use_case, owner, account, token_credential_record_repository
 ):
     _revoke(use_case, owner, account.id)
 
-    assert service_account_token_credential_record_repository.list_by_principal_id(account.id) == []
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
 
 
 def test_given_a_revoked_account_when_listing_the_group_then_the_row_survives(

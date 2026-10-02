@@ -12,9 +12,9 @@ from identity_access_management_context.adapters.secondary.sql import (
     PasswordCredentialRecordTable,
     PrincipalTable,
     ServiceAccountPrincipalTable,
-    ServiceAccountTokenCredentialRecordTable,
     SsoConfigurationTable,
     SSOCredentialRecordTable,
+    TokenCredentialRecordTable,
     UserPrincipalTable,
 )
 from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
@@ -47,7 +47,7 @@ _ = (
     VaultEventTable,
     IamEventTable,
     ServiceAccountPrincipalTable,
-    ServiceAccountTokenCredentialRecordTable,
+    TokenCredentialRecordTable,
 )
 
 # this is the Alembic Config object, which provides

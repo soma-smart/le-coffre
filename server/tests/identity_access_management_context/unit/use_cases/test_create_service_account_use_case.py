@@ -54,7 +54,7 @@ def groups(group_repository, group_member_repository):
 @pytest.fixture
 def use_case(
     service_account_repository,
-    service_account_token_credential_record_repository,
+    token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -63,7 +63,7 @@ def use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
-        service_account_token_credential_record_repository,
+        token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -77,14 +77,14 @@ def _create(use_case, user, name="nightly-backup", group_id=GROUP_ID):
 
 
 def test_given_an_owner_when_creating_then_returns_a_token_and_stores_only_its_hash(
-    use_case, owner, groups, service_account_repository, service_account_token_credential_record_repository
+    use_case, owner, groups, service_account_repository, token_credential_record_repository
 ):
     response = _create(use_case, owner)
 
     stored = list(service_account_repository.list_for_groups((GROUP_ID,)))
     assert len(stored) == 1
     assert stored[0].is_active
-    (credential_record,) = service_account_token_credential_record_repository.list_by_principal_id(stored[0].id)
+    (credential_record,) = token_credential_record_repository.list_by_principal_id(stored[0].id)
     assert credential_record.token_hash == hashlib.sha256(response.token.encode()).hexdigest()
     assert credential_record.token_hash != response.token
 

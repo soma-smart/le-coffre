@@ -4,9 +4,9 @@ from .group_member import GroupMember
 from .password_credential_record import PasswordCredentialRecord
 from .personal_group import PersonalGroup
 from .service_account import ServiceAccount
-from .service_account_token_credential_record import ServiceAccountTokenCredentialRecord
 from .sso_configuration import SsoConfiguration
 from .sso_credential_record import SSOCredentialRecord
+from .token_credential_record import TokenCredentialRecord
 from .user import User
 
 __all__ = [
@@ -15,7 +15,7 @@ __all__ = [
     "SsoConfiguration",
     "PasswordCredentialRecord",
     "SSOCredentialRecord",
-    "ServiceAccountTokenCredentialRecord",
+    "TokenCredentialRecord",
     "PersonalGroup",
     "Group",
     "GroupMember",

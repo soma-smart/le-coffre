@@ -27,12 +27,12 @@ from .fakes import (
     FakeRevokedTokenRepository,
     FakeServiceAccountEventRepository,
     FakeServiceAccountRepository,
-    FakeServiceAccountTokenCredentialRecordRepository,
     FakeSsoConfigurationRepository,
     FakeSSOCredentialRecordRepository,
     FakeSsoEncryptionGateway,
     FakeSsoEventRepository,
     FakeSsoGateway,
+    FakeTokenCredentialRecordRepository,
     FakeTokenGateway,
     FakeUserEventRepository,
     FakeUserRepository,
@@ -192,8 +192,8 @@ def service_account_repository():
 
 
 @pytest.fixture
-def service_account_token_credential_record_repository():
-    return FakeServiceAccountTokenCredentialRecordRepository()
+def token_credential_record_repository():
+    return FakeTokenCredentialRecordRepository()
 
 
 @pytest.fixture

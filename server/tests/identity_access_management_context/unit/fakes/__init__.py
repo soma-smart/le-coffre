@@ -12,12 +12,12 @@ from .fake_principal_repository import FakePrincipalRepository
 from .fake_revoked_token_repository import FakeRevokedTokenRepository
 from .fake_service_account_event_repository import FakeServiceAccountEventRepository
 from .fake_service_account_repository import FakeServiceAccountRepository
-from .fake_service_account_token_credential_record_repository import FakeServiceAccountTokenCredentialRecordRepository
 from .fake_sso_configuration_repository import FakeSsoConfigurationRepository
 from .fake_sso_credential_record_repository import FakeSSOCredentialRecordRepository
 from .fake_sso_encryption_gateway import FakeSsoEncryptionGateway
 from .fake_sso_event_repository import FakeSsoEventRepository
 from .fake_sso_gateway import FakeSsoGateway
+from .fake_token_credential_record_repository import FakeTokenCredentialRecordRepository
 from .fake_token_gateway import FakeTokenGateway
 from .fake_user_event_repository import FakeUserEventRepository
 from .fake_user_repository import FakeUserRepository
@@ -44,6 +44,6 @@ __all__ = [
     "FakeAdminEventRepository",
     "FakeAuthSessionRepository",
     "FakeServiceAccountRepository",
-    "FakeServiceAccountTokenCredentialRecordRepository",
+    "FakeTokenCredentialRecordRepository",
     "FakeServiceAccountEventRepository",
 ]

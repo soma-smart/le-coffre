@@ -24,7 +24,7 @@ depends_on: Union[str, Sequence[str], None] = None
 REVOKED_TOKEN_CREDENTIALS = """
     SELECT c.id FROM iam__credential c
     JOIN iam__principal__service_account sa ON sa.principal_id = c.principal_id
-    WHERE c.kind = 'service_account_token' AND sa.revoked_at IS NOT NULL
+    WHERE c.kind = 'token' AND sa.revoked_at IS NOT NULL
 """
 
 
@@ -32,7 +32,7 @@ def upgrade() -> None:
     """Upgrade schema."""
     # Details first: the cascade does not run where foreign keys are not enforced.
     op.execute(sa.text(
-        f"DELETE FROM iam__credential__service_account_token WHERE credential_id IN ({REVOKED_TOKEN_CREDENTIALS})"
+        f"DELETE FROM iam__credential__token WHERE credential_id IN ({REVOKED_TOKEN_CREDENTIALS})"
     ))
     op.execute(sa.text(f"DELETE FROM iam__credential WHERE id IN ({REVOKED_TOKEN_CREDENTIALS})"))
 

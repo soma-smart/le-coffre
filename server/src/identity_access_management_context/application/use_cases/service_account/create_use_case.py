@@ -5,16 +5,16 @@ from identity_access_management_context.application.commands import CreateServic
 from identity_access_management_context.application.gateways import (
     ServiceAccountEventRepository,
     ServiceAccountRepository,
-    ServiceAccountTokenCredentialRecordRepository,
+    TokenCredentialRecordRepository,
 )
 from identity_access_management_context.application.responses import CreateServiceAccountResponse
 from identity_access_management_context.application.services import ServiceAccountPermissionService
-from identity_access_management_context.domain.entities import ServiceAccount, ServiceAccountTokenCredentialRecord
+from identity_access_management_context.domain.entities import ServiceAccount, TokenCredentialRecord
 from identity_access_management_context.domain.events import ServiceAccountCreatedEvent
 from identity_access_management_context.domain.exceptions import (
     TooManyActiveServiceAccountsError,
 )
-from identity_access_management_context.domain.value_objects import ServiceAccountToken
+from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 from ._use_case import ServiceAccountUseCase
@@ -24,12 +24,12 @@ class CreateServiceAccountUseCase(
     ServiceAccountUseCase[CreateServiceAccountCommand, ServiceAccountCreatedEvent, CreateServiceAccountResponse]
 ):
     _max_active_accounts: int
-    _token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository
+    _token_credential_record_repository: TokenCredentialRecordRepository
 
     def __init__(
         self,
         service_account_repository: ServiceAccountRepository,
-        token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         permission_service: ServiceAccountPermissionService,
         event_publisher: DomainEventPublisher,
         service_account_event_repository: ServiceAccountEventRepository,
@@ -71,11 +71,11 @@ class CreateServiceAccountUseCase(
 
         # Create the service account
         now = self._time_provider.get_current_time()
-        token = ServiceAccountToken.generate()
+        token = TokenCredential.generate()
         account = ServiceAccount.create(group_id=command.group_id, name=name)
         self._repository.create((account,))
         self._token_credential_record_repository.create(
-            (ServiceAccountTokenCredentialRecord(principal_id=account.id, token_hash=token.hash),)
+            (TokenCredentialRecord(principal_id=account.id, token_hash=token.hash),)
         )
 
         event = ServiceAccountCreatedEvent(

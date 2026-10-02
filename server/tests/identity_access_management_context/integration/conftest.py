@@ -10,8 +10,8 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlRevokedTokenRepository,
     SqlServiceAccountEventRepository,
     SqlServiceAccountRepository,
-    SqlServiceAccountTokenCredentialRecordRepository,
     SqlSSOCredentialRecordRepository,
+    SqlTokenCredentialRecordRepository,
     SqlUserRepository,
 )
 
@@ -74,8 +74,8 @@ def sql_service_account_repository(session):
 
 
 @pytest.fixture(scope="function")
-def sql_service_account_token_credential_record_repository(session):
-    return SqlServiceAccountTokenCredentialRecordRepository(session)
+def sql_token_credential_record_repository(session):
+    return SqlTokenCredentialRecordRepository(session)
 
 
 @pytest.fixture(scope="function")

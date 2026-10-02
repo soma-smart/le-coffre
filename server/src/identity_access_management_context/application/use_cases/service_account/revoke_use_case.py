@@ -5,7 +5,7 @@ from identity_access_management_context.application.commands import RevokeServic
 from identity_access_management_context.application.gateways import (
     ServiceAccountEventRepository,
     ServiceAccountRepository,
-    ServiceAccountTokenCredentialRecordRepository,
+    TokenCredentialRecordRepository,
 )
 from identity_access_management_context.application.responses import RevokeServiceAccountResponse
 from identity_access_management_context.application.services.service_account_permission_service import (
@@ -24,12 +24,12 @@ from ._use_case import ServiceAccountUseCase
 class RevokeServiceAccountUseCase(
     ServiceAccountUseCase[RevokeServiceAccountCommand, ServiceAccountRevokedEvent, RevokeServiceAccountResponse]
 ):
-    _token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository
+    _token_credential_record_repository: TokenCredentialRecordRepository
 
     def __init__(
         self,
         service_account_repository: ServiceAccountRepository,
-        token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         permission_service: ServiceAccountPermissionService,
         event_publisher: DomainEventPublisher,
         service_account_event_repository: ServiceAccountEventRepository,

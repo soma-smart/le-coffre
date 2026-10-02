@@ -7,9 +7,9 @@ from .model.password_credential_model import PasswordCredentialRecordTable
 from .model.principal_model import PrincipalKind, PrincipalTable
 from .model.revoked_token_model import RevokedTokenTable
 from .model.service_account_model import ServiceAccountPrincipalTable
-from .model.service_account_token_credential_model import ServiceAccountTokenCredentialRecordTable
 from .model.sso_configuration_model import SsoConfigurationTable
 from .model.sso_credential_model import SSOCredentialRecordTable
+from .model.token_credential_model import TokenCredentialRecordTable
 from .model.users_model import UserPrincipalTable
 from .sql_auth_session_repository import SqlAuthSessionRepository
 from .sql_group_member_repository import SqlGroupMemberRepository
@@ -20,9 +20,9 @@ from .sql_principal_repository import SQLPrincipalRepository
 from .sql_revoked_token_repository import SqlRevokedTokenRepository
 from .sql_service_account_event_repository import SqlServiceAccountEventRepository
 from .sql_service_account_repository import SqlServiceAccountRepository
-from .sql_service_account_token_credential_record_repository import SqlServiceAccountTokenCredentialRecordRepository
 from .sql_sso_configuration_repository import SqlSsoConfigurationRepository
 from .sql_sso_credential_record_repository import SqlSSOCredentialRecordRepository
+from .sql_token_credential_record_repository import SqlTokenCredentialRecordRepository
 from .sql_user_repository import SqlUserRepository
 
 __all__ = [
@@ -46,12 +46,12 @@ __all__ = [
     "UserPrincipalTable",
     "PasswordCredentialRecordTable",
     "ServiceAccountPrincipalTable",
-    "ServiceAccountTokenCredentialRecordTable",
+    "TokenCredentialRecordTable",
     "CredentialKind",
     "CredentialRecordTable",
     "PrincipalKind",
     "PrincipalTable",
     "SqlServiceAccountRepository",
-    "SqlServiceAccountTokenCredentialRecordRepository",
+    "SqlTokenCredentialRecordRepository",
     "SqlServiceAccountEventRepository",
 ]
