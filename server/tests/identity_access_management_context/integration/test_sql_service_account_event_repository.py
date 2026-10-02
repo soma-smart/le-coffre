@@ -6,7 +6,7 @@ from identity_access_management_context.domain.events import (
     ServiceAccountRevokedEvent,
     ServiceAccountsListedEvent,
 )
-from identity_access_management_context.domain.value_objects import ServiceAccountToken
+from identity_access_management_context.domain.value_objects import TokenCredential
 
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
@@ -109,7 +109,7 @@ def test_given_stored_events_then_no_token_or_hash_reaches_the_audit_rows(
 
     from identity_access_management_context.adapters.secondary.sql import IamEventTable
 
-    token = ServiceAccountToken.generate()
+    token = TokenCredential.generate()
     sql_service_account_event_repository.extend([_created(uuid4(), uuid4())])
     session.expunge_all()
 

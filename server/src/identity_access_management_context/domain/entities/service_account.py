@@ -14,7 +14,7 @@ class ServiceAccount(Principal):
     """A group-owned machine identity.
 
     Its token is not a field: what proves the account is a separate
-    ServiceAccountTokenCredentialRecord, which rotation replaces.
+    TokenCredentialRecord, which rotation replaces.
 
     Rows survive revocation so the group's credential history stays auditable,
     which is why "revoked" is a timestamp rather than a deletion.

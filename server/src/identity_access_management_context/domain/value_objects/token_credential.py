@@ -4,13 +4,13 @@ from dataclasses import dataclass, field
 from functools import cached_property
 from typing import ClassVar
 
-from identity_access_management_context.domain.exceptions import InvalidServiceAccountTokenError
+from identity_access_management_context.domain.exceptions import InvalidTokenCredentialError
 from shared_kernel.domain.value_objects.credential import Credential
 
 
 @dataclass(frozen=True)
-class ServiceAccountToken(Credential):
-    """The secret handed to a service account's operator, and the proof it presents.
+class TokenCredential(Credential):
+    """The secret issued to a principal, and the proof it presents.
 
     Domain Rules:
     - only ever built from generate(), or parsed back from an incoming request
@@ -34,10 +34,10 @@ class ServiceAccountToken(Credential):
 
     def __post_init__(self) -> None:
         if len(self.value) < self._n_char_min:
-            raise InvalidServiceAccountTokenError()
+            raise InvalidTokenCredentialError()
 
     @classmethod
-    def generate(cls) -> "ServiceAccountToken":
+    def generate(cls) -> "TokenCredential":
         return cls(value=secrets.token_urlsafe(cls._n_token_bytes))
 
     @property

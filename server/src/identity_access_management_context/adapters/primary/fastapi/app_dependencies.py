@@ -33,9 +33,9 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlRevokedTokenRepository,
     SqlServiceAccountEventRepository,
     SqlServiceAccountRepository,
-    SqlServiceAccountTokenCredentialRecordRepository,
     SqlSsoConfigurationRepository,
     SqlSSOCredentialRecordRepository,
+    SqlTokenCredentialRecordRepository,
     SqlUserRepository,
 )
 from identity_access_management_context.application.gateways import (
@@ -54,12 +54,12 @@ from identity_access_management_context.application.gateways import (
     RevokedTokenRepository,
     ServiceAccountEventRepository,
     ServiceAccountRepository,
-    ServiceAccountTokenCredentialRecordRepository,
     SsoConfigurationRepository,
     SSOCredentialRecordRepository,
     SsoEncryptionGateway,
     SsoEventRepository,
     SsoGateway,
+    TokenCredentialRecordRepository,
     TokenGateway,
     UserEventRepository,
     UserRepository,
@@ -149,10 +149,10 @@ def get_service_account_repository(
     return SqlServiceAccountRepository(session)
 
 
-def get_service_account_token_credential_record_repository(
+def get_token_credential_record_repository(
     session: Session = Depends(get_session),
-) -> ServiceAccountTokenCredentialRecordRepository:
-    return SqlServiceAccountTokenCredentialRecordRepository(session)
+) -> TokenCredentialRecordRepository:
+    return SqlTokenCredentialRecordRepository(session)
 
 
 def get_service_account_event_repository(
@@ -729,8 +729,8 @@ def get_delete_group_usecase(
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
-    service_account_token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository = Depends(
-        get_service_account_token_credential_record_repository
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
     ),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
@@ -742,7 +742,7 @@ def get_delete_group_usecase(
         group_event_repository,
         service_account_repository,
         service_account_event_repository,
-        service_account_token_credential_record_repository,
+        token_credential_record_repository,
         time_provider,
     )
 
@@ -756,8 +756,8 @@ def get_statistic_for_admin_usecase(
 
 def get_create_service_account_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository = Depends(
-        get_service_account_token_credential_record_repository
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
     ),
     permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
@@ -800,8 +800,8 @@ def get_list_service_accounts_usecase(
 
 def get_rotate_service_account_token_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository = Depends(
-        get_service_account_token_credential_record_repository
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
     ),
     permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
@@ -933,8 +933,8 @@ def get_revoke_extension_token_usecase(
 
 def get_revoke_service_account_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository = Depends(
-        get_service_account_token_credential_record_repository
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
     ),
     permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),

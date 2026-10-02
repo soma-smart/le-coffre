@@ -337,7 +337,7 @@ def test_credentials_migration_moves_every_verifier_to_its_principal(alembic_con
 
         passwords = credentials("password", "d.email, d.password_hash")
         sso = credentials("sso", "d.provider, d.subject")
-        tokens = credentials("service_account_token", "d.token_hash")
+        tokens = credentials("token", "d.token_hash")
         registered = conn.execute(text("SELECT count(*) FROM iam__credential")).scalar_one()
         account_columns = {
             row[1] for row in conn.execute(text("PRAGMA table_info(iam__principal__service_account)")).all()
@@ -387,16 +387,11 @@ def test_revoked_tokens_migration_deletes_only_revoked_accounts_tokens(alembic_c
                 {"id": principal_id.hex, "group_id": uuid4().hex, "revoked_at": revoked_at},
             )
             conn.execute(
-                text(
-                    "INSERT INTO iam__credential (id, kind, principal_id) "
-                    "VALUES (:id, 'service_account_token', :principal_id)"
-                ),
+                text("INSERT INTO iam__credential (id, kind, principal_id) VALUES (:id, 'token', :principal_id)"),
                 {"id": credential_id.hex, "principal_id": principal_id.hex},
             )
             conn.execute(
-                text(
-                    "INSERT INTO iam__credential__service_account_token (credential_id, token_hash) VALUES (:id, :hash)"
-                ),
+                text("INSERT INTO iam__credential__token (credential_id, token_hash) VALUES (:id, :hash)"),
                 {"id": credential_id.hex, "hash": f"hash-{principal_id.hex}"},
             )
     engine.dispose()
@@ -405,7 +400,7 @@ def test_revoked_tokens_migration_deletes_only_revoked_accounts_tokens(alembic_c
     engine = create_engine(database_url)
     with engine.connect() as conn:
         registered = conn.execute(text("SELECT principal_id FROM iam__credential")).scalars().all()
-        hashes = conn.execute(text("SELECT token_hash FROM iam__credential__service_account_token")).scalars().all()
+        hashes = conn.execute(text("SELECT token_hash FROM iam__credential__token")).scalars().all()
     engine.dispose()
 
     assert registered == [active_id.hex]

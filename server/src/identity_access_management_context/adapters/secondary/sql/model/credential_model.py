@@ -12,7 +12,7 @@ class CredentialKind(StrEnum):
     """Which per-kind table holds a credential's verifier."""
 
     PASSWORD = "password"  # noqa: S105
-    SERVICE_ACCOUNT_TOKEN = "service_account_token"  # noqa: S105
+    TOKEN = "token"  # noqa: S105
     SSO = "sso"
 
 

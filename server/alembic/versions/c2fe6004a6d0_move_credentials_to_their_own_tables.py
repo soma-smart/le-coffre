@@ -4,7 +4,7 @@ Every stored verifier becomes a credential: a row in the credential registry
 (`iam__credential`), naming its kind and the principal it proves, plus one
 details table per kind. `UserPassword` -> `iam__credential__password`,
 `SsoUser` -> `iam__credential__sso`, and the service-account token hash ->
-`iam__credential__service_account_token`. The email and display-name copies
+`iam__credential__token`. The email and display-name copies
 kept next to the SSO subject and the password are dropped, except the
 password's email, which is what a user logs in with.
 
@@ -40,7 +40,7 @@ def upgrade() -> None:
     """Upgrade schema."""
     op.create_table('iam__credential',
     sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('kind', sa.Enum('password', 'service_account_token', 'sso', name='credential_kind', native_enum=False, create_constraint=True), nullable=False),
+    sa.Column('kind', sa.Enum('password', 'token', 'sso', name='credential_kind', native_enum=False, create_constraint=True), nullable=False),
     sa.Column('principal_id', sa.Uuid(), nullable=False),
     sa.ForeignKeyConstraint(['principal_id'], ['iam__principal.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
@@ -64,13 +64,13 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('credential_id'),
     sa.UniqueConstraint('provider', 'subject')
     )
-    op.create_table('iam__credential__service_account_token',
+    op.create_table('iam__credential__token',
     sa.Column('credential_id', sa.Uuid(), nullable=False),
     sa.Column('token_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.ForeignKeyConstraint(['credential_id'], ['iam__credential.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('credential_id')
     )
-    op.create_index(op.f('ix_iam__credential__service_account_token_token_hash'), 'iam__credential__service_account_token', ['token_hash'], unique=True)
+    op.create_index(op.f('ix_iam__credential__token_token_hash'), 'iam__credential__token', ['token_hash'], unique=True)
 
     bind = op.get_bind()
     principal_ids = set(bind.execute(sa.select(sa.column('id', sa.Uuid())).select_from(sa.table('iam__principal'))).scalars())
@@ -108,11 +108,11 @@ def upgrade() -> None:
         'provider', 'subject', 'created_at', 'last_login',
     )
     move(
-        'service_account_token',
+        'token',
         sa.select(sa.column('principal_id', sa.Uuid()), sa.column('token_hash')).select_from(
             sa.table('iam__principal__service_account')
         ),
-        'iam__credential__service_account_token',
+        'iam__credential__token',
         'token_hash',
     )
 
@@ -168,7 +168,7 @@ def downgrade() -> None:
     op.execute(sa.text("""
         UPDATE iam__principal__service_account SET token_hash = (
             SELECT d.token_hash
-            FROM iam__credential c JOIN iam__credential__service_account_token d ON d.credential_id = c.id
+            FROM iam__credential c JOIN iam__credential__token d ON d.credential_id = c.id
             WHERE c.principal_id = iam__principal__service_account.principal_id
         )
     """))
@@ -176,8 +176,8 @@ def downgrade() -> None:
         batch_op.alter_column('token_hash', existing_type=sqlmodel.sql.sqltypes.AutoString(), nullable=False)
     op.create_index(op.f('ix_iam__principal__service_account_token_hash'), 'iam__principal__service_account', ['token_hash'], unique=True)
 
-    op.drop_index(op.f('ix_iam__credential__service_account_token_token_hash'), table_name='iam__credential__service_account_token')
-    op.drop_table('iam__credential__service_account_token')
+    op.drop_index(op.f('ix_iam__credential__token_token_hash'), table_name='iam__credential__token')
+    op.drop_table('iam__credential__token')
     op.drop_table('iam__credential__sso')
     op.drop_table('iam__credential__password')
     op.drop_index(op.f('ix_iam__credential_principal_id'), table_name='iam__credential')
