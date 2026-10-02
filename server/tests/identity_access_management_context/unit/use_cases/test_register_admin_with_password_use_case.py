@@ -63,9 +63,7 @@ def test_should_register_first_admin_with_password_and_return_user_id(
 
     assert result == user_id
 
-    saved_credential = password_credential_record_repository.get_by_principal_id(user_id)
-
-    assert saved_credential
+    (saved_credential,) = password_credential_record_repository.list_by_principal_id(user_id)
     assert saved_credential.principal_id == user_id
     assert saved_credential.email == email
     assert saved_credential.password_hash == b"hashed(securepass12345!)"
@@ -117,9 +115,7 @@ def test_should_hash_password_before_storing_credentials(
 
     use_case.execute(command)
 
-    saved_credential = password_credential_record_repository.get_by_principal_id(user_id)
-
-    assert saved_credential
+    (saved_credential,) = password_credential_record_repository.list_by_principal_id(user_id)
     assert saved_credential.password_hash == b"hashed(my_plain_password)"
     assert saved_credential.password_hash != plain_password
 
@@ -205,7 +201,7 @@ class TestPasswordPolicyEnforcement:
             use_case.execute(command)
 
         # A rejected password must persist nothing: no orphaned admin credentials.
-        assert password_credential_record_repository.get_by_principal_id(user_id) is None
+        assert password_credential_record_repository.list_by_principal_id(user_id) == []
 
     def test_should_reject_a_well_known_common_password(
         self,
@@ -220,7 +216,7 @@ class TestPasswordPolicyEnforcement:
         with pytest.raises(CommonPasswordError):
             use_case.execute(command)
 
-        assert password_credential_record_repository.get_by_principal_id(user_id) is None
+        assert password_credential_record_repository.list_by_principal_id(user_id) == []
 
     def test_should_accept_a_password_merely_containing_a_common_word(
         self,
@@ -237,4 +233,4 @@ class TestPasswordPolicyEnforcement:
         result = use_case.execute(command)
 
         assert result == user_id
-        assert password_credential_record_repository.get_by_principal_id(user_id) is not None
+        assert password_credential_record_repository.list_by_principal_id(user_id) != []

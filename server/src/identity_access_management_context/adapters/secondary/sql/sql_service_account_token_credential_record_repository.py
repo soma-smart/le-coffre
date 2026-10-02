@@ -19,7 +19,7 @@ class SqlServiceAccountTokenCredentialRecordRepository(
     def __init__(self, session: Session):
         super().__init__(session)
 
-    def create(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
+    def _add(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
         details = []
         for credential_record in credential_records:
             credential_id = uuid4()
@@ -38,22 +38,32 @@ class SqlServiceAccountTokenCredentialRecordRepository(
         # Flushed first: the details reference the registry rows.
         self._session.flush()
         self._session.add_all(details)
+
+    def _delete(self, principal_ids: Iterable[UUID]) -> None:
+        holds_token = (
+            CredentialRecordTable.principal_id.in_(list(principal_ids)),  # type: ignore[attr-defined]
+            CredentialRecordTable.kind == CredentialKind.SERVICE_ACCOUNT_TOKEN,
+        )
+        # Both deleted explicitly, details first: the cascade does not run where
+        # foreign keys are not enforced.
+        self._session.exec(  # type: ignore[call-overload]
+            delete(ServiceAccountTokenCredentialRecordTable).where(
+                ServiceAccountTokenCredentialRecordTable.credential_id.in_(  # type: ignore[attr-defined]
+                    select(CredentialRecordTable.id).where(*holds_token)
+                )
+            )
+        )
+        self._session.exec(delete(CredentialRecordTable).where(*holds_token))  # type: ignore[call-overload]
+
+    def create(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
+        self._add(credential_records)
         self.commit()
 
     def replace(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
-        for credential_record in credential_records:
-            # Every account gets its credential at creation, so there is always one to replace.
-            statement = (
-                select(ServiceAccountTokenCredentialRecordTable)
-                .join(
-                    CredentialRecordTable,
-                    ServiceAccountTokenCredentialRecordTable.credential_id == CredentialRecordTable.id,
-                )
-                .where(CredentialRecordTable.principal_id == credential_record.principal_id)
-            )
-            details = self._session.exec(statement).one()
-            details.token_hash = credential_record.token_hash
-            self._session.add(details)
+        credential_records = list(credential_records)
+        # One commit for both, so an account is never left with no token or with both.
+        self._delete(credential_record.principal_id for credential_record in credential_records)
+        self._add(credential_records)
         self.commit()
 
     def get_by_token_hash(self, token_hash: str) -> ServiceAccountTokenCredentialRecord | None:
@@ -71,18 +81,5 @@ class SqlServiceAccountTokenCredentialRecordRepository(
         return ServiceAccountTokenCredentialRecord(principal_id=row[0], token_hash=row[1])
 
     def delete_by_principal_ids(self, principal_ids: Iterable[UUID]) -> None:
-        holds_token = (
-            CredentialRecordTable.principal_id.in_(list(principal_ids)),  # type: ignore[attr-defined]
-            CredentialRecordTable.kind == CredentialKind.SERVICE_ACCOUNT_TOKEN,
-        )
-        # Both deleted explicitly, details first: the cascade does not run where
-        # foreign keys are not enforced.
-        self._session.exec(  # type: ignore[call-overload]
-            delete(ServiceAccountTokenCredentialRecordTable).where(
-                ServiceAccountTokenCredentialRecordTable.credential_id.in_(  # type: ignore[attr-defined]
-                    select(CredentialRecordTable.id).where(*holds_token)
-                )
-            )
-        )
-        self._session.exec(delete(CredentialRecordTable).where(*holds_token))  # type: ignore[call-overload]
+        self._delete(principal_ids)
         self.commit()

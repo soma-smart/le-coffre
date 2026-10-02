@@ -115,8 +115,7 @@ def test_given_user_with_password_when_creating_user_should_store_hashed_passwor
 
     user_id = use_case.execute(command)
 
-    created_credential = password_credential_record_repository.get_by_principal_id(user_id)
-    assert created_credential is not None
+    (created_credential,) = password_credential_record_repository.list_by_principal_id(user_id)
     assert created_credential.principal_id == user_id
     assert created_credential.email == email
     assert created_credential.password_hash == b"hashed(secure_password123)"

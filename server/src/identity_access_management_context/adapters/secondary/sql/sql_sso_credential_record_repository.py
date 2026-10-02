@@ -64,9 +64,16 @@ class SqlSSOCredentialRecordRepository(SQLBaseRepository):
         found = self._find_by_subject(provider, subject)
         return self._to_entity(*found) if found else None
 
-    def get_by_principal_id(self, principal_id: UUID) -> SSOCredentialRecord | None:
-        found = self._find(CredentialRecordTable.principal_id == principal_id)
-        return self._to_entity(*found) if found else None
+    def _find_all(self, *conditions) -> list[tuple[CredentialRecordTable, SSOCredentialRecordTable]]:
+        statement = (
+            select(CredentialRecordTable, SSOCredentialRecordTable)
+            .join(SSOCredentialRecordTable, SSOCredentialRecordTable.credential_id == CredentialRecordTable.id)
+            .where(*conditions)
+        )
+        return [(row[0], row[1]) for row in self._session.exec(statement).all()]
+
+    def list_by_principal_id(self, principal_id: UUID) -> list[SSOCredentialRecord]:
+        return [self._to_entity(*found) for found in self._find_all(CredentialRecordTable.principal_id == principal_id)]
 
     def _find_by_subject(
         self, provider: str, subject: str

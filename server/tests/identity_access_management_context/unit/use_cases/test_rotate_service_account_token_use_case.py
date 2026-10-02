@@ -102,11 +102,12 @@ def test_given_an_active_account_when_rotating_then_the_stored_hash_is_replaced(
     time_provider,
 ):
     time_provider.set_current_time(LATER)
-    old_hash = service_account_token_credential_record_repository.credential_records[account.id].token_hash
+    (old_record,) = service_account_token_credential_record_repository.list_by_principal_id(account.id)
+    old_hash = old_record.token_hash
 
     rotated = _rotate(use_case, owner, account.id)
 
-    stored = service_account_token_credential_record_repository.credential_records[account.id]
+    (stored,) = service_account_token_credential_record_repository.list_by_principal_id(account.id)
     assert rotated.token != account.token
     assert stored.token_hash == hashlib.sha256(rotated.token.encode()).hexdigest()
     assert stored.token_hash != old_hash
@@ -155,12 +156,12 @@ def test_given_a_revoked_account_when_rotating_then_it_is_refused_and_the_hash_s
     use_case, owner, account, service_account_repository, service_account_token_credential_record_repository
 ):
     service_account_repository.revoke([account.id], NOW)
-    credential_record = service_account_token_credential_record_repository.credential_records[account.id]
+    (credential_record,) = service_account_token_credential_record_repository.list_by_principal_id(account.id)
 
     with pytest.raises(ServiceAccountAlreadyRevokedException):
         _rotate(use_case, owner, account.id)
 
-    assert service_account_token_credential_record_repository.credential_records[account.id] == credential_record
+    assert service_account_token_credential_record_repository.list_by_principal_id(account.id) == [credential_record]
 
 
 def test_given_an_account_revoked_concurrently_when_rotating_then_it_is_refused(

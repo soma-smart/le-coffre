@@ -15,6 +15,22 @@ class SqlPasswordCredentialRecordRepository(SQLBaseRepository):
     def __init__(self, session: Session):
         super().__init__(session)
 
+    @staticmethod
+    def _to_entity(registry: CredentialRecordTable, details: PasswordCredentialRecordTable) -> PasswordCredentialRecord:
+        return PasswordCredentialRecord(
+            principal_id=registry.principal_id, email=details.email, password_hash=details.password_hash
+        )
+
+    def _find_all(self, condition) -> list[tuple[CredentialRecordTable, PasswordCredentialRecordTable]]:
+        statement = (
+            select(CredentialRecordTable, PasswordCredentialRecordTable)
+            .join(
+                PasswordCredentialRecordTable, PasswordCredentialRecordTable.credential_id == CredentialRecordTable.id
+            )
+            .where(condition)
+        )
+        return [(row[0], row[1]) for row in self._session.exec(statement).all()]
+
     def save(self, credential_record: PasswordCredentialRecord) -> None:
         credential_id = uuid4()
         self._session.add(
@@ -34,47 +50,25 @@ class SqlPasswordCredentialRecordRepository(SQLBaseRepository):
         self.commit()
 
     def delete_by_principal_id(self, principal_id: UUID) -> None:
-        found = self._find(CredentialRecordTable.principal_id == principal_id)
-        if found is None:
-            return
-        registry, details = found
+        found = self._find_all(CredentialRecordTable.principal_id == principal_id)
         # Both deleted explicitly, details first: the cascade does not run where
         # foreign keys are not enforced.
-        self._session.delete(details)
+        for _, details in found:
+            self._session.delete(details)
         self._session.flush()
-        self._session.delete(registry)
+        for registry, _ in found:
+            self._session.delete(registry)
         self.commit()
 
-    def update_password_hash(self, principal_id: UUID, new_password_hash: bytes) -> None:
-        found = self._find(CredentialRecordTable.principal_id == principal_id)
-        if found is None:
-            return
-        _, details = found
-        details.password_hash = new_password_hash
-        self._session.add(details)
+    def update_password_hash(self, email: str, new_password_hash: bytes) -> None:
+        for _, details in self._find_all(PasswordCredentialRecordTable.email == email):
+            details.password_hash = new_password_hash
+            self._session.add(details)
         self.commit()
 
-    def get_by_principal_id(self, principal_id: UUID) -> PasswordCredentialRecord | None:
-        found = self._find(CredentialRecordTable.principal_id == principal_id)
-        return self._to_entity(*found) if found else None
+    def list_by_principal_id(self, principal_id: UUID) -> list[PasswordCredentialRecord]:
+        return [self._to_entity(*found) for found in self._find_all(CredentialRecordTable.principal_id == principal_id)]
 
     def get_by_email(self, email: str) -> PasswordCredentialRecord | None:
-        found = self._find(PasswordCredentialRecordTable.email == email)
-        return self._to_entity(*found) if found else None
-
-    def _find(self, condition) -> tuple[CredentialRecordTable, PasswordCredentialRecordTable] | None:
-        statement = (
-            select(CredentialRecordTable, PasswordCredentialRecordTable)
-            .join(
-                PasswordCredentialRecordTable, PasswordCredentialRecordTable.credential_id == CredentialRecordTable.id
-            )
-            .where(condition)
-        )
-        row = self._session.exec(statement).first()
-        return (row[0], row[1]) if row else None
-
-    @staticmethod
-    def _to_entity(registry: CredentialRecordTable, details: PasswordCredentialRecordTable) -> PasswordCredentialRecord:
-        return PasswordCredentialRecord(
-            principal_id=registry.principal_id, email=details.email, password_hash=details.password_hash
-        )
+        found = self._find_all(PasswordCredentialRecordTable.email == email)
+        return self._to_entity(*found[0]) if found else None

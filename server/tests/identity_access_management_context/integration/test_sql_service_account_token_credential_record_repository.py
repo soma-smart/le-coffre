@@ -75,3 +75,33 @@ def test_given_credentials_of_several_accounts_when_deleting_some_then_only_thei
     assert sql_service_account_token_credential_record_repository.get_by_token_hash(kept.token_hash) == kept
     registry = select(CredentialRecordTable).where(CredentialRecordTable.principal_id == deleted.principal_id)
     assert session.exec(registry).all() == []
+
+
+def test_given_two_tokens_of_one_account_when_looking_each_up_then_both_are_found(
+    sql_service_account_token_credential_record_repository, session
+):
+    principal_id = uuid4()
+    first, second = _credential_record(principal_id=principal_id), _credential_record(principal_id=principal_id)
+    sql_service_account_token_credential_record_repository.create([first, second])
+    session.expunge_all()
+
+    assert sql_service_account_token_credential_record_repository.get_by_token_hash(first.token_hash) == first
+    assert sql_service_account_token_credential_record_repository.get_by_token_hash(second.token_hash) == second
+
+
+def test_given_two_tokens_of_one_account_when_replacing_then_only_the_new_one_is_left(
+    sql_service_account_token_credential_record_repository, session
+):
+    principal_id = uuid4()
+    first, second = _credential_record(principal_id=principal_id), _credential_record(principal_id=principal_id)
+    sql_service_account_token_credential_record_repository.create([first, second])
+    new = _credential_record(principal_id=principal_id)
+
+    sql_service_account_token_credential_record_repository.replace([new])
+    session.expunge_all()
+
+    assert sql_service_account_token_credential_record_repository.get_by_token_hash(first.token_hash) is None
+    assert sql_service_account_token_credential_record_repository.get_by_token_hash(second.token_hash) is None
+    assert sql_service_account_token_credential_record_repository.get_by_token_hash(new.token_hash) == new
+    registry = select(CredentialRecordTable).where(CredentialRecordTable.principal_id == principal_id)
+    assert len(session.exec(registry).all()) == 1

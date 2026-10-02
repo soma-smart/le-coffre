@@ -459,3 +459,25 @@ def test_principal_kind_column_accepts_exactly_the_enum_values(alembic_config, t
     with pytest.raises(IntegrityError), engine.begin() as conn:
         conn.execute(text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'robot')"), {"id": uuid4().hex})
     engine.dispose()
+
+
+def test_a_principal_may_hold_several_credentials_of_one_kind(alembic_config, temp_database):
+    """Credentials of a kind are not limited to one per principal."""
+    database_url, _ = temp_database
+    command.upgrade(alembic_config, "head")
+    principal_id = uuid4()
+
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'user')"), {"id": principal_id.hex})
+        for _ in range(2):
+            conn.execute(
+                text("INSERT INTO iam__credential (id, kind, principal_id) VALUES (:id, 'password', :principal_id)"),
+                {"id": uuid4().hex, "principal_id": principal_id.hex},
+            )
+        registered = conn.execute(
+            text("SELECT count(*) FROM iam__credential WHERE principal_id = :id"), {"id": principal_id.hex}
+        ).scalar_one()
+    engine.dispose()
+
+    assert registered == 2

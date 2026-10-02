@@ -26,5 +26,5 @@ class FakeSSOCredentialRecordRepository:
     def get_by_subject(self, provider: str, subject: str) -> SSOCredentialRecord | None:
         return self._credential_records.get((provider, subject))
 
-    def get_by_principal_id(self, principal_id: UUID) -> SSOCredentialRecord | None:
-        return next((c for c in self._credential_records.values() if c.principal_id == principal_id), None)
+    def list_by_principal_id(self, principal_id: UUID) -> list[SSOCredentialRecord]:
+        return [c for c in self._credential_records.values() if c.principal_id == principal_id]
