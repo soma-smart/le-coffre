@@ -9,4 +9,4 @@ class GroupTable(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, nullable=False, primary_key=True, index=True)
     name: str = Field(nullable=False)
     is_personal: bool = Field(nullable=False, default=False)
-    user_id: UUID | None = Field(nullable=True, default=None, index=True)
+    principal_id: UUID | None = Field(nullable=True, default=None, index=True)

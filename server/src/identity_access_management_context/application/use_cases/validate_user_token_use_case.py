@@ -40,7 +40,7 @@ class ValidateUserTokenUseCase(TracedUseCase):
         if token_obj.jti and self._revoked_token_repository.is_revoked(token_obj.jti, now):
             raise InvalidTokenException()
 
-        authenticated_user = self._user_repository.get_by_id(token_obj.user_id)
+        authenticated_user = self._user_repository.get_by_id(token_obj.principal_id)
         if authenticated_user is None:
             raise UserNotFoundException("User not found")
         if authenticated_user.session_invalid_before is not None:
@@ -57,7 +57,7 @@ class ValidateUserTokenUseCase(TracedUseCase):
 
         return ValidateUserTokenResponse(
             is_valid=True,
-            user_id=token_obj.user_id,
+            user_id=token_obj.principal_id,
             email=authenticated_user.email,
             display_name=authenticated_user.name,
             roles=token_obj.roles if token_obj.roles else [],

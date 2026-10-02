@@ -6,4 +6,4 @@ from uuid import UUID
 class AddOwnerToGroupCommand:
     requester_id: UUID
     group_id: UUID
-    user_id: UUID
+    principal_id: UUID

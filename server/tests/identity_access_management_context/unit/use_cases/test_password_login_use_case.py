@@ -225,7 +225,7 @@ def test_should_store_admin_login_event_on_successful_login(
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminLoginEvent"
-    assert stored["actor_user_id"] == user_id
+    assert stored["actor_principal_id"] == user_id
 
 
 def test_should_store_admin_login_failed_event_on_wrong_password(
@@ -247,7 +247,7 @@ def test_should_store_admin_login_failed_event_on_wrong_password(
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminLoginFailedEvent"
-    assert stored["actor_user_id"] is None
+    assert stored["actor_principal_id"] is None
 
 
 def test_should_store_admin_login_failed_event_on_non_existent_admin(
@@ -261,7 +261,7 @@ def test_should_store_admin_login_failed_event_on_non_existent_admin(
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminLoginFailedEvent"
-    assert stored["actor_user_id"] is None
+    assert stored["actor_principal_id"] is None
 
 
 def test_given_admin_user_when_logging_in_should_receive_token_with_admin_role(

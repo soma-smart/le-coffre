@@ -15,12 +15,12 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
     def __init__(self, session: Session):
         super().__init__(session)
 
-    def add_member(self, group_id: UUID, user_id: UUID, is_owner: bool) -> None:
+    def add_member(self, group_id: UUID, principal_id: UUID, is_owner: bool) -> None:
         """Add a member to a group."""
         # Check if member already exists
         statement = select(GroupMemberTable).where(
             GroupMemberTable.group_id == group_id,
-            GroupMemberTable.user_id == user_id,
+            GroupMemberTable.principal_id == principal_id,
         )
         existing = self._session.exec(statement).first()
 
@@ -33,7 +33,7 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
             # Add new member
             member = GroupMemberTable(
                 group_id=group_id,
-                user_id=user_id,
+                principal_id=principal_id,
                 is_owner=is_owner,
             )
             self._session.add(member)
@@ -42,29 +42,29 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         if existing:
             self._session.refresh(existing)  # Refresh to ensure changes are persisted
 
-    def remove_member(self, group_id: UUID, user_id: UUID) -> None:
+    def remove_member(self, group_id: UUID, principal_id: UUID) -> None:
         """Remove a member from a group."""
         statement = delete(GroupMemberTable).where(
             GroupMemberTable.group_id == group_id,
-            GroupMemberTable.user_id == user_id,
+            GroupMemberTable.principal_id == principal_id,
         )
         self._session.execute(statement)
         self.commit()
 
-    def is_member(self, group_id: UUID, user_id: UUID) -> bool:
+    def is_member(self, group_id: UUID, principal_id: UUID) -> bool:
         """Check if a user is a member of a group."""
         statement = select(GroupMemberTable).where(
             GroupMemberTable.group_id == group_id,
-            GroupMemberTable.user_id == user_id,
+            GroupMemberTable.principal_id == principal_id,
         )
         result = self._session.exec(statement).first()
         return result is not None
 
-    def is_owner(self, group_id: UUID, user_id: UUID) -> bool:
+    def is_owner(self, group_id: UUID, principal_id: UUID) -> bool:
         """Check if a user is an owner of a group."""
         statement = select(GroupMemberTable).where(
             GroupMemberTable.group_id == group_id,
-            GroupMemberTable.user_id == user_id,
+            GroupMemberTable.principal_id == principal_id,
         )
         result = self._session.exec(statement).first()
         return result is not None and result.is_owner
@@ -76,16 +76,16 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         return [
             GroupMember(
                 group_id=result.group_id,
-                user_id=result.user_id,
+                principal_id=result.principal_id,
                 is_owner=result.is_owner,
             )
             for result in results
         ]
 
-    def get_group_ids_owned_by(self, user_id: UUID) -> list[UUID]:
+    def get_group_ids_owned_by(self, principal_id: UUID) -> list[UUID]:
         """Return the ids of every group this user owns."""
         statement = select(GroupMemberTable.group_id).where(
-            GroupMemberTable.user_id == user_id,
+            GroupMemberTable.principal_id == principal_id,
             GroupMemberTable.is_owner.is_(True),  # type: ignore[union-attr]
         )
         return list(self._session.exec(statement).all())
@@ -106,8 +106,8 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
             self._session.delete(member)
         self.commit()
 
-    def remove_user_from_all_groups(self, user_id: UUID) -> None:
+    def remove_principal_from_all_groups(self, principal_id: UUID) -> None:
         """Remove a user from all groups they are a member of."""
-        statement = delete(GroupMemberTable).where(GroupMemberTable.user_id == user_id)
+        statement = delete(GroupMemberTable).where(GroupMemberTable.principal_id == principal_id)
         self._session.exec(statement)
         self.commit()

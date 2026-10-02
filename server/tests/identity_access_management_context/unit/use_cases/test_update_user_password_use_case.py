@@ -98,7 +98,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
 
     stale_session = auth_session_repository.sessions[existing_session.id]
     assert stale_session.invalidated_at == time_provider.get_current_time().replace(microsecond=0)
-    current_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(
+    current_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(
         user_id,
         "refresh-token-jti-password-change",
     )

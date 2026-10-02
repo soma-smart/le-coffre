@@ -165,9 +165,9 @@ def test_given_new_user_when_creating_user_should_create_personal_group(
 
     user_id = use_case.execute(command)
 
-    personal_group = group_repository.get_by_user_id(user_id)
+    personal_group = group_repository.get_by_principal_id(user_id)
     assert personal_group is not None
-    assert personal_group.user_id == user_id
+    assert personal_group.principal_id == user_id
     assert personal_group.name == f"{username}'s Personal Group"
 
 
@@ -193,7 +193,7 @@ def test_given_valid_user_data_when_creating_user_should_publish_user_created_ev
     assert events[0].user_id == uuid
     assert events[0].username == "testuser"
     assert events[0].email == "testuser@example.com"
-    assert events[0].created_by_user_id == admin_id
+    assert events[0].created_by_principal_id == admin_id
 
 
 def test_given_valid_user_data_when_creating_user_should_store_user_created_event(
@@ -216,4 +216,4 @@ def test_given_valid_user_data_when_creating_user_should_store_user_created_even
     assert len(user_event_repository.events) == 1
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "UserCreatedEvent"
-    assert stored["actor_user_id"] == admin_id
+    assert stored["actor_principal_id"] == admin_id

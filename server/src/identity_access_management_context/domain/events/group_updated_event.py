@@ -10,7 +10,7 @@ class GroupUpdatedEvent(DomainEvent):
         self,
         group_id: UUID,
         new_name: str,
-        updated_by_user_id: UUID,
+        updated_by_principal_id: UUID,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -21,4 +21,4 @@ class GroupUpdatedEvent(DomainEvent):
         )
         self.group_id = group_id
         self.new_name = new_name
-        self.updated_by_user_id = updated_by_user_id
+        self.updated_by_principal_id = updated_by_principal_id

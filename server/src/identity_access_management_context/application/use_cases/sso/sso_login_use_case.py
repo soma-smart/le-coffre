@@ -143,20 +143,20 @@ class SsoLoginUseCase(TracedUseCase):
 
         # Step 5: Generate JWT tokens.
         token = self._token_gateway.generate_token(
-            user_id=user_id,
+            principal_id=user_id,
             email=email,
             roles=roles,
             claims={"display_name": display_name},
         )
 
         refresh_token = self._token_gateway.generate_refresh_token(
-            user_id=user_id,
+            principal_id=user_id,
             email=email,
             roles=roles,
         )
         if refresh_token.jti is not None:
             self._auth_session_repository.create_session(
-                user_id=user_id,
+                principal_id=user_id,
                 refresh_token_jti=refresh_token.jti,
                 created_at=self._time_provider.get_current_time(),
             )
@@ -167,7 +167,7 @@ class SsoLoginUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=user_id,
+            actor_principal_id=user_id,
             event_data={"email": email, "is_new_user": is_new_user},
         )
 

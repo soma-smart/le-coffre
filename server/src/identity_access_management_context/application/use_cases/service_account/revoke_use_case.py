@@ -69,7 +69,7 @@ class RevokeServiceAccountUseCase(
         event = ServiceAccountRevokedEvent(
             event_id=uuid4(),
             occurred_on=now,
-            user_id=command.requesting_user.user_id,
+            principal_id=command.requesting_user.user_id,
             service_account_id=account.id,
             service_account_name=account.name,
         )

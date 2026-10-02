@@ -177,7 +177,7 @@ def test_should_store_admin_registered_event_on_successful_registration(
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminRegisteredEvent"
-    assert stored["actor_user_id"] == user_id
+    assert stored["actor_principal_id"] == user_id
 
 
 class TestPasswordPolicyEnforcement:

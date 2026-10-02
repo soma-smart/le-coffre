@@ -76,7 +76,7 @@ class PasswordLoginUseCase(TracedUseCase):
                 event_id=event.event_id,
                 event_type=type(event).__name__,
                 occurred_on=event.occurred_on,
-                actor_user_id=None,
+                actor_principal_id=None,
                 event_data={"email": command.email, "reason": "Account locked"},
             )
             raise AccountLockedException(retry_after_seconds=lockout_status.retry_after_seconds)
@@ -101,7 +101,7 @@ class PasswordLoginUseCase(TracedUseCase):
                     event_id=event.event_id,
                     event_type=type(event).__name__,
                     occurred_on=event.occurred_on,
-                    actor_user_id=None,
+                    actor_principal_id=None,
                     event_data={"email": command.email, "reason": reason},
                 )
                 self._try_record_failed_login(command.email, now)
@@ -118,20 +118,20 @@ class PasswordLoginUseCase(TracedUseCase):
         self._try_record_successful_login(command.email)
 
         token = self._token_gateway.generate_token(
-            user_id=user.id,
+            principal_id=user.id,
             email=command.email,
             roles=user.roles,
             claims={"display_name": user.name},
         )
 
         refresh_token = self._token_gateway.generate_refresh_token(
-            user_id=user.id,
+            principal_id=user.id,
             email=command.email,
             roles=user.roles,
         )
         if refresh_token.jti is not None:
             self._auth_session_repository.create_session(
-                user_id=user.id,
+                principal_id=user.id,
                 refresh_token_jti=refresh_token.jti,
                 created_at=now,
             )
@@ -142,7 +142,7 @@ class PasswordLoginUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=user.id,
+            actor_principal_id=user.id,
             event_data={"email": command.email},
         )
 

@@ -72,7 +72,7 @@ def test_given_owner_when_removing_member_then_member_is_removed(
     command = RemoveUserFromGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     use_case.execute(command)
@@ -121,7 +121,7 @@ def test_given_non_owner_when_removing_member_then_raise_user_not_owner_exceptio
     command = RemoveUserFromGroupCommand(
         requester_id=non_owner_id,
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     with pytest.raises(UserNotOwnerOfGroupException):
@@ -147,7 +147,7 @@ def test_given_group_not_found_when_removing_member_then_raise_group_not_found_e
     command = RemoveUserFromGroupCommand(
         requester_id=requester_id,
         group_id=nonexistent_group_id,
-        user_id=user_id,
+        principal_id=user_id,
     )
 
     with pytest.raises(GroupNotFoundException):
@@ -186,7 +186,7 @@ def test_given_user_not_member_when_removing_then_raise_user_not_member_exceptio
     command = RemoveUserFromGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=non_member_id,
+        principal_id=non_member_id,
     )
 
     with pytest.raises(UserNotMemberOfGroupException):
@@ -226,7 +226,7 @@ def test_given_personal_group_when_removing_user_then_raise_cannot_modify_person
     command = RemoveUserFromGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     with pytest.raises(CannotModifyPersonalGroupException):
@@ -257,7 +257,7 @@ def test_given_owner_being_removed_when_removing_then_raise_cannot_remove_owner_
     command = RemoveUserFromGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=owner_id,
+        principal_id=owner_id,
     )
 
     with pytest.raises(CannotRemoveOwnerException):
@@ -285,14 +285,14 @@ def test_given_owner_when_removing_member_then_should_publish_user_removed_from_
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
     group_member_repository.add_member(group_id, member_id, is_owner=False)
 
-    command = RemoveUserFromGroupCommand(requester_id=owner_id, group_id=group_id, user_id=member_id)
+    command = RemoveUserFromGroupCommand(requester_id=owner_id, group_id=group_id, principal_id=member_id)
     use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(UserRemovedFromGroupEvent)
     assert len(events) == 1
     assert events[0].group_id == group_id
-    assert events[0].user_id == member_id
-    assert events[0].removed_by_user_id == owner_id
+    assert events[0].principal_id == member_id
+    assert events[0].removed_by_principal_id == owner_id
 
 
 def test_given_owner_when_removing_member_then_should_store_user_removed_from_group_event(
@@ -316,10 +316,10 @@ def test_given_owner_when_removing_member_then_should_store_user_removed_from_gr
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
     group_member_repository.add_member(group_id, member_id, is_owner=False)
 
-    command = RemoveUserFromGroupCommand(requester_id=owner_id, group_id=group_id, user_id=member_id)
+    command = RemoveUserFromGroupCommand(requester_id=owner_id, group_id=group_id, principal_id=member_id)
     use_case.execute(command)
 
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "UserRemovedFromGroupEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id

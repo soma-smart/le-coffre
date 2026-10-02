@@ -22,11 +22,11 @@ class ServiceAccountsListedEvent(ServiceAccountEvent):
         self,
         event_id: UUID,
         occurred_on: datetime,
-        user_id: UUID,
+        principal_id: UUID,
         group_id: UUID | None,
         priority: EventPriority = EventPriority.LOW,
     ) -> None:
-        super().__init__(event_id, occurred_on, user_id, priority)
+        super().__init__(event_id, occurred_on, principal_id, priority)
         self.group_id = group_id
 
     def _make_event_data(self) -> dict[str, str]:

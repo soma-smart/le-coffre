@@ -106,7 +106,7 @@ def test_given_admin_user_when_deleting_user_should_publish_user_deleted_event(
     published_event = domain_event_publisher.published_events[0]
     assert isinstance(published_event, UserDeletedEvent)
     assert published_event.user_id == user_uuid
-    assert published_event.deleted_by_user_id == admin_uuid
+    assert published_event.deleted_by_principal_id == admin_uuid
 
 
 def test_given_user_in_multiple_groups_when_deleting_user_should_remove_from_all_groups(
@@ -127,7 +127,7 @@ def test_given_user_in_multiple_groups_when_deleting_user_should_remove_from_all
 
     group1 = Group(id=group1_id, name="Group 1", is_personal=False)
     group2 = Group(id=group2_id, name="Group 2", is_personal=False)
-    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", principal_id=user_uuid)
 
     group_repository.save_group(group1)
     group_repository.save_group(group2)
@@ -161,7 +161,7 @@ def test_given_user_with_personal_group_when_deleting_user_should_delete_persona
     user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
-    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", principal_id=user_uuid)
     group_repository.save_personal_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_uuid, is_owner=True)
 
@@ -245,7 +245,7 @@ def test_given_user_when_deleting_should_publish_event_with_personal_group_id(
     user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
-    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", principal_id=user_uuid)
     group_repository.save_personal_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_uuid, is_owner=True)
 
@@ -258,7 +258,7 @@ def test_given_user_when_deleting_should_publish_event_with_personal_group_id(
     published_event = domain_event_publisher.published_events[0]
     assert isinstance(published_event, UserDeletedEvent)
     assert published_event.user_id == user_uuid
-    assert published_event.deleted_by_user_id == admin_uuid
+    assert published_event.deleted_by_principal_id == admin_uuid
     assert published_event.personal_group_id == personal_group_id
 
 
@@ -281,7 +281,7 @@ def test_given_admin_user_when_deleting_user_should_store_user_deleted_event(
     assert len(user_event_repository.events) == 1
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "UserDeletedEvent"
-    assert stored["actor_user_id"] == admin_uuid
+    assert stored["actor_principal_id"] == admin_uuid
 
 
 def test_given_deleted_user_should_also_remove_its_credentials(

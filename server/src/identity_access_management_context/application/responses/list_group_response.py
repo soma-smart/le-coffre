@@ -7,7 +7,7 @@ class GroupResponse:
     id: UUID
     name: str
     is_personal: bool
-    user_id: UUID | None
+    principal_id: UUID | None
     owners: list[UUID]
     members: list[UUID]
 

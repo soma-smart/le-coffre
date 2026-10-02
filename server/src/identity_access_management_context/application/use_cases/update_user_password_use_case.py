@@ -68,16 +68,16 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         now = self.time_provider.get_current_time().replace(microsecond=0)
 
-        self.auth_session_repository.invalidate_all_for_user(user.id, now)
+        self.auth_session_repository.invalidate_all_for_principal(user.id, now)
 
         access_token = self.token_gateway.generate_token(
-            user_id=user.id,
+            principal_id=user.id,
             email=user.email,
             roles=user.roles,
             claims={"display_name": user.name},
         )
         refresh_token = self.token_gateway.generate_refresh_token(
-            user_id=user.id,
+            principal_id=user.id,
             email=user.email,
             roles=user.roles,
         )
@@ -88,7 +88,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         if refresh_token.jti is not None:
             self.auth_session_repository.create_session(
-                user_id=user.id,
+                principal_id=user.id,
                 refresh_token_jti=refresh_token.jti,
                 created_at=now,
             )

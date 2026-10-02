@@ -77,7 +77,7 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     assert result.access_token == f"jwt_token_for_{user_id}_new_access_token"
     assert result.refresh_token == f"refresh_token_for_{user_id}_new_access_token"
     assert result.user_id == user_id
-    rotated_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(
+    rotated_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(
         user_id,
         "refresh-token-jti-new_access_token",
     )
@@ -413,7 +413,7 @@ def test_given_replayed_rotated_refresh_token_when_execute_then_invalidates_all_
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
-    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, attacker_jti) is None
+    assert auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, attacker_jti) is None
     contained_user = user_repository.get_by_id(user_id)
     assert contained_user is not None
     # The cutoff must be the exact (non-truncated) detection time so the
@@ -457,7 +457,7 @@ def test_given_replayed_logged_out_refresh_token_when_execute_then_raises_withou
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
-    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, other_device_jti) is not None
+    assert auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, other_device_jti) is not None
     unchanged_user = user_repository.get_by_id(user_id)
     assert unchanged_user is not None
     assert unchanged_user.session_invalid_before is None
@@ -542,7 +542,7 @@ def test_given_session_older_than_max_lifetime_when_execute_then_raises_and_inva
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
-    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, refresh_token_jti) is None
+    assert auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, refresh_token_jti) is None
     unchanged_user = user_repository.get_by_id(user_id)
     assert unchanged_user is not None
     assert unchanged_user.session_invalid_before is None

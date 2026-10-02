@@ -9,7 +9,7 @@ class RevokedTokenTable(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, nullable=False, primary_key=True, index=True)
     jti: str = Field(nullable=False, unique=True, index=True)
-    user_id: UUID | None = Field(default=None, nullable=True, index=True)
+    principal_id: UUID | None = Field(default=None, nullable=True, index=True)
     token_type: str = Field(nullable=False)
     expires_at: datetime | None = Field(default=None, nullable=True, index=True)
     revoked_at: datetime = Field(nullable=False)

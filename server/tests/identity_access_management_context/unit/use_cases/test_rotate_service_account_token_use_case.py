@@ -170,7 +170,7 @@ def test_given_a_rotation_when_it_succeeds_then_it_is_audited_without_the_token(
 
     event = service_account_event_repository.events[-1]
     assert event["event_type"] == "ServiceAccountTokenRotatedEvent"
-    assert event["actor_user_id"] == OWNER_ID
+    assert event["actor_principal_id"] == OWNER_ID
 
     payload = json.dumps(event["event_data"])
     assert rotated.token not in payload

@@ -164,7 +164,7 @@ def test_given_a_revocation_when_it_succeeds_then_it_is_audited_with_its_author(
 
     event = service_account_event_repository.events[-1]
     assert event["event_type"] == "ServiceAccountRevokedEvent"
-    assert event["actor_user_id"] == OWNER_ID
+    assert event["actor_principal_id"] == OWNER_ID
     assert account.token not in json.dumps(event["event_data"])
 
 

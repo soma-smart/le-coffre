@@ -38,7 +38,7 @@ def test_should_return_false_when_user_does_not_own_group(adapter, group_reposit
     user_id = uuid4()
     other_user_id = uuid4()
     group_id = uuid4()
-    group = PersonalGroup(id=group_id, name="Test Group", user_id=other_user_id)
+    group = PersonalGroup(id=group_id, name="Test Group", principal_id=other_user_id)
     group_repository.save_personal_group(group)
 
     result = adapter.is_user_owner_of_group(user_id, group_id)
@@ -119,6 +119,6 @@ def test_should_return_empty_member_list_for_personal_group(
 ):
     user_id = uuid4()
     group_id = uuid4()
-    group_repository.save_personal_group(PersonalGroup(id=group_id, name="Personal", user_id=user_id))
+    group_repository.save_personal_group(PersonalGroup(id=group_id, name="Personal", principal_id=user_id))
 
     assert adapter.get_group_member_users(group_id) == []

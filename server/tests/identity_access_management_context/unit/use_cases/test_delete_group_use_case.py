@@ -147,7 +147,7 @@ def test_given_personal_group_when_deleting_group_then_raises_cannot_delete_pers
         id=personal_group_id,
         name="Personal Group",
         is_personal=True,
-        user_id=user_id,
+        principal_id=user_id,
     )
     group_repository.save_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_id, is_owner=True)
@@ -248,7 +248,7 @@ def test_given_owner_when_deleting_group_then_should_publish_group_deleted_event
     events = event_publisher.get_published_events_of_type(GroupDeletedEvent)
     assert len(events) == 1
     assert events[0].group_id == group_id
-    assert events[0].deleted_by_user_id == owner_id
+    assert events[0].deleted_by_principal_id == owner_id
 
 
 def test_given_owner_when_deleting_group_then_should_store_group_deleted_event(
@@ -272,7 +272,7 @@ def test_given_owner_when_deleting_group_then_should_store_group_deleted_event(
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "GroupDeletedEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id
 
 
 def _service_account(group_id, name="nightly-backup"):
@@ -347,7 +347,7 @@ def test_given_a_group_with_service_accounts_when_deleting_then_each_revocation_
         e for e in service_account_event_repository.events if e["event_type"] == "ServiceAccountRevokedEvent"
     ]
     assert len(revocations) == 2
-    assert all(e["actor_user_id"] == owner_id for e in revocations)
+    assert all(e["actor_principal_id"] == owner_id for e in revocations)
 
 
 def test_given_an_already_revoked_service_account_when_deleting_the_group_then_it_is_left_alone(

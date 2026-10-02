@@ -36,7 +36,7 @@ class GroupAccessGatewayAdapter:
             return False
 
         # For personal groups, check if the user_id matches
-        if group.is_personal and group.user_id == user_id:
+        if group.is_personal and group.principal_id == user_id:
             return True
 
         # For shared groups, check membership
@@ -48,7 +48,7 @@ class GroupAccessGatewayAdapter:
             return False
 
         # For personal groups, check if the user_id matches
-        if group.is_personal and group.user_id == user_id:
+        if group.is_personal and group.principal_id == user_id:
             return True
 
         # For shared groups, check membership
@@ -79,12 +79,12 @@ class GroupAccessGatewayAdapter:
             return []
 
         # For personal groups, return the user_id
-        if group.is_personal and group.user_id:
-            return [group.user_id]
+        if group.is_personal and group.principal_id:
+            return [group.principal_id]
 
         # For shared groups, get all owner members
         members = self._group_member_repository.get_members(group_id)
-        return [member.user_id for member in members if member.is_owner]
+        return [member.principal_id for member in members if member.is_owner]
 
     def get_group_member_users(self, group_id: UUID) -> list[UUID]:
         """Get the users who belong to this group as members (not owners).
@@ -104,4 +104,4 @@ class GroupAccessGatewayAdapter:
             return []
 
         members = self._group_member_repository.get_members(group_id)
-        return [member.user_id for member in members if not member.is_owner]
+        return [member.principal_id for member in members if not member.is_owner]

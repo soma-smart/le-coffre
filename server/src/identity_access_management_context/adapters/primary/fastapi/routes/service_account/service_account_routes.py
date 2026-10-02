@@ -168,7 +168,7 @@ def list_service_accounts(
                     id=item.id,
                     group_id=item.group_id,
                     name=item.name,
-                    created_by_user_id=item.created_by_user_id,
+                    created_by_user_id=item.created_by_principal_id,
                     created_by_user_name=item.created_by_user_name,
                     created_at=item.created_at,
                     revoked_at=item.revoked_at,

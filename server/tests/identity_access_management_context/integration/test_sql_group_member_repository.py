@@ -168,9 +168,9 @@ def test_given_multiple_members_when_getting_members_then_all_returned(
 
     # Then
     assert len(members) == 3
-    assert any(m.user_id == owner_id and m.is_owner for m in members)
-    assert any(m.user_id == member1_id and not m.is_owner for m in members)
-    assert any(m.user_id == member2_id and not m.is_owner for m in members)
+    assert any(m.principal_id == owner_id and m.is_owner for m in members)
+    assert any(m.principal_id == member1_id and not m.is_owner for m in members)
+    assert any(m.principal_id == member2_id and not m.is_owner for m in members)
 
 
 def test_given_no_members_when_getting_members_then_empty_list(
@@ -240,7 +240,7 @@ def test_given_mix_of_owners_and_members_when_counting_then_only_counts_owners(
     assert count == 2
 
 
-# Method: remove_user_from_all_groups
+# Method: remove_principal_from_all_groups
 def test_given_user_in_multiple_groups_when_removing_from_all_then_all_memberships_deleted(
     sql_group_member_repository,
 ):
@@ -255,7 +255,7 @@ def test_given_user_in_multiple_groups_when_removing_from_all_then_all_membershi
     sql_group_member_repository.add_member(group3_id, user_id, is_owner=False)
 
     # When
-    sql_group_member_repository.remove_user_from_all_groups(user_id)
+    sql_group_member_repository.remove_principal_from_all_groups(user_id)
 
     # Then
     assert not sql_group_member_repository.is_member(group1_id, user_id)
@@ -270,7 +270,7 @@ def test_given_user_not_in_any_group_when_removing_from_all_then_no_error(
     user_id = uuid4()
 
     # When / Then - should not raise any exception
-    sql_group_member_repository.remove_user_from_all_groups(user_id)
+    sql_group_member_repository.remove_principal_from_all_groups(user_id)
 
 
 def test_given_multiple_users_in_group_when_removing_one_user_from_all_then_only_that_user_removed(
@@ -285,7 +285,7 @@ def test_given_multiple_users_in_group_when_removing_one_user_from_all_then_only
     sql_group_member_repository.add_member(group_id, user2_id, is_owner=False)
 
     # When
-    sql_group_member_repository.remove_user_from_all_groups(user1_id)
+    sql_group_member_repository.remove_principal_from_all_groups(user1_id)
 
     # Then
     assert not sql_group_member_repository.is_member(group_id, user1_id)

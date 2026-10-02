@@ -93,7 +93,9 @@ def test_given_an_owner_of_a_personal_group_when_creating_then_it_succeeds(
     use_case, owner, group_repository, group_member_repository
 ):
     personal_id = uuid4()
-    group_repository.save_personal_group(PersonalGroup(id=personal_id, name="Owner's Personal Group", user_id=OWNER_ID))
+    group_repository.save_personal_group(
+        PersonalGroup(id=personal_id, name="Owner's Personal Group", principal_id=OWNER_ID)
+    )
     group_member_repository.add_member(personal_id, OWNER_ID, is_owner=True)
 
     response = _create(use_case, owner, group_id=personal_id)
@@ -156,7 +158,7 @@ def test_given_a_creation_when_it_succeeds_then_it_is_audited_without_the_token(
     assert len(service_account_event_repository.events) == 1
     event = service_account_event_repository.events[0]
     assert event["event_type"] == "ServiceAccountCreatedEvent"
-    assert event["actor_user_id"] == OWNER_ID
+    assert event["actor_principal_id"] == OWNER_ID
     assert event["occurred_on"] == NOW
 
     payload = json.dumps(event["event_data"])

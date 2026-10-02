@@ -15,7 +15,7 @@ def _created(service_account_id, user_id, name="nightly-backup", occurred_on=NOW
     return ServiceAccountCreatedEvent(
         event_id=uuid4(),
         occurred_on=occurred_on,
-        user_id=user_id,
+        principal_id=user_id,
         service_account_id=service_account_id,
         service_account_name=name,
     )
@@ -30,7 +30,7 @@ def test_given_a_creation_event_when_reading_facts_back_then_they_round_trip(
 
     (fact,) = sql_service_account_event_repository.get_creation_facts([account_id])
 
-    assert fact.created_by_user_id == user_id
+    assert fact.created_by_principal_id == user_id
     assert fact.created_at == NOW
 
 
@@ -56,7 +56,7 @@ def test_given_an_account_with_no_creation_event_when_reading_facts_then_its_slo
     facts = sql_service_account_event_repository.get_creation_facts([unknown, known])
 
     assert facts[0].created_at is None
-    assert facts[0].created_by_user_id is None
+    assert facts[0].created_by_principal_id is None
     assert facts[1].created_at == NOW
 
 
@@ -69,7 +69,7 @@ def test_given_several_accounts_when_reading_facts_then_they_come_back_in_the_re
 
     facts = sql_service_account_event_repository.get_creation_facts([third, first, second])
 
-    assert [f.created_by_user_id for f in facts] == [users[third], users[first], users[second]]
+    assert [f.created_by_principal_id for f in facts] == [users[third], users[first], users[second]]
 
 
 def test_given_no_ids_when_reading_facts_then_nothing_is_queried(sql_service_account_event_repository):
@@ -87,17 +87,17 @@ def test_given_other_service_account_events_when_reading_facts_then_only_creatio
             ServiceAccountRevokedEvent(
                 event_id=uuid4(),
                 occurred_on=NOW,
-                user_id=revoker,
+                principal_id=revoker,
                 service_account_id=account_id,
                 service_account_name="nightly-backup",
             ),
-            ServiceAccountsListedEvent(event_id=uuid4(), occurred_on=NOW, user_id=revoker, group_id=uuid4()),
+            ServiceAccountsListedEvent(event_id=uuid4(), occurred_on=NOW, principal_id=revoker, group_id=uuid4()),
         ]
     )
 
     (fact,) = sql_service_account_event_repository.get_creation_facts([account_id])
 
-    assert fact.created_by_user_id == creator
+    assert fact.created_by_principal_id == creator
 
 
 def test_given_stored_events_then_no_token_or_hash_reaches_the_audit_rows(
