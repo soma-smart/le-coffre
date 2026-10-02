@@ -19,7 +19,7 @@ class ServiceAccountTokenAuthenticator(Authenticator[ServiceAccountToken]):
     service_account_repository: ServiceAccountRepository
 
     @override
-    def authenticate(self, authentication: ServiceAccountToken) -> ServiceAccount:
+    def authenticate(self, credential: ServiceAccountToken) -> ServiceAccount:
         """Return the account behind this token.
 
         Raises:
@@ -27,7 +27,7 @@ class ServiceAccountTokenAuthenticator(Authenticator[ServiceAccountToken]):
                 one holding it was revoked.
         """
         # The token is 256 bits of randomness, so a lookup by hash alone is safe
-        account = self.service_account_repository.get_by_token_hash(authentication.hash)
+        account = self.service_account_repository.get_by_token_hash(credential.hash)
         if account is None or not account.is_active:
             raise ServiceAccountTokenAuthenticationError()
         return account

@@ -5,11 +5,11 @@ from functools import cached_property
 from typing import ClassVar
 
 from identity_access_management_context.domain.exceptions import InvalidServiceAccountTokenError
-from shared_kernel.domain.value_objects.authentication import Authentication
+from shared_kernel.domain.value_objects.credential import Credential
 
 
 @dataclass(frozen=True)
-class ServiceAccountToken(Authentication):
+class ServiceAccountToken(Credential):
     """The secret handed to a service account's operator, and the proof it presents.
 
     Domain Rules:

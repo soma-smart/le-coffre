@@ -25,4 +25,4 @@ class ReadOnlyCredentialError(Exception):
 
 
 class AuthenticationError(Exception):
-    """Raised when an `Authentication` proves no principal."""
+    """Raised when a `Credential` proves no principal."""
