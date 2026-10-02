@@ -1,8 +1,8 @@
 from collections.abc import Iterable, Sequence
 from datetime import datetime
+from typing import override
 from uuid import UUID
 
-from sqlalchemy import case
 from sqlmodel import Session, select, update
 
 from identity_access_management_context.adapters.secondary.sql.model.principal_model import (
@@ -14,7 +14,6 @@ from identity_access_management_context.adapters.secondary.sql.model.service_acc
 )
 from identity_access_management_context.application.gateways import (
     CannotRevokeServiceAccount,
-    CannotRotateServiceAccount,
     ServiceAccountRepository,
 )
 from identity_access_management_context.domain.entities import ServiceAccount
@@ -36,10 +35,10 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
             id=row.principal_id,
             group_id=row.group_id,
             name=row.name,
-            token_hash=row.token_hash,
             revoked_at=as_utc(row.revoked_at),
         )
 
+    @override
     def create(self, accounts: Iterable[ServiceAccount]) -> None:
         accounts = list(accounts)
         # The registry rows and the details are the same principals: committed together.
@@ -49,7 +48,6 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
                 principal_id=account.id,
                 group_id=account.group_id,
                 name=account.name,
-                token_hash=account.token_hash,
                 revoked_at=to_naive_utc(account.revoked_at),
             )
             for account in accounts
@@ -57,6 +55,7 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
         self._session.add_all(rows)
         self.commit()
 
+    @override
     def get_by_ids(self, ids: Sequence[UUID]) -> Sequence[ServiceAccount | None]:
         query = select(ServiceAccountPrincipalTable).where(ServiceAccountPrincipalTable.principal_id.in_(ids))  # type: ignore[attr-defined]
         rows = self._session.exec(query).all()
@@ -65,37 +64,13 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
         # One slot per requested id, empty where there is no such account.
         return [accounts_by_id.get(account_id) for account_id in ids]
 
-    def get_by_token_hash(self, token_hash: str) -> ServiceAccount | None:
-        query = select(ServiceAccountPrincipalTable).where(ServiceAccountPrincipalTable.token_hash == token_hash)
-        row = self._session.exec(query).first()
-        return self._to_entity(row) if row is not None else None
-
+    @override
     def list_for_groups(self, group_ids: Sequence[UUID]) -> Iterable[ServiceAccount]:
         query = select(ServiceAccountPrincipalTable).where(ServiceAccountPrincipalTable.group_id.in_(group_ids))  # type: ignore[attr-defined]
         rows = self._session.exec(query).all()
         return [self._to_entity(row) for row in rows]
 
-    def rotate(self, ids: Sequence[UUID], hashes: Sequence[str]) -> None:
-        new_hashes = dict(zip(ids, hashes, strict=True))
-
-        # One statement for the batch: CASE picks each account's own hash.
-        statement = (
-            update(ServiceAccountPrincipalTable)
-            .where(
-                ServiceAccountPrincipalTable.principal_id.in_(new_hashes),  # type: ignore[attr-defined]
-                ServiceAccountPrincipalTable.revoked_at.is_(None),  # type: ignore[union-attr]
-            )
-            .values(token_hash=case(new_hashes, value=ServiceAccountPrincipalTable.principal_id))
-        )
-        result = self._session.exec(statement)  # type: ignore[call-overload]
-
-        # Fewer rows written than asked for means at least one was revoked.
-        if result.rowcount != len(new_hashes):
-            self._session.rollback()
-            raise CannotRotateServiceAccount(self._first_inactive(list(new_hashes)))
-
-        self.commit()
-
+    @override
     def revoke(self, ids: Iterable[UUID], now: datetime) -> None:
         account_ids = list(ids)
 

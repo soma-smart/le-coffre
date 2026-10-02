@@ -14,7 +14,7 @@ from identity_access_management_context.domain.events import SsoLoginEvent
 from identity_access_management_context.domain.exceptions import InvalidSsoCodeException, SsoConfigurationNotFoundError
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.identity_access_management_context.unit.conftest import (
-    create_existing_sso_user,
+    create_sso_credential,
     create_sso_user_from_provider,
 )
 from tests.shared_kernel.fakes import FakeTimeGateway
@@ -24,9 +24,9 @@ from ..fakes import (
     FakeGroupRepository,
     FakePasswordHashingGateway,
     FakeSsoConfigurationRepository,
+    FakeSSOCredentialRecordRepository,
     FakeSsoEncryptionGateway,
     FakeSsoGateway,
-    FakeSsoUserRepository,
     FakeTokenGateway,
     FakeUserRepository,
 )
@@ -35,7 +35,8 @@ from ..fakes import (
 @pytest.fixture
 def use_case(
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_authenticator,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     auth_session_repository,
     password_hashing_gateway: FakePasswordHashingGateway,
@@ -50,7 +51,8 @@ def use_case(
 ):
     return SsoLoginUseCase(
         sso_gateway=sso_gateway,
-        sso_user_repository=sso_user_repository,
+        sso_authenticator=sso_authenticator,
+        sso_credential_record_repository=sso_credential_record_repository,
         user_repository=user_repository,
         auth_session_repository=auth_session_repository,
         password_hashing_gateway=password_hashing_gateway,
@@ -66,10 +68,10 @@ def use_case(
 
 
 @pytest.mark.asyncio
-async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
+async def test_should_authenticate_existing_credential_and_return_jwt_token(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     token_gateway: FakeTokenGateway,
@@ -83,7 +85,7 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
     sso_user_id = "google_123456"
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
     user_repository.save(
         User(
             id=user_id,
@@ -106,7 +108,7 @@ async def test_should_authenticate_existing_sso_user_and_return_jwt_token(
         )
     )
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     token_gateway.set_unique_jwt_part("unique_token_part")
 
     command = SsoLoginCommand(code=sso_code)
@@ -154,7 +156,7 @@ async def test_should_raise_exception_for_invalid_sso_code(
 async def test_should_create_new_user_for_first_time_sso_login(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
     sso_configuration_repository: FakeSsoConfigurationRepository,
@@ -181,7 +183,7 @@ async def test_should_create_new_user_for_first_time_sso_login(
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    assert sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider) is None
+    assert sso_credential_record_repository.get_by_subject(sso_provider, sso_user_id) is None
     token_gateway.set_unique_jwt_part("new_user_token")
 
     command = SsoLoginCommand(code=sso_code)
@@ -202,7 +204,7 @@ async def test_should_create_new_user_for_first_time_sso_login(
 async def test_should_update_last_login_for_existing_user_without_recreation(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     token_gateway: FakeTokenGateway,
@@ -228,17 +230,10 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
         )
     )
 
-    existing_sso_user = create_existing_sso_user(
-        user_id,
-        email,
-        display_name,
-        sso_user_id,
-        sso_provider,
-        last_login=old_login_time,
-    )
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider, last_login=old_login_time)
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
 
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     user_repository.save(
         User(
             id=user_id,
@@ -266,15 +261,15 @@ async def test_should_update_last_login_for_existing_user_without_recreation(
     assert len(current_users) == initial_user_count
 
     # Check that last_login was updated
-    updated_sso_user = sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider)
-    assert updated_sso_user.last_login > old_login_time
+    updated_credential = sso_credential_record_repository.get_by_subject(sso_provider, sso_user_id)
+    assert updated_credential.last_login > old_login_time
 
 
 @pytest.mark.asyncio
 async def test_should_return_refresh_token_on_successful_sso_login(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     token_gateway: FakeTokenGateway,
@@ -299,10 +294,10 @@ async def test_should_return_refresh_token_on_successful_sso_login(
     )
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     user_repository.save(User(id=user_id, username="johndoe", email=email, name=display_name, roles=[]))
     token_gateway.set_unique_jwt_part("unique_token_part")
 
@@ -324,7 +319,7 @@ async def test_when_no_sso_config_when_login_should_fail(use_case: SsoLoginUseCa
 async def test_should_publish_sso_login_event_on_successful_login(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     token_gateway: FakeTokenGateway,
@@ -350,10 +345,10 @@ async def test_should_publish_sso_login_event_on_successful_login(
     )
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     user_repository.save(User(id=user_id, username="johndoe", email=email, name=display_name, roles=[]))
     token_gateway.set_unique_jwt_part("unique_token_part")
 
@@ -371,7 +366,7 @@ async def test_should_publish_sso_login_event_on_successful_login(
 async def test_should_store_sso_login_event_on_successful_login(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     token_gateway: FakeTokenGateway,
@@ -397,10 +392,10 @@ async def test_should_store_sso_login_event_on_successful_login(
     )
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     user_repository.save(User(id=user_id, username="johndoe", email=email, name=display_name, roles=[]))
     token_gateway.set_unique_jwt_part("unique_token_part")
 
@@ -414,10 +409,10 @@ async def test_should_store_sso_login_event_on_successful_login(
 
 
 @pytest.mark.asyncio
-async def test_should_raise_runtime_error_when_existing_sso_user_has_no_corresponding_user(
+async def test_should_raise_runtime_error_when_existing_credential_has_no_corresponding_user(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
 ):
     sso_code = "valid_code_orphan_sso"
@@ -440,9 +435,9 @@ async def test_should_raise_runtime_error_when_existing_sso_user_has_no_correspo
     )
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
 
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     # Intentionally NOT seeding user_repository to trigger the RuntimeError
 
@@ -454,7 +449,7 @@ async def test_should_raise_runtime_error_when_existing_sso_user_has_no_correspo
 async def test_should_return_admin_role_in_token_when_sso_user_has_been_promoted(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
     sso_configuration_repository: FakeSsoConfigurationRepository,
@@ -480,9 +475,9 @@ async def test_should_return_admin_role_in_token_when_sso_user_has_been_promoted
     )
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
 
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
     token_gateway.set_unique_jwt_part("promoted_token_part")
 
@@ -510,7 +505,7 @@ async def test_should_return_admin_role_in_token_when_sso_user_has_been_promoted
 async def test_should_propagate_redirect_uri_to_gateway_when_provided_in_command(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     token_gateway: FakeTokenGateway,
@@ -537,10 +532,10 @@ async def test_should_propagate_redirect_uri_to_gateway_when_provided_in_command
     )
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     user_repository.save(User(id=user_id, username="cliuser", email=email, name=display_name, roles=[]))
     token_gateway.set_unique_jwt_part("cli_token_part")
 
@@ -557,7 +552,7 @@ async def test_should_propagate_redirect_uri_to_gateway_when_provided_in_command
 async def test_should_not_pass_redirect_uri_to_gateway_when_not_provided(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
     user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
     token_gateway: FakeTokenGateway,
@@ -583,10 +578,10 @@ async def test_should_not_pass_redirect_uri_to_gateway_when_not_provided(
     )
 
     sso_user_from_provider = create_sso_user_from_provider(email, display_name, sso_user_id, sso_provider)
-    existing_sso_user = create_existing_sso_user(user_id, email, display_name, sso_user_id, sso_provider)
+    existing_credential = create_sso_credential(user_id, sso_user_id, sso_provider)
 
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    sso_user_repository.create(existing_sso_user)
+    sso_credential_record_repository.create(existing_credential)
     user_repository.save(User(id=user_id, username="browseruser", email=email, name=display_name, roles=[]))
     token_gateway.set_unique_jwt_part("browser_token_part")
 
@@ -597,3 +592,35 @@ async def test_should_not_pass_redirect_uri_to_gateway_when_not_provided(
 
     # Assert: the gateway received None (no redirect_uri override)
     assert sso_gateway.last_redirect_uri is None
+
+
+@pytest.mark.asyncio
+async def test_should_take_email_and_name_from_the_user_when_it_changed_since_linking(
+    use_case: SsoLoginUseCase,
+    sso_gateway: FakeSsoGateway,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
+    user_repository: FakeUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+    token_gateway: FakeTokenGateway,
+):
+    """The credential keeps no copy of the email or name, so a user updated since linking shows the update."""
+    sso_code = "valid_sso_code_renamed"
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    sso_provider = "google"
+    sso_user_id = "google_renamed"
+
+    sso_configuration_repository.save(
+        SsoConfiguration("client_id", "encrypted(client_secret)", "url", "auth", "token", "userinfo", None)
+    )
+    sso_gateway.set_valid_code(
+        sso_code, create_sso_user_from_provider("old@example.com", "Old Name", sso_user_id, sso_provider)
+    )
+    sso_credential_record_repository.create(create_sso_credential(user_id, sso_user_id, sso_provider))
+    user_repository.save(User(id=user_id, username="renamed", email="new@example.com", name="New Name", roles=[]))
+    token_gateway.set_unique_jwt_part("renamed_token_part")
+
+    response = await use_case.execute(SsoLoginCommand(code=sso_code))
+
+    assert response.email == "new@example.com"
+    assert response.display_name == "New Name"
+    assert token_gateway.get_last_generated_token().claims["display_name"] == "New Name"

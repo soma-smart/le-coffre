@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import override
 from uuid import UUID, uuid4
 
 from identity_access_management_context.application.commands import ListServiceAccountsCommand
@@ -65,6 +66,7 @@ class ListServiceAccountsUseCase(
 
         return self._group_member_repository.get_group_ids_owned_by(command.requesting_user.user_id)
 
+    @override
     def _execute(
         self, command: ListServiceAccountsCommand
     ) -> tuple[ServiceAccountsListedEvent, ListServiceAccountsResponse]:

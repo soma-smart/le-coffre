@@ -6,13 +6,15 @@ from uuid import UUID, uuid4
 from identity_access_management_context.domain.exceptions import (
     InvalidServiceAccountNameError,
 )
-from identity_access_management_context.domain.value_objects import ServiceAccountToken
 from shared_kernel.domain.entities.principal import Principal
 
 
 @dataclass
 class ServiceAccount(Principal):
-    """A group-owned machine identity, holding a rotatable token.
+    """A group-owned machine identity.
+
+    Its token is not a field: what proves the account is a separate
+    ServiceAccountTokenCredentialRecord, which rotation replaces.
 
     Rows survive revocation so the group's credential history stays auditable,
     which is why "revoked" is a timestamp rather than a deletion.
@@ -29,7 +31,6 @@ class ServiceAccount(Principal):
 
     group_id: UUID
     name: str
-    token_hash: str
     revoked_at: datetime | None = None
 
     @classmethod
@@ -50,12 +51,11 @@ class ServiceAccount(Principal):
         return stripped
 
     @classmethod
-    def create(cls, group_id: UUID, name: str, token: ServiceAccountToken) -> "ServiceAccount":
+    def create(cls, group_id: UUID, name: str) -> "ServiceAccount":
         return cls(
             id=uuid4(),
             group_id=group_id,
             name=cls.validated_service_account_name(name),
-            token_hash=token.hash,
             revoked_at=None,
         )
 

@@ -4,7 +4,11 @@ import pytest
 
 from identity_access_management_context.application.gateways import SsoUserInfo
 from identity_access_management_context.application.services import ServiceAccountPermissionService
-from identity_access_management_context.domain.entities import SsoUser
+from identity_access_management_context.application.services.authentication import (
+    PasswordAuthenticator,
+    SSOAuthenticator,
+)
+from identity_access_management_context.domain.entities import SSOCredentialRecord
 from tests.fakes import FakeDomainEventPublisher
 from tests.shared_kernel.fakes import FakeTimeGateway
 
@@ -17,18 +21,19 @@ from .fakes import (
     FakeGroupUsageGateway,
     FakeLoginLockoutGateway,
     FakeOneTimeLinkRevocationGateway,
+    FakePasswordCredentialRecordRepository,
     FakePasswordHashingGateway,
     FakeRevokedTokenRepository,
     FakeServiceAccountEventRepository,
     FakeServiceAccountRepository,
+    FakeServiceAccountTokenCredentialRecordRepository,
     FakeSsoConfigurationRepository,
+    FakeSSOCredentialRecordRepository,
     FakeSsoEncryptionGateway,
     FakeSsoEventRepository,
     FakeSsoGateway,
-    FakeSsoUserRepository,
     FakeTokenGateway,
     FakeUserEventRepository,
-    FakeUserPasswordRepository,
     FakeUserRepository,
 )
 
@@ -39,8 +44,8 @@ def user_repository():
 
 
 @pytest.fixture
-def user_password_repository():
-    return FakeUserPasswordRepository()
+def password_credential_record_repository():
+    return FakePasswordCredentialRecordRepository()
 
 
 @pytest.fixture
@@ -84,8 +89,18 @@ def sso_configuration_repository():
 
 
 @pytest.fixture
-def sso_user_repository():
-    return FakeSsoUserRepository()
+def sso_credential_record_repository():
+    return FakeSSOCredentialRecordRepository()
+
+
+@pytest.fixture
+def password_authenticator(password_credential_record_repository, user_repository, password_hashing_gateway):
+    return PasswordAuthenticator(password_credential_record_repository, user_repository, password_hashing_gateway)
+
+
+@pytest.fixture
+def sso_authenticator(sso_credential_record_repository, user_repository):
+    return SSOAuthenticator(sso_credential_record_repository, user_repository)
 
 
 @pytest.fixture
@@ -153,28 +168,19 @@ def create_sso_user_from_provider(email: str, display_name: str, sso_user_id: st
     )
 
 
-def create_existing_sso_user(
-    user_id: UUID,
-    email: str,
-    display_name: str,
-    sso_user_id: str,
-    sso_provider: str,
-    **kwargs,
-) -> SsoUser:
-    """Helper to create an existing SSO user entity"""
-    return SsoUser(
-        internal_user_id=user_id,
-        email=email,
-        display_name=display_name,
-        sso_user_id=sso_user_id,
-        sso_provider=sso_provider,
-        **kwargs,
-    )
+def create_sso_credential(user_id: UUID, sso_user_id: str, sso_provider: str, **kwargs) -> SSOCredentialRecord:
+    """Helper to link an existing user to an SSO subject"""
+    return SSOCredentialRecord(principal_id=user_id, provider=sso_provider, subject=sso_user_id, **kwargs)
 
 
 @pytest.fixture
 def service_account_repository():
     return FakeServiceAccountRepository()
+
+
+@pytest.fixture
+def service_account_token_credential_record_repository():
+    return FakeServiceAccountTokenCredentialRecordRepository()
 
 
 @pytest.fixture

@@ -45,6 +45,7 @@ def groups(group_repository, group_member_repository):
 @pytest.fixture
 def create_use_case(
     service_account_repository,
+    service_account_token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -53,6 +54,7 @@ def create_use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
+        service_account_token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,

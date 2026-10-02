@@ -1,3 +1,4 @@
+from typing import ClassVar
 from uuid import UUID
 
 from shared_kernel.domain.exceptions import AuthenticationError
@@ -29,6 +30,50 @@ class SessionAuthenticationError(IdentityAccessManagementDomainError, Authentica
 
     def __init__(self) -> None:
         super().__init__("The session is invalid")
+
+
+class PasswordAuthenticationError(IdentityAccessManagementDomainError, AuthenticationError):
+    """Raised when an email and password prove no user.
+
+    Each reason is its own subclass, because the login records which one it was.
+    """
+
+    reason: ClassVar[str]
+
+    def __init__(self) -> None:
+        super().__init__(self.reason)
+
+
+class UnknownPasswordEmailError(PasswordAuthenticationError):
+    reason = "User not found"
+
+
+class WrongPasswordError(PasswordAuthenticationError):
+    reason = "Invalid credentials"
+
+
+class OrphanedPasswordCredentialError(PasswordAuthenticationError):
+    """Raised when the credential matches but its user no longer exists."""
+
+    reason = "Orphaned credentials"
+
+
+class SSOAuthenticationError(IdentityAccessManagementDomainError, AuthenticationError):
+    """Raised when a provider's subject proves no user."""
+
+
+class UnknownSSOSubjectError(SSOAuthenticationError):
+    """Raised when no credential holds the subject: the SSO login provisions a user then."""
+
+    def __init__(self) -> None:
+        super().__init__("No user is linked to this SSO subject")
+
+
+class OrphanedSSOCredentialError(SSOAuthenticationError):
+    """Raised when the credential matches but its user no longer exists."""
+
+    def __init__(self) -> None:
+        super().__init__("The user linked to this SSO subject no longer exists")
 
 
 class InvalidTokenException(InvalidSessionException):
@@ -121,7 +166,7 @@ class UserAlreadyExistsException(IdentityAccessManagementDomainError):
         super().__init__(f"The user with username '{username}' already exists")
 
 
-class SsoUserAlreadyExistsException(IdentityAccessManagementDomainError):
+class SSOCredentialAlreadyExistsException(IdentityAccessManagementDomainError):
     pass
 
 

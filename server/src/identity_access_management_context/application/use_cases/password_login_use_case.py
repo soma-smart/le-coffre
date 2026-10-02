@@ -6,12 +6,12 @@ from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
     LoginLockoutGateway,
-    PasswordHashingGateway,
     TokenGateway,
-    UserPasswordRepository,
-    UserRepository,
 )
 from identity_access_management_context.application.responses import AdminLoginResponse
+from identity_access_management_context.application.services.authentication.password_authenticator import (
+    PasswordAuthenticator,
+)
 from identity_access_management_context.domain.events import (
     AdminLoginEvent,
     AdminLoginFailedEvent,
@@ -20,38 +20,29 @@ from identity_access_management_context.domain.exceptions import (
     AccountLockedException,
     AdminNotFoundException,
     InvalidCredentialsException,
+    PasswordAuthenticationError,
+    WrongPasswordError,
 )
+from identity_access_management_context.domain.value_objects import PasswordCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
 logger = logging.getLogger(__name__)
 
-# Pre-computed bcrypt hash used for constant-time password verification when
-# user is not found. This prevents timing oracles that could enumerate valid
-# emails by measuring response latency differences.
-# Generated with: bcrypt.hashpw(hashlib.sha256(b"dummy").digest(), bcrypt.gensalt())
-# Note: BcryptHashingGateway pre-hashes all passwords with SHA-256 before bcrypt.
-# See: SECURITY.md#timing-attack-mitigations, AUTH-VULN-09
-DUMMY_PASSWORD_HASH = b"$2b$12$bTnGLyMH2BYn4GtQhHPnVO33O1fpWb35NL/jHzxbboHURr26xGAu6"
-
 
 class PasswordLoginUseCase(TracedUseCase):
     def __init__(
         self,
-        user_password_repository: UserPasswordRepository,
-        user_repository: UserRepository,
+        password_authenticator: PasswordAuthenticator,
         auth_session_repository: AuthSessionRepository,
-        password_hashing_gateway: PasswordHashingGateway,
         token_gateway: TokenGateway,
         time_provider: TimeGateway,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
         login_lockout_gateway: LoginLockoutGateway,
     ):
-        self._user_password_repository = user_password_repository
-        self._user_repository = user_repository
+        self._password_authenticator = password_authenticator
         self._auth_session_repository = auth_session_repository
-        self._password_hashing_gateway = password_hashing_gateway
         self._token_gateway = token_gateway
         self._time_provider = time_provider
         self._event_publisher = event_publisher
@@ -81,103 +72,68 @@ class PasswordLoginUseCase(TracedUseCase):
         # DB reads and bcrypt verification are synchronous and blocking — run
         # them in a thread pool to avoid starving the event loop.
         def _lookup_and_verify():
-            user_password = self._user_password_repository.get_by_email(command.email)
-            if not user_password:
-                # Always call bcrypt.verify() with a dummy hash to prevent timing
-                # oracles. The latency converges to ~260ms (bcrypt time) regardless
-                # of whether the user exists, preventing email enumeration attacks.
-                # The verify() result is discarded; we always raise the same exception.
-                self._password_hashing_gateway.verify(command.password, DUMMY_PASSWORD_HASH)
-
-                logger.warning("Login failed for email=%s reason='User not found'", command.email)
-                event = AdminLoginFailedEvent(email=command.email, reason="User not found")
+            try:
+                return self._password_authenticator.authenticate(
+                    PasswordCredential(email=command.email, password=command.password)
+                )
+            except PasswordAuthenticationError as error:
+                logger.warning("Login failed for email=%s reason='%s'", command.email, error.reason)
+                event = AdminLoginFailedEvent(email=command.email, reason=error.reason)
                 self._event_publisher.publish(event)
                 self._admin_event_repository.append_event(
                     event_id=event.event_id,
                     event_type=type(event).__name__,
                     occurred_on=event.occurred_on,
                     actor_user_id=None,
-                    event_data={"email": command.email, "reason": "User not found"},
+                    event_data={"email": command.email, "reason": error.reason},
                 )
                 self._try_record_failed_login(command.email, now)
-                raise AdminNotFoundException("User not found")
+                if isinstance(error, WrongPasswordError):
+                    raise InvalidCredentialsException("Invalid credentials") from error
+                # An orphaned credential answers exactly like an unknown email, so the
+                # endpoint never confirms that the address once existed; the audit
+                # reason stays distinct so an operator can still spot the leftover row.
+                raise AdminNotFoundException("User not found") from error
 
-            if not self._password_hashing_gateway.verify(command.password, user_password.password_hash):
-                logger.warning("Login failed for email=%s reason='Invalid credentials'", command.email)
-                event = AdminLoginFailedEvent(email=command.email, reason="Invalid credentials")
-                self._event_publisher.publish(event)
-                self._admin_event_repository.append_event(
-                    event_id=event.event_id,
-                    event_type=type(event).__name__,
-                    occurred_on=event.occurred_on,
-                    actor_user_id=None,
-                    event_data={"email": command.email, "reason": "Invalid credentials"},
-                )
-                self._try_record_failed_login(command.email, now)
-                raise InvalidCredentialsException("Invalid credentials")
+        user = _lookup_and_verify()
 
-            user = self._user_repository.get_by_id(user_password.id)
-            if user is None:
-                # Credentials with no user behind them are an inconsistency, not
-                # a role-less account: falling back to an empty role set handed a
-                # valid token to a deleted account, so deleting a user did not
-                # actually revoke its ability to log in. Answering exactly like
-                # an unknown email keeps the endpoint from confirming that the
-                # address once existed; the audit reason is distinct so an
-                # operator can still spot the leftover row.
-                logger.warning("Login failed for email=%s reason='Orphaned credentials'", command.email)
-                event = AdminLoginFailedEvent(email=command.email, reason="Orphaned credentials")
-                self._event_publisher.publish(event)
-                self._admin_event_repository.append_event(
-                    event_id=event.event_id,
-                    event_type=type(event).__name__,
-                    occurred_on=event.occurred_on,
-                    actor_user_id=None,
-                    event_data={"email": command.email, "reason": "Orphaned credentials"},
-                )
-                self._try_record_failed_login(command.email, now)
-                raise AdminNotFoundException("User not found")
-
-            return user_password, user.roles
-
-        user_password, roles = _lookup_and_verify()
-
-        self._try_record_successful_login(user_password.email)
+        # The credential was found by this email, so it is the one it holds.
+        self._try_record_successful_login(command.email)
 
         token = self._token_gateway.generate_token(
-            user_id=user_password.id,
-            email=user_password.email,
-            roles=roles,
-            claims={"display_name": user_password.display_name},
+            user_id=user.id,
+            email=command.email,
+            roles=user.roles,
+            claims={"display_name": user.name},
         )
 
         refresh_token = self._token_gateway.generate_refresh_token(
-            user_id=user_password.id,
-            email=user_password.email,
-            roles=roles,
+            user_id=user.id,
+            email=command.email,
+            roles=user.roles,
         )
         if refresh_token.jti is not None:
             self._auth_session_repository.create_session(
-                user_id=user_password.id,
+                user_id=user.id,
                 refresh_token_jti=refresh_token.jti,
                 created_at=now,
             )
 
-        event = AdminLoginEvent(admin_id=user_password.id, email=user_password.email)
+        event = AdminLoginEvent(admin_id=user.id, email=command.email)
         self._event_publisher.publish(event)
         self._admin_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=user_password.id,
-            event_data={"email": user_password.email},
+            actor_user_id=user.id,
+            event_data={"email": command.email},
         )
 
         return AdminLoginResponse(
             jwt_token=token.value,
             refresh_token=refresh_token.value,
-            admin_id=user_password.id,
-            email=user_password.email,
+            admin_id=user.id,
+            email=command.email,
         )
 
     def _try_record_failed_login(self, email: str, now: datetime) -> None:

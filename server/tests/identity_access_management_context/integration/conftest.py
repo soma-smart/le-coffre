@@ -5,11 +5,12 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlAuthSessionRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
+    SqlPasswordCredentialRecordRepository,
     SqlRevokedTokenRepository,
     SqlServiceAccountEventRepository,
     SqlServiceAccountRepository,
-    SqlSsoUserRepository,
-    SqlUserPasswordRepository,
+    SqlServiceAccountTokenCredentialRecordRepository,
+    SqlSSOCredentialRecordRepository,
     SqlUserRepository,
 )
 
@@ -32,13 +33,13 @@ def session(database_engine):
 
 
 @pytest.fixture(scope="function")
-def sql_sso_user_repository(session):
-    return SqlSsoUserRepository(session)
+def sql_sso_credential_record_repository(session):
+    return SqlSSOCredentialRecordRepository(session)
 
 
 @pytest.fixture(scope="function")
-def sql_user_password_repository(session):
-    return SqlUserPasswordRepository(session)
+def sql_password_credential_record_repository(session):
+    return SqlPasswordCredentialRecordRepository(session)
 
 
 @pytest.fixture(scope="function")
@@ -72,5 +73,10 @@ def sql_service_account_repository(session):
 
 
 @pytest.fixture(scope="function")
+def sql_service_account_token_credential_record_repository(session):
+    return SqlServiceAccountTokenCredentialRecordRepository(session)
+
+
+@pytest.fixture
 def sql_service_account_event_repository(session):
     return SqlServiceAccountEventRepository(session)

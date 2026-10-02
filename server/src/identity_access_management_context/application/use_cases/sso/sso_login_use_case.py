@@ -10,10 +10,10 @@ from identity_access_management_context.application.gateways import (
     GroupRepository,
     PasswordHashingGateway,
     SsoConfigurationRepository,
+    SSOCredentialRecordRepository,
     SsoEncryptionGateway,
     SsoEventRepository,
     SsoGateway,
-    SsoUserRepository,
     TokenGateway,
     UserRepository,
 )
@@ -25,8 +25,16 @@ from identity_access_management_context.application.services import (
     UserCreationService,
     UserManagementService,
 )
-from identity_access_management_context.domain.entities.sso_user import SsoUser
+from identity_access_management_context.application.services.authentication.sso_authenticator import (
+    SSOAuthenticator,
+)
+from identity_access_management_context.domain.entities import SSOCredentialRecord
 from identity_access_management_context.domain.events import SsoLoginEvent
+from identity_access_management_context.domain.exceptions import (
+    OrphanedSSOCredentialError,
+    UnknownSSOSubjectError,
+)
+from identity_access_management_context.domain.value_objects import SSOCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
@@ -45,7 +53,8 @@ class SsoLoginUseCase(TracedUseCase):
     def __init__(
         self,
         sso_gateway: SsoGateway,
-        sso_user_repository: SsoUserRepository,
+        sso_authenticator: SSOAuthenticator,
+        sso_credential_record_repository: SSOCredentialRecordRepository,
         user_repository: UserRepository,
         auth_session_repository: AuthSessionRepository,
         password_hashing_gateway: PasswordHashingGateway,
@@ -59,7 +68,8 @@ class SsoLoginUseCase(TracedUseCase):
         sso_event_repository: SsoEventRepository,
     ):
         self._sso_gateway = sso_gateway
-        self._sso_user_repository = sso_user_repository
+        self._sso_authenticator = sso_authenticator
+        self._sso_credential_record_repository = sso_credential_record_repository
         self._user_repository = user_repository
         self._auth_session_repository = auth_session_repository
         self._password_hashing_gateway = password_hashing_gateway
@@ -86,32 +96,30 @@ class SsoLoginUseCase(TracedUseCase):
         # Called directly (no asyncio.to_thread) because the underlying synchronous
         # repository/session dependencies are not safe to use across threads.
         def _resolve_user():
-            existing_sso_user = self._sso_user_repository.get_by_sso_user_id(
-                sso_user_from_provider.sso_user_id, sso_user_from_provider.sso_provider
+            credential = SSOCredential(
+                provider=sso_user_from_provider.sso_provider, subject=sso_user_from_provider.sso_user_id
             )
+            try:
+                user = self._sso_authenticator.authenticate(credential)
+            except UnknownSSOSubjectError:
+                user = None
+            except OrphanedSSOCredentialError as error:
+                raise RuntimeError("User should exist at this point, but was not found in UserRepository") from error
 
-            if existing_sso_user:
-                user_id = existing_sso_user.internal_user_id
-                email = existing_sso_user.email
-                display_name = existing_sso_user.display_name
+            if user is not None:
                 is_new_user = False
-                self._sso_user_repository.update_last_login(
-                    sso_user_from_provider.sso_user_id,
-                    sso_user_from_provider.sso_provider,
-                    datetime.now(),
+                self._sso_credential_record_repository.update_last_login(
+                    credential.provider, credential.subject, datetime.now()
                 )
             else:
-                user_id = uuid4()
-                email = sso_user_from_provider.email
-                display_name = sso_user_from_provider.display_name
                 is_new_user = True
 
                 user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
                 user = user_management_service.create_user(
-                    user_id=user_id,
-                    email=email,
-                    username=email.split("@")[0],
-                    name=display_name,
+                    user_id=uuid4(),
+                    email=sso_user_from_provider.email,
+                    username=sso_user_from_provider.email.split("@")[0],
+                    name=sso_user_from_provider.display_name,
                 )
                 UserCreationService.create_personal_group_and_set_ownership(
                     user_id=user.id,
@@ -119,23 +127,17 @@ class SsoLoginUseCase(TracedUseCase):
                     group_repository=self._group_repository,
                     group_member_repository=self._group_member_repository,
                 )
-                sso_user = SsoUser(
-                    internal_user_id=user_id,
-                    email=email,
-                    display_name=display_name,
-                    sso_user_id=sso_user_from_provider.sso_user_id,
-                    sso_provider=sso_user_from_provider.sso_provider,
-                    created_at=datetime.now(),
-                    last_login=datetime.now(),
+                self._sso_credential_record_repository.create(
+                    SSOCredentialRecord(
+                        principal_id=user.id,
+                        provider=credential.provider,
+                        subject=credential.subject,
+                        created_at=datetime.now(),
+                        last_login=datetime.now(),
+                    )
                 )
-                self._sso_user_repository.create(sso_user)
 
-            # Fetch current roles so that any promotions are reflected in the token.
-            user = self._user_repository.get_by_id(user_id)
-            if not user:
-                raise RuntimeError("User should exist at this point, but was not found in UserRepository")
-
-            return user_id, email, display_name, is_new_user, user.roles
+            return user.id, user.email, user.name, is_new_user, user.roles
 
         user_id, email, display_name, is_new_user, roles = _resolve_user()
 
