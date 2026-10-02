@@ -20,7 +20,7 @@ class ServiceAccount(Principal):
     which is why "revoked" is a timestamp rather than a deletion.
 
     Creation date and creator are deliberately not fields: they are the
-    `occurred_on` and `actor_user_id` of the ServiceAccountCreatedEvent, read
+    `occurred_on` and `actor_principal_id` of the ServiceAccountCreatedEvent, read
     back when a listing needs them. Revocation is a field, because whether a
     credential is dead must not depend on an audit row still existing.
     """

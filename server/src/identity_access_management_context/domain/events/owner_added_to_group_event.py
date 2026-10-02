@@ -9,8 +9,8 @@ class OwnerAddedToGroupEvent(DomainEvent):
     def __init__(
         self,
         group_id: UUID,
-        user_id: UUID,
-        added_by_user_id: UUID,
+        principal_id: UUID,
+        added_by_principal_id: UUID,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -20,5 +20,5 @@ class OwnerAddedToGroupEvent(DomainEvent):
             priority=EventPriority.MEDIUM,
         )
         self.group_id = group_id
-        self.user_id = user_id
-        self.added_by_user_id = added_by_user_id
+        self.principal_id = principal_id
+        self.added_by_principal_id = added_by_principal_id

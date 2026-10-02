@@ -70,14 +70,14 @@ class CreateUserUseCase(TracedUseCase):
             user_id=user.id,
             username=user.username,
             email=user.email,
-            created_by_user_id=command.requesting_user.user_id,
+            created_by_principal_id=command.requesting_user.user_id,
         )
         self._event_publisher.publish(event)
         self._user_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={"user_id": str(user.id), "username": user.username, "email": user.email},
         )
 

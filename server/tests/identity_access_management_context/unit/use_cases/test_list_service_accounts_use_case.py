@@ -95,7 +95,7 @@ def test_given_an_account_when_listing_then_the_creation_facts_come_from_the_eve
 
     assert summary.name == "nightly"
     assert summary.created_at == NOW
-    assert summary.created_by_user_id == OWNER_ID
+    assert summary.created_by_principal_id == OWNER_ID
     assert summary.created_by_user_name == "Ada Owner"
     assert summary.revoked_at is None
 
@@ -123,7 +123,7 @@ def test_given_an_account_with_no_creation_event_when_listing_then_it_still_appe
 
     assert summary.name == "orphan"
     assert summary.created_at is None
-    assert summary.created_by_user_id is None
+    assert summary.created_by_principal_id is None
     assert summary.created_by_user_name is None
 
 
@@ -135,7 +135,7 @@ def test_given_a_deleted_creator_when_listing_then_the_display_name_is_empty(
 
     summary = _list(use_case, owner).items[0]
 
-    assert summary.created_by_user_id == OWNER_ID
+    assert summary.created_by_principal_id == OWNER_ID
     assert summary.created_by_user_name is None
 
 

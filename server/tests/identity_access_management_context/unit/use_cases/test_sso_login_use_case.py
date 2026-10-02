@@ -405,7 +405,7 @@ async def test_should_store_sso_login_event_on_successful_login(
     assert len(sso_event_repository.events) == 1
     stored = sso_event_repository.events[0]
     assert stored["event_type"] == "SsoLoginEvent"
-    assert stored["actor_user_id"] == user_id
+    assert stored["actor_principal_id"] == user_id
 
 
 @pytest.mark.asyncio

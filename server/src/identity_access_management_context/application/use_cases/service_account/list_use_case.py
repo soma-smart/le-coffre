@@ -78,7 +78,7 @@ class ListServiceAccountsUseCase(
         # Get user names
         # NOTE: Repositories should handle bulk queries to avoid such loops
         display_names: dict = {}
-        creator_ids = {fact.created_by_user_id for fact in facts if fact.created_by_user_id}
+        creator_ids = {fact.created_by_principal_id for fact in facts if fact.created_by_principal_id}
         for creator_id in creator_ids:
             user = self._user_repository.get_by_id(creator_id)
             display_names[creator_id] = user.name if user is not None else None
@@ -88,8 +88,8 @@ class ListServiceAccountsUseCase(
                 id=account.id,
                 group_id=account.group_id,
                 name=account.name,
-                created_by_user_id=fact.created_by_user_id,
-                created_by_user_name=display_names.get(fact.created_by_user_id),
+                created_by_principal_id=fact.created_by_principal_id,
+                created_by_user_name=display_names.get(fact.created_by_principal_id),
                 created_at=fact.created_at,
                 revoked_at=account.revoked_at,
             )
@@ -107,7 +107,7 @@ class ListServiceAccountsUseCase(
         event = ServiceAccountsListedEvent(
             event_id=uuid4(),
             occurred_on=self._time_provider.get_current_time(),
-            user_id=command.requesting_user.user_id,
+            principal_id=command.requesting_user.user_id,
             group_id=command.group_id,
         )
         # Counted on the accounts rather than the summaries: the account row is the

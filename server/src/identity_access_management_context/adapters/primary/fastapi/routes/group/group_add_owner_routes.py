@@ -66,7 +66,7 @@ def add_owner_to_group(
         command = AddOwnerToGroupCommand(
             requesting_user=current_user.to_authenticated_user(),
             group_id=group_id,
-            user_id=request.user_id,
+            principal_id=request.user_id,
         )
 
         usecase.execute(command)

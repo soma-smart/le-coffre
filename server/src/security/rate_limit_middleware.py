@@ -353,7 +353,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
                 token = None
             if token:
-                return Principal(kind="user", id=str(token.user_id))
+                return Principal(kind="user", id=str(token.principal_id))
 
         # No cookie at all is the EXTENSION's normal case, not an edge one: its
         # requests carry a bearer and never a cookie, because cookies here are

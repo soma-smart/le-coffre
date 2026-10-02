@@ -25,7 +25,7 @@ class JwtTokenGateway(TokenGateway):
 
     def generate_token(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: list[str],
         claims: dict[str, Any] | None = None,
@@ -34,13 +34,13 @@ class JwtTokenGateway(TokenGateway):
             claims = {}
 
         # Convert UUID to string for JWT serialization
-        user_id_str = str(user_id)
+        principal_id_str = str(principal_id)
         issued_at = datetime.now(UTC)
         expires_at = issued_at + timedelta(seconds=self.access_token_expiration_seconds)
         jti = str(uuid4())
 
         payload = {
-            "user_id": user_id_str,
+            "user_id": principal_id_str,
             "email": email,
             "roles": roles,
             "jti": jti,
@@ -53,7 +53,7 @@ class JwtTokenGateway(TokenGateway):
 
         return Token(
             value=token_value,
-            user_id=user_id,
+            principal_id=principal_id,
             email=email,
             roles=roles,
             claims=claims,
@@ -65,17 +65,17 @@ class JwtTokenGateway(TokenGateway):
 
     def generate_refresh_token(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: list[str],
     ) -> Token:
-        user_id_str = str(user_id)
+        principal_id_str = str(principal_id)
         issued_at = datetime.now(UTC)
         expires_at = issued_at + timedelta(seconds=self._refresh_token_expiration_seconds)
         jti = str(uuid4())
 
         payload = {
-            "user_id": user_id_str,
+            "user_id": principal_id_str,
             "email": email,
             "roles": roles,
             "type": REFRESH_TOKEN_TYPE,
@@ -87,7 +87,7 @@ class JwtTokenGateway(TokenGateway):
         refresh_token_value = jwt.encode(payload, self._secret_key, algorithm=self._algorithm)
         return Token(
             value=refresh_token_value,
-            user_id=user_id,
+            principal_id=principal_id,
             email=email,
             roles=roles,
             claims={},
@@ -131,14 +131,14 @@ class JwtTokenGateway(TokenGateway):
             return None
 
     def _build_token_from_payload(self, token_value: str, payload: dict[str, Any], token_type: str) -> Token:
-        user_id = UUID(payload.get("user_id"))
+        principal_id = UUID(payload.get("user_id"))
 
         standard_fields = {"user_id", "email", "roles", "exp", "iat", "jti", "type"}
         claims = {k: v for k, v in payload.items() if k not in standard_fields}
 
         return Token(
             value=token_value,
-            user_id=user_id,
+            principal_id=principal_id,
             email=payload.get("email", ""),
             roles=payload.get("roles", []),
             claims=claims,

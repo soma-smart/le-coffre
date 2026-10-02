@@ -481,3 +481,64 @@ def test_a_principal_may_hold_several_credentials_of_one_kind(alembic_config, te
     engine.dispose()
 
     assert registered == 2
+
+
+PRINCIPAL_COLUMNS_REVISION = "83cc85f63482"
+"""Revision renaming the user columns that hold any principal."""
+
+
+def test_principal_columns_migration_keeps_every_value(alembic_config, temp_database):
+    """Renamed columns keep their values, and get their old names back on downgrade."""
+    database_url, _ = temp_database
+    principal_id, group_id = uuid4().hex, uuid4().hex
+    rows = {
+        "Group": ("id, name, is_personal, user_id", f"'{group_id}', 'Personal', 1, '{principal_id}'"),
+        "GroupMember": ("group_id, user_id, is_owner", f"'{group_id}', '{principal_id}', 1"),
+        "AuthSession": (
+            "id, user_id, current_refresh_token_jti, created_at, updated_at",
+            f"'{uuid4().hex}', '{principal_id}', 'jti-1', '2026-01-01 12:00:00', '2026-01-01 12:00:00'",
+        ),
+        "RevokedToken": (
+            "id, jti, user_id, token_type, revoked_at, reason",
+            f"'{uuid4().hex}', 'jti-2', '{principal_id}', 'refresh', '2026-01-01 12:00:00', 'logout'",
+        ),
+        "IamEvent": (
+            "event_id, event_type, occurred_on, actor_user_id, event_data",
+            f"'{uuid4().hex}', 'GroupCreatedEvent', '2026-01-01 12:00:00', '{principal_id}', '{{}}'",
+        ),
+    }
+    renamed = {
+        "Group": "principal_id",
+        "GroupMember": "principal_id",
+        "AuthSession": "principal_id",
+        "RevokedToken": "principal_id",
+        "IamEvent": "actor_principal_id",
+    }
+
+    command.upgrade(alembic_config, REVOKED_TOKENS_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for table, (columns, values) in rows.items():
+            conn.execute(text(f'INSERT INTO "{table}" ({columns}) VALUES ({values})'))
+    engine.dispose()
+
+    command.upgrade(alembic_config, PRINCIPAL_COLUMNS_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        upgraded = {
+            table: conn.execute(text(f'SELECT {column} FROM "{table}"')).scalar_one()
+            for table, column in renamed.items()
+        }
+    engine.dispose()
+
+    command.downgrade(alembic_config, REVOKED_TOKENS_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        downgraded = {
+            table: conn.execute(text(f'SELECT {column.replace("principal", "user")} FROM "{table}"')).scalar_one()
+            for table, column in renamed.items()
+        }
+    engine.dispose()
+
+    assert upgraded == dict.fromkeys(renamed, principal_id)
+    assert downgraded == dict.fromkeys(renamed, principal_id)

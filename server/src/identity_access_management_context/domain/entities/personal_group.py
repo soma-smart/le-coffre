@@ -6,4 +6,4 @@ from uuid import UUID
 class PersonalGroup:
     id: UUID
     name: str
-    user_id: UUID
+    principal_id: UUID

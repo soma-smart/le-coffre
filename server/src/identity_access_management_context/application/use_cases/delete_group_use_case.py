@@ -67,7 +67,7 @@ class DeleteGroupUseCase(TracedUseCase):
             ServiceAccountRevokedEvent(
                 event_id=uuid4(),
                 occurred_on=now,
-                user_id=command.requesting_user.user_id,
+                principal_id=command.requesting_user.user_id,
                 service_account_id=account.id,
                 service_account_name=account.name,
             )
@@ -103,13 +103,13 @@ class DeleteGroupUseCase(TracedUseCase):
 
         event = GroupDeletedEvent(
             group_id=command.group_id,
-            deleted_by_user_id=command.requesting_user.user_id,
+            deleted_by_principal_id=command.requesting_user.user_id,
         )
         self._event_publisher.publish(event)
         self._group_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={"group_id": str(command.group_id)},
         )

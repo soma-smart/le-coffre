@@ -81,7 +81,7 @@ def list_group_events(
                     event_id=event.event_id,
                     event_type=event.event_type,
                     occurred_on=event.occurred_on,
-                    actor_user_id=event.actor_user_id,
+                    actor_user_id=event.actor_principal_id,
                     actor_email=event.actor_email,
                     event_data=event.event_data,
                 )

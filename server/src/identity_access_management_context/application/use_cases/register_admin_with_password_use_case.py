@@ -82,7 +82,7 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
                 event_id=event.event_id,
                 event_type=type(event).__name__,
                 occurred_on=event.occurred_on,
-                actor_user_id=user.id,
+                actor_principal_id=user.id,
                 event_data={"email": command.email},
             )
 

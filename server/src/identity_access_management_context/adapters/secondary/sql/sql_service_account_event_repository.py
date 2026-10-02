@@ -17,7 +17,7 @@ from shared_kernel.utils import as_utc, to_naive_utc
 
 _CREATED_EVENT_TYPE = ServiceAccountCreatedEvent.__name__
 
-_NO_CREATION_FACTS = ServiceAccountCreationFacts(created_at=None, created_by_user_id=None)
+_NO_CREATION_FACTS = ServiceAccountCreationFacts(created_at=None, created_by_principal_id=None)
 
 
 class SqlServiceAccountEventRepository(SQLBaseRepository, ServiceAccountEventRepository):
@@ -37,7 +37,7 @@ class SqlServiceAccountEventRepository(SQLBaseRepository, ServiceAccountEventRep
                 event_type=event.event_type,
                 # Read back as a creation date, so normalised here rather than left to the driver.
                 occurred_on=to_naive_utc(event.occurred_on),
-                actor_user_id=event.user_id,
+                actor_principal_id=event.principal_id,
                 event_data=event.event_data,
             )
             for event in events
@@ -57,7 +57,7 @@ class SqlServiceAccountEventRepository(SQLBaseRepository, ServiceAccountEventRep
         query = select(
             IamEventTable.event_data,
             IamEventTable.occurred_on,
-            IamEventTable.actor_user_id,
+            IamEventTable.actor_principal_id,
         ).where(
             IamEventTable.event_type == _CREATED_EVENT_TYPE,
             account_id_column.in_(wanted_ids),
@@ -65,10 +65,10 @@ class SqlServiceAccountEventRepository(SQLBaseRepository, ServiceAccountEventRep
         rows = self._session.exec(query).all()
 
         facts_by_account: dict[str, ServiceAccountCreationFacts] = {}
-        for event_data, occurred_on, actor_user_id in rows:
+        for event_data, occurred_on, actor_principal_id in rows:
             facts = ServiceAccountCreationFacts(
                 created_at=as_utc(occurred_on),
-                created_by_user_id=actor_user_id,
+                created_by_principal_id=actor_principal_id,
             )
             facts_by_account[event_data["service_account_id"]] = facts
 

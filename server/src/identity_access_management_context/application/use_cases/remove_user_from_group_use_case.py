@@ -45,24 +45,24 @@ class RemoveUserFromGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_owner(command.group_id, command.requester_id):
             raise UserNotOwnerOfGroupException(command.requester_id, command.group_id)
 
-        if not self.group_member_repository.is_member(command.group_id, command.user_id):
-            raise UserNotMemberOfGroupException(command.user_id, command.group_id)
+        if not self.group_member_repository.is_member(command.group_id, command.principal_id):
+            raise UserNotMemberOfGroupException(command.principal_id, command.group_id)
 
-        if self.group_member_repository.is_owner(command.group_id, command.user_id):
-            raise CannotRemoveOwnerException(command.user_id, command.group_id)
+        if self.group_member_repository.is_owner(command.group_id, command.principal_id):
+            raise CannotRemoveOwnerException(command.principal_id, command.group_id)
 
-        self.group_member_repository.remove_member(command.group_id, command.user_id)
+        self.group_member_repository.remove_member(command.group_id, command.principal_id)
 
         event = UserRemovedFromGroupEvent(
             group_id=command.group_id,
-            user_id=command.user_id,
-            removed_by_user_id=command.requester_id,
+            principal_id=command.principal_id,
+            removed_by_principal_id=command.requester_id,
         )
         self._event_publisher.publish(event)
         self._group_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requester_id,
-            event_data={"group_id": str(command.group_id), "user_id": str(command.user_id)},
+            actor_principal_id=command.requester_id,
+            event_data={"group_id": str(command.group_id), "user_id": str(command.principal_id)},
         )

@@ -74,7 +74,7 @@ def test_given_owner_when_adding_existing_member_as_owner_then_member_becomes_ow
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     use_case.execute(command)
@@ -123,7 +123,7 @@ def test_given_non_owner_when_adding_owner_to_group_then_raise_user_not_owner_ex
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=non_owner_id, roles=[]),
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     with pytest.raises(UserNotOwnerOfGroupException):
@@ -163,7 +163,7 @@ def test_given_admin_not_owner_when_adding_owner_to_group_then_member_becomes_ow
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=admin_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     use_case.execute(command)
@@ -197,7 +197,7 @@ def test_given_group_not_found_when_adding_owner_then_raise_group_not_found_exce
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=requester_id, roles=[]),
         group_id=nonexistent_group_id,
-        user_id=user_id,
+        principal_id=user_id,
     )
 
     with pytest.raises(GroupNotFoundException):
@@ -229,14 +229,14 @@ def test_given_personal_group_when_adding_owner_then_raise_cannot_modify_persona
     user_repository.save(owner)
     user_repository.save(member)
 
-    group = Group(id=group_id, name="Personal Group", is_personal=True, user_id=owner_id)
+    group = Group(id=group_id, name="Personal Group", is_personal=True, principal_id=owner_id)
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     with pytest.raises(CannotModifyPersonalGroupException):
@@ -268,7 +268,7 @@ def test_given_user_not_found_when_adding_owner_then_raise_user_not_found_except
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=nonexistent_user_id,
+        principal_id=nonexistent_user_id,
     )
 
     with pytest.raises(UserNotFoundException):
@@ -307,7 +307,7 @@ def test_given_user_not_member_when_adding_as_owner_then_raise_user_not_member_e
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=non_member_id,
+        principal_id=non_member_id,
     )
 
     with pytest.raises(UserNotMemberOfGroupException):
@@ -349,7 +349,7 @@ def test_given_user_already_owner_when_adding_as_owner_then_operation_is_idempot
     command = AddOwnerToGroupCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=existing_owner_id,
+        principal_id=existing_owner_id,
     )
 
     use_case.execute(command)
@@ -385,7 +385,7 @@ def test_given_user_already_owner_when_adding_as_owner_should_not_publish_duplic
     group_member_repository.add_member(group_id, existing_owner_id, is_owner=True)
 
     command = AddOwnerToGroupCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, user_id=existing_owner_id
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, principal_id=existing_owner_id
     )
     use_case.execute(command)
 
@@ -414,15 +414,15 @@ def test_given_owner_when_adding_existing_member_as_owner_then_should_publish_ow
     group_member_repository.add_member(group_id, member_id, is_owner=False)
 
     command = AddOwnerToGroupCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, user_id=member_id
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, principal_id=member_id
     )
     use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(OwnerAddedToGroupEvent)
     assert len(events) == 1
     assert events[0].group_id == group_id
-    assert events[0].user_id == member_id
-    assert events[0].added_by_user_id == owner_id
+    assert events[0].principal_id == member_id
+    assert events[0].added_by_principal_id == owner_id
 
 
 def test_given_owner_when_adding_existing_member_as_owner_then_should_store_owner_added_to_group_event(
@@ -447,11 +447,11 @@ def test_given_owner_when_adding_existing_member_as_owner_then_should_store_owne
     group_member_repository.add_member(group_id, member_id, is_owner=False)
 
     command = AddOwnerToGroupCommand(
-        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, user_id=member_id
+        requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]), group_id=group_id, principal_id=member_id
     )
     use_case.execute(command)
 
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "OwnerAddedToGroupEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id

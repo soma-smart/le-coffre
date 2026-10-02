@@ -89,7 +89,7 @@ class DeleteUserUseCase(TracedUseCase):
         # they die because validation refuses a token whose user row is gone.
         self._auth_session_repository.invalidate_all_for_user(user_id, now)
 
-        personal_group = self.group_repository.get_by_user_id(user_id)
+        personal_group = self.group_repository.get_by_principal_id(user_id)
         personal_group_id = personal_group.id if personal_group else None
 
         # Delete groups where user is the sole owner (excluding personal group)
@@ -105,7 +105,7 @@ class DeleteUserUseCase(TracedUseCase):
                     self.group_repository.delete_group(group.id)
 
         # Remove user from all remaining groups (including as owner/member) in one operation
-        self.group_member_repository.remove_user_from_all_groups(user_id)
+        self.group_member_repository.remove_principal_from_all_groups(user_id)
 
         # Credentials live in their own table, keyed by the same id. Leaving the
         # row behind would keep an authentication secret alive with no user to
@@ -117,7 +117,7 @@ class DeleteUserUseCase(TracedUseCase):
 
         event = UserDeletedEvent(
             user_id=user_id,
-            deleted_by_user_id=command.requesting_user.user_id,
+            deleted_by_principal_id=command.requesting_user.user_id,
             personal_group_id=personal_group_id,
         )
         self.event_publisher.publish(event)
@@ -125,7 +125,7 @@ class DeleteUserUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={
                 "user_id": str(user_id),
                 "personal_group_id": str(personal_group_id) if personal_group_id else None,

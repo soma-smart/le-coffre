@@ -16,7 +16,7 @@ class ServiceAccountCreationFacts:
     """
 
     created_at: datetime | None
-    created_by_user_id: UUID | None
+    created_by_principal_id: UUID | None
 
 
 class ServiceAccountEventRepository(ABC):
