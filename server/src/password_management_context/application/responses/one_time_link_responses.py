@@ -28,7 +28,7 @@ class OneTimeLinkSummaryResponse:
 
     id: UUID
     password_id: UUID
-    created_by_user_id: UUID
+    created_by_principal_id: UUID
     created_at: datetime
     expires_at: datetime
     read_at: datetime | None
@@ -64,7 +64,7 @@ class OneTimeLinkAuditItemResponse:
     password_id: UUID
     password_name: str | None
     group_name: str | None
-    created_by_user_id: UUID
+    created_by_principal_id: UUID
     created_by_display_name: str | None
     created_at: datetime
     expires_at: datetime

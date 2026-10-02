@@ -37,7 +37,7 @@ class ListOneTimeLinksUseCase(TracedUseCase):
         self.time_gateway = time_gateway
 
     def execute(self, command: ListOneTimeLinksCommand) -> ListOneTimeLinksResponse:
-        self.ownership_service.ensure_user_owns_password(command.requesting_user_id, command.password_id)
+        self.ownership_service.ensure_principal_owns_password(command.requesting_principal_id, command.password_id)
 
         now = self.time_gateway.get_current_time()
 
@@ -56,7 +56,7 @@ class ListOneTimeLinksUseCase(TracedUseCase):
                 OneTimeLinkSummaryResponse(
                     id=link.id,
                     password_id=link.password_id,
-                    created_by_user_id=link.created_by_user_id,
+                    created_by_principal_id=link.created_by_principal_id,
                     created_at=link.created_at,
                     expires_at=link.expires_at,
                     read_at=link.read_at,

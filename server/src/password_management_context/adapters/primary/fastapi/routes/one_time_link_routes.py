@@ -117,7 +117,7 @@ def create_one_time_link(
     try:
         command = CreateOneTimeLinkCommand(
             password_id=password_id,
-            requesting_user_id=current_user.user_id,
+            requesting_principal_id=current_user.user_id,
             lifetime_seconds=request.lifetime_seconds,
         )
         result = usecase.execute(command)
@@ -165,7 +165,7 @@ def list_one_time_links(
     try:
         command = ListOneTimeLinksCommand(
             password_id=password_id,
-            requesting_user_id=current_user.user_id,
+            requesting_principal_id=current_user.user_id,
             include_inactive=include_inactive,
         )
         result = usecase.execute(command)
@@ -174,7 +174,7 @@ def list_one_time_links(
                 OneTimeLinkSummary(
                     id=link.id,
                     password_id=link.password_id,
-                    created_by_user_id=link.created_by_user_id,
+                    created_by_user_id=link.created_by_principal_id,
                     created_at=link.created_at,
                     expires_at=link.expires_at,
                     read_at=link.read_at,
@@ -216,7 +216,7 @@ def revoke_one_time_link(
     Links that were already read cannot be revoked: their read timestamp is audit data.
     """
     try:
-        command = RevokeOneTimeLinkCommand(link_id=link_id, requesting_user_id=current_user.user_id)
+        command = RevokeOneTimeLinkCommand(link_id=link_id, requesting_principal_id=current_user.user_id)
         usecase.execute(command)
     except OneTimeLinkNotFoundError as e:
         raise HTTPException(status_code=404, detail="Link does not exist") from e

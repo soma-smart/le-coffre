@@ -74,7 +74,7 @@ def groups(
         event_type="PasswordCreatedEvent",
         occurred_on=NOW.replace(tzinfo=None),
         password_id=password.id,
-        actor_user_id=OWNER_ID,
+        actor_principal_id=OWNER_ID,
         event_data={
             "password_id": str(password.id),
             "password_name": password.name,

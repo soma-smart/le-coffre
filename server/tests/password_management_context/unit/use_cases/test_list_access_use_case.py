@@ -54,7 +54,7 @@ def password(password_repository: FakePasswordRepository) -> Password:
 
 
 def _user_link(response: ListAccessResponse, user_id: UUID, group_id: UUID):
-    matches = [link for link in response.user_accesses if link.user_id == user_id and link.group_id == group_id]
+    matches = [link for link in response.user_accesses if link.principal_id == user_id and link.group_id == group_id]
     assert len(matches) == 1, f"expected exactly one link for {user_id} via {group_id}, got {matches}"
     return matches[0]
 

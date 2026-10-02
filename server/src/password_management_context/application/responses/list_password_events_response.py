@@ -8,7 +8,7 @@ class PasswordEventItem:
     event_id: str
     event_type: str
     occurred_on: str
-    actor_user_id: str
+    actor_principal_id: str
     actor_email: str | None
     event_data: dict
 

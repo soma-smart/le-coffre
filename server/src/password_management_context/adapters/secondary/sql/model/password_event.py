@@ -13,5 +13,5 @@ class PasswordEventTable(SQLModel, table=True):
     event_type: str = Field(index=True)
     occurred_on: datetime = Field(index=True)
     password_id: UUID = Field(index=True)
-    actor_user_id: UUID = Field(index=True)
+    actor_principal_id: UUID = Field(index=True)
     event_data: dict = Field(default_factory=dict, sa_column=Column(JSON))

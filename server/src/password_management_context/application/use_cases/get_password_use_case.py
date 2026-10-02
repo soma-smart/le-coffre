@@ -48,8 +48,8 @@ class GetPasswordUseCase(TracedUseCase):
         if not password_entity:
             raise PasswordNotFoundError(command.password_id)
 
-        # Check if user has access through their groups
-        if not self._user_has_access_through_groups(command.requester_id, command.password_id):
+        # Check if the requester has access through its groups
+        if not self._principal_has_access_through_groups(command.requester_id, command.password_id):
             raise PasswordAccessDeniedError(command.requester_id, command.password_id)
 
         logger.info("Password accessed")
@@ -58,15 +58,15 @@ class GetPasswordUseCase(TracedUseCase):
         event = PasswordAccessedEvent(
             password_id=password_entity.id,
             password_name=password_entity.name,
-            accessed_by_user_id=command.requester_id,
+            accessed_by_principal_id=command.requester_id,
         )
         event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)
 
         return decrypted_password
 
-    def _user_has_access_through_groups(self, user_id: UUID, password_id: UUID) -> bool:
-        """Check if user has access to password through any of their groups"""
+    def _principal_has_access_through_groups(self, principal_id: UUID, password_id: UUID) -> bool:
+        """Check if a principal has access to the password through any of its groups"""
         all_permissions = self.password_permissions_repository.list_all_permissions_for(password_id)
         now = self.time_gateway.get_current_time()
 
@@ -76,10 +76,10 @@ class GetPasswordUseCase(TracedUseCase):
             if not access.grants_read(now):
                 continue
 
-            is_user_owner = self.group_access_gateway.is_user_owner_of_group(user_id, group_id)
-            is_user_member = self.group_access_gateway.is_user_member_of_group(user_id, group_id)
+            is_owner = self.group_access_gateway.is_principal_owner_of_group(principal_id, group_id)
+            is_member = self.group_access_gateway.is_principal_member_of_group(principal_id, group_id)
 
-            if is_user_owner or is_user_member:
+            if is_owner or is_member:
                 return True
 
         return False

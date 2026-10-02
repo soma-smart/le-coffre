@@ -133,7 +133,7 @@ def revoke_use_case(one_time_link_repository, ownership_service, time_gateway):
 
 
 def _issue(create_use_case, user_id=ALICE, password_id=PASSWORD_ID):
-    return create_use_case.execute(CreateOneTimeLinkCommand(password_id=password_id, requesting_user_id=user_id))
+    return create_use_case.execute(CreateOneTimeLinkCommand(password_id=password_id, requesting_principal_id=user_id))
 
 
 # ── Admin listing ─────────────────────────────────────────────────────
@@ -195,10 +195,10 @@ def test_my_listing_returns_only_my_own_links(create_use_case, my_list_use_case,
     _issue(create_use_case, user_id=ALICE)
     _issue(create_use_case, user_id=BOB)
 
-    result = my_list_use_case.execute(ListMyOneTimeLinksCommand(requesting_user_id=ALICE))
+    result = my_list_use_case.execute(ListMyOneTimeLinksCommand(requesting_principal_id=ALICE))
 
     assert len(result.links) == 1
-    assert result.links[0].created_by_user_id == ALICE
+    assert result.links[0].created_by_principal_id == ALICE
     assert result.total == 1
 
 
@@ -209,7 +209,7 @@ def test_personal_listing_still_names_the_owning_group(
     user_info_gateway.set_group_name(GROUP_ID, "Platform team")
     _issue(create_use_case, user_id=ALICE)
 
-    result = my_list_use_case.execute(ListMyOneTimeLinksCommand(requesting_user_id=ALICE))
+    result = my_list_use_case.execute(ListMyOneTimeLinksCommand(requesting_principal_id=ALICE))
 
     assert result.links[0].group_name == "Platform team"
     # No issuer on the personal table: there is only one, and it is the reader.
@@ -294,7 +294,7 @@ def test_issuer_can_revoke_their_own_link_after_losing_ownership(
     created = _issue(create_use_case, user_id=ALICE)
     group_access_gateway._group_owners[GROUP_ID].discard(ALICE)
 
-    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=created.id, requesting_user_id=ALICE))
+    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=created.id, requesting_principal_id=ALICE))
 
     assert one_time_link_repository.storage[created.id].is_revoked()
 
@@ -303,16 +303,16 @@ def test_a_stranger_still_cannot_revoke_someone_elses_link(create_use_case, revo
     created = _issue(create_use_case, user_id=ALICE)
 
     with pytest.raises(NotPasswordOwnerError):
-        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=created.id, requesting_user_id=BOB))
+        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=created.id, requesting_principal_id=BOB))
 
 
 def test_expired_links_drop_out_of_both_listings(
     create_use_case, admin_list_use_case, my_list_use_case, time_gateway, owned_password
 ):
     create_use_case.execute(
-        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=ALICE, lifetime_seconds=600)
+        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=ALICE, lifetime_seconds=600)
     )
     time_gateway.set_current_time(T0 + timedelta(seconds=601))
 
     assert admin_list_use_case.execute(ListOneTimeLinksForAdminCommand(requesting_user=ADMIN)).links == []
-    assert my_list_use_case.execute(ListMyOneTimeLinksCommand(requesting_user_id=ALICE)).links == []
+    assert my_list_use_case.execute(ListMyOneTimeLinksCommand(requesting_principal_id=ALICE)).links == []
