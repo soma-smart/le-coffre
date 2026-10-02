@@ -8,9 +8,8 @@ from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
     GroupRepository,
     OneTimeLinkRevocationGateway,
-    SsoUserRepository,
+    PasswordCredentialRecordRepository,
     UserEventRepository,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.services import (
@@ -34,11 +33,10 @@ class DeleteUserUseCase(TracedUseCase):
         event_publisher: DomainEventPublisher,
         user_event_repository: UserEventRepository,
         one_time_link_revocation_gateway: OneTimeLinkRevocationGateway,
-        user_password_repository: UserPasswordRepository,
+        password_credential_record_repository: PasswordCredentialRecordRepository,
         extension_token_repository: ExtensionTokenRepository,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
-        sso_user_repository: SsoUserRepository,
         auth_session_repository: AuthSessionRepository,
     ):
         self.user_repository = user_repository
@@ -47,11 +45,10 @@ class DeleteUserUseCase(TracedUseCase):
         self.event_publisher = event_publisher
         self._user_event_repository = user_event_repository
         self._one_time_link_revocation_gateway = one_time_link_revocation_gateway
-        self._user_password_repository = user_password_repository
+        self._password_credential_record_repository = password_credential_record_repository
         self._extension_token_repository = extension_token_repository
         self._admin_event_repository = admin_event_repository
         self._time_provider = time_provider
-        self._sso_user_repository = sso_user_repository
         self._auth_session_repository = auth_session_repository
 
     def execute(self, command: DeleteUserCommand) -> None:
@@ -114,11 +111,7 @@ class DeleteUserUseCase(TracedUseCase):
         # row behind would keep an authentication secret alive with no user to
         # own it, and it would shadow any account later created on that email,
         # because credentials are looked up by email.
-        self._user_password_repository.delete_by_id(user_id)
-        # Same for the SSO identity: token validation used to fall back on it
-        # once the user row was gone, and a surviving row would map the next SSO
-        # login of that person onto an account that no longer exists.
-        self._sso_user_repository.delete_by_user_id(user_id)
+        self._password_credential_record_repository.delete_by_principal_id(user_id)
 
         self.user_repository.delete(user_id)
 

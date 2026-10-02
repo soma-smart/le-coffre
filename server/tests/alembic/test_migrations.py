@@ -218,6 +218,9 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
 PRE_PRINCIPAL_REVISION = "6f3f296a75c9"
 """Last revision where users and service accounts had their own tables."""
 
+PRINCIPAL_REVISION = "b2756d236d95"
+"""Revision adding the principal registry, before credentials had their own tables."""
+
 
 def test_principal_registry_migration_keeps_every_id_with_its_kind(alembic_config, temp_database):
     """Users and service accounts survive the move, under the same ids, and come back on downgrade."""
@@ -243,7 +246,7 @@ def test_principal_registry_migration_keeps_every_id_with_its_kind(alembic_confi
         )
     engine.dispose()
 
-    command.upgrade(alembic_config, "head")
+    command.upgrade(alembic_config, PRINCIPAL_REVISION)
     engine = create_engine(database_url)
     with engine.connect() as conn:
         kinds = dict(conn.execute(text("SELECT id, kind FROM iam__principal")).all())
@@ -264,6 +267,126 @@ def test_principal_registry_migration_keeps_every_id_with_its_kind(alembic_confi
     with engine.connect() as conn:
         assert conn.execute(text('SELECT id, username FROM "User"')).all() == [(user_id.hex, "alice")]
         assert conn.execute(text('SELECT id, token_hash FROM "ServiceAccount"')).all() == [(account_id.hex, "hash-1")]
+    engine.dispose()
+
+
+def test_credentials_migration_moves_every_verifier_to_its_principal(alembic_config, temp_database):
+    """Passwords, SSO subjects and token hashes move to credential tables and come back on downgrade."""
+    database_url, _ = temp_database
+    user_id, sso_user_id, orphan_id, account_id = uuid4(), uuid4(), uuid4(), uuid4()
+
+    command.upgrade(alembic_config, PRINCIPAL_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for principal_id, kind in ((user_id, "user"), (sso_user_id, "user"), (account_id, "service_account")):
+            conn.execute(
+                text("INSERT INTO iam__principal (id, kind) VALUES (:id, :kind)"),
+                {"id": principal_id.hex, "kind": kind},
+            )
+        for principal_id, username in ((user_id, "alice"), (sso_user_id, "bob")):
+            conn.execute(
+                text(
+                    "INSERT INTO iam__principal__user (principal_id, username, email, name, roles) "
+                    "VALUES (:id, :username, :email, :name, '[]')"
+                ),
+                {"id": principal_id.hex, "username": username, "email": f"{username}@new.example", "name": username},
+            )
+        conn.execute(
+            text(
+                "INSERT INTO iam__principal__service_account (principal_id, group_id, name, token_hash) "
+                "VALUES (:id, :group_id, 'nightly-backup', 'hash-1')"
+            ),
+            {"id": account_id.hex, "group_id": uuid4().hex},
+        )
+        # The copies drifted from the user: the login email must survive, the display name must not.
+        for principal_id, email in ((user_id, "alice@old.example"), (orphan_id, "gone@example.com")):
+            conn.execute(
+                text(
+                    'INSERT INTO "UserPassword" (id, email, password_hash, display_name) '
+                    "VALUES (:id, :email, :hash, 'Stale Name')"
+                ),
+                {"id": principal_id.hex, "email": email, "hash": b"bcrypt-hash"},
+            )
+        conn.execute(
+            text(
+                'INSERT INTO "SsoUser" (internal_user_id, email, display_name, sso_user_id, sso_provider) '
+                "VALUES (:id, 'bob@old.example', 'Stale Name', 'subject-1', 'google')"
+            ),
+            {"id": sso_user_id.hex},
+        )
+    engine.dispose()
+
+    command.upgrade(alembic_config, "head")
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+
+        def credentials(kind: str, columns: str) -> list:
+            return conn.execute(
+                text(
+                    f"SELECT c.principal_id, {columns} FROM iam__credential c "
+                    f"JOIN iam__credential__{kind} d ON d.credential_id = c.id WHERE c.kind = :kind"
+                ),
+                {"kind": kind},
+            ).all()
+
+        passwords = credentials("password", "d.email, d.password_hash")
+        sso = credentials("sso", "d.provider, d.subject")
+        tokens = credentials("service_account_token", "d.token_hash")
+        registered = conn.execute(text("SELECT count(*) FROM iam__credential")).scalar_one()
+        account_columns = {
+            row[1] for row in conn.execute(text("PRAGMA table_info(iam__principal__service_account)")).all()
+        }
+    engine.dispose()
+
+    # The orphaned password is left behind: it pointed to no principal.
+    assert passwords == [(user_id.hex, "alice@old.example", b"bcrypt-hash")]
+    assert sso == [(sso_user_id.hex, "google", "subject-1")]
+    assert tokens == [(account_id.hex, "hash-1")]
+    assert registered == 3
+    assert "token_hash" not in account_columns
+
+    command.downgrade(alembic_config, PRINCIPAL_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT id, email, display_name FROM "UserPassword"')).all() == [
+            (user_id.hex, "alice@old.example", "alice")
+        ]
+        assert conn.execute(text('SELECT internal_user_id, email, display_name, sso_user_id FROM "SsoUser"')).all() == [
+            (sso_user_id.hex, "bob@new.example", "bob", "subject-1")
+        ]
+        assert conn.execute(text("SELECT principal_id, token_hash FROM iam__principal__service_account")).all() == [
+            (account_id.hex, "hash-1")
+        ]
+    engine.dispose()
+
+
+def test_deleting_a_principal_deletes_its_credentials(alembic_config, temp_database):
+    """The foreign keys cascade from the principal to its registry rows, then to their details."""
+    database_url, _ = temp_database
+    principal_id, credential_id = uuid4(), uuid4()
+    command.upgrade(alembic_config, "head")
+
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        # SQLite enforces foreign keys, and so runs the cascade, only when asked to.
+        conn.execute(text("PRAGMA foreign_keys = ON"))
+        conn.execute(text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'user')"), {"id": principal_id.hex})
+        conn.execute(
+            text("INSERT INTO iam__credential (id, kind, principal_id) VALUES (:id, 'password', :principal_id)"),
+            {"id": credential_id.hex, "principal_id": principal_id.hex},
+        )
+        conn.execute(
+            text(
+                "INSERT INTO iam__credential__password (credential_id, email, password_hash) "
+                "VALUES (:id, 'alice@example.com', :hash)"
+            ),
+            {"id": credential_id.hex, "hash": b"bcrypt-hash"},
+        )
+
+        conn.execute(text("DELETE FROM iam__principal WHERE id = :id"), {"id": principal_id.hex})
+
+        assert conn.execute(text("SELECT count(*) FROM iam__credential")).scalar_one() == 0
+        assert conn.execute(text("SELECT count(*) FROM iam__credential__password")).scalar_one() == 0
     engine.dispose()
 
 

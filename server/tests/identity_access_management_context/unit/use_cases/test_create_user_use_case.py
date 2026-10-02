@@ -16,8 +16,8 @@ from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import (
     FakeGroupMemberRepository,
     FakeGroupRepository,
+    FakePasswordCredentialRecordRepository,
     FakePasswordHashingGateway,
-    FakeUserPasswordRepository,
     FakeUserRepository,
 )
 
@@ -25,7 +25,7 @@ from ..fakes import (
 @pytest.fixture
 def use_case(
     user_repository: FakeUserRepository,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
@@ -34,7 +34,7 @@ def use_case(
 ):
     return CreateUserUseCase(
         user_repository,
-        user_password_repository,
+        password_credential_record_repository,
         group_repository,
         group_member_repository,
         password_hashing_gateway,
@@ -96,7 +96,7 @@ def test_given_non_admin_user_when_creating_user_should_raise_not_admin_error(
 
 def test_given_user_with_password_when_creating_user_should_store_hashed_password(
     use_case: CreateUserUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
     username = "testuser"
@@ -115,12 +115,11 @@ def test_given_user_with_password_when_creating_user_should_store_hashed_passwor
 
     user_id = use_case.execute(command)
 
-    created_user_password = user_password_repository.get_by_id(user_id)
-    assert created_user_password is not None
-    assert created_user_password.id == user_id
-    assert created_user_password.email == email
-    assert created_user_password.password_hash == b"hashed(secure_password123)"
-    assert created_user_password.display_name == name
+    created_credential = password_credential_record_repository.get_by_principal_id(user_id)
+    assert created_credential is not None
+    assert created_credential.principal_id == user_id
+    assert created_credential.email == email
+    assert created_credential.password_hash == b"hashed(secure_password123)"
 
 
 def test_given_existing_user_when_creating_user_should_raise_user_already_exists_error(

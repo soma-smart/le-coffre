@@ -45,6 +45,7 @@ def groups(group_repository, group_member_repository):
 @pytest.fixture
 def create_use_case(
     service_account_repository,
+    service_account_token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -53,6 +54,7 @@ def create_use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
+        service_account_token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -64,6 +66,7 @@ def create_use_case(
 @pytest.fixture
 def use_case(
     service_account_repository,
+    service_account_token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -71,6 +74,7 @@ def use_case(
 ):
     return RotateServiceAccountTokenUseCase(
         service_account_repository,
+        service_account_token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -90,14 +94,19 @@ def _rotate(use_case, user, account_id):
 
 
 def test_given_an_active_account_when_rotating_then_the_stored_hash_is_replaced(
-    use_case, owner, account, service_account_repository, service_account_event_repository, time_provider
+    use_case,
+    owner,
+    account,
+    service_account_token_credential_record_repository,
+    service_account_event_repository,
+    time_provider,
 ):
     time_provider.set_current_time(LATER)
-    old_hash = service_account_repository.accounts[account.id].token_hash
+    old_hash = service_account_token_credential_record_repository.credential_records[account.id].token_hash
 
     rotated = _rotate(use_case, owner, account.id)
 
-    stored = service_account_repository.accounts[account.id]
+    stored = service_account_token_credential_record_repository.credential_records[account.id]
     assert rotated.token != account.token
     assert stored.token_hash == hashlib.sha256(rotated.token.encode()).hexdigest()
     assert stored.token_hash != old_hash
@@ -142,11 +151,16 @@ def test_given_an_unknown_account_when_rotating_then_it_is_not_found(use_case, o
         _rotate(use_case, owner, uuid4())
 
 
-def test_given_a_revoked_account_when_rotating_then_it_is_refused(use_case, owner, account, service_account_repository):
+def test_given_a_revoked_account_when_rotating_then_it_is_refused_and_the_hash_stands(
+    use_case, owner, account, service_account_repository, service_account_token_credential_record_repository
+):
     service_account_repository.revoke([account.id], NOW)
+    credential_record = service_account_token_credential_record_repository.credential_records[account.id]
 
     with pytest.raises(ServiceAccountAlreadyRevokedException):
         _rotate(use_case, owner, account.id)
+
+    assert service_account_token_credential_record_repository.credential_records[account.id] == credential_record
 
 
 def test_given_an_account_revoked_concurrently_when_rotating_then_it_is_refused(

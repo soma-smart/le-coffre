@@ -6,13 +6,15 @@ from config import get_database_url
 
 # Import all models so they are registered with SQLModel.metadata
 from identity_access_management_context.adapters.secondary.sql import (
+    CredentialRecordTable,
     GroupMemberTable,
     GroupTable,
+    PasswordCredentialRecordTable,
     PrincipalTable,
     ServiceAccountPrincipalTable,
+    ServiceAccountTokenCredentialRecordTable,
     SsoConfigurationTable,
-    SsoUsersTable,
-    UserPasswordTable,
+    SSOCredentialRecordTable,
     UserPrincipalTable,
 )
 from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
@@ -34,8 +36,9 @@ _ = (
     GroupTable,
     GroupMemberTable,
     SsoConfigurationTable,
-    SsoUsersTable,
-    UserPasswordTable,
+    CredentialRecordTable,
+    PasswordCredentialRecordTable,
+    SSOCredentialRecordTable,
     PermissionsTable,
     OwnershipTable,
     PasswordTable,
@@ -46,6 +49,7 @@ _ = (
     VaultEventTable,
     IamEventTable,
     ServiceAccountPrincipalTable,
+    ServiceAccountTokenCredentialRecordTable,
 )
 
 # this is the Alembic Config object, which provides

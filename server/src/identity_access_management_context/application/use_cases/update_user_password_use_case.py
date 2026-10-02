@@ -5,9 +5,9 @@ from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
     ExtensionTokenRepository,
+    PasswordCredentialRecordRepository,
     PasswordHashingGateway,
     TokenGateway,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.responses import (
@@ -29,7 +29,7 @@ from shared_kernel.application.tracing import TracedUseCase
 class UpdateUserPasswordUseCase(TracedUseCase):
     def __init__(
         self,
-        user_password_repository: UserPasswordRepository,
+        password_credential_record_repository: PasswordCredentialRecordRepository,
         password_hashing_gateway: PasswordHashingGateway,
         user_repository: UserRepository,
         auth_session_repository: AuthSessionRepository,
@@ -39,7 +39,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
     ):
-        self.user_password_repository = user_password_repository
+        self.password_credential_record_repository = password_credential_record_repository
         self.password_hashing_gateway = password_hashing_gateway
         self.user_repository = user_repository
         self.auth_session_repository = auth_session_repository
@@ -50,11 +50,11 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         self._admin_event_repository = admin_event_repository
 
     def execute(self, command: UpdateUserPasswordCommand) -> UpdateUserPasswordResponse:
-        user_password = self.user_password_repository.get_by_id(command.user_id)
-        if not user_password:
+        credential_record = self.password_credential_record_repository.get_by_principal_id(command.user_id)
+        if not credential_record:
             raise UserNotFoundException(command.user_id)
 
-        if not self.password_hashing_gateway.verify(command.old_password, user_password.password_hash):
+        if not self.password_hashing_gateway.verify(command.old_password, credential_record.password_hash):
             raise InvalidCredentialsException("Invalid old password")
 
         # Checked after the old password so a wrong current password still answers 401
@@ -67,7 +67,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         new_password_hash = self.password_hashing_gateway.hash(new_password.value)
 
-        self.user_password_repository.update_password(command.user_id, new_password_hash)
+        self.password_credential_record_repository.update_password_hash(command.user_id, new_password_hash)
 
         now = self.time_provider.get_current_time().replace(microsecond=0)
 

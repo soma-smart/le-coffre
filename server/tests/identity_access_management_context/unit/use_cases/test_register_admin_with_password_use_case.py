@@ -20,15 +20,15 @@ from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from ..fakes import (
     FakeGroupMemberRepository,
     FakeGroupRepository,
+    FakePasswordCredentialRecordRepository,
     FakePasswordHashingGateway,
-    FakeUserPasswordRepository,
     FakeUserRepository,
 )
 
 
 @pytest.fixture
 def use_case(
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     user_repository: FakeUserRepository,
     group_repository: FakeGroupRepository,
@@ -37,7 +37,7 @@ def use_case(
     admin_event_repository,
 ):
     return RegisterAdminWithPasswordUseCase(
-        user_password_repository,
+        password_credential_record_repository,
         password_hashing_gateway,
         user_repository,
         group_repository,
@@ -49,7 +49,7 @@ def use_case(
 
 def test_should_register_first_admin_with_password_and_return_user_id(
     use_case: RegisterAdminWithPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -63,13 +63,12 @@ def test_should_register_first_admin_with_password_and_return_user_id(
 
     assert result == user_id
 
-    saved_user_password = user_password_repository.get_by_id(user_id)
+    saved_credential = password_credential_record_repository.get_by_principal_id(user_id)
 
-    assert saved_user_password
-    assert saved_user_password.id == user_id
-    assert saved_user_password.email == email
-    assert saved_user_password.display_name == display_name
-    assert saved_user_password.password_hash == b"hashed(securepass12345!)"
+    assert saved_credential
+    assert saved_credential.principal_id == user_id
+    assert saved_credential.email == email
+    assert saved_credential.password_hash == b"hashed(securepass12345!)"
 
     # Verify admin was created in user repository with admin role
     saved_user = user_repository.get_by_id(user_id)
@@ -105,7 +104,7 @@ def test_should_raise_exception_when_admin_already_exists(
 
 def test_should_hash_password_before_storing_credentials(
     use_case: RegisterAdminWithPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
@@ -118,11 +117,11 @@ def test_should_hash_password_before_storing_credentials(
 
     use_case.execute(command)
 
-    saved_user_password = user_password_repository.get_by_id(user_id)
+    saved_credential = password_credential_record_repository.get_by_principal_id(user_id)
 
-    assert saved_user_password
-    assert saved_user_password.password_hash == b"hashed(my_plain_password)"
-    assert saved_user_password.password_hash != plain_password
+    assert saved_credential
+    assert saved_credential.password_hash == b"hashed(my_plain_password)"
+    assert saved_credential.password_hash != plain_password
 
 
 def test_should_delegate_admin_creation_to_user_management_context(
@@ -195,7 +194,7 @@ class TestPasswordPolicyEnforcement:
     def test_should_reject_a_password_shorter_than_the_minimum(
         self,
         use_case: RegisterAdminWithPasswordUseCase,
-        user_password_repository: FakeUserPasswordRepository,
+        password_credential_record_repository: FakePasswordCredentialRecordRepository,
     ):
         user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
         command = RegisterAdminWithPasswordCommand(
@@ -206,12 +205,12 @@ class TestPasswordPolicyEnforcement:
             use_case.execute(command)
 
         # A rejected password must persist nothing: no orphaned admin credentials.
-        assert user_password_repository.get_by_id(user_id) is None
+        assert password_credential_record_repository.get_by_principal_id(user_id) is None
 
     def test_should_reject_a_well_known_common_password(
         self,
         use_case: RegisterAdminWithPasswordUseCase,
-        user_password_repository: FakeUserPasswordRepository,
+        password_credential_record_repository: FakePasswordCredentialRecordRepository,
     ):
         user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
         command = RegisterAdminWithPasswordCommand(
@@ -221,12 +220,12 @@ class TestPasswordPolicyEnforcement:
         with pytest.raises(CommonPasswordError):
             use_case.execute(command)
 
-        assert user_password_repository.get_by_id(user_id) is None
+        assert password_credential_record_repository.get_by_principal_id(user_id) is None
 
     def test_should_accept_a_password_merely_containing_a_common_word(
         self,
         use_case: RegisterAdminWithPasswordUseCase,
-        user_password_repository: FakeUserPasswordRepository,
+        password_credential_record_repository: FakePasswordCredentialRecordRepository,
     ):
         # Whole-string match, never substring: "SecurePassword123!" contains
         # "password" but is a fine password and must be accepted.
@@ -238,4 +237,4 @@ class TestPasswordPolicyEnforcement:
         result = use_case.execute(command)
 
         assert result == user_id
-        assert user_password_repository.get_by_id(user_id) is not None
+        assert password_credential_record_repository.get_by_principal_id(user_id) is not None

@@ -11,8 +11,6 @@ from config import get_extension_last_used_coarsening_seconds, get_extension_tok
 from identity_access_management_context.adapters.secondary.sql import (
     SqlExtensionTokenRepository,
     SqlRevokedTokenRepository,
-    SqlSsoUserRepository,
-    SqlUserPasswordRepository,
     SqlUserRepository,
 )
 from identity_access_management_context.application.commands import (
@@ -65,17 +63,13 @@ def get_validate_token_usecase(
     request: Request,
     session: Session = Depends(get_session),
 ) -> ValidateUserTokenUseCase:
-    user_password_repository = SqlUserPasswordRepository(session)
     user_repository = SqlUserRepository(session)
     revoked_token_repository: RevokedTokenRepository = SqlRevokedTokenRepository(session)
     token_gateway: TokenGateway = request.app.state.token_gateway
-    sso_user_repository = SqlSsoUserRepository(session)
     time_provider = request.app.state.time_provider
 
     return ValidateUserTokenUseCase(
-        user_password_repository,
         token_gateway,
-        sso_user_repository,
         user_repository,
         revoked_token_repository,
         time_provider,

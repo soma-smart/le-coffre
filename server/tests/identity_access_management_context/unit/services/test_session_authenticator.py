@@ -4,7 +4,7 @@ import pytest
 
 from identity_access_management_context.application.services.authentication import SessionAuthenticator
 from identity_access_management_context.application.use_cases import ValidateUserTokenUseCase
-from identity_access_management_context.domain.entities import User, UserPassword
+from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import SessionAuthenticationError
 from identity_access_management_context.domain.value_objects import SessionToken
 from shared_kernel.domain.exceptions import AuthenticationError
@@ -16,17 +16,13 @@ JWT = "jwt_token_for_admin"
 
 @pytest.fixture
 def authenticator(
-    user_password_repository,
     token_gateway,
-    sso_user_repository,
     user_repository,
     revoked_token_repository,
     time_provider,
 ):
     validate = ValidateUserTokenUseCase(
-        user_password_repository,
         token_gateway,
-        sso_user_repository,
         user_repository,
         revoked_token_repository,
         time_provider,
@@ -35,12 +31,9 @@ def authenticator(
 
 
 @pytest.fixture
-def signed_in_user(user_repository, user_password_repository, token_gateway) -> User:
+def signed_in_user(user_repository, token_gateway) -> User:
     user = User(id=USER_ID, username="admin", email=EMAIL, name="Admin User")
     user_repository.save(user)
-    user_password_repository.save(
-        UserPassword(id=USER_ID, email=EMAIL, password_hash=b"hashed_password", display_name="Admin User")
-    )
     token_gateway.set_valid_token(JWT, USER_ID, EMAIL, [], {})
     return user
 

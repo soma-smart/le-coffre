@@ -18,7 +18,6 @@ from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
 )
-from identity_access_management_context.domain.value_objects import ServiceAccountToken
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
@@ -270,7 +269,7 @@ def test_given_owner_when_deleting_group_then_should_store_group_deleted_event(
 
 
 def _service_account(group_id, name="nightly-backup"):
-    return ServiceAccount.create(group_id=group_id, name=name, token=ServiceAccountToken.generate())
+    return ServiceAccount.create(group_id=group_id, name=name)
 
 
 def test_given_a_group_with_service_accounts_when_deleting_then_they_are_revoked(

@@ -1,7 +1,7 @@
 from .entities import (
-    SsoUser,
+    PasswordCredentialRecord,
+    SSOCredentialRecord,
     User,
-    UserPassword,
 )
 from .exceptions import (
     AuthenticationDomainError,
@@ -19,8 +19,8 @@ from .value_objects import (
 __all__ = [
     # Entities
     "User",
-    "SsoUser",
-    "UserPassword",
+    "PasswordCredentialRecord",
+    "SSOCredentialRecord",
     # Value Objects
     "AccessToken",
     "RefreshToken",

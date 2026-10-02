@@ -6,15 +6,15 @@ from identity_access_management_context.application.commands import GetUserMeCom
 from identity_access_management_context.application.use_cases import (
     GetUserMeUseCase,
 )
-from identity_access_management_context.domain.entities import SsoUser, User
+from identity_access_management_context.domain.entities import SSOCredentialRecord, User
 from identity_access_management_context.domain.exceptions import UserNotFoundException
 
-from ..fakes import FakeSsoUserRepository, FakeUserRepository
+from ..fakes import FakeSSOCredentialRecordRepository, FakeUserRepository
 
 
 @pytest.fixture
-def use_case(user_repository: FakeUserRepository, sso_user_repository: FakeSsoUserRepository):
-    return GetUserMeUseCase(user_repository, sso_user_repository)
+def use_case(user_repository: FakeUserRepository, sso_credential_record_repository: FakeSSOCredentialRecordRepository):
+    return GetUserMeUseCase(user_repository, sso_credential_record_repository)
 
 
 def test_given_existing_user_when_users_me_then_show_infos(
@@ -41,21 +41,16 @@ def test_given_existing_user_when_users_me_then_show_infos(
 def test_given_existing_sso_user_when_users_me_then_show_infos_with_is_sso_true(
     use_case: GetUserMeUseCase,
     user_repository: FakeUserRepository,
-    sso_user_repository: FakeSsoUserRepository,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
 ):
     # Arrange
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     user = User(id=user_id, username="testuser", email="testuser@example.com", name="Test User")
     user_repository.save(user)
 
-    sso_user = SsoUser(
-        internal_user_id=user_id,
-        email="testuser@example.com",
-        display_name="Test User",
-        sso_user_id="sso123",
-        sso_provider="google",
+    sso_credential_record_repository.create(
+        SSOCredentialRecord(principal_id=user_id, provider="google", subject="sso123")
     )
-    sso_user_repository.create(sso_user)
 
     command = GetUserMeCommand(requesting_user_id=user_id)
 

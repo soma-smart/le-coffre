@@ -1,3 +1,4 @@
+from typing import override
 from uuid import uuid4
 
 from identity_access_management_context.application.commands import RevokeServiceAccountCommand
@@ -15,6 +16,7 @@ from ._use_case import ServiceAccountUseCase
 class RevokeServiceAccountUseCase(
     ServiceAccountUseCase[RevokeServiceAccountCommand, ServiceAccountRevokedEvent, RevokeServiceAccountResponse]
 ):
+    @override
     def _execute(
         self, command: RevokeServiceAccountCommand
     ) -> tuple[ServiceAccountRevokedEvent, RevokeServiceAccountResponse]:

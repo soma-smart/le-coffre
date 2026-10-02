@@ -2,13 +2,16 @@ from .access_token import AccessToken
 from .extension_token_secret import TOKEN_LENGTH, ExtensionTokenSecret
 from .pairing_user_code import PairingUserCode
 from .pkce_challenge import S256, PkceChallenge, PkceVerifier
+from .password_credential import PasswordCredential
 from .raw_password import MIN_PASSWORD_LENGTH, RawPassword
 from .refresh_token import RefreshToken
 from .service_account_token import ServiceAccountToken
 from .session_token import SessionToken
+from .sso_credential import SSOCredential
 
 __all__ = [
     "AccessToken",
+    "PasswordCredential",
     "RawPassword",
     "MIN_PASSWORD_LENGTH",
     "RefreshToken",
@@ -20,4 +23,5 @@ __all__ = [
     "PkceVerifier",
     "S256",
     "SessionToken",
+    "SSOCredential",
 ]
