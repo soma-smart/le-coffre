@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 
 from shared_kernel.domain.entities import Principal
-from shared_kernel.domain.value_objects import Authentication
+from shared_kernel.domain.value_objects import Credential
 
 
-class Authenticator[A: Authentication](ABC):
-    """Turns one kind of `Authentication` into the `Principal` it proves."""
+class Authenticator[C: Credential](ABC):
+    """Turns one kind of `Credential` into the `Principal` it proves."""
 
     @abstractmethod
-    def authenticate(self, authentication: A) -> Principal:
+    def authenticate(self, credential: C) -> Principal:
         """Return the principal behind this proof.
 
         Raises:

@@ -29,7 +29,7 @@ class SessionAuthenticator(Authenticator[SessionToken]):
     user_repository: UserRepository
 
     @override
-    def authenticate(self, authentication: SessionToken) -> User:
+    def authenticate(self, credential: SessionToken) -> User:
         """Return the user this session belongs to.
 
         Raises:
@@ -37,9 +37,7 @@ class SessionAuthenticator(Authenticator[SessionToken]):
                 no longer exists.
         """
         try:
-            validated = self.validate_user_token_use_case.execute(
-                ValidateUserTokenCommand(jwt_token=authentication.value)
-            )
+            validated = self.validate_user_token_use_case.execute(ValidateUserTokenCommand(jwt_token=credential.value))
         except (InvalidTokenException, UserNotFoundException) as error:
             raise SessionAuthenticationError() from error
 

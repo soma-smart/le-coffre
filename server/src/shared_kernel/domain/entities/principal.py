@@ -9,7 +9,7 @@ class Principal:
     """An actor that performs operations on resources.
 
     Only the identity lives here. How a principal proved who it is belongs to
-    `Authentication`, and what it may do is still decided per resource.
+    `Credential`, and what it may do is still decided per resource.
     """
 
     id: UUID
