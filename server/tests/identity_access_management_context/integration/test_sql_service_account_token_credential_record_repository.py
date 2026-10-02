@@ -2,7 +2,9 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
+from sqlmodel import select
 
+from identity_access_management_context.adapters.secondary.sql import CredentialRecordTable
 from identity_access_management_context.domain.entities import ServiceAccountTokenCredentialRecord
 from identity_access_management_context.domain.value_objects import ServiceAccountToken
 
@@ -58,3 +60,18 @@ def test_given_a_duplicate_token_hash_when_creating_then_the_unique_index_refuse
 
     with pytest.raises(IntegrityError):
         sql_service_account_token_credential_record_repository.create([_credential_record(token=token)])
+
+
+def test_given_credentials_of_several_accounts_when_deleting_some_then_only_theirs_are_gone(
+    sql_service_account_token_credential_record_repository, session
+):
+    deleted, kept = _credential_record(), _credential_record()
+    sql_service_account_token_credential_record_repository.create([deleted, kept])
+
+    sql_service_account_token_credential_record_repository.delete_by_principal_ids([deleted.principal_id])
+    session.expunge_all()
+
+    assert sql_service_account_token_credential_record_repository.get_by_token_hash(deleted.token_hash) is None
+    assert sql_service_account_token_credential_record_repository.get_by_token_hash(kept.token_hash) == kept
+    registry = select(CredentialRecordTable).where(CredentialRecordTable.principal_id == deleted.principal_id)
+    assert session.exec(registry).all() == []

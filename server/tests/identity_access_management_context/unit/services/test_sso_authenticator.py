@@ -3,12 +3,8 @@ from uuid import UUID
 import pytest
 
 from identity_access_management_context.domain.entities import SSOCredentialRecord, User
-from identity_access_management_context.domain.exceptions import (
-    OrphanedSSOCredentialError,
-    UnknownSSOSubjectError,
-)
 from identity_access_management_context.domain.value_objects import SSOCredential
-from shared_kernel.domain.exceptions import AuthenticationError
+from shared_kernel.domain.exceptions import AuthenticationError, OrphanedCredentialError, UnknownCredentialError
 
 USER_ID = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
 PROVIDER = "google"
@@ -34,19 +30,19 @@ def test_given_a_linked_subject_when_authenticating_then_its_user_is_returned(ss
 
 
 def test_given_an_unknown_subject_when_authenticating_then_it_is_refused(sso_authenticator, user):
-    with pytest.raises(UnknownSSOSubjectError):
+    with pytest.raises(UnknownCredentialError):
         sso_authenticator.authenticate(SSOCredential(PROVIDER, "someone_else"))
 
 
 def test_given_the_subject_from_another_provider_when_authenticating_then_it_is_refused(sso_authenticator, user):
-    with pytest.raises(UnknownSSOSubjectError):
+    with pytest.raises(UnknownCredentialError):
         sso_authenticator.authenticate(SSOCredential("okta", SUBJECT))
 
 
 def test_given_a_credential_whose_user_is_gone_when_authenticating_then_it_is_refused(
     sso_authenticator, credential_record
 ):
-    with pytest.raises(OrphanedSSOCredentialError):
+    with pytest.raises(OrphanedCredentialError):
         sso_authenticator.authenticate(SSOCredential(PROVIDER, SUBJECT))
 
 

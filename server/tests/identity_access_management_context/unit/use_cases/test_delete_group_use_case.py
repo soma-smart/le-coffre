@@ -10,7 +10,11 @@ from identity_access_management_context.application.gateways import (
     GroupUsageGateway,
 )
 from identity_access_management_context.application.use_cases import DeleteGroupUseCase
-from identity_access_management_context.domain.entities import Group, ServiceAccount
+from identity_access_management_context.domain.entities import (
+    Group,
+    ServiceAccount,
+    ServiceAccountTokenCredentialRecord,
+)
 from identity_access_management_context.domain.events import GroupDeletedEvent
 from identity_access_management_context.domain.exceptions import (
     CannotDeleteGroupStillUsedException,
@@ -18,6 +22,7 @@ from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
 )
+from identity_access_management_context.domain.value_objects import ServiceAccountToken
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
@@ -34,6 +39,7 @@ def use_case(
     group_event_repository,
     service_account_repository,
     service_account_event_repository,
+    service_account_token_credential_record_repository,
     time_provider,
 ):
     time_provider.set_current_time(NOW)
@@ -45,6 +51,7 @@ def use_case(
         group_event_repository=group_event_repository,
         service_account_repository=service_account_repository,
         service_account_event_repository=service_account_event_repository,
+        service_account_token_credential_record_repository=service_account_token_credential_record_repository,
         time_provider=time_provider,
     )
 
@@ -286,6 +293,28 @@ def test_given_a_group_with_service_accounts_when_deleting_then_they_are_revoked
 
     assert all(not service_account_repository.accounts[a.id].is_active for a in accounts)
     assert all(service_account_repository.accounts[a.id].revoked_at == NOW for a in accounts)
+
+
+def test_given_a_group_with_service_accounts_when_deleting_then_their_token_records_are_deleted(
+    use_case,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    service_account_token_credential_record_repository,
+):
+    group_id = uuid4()
+    owner_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    account = _service_account(group_id)
+    service_account_repository.create([account])
+    service_account_token_credential_record_repository.create(
+        [ServiceAccountTokenCredentialRecord(principal_id=account.id, token_hash=ServiceAccountToken.generate().hash)]
+    )
+
+    use_case.execute(DeleteGroupCommand(requesting_user=AuthenticatedUser(owner_id, []), group_id=group_id))
+
+    assert account.id not in service_account_token_credential_record_repository.credential_records
 
 
 def test_given_a_group_with_service_accounts_when_deleting_then_the_rows_survive_for_the_audit(

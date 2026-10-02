@@ -1,7 +1,7 @@
 from collections.abc import Iterable
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from identity_access_management_context.application.gateways import ServiceAccountTokenCredentialRecordRepository
 from identity_access_management_context.domain.entities import ServiceAccountTokenCredentialRecord
@@ -69,3 +69,20 @@ class SqlServiceAccountTokenCredentialRecordRepository(
         if row is None:
             return None
         return ServiceAccountTokenCredentialRecord(principal_id=row[0], token_hash=row[1])
+
+    def delete_by_principal_ids(self, principal_ids: Iterable[UUID]) -> None:
+        holds_token = (
+            CredentialRecordTable.principal_id.in_(list(principal_ids)),  # type: ignore[attr-defined]
+            CredentialRecordTable.kind == CredentialKind.SERVICE_ACCOUNT_TOKEN,
+        )
+        # Both deleted explicitly, details first: the cascade does not run where
+        # foreign keys are not enforced.
+        self._session.exec(  # type: ignore[call-overload]
+            delete(ServiceAccountTokenCredentialRecordTable).where(
+                ServiceAccountTokenCredentialRecordTable.credential_id.in_(  # type: ignore[attr-defined]
+                    select(CredentialRecordTable.id).where(*holds_token)
+                )
+            )
+        )
+        self._session.exec(delete(CredentialRecordTable).where(*holds_token))  # type: ignore[call-overload]
+        self.commit()

@@ -28,15 +28,12 @@ from identity_access_management_context.application.services import (
 from identity_access_management_context.application.services.authentication.sso_authenticator import (
     SSOAuthenticator,
 )
-from identity_access_management_context.domain.entities import SSOCredentialRecord
+from identity_access_management_context.domain.entities import SSOCredentialRecord, User
 from identity_access_management_context.domain.events import SsoLoginEvent
-from identity_access_management_context.domain.exceptions import (
-    OrphanedSSOCredentialError,
-    UnknownSSOSubjectError,
-)
 from identity_access_management_context.domain.value_objects import SSOCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.exceptions import OrphanedCredentialError, UnknownCredentialError
 
 
 class SsoLoginUseCase(TracedUseCase):
@@ -101,10 +98,13 @@ class SsoLoginUseCase(TracedUseCase):
             )
             try:
                 user = self._sso_authenticator.authenticate(credential)
-            except UnknownSSOSubjectError:
+            except UnknownCredentialError:
                 user = None
-            except OrphanedSSOCredentialError as error:
+            except OrphanedCredentialError as error:
                 raise RuntimeError("User should exist at this point, but was not found in UserRepository") from error
+            if user is not None and not isinstance(user, User):
+                # Only users open a session.
+                raise RuntimeError("This SSO subject is linked to a principal that is not a user")
 
             if user is not None:
                 is_new_user = False

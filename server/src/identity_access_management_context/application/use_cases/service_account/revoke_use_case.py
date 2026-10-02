@@ -2,12 +2,21 @@ from typing import override
 from uuid import uuid4
 
 from identity_access_management_context.application.commands import RevokeServiceAccountCommand
+from identity_access_management_context.application.gateways import (
+    ServiceAccountEventRepository,
+    ServiceAccountRepository,
+    ServiceAccountTokenCredentialRecordRepository,
+)
 from identity_access_management_context.application.responses import RevokeServiceAccountResponse
+from identity_access_management_context.application.services.service_account_permission_service import (
+    ServiceAccountPermissionService,
+)
 from identity_access_management_context.domain.events import ServiceAccountRevokedEvent
 from identity_access_management_context.domain.exceptions import (
     ServiceAccountAlreadyRevokedException,
     ServiceAccountNotFoundException,
 )
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 from ._use_case import ServiceAccountUseCase
 
@@ -15,6 +24,26 @@ from ._use_case import ServiceAccountUseCase
 class RevokeServiceAccountUseCase(
     ServiceAccountUseCase[RevokeServiceAccountCommand, ServiceAccountRevokedEvent, RevokeServiceAccountResponse]
 ):
+    _token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository
+
+    def __init__(
+        self,
+        service_account_repository: ServiceAccountRepository,
+        token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository,
+        permission_service: ServiceAccountPermissionService,
+        event_publisher: DomainEventPublisher,
+        service_account_event_repository: ServiceAccountEventRepository,
+        time_provider: TimeGateway,
+    ):
+        super().__init__(
+            service_account_repository,
+            permission_service,
+            event_publisher,
+            service_account_event_repository,
+            time_provider,
+        )
+        self._token_credential_record_repository = token_credential_record_repository
+
     @override
     def _execute(
         self, command: RevokeServiceAccountCommand
@@ -34,6 +63,8 @@ class RevokeServiceAccountUseCase(
         # Revoke the service account
         now = self._time_provider.get_current_time()
         self._repository.revoke([account.id], now)
+        # Without its token records, a revoked account can no longer authenticate.
+        self._token_credential_record_repository.delete_by_principal_ids([account.id])
 
         event = ServiceAccountRevokedEvent(
             event_id=uuid4(),

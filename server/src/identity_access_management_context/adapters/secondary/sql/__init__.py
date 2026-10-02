@@ -16,6 +16,7 @@ from .sql_group_member_repository import SqlGroupMemberRepository
 from .sql_group_repository import SqlGroupRepository
 from .sql_iam_event_repository import SqlIamEventRepository
 from .sql_password_credential_record_repository import SqlPasswordCredentialRecordRepository
+from .sql_principal_repository import SQLPrincipalRepository
 from .sql_revoked_token_repository import SqlRevokedTokenRepository
 from .sql_service_account_event_repository import SqlServiceAccountEventRepository
 from .sql_service_account_repository import SqlServiceAccountRepository
@@ -31,6 +32,7 @@ __all__ = [
     "SqlRevokedTokenRepository",
     "SqlUserRepository",
     "SqlPasswordCredentialRecordRepository",
+    "SQLPrincipalRepository",
     "SqlSSOCredentialRecordRepository",
     "SqlSsoConfigurationRepository",
     "SqlAuthSessionRepository",

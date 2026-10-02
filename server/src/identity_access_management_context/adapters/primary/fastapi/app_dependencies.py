@@ -16,6 +16,7 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
     SqlIamEventRepository,
     SqlPasswordCredentialRecordRepository,
+    SQLPrincipalRepository,
     SqlRevokedTokenRepository,
     SqlServiceAccountEventRepository,
     SqlServiceAccountRepository,
@@ -97,7 +98,7 @@ from password_management_context.adapters.secondary import (
 from password_management_context.application.use_cases import IsGroupUsedUseCase
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.adapters.secondary.utc_time_gateway import UtcTimeGateway
-from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, PrincipalRepository, TimeGateway
 
 
 def get_event_publisher(request: Request) -> DomainEventPublisher:
@@ -186,6 +187,14 @@ def get_one_time_link_revocation_gateway(
 
 def get_user_repository(session: Session = Depends(get_session)) -> UserRepository:
     return SqlUserRepository(session)
+
+
+def get_principal_repository(
+    session: Session = Depends(get_session),
+    user_repository: UserRepository = Depends(get_user_repository),
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+) -> PrincipalRepository:
+    return SQLPrincipalRepository(session, user_repository, service_account_repository)
 
 
 def get_password_credential_record_repository(
@@ -353,10 +362,14 @@ def get_password_authenticator(
     password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
         get_password_credential_record_repository
     ),
-    user_repository: UserRepository = Depends(get_user_repository),
+    principal_repository: PrincipalRepository = Depends(get_principal_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
 ) -> PasswordAuthenticator:
-    return PasswordAuthenticator(password_credential_record_repository, user_repository, password_hashing_gateway)
+    return PasswordAuthenticator(
+        principal_repository=principal_repository,
+        password_credential_record_repository=password_credential_record_repository,
+        password_hashing_gateway=password_hashing_gateway,
+    )
 
 
 def get_password_login_usecase(
@@ -441,9 +454,12 @@ def get_is_sso_config_set_usecase(
 
 def get_sso_authenticator(
     sso_credential_record_repository: SSOCredentialRecordRepository = Depends(get_sso_credential_record_repository),
-    user_repository: UserRepository = Depends(get_user_repository),
+    principal_repository: PrincipalRepository = Depends(get_principal_repository),
 ) -> SSOAuthenticator:
-    return SSOAuthenticator(sso_credential_record_repository, user_repository)
+    return SSOAuthenticator(
+        principal_repository=principal_repository,
+        sso_credential_record_repository=sso_credential_record_repository,
+    )
 
 
 def get_sso_login_usecase(
@@ -634,6 +650,9 @@ def get_delete_group_usecase(
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    service_account_token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository = Depends(
+        get_service_account_token_credential_record_repository
+    ),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return DeleteGroupUseCase(
@@ -644,6 +663,7 @@ def get_delete_group_usecase(
         group_event_repository,
         service_account_repository,
         service_account_event_repository,
+        service_account_token_credential_record_repository,
         time_provider,
     )
 
@@ -721,6 +741,9 @@ def get_rotate_service_account_token_usecase(
 
 def get_revoke_service_account_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository = Depends(
+        get_service_account_token_credential_record_repository
+    ),
     permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
@@ -728,6 +751,7 @@ def get_revoke_service_account_usecase(
 ):
     return RevokeServiceAccountUseCase(
         service_account_repository,
+        token_credential_record_repository,
         permission_service,
         event_publisher,
         service_account_event_repository,

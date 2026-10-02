@@ -8,6 +8,7 @@ from identity_access_management_context.application.gateways import (
     GroupUsageGateway,
     ServiceAccountEventRepository,
     ServiceAccountRepository,
+    ServiceAccountTokenCredentialRecordRepository,
 )
 from identity_access_management_context.domain.events import GroupDeletedEvent, ServiceAccountRevokedEvent
 from identity_access_management_context.domain.exceptions import (
@@ -31,6 +32,7 @@ class DeleteGroupUseCase(TracedUseCase):
         group_event_repository: GroupEventRepository,
         service_account_repository: ServiceAccountRepository,
         service_account_event_repository: ServiceAccountEventRepository,
+        service_account_token_credential_record_repository: ServiceAccountTokenCredentialRecordRepository,
         time_provider: TimeGateway,
     ):
         self.group_repository = group_repository
@@ -40,6 +42,7 @@ class DeleteGroupUseCase(TracedUseCase):
         self._group_event_repository = group_event_repository
         self._service_account_repository = service_account_repository
         self._service_account_event_repository = service_account_event_repository
+        self._service_account_token_credential_record_repository = service_account_token_credential_record_repository
         self._time_provider = time_provider
 
     def _revoke_service_accounts(self, command: DeleteGroupCommand) -> None:
@@ -55,6 +58,10 @@ class DeleteGroupUseCase(TracedUseCase):
         # Revoke service accounts
         now = self._time_provider.get_current_time()
         self._service_account_repository.revoke([account.id for account in active_accounts], now)
+        # Without their token records, revoked accounts can no longer authenticate.
+        self._service_account_token_credential_record_repository.delete_by_principal_ids(
+            [account.id for account in active_accounts]
+        )
 
         events = tuple(
             ServiceAccountRevokedEvent(

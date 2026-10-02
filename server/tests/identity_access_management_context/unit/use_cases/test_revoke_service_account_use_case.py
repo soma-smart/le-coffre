@@ -66,6 +66,7 @@ def create_use_case(
 @pytest.fixture
 def use_case(
     service_account_repository,
+    service_account_token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -73,6 +74,7 @@ def use_case(
 ):
     return RevokeServiceAccountUseCase(
         service_account_repository,
+        service_account_token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -101,6 +103,14 @@ def test_given_an_active_account_when_revoking_then_it_becomes_inactive(
     stored = service_account_repository.accounts[account.id]
     assert not stored.is_active
     assert stored.revoked_at == LATER
+
+
+def test_given_an_active_account_when_revoking_then_its_token_records_are_deleted(
+    use_case, owner, account, service_account_token_credential_record_repository
+):
+    _revoke(use_case, owner, account.id)
+
+    assert account.id not in service_account_token_credential_record_repository.credential_records
 
 
 def test_given_a_revoked_account_when_listing_the_group_then_the_row_survives(

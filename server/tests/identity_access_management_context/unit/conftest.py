@@ -23,6 +23,7 @@ from .fakes import (
     FakeOneTimeLinkRevocationGateway,
     FakePasswordCredentialRecordRepository,
     FakePasswordHashingGateway,
+    FakePrincipalRepository,
     FakeRevokedTokenRepository,
     FakeServiceAccountEventRepository,
     FakeServiceAccountRepository,
@@ -94,13 +95,25 @@ def sso_credential_record_repository():
 
 
 @pytest.fixture
-def password_authenticator(password_credential_record_repository, user_repository, password_hashing_gateway):
-    return PasswordAuthenticator(password_credential_record_repository, user_repository, password_hashing_gateway)
+def principal_repository(user_repository, service_account_repository):
+    return FakePrincipalRepository(user_repository, service_account_repository)
 
 
 @pytest.fixture
-def sso_authenticator(sso_credential_record_repository, user_repository):
-    return SSOAuthenticator(sso_credential_record_repository, user_repository)
+def password_authenticator(principal_repository, password_credential_record_repository, password_hashing_gateway):
+    return PasswordAuthenticator(
+        principal_repository=principal_repository,
+        password_credential_record_repository=password_credential_record_repository,
+        password_hashing_gateway=password_hashing_gateway,
+    )
+
+
+@pytest.fixture
+def sso_authenticator(principal_repository, sso_credential_record_repository):
+    return SSOAuthenticator(
+        principal_repository=principal_repository,
+        sso_credential_record_repository=sso_credential_record_repository,
+    )
 
 
 @pytest.fixture
