@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
@@ -6,7 +6,7 @@ import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryServiceAccountRepository } from '@/infrastructure/in_memory/InMemoryServiceAccountRepository'
 import type { Group } from '@/domain/group/Group'
-import type { ServiceAccount } from '@/domain/serviceAccount/ServiceAccount'
+import type { ServiceAccount, ServiceAccountPage } from '@/domain/serviceAccount/ServiceAccount'
 
 const group: Group = {
   id: 'group-1',
@@ -238,5 +238,31 @@ describe('ServiceAccountsModal', () => {
     expect(wrapper.find('[data-testid="rotate-account"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="revoke-account"]').exists()).toBe(false)
     expect(wrapper.emitted('notOwner')).toBeTruthy()
+  })
+
+  it('ignores a list response that arrives after the dialog moved on to another group', async () => {
+    const otherGroup: Group = { ...group, id: 'group-2', name: 'Data' }
+    const repo = new InMemoryServiceAccountRepository()
+      .seed(makeAccount({ id: 'a1', groupId: 'group-1', name: 'platform-bot' }))
+      .seed(makeAccount({ id: 'a2', groupId: 'group-2', name: 'data-bot' }))
+    // Hold back the first group's response until the second group's has landed.
+    let releaseFirst!: () => void
+    const listForGroup = repo.listForGroup.bind(repo)
+    vi.spyOn(repo, 'listForGroup').mockImplementationOnce(
+      (groupId) =>
+        new Promise<ServiceAccountPage>((resolve) => {
+          releaseFirst = () => resolve(listForGroup(groupId))
+        }),
+    )
+    const wrapper = await openModal(repo)
+
+    await wrapper.setProps({ visible: false })
+    await wrapper.setProps({ group: otherGroup, visible: true })
+    await flushPromises()
+    releaseFirst()
+    await flushPromises()
+
+    const names = wrapper.findAll('[data-testid="account-name"]').map((name) => name.text())
+    expect(names).toEqual(['data-bot'])
   })
 })

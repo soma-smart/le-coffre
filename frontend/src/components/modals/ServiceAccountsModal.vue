@@ -89,9 +89,14 @@ watch(
 
 async function refresh() {
   if (!props.group) return
+  const groupId = props.group.id
+  const isStale = () => !props.visible || props.group?.id !== groupId
   try {
-    page.value = await serviceAccounts.list.execute(props.group.id)
+    const result = await serviceAccounts.list.execute(groupId)
+    if (isStale()) return
+    page.value = result
   } catch (err) {
+    if (isStale()) return
     handle(err, t('components.serviceAccountsModal.loadFailed'))
   }
 }
