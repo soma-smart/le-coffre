@@ -1,0 +1,100 @@
+name: le-coffre-preview
+
+# Ephemeral preview deployment — builds BOTH images from this checkout.
+#
+# This is the only compose file that previews the code in the working tree.
+# docker-compose.yml deliberately runs the published
+# ghcr.io/soma-smart/le-coffre-{backend,frontend}:latest images, which are only
+# pushed on version tags: pointing a per-commit preview at it would come up
+# healthy while showing none of the commit's code.
+#
+# Everything here is disposable. The database is bundled and unseeded, the
+# secrets are generated per deployment, and the whole stack is deleted when the
+# pull request closes.
+#
+#   APP_BASE_URL=https://<host> \
+#   JWT_SECRET_KEY=$(openssl rand -base64 32) \
+#   POSTGRES_PASSWORD=$(openssl rand -base64 24) \
+#     docker compose -f docker-compose.preview.yml up -d --build
+#
+# ⚠️ A preview served from this file is PUBLIC and UNAUTHENTICATED. Never point
+# it at a real database and never give it a production secret — see SECURITY.md.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Reverse proxy — same routing as docker-compose.yml (/api → backend, / → frontend)
+  # ---------------------------------------------------------------------------
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-compose.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Frontend — built from ./frontend, served by nginx on 8080
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Backend — built from ./server. Applies Alembic migrations itself at startup,
+  # so the bundled database needs no init step.
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      ENVIRONMENT: production
+      # Required: the backend refuses to start without it, and SSO callbacks and
+      # absolute links in emails are built from it. Set it to the preview URL.
+      APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL to the preview URL}
+      DATABASE_URL: postgresql://lecoffre:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/lecoffre
+      # Required, and generated fresh per preview — never reuse a real one:
+      #   openssl rand -base64 32
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY}
+      LOG_FORMAT: json
+      RATE_LIMIT_ENABLED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/api/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Bundled PostgreSQL — always on here, unlike docker-compose.yml where it sits
+  # behind a profile. A preview has no external database to point at.
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lecoffre
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: lecoffre
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lecoffre -d lecoffre"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  pg_data:
