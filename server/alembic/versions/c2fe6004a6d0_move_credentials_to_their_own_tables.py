@@ -51,7 +51,8 @@ def upgrade() -> None:
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('password_hash', sa.LargeBinary(), nullable=False),
     sa.ForeignKeyConstraint(['credential_id'], ['iam__credential.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('credential_id')
+    sa.PrimaryKeyConstraint('credential_id'),
+    sa.UniqueConstraint('email')
     )
     op.create_table('iam__credential__sso',
     sa.Column('credential_id', sa.Uuid(), nullable=False),

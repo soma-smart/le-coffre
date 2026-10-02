@@ -1,5 +1,8 @@
 from uuid import UUID, uuid4
 
+import pytest
+from sqlalchemy.exc import IntegrityError
+
 from identity_access_management_context.domain.entities import PasswordCredentialRecord
 
 
@@ -109,7 +112,7 @@ def test_delete_by_principal_id_on_a_missing_row_does_nothing(sql_password_crede
 
 
 def test_delete_frees_the_email_for_a_new_account(sql_password_credential_record_repository):
-    """get_by_email takes the first match, so a leftover row would shadow the new one."""
+    """Emails are unique, so a leftover row would refuse the new account's password."""
     email = "reused@example.com"
     old = PasswordCredentialRecord(principal_id=uuid4(), email=email, password_hash=b"old-hash")
     sql_password_credential_record_repository.save(old)
@@ -119,3 +122,18 @@ def test_delete_frees_the_email_for_a_new_account(sql_password_credential_record
     sql_password_credential_record_repository.save(new)
 
     assert sql_password_credential_record_repository.get_by_email(email) == new
+
+
+def test_given_an_email_already_held_when_saving_another_password_with_it_then_it_is_refused(
+    sql_password_credential_record_repository,
+):
+    """The email identifies the record a password is checked against, so it cannot be shared."""
+    email = "taken@example.com"
+    sql_password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=uuid4(), email=email, password_hash=b"first-hash")
+    )
+
+    with pytest.raises(IntegrityError):
+        sql_password_credential_record_repository.save(
+            PasswordCredentialRecord(principal_id=uuid4(), email=email, password_hash=b"second-hash")
+        )
