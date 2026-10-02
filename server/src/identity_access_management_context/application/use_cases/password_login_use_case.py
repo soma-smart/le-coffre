@@ -12,6 +12,7 @@ from identity_access_management_context.application.responses import AdminLoginR
 from identity_access_management_context.application.services.authentication.password_authenticator import (
     PasswordAuthenticator,
 )
+from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import (
     AdminLoginEvent,
     AdminLoginFailedEvent,
@@ -20,14 +21,25 @@ from identity_access_management_context.domain.exceptions import (
     AccountLockedException,
     AdminNotFoundException,
     InvalidCredentialsException,
-    PasswordAuthenticationError,
-    WrongPasswordError,
 )
 from identity_access_management_context.domain.value_objects import PasswordCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.exceptions import (
+    AuthenticationError,
+    OrphanedCredentialError,
+    RejectedCredentialError,
+    UnknownCredentialError,
+)
 
 logger = logging.getLogger(__name__)
+
+# The audit reason recorded for each way an email and password fail to prove a user.
+FAILURE_REASONS: dict[type[AuthenticationError], str] = {
+    UnknownCredentialError: "User not found",
+    RejectedCredentialError: "Invalid credentials",
+    OrphanedCredentialError: "Orphaned credentials",
+}
 
 
 class PasswordLoginUseCase(TracedUseCase):
@@ -71,24 +83,29 @@ class PasswordLoginUseCase(TracedUseCase):
 
         # DB reads and bcrypt verification are synchronous and blocking — run
         # them in a thread pool to avoid starving the event loop.
-        def _lookup_and_verify():
+        def _lookup_and_verify() -> User:
             try:
-                return self._password_authenticator.authenticate(
+                principal = self._password_authenticator.authenticate(
                     PasswordCredential(email=command.email, password=command.password)
                 )
-            except PasswordAuthenticationError as error:
-                logger.warning("Login failed for email=%s reason='%s'", command.email, error.reason)
-                event = AdminLoginFailedEvent(email=command.email, reason=error.reason)
+                if not isinstance(principal, User):
+                    # Only users open a session: any other principal answers like an unknown email.
+                    raise UnknownCredentialError()
+                return principal
+            except AuthenticationError as error:
+                reason = FAILURE_REASONS[type(error)]
+                logger.warning("Login failed for email=%s reason='%s'", command.email, reason)
+                event = AdminLoginFailedEvent(email=command.email, reason=reason)
                 self._event_publisher.publish(event)
                 self._admin_event_repository.append_event(
                     event_id=event.event_id,
                     event_type=type(event).__name__,
                     occurred_on=event.occurred_on,
                     actor_user_id=None,
-                    event_data={"email": command.email, "reason": error.reason},
+                    event_data={"email": command.email, "reason": reason},
                 )
                 self._try_record_failed_login(command.email, now)
-                if isinstance(error, WrongPasswordError):
+                if isinstance(error, RejectedCredentialError):
                     raise InvalidCredentialsException("Invalid credentials") from error
                 # An orphaned credential answers exactly like an unknown email, so the
                 # endpoint never confirms that the address once existed; the audit

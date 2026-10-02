@@ -9,6 +9,7 @@ from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupRepository,
     SqlIamEventRepository,
     SqlPasswordCredentialRecordRepository,
+    SQLPrincipalRepository,
     SqlRevokedTokenRepository,
     SqlServiceAccountEventRepository,
     SqlServiceAccountRepository,
@@ -83,6 +84,11 @@ def sql_service_account_repository(session):
 @pytest.fixture(scope="function")
 def sql_service_account_token_credential_record_repository(session):
     return SqlServiceAccountTokenCredentialRecordRepository(session)
+
+
+@pytest.fixture(scope="function")
+def sql_principal_repository(session, sql_user_repository, sql_service_account_repository):
+    return SQLPrincipalRepository(session, sql_user_repository, sql_service_account_repository)
 
 
 @pytest.fixture

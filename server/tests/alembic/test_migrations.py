@@ -221,6 +221,12 @@ PRE_PRINCIPAL_REVISION = "6f3f296a75c9"
 PRINCIPAL_REVISION = "b2756d236d95"
 """Revision adding the principal registry, before credentials had their own tables."""
 
+CREDENTIALS_REVISION = "c2fe6004a6d0"
+"""Revision moving credentials to their own tables, while revoked accounts still kept their token."""
+
+REVOKED_TOKENS_REVISION = "528c0676a893"
+"""Revision deleting the token credentials of revoked service accounts."""
+
 
 def test_principal_registry_migration_keeps_every_id_with_its_kind(alembic_config, temp_database):
     """Users and service accounts survive the move, under the same ids, and come back on downgrade."""
@@ -316,7 +322,7 @@ def test_credentials_migration_moves_every_verifier_to_its_principal(alembic_con
         )
     engine.dispose()
 
-    command.upgrade(alembic_config, "head")
+    command.upgrade(alembic_config, CREDENTIALS_REVISION)
     engine = create_engine(database_url)
     with engine.connect() as conn:
 
@@ -358,6 +364,52 @@ def test_credentials_migration_moves_every_verifier_to_its_principal(alembic_con
             (account_id.hex, "hash-1")
         ]
     engine.dispose()
+
+
+def test_revoked_tokens_migration_deletes_only_revoked_accounts_tokens(alembic_config, temp_database):
+    """A revoked account loses its token credential; an active one keeps it."""
+    database_url, _ = temp_database
+    active_id, revoked_id = uuid4(), uuid4()
+
+    command.upgrade(alembic_config, CREDENTIALS_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for principal_id, revoked_at in ((active_id, None), (revoked_id, "2026-01-01 12:00:00")):
+            credential_id = uuid4()
+            conn.execute(
+                text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'service_account')"), {"id": principal_id.hex}
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__principal__service_account (principal_id, group_id, name, revoked_at) "
+                    "VALUES (:id, :group_id, 'nightly-backup', :revoked_at)"
+                ),
+                {"id": principal_id.hex, "group_id": uuid4().hex, "revoked_at": revoked_at},
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__credential (id, kind, principal_id) "
+                    "VALUES (:id, 'service_account_token', :principal_id)"
+                ),
+                {"id": credential_id.hex, "principal_id": principal_id.hex},
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__credential__service_account_token (credential_id, token_hash) VALUES (:id, :hash)"
+                ),
+                {"id": credential_id.hex, "hash": f"hash-{principal_id.hex}"},
+            )
+    engine.dispose()
+
+    command.upgrade(alembic_config, REVOKED_TOKENS_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        registered = conn.execute(text("SELECT principal_id FROM iam__credential")).scalars().all()
+        hashes = conn.execute(text("SELECT token_hash FROM iam__credential__service_account_token")).scalars().all()
+    engine.dispose()
+
+    assert registered == [active_id.hex]
+    assert hashes == [f"hash-{active_id.hex}"]
 
 
 def test_deleting_a_principal_deletes_its_credentials(alembic_config, temp_database):

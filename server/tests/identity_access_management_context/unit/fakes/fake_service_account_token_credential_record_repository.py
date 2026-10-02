@@ -19,3 +19,7 @@ class FakeServiceAccountTokenCredentialRecordRepository(ServiceAccountTokenCrede
 
     def get_by_token_hash(self, token_hash: str) -> ServiceAccountTokenCredentialRecord | None:
         return next((c for c in self.credential_records.values() if c.token_hash == token_hash), None)
+
+    def delete_by_principal_ids(self, principal_ids: Iterable[UUID]) -> None:
+        for principal_id in principal_ids:
+            self.credential_records.pop(principal_id, None)
