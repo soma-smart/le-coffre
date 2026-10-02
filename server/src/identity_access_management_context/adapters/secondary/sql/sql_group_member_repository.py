@@ -82,6 +82,14 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
             for result in results
         ]
 
+    def get_group_ids_owned_by(self, user_id: UUID) -> list[UUID]:
+        """Return the ids of every group this user owns."""
+        statement = select(GroupMemberTable.group_id).where(
+            GroupMemberTable.user_id == user_id,
+            GroupMemberTable.is_owner.is_(True),  # type: ignore[union-attr]
+        )
+        return list(self._session.exec(statement).all())
+
     def count_owners(self, group_id: UUID) -> int:
         """Count the number of owners in a group."""
         statement = select(GroupMemberTable).where(

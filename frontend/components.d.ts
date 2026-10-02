@@ -60,6 +60,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('primevue/select')['default']
     SelectButton: typeof import('primevue/selectbutton')['default']
+    ServiceAccountsModal: typeof import('./src/components/modals/ServiceAccountsModal.vue')['default']
     SetupDone: typeof import('./src/components/setup/SetupDone.vue')['default']
     ShamirInputs: typeof import('./src/components/setup/shamir/ShamirInputs.vue')['default']
     ShareDurationPicker: typeof import('./src/components/shared/ShareDurationPicker.vue')['default']

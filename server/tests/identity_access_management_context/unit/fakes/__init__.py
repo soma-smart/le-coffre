@@ -8,6 +8,8 @@ from .fake_login_lockout_gateway import FakeLoginLockoutGateway
 from .fake_one_time_link_revocation_gateway import FakeOneTimeLinkRevocationGateway
 from .fake_password_hashing_gateway import FakePasswordHashingGateway
 from .fake_revoked_token_repository import FakeRevokedTokenRepository
+from .fake_service_account_event_repository import FakeServiceAccountEventRepository
+from .fake_service_account_repository import FakeServiceAccountRepository
 from .fake_sso_configuration_repository import FakeSsoConfigurationRepository
 from .fake_sso_encryption_gateway import FakeSsoEncryptionGateway
 from .fake_sso_event_repository import FakeSsoEventRepository
@@ -38,4 +40,6 @@ __all__ = [
     "FakeSsoEventRepository",
     "FakeAdminEventRepository",
     "FakeAuthSessionRepository",
+    "FakeServiceAccountRepository",
+    "FakeServiceAccountEventRepository",
 ]

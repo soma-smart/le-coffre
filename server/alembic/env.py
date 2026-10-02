@@ -8,6 +8,7 @@ from config import get_database_url
 from identity_access_management_context.adapters.secondary.sql import (
     GroupMemberTable,
     GroupTable,
+    ServiceAccountTable,
     SsoConfigurationTable,
     SsoUsersTable,
     UserPasswordTable,
@@ -40,6 +41,8 @@ _ = (
     VaultTable,
     VaultEventTable,
     IamEventTable,
+    ServiceAccountTable,
+    ServiceAccountTable,
 )
 
 # this is the Alembic Config object, which provides
