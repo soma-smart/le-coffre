@@ -40,7 +40,7 @@ class VaultStateChangedEventSubscriber:
 
     def handle_locked(self, event: VaultLockedEvent) -> None:
         self._submit(
-            NotifyVaultStateChangedCommand(change=VaultStateChange.LOCKED, locked_by_user_id=event.locked_by_user_id)
+            NotifyVaultStateChangedCommand(change=VaultStateChange.LOCKED, locked_by_user_id=event.locked_by_principal_id)
         )
 
     def handle_unlocked(self, event: VaultUnlockedEvent) -> None:

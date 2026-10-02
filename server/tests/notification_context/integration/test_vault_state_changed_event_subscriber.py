@@ -51,7 +51,7 @@ def test_given_vault_events_should_email_opted_in_users_once_per_event_end_to_en
     publisher.subscribe(VaultLockedEvent, subscriber.handle_locked)
     publisher.subscribe(VaultUnlockedEvent, subscriber.handle_unlocked)
 
-    publisher.publish(VaultLockedEvent(locked_by_user_id=admin_id))
+    publisher.publish(VaultLockedEvent(locked_by_principal_id=admin_id))
 
     assert [m["To"] for m in smtpd.messages] == ["alice@example.com"]
     assert smtpd.messages[0]["Subject"] == "Le Coffre: the vault was locked"

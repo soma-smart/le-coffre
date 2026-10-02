@@ -8,7 +8,7 @@ from shared_kernel.domain.value_objects import EventPriority
 class VaultLockedEvent(DomainEvent):
     def __init__(
         self,
-        locked_by_user_id: UUID | None,
+        locked_by_principal_id: UUID | None,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -19,4 +19,4 @@ class VaultLockedEvent(DomainEvent):
         )
         # None when no one locked it: the server restarted, and the decrypted key
         # only ever lives in memory.
-        self.locked_by_user_id = locked_by_user_id
+        self.locked_by_principal_id = locked_by_principal_id
