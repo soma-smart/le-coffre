@@ -110,7 +110,7 @@ def test_given_an_active_account_when_revoking_then_its_token_records_are_delete
 ):
     _revoke(use_case, owner, account.id)
 
-    assert account.id not in service_account_token_credential_record_repository.credential_records
+    assert service_account_token_credential_record_repository.list_by_principal_id(account.id) == []
 
 
 def test_given_a_revoked_account_when_listing_the_group_then_the_row_survives(

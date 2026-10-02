@@ -2,7 +2,6 @@ from enum import StrEnum
 from uuid import UUID
 
 import sqlalchemy as sa
-from sqlalchemy import UniqueConstraint
 from sqlmodel import Column, Field
 
 from .iam_table import IAMTable
@@ -25,8 +24,6 @@ class CredentialRecordTable(IAMTable, table=True):
     """
 
     __table_suffix__ = "credential"
-    # One credential of each kind per principal.
-    __table_args__ = (UniqueConstraint("principal_id", "kind"),)
 
     id: UUID = Field(primary_key=True)
     kind: CredentialKind = Field(

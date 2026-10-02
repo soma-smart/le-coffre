@@ -314,7 +314,7 @@ def test_given_a_group_with_service_accounts_when_deleting_then_their_token_reco
 
     use_case.execute(DeleteGroupCommand(requesting_user=AuthenticatedUser(owner_id, []), group_id=group_id))
 
-    assert account.id not in service_account_token_credential_record_repository.credential_records
+    assert service_account_token_credential_record_repository.list_by_principal_id(account.id) == []
 
 
 def test_given_a_group_with_service_accounts_when_deleting_then_the_rows_survive_for_the_audit(

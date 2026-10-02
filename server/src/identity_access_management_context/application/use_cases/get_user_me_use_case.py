@@ -20,7 +20,7 @@ class GetUserMeUseCase(TracedUseCase):
         if user is None:
             raise UserNotFoundException(command.requesting_user_id)
 
-        is_sso = self.sso_credential_record_repository.get_by_principal_id(user.id) is not None
+        is_sso = self.sso_credential_record_repository.list_by_principal_id(user.id) != []
 
         return GetUserMeResponse(
             id=user.id,

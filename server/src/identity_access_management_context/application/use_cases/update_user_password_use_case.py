@@ -38,11 +38,20 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         self.time_provider = time_provider
 
     def execute(self, command: UpdateUserPasswordCommand) -> UpdateUserPasswordResponse:
-        credential_record = self.password_credential_record_repository.get_by_principal_id(command.user_id)
-        if not credential_record:
+        credential_records = self.password_credential_record_repository.list_by_principal_id(command.user_id)
+        if not credential_records:
             raise UserNotFoundException(command.user_id)
 
-        if not self.password_hashing_gateway.verify(command.old_password, credential_record.password_hash):
+        # A user may hold several passwords: the old one names which to change.
+        credential_record = next(
+            (
+                credential_record
+                for credential_record in credential_records
+                if self.password_hashing_gateway.verify(command.old_password, credential_record.password_hash)
+            ),
+            None,
+        )
+        if credential_record is None:
             raise InvalidCredentialsException("Invalid old password")
 
         # Checked after the old password so a wrong current password still answers 401
@@ -55,7 +64,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         new_password_hash = self.password_hashing_gateway.hash(new_password.value)
 
-        self.password_credential_record_repository.update_password_hash(command.user_id, new_password_hash)
+        self.password_credential_record_repository.update_password_hash(credential_record.email, new_password_hash)
 
         now = self.time_provider.get_current_time().replace(microsecond=0)
 

@@ -7,19 +7,23 @@ from identity_access_management_context.domain.entities import ServiceAccountTok
 
 class FakeServiceAccountTokenCredentialRecordRepository(ServiceAccountTokenCredentialRecordRepository):
     def __init__(self):
-        self.credential_records: dict[UUID, ServiceAccountTokenCredentialRecord] = {}
+        self.credential_records: list[ServiceAccountTokenCredentialRecord] = []
+
+    def list_by_principal_id(self, principal_id: UUID) -> list[ServiceAccountTokenCredentialRecord]:
+        """Test helper: the records an account holds."""
+        return [c for c in self.credential_records if c.principal_id == principal_id]
 
     def create(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
-        for credential_record in credential_records:
-            self.credential_records[credential_record.principal_id] = credential_record
-
-    def replace(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
-        for credential_record in credential_records:
-            self.credential_records[credential_record.principal_id] = credential_record
-
-    def get_by_token_hash(self, token_hash: str) -> ServiceAccountTokenCredentialRecord | None:
-        return next((c for c in self.credential_records.values() if c.token_hash == token_hash), None)
+        self.credential_records.extend(credential_records)
 
     def delete_by_principal_ids(self, principal_ids: Iterable[UUID]) -> None:
-        for principal_id in principal_ids:
-            self.credential_records.pop(principal_id, None)
+        deleted = set(principal_ids)
+        self.credential_records = [c for c in self.credential_records if c.principal_id not in deleted]
+
+    def replace(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
+        credential_records = list(credential_records)
+        self.delete_by_principal_ids(c.principal_id for c in credential_records)
+        self.create(credential_records)
+
+    def get_by_token_hash(self, token_hash: str) -> ServiceAccountTokenCredentialRecord | None:
+        return next((c for c in self.credential_records if c.token_hash == token_hash), None)

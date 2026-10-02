@@ -84,7 +84,7 @@ def test_given_an_owner_when_creating_then_returns_a_token_and_stores_only_its_h
     stored = list(service_account_repository.list_for_groups((GROUP_ID,)))
     assert len(stored) == 1
     assert stored[0].is_active
-    credential_record = service_account_token_credential_record_repository.credential_records[stored[0].id]
+    (credential_record,) = service_account_token_credential_record_repository.list_by_principal_id(stored[0].id)
     assert credential_record.token_hash == hashlib.sha256(response.token.encode()).hexdigest()
     assert credential_record.token_hash != response.token
 

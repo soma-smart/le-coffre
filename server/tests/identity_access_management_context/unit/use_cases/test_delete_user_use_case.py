@@ -305,7 +305,7 @@ def test_given_deleted_user_should_also_remove_its_credentials(
 
     use_case.execute(DeleteUserCommand(user_id=user_uuid, requesting_user=AuthenticatedUser(admin_uuid, ["admin"])))
 
-    assert password_credential_record_repository.get_by_principal_id(user_uuid) is None
+    assert password_credential_record_repository.list_by_principal_id(user_uuid) == []
     assert password_credential_record_repository.get_by_email(email) is None
 
 

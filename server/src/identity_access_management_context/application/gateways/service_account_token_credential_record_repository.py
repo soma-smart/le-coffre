@@ -10,11 +10,11 @@ class ServiceAccountTokenCredentialRecordRepository(ABC):
 
     @abstractmethod
     def create(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
-        """Store the first token credential record of new service accounts."""
+        """Store token credential records, alongside any the accounts already hold."""
 
     @abstractmethod
     def replace(self, credential_records: Iterable[ServiceAccountTokenCredentialRecord]) -> None:
-        """Make each credential record the only one of its service account."""
+        """Make each credential record the only one of its service account, deleting the others."""
 
     @abstractmethod
     def get_by_token_hash(self, token_hash: str) -> ServiceAccountTokenCredentialRecord | None:

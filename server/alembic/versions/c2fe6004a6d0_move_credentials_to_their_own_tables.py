@@ -43,8 +43,7 @@ def upgrade() -> None:
     sa.Column('kind', sa.Enum('password', 'service_account_token', 'sso', name='credential_kind', native_enum=False, create_constraint=True), nullable=False),
     sa.Column('principal_id', sa.Uuid(), nullable=False),
     sa.ForeignKeyConstraint(['principal_id'], ['iam__principal.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('principal_id', 'kind')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_iam__credential_principal_id'), 'iam__credential', ['principal_id'], unique=False)
     op.create_table('iam__credential__password',
