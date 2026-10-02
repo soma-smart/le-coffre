@@ -72,7 +72,7 @@ class UnlockVaultUseCase(TracedUseCase):
                 event_id=event.event_id,
                 event_type=type(event).__name__,
                 occurred_on=event.occurred_on,
-                actor_user_id=None,
+                actor_principal_id=None,
                 event_data={},
             )
         except VaultUnlockedError as e:

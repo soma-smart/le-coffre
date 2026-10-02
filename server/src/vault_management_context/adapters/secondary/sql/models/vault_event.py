@@ -12,5 +12,5 @@ class VaultEventTable(SQLModel, table=True):
     event_id: UUID = Field(primary_key=True)
     event_type: str = Field(index=True)
     occurred_on: datetime = Field(index=True)
-    actor_user_id: UUID | None = Field(default=None, index=True)
+    actor_principal_id: UUID | None = Field(default=None, index=True)
     event_data: dict = Field(default_factory=dict, sa_column=Column(JSON))

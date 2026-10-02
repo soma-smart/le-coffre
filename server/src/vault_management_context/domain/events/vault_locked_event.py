@@ -8,7 +8,7 @@ from shared_kernel.domain.value_objects import EventPriority
 class VaultLockedEvent(DomainEvent):
     def __init__(
         self,
-        locked_by_user_id: UUID,
+        locked_by_principal_id: UUID,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -17,4 +17,4 @@ class VaultLockedEvent(DomainEvent):
             occurred_on=occurred_on or datetime.now(),
             priority=EventPriority.HIGH,
         )
-        self.locked_by_user_id = locked_by_user_id
+        self.locked_by_principal_id = locked_by_principal_id

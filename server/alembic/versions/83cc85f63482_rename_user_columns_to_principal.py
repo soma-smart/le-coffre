@@ -29,6 +29,7 @@ RENAMES = (
     ('IamEvent', 'actor_user_id', 'actor_principal_id'),
     ('PasswordEvent', 'actor_user_id', 'actor_principal_id'),
     ('OneTimeLink', 'created_by_user_id', 'created_by_principal_id'),
+    ('VaultEvent', 'actor_user_id', 'actor_principal_id'),
 )
 
 
