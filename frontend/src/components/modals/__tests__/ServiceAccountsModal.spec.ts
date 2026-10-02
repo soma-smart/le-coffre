@@ -12,7 +12,7 @@ const group: Group = {
   id: 'group-1',
   name: 'Platform',
   isPersonal: false,
-  userId: null,
+  principalId: null,
   owners: ['user-1'],
   members: ['user-1'],
 }
@@ -22,7 +22,7 @@ function makeAccount(overrides: Partial<ServiceAccount> = {}): ServiceAccount {
     id: 'account-1',
     groupId: 'group-1',
     name: 'nightly-backup',
-    createdByUserId: 'user-1',
+    createdByPrincipalId: 'user-1',
     createdByUserName: 'Ada Owner',
     createdAt: new Date(Date.now() - 3_600_000).toISOString(),
     revokedAt: null,
@@ -126,7 +126,7 @@ describe('ServiceAccountsModal', () => {
 
   it('falls back to plain wording when the creation event is missing', async () => {
     const repo = new InMemoryServiceAccountRepository().seed(
-      makeAccount({ createdAt: null, createdByUserId: null, createdByUserName: null }),
+      makeAccount({ createdAt: null, createdByPrincipalId: null, createdByUserName: null }),
     )
     const wrapper = await openModal(repo)
 

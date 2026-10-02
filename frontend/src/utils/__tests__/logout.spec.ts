@@ -107,7 +107,7 @@ describe('logout()', () => {
       id: 'g1',
       name: 'Team',
       isPersonal: false,
-      userId: null,
+      principalId: null,
       owners: ['u1'],
       members: [],
     })

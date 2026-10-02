@@ -62,7 +62,7 @@ def test_given_owner_when_listing_group_events_then_events_are_returned(
         event_type="UserAddedToGroupEvent",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         actor_principal_id=owner_id,
-        event_data={"group_id": str(group_id), "user_id": str(new_user_id)},
+        event_data={"group_id": str(group_id), "principal_id": str(new_user_id)},
     )
 
     response = use_case.execute(
@@ -89,7 +89,7 @@ def test_given_admin_with_no_group_access_when_listing_group_events_then_events_
         event_type="OwnerAddedToGroupEvent",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         actor_principal_id=owner_id,
-        event_data={"group_id": str(group_id), "user_id": str(owner_id)},
+        event_data={"group_id": str(group_id), "principal_id": str(owner_id)},
     )
 
     response = use_case.execute(ListGroupEventsCommand(group_id=group_id, requesting_user=ADMIN_USER))
@@ -137,14 +137,14 @@ def test_given_event_types_filter_when_listing_group_events_then_only_matching_t
         event_type="UserAddedToGroupEvent",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         actor_principal_id=owner_id,
-        event_data={"group_id": str(group_id), "user_id": str(owner_id)},
+        event_data={"group_id": str(group_id), "principal_id": str(owner_id)},
     )
     group_event_repository.append_event(
         event_id=UUID("b2222222-2222-2222-2222-222222222222"),
         event_type="UserRemovedFromGroupEvent",
         occurred_on=datetime(2026, 2, 6, 11, 0, 0),
         actor_principal_id=owner_id,
-        event_data={"group_id": str(group_id), "user_id": str(owner_id)},
+        event_data={"group_id": str(group_id), "principal_id": str(owner_id)},
     )
 
     response = use_case.execute(
@@ -173,7 +173,7 @@ def test_given_events_from_another_group_when_listing_group_events_then_they_are
         event_type="UserAddedToGroupEvent",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         actor_principal_id=owner_id,
-        event_data={"group_id": str(other_group_id), "user_id": str(owner_id)},
+        event_data={"group_id": str(other_group_id), "principal_id": str(owner_id)},
     )
 
     response = use_case.execute(ListGroupEventsCommand(group_id=group_id, requesting_user=ADMIN_USER))

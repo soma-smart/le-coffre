@@ -14,9 +14,9 @@ export type AccessRoleEnum = 'owner' | 'member';
  */
 export type AddMemberToGroupRequest = {
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
 };
 
 /**
@@ -28,9 +28,9 @@ export type AddMemberToGroupResponse = {
      */
     group_id: string;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
     /**
      * Message
      */
@@ -42,9 +42,9 @@ export type AddMemberToGroupResponse = {
  */
 export type AddOwnerToGroupRequest = {
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
 };
 
 /**
@@ -56,9 +56,9 @@ export type AddOwnerToGroupResponse = {
      */
     group_id: string;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
     /**
      * Message
      */
@@ -91,6 +91,16 @@ export type AdminLoginResponse = {
      * Email
      */
     email: string;
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
+ * ClearPendingSharesResponse
+ */
+export type ClearPendingSharesResponse = {
     /**
      * Message
      */
@@ -360,198 +370,6 @@ export type CsrfTokenResponse = {
 };
 
 /**
- * DemoteOwnerToMemberResponse
- */
-export type DemoteOwnerToMemberResponse = {
-    /**
-     * Message
-     */
-    message: string;
-};
-
-/**
- * ExchangeExtensionDeviceRequest
- */
-export type ExchangeExtensionDeviceRequest = {
-    /**
-     * User Code
-     */
-    user_code: string;
-    /**
-     * Code Verifier
-     *
-     * The secret the extension kept when it registered
-     */
-    code_verifier: string;
-};
-
-/**
- * ExchangeExtensionDeviceResponse
- *
- * One shape for both outcomes, keyed on `status`.
- *
- * A union response model would force the generated client into a discriminated
- * type for what is, from the extension's point of view, one poll loop. The
- * token fields are populated only when `status` is `approved`.
- */
-export type ExchangeExtensionDeviceResponse = {
-    /**
-     * Status
-     *
-     * `approved` once redeemed, `pending` while awaiting approval
-     */
-    status: string;
-    /**
-     * Expires At
-     *
-     * Pairing expiry while pending, token expiry once approved
-     */
-    expires_at: string;
-    /**
-     * Poll Interval Seconds
-     */
-    poll_interval_seconds?: number | null;
-    /**
-     * Token
-     */
-    token?: string | null;
-    /**
-     * Token Id
-     */
-    token_id?: string | null;
-    /**
-     * Email
-     */
-    email?: string | null;
-    /**
-     * Display Name
-     */
-    display_name?: string | null;
-};
-
-/**
- * ExtensionGroupItem
- */
-export type ExtensionGroupItem = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Is Personal
-     */
-    is_personal: boolean;
-    /**
-     * Is Owner
-     */
-    is_owner: boolean;
-};
-
-/**
- * ExtensionTokenItem
- */
-export type ExtensionTokenItem = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Device Name
-     */
-    device_name: string;
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-    /**
-     * Last Used At
-     */
-    last_used_at: string | null;
-    /**
-     * Revoked At
-     */
-    revoked_at: string | null;
-    /**
-     * Created From Ip
-     */
-    created_from_ip: string | null;
-    /**
-     * Is Active
-     */
-    is_active: boolean;
-};
-
-/**
- * GetExtensionPairingResponse
- */
-export type GetExtensionPairingResponse = {
-    /**
-     * User Code
-     */
-    user_code: string;
-    /**
-     * Device Name
-     */
-    device_name: string;
-    /**
-     * Created At
-     */
-    created_at: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-    /**
-     * Seconds Left
-     *
-     * Seconds until the request expires, by the server's clock
-     */
-    seconds_left: number;
-    /**
-     * Access Lifetime Seconds
-     */
-    access_lifetime_seconds: number;
-    /**
-     * Created From Ip
-     */
-    created_from_ip: string | null;
-    /**
-     * Is Resolved
-     */
-    is_resolved: boolean;
-};
-
-/**
- * GetExtensionSessionResponse
- */
-export type GetExtensionSessionResponse = {
-    /**
-     * User Id
-     */
-    user_id: string;
-    /**
-     * Email
-     */
-    email: string;
-    /**
-     * Display Name
-     */
-    display_name: string;
-    /**
-     * Is Read Only
-     */
-    is_read_only: boolean;
-};
-
-/**
  * GetGroupResponse
  */
 export type GetGroupResponse = {
@@ -568,9 +386,9 @@ export type GetGroupResponse = {
      */
     is_personal: boolean;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string | null;
+    principal_id: string | null;
     /**
      * Owners
      */
@@ -741,9 +559,9 @@ export type GroupEventResponse = {
      */
     occurred_on: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Actor Email
      */
@@ -773,9 +591,9 @@ export type GroupItem = {
      */
     is_personal: boolean;
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string | null;
+    principal_id: string | null;
     /**
      * Owners
      */
@@ -806,30 +624,6 @@ export type IsSsoConfigSetResponse = {
      * Is Set
      */
     is_set: boolean;
-};
-
-/**
- * ListExtensionGroupsResponse
- */
-export type ListExtensionGroupsResponse = {
-    /**
-     * Groups
-     */
-    groups: Array<ExtensionGroupItem>;
-    /**
-     * Total
-     */
-    total: number;
-};
-
-/**
- * ListExtensionTokensResponseModel
- */
-export type ListExtensionTokensResponseModel = {
-    /**
-     * Tokens
-     */
-    tokens: Array<ExtensionTokenItem>;
 };
 
 /**
@@ -1007,20 +801,6 @@ export type LogoutResponse = {
 };
 
 /**
- * NotificationPreferencesResponse
- */
-export type NotificationPreferencesResponse = {
-    /**
-     * Notify On Vault Lock
-     */
-    notify_on_vault_lock: boolean;
-    /**
-     * Notify On Vault Unlock
-     */
-    notify_on_vault_unlock: boolean;
-};
-
-/**
  * OneTimeLinkAuditItem
  */
 export type OneTimeLinkAuditItem = {
@@ -1045,9 +825,9 @@ export type OneTimeLinkAuditItem = {
      */
     group_name: string | null;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string;
+    created_by_principal_id: string;
     /**
      * Created By Display Name
      */
@@ -1083,9 +863,9 @@ export type OneTimeLinkSummary = {
      */
     password_id: string;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string;
+    created_by_principal_id: string;
     /**
      * Created At
      */
@@ -1125,9 +905,9 @@ export type PasswordEventByActorResponseItem = {
      */
     password_id: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Event Data
      */
@@ -1153,9 +933,9 @@ export type PasswordEventResponse = {
      */
     occurred_on: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Actor Email
      */
@@ -1242,48 +1022,6 @@ export type RegisterAdminResponse = {
 };
 
 /**
- * RegisterExtensionDeviceRequest
- */
-export type RegisterExtensionDeviceRequest = {
-    /**
-     * Code Challenge
-     *
-     * base64url(SHA-256(code_verifier))
-     */
-    code_challenge: string;
-    /**
-     * Code Challenge Method
-     *
-     * Only S256 is accepted
-     */
-    code_challenge_method?: string;
-    /**
-     * Device Name
-     *
-     * Self-reported; shown as untrusted on the approval page
-     */
-    device_name?: string;
-};
-
-/**
- * RegisterExtensionDeviceResponse
- */
-export type RegisterExtensionDeviceResponse = {
-    /**
-     * User Code
-     */
-    user_code: string;
-    /**
-     * Expires At
-     */
-    expires_at: string;
-    /**
-     * Poll Interval Seconds
-     */
-    poll_interval_seconds: number;
-};
-
-/**
  * RemoveMemberFromGroupResponse
  */
 export type RemoveMemberFromGroupResponse = {
@@ -1291,26 +1029,6 @@ export type RemoveMemberFromGroupResponse = {
      * Message
      */
     message: string;
-};
-
-/**
- * RevokeAllExtensionTokensForUserResponse
- */
-export type RevokeAllExtensionTokensForUserResponse = {
-    /**
-     * Revoked Count
-     */
-    revoked_count: number;
-};
-
-/**
- * RevokeAllExtensionTokensResponse
- */
-export type RevokeAllExtensionTokensResponse = {
-    /**
-     * Revoked Count
-     */
-    revoked_count: number;
 };
 
 /**
@@ -1372,9 +1090,9 @@ export type ServiceAccountSummary = {
      */
     name: string;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string | null;
+    created_by_principal_id: string | null;
     /**
      * Created By User Name
      */
@@ -1475,12 +1193,6 @@ export type StatisticForAdminResponse = {
  */
 export type UnlockVaultPostRequest = {
     /**
-     * Unlock Session Id
-     *
-     * Id of the unlock session the shares are added to (generated by the unlock page)
-     */
-    unlock_session_id: string;
-    /**
      * Shares
      *
      * List of share secrets (hex strings with embedded index)
@@ -1524,20 +1236,6 @@ export type UpdateGroupResponse = {
      * Message
      */
     message: string;
-};
-
-/**
- * UpdateNotificationPreferencesRequest
- */
-export type UpdateNotificationPreferencesRequest = {
-    /**
-     * Notify On Vault Lock
-     */
-    notify_on_vault_lock: boolean;
-    /**
-     * Notify On Vault Unlock
-     */
-    notify_on_vault_unlock: boolean;
 };
 
 /**
@@ -1615,9 +1313,9 @@ export type UpdateUserRequest = {
  */
 export type UserAccessItem = {
     /**
-     * User Id
+     * Principal Id
      */
-    user_id: string;
+    principal_id: string;
     /**
      * Group Id
      */
@@ -1817,6 +1515,22 @@ export type UnlockVaultVaultUnlockPostResponses = {
 
 export type UnlockVaultVaultUnlockPostResponse = UnlockVaultVaultUnlockPostResponses[keyof UnlockVaultVaultUnlockPostResponses];
 
+export type ClearPendingSharesVaultUnlockClearDeleteData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/vault/unlock/clear';
+};
+
+export type ClearPendingSharesVaultUnlockClearDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: ClearPendingSharesResponse;
+};
+
+export type ClearPendingSharesVaultUnlockClearDeleteResponse = ClearPendingSharesVaultUnlockClearDeleteResponses[keyof ClearPendingSharesVaultUnlockClearDeleteResponses];
+
 export type LockVaultVaultLockPostData = {
     body?: never;
     path?: never;
@@ -1835,27 +1549,10 @@ export type LockVaultVaultLockPostResponse = LockVaultVaultLockPostResponses[key
 
 export type GetVaultStatusVaultStatusGetData = {
     body?: never;
-    headers?: {
-        /**
-         * X-Unlock-Session-Id
-         *
-         * Unlock session to report the progress of
-         */
-        'X-Unlock-Session-Id'?: string | null;
-    };
     path?: never;
     query?: never;
     url: '/vault/status';
 };
-
-export type GetVaultStatusVaultStatusGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetVaultStatusVaultStatusGetError = GetVaultStatusVaultStatusGetErrors[keyof GetVaultStatusVaultStatusGetErrors];
 
 export type GetVaultStatusVaultStatusGetResponses = {
     /**
@@ -3054,7 +2751,7 @@ export type AddOwnerToGroupGroupsGroupIdOwnersPostResponses = {
 
 export type AddOwnerToGroupGroupsGroupIdOwnersPostResponse = AddOwnerToGroupGroupsGroupIdOwnersPostResponses[keyof AddOwnerToGroupGroupsGroupIdOwnersPostResponses];
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteData = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -3062,65 +2759,31 @@ export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteData = {
          */
         group_id: string;
         /**
-         * User Id
+         * Principal Id
          */
-        user_id: string;
+        principal_id: string;
     };
     query?: never;
-    url: '/groups/{group_id}/owners/{user_id}';
+    url: '/groups/{group_id}/members/{principal_id}';
 };
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteErrors = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteError = DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteErrors[keyof DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteErrors];
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteError = RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors[keyof RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors];
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    200: DemoteOwnerToMemberResponse;
-};
-
-export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponse = DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponses[keyof DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponses];
-
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Group Id
-         */
-        group_id: string;
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/groups/{group_id}/members/{user_id}';
-};
-
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteError = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors];
-
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses = {
     /**
      * Successful Response
      */
     200: RemoveMemberFromGroupResponse;
 };
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponse = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses];
+export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponse = RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses[keyof RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses];
 
 export type DeleteGroupGroupsGroupIdDeleteData = {
     body?: never;
@@ -3425,332 +3088,3 @@ export type GetStatisticForAdminIamStatisticsGetResponses = {
 };
 
 export type GetStatisticForAdminIamStatisticsGetResponse = GetStatisticForAdminIamStatisticsGetResponses[keyof GetStatisticForAdminIamStatisticsGetResponses];
-
-export type RegisterExtensionDeviceExtensionDevicePostData = {
-    body: RegisterExtensionDeviceRequest;
-    path?: never;
-    query?: never;
-    url: '/extension/device';
-};
-
-export type RegisterExtensionDeviceExtensionDevicePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RegisterExtensionDeviceExtensionDevicePostError = RegisterExtensionDeviceExtensionDevicePostErrors[keyof RegisterExtensionDeviceExtensionDevicePostErrors];
-
-export type RegisterExtensionDeviceExtensionDevicePostResponses = {
-    /**
-     * Successful Response
-     */
-    201: RegisterExtensionDeviceResponse;
-};
-
-export type RegisterExtensionDeviceExtensionDevicePostResponse = RegisterExtensionDeviceExtensionDevicePostResponses[keyof RegisterExtensionDeviceExtensionDevicePostResponses];
-
-export type ExchangeExtensionDeviceExtensionDeviceExchangePostData = {
-    body: ExchangeExtensionDeviceRequest;
-    path?: never;
-    query?: never;
-    url: '/extension/device/exchange';
-};
-
-export type ExchangeExtensionDeviceExtensionDeviceExchangePostErrors = {
-    /**
-     * The pairing is invalid, expired, denied or already redeemed
-     */
-    400: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ExchangeExtensionDeviceExtensionDeviceExchangePostError = ExchangeExtensionDeviceExtensionDeviceExchangePostErrors[keyof ExchangeExtensionDeviceExtensionDeviceExchangePostErrors];
-
-export type ExchangeExtensionDeviceExtensionDeviceExchangePostResponses = {
-    /**
-     * Successful Response
-     */
-    200: ExchangeExtensionDeviceResponse;
-};
-
-export type ExchangeExtensionDeviceExtensionDeviceExchangePostResponse = ExchangeExtensionDeviceExtensionDeviceExchangePostResponses[keyof ExchangeExtensionDeviceExtensionDeviceExchangePostResponses];
-
-export type GetExtensionPairingExtensionPairingUserCodeGetData = {
-    body?: never;
-    path: {
-        /**
-         * User Code
-         */
-        user_code: string;
-    };
-    query?: never;
-    url: '/extension/pairing/{user_code}';
-};
-
-export type GetExtensionPairingExtensionPairingUserCodeGetErrors = {
-    /**
-     * The pairing is unknown or has expired
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetExtensionPairingExtensionPairingUserCodeGetError = GetExtensionPairingExtensionPairingUserCodeGetErrors[keyof GetExtensionPairingExtensionPairingUserCodeGetErrors];
-
-export type GetExtensionPairingExtensionPairingUserCodeGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: GetExtensionPairingResponse;
-};
-
-export type GetExtensionPairingExtensionPairingUserCodeGetResponse = GetExtensionPairingExtensionPairingUserCodeGetResponses[keyof GetExtensionPairingExtensionPairingUserCodeGetResponses];
-
-export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostData = {
-    body?: never;
-    path: {
-        /**
-         * User Code
-         */
-        user_code: string;
-    };
-    query?: never;
-    url: '/extension/pairing/{user_code}/approve';
-};
-
-export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors = {
-    /**
-     * The pairing is unknown or has expired
-     */
-    404: unknown;
-    /**
-     * The account already has the maximum number of connected extensions
-     */
-    409: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostError = ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors[keyof ApproveExtensionPairingExtensionPairingUserCodeApprovePostErrors];
-
-export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponse = ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses[keyof ApproveExtensionPairingExtensionPairingUserCodeApprovePostResponses];
-
-export type DenyExtensionPairingExtensionPairingUserCodeDenyPostData = {
-    body?: never;
-    path: {
-        /**
-         * User Code
-         */
-        user_code: string;
-    };
-    query?: never;
-    url: '/extension/pairing/{user_code}/deny';
-};
-
-export type DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors = {
-    /**
-     * The pairing is unknown or has expired
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DenyExtensionPairingExtensionPairingUserCodeDenyPostError = DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors[keyof DenyExtensionPairingExtensionPairingUserCodeDenyPostErrors];
-
-export type DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type DenyExtensionPairingExtensionPairingUserCodeDenyPostResponse = DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses[keyof DenyExtensionPairingExtensionPairingUserCodeDenyPostResponses];
-
-export type GetExtensionSessionExtensionSessionGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/extension/session';
-};
-
-export type GetExtensionSessionExtensionSessionGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: GetExtensionSessionResponse;
-};
-
-export type GetExtensionSessionExtensionSessionGetResponse = GetExtensionSessionExtensionSessionGetResponses[keyof GetExtensionSessionExtensionSessionGetResponses];
-
-export type ListExtensionGroupsExtensionGroupsGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/extension/groups';
-};
-
-export type ListExtensionGroupsExtensionGroupsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: ListExtensionGroupsResponse;
-};
-
-export type ListExtensionGroupsExtensionGroupsGetResponse = ListExtensionGroupsExtensionGroupsGetResponses[keyof ListExtensionGroupsExtensionGroupsGetResponses];
-
-export type RevokeAllExtensionTokensExtensionTokensDeleteData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/extension/tokens';
-};
-
-export type RevokeAllExtensionTokensExtensionTokensDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    200: RevokeAllExtensionTokensResponse;
-};
-
-export type RevokeAllExtensionTokensExtensionTokensDeleteResponse = RevokeAllExtensionTokensExtensionTokensDeleteResponses[keyof RevokeAllExtensionTokensExtensionTokensDeleteResponses];
-
-export type ListExtensionTokensExtensionTokensGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/extension/tokens';
-};
-
-export type ListExtensionTokensExtensionTokensGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: ListExtensionTokensResponseModel;
-};
-
-export type ListExtensionTokensExtensionTokensGetResponse = ListExtensionTokensExtensionTokensGetResponses[keyof ListExtensionTokensExtensionTokensGetResponses];
-
-export type RevokeExtensionTokenExtensionTokensTokenIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Token Id
-         */
-        token_id: string;
-    };
-    query?: never;
-    url: '/extension/tokens/{token_id}';
-};
-
-export type RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors = {
-    /**
-     * No such connected extension for this account
-     */
-    404: unknown;
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RevokeExtensionTokenExtensionTokensTokenIdDeleteError = RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors[keyof RevokeExtensionTokenExtensionTokensTokenIdDeleteErrors];
-
-export type RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type RevokeExtensionTokenExtensionTokensTokenIdDeleteResponse = RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses[keyof RevokeExtensionTokenExtensionTokensTokenIdDeleteResponses];
-
-export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * User Id
-         */
-        user_id: string;
-    };
-    query?: never;
-    url: '/admin/users/{user_id}/extension-tokens';
-};
-
-export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteError = RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteErrors[keyof RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteErrors];
-
-export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    200: RevokeAllExtensionTokensForUserResponse;
-};
-
-export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponse = RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses[keyof RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses];
-
-export type GetNotificationPreferencesNotificationsPreferencesGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/notifications/preferences';
-};
-
-export type GetNotificationPreferencesNotificationsPreferencesGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: NotificationPreferencesResponse;
-};
-
-export type GetNotificationPreferencesNotificationsPreferencesGetResponse = GetNotificationPreferencesNotificationsPreferencesGetResponses[keyof GetNotificationPreferencesNotificationsPreferencesGetResponses];
-
-export type UpdateNotificationPreferencesNotificationsPreferencesPutData = {
-    body: UpdateNotificationPreferencesRequest;
-    path?: never;
-    query?: never;
-    url: '/notifications/preferences';
-};
-
-export type UpdateNotificationPreferencesNotificationsPreferencesPutErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateNotificationPreferencesNotificationsPreferencesPutError = UpdateNotificationPreferencesNotificationsPreferencesPutErrors[keyof UpdateNotificationPreferencesNotificationsPreferencesPutErrors];
-
-export type UpdateNotificationPreferencesNotificationsPreferencesPutResponses = {
-    /**
-     * Successful Response
-     */
-    200: NotificationPreferencesResponse;
-};
-
-export type UpdateNotificationPreferencesNotificationsPreferencesPutResponse = UpdateNotificationPreferencesNotificationsPreferencesPutResponses[keyof UpdateNotificationPreferencesNotificationsPreferencesPutResponses];

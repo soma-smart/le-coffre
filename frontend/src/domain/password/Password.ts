@@ -32,13 +32,13 @@ export interface Password {
 export type AccessRole = 'owner' | 'member'
 
 /**
- * One access link: a user reaches the password through a single group.
- * A user who reaches it through several groups produces several links.
+ * One access link: a principal reaches the password through a single group.
+ * A principal that reaches it through several groups produces several links.
  */
 export interface UserAccessLink {
-  userId: string
+  principalId: string
   groupId: string
-  /** Whether the user is an owner or a plain member of `groupId`. */
+  /** Whether the principal is an owner or a plain member of `groupId`. */
   roleInGroup: AccessRole
   /** Whether `groupId` owns the password or is merely shared with it. */
   groupRole: AccessRole
@@ -66,7 +66,7 @@ export interface PasswordEvent {
   eventId: string
   eventType: string
   occurredOn: string
-  actorUserId: string
+  actorPrincipalId: string
   actorEmail: string | null
   eventData: Record<string, unknown>
 }

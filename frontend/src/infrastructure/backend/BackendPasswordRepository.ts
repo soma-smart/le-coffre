@@ -194,7 +194,7 @@ function toPasswordAccess(dto: ListPasswordAccessResponse): PasswordAccess {
   return {
     resourceId: dto.resource_id,
     users: dto.user_access_list.map((item) => ({
-      userId: item.user_id,
+      principalId: item.principal_id,
       groupId: item.group_id,
       roleInGroup: item.role_in_group,
       groupRole: item.group_role,
@@ -215,7 +215,7 @@ function toPasswordEvent(dto: PasswordEventResponse): PasswordEvent {
     eventId: dto.event_id,
     eventType: dto.event_type,
     occurredOn: dto.occurred_on,
-    actorUserId: dto.actor_user_id,
+    actorPrincipalId: dto.actor_principal_id,
     actorEmail: dto.actor_email,
     eventData: toPasswordEventData(dto.event_data),
   }

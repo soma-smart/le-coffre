@@ -100,7 +100,7 @@
         </Column>
 
         <Column
-          field="actorUserId"
+          field="actorPrincipalId"
           :header="t('components.groupHistoryModal.actor')"
           :style="{ width: '20%' }"
         >
@@ -261,8 +261,10 @@ const formatDateTime = (dateString: string): string => {
 
 const targetUserLabel = (eventData: Record<string, unknown>): string => {
   if (typeof eventData.userEmail === 'string') return eventData.userEmail
-  const userId = eventData.userId
-  return typeof userId === 'string' ? `${userId.substring(0, 8)}...` : t('common.unknownUser')
+  const principalId = eventData.principalId
+  return typeof principalId === 'string'
+    ? `${principalId.substring(0, 8)}...`
+    : t('common.unknownUser')
 }
 
 const formatEventType = (eventType: string): string => translateEventType(t, eventType)

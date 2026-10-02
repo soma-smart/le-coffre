@@ -13,12 +13,12 @@ describe('toGroupEventData', () => {
     expect(
       toGroupEventData({
         group_id: 'g1',
-        user_id: 'u2',
+        principal_id: 'u2',
         user_email: 'u2@example.com',
       }),
     ).toEqual({
       groupId: 'g1',
-      userId: 'u2',
+      principalId: 'u2',
       userEmail: 'u2@example.com',
     })
   })

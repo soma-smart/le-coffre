@@ -78,7 +78,7 @@ export class InMemoryServiceAccountRepository implements ServiceAccountRepositor
       id,
       groupId,
       name,
-      createdByUserId: this.creator.id,
+      createdByPrincipalId: this.creator.id,
       createdByUserName: this.creator.name || null,
       createdAt: new Date().toISOString(),
       revokedAt: null,

@@ -54,9 +54,9 @@ class ListGroupEventsUseCase(TracedUseCase):
         for event in events:
             enriched_event_data = dict(event["event_data"])
 
-            target_user_id = enriched_event_data.get("user_id")
-            if target_user_id:
-                target_user = self.user_repository.get_by_id(UUID(target_user_id))
+            member_id = enriched_event_data.get("principal_id")
+            if member_id:
+                target_user = self.user_repository.get_by_id(UUID(member_id))
                 if target_user:
                     enriched_event_data["user_email"] = target_user.email
 

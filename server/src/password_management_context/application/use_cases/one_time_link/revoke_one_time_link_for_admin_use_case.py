@@ -44,7 +44,7 @@ class RevokeOneTimeLinkForAdminUseCase(TracedUseCase):
             extra={
                 "link_id": str(link.id),
                 "password_id": str(link.password_id),
-                "issued_by_user_id": str(link.created_by_principal_id),
-                "by_user_id": str(command.requesting_user.user_id),
+                "issued_by_principal_id": str(link.created_by_principal_id),
+                "by_principal_id": str(command.requesting_user.user_id),
             },
         )

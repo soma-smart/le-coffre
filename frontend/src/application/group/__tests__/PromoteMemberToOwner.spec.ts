@@ -8,7 +8,7 @@ function seed() {
     id: 'g1',
     name: 'Team',
     isPersonal: false,
-    userId: null,
+    principalId: null,
     owners: ['owner-1'],
     members: ['owner-1', 'user-2'],
   })

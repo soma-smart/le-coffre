@@ -7,7 +7,7 @@ import {
   getGroupGroupsGroupIdGet,
   listGroupEventsGroupsGroupIdEventsGet,
   listGroupsGroupsGet,
-  removeMemberFromGroupGroupsGroupIdMembersUserIdDelete,
+  removeMemberFromGroupGroupsGroupIdMembersPrincipalIdDelete,
   updateGroupGroupsGroupIdPut,
 } from '@/client/sdk.gen'
 import type { GetGroupResponse, GroupEventResponse, GroupItem } from '@/client/types.gen'
@@ -74,14 +74,14 @@ export class BackendGroupRepository implements GroupRepository {
   async addMember(groupId: string, userId: string): Promise<void> {
     const response = await addMemberToGroupGroupsGroupIdMembersPost({
       path: { group_id: groupId },
-      body: { user_id: userId },
+      body: { principal_id: userId },
     })
     this.throwIfError(response.error, response.response?.status, groupId)
   }
 
   async removeMember(groupId: string, userId: string): Promise<void> {
-    const response = await removeMemberFromGroupGroupsGroupIdMembersUserIdDelete({
-      path: { group_id: groupId, user_id: userId },
+    const response = await removeMemberFromGroupGroupsGroupIdMembersPrincipalIdDelete({
+      path: { group_id: groupId, principal_id: userId },
     })
     this.throwIfError(response.error, response.response?.status, groupId)
   }
@@ -89,7 +89,7 @@ export class BackendGroupRepository implements GroupRepository {
   async promoteToOwner(groupId: string, userId: string): Promise<void> {
     const response = await addOwnerToGroupGroupsGroupIdOwnersPost({
       path: { group_id: groupId },
-      body: { user_id: userId },
+      body: { principal_id: userId },
     })
     this.throwIfError(response.error, response.response?.status, groupId)
   }
@@ -136,7 +136,7 @@ function toGroup(dto: GroupItem | GetGroupResponse): Group {
     id: dto.id,
     name: dto.name,
     isPersonal: dto.is_personal,
-    userId: dto.user_id,
+    principalId: dto.principal_id,
     owners: dto.owners,
     members: dto.members,
   }
@@ -147,7 +147,7 @@ function toGroupEvent(dto: GroupEventResponse): GroupEvent {
     eventId: dto.event_id,
     eventType: dto.event_type,
     occurredOn: dto.occurred_on,
-    actorUserId: dto.actor_user_id,
+    actorPrincipalId: dto.actor_principal_id,
     actorEmail: dto.actor_email,
     eventData: toGroupEventData(dto.event_data),
   }

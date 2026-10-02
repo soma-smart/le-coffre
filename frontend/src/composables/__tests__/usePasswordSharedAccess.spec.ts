@@ -27,7 +27,7 @@ function makeGroup(overrides: Partial<Group> = {}): Group {
     id: 'g1',
     name: 'Group',
     isPersonal: false,
-    userId: null,
+    principalId: null,
     owners: [],
     members: ['u1'],
     ...overrides,
@@ -39,7 +39,7 @@ function makeShareEvent(overrides: Partial<PasswordEvent> = {}): PasswordEvent {
     eventId: 'e1',
     eventType: 'PasswordSharedEvent',
     occurredOn: '2026-04-01T10:00:00Z',
-    actorUserId: 'admin',
+    actorPrincipalId: 'admin',
     actorEmail: 'admin@example.com',
     eventData: { sharedWithGroupId: 'g1' },
     ...overrides,
@@ -115,7 +115,9 @@ describe('usePasswordSharedAccess', () => {
   })
 
   it('falls back to actorEmail when the user lookup fails', async () => {
-    const events = [makeShareEvent({ actorUserId: 'absent', actorEmail: 'fallback@example.com' })]
+    const events = [
+      makeShareEvent({ actorPrincipalId: 'absent', actorEmail: 'fallback@example.com' }),
+    ]
     const { sharedAccessInfo } = usePasswordSharedAccess({
       password: ref(makePassword()),
       contextGroupId: ref('g1'),

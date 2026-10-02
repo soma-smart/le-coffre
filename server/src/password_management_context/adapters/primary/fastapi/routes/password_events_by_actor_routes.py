@@ -28,7 +28,7 @@ class PasswordEventByActorResponseItem(BaseModel):
     event_type: str
     occurred_on: str
     password_id: str
-    actor_user_id: str
+    actor_principal_id: str
     event_data: dict
 
 
@@ -78,7 +78,7 @@ def list_password_events_by_actor(
                     event_type=event.event_type,
                     occurred_on=event.occurred_on,
                     password_id=event.password_id,
-                    actor_user_id=event.actor_principal_id,
+                    actor_principal_id=event.actor_principal_id,
                     event_data=event.event_data,
                 )
                 for event in response.events
