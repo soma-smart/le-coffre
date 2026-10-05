@@ -304,9 +304,6 @@ def get_delete_user_usecase(
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
     one_time_link_revocation_gateway: OneTimeLinkRevocationGateway = Depends(get_one_time_link_revocation_gateway),
-    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
-        get_password_credential_record_repository
-    ),
     extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
@@ -319,7 +316,6 @@ def get_delete_user_usecase(
         event_publisher,
         user_event_repository,
         one_time_link_revocation_gateway,
-        password_credential_record_repository,
         extension_token_repository,
         admin_event_repository,
         time_provider,

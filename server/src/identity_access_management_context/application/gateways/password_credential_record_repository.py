@@ -20,12 +20,3 @@ class PasswordCredentialRecordRepository(ABC):
     @abstractmethod
     def get_by_email(self, email: str) -> PasswordCredentialRecord | None:
         """Get the password credential record holding this email"""
-
-    @abstractmethod
-    def delete_by_principal_id(self, principal_id: UUID) -> None:
-        """Delete every password credential record of a principal.
-
-        Must run whenever the user itself is deleted. A credential row that
-        outlives its user shadows any account later created with the same
-        email, and is an authentication secret nobody can see or revoke.
-        """

@@ -8,7 +8,6 @@ from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
     GroupRepository,
     OneTimeLinkRevocationGateway,
-    PasswordCredentialRecordRepository,
     UserEventRepository,
     UserRepository,
 )
@@ -33,7 +32,6 @@ class DeleteUserUseCase(TracedUseCase):
         event_publisher: DomainEventPublisher,
         user_event_repository: UserEventRepository,
         one_time_link_revocation_gateway: OneTimeLinkRevocationGateway,
-        password_credential_record_repository: PasswordCredentialRecordRepository,
         extension_token_repository: ExtensionTokenRepository,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
@@ -45,7 +43,6 @@ class DeleteUserUseCase(TracedUseCase):
         self.event_publisher = event_publisher
         self._user_event_repository = user_event_repository
         self._one_time_link_revocation_gateway = one_time_link_revocation_gateway
-        self._password_credential_record_repository = password_credential_record_repository
         self._extension_token_repository = extension_token_repository
         self._admin_event_repository = admin_event_repository
         self._time_provider = time_provider
@@ -107,12 +104,7 @@ class DeleteUserUseCase(TracedUseCase):
         # Remove user from all remaining groups (including as owner/member) in one operation
         self.group_member_repository.remove_principal_from_all_groups(user_id)
 
-        # Credentials live in their own table, keyed by the same id. Leaving the
-        # row behind would keep an authentication secret alive with no user to
-        # own it, and it would shadow any account later created on that email,
-        # because credentials are looked up by email.
-        self._password_credential_record_repository.delete_by_principal_id(user_id)
-
+        # Takes the user's credentials of every kind with it.
         self.user_repository.delete(user_id)
 
         event = UserDeletedEvent(

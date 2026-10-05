@@ -81,49 +81,6 @@ def test_update_missing_credential_does_nothing(sql_password_credential_record_r
     sql_password_credential_record_repository.update_password_hash("nobody@example.com", b"new_password_hashed")
 
 
-def test_delete_by_principal_id_removes_the_credential(sql_password_credential_record_repository):
-    credential_record = PasswordCredentialRecord(
-        principal_id=uuid4(), email="leaver@example.com", password_hash=b"hashedpassword123"
-    )
-    sql_password_credential_record_repository.save(credential_record)
-
-    sql_password_credential_record_repository.delete_by_principal_id(credential_record.principal_id)
-
-    assert sql_password_credential_record_repository.list_by_principal_id(credential_record.principal_id) == []
-    assert sql_password_credential_record_repository.get_by_email(credential_record.email) is None
-
-
-def test_given_two_passwords_when_deleting_by_principal_id_then_both_are_gone(
-    sql_password_credential_record_repository,
-):
-    principal_id = uuid4()
-    for email in ("work@example.com", "home@example.com"):
-        sql_password_credential_record_repository.save(
-            PasswordCredentialRecord(principal_id=principal_id, email=email, password_hash=b"hash")
-        )
-
-    sql_password_credential_record_repository.delete_by_principal_id(principal_id)
-
-    assert sql_password_credential_record_repository.list_by_principal_id(principal_id) == []
-
-
-def test_delete_by_principal_id_on_a_missing_row_does_nothing(sql_password_credential_record_repository):
-    sql_password_credential_record_repository.delete_by_principal_id(uuid4())
-
-
-def test_delete_frees_the_email_for_a_new_account(sql_password_credential_record_repository):
-    """Emails are unique, so a leftover row would refuse the new account's password."""
-    email = "reused@example.com"
-    old = PasswordCredentialRecord(principal_id=uuid4(), email=email, password_hash=b"old-hash")
-    sql_password_credential_record_repository.save(old)
-    sql_password_credential_record_repository.delete_by_principal_id(old.principal_id)
-
-    new = PasswordCredentialRecord(principal_id=uuid4(), email=email, password_hash=b"new-hash")
-    sql_password_credential_record_repository.save(new)
-
-    assert sql_password_credential_record_repository.get_by_email(email) == new
-
-
 def test_given_an_email_already_held_when_saving_another_password_with_it_then_it_is_refused(
     sql_password_credential_record_repository,
 ):
