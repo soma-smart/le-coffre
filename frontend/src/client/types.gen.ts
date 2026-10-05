@@ -370,6 +370,16 @@ export type CsrfTokenResponse = {
 };
 
 /**
+ * DemoteOwnerToMemberResponse
+ */
+export type DemoteOwnerToMemberResponse = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
  * GetGroupResponse
  */
 export type GetGroupResponse = {
@@ -2750,6 +2760,40 @@ export type AddOwnerToGroupGroupsGroupIdOwnersPostResponses = {
 };
 
 export type AddOwnerToGroupGroupsGroupIdOwnersPostResponse = AddOwnerToGroupGroupsGroupIdOwnersPostResponses[keyof AddOwnerToGroupGroupsGroupIdOwnersPostResponses];
+
+export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteData = {
+    body?: never;
+    path: {
+        /**
+         * Group Id
+         */
+        group_id: string;
+        /**
+         * Principal Id
+         */
+        principal_id: string;
+    };
+    query?: never;
+    url: '/groups/{group_id}/owners/{principal_id}';
+};
+
+export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteError = DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteErrors[keyof DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteErrors];
+
+export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: DemoteOwnerToMemberResponse;
+};
+
+export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponse = DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponses[keyof DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponses];
 
 export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteData = {
     body?: never;

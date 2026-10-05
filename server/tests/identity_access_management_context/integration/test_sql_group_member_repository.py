@@ -240,6 +240,51 @@ def test_given_mix_of_owners_and_members_when_counting_then_only_counts_owners(
     assert count == 2
 
 
+# Method: count_owners_for_update
+#
+# These only exercise the counting logic, not the locking itself: the test
+# fixture runs against sqlite:///:memory:, where SQLAlchemy's SQLite dialect
+# silently ignores FOR UPDATE (SQLite has no row-level locking). The actual
+# concurrency guarantee only holds against Postgres, which every environment
+# outside this test suite runs; there is no cross-transaction integration
+# test here for the same reason two real, independently-committing sessions
+# aren't available against an in-memory SQLite database.
+def test_given_multiple_owners_when_counting_for_update_then_correct_count(
+    sql_group_member_repository,
+):
+    # Given
+    group_id = uuid4()
+    owner1_id = uuid4()
+    owner2_id = uuid4()
+
+    sql_group_member_repository.add_member(group_id, owner1_id, is_owner=True)
+    sql_group_member_repository.add_member(group_id, owner2_id, is_owner=True)
+
+    # When
+    count = sql_group_member_repository.count_owners_for_update(group_id)
+
+    # Then
+    assert count == 2
+
+
+def test_given_mix_of_owners_and_members_when_counting_for_update_then_only_counts_owners(
+    sql_group_member_repository,
+):
+    # Given
+    group_id = uuid4()
+    owner_id = uuid4()
+    member_id = uuid4()
+
+    sql_group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    sql_group_member_repository.add_member(group_id, member_id, is_owner=False)
+
+    # When
+    count = sql_group_member_repository.count_owners_for_update(group_id)
+
+    # Then
+    assert count == 1
+
+
 # Method: remove_principal_from_all_groups
 def test_given_user_in_multiple_groups_when_removing_from_all_then_all_memberships_deleted(
     sql_group_member_repository,
@@ -290,3 +335,59 @@ def test_given_multiple_users_in_group_when_removing_one_user_from_all_then_only
     # Then
     assert not sql_group_member_repository.is_member(group_id, user1_id)
     assert sql_group_member_repository.is_member(group_id, user2_id)
+
+
+# Method: promote_to_owner
+def test_given_existing_non_owner_member_when_promoting_to_owner_should_return_true_and_set_owner(
+    sql_group_member_repository,
+):
+    group_id = uuid4()
+    user_id = uuid4()
+    sql_group_member_repository.add_member(group_id, user_id, is_owner=False)
+
+    promoted = sql_group_member_repository.promote_to_owner(group_id, user_id)
+
+    assert promoted is True
+    assert sql_group_member_repository.is_owner(group_id, user_id)
+
+
+def test_given_existing_owner_when_promoting_to_owner_again_should_return_false_and_stay_owner(
+    sql_group_member_repository,
+):
+    group_id = uuid4()
+    user_id = uuid4()
+    sql_group_member_repository.add_member(group_id, user_id, is_owner=True)
+
+    promoted = sql_group_member_repository.promote_to_owner(group_id, user_id)
+
+    assert promoted is False
+    assert sql_group_member_repository.is_owner(group_id, user_id)
+
+
+def test_given_nonexistent_member_when_promoting_to_owner_should_return_false(
+    sql_group_member_repository,
+):
+    group_id = uuid4()
+    user_id = uuid4()
+
+    promoted = sql_group_member_repository.promote_to_owner(group_id, user_id)
+
+    assert promoted is False
+    assert not sql_group_member_repository.is_member(group_id, user_id)
+
+
+def test_given_two_sequential_promotion_attempts_when_promoting_should_only_the_first_return_true(
+    sql_group_member_repository,
+):
+    """Proves the check-and-set is a single atomic statement: only the call that actually
+    performs the false->true transition returns True, which is what makes concurrent
+    duplicate-promotion requests resolve to exactly one winner at the database level."""
+    group_id = uuid4()
+    user_id = uuid4()
+    sql_group_member_repository.add_member(group_id, user_id, is_owner=False)
+
+    first = sql_group_member_repository.promote_to_owner(group_id, user_id)
+    second = sql_group_member_repository.promote_to_owner(group_id, user_id)
+
+    assert first is True
+    assert second is False

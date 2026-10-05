@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlmodel import Field
+from sqlmodel import DateTime, Field
 
 from .principal_model import PrincipalDetailsTable, PrincipalKind
 
@@ -13,4 +13,6 @@ class ServiceAccountPrincipalTable(PrincipalDetailsTable, table=True):
 
     group_id: UUID = Field(nullable=False, index=True)
     name: str = Field(nullable=False)
-    revoked_at: datetime | None = Field(default=None, index=True, description="When the account was revoked")
+    revoked_at: datetime | None = Field(
+        sa_type=DateTime, default=None, index=True, description="When the account was revoked"
+    )

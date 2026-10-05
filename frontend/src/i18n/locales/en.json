@@ -58,7 +58,8 @@
       "OneTimeLinkReadEvent": "One-Time Link Opened",
       "UserAddedToGroupEvent": "User Added To Group",
       "OwnerAddedToGroupEvent": "Owner Added To Group",
-      "UserRemovedFromGroupEvent": "User Removed From Group"
+      "UserRemovedFromGroupEvent": "User Removed From Group",
+      "OwnerDemotedToMemberEvent": "Owner Demoted To Member"
     },
     "passwordEvents": {
       "createdInFolder": "Created in folder:",
@@ -473,6 +474,8 @@
       "promoteAria": "Promote to owner",
       "removeTooltip": "Remove member",
       "removeAria": "Remove member",
+      "demoteTooltip": "Demote to member",
+      "demoteAria": "Demote to member",
       "addMemberTitle": "Add Member",
       "searchUserPlaceholder": "Search for a user (min. 3 characters)",
       "userRequired": "Please select a user",
@@ -485,7 +488,13 @@
       "promoteConfirmAccept": "Promote",
       "promotedDetail": "{name} promoted to owner",
       "promoteFailed": "Failed to promote member to owner",
-      "historyButton": "History"
+      "historyButton": "History",
+      "demoteConfirmMessage": "Are you sure you want to demote {name} to member?",
+      "demoteConfirmHeader": "Demote to Member",
+      "demoteConfirmAccept": "Demote",
+      "demotedDetail": "{name} demoted to member",
+      "demoteFailed": "Failed to demote member",
+      "demoteFailedLastOwner": "Cannot demote {user}: {group} would be left without an owner"
     },
     "groupHistoryModal": {
       "title": "History: {name}",
@@ -501,6 +510,7 @@
       "addedAsMember": "Added {name} as a member",
       "promotedToOwner": "Promoted {name} to owner",
       "removedFromGroup": "Removed {name} from the group",
+      "demotedToMember": "Demoted {name} to member",
       "loadFailedSummary": "Load Failed",
       "loadFailedDetail": "Failed to load group history."
     },

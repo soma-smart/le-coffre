@@ -4,7 +4,7 @@ import type {
   ListGroupsFilters,
 } from '@/application/ports/GroupRepository'
 import type { Group, GroupEvent } from '@/domain/group/Group'
-import { GroupNotFoundError } from '@/domain/group/errors'
+import { GroupLastOwnerError, GroupNotFoundError } from '@/domain/group/errors'
 
 /**
  * Test-only implementation of GroupRepository. seed() pre-populates
@@ -113,6 +113,19 @@ export class InMemoryGroupRepository implements GroupRepository {
       events = events.filter((event) => new Date(event.occurredOn).getTime() <= max)
     }
     return events
+  }
+
+  async demoteToMember(groupId: string, userId: string): Promise<void> {
+    const group = this.storage.get(groupId)
+    if (!group) throw new GroupNotFoundError(groupId)
+    if (group.owners.includes(userId) && group.owners.length <= 1) {
+      throw new GroupLastOwnerError(groupId, userId)
+    }
+    this.storage.set(groupId, {
+      ...group,
+      owners: group.owners.filter((id) => id !== userId),
+      members: group.members.includes(userId) ? group.members : [...group.members, userId],
+    })
   }
 }
 

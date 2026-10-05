@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class AuthSessionTable(SQLModel, table=True):
@@ -10,6 +10,6 @@ class AuthSessionTable(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, nullable=False, primary_key=True, index=True)
     principal_id: UUID = Field(nullable=False, index=True)
     current_refresh_token_jti: str = Field(nullable=False, unique=True, index=True)
-    created_at: datetime = Field(nullable=False)
-    updated_at: datetime = Field(nullable=False)
-    invalidated_at: datetime | None = Field(default=None, nullable=True, index=True)
+    created_at: datetime = Field(sa_type=DateTime, nullable=False)
+    updated_at: datetime = Field(sa_type=DateTime, nullable=False)
+    invalidated_at: datetime | None = Field(sa_type=DateTime, default=None, nullable=True, index=True)

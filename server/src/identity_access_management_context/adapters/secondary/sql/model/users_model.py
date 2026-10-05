@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlmodel import Field
+from sqlmodel import DateTime, Field
 
 from .principal_model import PrincipalDetailsTable, PrincipalKind
 
@@ -15,4 +15,4 @@ class UserPrincipalTable(PrincipalDetailsTable, table=True):
     name: str = Field(nullable=False)
     roles: str = Field(default="[]", description="Roles as JSON string")
     current_refresh_token_jti: str | None = Field(default=None, nullable=True)
-    session_invalid_before: datetime | None = Field(default=None, nullable=True)
+    session_invalid_before: datetime | None = Field(sa_type=DateTime, default=None, nullable=True)

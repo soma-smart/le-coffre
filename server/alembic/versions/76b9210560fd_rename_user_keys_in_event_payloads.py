@@ -27,6 +27,7 @@ IAM_EVENT_TYPES = (
     'UserAddedToGroupEvent',
     'OwnerAddedToGroupEvent',
     'UserRemovedFromGroupEvent',
+    'OwnerDemotedToMemberEvent',
     'ServiceAccountCreatedEvent',
     'ServiceAccountTokenRotatedEvent',
     'ServiceAccountRevokedEvent',

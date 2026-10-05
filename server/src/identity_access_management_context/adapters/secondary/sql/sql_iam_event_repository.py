@@ -20,6 +20,7 @@ class GroupMembershipEventType(Enum):
     USER_ADDED = "UserAddedToGroupEvent"
     OWNER_ADDED = "OwnerAddedToGroupEvent"
     USER_REMOVED = "UserRemovedFromGroupEvent"
+    OWNER_DEMOTED = "OwnerDemotedToMemberEvent"
 
 
 class SqlIamEventRepository(SQLBaseRepository):
