@@ -262,9 +262,6 @@ def get_delete_user_usecase(
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
     one_time_link_revocation_gateway: OneTimeLinkRevocationGateway = Depends(get_one_time_link_revocation_gateway),
-    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
-        get_password_credential_record_repository
-    ),
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -273,7 +270,6 @@ def get_delete_user_usecase(
         event_publisher,
         user_event_repository,
         one_time_link_revocation_gateway,
-        password_credential_record_repository,
     )
 
 

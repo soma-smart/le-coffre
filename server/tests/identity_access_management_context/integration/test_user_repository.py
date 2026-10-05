@@ -1,9 +1,29 @@
 from uuid import uuid4
 
 import pytest
+from sqlmodel import select
 
 from identity_access_management_context.adapters.secondary.sql import PrincipalKind, PrincipalTable
-from identity_access_management_context.domain.entities import User
+from identity_access_management_context.adapters.secondary.sql.model.credential_record._credential_record import (
+    CredentialKind,
+    CredentialRecordTable,
+)
+from identity_access_management_context.adapters.secondary.sql.model.credential_record.password import (
+    PasswordCredentialRecordTable,
+)
+from identity_access_management_context.adapters.secondary.sql.model.credential_record.sso import (
+    SSOCredentialRecordTable,
+)
+from identity_access_management_context.adapters.secondary.sql.model.credential_record.token import (
+    TokenCredentialRecordTable,
+)
+from identity_access_management_context.adapters.secondary.sql.sql_user_repository import CREDENTIAL_DETAILS_TABLES
+from identity_access_management_context.domain.entities import (
+    PasswordCredentialRecord,
+    SSOCredentialRecord,
+    TokenCredentialRecord,
+    User,
+)
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyExistsError,
     UserNotFoundError,
@@ -220,3 +240,77 @@ def test_given_an_id_already_registered_when_saving_a_user_then_it_is_refused(sq
 
     with pytest.raises(UserAlreadyExistsError):
         sql_user_repository.save(User(id=taken_id, username="alice", email="alice@test.fr", name="Alice", roles=[]))
+
+
+def test_every_credential_kind_is_deleted_with_its_principal():
+    """A kind left out would outlive its principal, as a secret nobody can see or revoke."""
+    assert {table.__table_suffix__ for table in CREDENTIAL_DETAILS_TABLES} == {kind.value for kind in CredentialKind}
+
+
+def test_given_a_deleted_user_then_its_credentials_of_every_kind_are_gone(
+    sql_user_repository,
+    sql_password_credential_record_repository,
+    sql_sso_credential_record_repository,
+    sql_token_credential_record_repository,
+    session,
+):
+    """Deleted explicitly, since the cascade does not run where foreign keys are not enforced."""
+    user = User(id=uuid4(), username="leaver", email="leaver@test.fr", name="Leaver", roles=[])
+    sql_user_repository.save(user)
+    sql_password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=user.id, email=user.email, password_hash=b"hash")
+    )
+    sql_sso_credential_record_repository.create(
+        SSOCredentialRecord(principal_id=user.id, provider="google", subject="sso-leaver")
+    )
+    sql_token_credential_record_repository.create([TokenCredentialRecord(principal_id=user.id, token_hash="h")])
+
+    sql_user_repository.delete(user.id)
+
+    assert session.exec(select(CredentialRecordTable)).all() == []
+    for details_table in (PasswordCredentialRecordTable, SSOCredentialRecordTable, TokenCredentialRecordTable):
+        assert session.exec(select(details_table)).all() == []
+
+
+def test_given_a_deleted_user_then_other_principals_keep_their_credentials(
+    sql_user_repository, sql_password_credential_record_repository
+):
+    leaver = User(id=uuid4(), username="leaver", email="leaver@test.fr", name="Leaver", roles=[])
+    stayer = User(id=uuid4(), username="stayer", email="stayer@test.fr", name="Stayer", roles=[])
+    for user in (leaver, stayer):
+        sql_user_repository.save(user)
+        sql_password_credential_record_repository.save(
+            PasswordCredentialRecord(principal_id=user.id, email=user.email, password_hash=b"hash")
+        )
+
+    sql_user_repository.delete(leaver.id)
+
+    assert sql_password_credential_record_repository.get_by_email(stayer.email) is not None
+
+
+def test_given_a_deleted_user_then_its_email_and_subject_are_free_for_a_new_account(
+    sql_user_repository, sql_password_credential_record_repository, sql_sso_credential_record_repository
+):
+    """Both are unique: a leftover record would refuse the new account's credentials, or shadow them."""
+    old = User(id=uuid4(), username="old", email="reused@test.fr", name="Old", roles=[])
+    sql_user_repository.save(old)
+    sql_password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=old.id, email=old.email, password_hash=b"old-hash")
+    )
+    sql_sso_credential_record_repository.create(
+        SSOCredentialRecord(principal_id=old.id, provider="google", subject="reused")
+    )
+    sql_user_repository.delete(old.id)
+
+    new = User(id=uuid4(), username="new", email="reused@test.fr", name="New", roles=[])
+    sql_user_repository.save(new)
+    new_password = PasswordCredentialRecord(principal_id=new.id, email=new.email, password_hash=b"new-hash")
+    sql_password_credential_record_repository.save(new_password)
+    sql_sso_credential_record_repository.create(
+        SSOCredentialRecord(principal_id=new.id, provider="google", subject="reused")
+    )
+
+    assert sql_password_credential_record_repository.get_by_email(new.email) == new_password
+    found = sql_sso_credential_record_repository.get_by_subject("google", "reused")
+    assert found is not None
+    assert found.principal_id == new.id

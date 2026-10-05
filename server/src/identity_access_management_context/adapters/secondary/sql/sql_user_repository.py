@@ -15,6 +15,7 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 
+from .model.credential_record import CREDENTIAL_DETAILS_TABLES, CredentialRecordTable
 from .model.principal_model import PrincipalKind, PrincipalTable
 from .model.users_model import UserPrincipalTable
 
@@ -69,8 +70,28 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
         db_obj = self._session.get(UserPrincipalTable, user_id)
         if db_obj is None:
             raise UserNotFoundError(user_id)
+
+        # TODO: Put this on in a SQLPrincipalRepository
+        # Grab all credentials bound to the user
+        statement = select(CredentialRecordTable, *CREDENTIAL_DETAILS_TABLES).where(
+            CredentialRecordTable.principal_id == user_id
+        )
+        for details_table in CREDENTIAL_DETAILS_TABLES:
+            statement = statement.outerjoin(details_table, details_table.credential_id == CredentialRecordTable.id)
+        credentials = self._session.exec(statement).all()
+
+        # Delete the user and its credentials
+        # NOTE: We may want to enforce cascade deletion structurally
         self._session.delete(db_obj)
-        # Flushed first: the details reference the registry row.
+        for _, *details in credentials:
+            for kind_details in details:
+                if kind_details is not None:
+                    self._session.delete(kind_details)
+        # Flushed first: the details reference the registry rows.
+        self._session.flush()
+        for credential, *_ in credentials:
+            self._session.delete(credential)
+        # Flushed first: the credentials reference the principal.
         self._session.flush()
         principal = self._session.get(PrincipalTable, user_id)
         if principal is not None:

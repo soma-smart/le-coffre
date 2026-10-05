@@ -6,7 +6,6 @@ from identity_access_management_context.application.commands import DeleteUserCo
 from identity_access_management_context.application.use_cases import DeleteUserUseCase
 from identity_access_management_context.domain.entities import (
     Group,
-    PasswordCredentialRecord,
     PersonalGroup,
     User,
 )
@@ -18,7 +17,6 @@ from tests.fakes import FakeDomainEventPublisher
 from ..fakes import (
     FakeGroupMemberRepository,
     FakeGroupRepository,
-    FakePasswordCredentialRecordRepository,
     FakeUserRepository,
 )
 
@@ -31,7 +29,6 @@ def use_case(
     domain_event_publisher: FakeDomainEventPublisher,
     user_event_repository,
     one_time_link_revocation_gateway,
-    password_credential_record_repository: FakePasswordCredentialRecordRepository,
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -40,7 +37,6 @@ def use_case(
         domain_event_publisher,
         user_event_repository,
         one_time_link_revocation_gateway,
-        password_credential_record_repository,
     )
 
 
@@ -282,54 +278,3 @@ def test_given_admin_user_when_deleting_user_should_store_user_deleted_event(
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "UserDeletedEvent"
     assert stored["actor_principal_id"] == admin_uuid
-
-
-def test_given_deleted_user_should_also_remove_its_credentials(
-    use_case: DeleteUserUseCase,
-    user_repository: FakeUserRepository,
-    password_credential_record_repository: FakePasswordCredentialRecordRepository,
-):
-    """A surviving PasswordCredentialRecord row outlives the account it belonged to.
-
-    It then shadows any account later created with the same email, and, since
-    login tolerates a missing User, it stays usable on its own.
-    """
-    user_uuid = UUID("123e4567-e89b-12d3-a456-426614174010")
-    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174011")
-    email = "leaver@example.com"
-
-    user_repository.save(User(id=user_uuid, username="leaver", email=email, name="Leaver"))
-    password_credential_record_repository.save(
-        PasswordCredentialRecord(principal_id=user_uuid, email=email, password_hash=b"hash")
-    )
-
-    use_case.execute(DeleteUserCommand(user_id=user_uuid, requesting_user=AuthenticatedUser(admin_uuid, ["admin"])))
-
-    assert password_credential_record_repository.list_by_principal_id(user_uuid) == []
-    assert password_credential_record_repository.get_by_email(email) is None
-
-
-def test_given_deleted_user_should_free_the_email_for_a_new_account(
-    use_case: DeleteUserUseCase,
-    user_repository: FakeUserRepository,
-    password_credential_record_repository: FakePasswordCredentialRecordRepository,
-):
-    """Recreating an account on a freed email must resolve to the new credentials."""
-    old_uuid = UUID("123e4567-e89b-12d3-a456-426614174020")
-    new_uuid = UUID("123e4567-e89b-12d3-a456-426614174021")
-    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174022")
-    email = "reused@example.com"
-
-    user_repository.save(User(id=old_uuid, username="old", email=email, name="Old"))
-    password_credential_record_repository.save(
-        PasswordCredentialRecord(principal_id=old_uuid, email=email, password_hash=b"old-hash")
-    )
-    use_case.execute(DeleteUserCommand(user_id=old_uuid, requesting_user=AuthenticatedUser(admin_uuid, ["admin"])))
-
-    password_credential_record_repository.save(
-        PasswordCredentialRecord(principal_id=new_uuid, email=email, password_hash=b"new-hash")
-    )
-
-    found = password_credential_record_repository.get_by_email(email)
-    assert found is not None
-    assert found.password_hash == b"new-hash"

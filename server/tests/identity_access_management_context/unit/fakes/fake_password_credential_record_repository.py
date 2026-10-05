@@ -20,6 +20,3 @@ class FakePasswordCredentialRecordRepository:
 
     def get_by_email(self, email: str) -> PasswordCredentialRecord | None:
         return next((c for c in self._credential_records if c.email == email), None)
-
-    def delete_by_principal_id(self, principal_id: UUID) -> None:
-        self._credential_records = [c for c in self._credential_records if c.principal_id != principal_id]

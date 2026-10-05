@@ -48,17 +48,6 @@ class SqlPasswordCredentialRecordRepository(SQLBaseRepository):
         )
         self.commit()
 
-    def delete_by_principal_id(self, principal_id: UUID) -> None:
-        found = self._find_all(CredentialRecordTable.principal_id == principal_id)
-        # Both deleted explicitly, details first: the cascade does not run where
-        # foreign keys are not enforced.
-        for _, details in found:
-            self._session.delete(details)
-        self._session.flush()
-        for registry, _ in found:
-            self._session.delete(registry)
-        self.commit()
-
     def update_password_hash(self, email: str, new_password_hash: bytes) -> None:
         for _, details in self._find_all(PasswordCredentialRecordTable.email == email):
             details.password_hash = new_password_hash
