@@ -1,6 +1,7 @@
 import pytest
 
-pytest.importorskip("opentelemetry")
+# fastapi[standard] pulls in opentelemetry-api/sdk, so probe a package only the monitoring group installs.
+pytest.importorskip("opentelemetry.instrumentation")
 from unittest.mock import MagicMock, patch
 
 from opentelemetry.trace import StatusCode
