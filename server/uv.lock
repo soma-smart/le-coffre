@@ -907,7 +907,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
     { name = "pycryptodome", specifier = ">=3.23.0" },
-    { name = "pyjwt", specifier = ">=2.15.0" },
+    { name = "pyjwt", specifier = ">=2.15.1" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "sqlmodel", specifier = ">=0.0.47" },
     { name = "tenacity", specifier = ">=9.1.4" },
