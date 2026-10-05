@@ -38,7 +38,7 @@ class CredentialRecordTable(IAMTable, table=True):
             nullable=False,
         )
     )
-    principal_id: UUID = Field(foreign_key=PrincipalTable.__tablename__ + ".id", ondelete="CASCADE", index=True)
+    principal_id: UUID = Field(foreign_key=str(PrincipalTable.__tablename__) + ".id", ondelete="CASCADE", index=True)
 
 
 class CredentialRecordDetailsTable(IAMTable):
@@ -47,5 +47,5 @@ class CredentialRecordDetailsTable(IAMTable):
     __table_suffix__ = CredentialRecordTable.__table_suffix__
 
     credential_id: UUID = Field(
-        primary_key=True, foreign_key=CredentialRecordTable.__tablename__ + ".id", ondelete="CASCADE"
+        primary_key=True, foreign_key=str(CredentialRecordTable.__tablename__) + ".id", ondelete="CASCADE"
     )
