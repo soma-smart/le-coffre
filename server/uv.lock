@@ -903,7 +903,7 @@ requires-dist = [
     { name = "authlib", specifier = ">=1.8.0" },
     { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "cryptography", specifier = ">=50.0.1" },
-    { name = "fastapi", extras = ["standard"], specifier = ">=0.141.1" },
+    { name = "fastapi", extras = ["standard"], specifier = ">=0.141.2" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },
     { name = "pycryptodome", specifier = ">=3.23.0" },
