@@ -24,7 +24,7 @@ dev = [
   "pytest-asyncio>=1.4.0",
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.16.9",
+  "ruff>=0.16.10",
   "smtpdfix>=0.5.3",
 ]
 monitoring = [
