@@ -4,8 +4,8 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlmodel import Column, Field
 
-from .iam_table import IAMTable
-from .principal_model import PrincipalTable
+from ..iam_table import IAMTable
+from ..principal_model import PrincipalTable
 
 
 class CredentialKind(StrEnum):

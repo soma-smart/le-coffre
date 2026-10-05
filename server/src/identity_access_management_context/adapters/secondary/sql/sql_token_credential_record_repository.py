@@ -7,8 +7,7 @@ from identity_access_management_context.application.gateways import TokenCredent
 from identity_access_management_context.domain.entities import TokenCredentialRecord
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
-from .model.credential_model import CredentialKind, CredentialRecordTable
-from .model.token_credential_model import TokenCredentialRecordTable
+from .model.credential_record import CredentialKind, CredentialRecordTable, TokenCredentialRecordTable
 
 
 class SqlTokenCredentialRecordRepository(SQLBaseRepository, TokenCredentialRecordRepository):
