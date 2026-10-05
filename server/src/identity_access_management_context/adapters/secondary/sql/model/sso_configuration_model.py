@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class SsoConfigurationTable(SQLModel, table=True):
@@ -15,6 +15,7 @@ class SsoConfigurationTable(SQLModel, table=True):
     userinfo_endpoint: str = Field(description="OAuth userinfo endpoint", nullable=False)
     jwks_uri: str | None = Field(description="JWKS URI for token validation", nullable=True, default=None)
     updated_at: datetime = Field(
+        sa_type=DateTime,
         description="Last update timestamp",
         nullable=False,
         default_factory=lambda: datetime.now(timezone.utc),

@@ -151,6 +151,16 @@
                   <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
                 </template>
               </i18n-t>
+              <i18n-t
+                v-else-if="slotProps.data.eventType === 'OwnerDemotedToMemberEvent'"
+                keypath="components.groupHistoryModal.demotedToMember"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
               <span v-else>
                 {{ JSON.stringify(slotProps.data.eventData) }}
               </span>

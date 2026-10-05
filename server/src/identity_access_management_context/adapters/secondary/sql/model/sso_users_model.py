@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class SsoUsersTable(SQLModel, table=True):
@@ -13,11 +13,13 @@ class SsoUsersTable(SQLModel, table=True):
     sso_user_id: str = Field(description="SSO User ID", nullable=False)
     sso_provider: str = Field(description="SSO provider name", default="default", nullable=False)
     created_at: datetime = Field(
+        sa_type=DateTime,
         description="Creation timestamp",
         nullable=True,
         default_factory=lambda: datetime.now(timezone.utc),
     )
     last_login: datetime | None = Field(
+        sa_type=DateTime,
         description="Last login timestamp",
         nullable=True,
         default_factory=lambda: datetime.now(timezone.utc),

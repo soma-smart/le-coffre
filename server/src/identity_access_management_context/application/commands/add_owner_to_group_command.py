@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from shared_kernel.domain.entities import AuthenticatedUser
+
 
 @dataclass
 class AddOwnerToGroupCommand:
-    requester_id: UUID
+    requesting_user: AuthenticatedUser
     group_id: UUID
     user_id: UUID

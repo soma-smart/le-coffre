@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlmodel import Session, delete, select
+from sqlmodel import Session, delete, select, update
 
 from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
@@ -69,6 +69,21 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         result = self._session.exec(statement).first()
         return result is not None and result.is_owner
 
+    def promote_to_owner(self, group_id: UUID, user_id: UUID) -> bool:
+        """Atomically mark an existing member as owner; see Protocol docstring for the concurrency guarantee."""
+        statement = (
+            update(GroupMemberTable)
+            .where(
+                GroupMemberTable.group_id == group_id,
+                GroupMemberTable.user_id == user_id,
+                GroupMemberTable.is_owner.is_(False),
+            )
+            .values(is_owner=True)
+        )
+        result = self._session.execute(statement)
+        self.commit()
+        return result.rowcount > 0
+
     def get_members(self, group_id: UUID) -> list[GroupMember]:
         """Get all members of a group."""
         statement = select(GroupMemberTable).where(GroupMemberTable.group_id == group_id)
@@ -95,6 +110,23 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         statement = select(GroupMemberTable).where(
             GroupMemberTable.group_id == group_id,
             GroupMemberTable.is_owner.is_(True),
+        )
+        results = self._session.exec(statement).all()
+        return len(results)
+
+    def count_owners_for_update(self, group_id: UUID) -> int:
+        """Count the number of owners in a group, locking those rows for the
+        rest of the current transaction (SELECT ... FOR UPDATE). No-ops on
+        SQLite (used for local dev/tests), which doesn't support row locks;
+        the transactional protection only applies against Postgres.
+        """
+        statement = (
+            select(GroupMemberTable)
+            .where(
+                GroupMemberTable.group_id == group_id,
+                GroupMemberTable.is_owner.is_(True),
+            )
+            .with_for_update()
         )
         results = self._session.exec(statement).all()
         return len(results)

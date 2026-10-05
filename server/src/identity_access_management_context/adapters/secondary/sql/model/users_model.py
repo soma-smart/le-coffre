@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class UserTable(SQLModel, table=True):
@@ -15,7 +15,7 @@ class UserTable(SQLModel, table=True):
     roles: str = Field(default="[]", description="Roles as JSON string")
     password_hash: bytes | None = Field(nullable=True)
     current_refresh_token_jti: str | None = Field(default=None, nullable=True)
-    session_invalid_before: datetime | None = Field(default=None, nullable=True)
+    session_invalid_before: datetime | None = Field(sa_type=DateTime, default=None, nullable=True)
 
     @property
     def roles_list(self):
