@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import DateTime, Field, SQLModel
 
 
 class ServiceAccountTable(SQLModel, table=True):
@@ -15,4 +15,6 @@ class ServiceAccountTable(SQLModel, table=True):
     token_hash: str = Field(
         nullable=False, unique=True, index=True, description="SHA-256 hex of the service account token"
     )
-    revoked_at: datetime | None = Field(default=None, index=True, description="When the account was revoked")
+    revoked_at: datetime | None = Field(
+        sa_type=DateTime, default=None, index=True, description="When the account was revoked"
+    )
