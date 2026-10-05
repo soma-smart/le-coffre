@@ -1,15 +1,18 @@
 from .model.auth_session_model import AuthSessionTable
-from .model.credential_model import CredentialKind, CredentialRecordTable
+from .model.credential_record import (
+    CredentialKind,
+    CredentialRecordTable,
+    PasswordCredentialRecordTable,
+    SSOCredentialRecordTable,
+    TokenCredentialRecordTable,
+)
 from .model.group_member_model import GroupMemberTable
 from .model.group_model import GroupTable
 from .model.iam_event import IamEventTable
-from .model.password_credential_model import PasswordCredentialRecordTable
 from .model.principal_model import PrincipalKind, PrincipalTable
 from .model.revoked_token_model import RevokedTokenTable
 from .model.service_account_model import ServiceAccountPrincipalTable
 from .model.sso_configuration_model import SsoConfigurationTable
-from .model.sso_credential_model import SSOCredentialRecordTable
-from .model.token_credential_model import TokenCredentialRecordTable
 from .model.users_model import UserPrincipalTable
 from .sql_auth_session_repository import SqlAuthSessionRepository
 from .sql_group_member_repository import SqlGroupMemberRepository

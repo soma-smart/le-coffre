@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import UniqueConstraint
 from sqlmodel import DateTime, Field
 
-from .credential_model import CredentialKind, CredentialRecordDetailsTable
+from ._credential_record import CredentialKind, CredentialRecordDetailsTable
 
 
 class SSOCredentialRecordTable(CredentialRecordDetailsTable, table=True):

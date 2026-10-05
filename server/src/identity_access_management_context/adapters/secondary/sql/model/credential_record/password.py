@@ -1,6 +1,6 @@
 from sqlmodel import Field
 
-from .credential_model import CredentialKind, CredentialRecordDetailsTable
+from ._credential_record import CredentialKind, CredentialRecordDetailsTable
 
 
 class PasswordCredentialRecordTable(CredentialRecordDetailsTable, table=True):

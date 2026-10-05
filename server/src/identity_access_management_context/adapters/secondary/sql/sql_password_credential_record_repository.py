@@ -5,8 +5,7 @@ from sqlmodel import Session, select
 from identity_access_management_context.domain.entities import PasswordCredentialRecord
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
-from .model.credential_model import CredentialKind, CredentialRecordTable
-from .model.password_credential_model import PasswordCredentialRecordTable
+from .model.credential_record import CredentialKind, CredentialRecordTable, PasswordCredentialRecordTable
 
 
 class SqlPasswordCredentialRecordRepository(SQLBaseRepository):

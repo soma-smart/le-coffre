@@ -9,8 +9,7 @@ from identity_access_management_context.domain.exceptions import (
 )
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
-from .model.credential_model import CredentialKind, CredentialRecordTable
-from .model.sso_credential_model import SSOCredentialRecordTable
+from .model.credential_record import CredentialKind, CredentialRecordTable, SSOCredentialRecordTable
 
 
 class SqlSSOCredentialRecordRepository(SQLBaseRepository):
