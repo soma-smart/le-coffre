@@ -924,11 +924,11 @@ dev = [
     { name = "smtpdfix", specifier = ">=0.5.3" },
 ]
 monitoring = [
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.40.0" },
-    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.65b0" },
-    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.61b0" },
-    { name = "opentelemetry-instrumentation-sqlalchemy", specifier = ">=0.61b0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.40.0" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.0" },
+    { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.66b0" },
+    { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.66b0" },
+    { name = "opentelemetry-instrumentation-sqlalchemy", specifier = ">=0.66b0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.45.0" },
 ]
 postgres = [
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
