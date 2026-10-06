@@ -9,13 +9,13 @@ from identity_access_management_context.application.gateways import (
 )
 from identity_access_management_context.application.responses import RotateServiceAccountTokenResponse
 from identity_access_management_context.application.services import ServiceAccountPermissionService
-from identity_access_management_context.domain.entities import TokenCredentialRecord
+from identity_access_management_context.domain.entities.token_credential_record import TokenCredentialRecord
 from identity_access_management_context.domain.events import ServiceAccountTokenRotatedEvent
 from identity_access_management_context.domain.exceptions import (
     ServiceAccountAlreadyRevokedException,
     ServiceAccountNotFoundException,
 )
-from identity_access_management_context.domain.value_objects import TokenCredential
+from identity_access_management_context.domain.value_objects.token_credential import TokenCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 from ._use_case import ServiceAccountUseCase
@@ -66,6 +66,8 @@ class RotateServiceAccountTokenUseCase(
 
         # Rotate the token
         now = self._time_provider.get_current_time()
+
+        # TODO: Have a `rotate` instead, and catch exceptions
         token = TokenCredential.generate()
         self._token_credential_record_repository.replace(
             (TokenCredentialRecord(principal_id=account.id, token_hash=token.hash),)

@@ -164,6 +164,12 @@
             "lockoutSeconds": { "type": "integer", "minimum": 1 }
           }
         },
+        "serviceAccounts": {
+          "type": "object",
+          "properties": {
+            "maxActivePerGroup": { "type": "integer", "minimum": 1 }
+          }
+        },
         "logging": {
           "type": "object",
           "properties": {

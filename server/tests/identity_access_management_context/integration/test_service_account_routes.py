@@ -14,8 +14,8 @@ from fastapi.testclient import TestClient
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_service_accounts_usecase,
 )
-from identity_access_management_context.adapters.primary.fastapi.routes.service_account.service_account_routes import (
-    router as service_account_router,
+from identity_access_management_context.adapters.primary.fastapi.routes.service_account.list import (
+    router as service_account_list_router,
 )
 from identity_access_management_context.domain.exceptions import GroupNotFoundException
 from shared_kernel.adapters.primary.dependencies import get_current_user
@@ -45,7 +45,7 @@ def _client(error: Exception) -> TestClient:
 
     app.dependency_overrides[get_current_user] = current_user_override
     app.dependency_overrides[get_list_service_accounts_usecase] = lambda: _FailingUseCase(error)
-    app.include_router(service_account_router)
+    app.include_router(service_account_list_router)
     return TestClient(app)
 
 

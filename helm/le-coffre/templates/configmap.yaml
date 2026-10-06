@@ -30,6 +30,8 @@ data:
   # Login lockout
   LOGIN_MAX_FAILED_ATTEMPTS: {{ .Values.config.loginLockout.maxFailedAttempts | quote }}
   LOGIN_LOCKOUT_SECONDS: {{ .Values.config.loginLockout.lockoutSeconds | quote }}
+  # Service accounts
+  MAX_ACTIVE_SERVICE_ACCOUNTS_PER_GROUP: {{ .Values.config.serviceAccounts.maxActivePerGroup | quote }}
   {{- if .Values.config.monitoring.enabled }}
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ required "config.monitoring.otlpEndpoint is required when config.monitoring.enabled is true" .Values.config.monitoring.otlpEndpoint | quote }}
   OTEL_SERVICE_NAME: {{ required "config.monitoring.serviceName is required when config.monitoring.enabled is true" .Values.config.monitoring.serviceName | quote }}

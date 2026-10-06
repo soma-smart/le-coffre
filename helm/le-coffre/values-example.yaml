@@ -145,6 +145,12 @@ config:
     # Duration in seconds the account stays locked.
     lockoutSeconds: 300
 
+  # Service accounts.
+  serviceAccounts:
+    # How many service accounts may be active at once in one group.
+    # Revoked accounts stay listed but do not count towards it.
+    maxActivePerGroup: 10
+
   # Monitoring — OpenTelemetry OTLP export.
   # To enable, set enabled: true and configure the endpoint and service name.
   monitoring:

@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from identity_access_management_context.application.commands import RevokeServiceAccountCommand
 from identity_access_management_context.application.gateways import (
+    CannotRevokeServiceAccount,
     ServiceAccountEventRepository,
     ServiceAccountRepository,
     TokenCredentialRecordRepository,
@@ -62,7 +63,10 @@ class RevokeServiceAccountUseCase(
 
         # Revoke the service account
         now = self._time_provider.get_current_time()
-        self._repository.revoke([account.id], now)
+        try:
+            self._repository.revoke([account.id], now)
+        except CannotRevokeServiceAccount as e:
+            raise ServiceAccountAlreadyRevokedException(account.id) from e
         # Without its token records, a revoked account can no longer authenticate.
         self._token_credential_record_repository.delete_by_principal_ids([account.id])
 
