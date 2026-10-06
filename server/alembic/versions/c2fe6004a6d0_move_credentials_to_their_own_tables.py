@@ -165,11 +165,17 @@ def downgrade() -> None:
 
     with op.batch_alter_table('iam__principal__service_account') as batch_op:
         batch_op.add_column(sa.Column('token_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=True))
+    # One hash per account in the restored schema: a principal holding several
+    # tokens keeps one of them. A revoked account holds none, and gets a value
+    # unique to it that no SHA-256 hex digest can equal, so it stays unusable.
     op.execute(sa.text("""
-        UPDATE iam__principal__service_account SET token_hash = (
-            SELECT d.token_hash
-            FROM iam__credential c JOIN iam__credential__token d ON d.credential_id = c.id
-            WHERE c.principal_id = iam__principal__service_account.principal_id
+        UPDATE iam__principal__service_account SET token_hash = COALESCE(
+            (
+                SELECT MIN(d.token_hash)
+                FROM iam__credential c JOIN iam__credential__token d ON d.credential_id = c.id
+                WHERE c.principal_id = iam__principal__service_account.principal_id
+            ),
+            'revoked:' || CAST(principal_id AS TEXT)
         )
     """))
     with op.batch_alter_table('iam__principal__service_account') as batch_op:
