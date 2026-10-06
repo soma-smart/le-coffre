@@ -2,11 +2,12 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from 'vue-i18n'
+import type { IssuedShareLink } from '@/domain/vault/ShareLink'
 import { VaultDomainError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 
 const emit = defineEmits<{
-  (e: 'shares-generated', data: { shares: string[]; setupId: string }): void
+  (e: 'share-links-issued', data: { shareLinks: IssuedShareLink[]; setupId: string }): void
 }>()
 
 const toast = useToast()
@@ -26,7 +27,7 @@ async function generateMasterKey() {
       nbShares: shamirRef.value.state.shares,
       threshold: shamirRef.value.state.threshold,
     })
-    emit('shares-generated', { shares: setup.shares, setupId: setup.setupId })
+    emit('share-links-issued', { shareLinks: setup.shareLinks, setupId: setup.setupId })
   } catch (error) {
     const detail =
       error instanceof VaultDomainError

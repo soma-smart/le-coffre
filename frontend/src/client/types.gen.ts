@@ -322,9 +322,9 @@ export type CreateVaultPostResponse = {
      */
     setup_id: string;
     /**
-     * Shares
+     * Share Links
      */
-    shares: Array<ShareResponse>;
+    share_links: Array<IssuedShareLinkResponse>;
 };
 
 /**
@@ -806,6 +806,24 @@ export type IsSsoConfigSetResponse = {
      * Is Set
      */
     is_set: boolean;
+};
+
+/**
+ * IssuedShareLinkResponse
+ */
+export type IssuedShareLinkResponse = {
+    /**
+     * Share Index
+     */
+    share_index: number;
+    /**
+     * Token
+     */
+    token: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
 };
 
 /**
@@ -1294,6 +1312,30 @@ export type RemoveMemberFromGroupResponse = {
 };
 
 /**
+ * RetrieveShareLinkRequest
+ */
+export type RetrieveShareLinkRequest = {
+    /**
+     * Lookup Hash
+     */
+    lookup_hash: string;
+};
+
+/**
+ * RetrieveShareLinkResponse
+ */
+export type RetrieveShareLinkResponse = {
+    /**
+     * Share Index
+     */
+    share_index: number;
+    /**
+     * Sealed Share
+     */
+    sealed_share: string;
+};
+
+/**
  * RevokeAllExtensionTokensForUserResponse
  */
 export type RevokeAllExtensionTokensForUserResponse = {
@@ -1411,16 +1453,6 @@ export type SharePasswordResponse = {
      * Message
      */
     message: string;
-};
-
-/**
- * ShareResponse
- */
-export type ShareResponse = {
-    /**
-     * Secret
-     */
-    secret: string;
 };
 
 /**
@@ -1865,6 +1897,35 @@ export type GetVaultStatusVaultStatusGetResponses = {
 };
 
 export type GetVaultStatusVaultStatusGetResponse = GetVaultStatusVaultStatusGetResponses[keyof GetVaultStatusVaultStatusGetResponses];
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostData = {
+    body: RetrieveShareLinkRequest;
+    path?: never;
+    query?: never;
+    url: '/vault/share-links/retrieve';
+};
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostErrors = {
+    /**
+     * The link is invalid, expired or already used
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostError = RetrieveShareLinkVaultShareLinksRetrievePostErrors[keyof RetrieveShareLinkVaultShareLinksRetrievePostErrors];
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RetrieveShareLinkResponse;
+};
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostResponse = RetrieveShareLinkVaultShareLinksRetrievePostResponses[keyof RetrieveShareLinkVaultShareLinksRetrievePostResponses];
 
 export type GetPasswordStatisticForAdminPasswordsStatisticsGetData = {
     body?: never;

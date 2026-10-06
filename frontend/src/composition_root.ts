@@ -9,6 +9,7 @@ import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepos
 import { BackendVaultRepository } from '@/infrastructure/backend/BackendVaultRepository'
 import { BackendNotificationPreferencesRepository } from '@/infrastructure/backend/BackendNotificationPreferencesRepository'
 import { BackendStatisticsGateway } from '@/infrastructure/backend/BackendStatisticsGateway'
+import { WebCryptoShareLinkCipher } from '@/infrastructure/crypto/WebCryptoShareLinkCipher'
 import { LocalStoragePreferencesGateway } from '@/infrastructure/local_storage/LocalStoragePreferencesGateway'
 import { SessionStorageLoginRedirectGateway } from '@/infrastructure/session_storage/SessionStorageLoginRedirectGateway'
 import { buildContainer, type Container } from '@/container'
@@ -35,5 +36,6 @@ export function installProductionContainer(): Container {
     extensionGateway: new BackendExtensionGateway(),
     loginRedirectGateway: new SessionStorageLoginRedirectGateway(),
     notificationPreferencesRepository: new BackendNotificationPreferencesRepository(),
+    shareLinkCipher: new WebCryptoShareLinkCipher(),
   })
 }

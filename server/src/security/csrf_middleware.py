@@ -60,6 +60,9 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # "/api/extension" would also exempt the approve and deny routes, which
         # are cookie-authenticated and must keep their CSRF check.
         "/api/extension/device",
+        # Same reasoning for the links handing Shamir shares to their custodians:
+        # anonymous by design, the link is the only credential.
+        "/api/vault/share-links/retrieve",
     ]
 
     # HTTP methods that require CSRF protection

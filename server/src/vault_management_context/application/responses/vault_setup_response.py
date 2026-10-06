@@ -1,9 +1,17 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 
-from vault_management_context.domain.entities.share import Share
+
+@dataclass(frozen=True)
+class IssuedShareLink:
+    """A share link as handed to whoever ran the setup, the only time its token exists."""
+
+    share_index: int
+    token: str = field(repr=False)
+    expires_at: datetime
 
 
 @dataclass
 class VaultSetupResponse:
     setup_id: str
-    shares: list[Share]
+    share_links: list[IssuedShareLink]

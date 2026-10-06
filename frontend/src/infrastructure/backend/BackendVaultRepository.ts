@@ -2,12 +2,14 @@ import {
   createVaultVaultSetupPost,
   getVaultStatusVaultStatusGet,
   lockVaultVaultLockPost,
+  retrieveShareLinkVaultShareLinksRetrievePost,
   unlockVaultVaultUnlockPost,
   validateVaultSetupVaultValidateSetupPost,
 } from '@/client/sdk.gen'
 import type { CreateVaultInput, VaultRepository } from '@/application/ports/VaultRepository'
+import type { SealedShare } from '@/domain/vault/ShareLink'
 import type { VaultSetup, VaultState } from '@/domain/vault/Vault'
-import { VaultDomainError } from '@/domain/vault/errors'
+import { ShareLinkUnusableError, VaultDomainError } from '@/domain/vault/errors'
 
 /**
  * Backend adapter for VaultRepository. Wraps every /vault/* SDK
@@ -42,7 +44,11 @@ export class BackendVaultRepository implements VaultRepository {
     if (!response.data) throw new VaultDomainError('Empty response from create vault')
     return {
       setupId: response.data.setup_id,
-      shares: response.data.shares.map((s) => s.secret),
+      shareLinks: response.data.share_links.map((link) => ({
+        shareIndex: link.share_index,
+        token: link.token,
+        expiresAt: link.expires_at,
+      })),
     }
   }
 
@@ -63,6 +69,22 @@ export class BackendVaultRepository implements VaultRepository {
   async lock(): Promise<void> {
     const response = await lockVaultVaultLockPost()
     this.throwIfError(response.error)
+  }
+
+  async retrieveSealedShare(lookupHash: string): Promise<SealedShare> {
+    const response = await retrieveShareLinkVaultShareLinksRetrievePost({
+      body: { lookup_hash: lookupHash },
+    })
+    if (response.error) {
+      // 404 covers unknown, expired and already retrieved alike; the backend
+      // keeps them indistinguishable on purpose. 400 is a hash that no link
+      // could have produced, which to the custodian is the same dead link.
+      const status = response.response?.status
+      if (status === 404 || status === 400) throw new ShareLinkUnusableError()
+      this.throwIfError(response.error)
+    }
+    if (!response.data) throw new ShareLinkUnusableError()
+    return { shareIndex: response.data.share_index, sealedShare: response.data.sealed_share }
   }
 
   private throwIfError(error: unknown): void {
