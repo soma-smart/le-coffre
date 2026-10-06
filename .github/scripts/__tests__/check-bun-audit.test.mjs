@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { evaluateReport, formatAdvisories } from '../check-bun-audit.mjs'
+import { evaluateReport, formatAdvisories, loadAccepted } from '../check-bun-audit.mjs'
 
 const BUN_SAMPLE = {
   minimist: [
@@ -100,6 +100,64 @@ describe('evaluateReport', () => {
 
   it('refuses an unknown threshold instead of silently enforcing nothing', () => {
     assert.throws(() => evaluateReport({}, 'severe'), /Unknown audit level/)
+  })
+})
+
+describe('accepted risks', () => {
+  const ENTRY = {
+    advisory: 'GHSA-xvch-5gv4-984h',
+    package: 'minimist',
+    reason: 'No fixed release exists and it only runs in the lint toolchain.',
+    review_by: '2027-01-06',
+  }
+
+  it('reports an accepted advisory without failing on it', () => {
+    const { active } = loadAccepted([ENTRY], '2026-10-06')
+    const outcome = evaluateReport(BUN_SAMPLE, 'high', active)
+
+    assert.equal(outcome.kind, 'ok')
+    assert.equal(outcome.advisories.find((advisory) => advisory.package === 'minimist').accepted, true)
+  })
+
+  it('does not accept the same advisory reported against another package', () => {
+    const { active } = loadAccepted([{ ...ENTRY, package: 'not-minimist' }], '2026-10-06')
+
+    assert.equal(evaluateReport(BUN_SAMPLE, 'high', active).kind, 'fail')
+  })
+
+  it('stops honouring an entry past its review date, so the build goes red again', () => {
+    const { active, expired } = loadAccepted([ENTRY], '2027-01-07')
+
+    assert.deepEqual(active, [])
+    assert.equal(expired.length, 1)
+    assert.equal(evaluateReport(BUN_SAMPLE, 'high', active).kind, 'fail')
+  })
+
+  it('refuses a malformed entry instead of skipping it', () => {
+    for (const broken of [
+      { ...ENTRY, advisory: 'CVE-2026-1' },
+      { ...ENTRY, package: '' },
+      { ...ENTRY, reason: 'ok' },
+      { ...ENTRY, review_by: 'soon' },
+      null,
+    ]) {
+      assert.throws(() => loadAccepted([broken], '2026-10-06'), Error, JSON.stringify(broken))
+    }
+    assert.throws(() => loadAccepted({}, '2026-10-06'), /JSON array/)
+  })
+
+  it('validates the entries actually committed in the repository', async () => {
+    const { readFileSync } = await import('node:fs')
+    const entries = JSON.parse(readFileSync(new URL('../../bun-audit-accepted.json', import.meta.url), 'utf8'))
+
+    assert.doesNotThrow(() => loadAccepted(entries, '2026-10-06'))
+  })
+
+  it('marks an accepted advisory in the printed report', () => {
+    const { active } = loadAccepted([ENTRY], '2026-10-06')
+    const outcome = evaluateReport(BUN_SAMPLE, 'high', active)
+
+    assert.match(formatAdvisories(outcome.advisories, outcome.failing), /ok \[critical\] Prototype Pollution in minimist \(accepted/)
   })
 })
 

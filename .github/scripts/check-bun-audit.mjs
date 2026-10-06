@@ -36,6 +36,16 @@
  * not run. So an unreachable audit is retried, then reported as a warning
  * annotation on the run.
  *
+ * Some advisories have no fix to take: the vulnerable range covers every
+ * published release. `.github/bun-audit-accepted.json` lists those, each with
+ * the advisory id, the package, the reason the risk is acceptable, and a
+ * review date. An accepted advisory is still printed, marked as such, but does
+ * not fail the build. Past its review date an entry stops counting, so the
+ * build goes red again and someone has to look: an exception that never
+ * expires is how a temporary waiver becomes permanent. An entry must name the
+ * package as well as the advisory, so it cannot silence the same id reported
+ * against something else.
+ *
  * Usage: node .github/scripts/check-bun-audit.mjs [package-directory]
  *   BUN_AUDIT_LEVEL=low|moderate|high|critical   (default: high)
  *
@@ -43,6 +53,7 @@
  * audit when this file is the entry point.
  */
 import { spawnSync } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -64,6 +75,43 @@ function rank(severity) {
   return index === -1 ? SEVERITY_LEVELS.length : index
 }
 
+const ACCEPTED_FILE = new URL('../bun-audit-accepted.json', import.meta.url)
+
+/**
+ * Validate the accepted-risk entries and keep the ones still in force.
+ *
+ * Throws on a malformed entry rather than skipping it: a typo in the file must
+ * not quietly turn into "nothing is accepted" or, worse, "everything is".
+ * Returns { active, expired }, both as entries; `today` is "YYYY-MM-DD".
+ */
+export function loadAccepted(entries, today) {
+  if (!Array.isArray(entries)) throw new Error('the accepted list must be a JSON array')
+  const active = []
+  const expired = []
+  for (const entry of entries) {
+    const label = JSON.stringify(entry)
+    if (!entry || typeof entry !== 'object') throw new Error(`not an object: ${label}`)
+    if (!/^GHSA(-[23456789cfghjmpqrvwx]{4}){3}$/.test(entry.advisory ?? '')) {
+      throw new Error(`"advisory" must be a GHSA id: ${label}`)
+    }
+    if (typeof entry.package !== 'string' || !entry.package) throw new Error(`"package" is required: ${label}`)
+    if (typeof entry.reason !== 'string' || entry.reason.trim().length < 20) {
+      throw new Error(`"reason" must explain why the risk is acceptable: ${label}`)
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.review_by ?? '')) {
+      throw new Error(`"review_by" must be a YYYY-MM-DD date: ${label}`)
+    }
+    ;(entry.review_by >= today ? active : expired).push(entry)
+  }
+  return { active, expired }
+}
+
+function isAccepted(advisory, accepted) {
+  return accepted.some(
+    (entry) => entry.package === advisory.package && (advisory.url ?? '').endsWith(`/${entry.advisory}`),
+  )
+}
+
 /**
  * Decide what a parsed `bun audit --json` report means.
  *
@@ -73,11 +121,13 @@ function rank(severity) {
  *   { kind: 'fail', advisories, failing }    at least one advisory is
  *
  * `advisories` is every advisory found, flattened and sorted by package, each
- * as { package, id, severity, title, url }. A report is usable only when it is
+ * as { package, id, severity, title, url, accepted }. `accepted` is the list
+ * of entries in force (see loadAccepted); an advisory they cover is reported
+ * but never failing. A report is usable only when it is
  * a plain object whose every value is an array of advisory objects; `{"error":
  * "..."}`, arrays, strings and null are all "the audit did not run".
  */
-export function evaluateReport(report, level = DEFAULT_LEVEL) {
+export function evaluateReport(report, level = DEFAULT_LEVEL, accepted = []) {
   if (!SEVERITY_LEVELS.includes(level)) {
     throw new Error(`Unknown audit level "${level}", expected one of ${SEVERITY_LEVELS.join(', ')}`)
   }
@@ -95,19 +145,21 @@ export function evaluateReport(report, level = DEFAULT_LEVEL) {
       if (entry === null || typeof entry !== 'object' || Array.isArray(entry)) {
         return { kind: 'unusable', reason: `"${name}" holds an advisory that is not an object` }
       }
-      advisories.push({
+      const advisory = {
         package: name,
         id: entry.id ?? null,
         severity: typeof entry.severity === 'string' ? entry.severity.toLowerCase() : 'unknown',
         title: entry.title ?? '(untitled advisory)',
         url: entry.url ?? null,
-      })
+      }
+      advisory.accepted = isAccepted(advisory, accepted)
+      advisories.push(advisory)
     }
   }
 
   advisories.sort((left, right) => left.package.localeCompare(right.package))
   const threshold = rank(level)
-  const failing = advisories.filter((advisory) => rank(advisory.severity) >= threshold)
+  const failing = advisories.filter((advisory) => !advisory.accepted && rank(advisory.severity) >= threshold)
 
   return { kind: failing.length > 0 ? 'fail' : 'ok', advisories, failing }
 }
@@ -122,8 +174,9 @@ export function formatAdvisories(advisories, failing) {
       current = advisory.package
       lines.push(`${current}:`)
     }
-    const marker = overThreshold.has(advisory) ? '!!' : '  '
-    lines.push(`  ${marker} [${advisory.severity}] ${advisory.title}`)
+    const marker = overThreshold.has(advisory) ? '!!' : advisory.accepted ? 'ok' : '  '
+    const note = advisory.accepted ? ' (accepted, see .github/bun-audit-accepted.json)' : ''
+    lines.push(`  ${marker} [${advisory.severity}] ${advisory.title}${note}`)
     if (advisory.url) lines.push(`       ${advisory.url}`)
   }
   return lines.join('\n')
@@ -168,6 +221,22 @@ async function main() {
     process.exit(2)
   }
 
+  let accepted = { active: [], expired: [] }
+  if (existsSync(ACCEPTED_FILE)) {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      accepted = loadAccepted(JSON.parse(readFileSync(ACCEPTED_FILE, 'utf8')), today)
+    } catch (error) {
+      console.log(`::error::.github/bun-audit-accepted.json is invalid: ${error.message}`)
+      process.exit(2)
+    }
+  }
+  for (const entry of accepted.expired) {
+    console.log(
+      `::warning title=Accepted risk expired::${entry.advisory} on ${entry.package} was to be reviewed by ${entry.review_by}; it is enforced again until the entry is renewed or removed.`,
+    )
+  }
+
   let outcome = null
   for (let attempt = 1; attempt <= ATTEMPTS && outcome === null; attempt += 1) {
     if (attempt > 1) {
@@ -176,7 +245,7 @@ async function main() {
     }
     const report = audit(cwd)
     if (report === null) continue
-    const evaluated = evaluateReport(report, level)
+    const evaluated = evaluateReport(report, level, accepted.active)
     if (evaluated.kind === 'unusable') {
       console.log(`bun audit did not return a report: ${evaluated.reason}`)
       console.log(JSON.stringify(report).slice(0, 2_000))
