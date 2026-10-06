@@ -1007,6 +1007,20 @@ export type LogoutResponse = {
 };
 
 /**
+ * NotificationPreferencesResponse
+ */
+export type NotificationPreferencesResponse = {
+    /**
+     * Notify On Vault Lock
+     */
+    notify_on_vault_lock: boolean;
+    /**
+     * Notify On Vault Unlock
+     */
+    notify_on_vault_unlock: boolean;
+};
+
+/**
  * OneTimeLinkAuditItem
  */
 export type OneTimeLinkAuditItem = {
@@ -1510,6 +1524,20 @@ export type UpdateGroupResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * UpdateNotificationPreferencesRequest
+ */
+export type UpdateNotificationPreferencesRequest = {
+    /**
+     * Notify On Vault Lock
+     */
+    notify_on_vault_lock: boolean;
+    /**
+     * Notify On Vault Unlock
+     */
+    notify_on_vault_unlock: boolean;
 };
 
 /**

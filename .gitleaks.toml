@@ -1,0 +1,12 @@
+title = "le-coffre gitleaks config"
+
+# Keep every built-in detection rule; only add exceptions below.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake credentials in test fixtures — never real secrets, just stand-ins used across the test suite"
+paths = [
+  '''^server/tests/.*''',
+  '''^frontend/.*__tests__/.*''',
+]

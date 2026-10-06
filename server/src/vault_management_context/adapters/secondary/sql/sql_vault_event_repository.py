@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
 from vault_management_context.adapters.secondary.sql.models.vault_event import (
@@ -33,3 +33,12 @@ class SqlVaultEventRepository(SQLBaseRepository):
         )
         self._session.add(event)
         self.commit()
+
+    def get_last_event_type(self, event_types: list[str]) -> str | None:
+        statement = (
+            select(VaultEventTable.event_type)
+            .where(col(VaultEventTable.event_type).in_(event_types))
+            .order_by(col(VaultEventTable.occurred_on).desc())
+            .limit(1)
+        )
+        return self._session.exec(statement).first()
