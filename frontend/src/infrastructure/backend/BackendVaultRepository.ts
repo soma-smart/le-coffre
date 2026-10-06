@@ -1,5 +1,4 @@
 import {
-  clearPendingSharesVaultUnlockClearDelete,
   createVaultVaultSetupPost,
   getVaultStatusVaultStatusGet,
   lockVaultVaultLockPost,
@@ -18,8 +17,10 @@ import { VaultDomainError } from '@/domain/vault/errors'
  * UNLOCKED) rather than specific error types.
  */
 export class BackendVaultRepository implements VaultRepository {
-  async getStatus(): Promise<VaultState> {
-    const response = await getVaultStatusVaultStatusGet()
+  async getStatus(unlockSessionId?: string): Promise<VaultState> {
+    const response = await getVaultStatusVaultStatusGet(
+      unlockSessionId ? { headers: { 'X-Unlock-Session-Id': unlockSessionId } } : undefined,
+    )
     this.throwIfError(response.error)
     // An empty body on a 200 response is a server bug, not "vault not
     // configured" — coercing to NOT_SETUP would redirect a configured
@@ -52,18 +53,15 @@ export class BackendVaultRepository implements VaultRepository {
     this.throwIfError(response.error)
   }
 
-  async unlock(shares: string[]): Promise<void> {
-    const response = await unlockVaultVaultUnlockPost({ body: { shares } })
+  async unlock(unlockSessionId: string, shares: string[]): Promise<void> {
+    const response = await unlockVaultVaultUnlockPost({
+      body: { unlock_session_id: unlockSessionId, shares },
+    })
     this.throwIfError(response.error)
   }
 
   async lock(): Promise<void> {
     const response = await lockVaultVaultLockPost()
-    this.throwIfError(response.error)
-  }
-
-  async clearPendingShares(): Promise<void> {
-    const response = await clearPendingSharesVaultUnlockClearDelete()
     this.throwIfError(response.error)
   }
 

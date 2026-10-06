@@ -55,10 +55,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     AUTH_ROUTES: tuple[str, ...] = ("/api/auth/login",)
 
     # Vault-mutation endpoints share a strict per-IP floor. These are the
-    # (mostly unauthenticated) unlock/setup surfaces abused for DoS: looped
-    # `/vault/unlock/clear`, share-pool pollution via `/vault/unlock`, and
-    # `/vault/setup` re-init flooding. `/api/vault/unlock` covers both
-    # `/unlock` and `/unlock/clear`. `/api/vault/status` stays exempt (polled).
+    # (mostly unauthenticated) unlock/setup surfaces abused for DoS: share-pool
+    # pollution via `/vault/unlock` and `/vault/setup` re-init flooding.
+    # `/api/vault/status` stays exempt (polled).
     VAULT_MUTATION_PREFIXES: tuple[str, ...] = (
         "/api/vault/unlock",
         "/api/vault/setup",
@@ -66,12 +65,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     )
 
     # Destructive vault operations throttled by a single GLOBAL bucket (all callers
-    # and all IPs share it), enforcing "at most once per window" across both ops.
-    # This is what stops the DoS: an attacker cannot loop the anonymous
-    # `/vault/unlock/clear` to wipe accumulated shares, nor loop `/vault/setup` to
+    # and all IPs share it), enforcing "at most once per window".
+    # This is what stops the DoS: an attacker cannot loop `/vault/setup` to
     # overwrite a setup in progress — regardless of how many IPs they rotate through.
     VAULT_SENSITIVE_OPS: dict[tuple[str, str], str] = {
-        ("DELETE", "/api/vault/unlock/clear"): "vault:sensitive",
         ("POST", "/api/vault/setup"): "vault:sensitive",
     }
 

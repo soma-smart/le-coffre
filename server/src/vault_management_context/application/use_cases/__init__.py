@@ -1,4 +1,3 @@
-from .clear_pending_shares_use_case import ClearPendingSharesUseCase
 from .create_vault_use_case import CreateVaultUseCase
 from .decrypt_use_case import DecryptUseCase
 from .encrypt_use_case import EncryptUseCase
@@ -15,5 +14,4 @@ __all__ = [
     "EncryptUseCase",
     "DecryptUseCase",
     "GetVaultStatusUseCase",
-    "ClearPendingSharesUseCase",
 ]

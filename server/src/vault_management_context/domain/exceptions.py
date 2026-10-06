@@ -91,3 +91,10 @@ class VaultSetupIdNotFound(VaultManagementDomainError):
 
     def __init__(self):
         super().__init__("Invalid setup ID")
+
+
+class InvalidUnlockSessionIdError(VaultManagementDomainError):
+    """Raised when an unlock session id does not have the expected format"""
+
+    def __init__(self):
+        super().__init__("Invalid unlock session id")

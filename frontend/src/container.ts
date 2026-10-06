@@ -49,7 +49,6 @@ import { ListPasswordsUseCase } from '@/application/password/ListPasswords'
 import { SharePasswordUseCase, UnsharePasswordUseCase } from '@/application/password/SharePassword'
 import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
 import { UpdateShareExpirationUseCase } from '@/application/password/UpdateShareExpiration'
-import { ClearPendingSharesUseCase } from '@/application/vault/ClearPendingShares'
 import { CreateVaultUseCase } from '@/application/vault/CreateVault'
 import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
 import { LockVaultUseCase } from '@/application/vault/LockVault'
@@ -136,7 +135,6 @@ export interface Container {
     validateSetup: ValidateVaultSetupUseCase
     unlock: UnlockVaultUseCase
     lock: LockVaultUseCase
-    clearPendingShares: ClearPendingSharesUseCase
   }
   auth: {
     login: LoginWithPasswordUseCase
@@ -221,7 +219,6 @@ export function buildContainer(ports: Ports): Container {
       validateSetup: new ValidateVaultSetupUseCase(ports.vaultRepository),
       unlock: new UnlockVaultUseCase(ports.vaultRepository),
       lock: new LockVaultUseCase(ports.vaultRepository),
-      clearPendingShares: new ClearPendingSharesUseCase(ports.vaultRepository),
     },
     auth: {
       login: new LoginWithPasswordUseCase(ports.authGateway),
