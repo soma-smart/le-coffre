@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from identity_access_management_context.application.commands import RotateServiceAccountTokenCommand
+from identity_access_management_context.application.gateways import CannotRotateServiceAccount
 from identity_access_management_context.application.responses import RotateServiceAccountTokenResponse
 from identity_access_management_context.domain.events import ServiceAccountTokenRotatedEvent
 from identity_access_management_context.domain.exceptions import (
@@ -35,7 +36,10 @@ class RotateServiceAccountTokenUseCase(
         # Rotate the token
         now = self._time_provider.get_current_time()
         token = ServiceAccountToken.generate()
-        self._repository.rotate((account.id,), (token.hash,))
+        try:
+            self._repository.rotate((account.id,), (token.hash,))
+        except CannotRotateServiceAccount as e:
+            raise ServiceAccountAlreadyRevokedException(account.id) from e
 
         event = ServiceAccountTokenRotatedEvent(
             event_id=uuid4(),

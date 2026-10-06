@@ -9,6 +9,7 @@ from identity_access_management_context.application.commands import (
     CreateServiceAccountCommand,
     RevokeServiceAccountCommand,
 )
+from identity_access_management_context.application.gateways import CannotRevokeServiceAccount
 from identity_access_management_context.application.responses import ServiceAccountSummaryResponse
 from identity_access_management_context.application.use_cases import (
     CreateServiceAccountUseCase,
@@ -128,6 +129,18 @@ def test_given_an_already_revoked_account_when_revoking_again_then_the_first_tim
         _revoke(use_case, owner, account.id)
 
     assert service_account_repository.accounts[account.id].revoked_at == NOW
+
+
+def test_given_an_account_revoked_concurrently_when_revoking_then_it_is_refused(
+    use_case, owner, account, service_account_repository, monkeypatch
+):
+    def revoked_meanwhile(ids, _now):
+        raise CannotRevokeServiceAccount(next(iter(ids)))
+
+    monkeypatch.setattr(service_account_repository, "revoke", revoked_meanwhile)
+
+    with pytest.raises(ServiceAccountAlreadyRevokedException):
+        _revoke(use_case, owner, account.id)
 
 
 def test_given_a_plain_member_when_revoking_then_it_is_refused(use_case, account, groups):

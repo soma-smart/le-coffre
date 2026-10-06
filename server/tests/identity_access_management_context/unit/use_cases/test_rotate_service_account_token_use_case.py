@@ -9,6 +9,7 @@ from identity_access_management_context.application.commands import (
     CreateServiceAccountCommand,
     RotateServiceAccountTokenCommand,
 )
+from identity_access_management_context.application.gateways import CannotRotateServiceAccount
 from identity_access_management_context.application.use_cases import (
     CreateServiceAccountUseCase,
     RotateServiceAccountTokenUseCase,
@@ -143,6 +144,18 @@ def test_given_an_unknown_account_when_rotating_then_it_is_not_found(use_case, o
 
 def test_given_a_revoked_account_when_rotating_then_it_is_refused(use_case, owner, account, service_account_repository):
     service_account_repository.revoke([account.id], NOW)
+
+    with pytest.raises(ServiceAccountAlreadyRevokedException):
+        _rotate(use_case, owner, account.id)
+
+
+def test_given_an_account_revoked_concurrently_when_rotating_then_it_is_refused(
+    use_case, owner, account, service_account_repository, monkeypatch
+):
+    def revoked_meanwhile(ids, _hashes):
+        raise CannotRotateServiceAccount(ids[0])
+
+    monkeypatch.setattr(service_account_repository, "rotate", revoked_meanwhile)
 
     with pytest.raises(ServiceAccountAlreadyRevokedException):
         _rotate(use_case, owner, account.id)

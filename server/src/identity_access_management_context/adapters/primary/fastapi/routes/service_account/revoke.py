@@ -8,7 +8,6 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
     get_revoke_service_account_usecase,
 )
 from identity_access_management_context.application.commands import RevokeServiceAccountCommand
-from identity_access_management_context.application.gateways import ServiceAccountRepositoryException
 from identity_access_management_context.application.use_cases import RevokeServiceAccountUseCase
 from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
@@ -51,7 +50,7 @@ def revoke_service_account(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except UserNotOwnerOfGroupException as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
-    except (ServiceAccountAlreadyRevokedException, ServiceAccountRepositoryException) as e:
+    except ServiceAccountAlreadyRevokedException as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in revoke service account")

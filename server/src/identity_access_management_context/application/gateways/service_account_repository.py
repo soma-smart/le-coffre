@@ -26,7 +26,7 @@ class CannotRevokeServiceAccount(ServiceAccountRepositoryException):
 
     @override
     def __str__(self) -> str:
-        return f"Service account with ID {self.service_account_id} was already revoked."
+        return f"Service account with ID {self.service_account_id} cannot be revoked."
 
 
 class ServiceAccountRepository(ABC):
