@@ -27,15 +27,14 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
         result = self._session.exec(statement).first()
         if result is None:
             return None
-        return User(
-            id=result.id,
-            username=result.username,
-            email=result.email,
-            name=result.name,
-            roles=json.loads(result.roles),
-            current_refresh_token_jti=result.current_refresh_token_jti,
-            session_invalid_before=self._normalize_datetime(result.session_invalid_before),
-        )
+        return self._to_domain(result)
+
+    def get_by_ids(self, user_ids: list[UUID]) -> list[User]:
+        """Users that still exist among the given ids, in no particular order."""
+        if not user_ids:
+            return []
+        statement = select(UserTable).where(UserTable.id.in_(user_ids))
+        return [self._to_domain(row) for row in self._session.exec(statement).all()]
 
     def get_by_email(self, email: str) -> list[User]:
         statement = select(UserTable).where(UserTable.email == email)
@@ -144,6 +143,17 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             roles=json.loads(result.roles),
             current_refresh_token_jti=result.current_refresh_token_jti,
             session_invalid_before=self._normalize_datetime(result.session_invalid_before),
+        )
+
+    def _to_domain(self, row: UserTable) -> User:
+        return User(
+            id=row.id,
+            username=row.username,
+            email=row.email,
+            name=row.name,
+            roles=json.loads(row.roles),
+            current_refresh_token_jti=row.current_refresh_token_jti,
+            session_invalid_before=self._normalize_datetime(row.session_invalid_before),
         )
 
     def _normalize_datetime(self, value: datetime | None) -> datetime | None:

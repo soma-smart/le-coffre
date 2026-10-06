@@ -10,6 +10,7 @@ import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryP
 import { InMemoryStatisticsGateway } from '@/infrastructure/in_memory/InMemoryStatisticsGateway'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
+import { InMemoryNotificationPreferencesRepository } from '@/infrastructure/in_memory/InMemoryNotificationPreferencesRepository'
 import { setContainer } from '@/plugins/container'
 
 /**
@@ -43,6 +44,7 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
     statisticsGateway: new InMemoryStatisticsGateway(),
     oneTimeLinkRepository: new InMemoryOneTimeLinkRepository(),
     serviceAccountRepository: new InMemoryServiceAccountRepository(),
+    notificationPreferencesRepository: new InMemoryNotificationPreferencesRepository(),
     ...overrides,
   }
   const container = buildContainer(ports)

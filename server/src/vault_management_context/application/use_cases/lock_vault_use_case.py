@@ -39,16 +39,17 @@ class LockVaultUseCase(TracedUseCase):
         if vault is None:
             raise VaultNotSetupException()
 
-        try:
-            self._vault_session_gateway.get_decrypted_key()
-        except ValueError as e:
-            raise VaultLockedException() from e
-
-        self._vault_session_gateway.clear_decrypted_key()
+        # Atomic check-and-clear: of two concurrent locks, only one publishes
+        # the event (and triggers the lock notification emails).
+        if not self._vault_session_gateway.clear_decrypted_key():
+            raise VaultLockedException()
 
         logger.info("Vault locked", extra={"user_id": str(command.requesting_user.user_id)})
         event = VaultLockedEvent(locked_by_user_id=command.requesting_user.user_id)
-        self._event_publisher.publish(event)
+        # append_event() before publish(): if the write fails, this raises before any
+        # notification email goes out for a lock that was never durably recorded —
+        # which a later restart (RecordVaultLockedOnStartupUseCase) would otherwise
+        # find "last known unlocked" and report, and email, a second time.
         self._vault_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
@@ -56,3 +57,4 @@ class LockVaultUseCase(TracedUseCase):
             actor_user_id=command.requesting_user.user_id,
             event_data={},
         )
+        self._event_publisher.publish(event)
