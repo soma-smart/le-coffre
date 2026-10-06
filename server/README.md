@@ -44,6 +44,7 @@ uv run fastapi dev src/main.py --host 0.0.0.0
 | `RATE_LIMIT_TRUSTED_PROXY_HOPS` | No | Number of trusted proxy hops between client and backend | `1` |
 | `LOGIN_MAX_FAILED_ATTEMPTS` | No | Consecutive failed logins before an account is locked | `5` |
 | `LOGIN_LOCKOUT_SECONDS` | No | Duration in seconds an account stays locked | `300` |
+| `MAX_ACTIVE_SERVICE_ACCOUNTS_PER_GROUP` | No | Service accounts that may be active at once in one group | `10` |
 
 ## Optional: monitoring (OpenTelemetry)
 
