@@ -7,7 +7,7 @@ from .list_group_events_response import GroupEventItem, ListGroupEventsResponse
 from .list_group_response import GroupResponse, ListGroupResponse
 from .refresh_access_token_response import RefreshAccessTokenResponse
 from .search_user_response import SearchUserResponse
-from .service_account_responses import (
+from .service_account import (
     CreateServiceAccountResponse,
     ListServiceAccountsResponse,
     RevokeServiceAccountResponse,

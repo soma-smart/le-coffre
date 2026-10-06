@@ -1,57 +1,8 @@
-from collections.abc import Hashable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-
-@dataclass(frozen=True)
-class ItemResponse[IdT: Hashable]:
-    """Response with an identified item."""
-
-    id: IdT
-
-
-@dataclass(frozen=True)
-class ListResponse[ItemT: ItemResponse]:
-    """Response with a sequence of identified items."""
-
-    items: tuple[ItemT, ...]
-
-
-# Service Account
-
-
-@dataclass(frozen=True, kw_only=True)
-class ServiceAccountResponse: ...
-
-
-@dataclass(frozen=True, kw_only=True)
-class ServiceAccountItemResponse(ServiceAccountResponse, ItemResponse[UUID]): ...
-
-
-## Concrete responses
-
-
-@dataclass(frozen=True, kw_only=True)
-class CreateServiceAccountResponse(ServiceAccountItemResponse):
-    """Response on service account creation."""
-
-    group_id: UUID
-    """The ID of the group related to the service account."""
-
-    name: str
-    """The name given to the service account."""
-
-    token: str = field(repr=False)
-    """The token generated for the service account."""
-
-
-@dataclass(frozen=True, kw_only=True)
-class RotateServiceAccountTokenResponse(ServiceAccountItemResponse):
-    """Response on service account token rotation."""
-
-    token: str = field(repr=False)
-    """The new token generated for the service account."""
+from ._response import ListResponse, ServiceAccountItemResponse, ServiceAccountResponse
 
 
 @dataclass(frozen=True)
@@ -96,8 +47,3 @@ class ListServiceAccountsResponse(ServiceAccountResponse, ListResponse[ServiceAc
 
     max_active: int
     """How many accounts may be active at once in one group."""
-
-
-@dataclass(frozen=True, kw_only=True)
-class RevokeServiceAccountResponse(ServiceAccountItemResponse):
-    """Response on service account revocation."""

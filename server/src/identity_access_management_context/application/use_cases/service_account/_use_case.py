@@ -8,7 +8,7 @@ from identity_access_management_context.application.gateways.service_account_eve
     ServiceAccountEventRepository,
 )
 from identity_access_management_context.application.gateways.service_account_repository import ServiceAccountRepository
-from identity_access_management_context.application.responses.service_account_responses import ServiceAccountResponse
+from identity_access_management_context.application.responses.service_account import ServiceAccountResponse
 from identity_access_management_context.application.services.service_account_permission_service import (
     ServiceAccountPermissionService,
 )
