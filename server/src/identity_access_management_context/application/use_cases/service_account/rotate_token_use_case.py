@@ -20,6 +20,8 @@ from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 from ._use_case import ServiceAccountUseCase
 
+# TODO: Rotate tokens instead, a service account may have multiple tokens
+
 
 class RotateServiceAccountTokenUseCase(
     ServiceAccountUseCase[
@@ -68,6 +70,13 @@ class RotateServiceAccountTokenUseCase(
         self._token_credential_record_repository.replace(
             (TokenCredentialRecord(principal_id=account.id, token_hash=token.hash),)
         )
+
+        # Make sure rotating does not undo a concurrent revoke
+        # TODO: Make something simpler
+        (account,) = self._repository.get_by_ids((account.id,))
+        if account is None or not account.is_active:
+            self._token_credential_record_repository.delete_by_principal_ids([command.service_account_id])
+            raise ServiceAccountAlreadyRevokedException(command.service_account_id)
 
         event = ServiceAccountTokenRotatedEvent(
             event_id=uuid4(),

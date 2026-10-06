@@ -82,13 +82,13 @@ def use_case(
 
 
 @pytest.fixture
-def account(create_use_case, owner, groups):
+def account(create_use_case: CreateServiceAccountUseCase, owner, groups):
     return create_use_case.execute(
         CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="nightly-backup")
     )
 
 
-def _rotate(use_case, user, account_id):
+def _rotate(use_case: RotateServiceAccountTokenUseCase, user, account_id):
     return use_case.execute(RotateServiceAccountTokenCommand(requesting_user=user, service_account_id=account_id))
 
 
@@ -161,6 +161,33 @@ def test_given_a_revoked_account_when_rotating_then_it_is_refused_and_the_hash_s
         _rotate(use_case, owner, account.id)
 
     assert token_credential_record_repository.list_by_principal_id(account.id) == [credential_record]
+
+
+def test_given_a_revocation_landing_mid_rotation_when_rotating_then_it_is_refused_and_no_token_survives(
+    use_case,
+    owner,
+    account,
+    service_account_repository,
+    token_credential_record_repository,
+    service_account_event_repository,
+    monkeypatch,
+):
+    """The revocation marks the account and deletes its tokens after the check, before the new token is written."""
+    replace = token_credential_record_repository.replace
+
+    def revoke_then_replace(credential_records):
+        service_account_repository.revoke([account.id], NOW)
+        token_credential_record_repository.delete_by_principal_ids([account.id])
+        replace(credential_records)
+
+    monkeypatch.setattr(token_credential_record_repository, "replace", revoke_then_replace)
+    events_before = len(service_account_event_repository.events)
+
+    with pytest.raises(ServiceAccountAlreadyRevokedException):
+        _rotate(use_case, owner, account.id)
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+    assert len(service_account_event_repository.events) == events_before
 
 
 def test_given_a_rotation_when_it_succeeds_then_it_is_audited_without_the_token(
