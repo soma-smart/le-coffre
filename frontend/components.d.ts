@@ -57,6 +57,7 @@ declare module 'vue' {
     PasswordsHeaderBar: typeof import('./src/components/passwords/PasswordsHeaderBar.vue')['default']
     PasswordsList: typeof import('./src/components/passwords/PasswordsList.vue')['default']
     PasswordsWorkspace: typeof import('./src/components/passwords/PasswordsWorkspace.vue')['default']
+    ProgressBar: typeof import('primevue/progressbar')['default']
     ProgressSpinner: typeof import('primevue/progressspinner')['default']
     ResizeHandle: typeof import('./src/components/shared/ResizeHandle.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

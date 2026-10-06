@@ -3,8 +3,9 @@ def test_vault_workflow(e2e_client, client_factory):
     Complete vault workflow:
     NOT_SETUP → setup (x2) → validate (wrong id fails) → validate (correct id) →
     setup again fails → validate again fails → lock → lock again fails →
-    lock without auth fails → PENDING_UNLOCK → clear → incremental unlock →
-    UNLOCKED → lock → invalid shares → clear
+    lock without auth fails → PENDING_UNLOCK (scoped to its unlock session) →
+    poisoned session abandoned → incremental unlock in a new session → UNLOCKED
+    (every session cleared) → lock → invalid shares → invalid session id
     """
     unauthenticated_client = client_factory()
 
@@ -129,29 +130,39 @@ def test_vault_workflow(e2e_client, client_factory):
     assert status_response.json()["status"] == "LOCKED"
 
     # === UNLOCK PHASE: insufficient shares → PENDING_UNLOCK ===
+    first_session = "FIRSTSESSION0001"
     insufficient_shares = share_secrets[:2]
     unlock_response = e2e_client.post(
         "/api/vault/unlock",
-        json={"shares": insufficient_shares},
+        json={"unlock_session_id": first_session, "shares": insufficient_shares},
     )
     assert unlock_response.status_code == 202
     assert "More shares needed" in unlock_response.json()["message"]
 
-    # Status is PENDING_UNLOCK with a timestamp
-    status_response = e2e_client.get("/api/vault/status")
+    # Status is PENDING_UNLOCK with a timestamp, for that session only
+    status_response = e2e_client.get("/api/vault/status", params={"unlock_session_id": first_session})
     assert status_response.status_code == 200
     status_data = status_response.json()
     assert status_data["status"] == "PENDING_UNLOCK"
     assert status_data["last_share_timestamp"] is not None
 
-    # === CLEAR PENDING SHARES ===
-    clear_response = e2e_client.delete("/api/vault/unlock/clear")
-    assert clear_response.status_code == 200
-    assert clear_response.json()["message"] == "Pending shares cleared successfully"
-
-    # Status back to LOCKED with no timestamp
     status_response = e2e_client.get("/api/vault/status")
-    assert status_response.status_code == 200
+    assert status_response.json()["status"] == "LOCKED"
+    assert status_response.json().get("last_share_timestamp") is None
+
+    # === POISONED SESSION: a wrong share makes it unusable, holders move on ===
+    poisoned_session = "POISONEDSESSION1"
+    wrong_share = share_secrets[0].split(":")[0] + ":" + "0" * len(share_secrets[0].split(":")[1])
+    e2e_client.post("/api/vault/unlock", json={"unlock_session_id": poisoned_session, "shares": [wrong_share]})
+    poisoned_unlock = e2e_client.post(
+        "/api/vault/unlock",
+        json={"unlock_session_id": poisoned_session, "shares": share_secrets[1:4]},
+    )
+    assert poisoned_unlock.status_code == 202
+
+    # A new session is untouched by the pending shares of the others
+    new_session = "NEWSESSION000001"
+    status_response = e2e_client.get("/api/vault/status", params={"unlock_session_id": new_session})
     status_data = status_response.json()
     assert status_data["status"] == "LOCKED"
     assert status_data.get("last_share_timestamp") is None
@@ -159,13 +170,13 @@ def test_vault_workflow(e2e_client, client_factory):
     # === INCREMENTAL UNLOCK: submit 1 share then 2 more to reach threshold ===
     unlock_partial = e2e_client.post(
         "/api/vault/unlock",
-        json={"shares": [share_secrets[0]]},
+        json={"unlock_session_id": new_session, "shares": [share_secrets[0]]},
     )
     assert unlock_partial.status_code == 202
 
     unlock_final = e2e_client.post(
         "/api/vault/unlock",
-        json={"shares": share_secrets[1:3]},
+        json={"unlock_session_id": new_session, "shares": share_secrets[1:3]},
     )
     assert unlock_final.status_code == 200
     assert unlock_final.json()["message"] == "Vault unlocked successfully"
@@ -178,14 +189,28 @@ def test_vault_workflow(e2e_client, client_factory):
     # === LOCK AGAIN FOR FURTHER TESTS ===
     e2e_client.post("/api/vault/lock")
 
+    # Unlocking discarded the pending shares of every session
+    status_response = e2e_client.get("/api/vault/status", params={"unlock_session_id": first_session})
+    assert status_response.json()["status"] == "LOCKED"
+
     # === INVALID SHARES: corrupted secrets ===
     invalid_shares = [share.replace(share.split(":")[1], "wrongsecret") for share in share_secrets[:3]]
     unlock_invalid = e2e_client.post(
         "/api/vault/unlock",
-        json={"shares": invalid_shares},
+        json={"unlock_session_id": "INVALIDSHARES001", "shares": invalid_shares},
     )
     assert unlock_invalid.status_code == 202
     assert "More shares needed" in unlock_invalid.json()["message"]
 
-    # Clear invalid shares
-    e2e_client.delete("/api/vault/unlock/clear")
+    # === INVALID SESSION ID: missing or too short to be unguessable ===
+    missing_session = e2e_client.post("/api/vault/unlock", json={"shares": share_secrets[:3]})
+    assert missing_session.status_code == 422
+
+    short_session = e2e_client.post(
+        "/api/vault/unlock",
+        json={"unlock_session_id": "SHORT", "shares": share_secrets[:3]},
+    )
+    assert short_session.status_code == 422
+
+    invalid_status = e2e_client.get("/api/vault/status", params={"unlock_session_id": "not valid!"})
+    assert invalid_status.status_code == 422
