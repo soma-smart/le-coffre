@@ -19,7 +19,7 @@
     "package": "./scripts/package.sh"
   },
   "dependencies": {
-    "vue": "3.5.41",
+    "vue": "3.5.43",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -45,5 +45,12 @@
     "vite": "8.2.1",
     "vitest": "4.1.10",
     "vue-tsc": "3.3.9"
+  },
+  "overrides": {
+    "@vue/server-renderer": "3.5.43",
+    "brace-expansion": "5.0.12",
+    "minimatch": "10.2.6",
+    "source-map-js": "1.2.2",
+    "undici": "7.30.0"
   }
 }
