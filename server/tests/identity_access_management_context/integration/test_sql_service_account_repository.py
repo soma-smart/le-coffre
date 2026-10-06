@@ -2,8 +2,16 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
+from sqlmodel import Session
 
-from identity_access_management_context.adapters.secondary.sql import PrincipalKind, PrincipalTable
+from identity_access_management_context.adapters.secondary.sql import (
+    PrincipalKind,
+    PrincipalTable,
+    SqlServiceAccountRepository,
+)
+from identity_access_management_context.adapters.secondary.sql.model.service_account_model import (
+    ServiceAccountPrincipalTable,
+)
 from identity_access_management_context.application.gateways import CannotRevokeServiceAccount
 from identity_access_management_context.domain.entities import ServiceAccount
 
@@ -101,3 +109,25 @@ def test_given_created_accounts_then_each_is_registered_as_a_service_account_pri
         principal = session.get(PrincipalTable, account.id)
         assert principal is not None
         assert principal.kind == PrincipalKind.SERVICE_ACCOUNT
+
+
+def test_given_a_revocation_committed_by_another_session_when_reading_again_then_it_shows(
+    sql_service_account_repository, session, database_engine
+):
+    """Sessions do not expire on commit, so a cached row must not hide another request's revocation.
+
+    Rotation relies on this to notice a revocation that landed while it was writing the new token.
+    """
+    account = _account()
+    sql_service_account_repository.create([account])
+    (before,) = sql_service_account_repository.get_by_ids([account.id])
+    assert before.is_active
+    # Held, as anything else in the request might: the session then keeps the row cached.
+    cached_row = session.get(ServiceAccountPrincipalTable, account.id)
+
+    with Session(database_engine, expire_on_commit=False) as other_session:
+        SqlServiceAccountRepository(other_session).revoke([account.id], NOW)
+
+    (after,) = sql_service_account_repository.get_by_ids([account.id])
+    assert not after.is_active
+    assert cached_row.revoked_at is not None
