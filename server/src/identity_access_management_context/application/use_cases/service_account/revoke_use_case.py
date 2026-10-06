@@ -63,12 +63,15 @@ class RevokeServiceAccountUseCase(
 
         # Revoke the service account
         now = self._time_provider.get_current_time()
+
+        # Delete credential records
+        self._token_credential_record_repository.delete_by_principal_ids([account.id])
+
+        # Revoke the service account
         try:
             self._repository.revoke([account.id], now)
         except CannotRevokeServiceAccount as e:
             raise ServiceAccountAlreadyRevokedException(account.id) from e
-        # Without its token records, a revoked account can no longer authenticate.
-        self._token_credential_record_repository.delete_by_principal_ids([account.id])
 
         event = ServiceAccountRevokedEvent(
             event_id=uuid4(),

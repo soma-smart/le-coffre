@@ -55,11 +55,13 @@ class DeleteGroupUseCase(TracedUseCase):
         if not active_accounts:
             return
 
-        # Revoke service accounts
         now = self._time_provider.get_current_time()
-        self._service_account_repository.revoke([account.id for account in active_accounts], now)
+
         # Without their token records, revoked accounts can no longer authenticate.
         self._token_credential_record_repository.delete_by_principal_ids([account.id for account in active_accounts])
+
+        # Revoke service accounts
+        self._service_account_repository.revoke([account.id for account in active_accounts], now)
 
         events = tuple(
             ServiceAccountRevokedEvent(
