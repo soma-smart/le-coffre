@@ -1,9 +1,14 @@
 from collections.abc import Iterable
+from typing import override
 from uuid import UUID, uuid4
 
-from sqlmodel import Session, delete, select
+from sqlalchemy import case
+from sqlmodel import Session, delete, select, update
 
-from identity_access_management_context.application.gateways import TokenCredentialRecordRepository
+from identity_access_management_context.application.gateways import (
+    CannotRotateTokenCredentialError,
+    TokenCredentialRecordRepository,
+)
 from identity_access_management_context.domain.entities import TokenCredentialRecord
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
@@ -54,19 +59,43 @@ class SqlTokenCredentialRecordRepository(SQLBaseRepository, TokenCredentialRecor
         self._add(credential_records)
         self.commit()
 
-    def replace(self, credential_records: Iterable[TokenCredentialRecord]) -> None:
-        credential_records = list(credential_records)
-        # One commit for both, so an account is never left with no token or with both.
-        self._delete(credential_record.principal_id for credential_record in credential_records)
-        self._add(credential_records)
+    @override
+    def _replace(self, token_hashes: Iterable[str], new_token_hashes: Iterable[str]) -> None:
+        new_token_hash_by_old = dict(zip(token_hashes, new_token_hashes, strict=True))
+        result = self._session.exec(  # type: ignore[call-overload]
+            update(TokenCredentialRecordTable)
+            .where(TokenCredentialRecordTable.token_hash.in_(list(new_token_hash_by_old)))  # type: ignore[attr-defined]
+            .values(token_hash=case(new_token_hash_by_old, value=TokenCredentialRecordTable.token_hash))
+        )
+
+        # Make sur all updates were done
+        if result.rowcount != len(new_token_hash_by_old):
+            self._session.rollback()
+            raise CannotRotateTokenCredentialError()
+
         self.commit()
+
+    @override
+    def list_by_principal_ids(self, principal_ids: Iterable[UUID]) -> list[TokenCredentialRecord]:
+        statement = (
+            select(CredentialRecordTable.principal_id, TokenCredentialRecordTable.token_hash)
+            .join(
+                CredentialRecordTable,
+                TokenCredentialRecordTable.credential_id == CredentialRecordTable.id,  # pyright: ignore[reportArgumentType]
+            )
+            .where(CredentialRecordTable.principal_id.in_(list(principal_ids)))  # type: ignore[attr-defined]
+        )
+        return [
+            TokenCredentialRecord(principal_id=principal_id, token_hash=token_hash)
+            for principal_id, token_hash in self._session.exec(statement).all()
+        ]
 
     def get_by_token_hash(self, token_hash: str) -> TokenCredentialRecord | None:
         statement = (
             select(CredentialRecordTable.principal_id, TokenCredentialRecordTable.token_hash)
             .join(
                 CredentialRecordTable,
-                TokenCredentialRecordTable.credential_id == CredentialRecordTable.id,
+                TokenCredentialRecordTable.credential_id == CredentialRecordTable.id,  # pyright: ignore[reportArgumentType]
             )
             .where(TokenCredentialRecordTable.token_hash == token_hash)
         )
