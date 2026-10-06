@@ -80,6 +80,15 @@ const router = createRouter({
       meta: { public: true, skipSetupCheck: true },
     },
     {
+      // Custodians collecting their Shamir share may have no account at all —
+      // none exists yet when the vault is first set up. The token travels in
+      // the fragment, which the router never sees.
+      path: '/vault-share',
+      name: 'VaultShare',
+      component: () => import('@/pages/VaultSharePage.vue'),
+      meta: { public: true, skipSetupCheck: true },
+    },
+    {
       path: '/groups',
       name: 'Groups',
       component: () => import('@/pages/GroupsPage.vue'),

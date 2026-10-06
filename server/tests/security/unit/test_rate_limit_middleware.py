@@ -118,6 +118,14 @@ def _create_app(
     async def vault_setup():
         return PlainTextResponse("setup", status_code=201)
 
+    @app.post("/vault/share-links/retrieve")
+    async def vault_share_link_retrieve():
+        return PlainTextResponse("sealed", status_code=200)
+
+    @app.post("/one-time-links/consume")
+    async def one_time_link_consume():
+        return PlainTextResponse("secret", status_code=200)
+
     @app.get("/other")
     async def other():
         return PlainTextResponse("other")
@@ -506,3 +514,30 @@ def test_given_concurrent_requests_on_shared_bucket_when_dispatching_should_seri
 
     assert len(allowed) == 3
     assert len(limited) == 7
+
+
+# ── Anonymous single-use link redemption floor ───
+
+
+def test_given_share_link_retrievals_beyond_floor_should_be_throttled_per_ip():
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, one_time_link_max=2)
+    with TestClient(app) as c:
+        statuses = [c.post("/api/vault/share-links/retrieve").status_code for _ in range(3)]
+    assert statuses == [200, 200, 429]
+
+
+def test_given_share_link_retrieval_should_not_consume_the_vault_mutation_floor():
+    # Custodians collecting their shares must not lock the unlock/setup surface.
+    app = _create_app(user_max=100, unauth_max=100, vault_max=1, one_time_link_max=10)
+    with TestClient(app) as c:
+        assert c.post("/api/vault/share-links/retrieve").status_code == 200
+        assert c.post("/api/vault/share-links/retrieve").status_code == 200
+        assert c.post("/api/vault/unlock").status_code == 202
+
+
+def test_given_share_link_and_one_time_link_redemptions_should_share_one_floor():
+    app = _create_app(user_max=100, unauth_max=100, vault_max=100, one_time_link_max=2)
+    with TestClient(app) as c:
+        assert c.post("/api/one-time-links/consume").status_code == 200
+        assert c.post("/api/vault/share-links/retrieve").status_code == 200
+        assert c.post("/api/vault/share-links/retrieve").status_code == 429

@@ -186,6 +186,23 @@
         "openFailed": "Could not open this link right now."
       }
     },
+    "vaultShare": {
+      "title": "Your share of the master key",
+      "intro": "You have been chosen as a custodian of the Le Coffre master key. The vault can only be unlocked when enough custodians bring their shares together.",
+      "onceWarning": "This link opens only once. Have a safe place ready before revealing your share.",
+      "revealButton": "Reveal my share",
+      "shareLabel": "Share {index}",
+      "usedInfo": "This link has now been used and will not open again. Nobody, not even an administrator, can show you this share again.",
+      "storageAdvice": "Store it offline or in a password manager other than Le Coffre: you will need it precisely when Le Coffre is locked.",
+      "copy": "Copy the share",
+      "copied": "Copied",
+      "show": "Show the share",
+      "hide": "Hide the share",
+      "errors": {
+        "incompleteLink": "This link is incomplete. Please check the URL you were given.",
+        "openFailed": "Could not open this link right now."
+      }
+    },
     "profile": {
       "title": "Profile",
       "loggedOutSummary": "Logged out",
@@ -817,7 +834,7 @@
         "description1Prefix": "The master key is used to encrypt all your secrets. We use",
         "sssLinkText": "Shamir's Secret Sharing (SSS)",
         "description1Suffix": "to split the key into multiple parts for enhanced security.",
-        "description2": "If you lose the required number of shares, you will lose access to your vault. Please store the shares securely in different locations.",
+        "description2": "Each share will be delivered through its own single-use link, valid for 48 hours, for you to send to a custodian. If the required number of shares is lost, access to the vault is lost with them.",
         "description3": "Please choose the total number of shares and the threshold required to reconstruct the key.",
         "generateButton": "Generate shares of the master key",
         "errorFallback": "An unexpected error occurred.",
@@ -858,16 +875,17 @@
         "thresholdLabel": "Threshold",
         "needAndCanLose": "You will need {threshold} parts out of {shares} to reconstruct the key. You can lose {count} part. | You will need {threshold} parts out of {shares} to reconstruct the key. You can lose {count} parts."
       },
-      "sharesModal": {
-        "title": "Shares of the master key",
-        "description": "Please store the following shares securely (index and secret):",
+      "shareLinksModal": {
+        "title": "Share links for the master key",
+        "description": "Each share of the master key now sits behind its own single-use link. Send each link to a different custodian, ideally each through a separate channel. The shares themselves are never shown here.",
+        "expiryInfo": "Each link opens once, until {expiresAt} (48 hours). A link nobody opens in time is lost for good, and so is its share.",
         "shareLabel": "Share {index}",
-        "copyAria": "Copy share secret",
+        "copyLinkAria": "Copy the link for share {index}",
         "copiedSummary": "Copied",
-        "copiedDetail": "Share copied to clipboard",
+        "copiedDetail": "Link copied to clipboard",
         "copyFailedSummary": "Error",
-        "copyFailedDetail": "Failed to copy share",
-        "confirmCheckboxLabel": "I have stored the above shares and their indices securely. I cannot retrieve them later.",
+        "copyFailedDetail": "Failed to copy the link",
+        "confirmCheckboxLabel": "I have copied every link to send it to its custodian. These links cannot be displayed again.",
         "continueButton": "Continue"
       }
     }

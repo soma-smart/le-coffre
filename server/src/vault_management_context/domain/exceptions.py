@@ -91,3 +91,21 @@ class VaultSetupIdNotFound(VaultManagementDomainError):
 
     def __init__(self):
         super().__init__("Invalid setup ID")
+
+
+class ShareLinkUnusableError(VaultManagementDomainError):
+    """Raised when a share link cannot be retrieved.
+
+    Unknown, expired and already retrieved links all raise this same error, so
+    an anonymous caller cannot probe which links exist.
+    """
+
+    def __init__(self):
+        super().__init__("This share link is invalid, expired or has already been used")
+
+
+class InvalidShareLinkLookupError(VaultManagementDomainError):
+    """Raised when a share link lookup hash is not a SHA-256 hex digest"""
+
+    def __init__(self):
+        super().__init__("Malformed share link")

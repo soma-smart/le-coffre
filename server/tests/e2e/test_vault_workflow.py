@@ -1,3 +1,6 @@
+from tests.vault_management_context.share_link_crypto import retrieve_share
+
+
 def test_vault_workflow(e2e_client, client_factory):
     """
     Complete vault workflow:
@@ -37,8 +40,8 @@ def test_vault_workflow(e2e_client, client_factory):
     assert setup_response1.status_code == 201
     setup_data1 = setup_response1.json()
     assert "setup_id" in setup_data1
-    assert "shares" in setup_data1
-    assert len(setup_data1["shares"]) == 3
+    assert "shares" not in setup_data1
+    assert len(setup_data1["share_links"]) == 3
     setup_id1 = setup_data1["setup_id"]
 
     # Status should be UNLOCKED (session key stored during setup)
@@ -56,12 +59,12 @@ def test_vault_workflow(e2e_client, client_factory):
     assert setup_response2.status_code == 201
     setup_data2 = setup_response2.json()
     assert "setup_id" in setup_data2
-    assert "shares" in setup_data2
-    assert len(setup_data2["shares"]) == nb_shares
+    assert "shares" not in setup_data2
+    assert len(setup_data2["share_links"]) == nb_shares
     setup_id2 = setup_data2["setup_id"]
     assert setup_id2 != setup_id1
-    shares = setup_data2["shares"]
-    share_secrets = [share["secret"] for share in shares]
+    # Each custodian opens their own link, anonymously.
+    share_secrets = [retrieve_share(unauthenticated_client, link["token"]) for link in setup_data2["share_links"]]
 
     # Status still UNLOCKED
     status_response = e2e_client.get("/api/vault/status")

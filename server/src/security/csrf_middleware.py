@@ -58,6 +58,9 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # happens to be logged in would be rejected, since the public page has no
         # CSRF token in its store.
         "/api/one-time-links/consume",
+        # Same reasoning for the links handing Shamir shares to their custodians:
+        # anonymous by design, the link is the only credential.
+        "/api/vault/share-links/retrieve",
     ]
 
     # HTTP methods that require CSRF protection

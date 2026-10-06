@@ -38,3 +38,45 @@ export class VaultSetupIdRequiredError extends VaultDomainError {
     this.name = 'VaultSetupIdRequiredError'
   }
 }
+
+/**
+ * The share link cannot be used. Deliberately does not say why: the backend
+ * answers the same 404 for unknown, expired and already retrieved links so an
+ * anonymous caller cannot probe which exist.
+ */
+export class ShareLinkUnusableError extends VaultDomainError {
+  constructor() {
+    super('This share link is invalid, expired or has already been used')
+    this.name = 'ShareLinkUnusableError'
+  }
+}
+
+export class ShareLinkTokenRequiredError extends VaultDomainError {
+  constructor() {
+    super('This link is incomplete: the part after # is missing')
+    this.name = 'ShareLinkTokenRequiredError'
+  }
+}
+
+/**
+ * The sealed share came back but does not open with this link's token. A
+ * truncated token never gets this far (its hash matches no link), so this
+ * means the data was tampered with between sealing and delivery. The server
+ * has already spent the link at this point.
+ */
+export class ShareLinkCorruptedError extends VaultDomainError {
+  constructor() {
+    super(
+      'The share could not be decrypted: the data received was altered. Alert your administrator',
+    )
+    this.name = 'ShareLinkCorruptedError'
+  }
+}
+
+/** WebCrypto is only exposed to secure contexts (HTTPS or localhost). */
+export class ShareLinkInsecureContextError extends VaultDomainError {
+  constructor() {
+    super('Opening a share requires a secure (HTTPS) connection')
+    this.name = 'ShareLinkInsecureContextError'
+  }
+}

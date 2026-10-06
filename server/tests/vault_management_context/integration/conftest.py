@@ -2,6 +2,7 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from vault_management_context.adapters.secondary import (
+    SqlShareLinkRepository,
     SqlVaultRepository,
 )
 
@@ -26,3 +27,8 @@ def session(database_engine):
 @pytest.fixture
 def vault_repository(session):
     return SqlVaultRepository(session)
+
+
+@pytest.fixture
+def share_link_repository(session):
+    return SqlShareLinkRepository(session)

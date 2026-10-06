@@ -6,6 +6,7 @@ import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPassw
 import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepository'
 import { BackendVaultRepository } from '@/infrastructure/backend/BackendVaultRepository'
 import { BackendStatisticsGateway } from '@/infrastructure/backend/BackendStatisticsGateway'
+import { WebCryptoShareLinkCipher } from '@/infrastructure/crypto/WebCryptoShareLinkCipher'
 import { LocalStoragePreferencesGateway } from '@/infrastructure/local_storage/LocalStoragePreferencesGateway'
 import { buildContainer, type Container } from '@/container'
 
@@ -26,5 +27,6 @@ export function installProductionContainer(): Container {
     preferencesGateway: new LocalStoragePreferencesGateway(),
     statisticsGateway: new BackendStatisticsGateway(),
     oneTimeLinkRepository: new BackendOneTimeLinkRepository(),
+    shareLinkCipher: new WebCryptoShareLinkCipher(),
   })
 }

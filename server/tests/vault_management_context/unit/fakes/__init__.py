@@ -1,6 +1,8 @@
 from .fake_encryption_gateway import FakeEncryptionGateway
 from .fake_shamir_gateway import FakeShamirGateway
+from .fake_share_link_repository import FakeShareLinkRepository
 from .fake_share_repository import FakeShareRepository
+from .fake_share_sealing_gateway import FakeShareSealingGateway
 from .fake_vault_event_repository import FakeVaultEventRepository
 from .fake_vault_repository import FakeVaultRepository
 from .fake_vault_session_gateway import FakeVaultSessionGateway
@@ -12,4 +14,6 @@ __all__ = [
     "FakeVaultSessionGateway",
     "FakeShareRepository",
     "FakeVaultEventRepository",
+    "FakeShareLinkRepository",
+    "FakeShareSealingGateway",
 ]

@@ -1,9 +1,11 @@
+import type { IssuedShareLink } from './ShareLink'
+
 /**
  * Vault domain types. Pure TypeScript — no Vue, no fetch, no SDK.
  *
  * The vault has one piece of serialisable state (its status +
  * optional last-share timestamp) and one one-shot output from the
- * setup flow (setup id + Shamir shares returned to the admin once).
+ * setup flow (setup id + one share link per Shamir share).
  */
 
 export type VaultStatus =
@@ -17,8 +19,11 @@ export interface VaultState {
 
 export interface VaultSetup {
   setupId: string
-  /** Plain share secrets, returned once by create — the user must store them. */
-  shares: string[]
+  /**
+   * One single-use link per share, returned once by create. The shares
+   * themselves never reach the admin's screen: each custodian opens their own.
+   */
+  shareLinks: IssuedShareLink[]
 }
 
 export function isVaultLocked(state: VaultState | null): boolean {

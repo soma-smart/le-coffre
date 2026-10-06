@@ -4,7 +4,8 @@ import { test, expect } from '@playwright/test'
  * Helm Integration E2E Test
  *
  * A single test covering the full lifecycle of Le Coffre:
- *   Setup → Login → Create password → Read password → Lock vault → Unlock vault
+ *   Setup → Custodians retrieve their shares → Login → Create password →
+ *   Read password → Lock vault → Unlock vault
  *
  * The database is wiped and re-migrated before each run by global-setup.ts.
  */
@@ -21,8 +22,14 @@ const TEST_PASSWORD_URL = 'https://example.com'
 const SHARES_COUNT = 2
 const THRESHOLD = 2
 
-test('Full lifecycle: setup → login → create → read → lock → unlock', async ({ page }) => {
+test('Full lifecycle: setup → login → create → read → lock → unlock', async ({
+  page,
+  context,
+  browser,
+}) => {
+  const shareLinks: string[] = []
   const storedShares: string[] = []
+  await context.grantPermissions(['clipboard-read', 'clipboard-write'])
 
   // ── Setup wizard ─────────────────────────────────────────────
   await page.goto('/', { waitUntil: 'commit' })
@@ -46,17 +53,20 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
   await thresholdInput.press('Tab')
 
   await page.getByRole('button', { name: 'Generate shares of the master key' }).click()
-  await expect(page.getByText('Shares of the master key')).toBeVisible({ timeout: 30000 })
+  await expect(page.getByText('Share links for the master key')).toBeVisible({ timeout: 30000 })
 
-  // Extract share secrets
-  for (let i = 0; i < SHARES_COUNT; i++) {
-    const shareInput = page.locator(`#share-secret-${i}`)
-    await expect(shareInput).not.toHaveValue('', { timeout: 10000 })
-    storedShares.push(await shareInput.inputValue())
+  // The shares are never displayed: copy the link of each one instead
+  for (let i = 1; i <= SHARES_COUNT; i++) {
+    await page.getByTestId(`copy-share-link-${i}`).click()
+    const link = await page.evaluate(() => navigator.clipboard.readText())
+    expect(link).toMatch(/\/vault-share#.{43,}$/)
+    shareLinks.push(link)
   }
-  expect(storedShares[0].length).toBeGreaterThan(10)
+  await expect(page.getByTestId('share-link-row').first()).not.toContainText(
+    shareLinks[0]!.split('#')[1]!,
+  )
 
-  await page.locator('#storedSharesCheckbox').click()
+  await page.locator('#linksSentCheckbox').click()
   await page.getByRole('button', { name: 'Continue' }).click()
 
   // Step 3: Create Admin Account
@@ -71,6 +81,29 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
 
   // Step 4: Done
   await expect(page.getByText('Setup is done!')).toBeVisible({ timeout: 30000 })
+
+  // ── Custodians open their links, with no account and no session ──
+  const custodianContext = await browser.newContext()
+  const custodian = await custodianContext.newPage()
+  for (const link of shareLinks) {
+    await custodian.goto(link, { waitUntil: 'commit' })
+    await expect(custodian.getByText('Your share of the master key')).toBeVisible({
+      timeout: 15000,
+    })
+    await custodian.getByRole('button', { name: 'Reveal my share' }).click()
+    await custodian.getByRole('button', { name: 'Show the share' }).click()
+    const share = (await custodian.getByTestId('share-value').textContent())?.trim() ?? ''
+    expect(share).toMatch(/^\d+:[0-9a-f]+$/)
+    storedShares.push(share)
+  }
+
+  // A link only opens once
+  await custodian.goto(shareLinks[0]!, { waitUntil: 'commit' })
+  await custodian.getByRole('button', { name: 'Reveal my share' }).click()
+  await expect(
+    custodian.getByText('This share link is invalid, expired or has already been used'),
+  ).toBeVisible({ timeout: 10000 })
+  await custodianContext.close()
 
   // ── Login ────────────────────────────────────────────────────
   await page.getByRole('button', { name: 'Login' }).click()

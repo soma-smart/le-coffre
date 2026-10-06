@@ -4,10 +4,27 @@ import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaul
 import { VaultThresholdInvalidError } from '@/domain/vault/errors'
 
 describe('CreateVaultUseCase', () => {
-  it('delegates to the repository and returns the setup payload', async () => {
-    const repo = new InMemoryVaultRepository().queueSetup('setup-42', ['s1', 's2', 's3'])
+  it('delegates to the repository and returns one share link per share', async () => {
+    const repo = new InMemoryVaultRepository()
+      .useClock(() => new Date('2026-10-06T09:00:00Z'))
+      .queueSetup('setup-42', ['t1', 't2', 't3'])
     const result = await new CreateVaultUseCase(repo).execute({ nbShares: 3, threshold: 2 })
-    expect(result).toEqual({ setupId: 'setup-42', shares: ['s1', 's2', 's3'] })
+    expect(result).toEqual({
+      setupId: 'setup-42',
+      shareLinks: [
+        { shareIndex: 1, token: 't1', expiresAt: '2026-10-08T09:00:00.000Z' },
+        { shareIndex: 2, token: 't2', expiresAt: '2026-10-08T09:00:00.000Z' },
+        { shareIndex: 3, token: 't3', expiresAt: '2026-10-08T09:00:00.000Z' },
+      ],
+    })
+  })
+
+  it('never hands the shares themselves back', async () => {
+    const result = await new CreateVaultUseCase(new InMemoryVaultRepository()).execute({
+      nbShares: 3,
+      threshold: 2,
+    })
+    expect(result).not.toHaveProperty('shares')
   })
 
   it('rejects threshold below 2', async () => {

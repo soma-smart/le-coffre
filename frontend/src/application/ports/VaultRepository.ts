@@ -1,3 +1,4 @@
+import type { SealedShare } from '@/domain/vault/ShareLink'
 import type { VaultSetup, VaultState } from '@/domain/vault/Vault'
 
 export interface CreateVaultInput {
@@ -12,4 +13,6 @@ export interface VaultRepository {
   unlock(shares: string[]): Promise<void>
   lock(): Promise<void>
   clearPendingShares(): Promise<void>
+  /** Anonymous and single use: the server wipes the sealed share once handed out. */
+  retrieveSealedShare(lookupHash: string): Promise<SealedShare>
 }

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -21,13 +22,15 @@ class CreateVaultPostRequest(BaseModel):
     threshold: int
 
 
-class ShareResponse(BaseModel):
-    secret: str
+class IssuedShareLinkResponse(BaseModel):
+    share_index: int
+    token: str
+    expires_at: datetime
 
 
 class CreateVaultPostResponse(BaseModel):
     setup_id: UUID
-    shares: list[ShareResponse]
+    share_links: list[IssuedShareLinkResponse]
 
 
 @router.post(
@@ -46,7 +49,11 @@ def create_vault(
     - **nb_shares**: Total number of shares to generate
     - **threshold**: Minimum number of shares needed to unlock the vault
 
-    Returns shares and a setup_id for validation.
+    Returns a setup_id for validation and one single-use link token per share.
+    The shares themselves are never returned: each is sealed under a key
+    derived from its token, which exists only in this response. Build the link
+    as `<origin>/vault-share#<token>` and hand one to each custodian; it can be
+    retrieved once, within 48 hours, through POST /vault/share-links/retrieve.
     """
     try:
         setup_id = uuid4()
@@ -58,5 +65,10 @@ def create_vault(
         logger.exception("Unexpected error in vault setup")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
-    shares_response = [{"secret": share.secret} for share in result.shares]
-    return {"setup_id": setup_id, "shares": shares_response}
+    return CreateVaultPostResponse(
+        setup_id=setup_id,
+        share_links=[
+            IssuedShareLinkResponse(share_index=link.share_index, token=link.token, expires_at=link.expires_at)
+            for link in result.share_links
+        ],
+    )

@@ -98,6 +98,7 @@ from vault_management_context.adapters.primary.fastapi.routes import (
 from vault_management_context.adapters.primary.private_api import EncryptionApi
 from vault_management_context.adapters.secondary import (
     AesEncryptionGateway,
+    AesGcmShareSealingGateway,
     CryptoShamirGateway,
     InMemoryShareRepository,
     InMemoryVaultSessionGateway,
@@ -160,11 +161,13 @@ async def lifespan(app: FastAPI):
     encryption_gateway = AesEncryptionGateway()
     vault_session_gateway = InMemoryVaultSessionGateway()
     share_repository = InMemoryShareRepository()
+    share_sealing_gateway = AesGcmShareSealingGateway()
 
     app.state.shamir_gateway = shamir_gateway
     app.state.encryption_gateway = encryption_gateway
     app.state.vault_session_gateway = vault_session_gateway
     app.state.share_repository = share_repository
+    app.state.share_sealing_gateway = share_sealing_gateway
 
     # Encryption use cases and API (stateless)
     encrypt_use_case = EncryptUseCase(encryption_gateway, vault_session_gateway)

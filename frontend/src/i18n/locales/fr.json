@@ -186,6 +186,23 @@
         "openFailed": "Impossible d'ouvrir ce lien pour le moment."
       }
     },
+    "vaultShare": {
+      "title": "Votre part de la clé maîtresse",
+      "intro": "Vous avez été désigné dépositaire de la clé maîtresse de Le Coffre. Le coffre ne peut être déverrouillé que si suffisamment de dépositaires réunissent leurs parts.",
+      "onceWarning": "Ce lien ne s'ouvre qu'une seule fois. Prévoyez un endroit sûr avant de révéler votre part.",
+      "revealButton": "Révéler ma part",
+      "shareLabel": "Part {index}",
+      "usedInfo": "Ce lien a maintenant été utilisé et ne s'ouvrira plus. Personne, pas même un administrateur, ne pourra vous réafficher cette part.",
+      "storageAdvice": "Conservez-la hors ligne ou dans un gestionnaire de mots de passe autre que Le Coffre : vous en aurez besoin justement quand Le Coffre sera verrouillé.",
+      "copy": "Copier la part",
+      "copied": "Copié",
+      "show": "Afficher la part",
+      "hide": "Masquer la part",
+      "errors": {
+        "incompleteLink": "Ce lien est incomplet. Veuillez vérifier l'URL qui vous a été fournie.",
+        "openFailed": "Impossible d'ouvrir ce lien pour le moment."
+      }
+    },
     "profile": {
       "title": "Profil",
       "loggedOutSummary": "Déconnecté",
@@ -817,7 +834,7 @@
         "description1Prefix": "La clé maîtresse est utilisée pour chiffrer tous vos secrets. Nous utilisons",
         "sssLinkText": "le partage de secret de Shamir (SSS)",
         "description1Suffix": "pour diviser la clé en plusieurs parties afin de renforcer la sécurité.",
-        "description2": "Si vous perdez le nombre de parts requis, vous perdrez l'accès à votre coffre. Veuillez conserver les parts en lieu sûr, dans des emplacements différents.",
+        "description2": "Chaque part sera remise via son propre lien à usage unique, valable 48 heures, que vous enverrez à un dépositaire. Si le nombre de parts requis est perdu, l'accès au coffre l'est aussi.",
         "description3": "Veuillez choisir le nombre total de parts et le seuil requis pour reconstituer la clé.",
         "generateButton": "Générer les parts de la clé maîtresse",
         "errorFallback": "Une erreur inattendue s'est produite.",
@@ -858,16 +875,17 @@
         "thresholdLabel": "Seuil",
         "needAndCanLose": "Vous aurez besoin de {threshold} parts sur {shares} pour reconstituer la clé. Vous pouvez perdre {count} part. | Vous aurez besoin de {threshold} parts sur {shares} pour reconstituer la clé. Vous pouvez perdre {count} parts."
       },
-      "sharesModal": {
-        "title": "Parts de la clé maîtresse",
-        "description": "Veuillez stocker les parts suivantes en toute sécurité (index et secret) :",
+      "shareLinksModal": {
+        "title": "Liens des parts de la clé maîtresse",
+        "description": "Chaque part de la clé maîtresse est désormais derrière son propre lien à usage unique. Envoyez chaque lien à un dépositaire différent, idéalement par un canal distinct. Les parts elles-mêmes ne sont jamais affichées ici.",
+        "expiryInfo": "Chaque lien ne s'ouvre qu'une fois, jusqu'au {expiresAt} (48 heures). Un lien qui n'est pas ouvert à temps est perdu définitivement, ainsi que sa part.",
         "shareLabel": "Part {index}",
-        "copyAria": "Copier le secret de la part",
+        "copyLinkAria": "Copier le lien de la part {index}",
         "copiedSummary": "Copié",
-        "copiedDetail": "Part copiée dans le presse-papiers",
+        "copiedDetail": "Lien copié dans le presse-papiers",
         "copyFailedSummary": "Erreur",
-        "copyFailedDetail": "Échec de la copie de la part",
-        "confirmCheckboxLabel": "J'ai stocké les parts ci-dessus et leurs index en toute sécurité. Je ne peux pas les récupérer plus tard.",
+        "copyFailedDetail": "Échec de la copie du lien",
+        "confirmCheckboxLabel": "J'ai copié chaque lien pour l'envoyer à son dépositaire. Ces liens ne pourront plus être affichés.",
         "continueButton": "Continuer"
       }
     }

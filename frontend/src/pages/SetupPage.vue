@@ -2,8 +2,9 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BlankLayout from '../layouts/BlankLayout.vue'
+import type { IssuedShareLink } from '@/domain/vault/ShareLink'
 
-import SharesModal from '@/components/setup/shamir/SharesModal.vue'
+import ShareLinksModal from '@/components/setup/shamir/ShareLinksModal.vue'
 import StepWelcome from '@/components/setup/StepWelcome.vue'
 import StepGenerateMasterKey from '@/components/setup/StepGenerateMasterKey.vue'
 import StepAdminAccountForm from '@/components/setup/StepAdminAccountForm.vue'
@@ -11,28 +12,29 @@ import SetupDone from '@/components/setup/SetupDone.vue'
 
 const { t } = useI18n()
 const showModal = ref(false)
-const shares = ref<string[]>([])
+// Held only while the modal is open: once confirmed, the tokens are dropped and
+// nothing on this page can show them again.
+const shareLinks = ref<IssuedShareLink[]>([])
 const setupId = ref<string>('')
 
-const handleSharesGenerated = (data: { shares: string[]; setupId: string }) => {
-  shares.value = data.shares
+const handleShareLinksIssued = (data: { shareLinks: IssuedShareLink[]; setupId: string }) => {
+  shareLinks.value = data.shareLinks
   setupId.value = data.setupId
   showModal.value = true
 }
 
 const handleModalConfirmed = () => {
   showModal.value = false
-  // Here, you could automatically advance to the next step if desired
-  // For example: activateCallback('3')
+  shareLinks.value = []
 }
 </script>
 
 <template>
   <BlankLayout>
-    <SharesModal
+    <ShareLinksModal
       v-if="showModal"
       v-model:visible="showModal"
-      :shares="shares"
+      :share-links="shareLinks"
       @confirmed="handleModalConfirmed"
     />
 
@@ -54,9 +56,9 @@ const handleModalConfirmed = () => {
           <StepPanel v-slot="{ activateCallback }" value="2">
             <div class="p-6 sm:p-8">
               <StepGenerateMasterKey
-                @shares-generated="
-                  (s) => {
-                    handleSharesGenerated(s)
+                @share-links-issued="
+                  (issued) => {
+                    handleShareLinksIssued(issued)
                     activateCallback('3')
                   }
                 "

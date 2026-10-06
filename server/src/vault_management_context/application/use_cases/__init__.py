@@ -4,6 +4,7 @@ from .decrypt_use_case import DecryptUseCase
 from .encrypt_use_case import EncryptUseCase
 from .get_vault_status_use_case import GetVaultStatusUseCase
 from .lock_vault_use_case import LockVaultUseCase
+from .retrieve_share_link_use_case import RetrieveShareLinkUseCase
 from .unlock_vault_use_case import UnlockVaultUseCase
 from .validate_vault_setup_use_case import ValidateVaultSetupUseCase
 
@@ -16,4 +17,5 @@ __all__ = [
     "DecryptUseCase",
     "GetVaultStatusUseCase",
     "ClearPendingSharesUseCase",
+    "RetrieveShareLinkUseCase",
 ]
