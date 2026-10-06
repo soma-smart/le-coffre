@@ -9,7 +9,7 @@ from identity_access_management_context.application.commands import (
     CreateServiceAccountCommand,
     RotateServiceAccountTokenCommand,
 )
-from identity_access_management_context.application.gateways import CannotRotateServiceAccount
+from identity_access_management_context.application.gateways import CannotRotateTokenCredentialError
 from identity_access_management_context.application.use_cases import (
     CreateServiceAccountUseCase,
     RotateServiceAccountTokenUseCase,
@@ -173,15 +173,15 @@ def test_given_a_revocation_landing_mid_rotation_when_rotating_then_it_is_refuse
     service_account_event_repository,
     monkeypatch,
 ):
-    """The revocation marks the account and deletes its tokens after the check, before the new token is written."""
-    replace = token_credential_record_repository.replace
+    """The revocation deletes the account's tokens after they were listed, before they are replaced."""
+    replace = token_credential_record_repository._replace
 
-    def revoke_then_replace(credential_records):
-        service_account_repository.revoke([account.id], NOW)
+    def revoke_then_replace(token_hashes, new_token_hashes):
         token_credential_record_repository.delete_by_principal_ids([account.id])
-        replace(credential_records)
+        service_account_repository.revoke([account.id], NOW)
+        replace(token_hashes, new_token_hashes)
 
-    monkeypatch.setattr(token_credential_record_repository, "replace", revoke_then_replace)
+    monkeypatch.setattr(token_credential_record_repository, "_replace", revoke_then_replace)
     events_before = len(service_account_event_repository.events)
 
     with pytest.raises(ServiceAccountAlreadyRevokedException):
@@ -191,16 +191,28 @@ def test_given_a_revocation_landing_mid_rotation_when_rotating_then_it_is_refuse
     assert len(service_account_event_repository.events) == events_before
 
 
-def test_given_an_account_revoked_concurrently_when_rotating_then_it_is_refused(
-    use_case, owner, account, service_account_repository, monkeypatch
+def test_given_tokens_deleted_concurrently_when_rotating_then_it_is_refused(
+    use_case, owner, account, token_credential_record_repository, monkeypatch
 ):
-    def revoked_meanwhile(ids, _hashes):
-        raise CannotRotateServiceAccount(ids[0])
+    def deleted_meanwhile(_token_hashes, _new_token_hashes):
+        raise CannotRotateTokenCredentialError()
 
-    monkeypatch.setattr(service_account_repository, "rotate", revoked_meanwhile)
+    monkeypatch.setattr(token_credential_record_repository, "_replace", deleted_meanwhile)
 
     with pytest.raises(ServiceAccountAlreadyRevokedException):
         _rotate(use_case, owner, account.id)
+
+
+def test_given_an_active_account_without_tokens_when_rotating_then_it_is_refused(
+    use_case, owner, account, token_credential_record_repository
+):
+    """Tokens are deleted when an account is revoked: an account holding none has nothing to rotate."""
+    token_credential_record_repository.delete_by_principal_ids([account.id])
+
+    with pytest.raises(ServiceAccountAlreadyRevokedException):
+        _rotate(use_case, owner, account.id)
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
 
 
 def test_given_a_rotation_when_it_succeeds_then_it_is_audited_without_the_token(

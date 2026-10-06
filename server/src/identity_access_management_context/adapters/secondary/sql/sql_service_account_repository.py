@@ -57,11 +57,7 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
 
     @override
     def get_by_ids(self, ids: Sequence[UUID]) -> Sequence[ServiceAccount | None]:
-        query = (
-            select(ServiceAccountPrincipalTable)
-            .where(ServiceAccountPrincipalTable.principal_id.in_(ids))  # type: ignore[attr-defined]
-            .execution_options(populate_existing=True)
-        )
+        query = select(ServiceAccountPrincipalTable).where(ServiceAccountPrincipalTable.principal_id.in_(ids))  # type: ignore[attr-defined]
         rows = self._session.exec(query).all()
         accounts_by_id = {row.principal_id: self._to_entity(row) for row in rows}
 

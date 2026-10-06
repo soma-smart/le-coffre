@@ -28,7 +28,11 @@ from .sso_credential_record_repository import SSOCredentialRecordRepository
 from .sso_encryption_gateway import SsoEncryptionGateway
 from .sso_event_repository import SsoEventRepository
 from .sso_gateway import SsoDiscoveryResult, SsoGateway, SsoUserInfo
-from .token_credential_record_repository import TokenCredentialRecordRepository
+from .token_credential_record_repository import (
+    CannotRotateTokenCredentialError,
+    TokenCredentialRecordRepository,
+    TokenCredentialRecordRepositoryException,
+)
 from .token_gateway import Token, TokenGateway
 from .user_event_repository import UserEventRepository
 from .user_repository import UserRepository
@@ -63,6 +67,8 @@ __all__ = [
     "ServiceAccountRepository",
     "ServiceAccountRepositoryException",
     "TokenCredentialRecordRepository",
+    "TokenCredentialRecordRepositoryException",
+    "CannotRotateTokenCredentialError",
     "CannotRevokeServiceAccount",
     "ServiceAccountEventRepository",
     "ServiceAccountCreationFacts",
