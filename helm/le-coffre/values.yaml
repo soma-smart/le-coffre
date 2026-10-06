@@ -179,6 +179,12 @@ config:
     # Duration in seconds the account stays locked once the threshold is hit.
     lockoutSeconds: 300
 
+  # Service accounts — group-owned machine identities.
+  serviceAccounts:
+    # How many service accounts may be active at once in one group.
+    # Revoked accounts stay listed but do not count towards it.
+    maxActivePerGroup: 10
+
   # Logging
   logging:
     # Set to "json" to emit structured JSON logs (recommended for log aggregation).

@@ -7,6 +7,12 @@ from .group_deleted_event import GroupDeletedEvent
 from .group_updated_event import GroupUpdatedEvent
 from .owner_added_to_group_event import OwnerAddedToGroupEvent
 from .owner_demoted_to_member_event import OwnerDemotedToMemberEvent
+from .service_account import (
+    ServiceAccountCreatedEvent,
+    ServiceAccountRevokedEvent,
+    ServiceAccountsListedEvent,
+    ServiceAccountTokenRotatedEvent,
+)
 from .sso_configured_event import SsoConfiguredEvent
 from .sso_login_event import SsoLoginEvent
 from .user_added_to_group_event import UserAddedToGroupEvent
@@ -32,4 +38,8 @@ __all__ = [
     "AdminPromotedEvent",
     "SsoConfiguredEvent",
     "SsoLoginEvent",
+    "ServiceAccountCreatedEvent",
+    "ServiceAccountTokenRotatedEvent",
+    "ServiceAccountRevokedEvent",
+    "ServiceAccountsListedEvent",
 ]

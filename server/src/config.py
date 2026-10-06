@@ -247,3 +247,11 @@ def get_smtp_tls_mode() -> str:
     if not tls_mode:
         raise ValueError('SMTP_TLS_MODE is required. Set it to "none", "implicit", or "starttls".')
     return tls_mode.lower()
+
+
+# ── Service Accounts ─────────────────────────────────────────────
+
+
+def get_max_active_service_accounts_per_group() -> int:
+    """How many service accounts may be active at once in one group. Default 10."""
+    return int(os.environ.get("MAX_ACTIVE_SERVICE_ACCOUNTS_PER_GROUP", "10"))

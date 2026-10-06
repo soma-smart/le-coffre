@@ -21,6 +21,12 @@ from .register_admin_with_password_use_case import (
 )
 from .remove_user_from_group_use_case import RemoveUserFromGroupUseCase
 from .search_users_use_case import SearchUsersUseCase
+from .service_account import (
+    CreateServiceAccountUseCase,
+    ListServiceAccountsUseCase,
+    RevokeServiceAccountUseCase,
+    RotateServiceAccountTokenUseCase,
+)
 from .sso.configure_sso_provider_use_case import ConfigureSsoProviderUseCase
 from .sso.get_sso_authorize_url_use_case import GetSsoAuthorizeUrlUseCase
 from .sso.is_sso_config_set_use_case import IsSsoConfigSetUseCase
@@ -60,4 +66,8 @@ __all__ = [
     "ConfigureSsoProviderUseCase",
     "SsoLoginUseCase",
     "GetStatisticForAdminUseCase",
+    "CreateServiceAccountUseCase",
+    "ListServiceAccountsUseCase",
+    "RotateServiceAccountTokenUseCase",
+    "RevokeServiceAccountUseCase",
 ]
