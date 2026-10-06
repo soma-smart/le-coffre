@@ -155,6 +155,29 @@ def test_given_an_account_revoked_concurrently_when_revoking_then_it_is_refused(
         _revoke(use_case, owner, account.id)
 
 
+def test_given_a_failure_while_marking_the_account_when_revoking_then_its_token_is_already_gone(
+    use_case, owner, account, service_account_repository, token_credential_record_repository, monkeypatch
+):
+    """A revocation cut short must leave an account that cannot authenticate, not a revoked one that can."""
+    revoke = service_account_repository.revoke
+
+    def fail(ids, now):
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(service_account_repository, "revoke", fail)
+    with pytest.raises(RuntimeError):
+        _revoke(use_case, owner, account.id)
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+    assert service_account_repository.accounts[account.id].is_active
+
+    # Revoking again finishes the job
+    monkeypatch.setattr(service_account_repository, "revoke", revoke)
+    _revoke(use_case, owner, account.id)
+
+    assert not service_account_repository.accounts[account.id].is_active
+
+
 def test_given_a_plain_member_when_revoking_then_it_is_refused(use_case, account, groups):
     with pytest.raises(UserNotOwnerOfGroupException):
         _revoke(use_case, AuthenticatedUser(user_id=MEMBER_ID, roles=[]), account.id)

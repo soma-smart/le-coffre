@@ -317,6 +317,44 @@ def test_given_a_group_with_service_accounts_when_deleting_then_their_token_reco
     assert token_credential_record_repository.list_by_principal_id(account.id) == []
 
 
+def test_given_a_failure_while_marking_the_accounts_when_deleting_then_their_tokens_are_already_gone(
+    use_case,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+    monkeypatch,
+):
+    """A revocation cut short must leave accounts that cannot authenticate, not revoked ones that can."""
+    group_id = uuid4()
+    owner_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    account = _service_account(group_id)
+    service_account_repository.create([account])
+    token_credential_record_repository.create(
+        [TokenCredentialRecord(principal_id=account.id, token_hash=TokenCredential.generate().hash)]
+    )
+    revoke = service_account_repository.revoke
+
+    def fail(ids, now):
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(service_account_repository, "revoke", fail)
+    with pytest.raises(RuntimeError):
+        use_case.execute(DeleteGroupCommand(requesting_user=AuthenticatedUser(owner_id, []), group_id=group_id))
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+    assert group_repository.get_by_id(group_id) is not None
+
+    # Deleting again finishes the job
+    monkeypatch.setattr(service_account_repository, "revoke", revoke)
+    use_case.execute(DeleteGroupCommand(requesting_user=AuthenticatedUser(owner_id, []), group_id=group_id))
+
+    assert not service_account_repository.accounts[account.id].is_active
+    assert group_repository.get_by_id(group_id) is None
+
+
 def test_given_a_group_with_service_accounts_when_deleting_then_the_rows_survive_for_the_audit(
     use_case, group_repository, group_member_repository, service_account_repository
 ):
