@@ -11,23 +11,7 @@ from shared_kernel.domain.value_objects.event_priority import EventPriority
 
 @dataclass(init=False)  # TODO: Remove the `init` flag when `DomainEvent` is a dataclass
 class ServiceAccountEvent(DomainEvent, ABC):
-    """A service-account event that knows how to become an audit row.
-
-    Stays a DomainEvent, so it keeps the event_id, occurred_on and event_type
-    that the audit row is built from, and can still go on the publisher bus like
-    every other IAM event.
-
-    What it adds is serialisation: the payload that reaches storage is defined
-    here, next to the event, rather than assembled by each use case. That is
-    deliberate for credentials — it leaves exactly one place per event where the
-    stored payload is decided, so "the token and its hash never reach the audit
-    log" is something you can read off these classes instead of auditing every
-    call site.
-
-    Only the actor is held here. Events about one account carry its identity
-    through ServiceAccountItemEvent, mirroring how the responses split
-    ServiceAccountResponse from ServiceAccountItemResponse.
-    """
+    """A service-account event."""
 
     user_id: UUID
     """The user who fired the event."""
