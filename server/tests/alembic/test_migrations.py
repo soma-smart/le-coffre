@@ -408,6 +408,52 @@ def test_revoked_tokens_migration_deletes_only_revoked_accounts_tokens(alembic_c
     assert hashes == [f"hash-{active_id.hex}"]
 
 
+def test_credentials_downgrade_restores_a_hash_for_every_service_account(alembic_config, temp_database):
+    """Revoked accounts hold no token and some may hold several, yet the restored column is not nullable."""
+    database_url, _ = temp_database
+    revoked_id, multi_id, single_id = uuid4(), uuid4(), uuid4()
+    hashes = {multi_id: ["b" * 64, "a" * 64], single_id: ["c" * 64]}
+
+    command.upgrade(alembic_config, CREDENTIALS_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for principal_id, revoked_at in ((revoked_id, "2026-01-01 12:00:00"), (multi_id, None), (single_id, None)):
+            conn.execute(
+                text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'service_account')"), {"id": principal_id.hex}
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__principal__service_account (principal_id, group_id, name, revoked_at) "
+                    "VALUES (:id, :group_id, 'nightly-backup', :revoked_at)"
+                ),
+                {"id": principal_id.hex, "group_id": uuid4().hex, "revoked_at": revoked_at},
+            )
+            for token_hash in hashes.get(principal_id, []):
+                credential_id = uuid4()
+                conn.execute(
+                    text("INSERT INTO iam__credential (id, kind, principal_id) VALUES (:id, 'token', :principal_id)"),
+                    {"id": credential_id.hex, "principal_id": principal_id.hex},
+                )
+                conn.execute(
+                    text("INSERT INTO iam__credential__token (credential_id, token_hash) VALUES (:id, :hash)"),
+                    {"id": credential_id.hex, "hash": token_hash},
+                )
+    engine.dispose()
+
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, PRINCIPAL_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        restored = dict(
+            conn.execute(text("SELECT principal_id, token_hash FROM iam__principal__service_account")).all()
+        )
+    engine.dispose()
+
+    assert restored[single_id.hex] == "c" * 64
+    assert restored[multi_id.hex] == "a" * 64
+    assert restored[revoked_id.hex] == f"revoked:{revoked_id.hex}"
+
+
 def test_deleting_a_principal_deletes_its_credentials(alembic_config, temp_database):
     """The foreign keys cascade from the principal to its registry rows, then to their details."""
     database_url, _ = temp_database
