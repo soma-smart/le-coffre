@@ -103,9 +103,7 @@ describe('useGroupsStore', () => {
     // Personal groups still need u1 in owners[] for membership predicates;
     // userId is a domain field that flags personal vs shared but doesn't
     // imply membership on its own.
-    groupRepo.seed(
-      makeGroup({ id: 'personal-1', isPersonal: true, userId: 'u1', owners: ['u1'] }),
-    )
+    groupRepo.seed(makeGroup({ id: 'personal-1', isPersonal: true, userId: 'u1', owners: ['u1'] }))
     groupRepo.seed(makeGroup({ id: 'owned', name: 'Owned', owners: ['u1'] }))
     groupRepo.seed(makeGroup({ id: 'member', name: 'Member', members: ['u1'] }))
     groupRepo.seed(makeGroup({ id: 'outside', name: 'Outside', owners: ['u2'] }))
