@@ -39,17 +39,28 @@ PASSWORD_KEYS = {'by_user_id': 'by_principal_id', 'issued_by_user_id': 'issued_b
 
 
 def _rename_keys(table_name: str, keys: dict[str, str], event_types: tuple[str, ...] | None) -> None:
-    # Row by row in Python: JSON key renames have no portable SQL form.
-    table = sa.table(table_name, sa.column('event_id'), sa.column('event_type'), sa.column('event_data', sa.JSON))
+    # One statement per key, run by the database: the payloads never go through
+    # Python. Renaming a JSON key has no portable SQL form, hence one per dialect.
     bind = op.get_bind()
-    query = sa.select(table.c.event_id, table.c.event_data)
-    if event_types is not None:
-        query = query.where(table.c.event_type.in_(event_types))
-    for event_id, event_data in bind.execute(query).all():
-        if not event_data or not any(old in event_data for old in keys):
-            continue
-        renamed = {keys.get(key, key): value for key, value in event_data.items()}
-        bind.execute(table.update().where(table.c.event_id == event_id).values(event_data=renamed))
+    for old, new in keys.items():
+        match bind.dialect.name:
+            case 'postgresql':
+                renamed = f"((event_data::jsonb - '{old}') || jsonb_build_object('{new}', event_data::jsonb -> '{old}'))::json"
+                holds_key = f"event_data::jsonb ? '{old}'"
+            case 'sqlite':
+                renamed = f"json_set(json_remove(event_data, '$.{old}'), '$.{new}', json_extract(event_data, '$.{old}'))"
+                holds_key = f"json_type(event_data, '$.{old}') IS NOT NULL"
+            case dialect:
+                raise NotImplementedError(f"No JSON key rename for the {dialect} dialect")
+        statement = f'UPDATE "{table_name}" SET event_data = {renamed} WHERE {holds_key}'
+        if event_types is None:
+            op.execute(sa.text(statement))
+        else:
+            op.execute(
+                sa.text(f"{statement} AND event_type IN :event_types").bindparams(
+                    sa.bindparam('event_types', event_types, expanding=True)
+                )
+            )
 
 
 def upgrade() -> None:
