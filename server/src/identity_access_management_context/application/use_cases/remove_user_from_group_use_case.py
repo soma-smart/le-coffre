@@ -42,7 +42,10 @@ class RemoveUserFromGroupUseCase(TracedUseCase):
         if group.is_personal:
             raise CannotModifyPersonalGroupException(command.group_id)
 
-        if not self.group_member_repository.is_owner(command.group_id, command.requester_id):
+        is_self_removal = command.requester_id == command.user_id
+        if not is_self_removal and not self.group_member_repository.is_owner(
+            command.group_id, command.requester_id
+        ):
             raise UserNotOwnerOfGroupException(command.requester_id, command.group_id)
 
         if not self.group_member_repository.is_member(command.group_id, command.user_id):

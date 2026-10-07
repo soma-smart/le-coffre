@@ -80,6 +80,47 @@ def test_given_owner_when_removing_member_then_member_is_removed(
     assert not group_member_repository.is_member(group_id, member_id)
 
 
+def test_given_member_when_leaving_group_then_member_is_removed(
+    use_case: RemoveUserFromGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    member_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+
+    owner = User(
+        id=owner_id,
+        username="owner",
+        email="owner@example.com",
+        name="Owner User",
+    )
+    member = User(
+        id=member_id,
+        username="member",
+        email="member@example.com",
+        name="Member User",
+    )
+    user_repository.save(owner)
+    user_repository.save(member)
+
+    group = Group(id=group_id, name="Development Team", is_personal=False)
+    group_repository.save_group(group)
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, member_id, is_owner=False)
+
+    command = RemoveUserFromGroupCommand(
+        requester_id=member_id,
+        group_id=group_id,
+        user_id=member_id,
+    )
+
+    use_case.execute(command)
+
+    assert not group_member_repository.is_member(group_id, member_id)
+
+
 def test_given_non_owner_when_removing_member_then_raise_user_not_owner_exception(
     use_case: RemoveUserFromGroupUseCase,
     user_repository: FakeUserRepository,
