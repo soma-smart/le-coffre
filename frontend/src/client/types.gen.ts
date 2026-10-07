@@ -1090,9 +1090,9 @@ export type ServiceAccountSummary = {
      */
     name: string;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string | null;
+    created_by_principal_id: string | null;
     /**
      * Created By User Name
      */
