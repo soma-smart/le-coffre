@@ -20,7 +20,7 @@ export interface VaultState {
 export interface VaultSetup {
   setupId: string
   /**
-   * One single-use link per share, returned once by create. The shares
+   * One link per share, returned once by create. The shares
    * themselves never reach the admin's screen: each custodian opens their own.
    */
   shareLinks: IssuedShareLink[]

@@ -2,9 +2,9 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
-from shared_kernel.adapters.primary.dependencies import get_session
+from shared_kernel.adapters.primary.dependencies import get_session, get_transaction_gateway
 from shared_kernel.adapters.secondary import UtcTimeGateway
-from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway, TransactionGateway
 from vault_management_context.adapters.primary.private_api import VaultStatusApi
 from vault_management_context.adapters.secondary import (
     SqlShareLinkRepository,
@@ -22,6 +22,7 @@ from vault_management_context.application.gateways import (
     VaultSessionGateway,
 )
 from vault_management_context.application.use_cases import (
+    AcknowledgeShareLinkUseCase,
     CreateVaultUseCase,
     GetVaultStatusUseCase,
     LockVaultUseCase,
@@ -81,6 +82,7 @@ def get_create_vault_usecase(
     share_link_repository: ShareLinkRepository = Depends(get_share_link_repository),
     share_sealing_gateway: ShareSealingGateway = Depends(get_share_sealing_gateway),
     time_gateway: TimeGateway = Depends(get_time_gateway),
+    transaction_gateway: TransactionGateway = Depends(get_transaction_gateway),
 ):
     return CreateVaultUseCase(
         vault_repository,
@@ -92,6 +94,7 @@ def get_create_vault_usecase(
         share_link_repository,
         share_sealing_gateway,
         time_gateway,
+        transaction_gateway,
     )
 
 
@@ -149,5 +152,20 @@ def get_retrieve_share_link_usecase(
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     vault_event_repository: VaultEventRepository = Depends(get_vault_event_repository),
     time_gateway: TimeGateway = Depends(get_time_gateway),
+    transaction_gateway: TransactionGateway = Depends(get_transaction_gateway),
 ):
-    return RetrieveShareLinkUseCase(share_link_repository, event_publisher, vault_event_repository, time_gateway)
+    return RetrieveShareLinkUseCase(
+        share_link_repository, event_publisher, vault_event_repository, time_gateway, transaction_gateway
+    )
+
+
+def get_acknowledge_share_link_usecase(
+    share_link_repository: ShareLinkRepository = Depends(get_share_link_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    vault_event_repository: VaultEventRepository = Depends(get_vault_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+    transaction_gateway: TransactionGateway = Depends(get_transaction_gateway),
+):
+    return AcknowledgeShareLinkUseCase(
+        share_link_repository, event_publisher, vault_event_repository, time_gateway, transaction_gateway
+    )

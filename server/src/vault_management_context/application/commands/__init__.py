@@ -1,3 +1,4 @@
+from .acknowledge_share_link_command import AcknowledgeShareLinkCommand
 from .create_vault_command import CreateVaultCommand
 from .decrypt_command import DecryptCommand
 from .encrypt_command import EncryptCommand
@@ -16,4 +17,5 @@ __all__ = [
     "GetVaultStatusCommand",
     "ValidateVaultSetupCommand",
     "RetrieveShareLinkCommand",
+    "AcknowledgeShareLinkCommand",
 ]

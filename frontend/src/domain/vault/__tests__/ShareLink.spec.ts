@@ -15,4 +15,9 @@ describe('share links', () => {
     expect(readShareTokenFromFragment(url.hash)).toBe(token)
     expect(readShareTokenFromFragment('')).toBe('')
   })
+
+  it('yields no token for a fragment cut in the middle of an escape', () => {
+    expect(readShareTokenFromFragment('#abc%E0%A4')).toBe('')
+    expect(readShareTokenFromFragment('#abc%')).toBe('')
+  })
 })

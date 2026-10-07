@@ -1,7 +1,8 @@
 """Value Objects for the Vault Management context."""
 
 from .shamir_result import ShamirResult
-from .share_link_token import ShareLinkLookupHash, ShareLinkToken
+from .share_link_delivery import ShareLinkDelivery
+from .share_link_token import ShareLinkAckKey, ShareLinkLookupHash, ShareLinkToken
 from .unlock_session_id import UNLOCK_SESSION_ID_PATTERN, UnlockSessionId
 from .vault_configuration import VaultConfiguration
 
@@ -12,4 +13,6 @@ __all__ = [
     "UNLOCK_SESSION_ID_PATTERN",
     "ShareLinkToken",
     "ShareLinkLookupHash",
+    "ShareLinkAckKey",
+    "ShareLinkDelivery",
 ]

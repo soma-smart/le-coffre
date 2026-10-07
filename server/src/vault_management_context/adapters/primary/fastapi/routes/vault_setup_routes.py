@@ -49,11 +49,15 @@ def create_vault(
     - **nb_shares**: Total number of shares to generate
     - **threshold**: Minimum number of shares needed to unlock the vault
 
-    Returns a setup_id for validation and one single-use link token per share.
+    Returns a setup_id for validation and one link token per share.
     The shares themselves are never returned: each is sealed under a key
     derived from its token, which exists only in this response. Build the link
-    as `<origin>/vault-share#<token>` and hand one to each custodian; it can be
-    retrieved once, within 48 hours, through POST /vault/share-links/retrieve.
+    as `<origin>/vault-share#<token>` and hand one to each custodian. Each link
+    is valid 48 hours. POST /vault/share-links/retrieve hands its share out; the
+    first call opens a reopen window of 15 minutes (never past the 48 hours),
+    during which the link can be retrieved again, until the custodian closes it
+    with POST /vault/share-links/acknowledge. A link left unacknowledged closes
+    on its own when the window ends.
     """
     try:
         setup_id = uuid4()

@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
+from tests.shared_kernel.fakes import FakeTransactionGateway
 from vault_management_context.application.commands import CreateVaultCommand
 from vault_management_context.application.responses.vault_status import VaultStatus
 from vault_management_context.application.use_cases import (
@@ -41,6 +42,7 @@ def use_case(
     share_link_repository,
     share_sealing_gateway,
     time_gateway,
+    transaction_gateway,
 ):
     return CreateVaultUseCase(
         vault_repository,
@@ -52,6 +54,7 @@ def use_case(
         share_link_repository,
         share_sealing_gateway,
         time_gateway,
+        transaction_gateway,
     )
 
 
@@ -293,7 +296,12 @@ def test_given_valid_vault_config_when_creating_vault_should_store_each_share_se
         # Only the hash of the token is stored, never the token itself.
         assert stored_link.lookup_hash == hashlib.sha256(issued.token.encode()).hexdigest()
         assert issued.token not in repr(stored_link)
-        assert stored_link.sealed_share == f"sealed[{share.secret}]by[{stored_link.lookup_hash}]"
+        # Bound to the setup and the index it is handed out with
+        assert stored_link.sealed_share == (
+            f"sealed[{share.secret}]by[{stored_link.lookup_hash}]as[{setup_id}#{stored_link.share_index}]"
+        )
+        assert stored_link.ack_hash == f"ack-hash[{stored_link.lookup_hash}]"
+        assert stored_link.delivered_at is None
         assert stored_link.setup_id == str(setup_id)
 
 
@@ -335,3 +343,73 @@ def test_given_invalid_config_when_creating_vault_should_not_issue_any_link(
         use_case.execute(CreateVaultCommand(nb_shares=2, threshold=3, setup_id=uuid4()))
 
     assert share_link_repository.stored() == []
+
+
+def test_given_valid_vault_config_when_creating_vault_should_commit_the_setup_once(
+    use_case, shamir_gateway, encryption_gateway, transaction_gateway: FakeTransactionGateway
+):
+    _configure_setup(shamir_gateway, encryption_gateway, [Share("1:aa"), Share("2:bb")])
+
+    use_case.execute(CreateVaultCommand(nb_shares=2, threshold=2, setup_id=uuid4()))
+
+    assert transaction_gateway.committed == 1
+    assert transaction_gateway.rolled_back == 0
+
+
+def test_given_sealing_fails_when_creating_vault_should_roll_back_and_keep_the_key_out_of_memory(
+    use_case,
+    shamir_gateway,
+    encryption_gateway,
+    share_sealing_gateway: FakeShareSealingGateway,
+    transaction_gateway: FakeTransactionGateway,
+    vault_session_gateway: FakeVaultSessionGateway,
+    event_publisher: FakeDomainEventPublisher,
+):
+    _configure_setup(shamir_gateway, encryption_gateway, [Share("1:aa"), Share("2:bb")])
+    share_sealing_gateway.error = RuntimeError("sealing failed")
+
+    with pytest.raises(RuntimeError):
+        use_case.execute(CreateVaultCommand(nb_shares=2, threshold=2, setup_id=uuid4()))
+
+    assert transaction_gateway.rolled_back == 1
+    assert transaction_gateway.committed == 0
+    assert vault_session_gateway.is_vault_locked()
+    assert event_publisher.get_published_events_of_type(VaultCreatedEvent) == []
+
+
+def test_given_commit_fails_when_creating_vault_should_keep_the_key_out_of_memory(
+    use_case,
+    shamir_gateway,
+    encryption_gateway,
+    transaction_gateway: FakeTransactionGateway,
+    vault_session_gateway: FakeVaultSessionGateway,
+    event_publisher: FakeDomainEventPublisher,
+):
+    _configure_setup(shamir_gateway, encryption_gateway, [Share("1:aa"), Share("2:bb")])
+    transaction_gateway.commit_error = RuntimeError("commit failed")
+
+    with pytest.raises(RuntimeError):
+        use_case.execute(CreateVaultCommand(nb_shares=2, threshold=2, setup_id=uuid4()))
+
+    assert vault_session_gateway.is_vault_locked()
+    assert event_publisher.get_published_events_of_type(VaultCreatedEvent) == []
+
+
+def test_given_pending_vault_when_re_setup_fails_should_keep_the_previous_key_in_memory(
+    use_case,
+    shamir_gateway,
+    encryption_gateway,
+    share_sealing_gateway: FakeShareSealingGateway,
+    vault_session_gateway: FakeVaultSessionGateway,
+):
+    # The rollback leaves the earlier setup in the database, so the key in
+    # memory must still be the one that matches it.
+    _configure_setup(shamir_gateway, encryption_gateway, [Share("1:aa"), Share("2:bb")])
+    use_case.execute(CreateVaultCommand(nb_shares=2, threshold=2, setup_id=uuid4()))
+
+    encryption_gateway.set_decrypted_data("key_of_the_failed_setup")
+    share_sealing_gateway.error = RuntimeError("sealing failed")
+    with pytest.raises(RuntimeError):
+        use_case.execute(CreateVaultCommand(nb_shares=2, threshold=2, setup_id=uuid4()))
+
+    assert vault_session_gateway.get_decrypted_key() == "decrypted_vault_key"

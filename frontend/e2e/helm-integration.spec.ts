@@ -95,9 +95,12 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
     const share = (await custodian.getByTestId('share-value').textContent())?.trim() ?? ''
     expect(share).toMatch(/^\d+:[0-9a-f]+$/)
     storedShares.push(share)
+    // The link stays open until the custodian confirms the share is saved
+    await custodian.getByRole('button', { name: 'I have saved my share: close this link' }).click()
+    await expect(custodian.getByTestId('share-link-closed')).toBeVisible({ timeout: 10000 })
   }
 
-  // A link only opens once
+  // A closed link does not open again
   await custodian.goto(shareLinks[0]!, { waitUntil: 'commit' })
   await custodian.getByRole('button', { name: 'Reveal my share' }).click()
   await expect(

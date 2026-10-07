@@ -16,6 +16,8 @@ export interface VaultRepository {
   validateSetup(setupId: string): Promise<void>
   unlock(unlockSessionId: string, shares: string[]): Promise<void>
   lock(): Promise<void>
-  /** Anonymous and single use: the server wipes the sealed share once handed out. */
+  /** Anonymous. Reopenable for a short while after the first opening, until acknowledged. */
   retrieveSealedShare(lookupHash: string): Promise<SealedShare>
+  /** Anonymous. Deletes the link for good; only a key derived from the token is accepted. */
+  acknowledgeShare(lookupHash: string, ackKey: string): Promise<void>
 }
