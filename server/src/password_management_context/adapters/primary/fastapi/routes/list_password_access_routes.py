@@ -35,7 +35,7 @@ class AccessRoleEnum(str, Enum):
 class UserAccessItem(BaseModel):
     """A single access link: a user reaches the password through one group."""
 
-    principal_id: UUID
+    user_id: UUID
     group_id: UUID
     role_in_group: AccessRoleEnum
     group_role: AccessRoleEnum
@@ -90,7 +90,7 @@ def list_password_access(
         for user_access in result.user_accesses:
             ret.user_access_list.append(
                 UserAccessItem(
-                    principal_id=user_access.principal_id,
+                    user_id=user_access.principal_id,
                     group_id=user_access.group_id,
                     role_in_group=AccessRoleEnum(user_access.role_in_group.value),
                     group_role=AccessRoleEnum(user_access.group_role.value),

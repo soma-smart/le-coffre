@@ -29,7 +29,7 @@ const ENGINEERING: Group = {
   id: 'g1',
   name: 'Engineering',
   isPersonal: false,
-  principalId: null,
+  userId: null,
   owners: ['u1'],
   members: [],
 }
@@ -38,7 +38,7 @@ const PERSONAL: Group = {
   id: 'g2',
   name: 'Alice',
   isPersonal: true,
-  principalId: 'u1',
+  userId: 'u1',
   owners: ['u1'],
   members: [],
 }

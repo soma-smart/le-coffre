@@ -16,7 +16,7 @@ export interface ServiceAccount {
    * than from its row, so an account whose event is missing still lists — with
    * these left empty.
    */
-  createdByPrincipalId: string | null
+  createdByUserId: string | null
   createdByUserName: string | null
   createdAt: string | null
   revokedAt: string | null
