@@ -12,6 +12,7 @@ from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepo
 @pytest.fixture
 def repo():
     session = MagicMock()
+    session.info = {}  # a real Session's info is a dict
     return SQLBaseRepository(session)
 
 

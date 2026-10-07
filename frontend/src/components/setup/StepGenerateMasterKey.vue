@@ -19,6 +19,8 @@ const { vault } = useContainer()
 
 const shamirRef = ref()
 const isGeneratingMasterKey = ref(false)
+// Plain HTTP: custodians could not open their links, so do not even offer it.
+const canIssueShareLinks = vault.create.canIssueShareLinks()
 
 async function generateMasterKey() {
   isGeneratingMasterKey.value = true
@@ -65,12 +67,22 @@ async function generateMasterKey() {
       {{ t('components.setup.generateMasterKey.description3') }}
     </p>
     <ShamirInputs ref="shamirRef" />
+    <Message
+      v-if="!canIssueShareLinks"
+      severity="error"
+      :closable="false"
+      class="mt-4"
+      data-testid="share-links-unsupported"
+    >
+      {{ t('components.setup.generateMasterKey.insecureContext') }}
+    </Message>
     <div class="flex justify-center mt-4">
       <Button
         :loading="isGeneratingMasterKey"
         @click="generateMasterKey"
         :label="t('components.setup.generateMasterKey.generateButton')"
-        :disabled="!shamirRef?.isValidSSSConfig || isGeneratingMasterKey"
+        :disabled="!canIssueShareLinks || !shamirRef?.isValidSSSConfig || isGeneratingMasterKey"
+        data-testid="generate-master-key"
       />
     </div>
   </div>

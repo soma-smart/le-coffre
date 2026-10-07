@@ -6,7 +6,8 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
-from shared_kernel.adapters.secondary.sql import SQLBaseRepository
+from shared_kernel.adapters.secondary.sql import SQLBaseRepository, SqlTransactionGateway
+from shared_kernel.application.gateways import TransactionRolledBackError
 
 
 # Model for testing
@@ -135,3 +136,72 @@ def test_multiple_operations_in_sequence_after_error(repository):
     # Verify all valid users were saved
     assert repository.get_by_email("seq1@example.com") is not None
     assert repository.get_by_email("seq3@example.com") is not None
+
+
+# Atomic blocks: repositories sharing the session stop committing on their own.
+
+
+@pytest.fixture
+def transaction(session):
+    return SqlTransactionGateway(session)
+
+
+def _user(email: str) -> UserModel:
+    return UserModel(id=str(uuid4()), email=email, name=email)
+
+
+def test_atomic_block_commits_every_write_at_the_end(repository, transaction, session):
+    with transaction.atomic():
+        repository.save_with_commit(_user("a@example.com"))
+        repository.save_with_commit_and_refresh(_user("b@example.com"))
+
+    assert not session.in_transaction()
+    assert repository.get_by_email("a@example.com") is not None
+    assert repository.get_by_email("b@example.com") is not None
+
+
+def test_atomic_block_rolls_back_writes_already_committed_by_a_repository(repository, transaction):
+    with pytest.raises(RuntimeError), transaction.atomic():
+        repository.save_with_commit(_user("a@example.com"))
+        raise RuntimeError("later step failed")
+
+    assert repository.get_by_email("a@example.com") is None
+
+
+def test_failed_nested_block_dooms_the_transaction_even_if_the_error_is_caught(repository, transaction, session):
+    with pytest.raises(TransactionRolledBackError), transaction.atomic():
+        repository.save_with_commit(_user("outer@example.com"))
+        try:
+            with transaction.atomic():
+                repository.save_with_commit(_user("inner@example.com"))
+                raise RuntimeError("inner step failed")
+        except RuntimeError:
+            pass
+        repository.save_with_commit(_user("after@example.com"))
+
+    for email in ("outer@example.com", "inner@example.com", "after@example.com"):
+        assert repository.get_by_email(email) is None
+    # The next transaction starts clean
+    with transaction.atomic():
+        repository.save_with_commit(_user("next@example.com"))
+    assert repository.get_by_email("next@example.com") is not None
+
+
+def test_nested_atomic_block_joins_the_enclosing_one(repository, transaction):
+    with pytest.raises(RuntimeError), transaction.atomic():
+        with transaction.atomic():
+            repository.save_with_commit(_user("a@example.com"))
+        raise RuntimeError("outer block failed")
+
+    assert repository.get_by_email("a@example.com") is None
+
+
+def test_atomic_block_raises_a_constraint_violation_at_the_write_and_rolls_back_everything(repository, transaction):
+    with pytest.raises(IntegrityError), transaction.atomic():
+        repository.save_with_commit(_user("a@example.com"))
+        repository.save_with_commit(_user("a@example.com"))
+
+    assert repository.get_by_email("a@example.com") is None
+    # The session is usable again after the block
+    repository.save_with_commit(_user("c@example.com"))
+    assert repository.get_by_email("c@example.com") is not None

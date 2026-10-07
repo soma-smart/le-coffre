@@ -189,6 +189,8 @@ _EXCLUDED_URLS = ",".join(
         "/api/vault/unlock",
         "/api/vault/setup",
         "/api/vault/validate-setup",
+        # Prefix: retrieve hands out sealed shares, acknowledge takes the ack key
+        "/api/vault/share-links",
         "/api/auth/login",
         "/api/auth/register-admin",
         "/api/auth/refresh-token",

@@ -1,4 +1,5 @@
 import {
+  acknowledgeShareLinkVaultShareLinksAcknowledgePost,
   clearPendingSharesVaultUnlockClearDelete,
   createVaultVaultSetupPost,
   getVaultStatusVaultStatusGet,
@@ -10,7 +11,11 @@ import {
 import type { CreateVaultInput, VaultRepository } from '@/application/ports/VaultRepository'
 import type { SealedShare } from '@/domain/vault/ShareLink'
 import type { VaultSetup, VaultState } from '@/domain/vault/Vault'
-import { ShareLinkUnusableError, VaultDomainError } from '@/domain/vault/errors'
+import {
+  ShareLinkAckRejectedError,
+  ShareLinkUnusableError,
+  VaultDomainError,
+} from '@/domain/vault/errors'
 
 /**
  * Backend adapter for VaultRepository. Wraps every /vault/* SDK
@@ -78,15 +83,33 @@ export class BackendVaultRepository implements VaultRepository {
       body: { lookup_hash: lookupHash },
     })
     if (response.error) {
-      // 404 covers unknown, expired and already retrieved alike; the backend
-      // keeps them indistinguishable on purpose. 400 is a hash that no link
+      // 404 covers unknown, expired, closed and past-the-window alike; the
+      // backend keeps them indistinguishable on purpose. 400 is a hash that no link
       // could have produced, which to the custodian is the same dead link.
       const status = response.response?.status
       if (status === 404 || status === 400) throw new ShareLinkUnusableError()
       this.throwIfError(response.error)
     }
     if (!response.data) throw new ShareLinkUnusableError()
-    return { shareIndex: response.data.share_index, sealedShare: response.data.sealed_share }
+    return {
+      setupId: response.data.setup_id,
+      shareIndex: response.data.share_index,
+      sealedShare: response.data.sealed_share,
+      firstRetrievedAt: response.data.first_retrieved_at,
+      reopenableUntil: response.data.reopenable_until,
+      reopened: response.data.reopened,
+    }
+  }
+
+  async acknowledgeShare(lookupHash: string, ackKey: string): Promise<void> {
+    const response = await acknowledgeShareLinkVaultShareLinksAcknowledgePost({
+      body: { lookup_hash: lookupHash, ack_key: ackKey },
+    })
+    if (!response.error) return
+    const status = response.response?.status
+    if (status === 403) throw new ShareLinkAckRejectedError()
+    if (status === 404 || status === 400) throw new ShareLinkUnusableError()
+    this.throwIfError(response.error)
   }
 
   private throwIfError(error: unknown): void {

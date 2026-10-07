@@ -4,6 +4,7 @@ import pytest
 
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
+from tests.shared_kernel.fakes.fake_transaction_gateway import FakeTransactionGateway
 
 from .fakes import (
     FakeEncryptionGateway,
@@ -65,3 +66,8 @@ def share_sealing_gateway():
 @pytest.fixture()
 def time_gateway():
     return FakeTimeGateway(datetime(2026, 10, 6, 9, 0, tzinfo=UTC))
+
+
+@pytest.fixture()
+def transaction_gateway():
+    return FakeTransactionGateway()

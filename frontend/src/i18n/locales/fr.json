@@ -189,10 +189,9 @@
     "vaultShare": {
       "title": "Votre part de la clé maîtresse",
       "intro": "Vous avez été désigné dépositaire de la clé maîtresse de Le Coffre. Le coffre ne peut être déverrouillé que si suffisamment de dépositaires réunissent leurs parts.",
-      "onceWarning": "Ce lien ne s'ouvre qu'une seule fois. Prévoyez un endroit sûr avant de révéler votre part.",
+      "onceWarning": "Prévoyez un endroit sûr avant de révéler votre part. Une fois révélée, vous pourrez rouvrir ce lien pendant 15 minutes, jusqu'à ce que vous confirmiez l'avoir mise en lieu sûr.",
       "revealButton": "Révéler ma part",
       "shareLabel": "Part {index}",
-      "usedInfo": "Ce lien a maintenant été utilisé et ne s'ouvrira plus. Personne, pas même un administrateur, ne pourra vous réafficher cette part.",
       "storageAdvice": "Conservez-la hors ligne ou dans un gestionnaire de mots de passe autre que Le Coffre : vous en aurez besoin justement quand Le Coffre sera verrouillé.",
       "copy": "Copier la part",
       "copied": "Copié",
@@ -200,8 +199,19 @@
       "hide": "Masquer la part",
       "errors": {
         "incompleteLink": "Ce lien est incomplet. Veuillez vérifier l'URL qui vous a été fournie.",
-        "openFailed": "Impossible d'ouvrir ce lien pour le moment."
-      }
+        "openFailed": "Impossible d'ouvrir ce lien pour le moment.",
+        "copyFailed": "La part n'a pas pu être copiée. Affichez-la avec le bouton en forme d'œil et recopiez-la à la main avant de fermer ce lien.",
+        "reportIfNotYou": "Si vous n'avez pas ouvert ce lien vous-même et que vous l'avez reçu il y a moins de 48 heures, quelqu'un d'autre a peut-être récupéré votre part. Signalez-le sans attendre à une autre personne que celle qui vous a envoyé le lien, par exemple un autre dépositaire ou votre équipe sécurité.",
+        "alreadyClosed": "Ce lien a déjà été fermé et ne s'ouvrira plus. Conservez la part affichée ci-dessus.",
+        "ackFailed": "Le lien n'a pas pu être fermé. Réessayez ; sinon il se fermera de lui-même à la fin des 15 minutes.",
+        "ackRejected": "Ce lien n'a pas pu être fermé : le serveur ne reconnaît pas la confirmation, et réessayer n'y changera rien. Conservez la part affichée ci-dessus et signalez-le à votre équipe sécurité, car le lien a peut-être été falsifié. Il se fermera de lui-même à la fin des 15 minutes."
+      },
+      "reopenedWarning": "Ce lien avait déjà été ouvert le {firstRetrievedAt}. Si ce n'était pas vous, quelqu'un d'autre a peut-être votre part : signalez-le sans attendre à une autre personne que celle qui vous a envoyé le lien, par exemple un autre dépositaire ou votre équipe sécurité.",
+      "reopenWindowInfo": "Tant que vous n'avez pas confirmé, ce lien peut être rouvert jusqu'au {reopenableUntil}, au cas où quelque chose se serait mal passé. Il se fermera ensuite de lui-même.",
+      "ackButton": "J'ai mis ma part en lieu sûr : fermer ce lien",
+      "closedInfo": "Ce lien est maintenant fermé et ne s'ouvrira plus. Personne, pas même un administrateur, ne pourra vous réafficher cette part.",
+      "clipboardWarning": "Copier place votre part dans le presse-papiers, que certains systèmes conservent dans un historique (Windows + V, gestionnaires de presse-papiers, synchronisation entre appareils). Collez-la directement là où vous la conservez, puis effacez cet historique.",
+      "reopenedByOwnAttempt": "Ce lien avait déjà été ouvert le {firstRetrievedAt}, très probablement par votre tentative précédente sur cette page. Si cette heure ne correspond pas à votre première tentative, signalez-le à une autre personne que celle qui vous a envoyé le lien."
     },
     "profile": {
       "title": "Profil",
@@ -834,11 +844,12 @@
         "description1Prefix": "La clé maîtresse est utilisée pour chiffrer tous vos secrets. Nous utilisons",
         "sssLinkText": "le partage de secret de Shamir (SSS)",
         "description1Suffix": "pour diviser la clé en plusieurs parties afin de renforcer la sécurité.",
-        "description2": "Chaque part sera remise via son propre lien à usage unique, valable 48 heures, que vous enverrez à un dépositaire. Si le nombre de parts requis est perdu, l'accès au coffre l'est aussi.",
+        "description2": "Chaque part sera remise via son propre lien, valable 48 heures, que vous enverrez à un dépositaire. Si le nombre de parts requis est perdu, l'accès au coffre l'est aussi.",
         "description3": "Veuillez choisir le nombre total de parts et le seuil requis pour reconstituer la clé.",
         "generateButton": "Générer les parts de la clé maîtresse",
         "errorFallback": "Une erreur inattendue s'est produite.",
-        "diagramAlt": "Schéma du partage de secret de Shamir"
+        "diagramAlt": "Schéma du partage de secret de Shamir",
+        "insecureContext": "Le Coffre est servi ici en HTTP simple. Chaque part est remise à son dépositaire par un lien qui ne s'ouvre qu'en HTTPS (ou sur localhost) : configuré maintenant, aucun dépositaire ne pourrait ouvrir le sien, les liens expireraient au bout de 48 heures et la clé maîtresse serait perdue avec eux. Servez Le Coffre en HTTPS, puis revenez à cette étape."
       },
       "adminAccountForm": {
         "title": "Créer le compte administrateur",
@@ -877,16 +888,18 @@
       },
       "shareLinksModal": {
         "title": "Liens des parts de la clé maîtresse",
-        "description": "Chaque part de la clé maîtresse est désormais derrière son propre lien à usage unique. Envoyez chaque lien à un dépositaire différent, idéalement par un canal distinct. Les parts elles-mêmes ne sont jamais affichées ici.",
-        "expiryInfo": "Chaque lien ne s'ouvre qu'une fois, jusqu'au {expiresAt} (48 heures). Un lien qui n'est pas ouvert à temps est perdu définitivement, ainsi que sa part.",
+        "description": "Chaque part de la clé maîtresse est désormais derrière son propre lien, que son dépositaire ferme une fois la part mise en lieu sûr. Envoyez chaque lien à un dépositaire différent, idéalement par un canal distinct. Les parts elles-mêmes ne sont jamais affichées ici.",
+        "expiryInfo": "Chaque lien est valable jusqu'au {expiresAt} (48 heures) et se ferme définitivement dès que son dépositaire confirme avoir mis sa part en lieu sûr. Un lien qui n'est pas ouvert à temps est perdu définitivement, ainsi que sa part.",
         "shareLabel": "Part {index}",
         "copyLinkAria": "Copier le lien de la part {index}",
         "copiedSummary": "Copié",
         "copiedDetail": "Lien copié dans le presse-papiers",
         "copyFailedSummary": "Erreur",
-        "copyFailedDetail": "Échec de la copie du lien",
+        "copyFailedDetail": "Le presse-papiers a refusé le lien : il est affiché en entier, copiez-le à la main.",
+        "copyAllFirst": "Copiez chaque lien avant de continuer ({copied} sur {total} copiés).",
         "confirmCheckboxLabel": "J'ai copié chaque lien pour l'envoyer à son dépositaire. Ces liens ne pourront plus être affichés.",
-        "continueButton": "Continuer"
+        "continueButton": "Continuer",
+        "clipboardWarning": "Les liens copiés passent par le presse-papiers, que certains systèmes conservent dans un historique (Windows + V, gestionnaires de presse-papiers, synchronisation entre appareils). Collez chaque lien aussitôt dans le message destiné à son dépositaire, puis effacez cet historique : quiconque y retrouve un lien peut ouvrir la part."
       }
     }
   }

@@ -10,6 +10,7 @@ class VaultShareLinkRetrievedEvent(DomainEvent):
         self,
         setup_id: str,
         share_index: int,
+        reopened: bool = False,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -20,3 +21,4 @@ class VaultShareLinkRetrievedEvent(DomainEvent):
         )
         self.setup_id = setup_id
         self.share_index = share_index
+        self.reopened = reopened

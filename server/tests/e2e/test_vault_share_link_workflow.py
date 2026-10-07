@@ -3,7 +3,8 @@ End-to-end test for the links distributing the Shamir shares at vault setup.
 
 Covers:
 - setup hands out one link per share and never a share in clear
-- a custodian with no account retrieves their share once, and only once
+- a custodian with no account retrieves their share, may reopen the link
+  until they acknowledge it, and never after
 - what the database holds can neither reveal a share nor rebuild the master key
 - links keep working while the vault is locked (when the shares are needed)
 - a re-setup kills the links of the abandoned attempt
@@ -14,9 +15,21 @@ import pytest
 from cryptography.exceptions import InvalidTag
 from sqlalchemy import create_engine, text
 
-from tests.vault_management_context.share_link_crypto import open_sealed_share, retrieve_share, share_link_lookup_hash
+from security.rate_limiter import InMemoryRateLimiter
+from tests.vault_management_context.share_link_crypto import (
+    acknowledge_share,
+    open_retrieved_share,
+    open_sealed_share,
+    retrieve_share,
+    share_link_ack_key,
+    share_link_lookup_hash,
+)
 
 UNUSABLE_DETAIL = "This share link is invalid, expired or has already been used"
+
+
+def _retrieve(client, token: str):
+    return client.post("/api/vault/share-links/retrieve", json={"lookup_hash": share_link_lookup_hash(token)})
 
 
 def _register_admin_and_login(client) -> None:
@@ -60,25 +73,50 @@ def test_vault_share_link_workflow(e2e_client, client_factory, database):
     assert len(rows) == 3
     for row, link in zip(sorted(rows, key=lambda r: r["share_index"]), links, strict=True):
         assert row["lookup_hash"] == share_link_lookup_hash(link["token"])
+        assert row["ack_hash"] != share_link_ack_key(link["token"])
         assert link["token"] not in str(row)
         assert row["sealed_share"]
+        assert row["delivered_at"] is None
 
     # === RETRIEVE: anonymous, no CSRF token, no session ===
     first_share = retrieve_share(custodian, links[0]["token"])
     assert first_share.startswith("1:")
 
-    # Once retrieved, nothing of the link is left in the database.
+    # Retrieved but not yet acknowledged: the link stays, so a lost response or
+    # a closed tab does not cost the share.
+    delivered = {row["share_index"]: row for row in _share_link_rows(database_path)}[1]
+    assert delivered["delivered_at"] is not None
+
+    # === REOPEN: flagged, with the time of the first opening ===
+    reopened = _retrieve(custodian, links[0]["token"])
+    assert reopened.status_code == 200
+    assert reopened.json()["reopened"] is True
+    assert open_retrieved_share(reopened.json(), links[0]["token"]) == first_share
+
+    # === ACKNOWLEDGE: knowing the lookup hash is not enough, the token is needed ===
+    forged = custodian.post(
+        "/api/vault/share-links/acknowledge",
+        json={"lookup_hash": share_link_lookup_hash(links[0]["token"]), "ack_key": "0" * 64},
+    )
+    assert forged.status_code == 403
+    acknowledge_share(custodian, links[0]["token"])
     assert sorted(row["share_index"] for row in _share_link_rows(database_path)) == [2, 3]
 
-    # === SINGLE USE: a second retrieval gets the same answer as an unknown link ===
-    replay = custodian.post(
-        "/api/vault/share-links/retrieve", json={"lookup_hash": share_link_lookup_hash(links[0]["token"])}
-    )
-    unknown = custodian.post(
-        "/api/vault/share-links/retrieve", json={"lookup_hash": share_link_lookup_hash("never-issued")}
-    )
+    # === CLOSED: a retrieval after acknowledgement gets the same answer as an unknown link ===
+    replay = _retrieve(custodian, links[0]["token"])
+    unknown = _retrieve(custodian, "never-issued")
     assert replay.status_code == unknown.status_code == 404
     assert replay.json() == unknown.json() == {"detail": UNUSABLE_DETAIL}
+
+    # A link nobody retrieved cannot be acknowledged
+    not_retrieved = custodian.post(
+        "/api/vault/share-links/acknowledge",
+        json={
+            "lookup_hash": share_link_lookup_hash(links[1]["token"]),
+            "ack_key": share_link_ack_key(links[1]["token"]),
+        },
+    )
+    assert not_retrieved.status_code == 404
 
     # The raw token is not an accepted address: only its hash is.
     raw_token = custodian.post("/api/vault/share-links/retrieve", json={"lookup_hash": links[1]["token"]})
@@ -91,10 +129,15 @@ def test_vault_share_link_workflow(e2e_client, client_factory, database):
     # The setup did not wait for the custodians: two links are still pending.
     assert len(_share_link_rows(database_path)) == 2
 
+    # Every custodian here comes from the same test client address, which
+    # would otherwise exhaust the per-IP floor that link redemptions share.
+    e2e_client.app.state.rate_limiter = InMemoryRateLimiter()
+
     # === VAULT LOCKED: links still deliver, they do not depend on the vault key ===
     assert e2e_client.post("/api/vault/lock").status_code == 200
     assert e2e_client.get("/api/vault/status").json()["status"] == "LOCKED"
     second_share = retrieve_share(custodian, links[1]["token"])
+    acknowledge_share(custodian, links[1]["token"])
 
     # === UNLOCK with the shares the custodians collected ===
     unlock = custodian.post("/api/vault/unlock", json={"shares": [first_share, second_share]})
@@ -105,6 +148,7 @@ def test_vault_share_link_workflow(e2e_client, client_factory, database):
     # The page has no CSRF token in its store; the link is the only credential.
     e2e_client.disable_auto_csrf()
     third_share = retrieve_share(e2e_client, links[2]["token"])
+    acknowledge_share(e2e_client, links[2]["token"])
     e2e_client.enable_auto_csrf()
     assert third_share.startswith("3:")
     assert _share_link_rows(database_path) == []
@@ -139,10 +183,15 @@ def test_sealed_share_is_useless_without_the_link(e2e_client, client_factory):
     response = client_factory().post(
         "/api/vault/share-links/retrieve", json={"lookup_hash": share_link_lookup_hash(links[0]["token"])}
     )
-    sealed = response.json()["sealed_share"]
+    body = response.json()
+    sealed, setup_id = body["sealed_share"], body["setup_id"]
+    assert body["share_index"] == 1
 
     # Neither the lookup hash (stored) nor another link's token opens it.
     for wrong_key in (share_link_lookup_hash(links[0]["token"]), links[1]["token"]):
         with pytest.raises(InvalidTag):
-            open_sealed_share(sealed, wrong_key)
-    assert open_sealed_share(sealed, links[0]["token"]).startswith("1:")
+            open_sealed_share(sealed, wrong_key, setup_id, 1)
+    # Nor does relabelling it as another share
+    with pytest.raises(InvalidTag):
+        open_sealed_share(sealed, links[0]["token"], setup_id, 2)
+    assert open_sealed_share(sealed, links[0]["token"], setup_id, 1).startswith("1:")

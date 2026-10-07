@@ -61,6 +61,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         # Same reasoning for the links handing Shamir shares to their custodians:
         # anonymous by design, the link is the only credential.
         "/api/vault/share-links/retrieve",
+        "/api/vault/share-links/acknowledge",
     ]
 
     # HTTP methods that require CSRF protection

@@ -8,7 +8,13 @@ class FakeShareSealingGateway(ShareSealingGateway):
 
     def __init__(self):
         self.sealed: list[tuple[Share, ShareLinkToken]] = []
+        self.error: Exception | None = None
 
-    def seal(self, share: Share, token: ShareLinkToken) -> str:
+    def seal(self, share: Share, token: ShareLinkToken, setup_id: str, share_index: int) -> str:
+        if self.error is not None:
+            raise self.error
         self.sealed.append((share, token))
-        return f"sealed[{share.secret}]by[{token.lookup_hash()}]"
+        return f"sealed[{share.secret}]by[{token.lookup_hash()}]as[{setup_id}#{share_index}]"
+
+    def ack_hash(self, token: ShareLinkToken) -> str:
+        return f"ack-hash[{token.lookup_hash()}]"

@@ -96,6 +96,7 @@ from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
 )
 from vault_management_context.adapters.primary.private_api import EncryptionApi
+from vault_management_context.adapters.primary.scheduled import ExpiredShareLinkPurgeJob
 from vault_management_context.adapters.secondary import (
     AesEncryptionGateway,
     AesGcmShareSealingGateway,
@@ -273,13 +274,20 @@ async def lifespan(app: FastAPI):
             )
 
     app.state.migration_task = asyncio.create_task(_run_migrations_in_background())
+    # Starts purging once the migrations are done
+    share_link_purge_job = ExpiredShareLinkPurgeJob(SessionLocal, app.state.time_provider)
+    app.state.share_link_purge_task = asyncio.create_task(
+        share_link_purge_job.run_forever(is_ready=lambda: app.state.ready)
+    )
     logger.info("Application started — db=%s base_url=%s", db_type, base_url)
     yield
+    app.state.share_link_purge_task.cancel()
     app.state.migration_task.cancel()
-    try:
-        await asyncio.wait_for(app.state.migration_task, timeout=5.0)
-    except (asyncio.CancelledError, asyncio.TimeoutError):
-        pass
+    for task in (app.state.share_link_purge_task, app.state.migration_task):
+        try:
+            await asyncio.wait_for(task, timeout=5.0)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
     logger.info("Application shutting down")
     # Flush and shut down OTel providers to avoid losing buffered spans/metrics/logs
     if _otel_providers is not None:

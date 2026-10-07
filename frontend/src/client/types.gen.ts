@@ -10,6 +10,20 @@ export type ClientOptions = {
 export type AccessRoleEnum = 'owner' | 'member';
 
 /**
+ * AcknowledgeShareLinkRequest
+ */
+export type AcknowledgeShareLinkRequest = {
+    /**
+     * Lookup Hash
+     */
+    lookup_hash: string;
+    /**
+     * Ack Key
+     */
+    ack_key: string;
+};
+
+/**
  * AddMemberToGroupRequest
  */
 export type AddMemberToGroupRequest = {
@@ -1016,6 +1030,10 @@ export type RetrieveShareLinkRequest = {
  */
 export type RetrieveShareLinkResponse = {
     /**
+     * Setup Id
+     */
+    setup_id: string;
+    /**
      * Share Index
      */
     share_index: number;
@@ -1023,6 +1041,18 @@ export type RetrieveShareLinkResponse = {
      * Sealed Share
      */
     sealed_share: string;
+    /**
+     * First Retrieved At
+     */
+    first_retrieved_at: string;
+    /**
+     * Reopenable Until
+     */
+    reopenable_until: string;
+    /**
+     * Reopened
+     */
+    reopened: boolean;
 };
 
 /**
@@ -1508,7 +1538,7 @@ export type RetrieveShareLinkVaultShareLinksRetrievePostData = {
 
 export type RetrieveShareLinkVaultShareLinksRetrievePostErrors = {
     /**
-     * The link is invalid, expired or already used
+     * The link is invalid, expired, closed or past its reopen window
      */
     404: unknown;
     /**
@@ -1527,6 +1557,39 @@ export type RetrieveShareLinkVaultShareLinksRetrievePostResponses = {
 };
 
 export type RetrieveShareLinkVaultShareLinksRetrievePostResponse = RetrieveShareLinkVaultShareLinksRetrievePostResponses[keyof RetrieveShareLinkVaultShareLinksRetrievePostResponses];
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostData = {
+    body: AcknowledgeShareLinkRequest;
+    path?: never;
+    query?: never;
+    url: '/vault/share-links/acknowledge';
+};
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostErrors = {
+    /**
+     * The acknowledgement key does not come from the link's token
+     */
+    403: unknown;
+    /**
+     * The link is invalid, not yet retrieved, or already closed
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostError = AcknowledgeShareLinkVaultShareLinksAcknowledgePostErrors[keyof AcknowledgeShareLinkVaultShareLinksAcknowledgePostErrors];
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponse = AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponses[keyof AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponses];
 
 export type GetPasswordStatisticForAdminPasswordsStatisticsGetData = {
     body?: never;

@@ -50,6 +50,7 @@ import { CreateVaultUseCase } from '@/application/vault/CreateVault'
 import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
 import { LockVaultUseCase } from '@/application/vault/LockVault'
 import { RetrieveVaultShareUseCase } from '@/application/vault/RetrieveVaultShare'
+import { AcknowledgeVaultShareUseCase } from '@/application/vault/AcknowledgeVaultShare'
 import { UnlockVaultUseCase } from '@/application/vault/UnlockVault'
 import { ValidateVaultSetupUseCase } from '@/application/vault/ValidateVaultSetup'
 import { ReadPreferenceUseCase } from '@/application/preferences/ReadPreference'
@@ -135,6 +136,7 @@ export interface Container {
     lock: LockVaultUseCase
     clearPendingShares: ClearPendingSharesUseCase
     retrieveShare: RetrieveVaultShareUseCase
+    acknowledgeShare: AcknowledgeVaultShareUseCase
   }
   auth: {
     login: LoginWithPasswordUseCase
@@ -209,12 +211,16 @@ export function buildContainer(ports: Ports): Container {
     },
     vault: {
       getStatus: new GetVaultStatusUseCase(ports.vaultRepository),
-      create: new CreateVaultUseCase(ports.vaultRepository),
+      create: new CreateVaultUseCase(ports.vaultRepository, ports.shareLinkCipher),
       validateSetup: new ValidateVaultSetupUseCase(ports.vaultRepository),
       unlock: new UnlockVaultUseCase(ports.vaultRepository),
       lock: new LockVaultUseCase(ports.vaultRepository),
       clearPendingShares: new ClearPendingSharesUseCase(ports.vaultRepository),
       retrieveShare: new RetrieveVaultShareUseCase(ports.vaultRepository, ports.shareLinkCipher),
+      acknowledgeShare: new AcknowledgeVaultShareUseCase(
+        ports.vaultRepository,
+        ports.shareLinkCipher,
+      ),
     },
     auth: {
       login: new LoginWithPasswordUseCase(ports.authGateway),

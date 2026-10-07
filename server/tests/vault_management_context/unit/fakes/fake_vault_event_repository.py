@@ -8,6 +8,7 @@ class FakeVaultEventRepository:
 
     def __init__(self):
         self.events: list[dict[str, Any]] = []
+        self.error: Exception | None = None
 
     def append_event(
         self,
@@ -18,6 +19,8 @@ class FakeVaultEventRepository:
         event_data: dict,
     ) -> None:
         """Append a vault event to storage"""
+        if self.error is not None:
+            raise self.error
         self.events.append(
             {
                 "event_id": event_id,
