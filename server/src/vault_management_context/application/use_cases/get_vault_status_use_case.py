@@ -27,8 +27,7 @@ class GetVaultStatusUseCase(TracedUseCase):
 
         is_locked = self.vault_session_gateway.is_vault_locked()
         if is_locked:
-            shares = self.share_repository.get_all()
-            if len(shares) > 0:
+            if command.session_id is not None and self.share_repository.get_all(command.session_id):
                 return VaultStatus.PENDING_UNLOCK
             return VaultStatus.LOCKED
         return VaultStatus.UNLOCKED

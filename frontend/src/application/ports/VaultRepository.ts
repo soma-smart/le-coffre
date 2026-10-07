@@ -6,10 +6,13 @@ export interface CreateVaultInput {
 }
 
 export interface VaultRepository {
-  getStatus(): Promise<VaultState>
+  /**
+   * With an unlock session id, a locked vault reports PENDING_UNLOCK when
+   * that session already holds shares. Without one, it is simply LOCKED.
+   */
+  getStatus(unlockSessionId?: string): Promise<VaultState>
   createVault(input: CreateVaultInput): Promise<VaultSetup>
   validateSetup(setupId: string): Promise<void>
-  unlock(shares: string[]): Promise<void>
+  unlock(unlockSessionId: string, shares: string[]): Promise<void>
   lock(): Promise<void>
-  clearPendingShares(): Promise<void>
 }
