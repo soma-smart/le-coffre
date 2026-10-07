@@ -11,7 +11,7 @@ class PrivateApiUserContactGateway(UserContactGateway):
     def __init__(self, user_contact_info_api: UserContactInfoApi):
         self._user_contact_info_api = user_contact_info_api
 
-    def get_contact(self, user_id: UUID) -> UserContact | None:
+    def get_pairing_notification_recipient(self, user_id: UUID) -> UserContact | None:
         info = self._user_contact_info_api.get_contact(user_id)
         if info is None:
             return None

@@ -30,7 +30,7 @@ class NotifyExtensionPairedUseCase(TracedUseCase):
 
     def execute(self, command: NotifyExtensionPairedCommand) -> None:
         try:
-            contact = self._user_contact_gateway.get_contact(command.user_id)
+            contact = self._user_contact_gateway.get_pairing_notification_recipient(command.user_id)
         except Exception:  # noqa: BLE001 - courtesy send: a lookup failure must not surface on the already-completed pairing
             logger.error("Failed to look up the contact for user=%s", command.user_id, exc_info=True)
             return

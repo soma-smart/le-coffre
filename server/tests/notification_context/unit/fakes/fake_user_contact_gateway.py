@@ -11,7 +11,7 @@ class FakeUserContactGateway:
     def set_contact(self, user_id: UUID, contact: UserContact) -> None:
         self._contacts[user_id] = contact
 
-    def get_contact(self, user_id: UUID) -> UserContact | None:
+    def get_pairing_notification_recipient(self, user_id: UUID) -> UserContact | None:
         if self._should_fail:
             self._should_fail = False
             raise RuntimeError("simulated lookup failure")
