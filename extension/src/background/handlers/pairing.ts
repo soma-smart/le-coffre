@@ -88,7 +88,11 @@ function minutesFor(seconds: number): number {
  */
 export async function pollPairing(deps: Deps): Promise<Result<ConnectionState>> {
   const pairing = await readPairing(deps.browser)
-  if (!pairing) return getConnectionState(deps)
+  // Nothing left to redeem, so the poll alarm has nothing left to do either.
+  // This is how an orphan gets cleared: the pairing lives in storage.session,
+  // which a browser restart wipes, while the alarm may survive it and would
+  // otherwise wake the worker every 30 seconds until the extension reloads.
+  if (!pairing) return cancelPairing(deps)
 
   const vaultUrl = await readVaultUrl(deps.browser)
   if (!vaultUrl) return err({ kind: 'NOT_CONFIGURED' })

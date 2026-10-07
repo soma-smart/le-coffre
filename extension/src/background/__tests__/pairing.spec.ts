@@ -105,6 +105,20 @@ describe('startPairing', () => {
 })
 
 describe('pollPairing', () => {
+  it('should clear the poll alarm when no pairing is left to redeem', async () => {
+    // The orphan a browser restart leaves behind: storage.session, where the
+    // pairing lived, is wiped, while the alarm may survive and would wake the
+    // worker every 30 seconds for nothing.
+    const { deps, browser } = createTestDeps()
+    await givenConfigured(browser)
+    await browser.alarms.schedule(ALARMS.pairingPoll, 0.5)
+
+    const result = await pollPairing(deps)
+
+    expect(browser.scheduledAlarms.has(ALARMS.pairingPoll)).toBe(false)
+    expect(result).toEqual({ ok: true, data: { status: 'unpaired', vaultUrl: VAULT_URL } })
+  })
+
   it('should keep the pairing alive while the user has not decided yet', async () => {
     // Regression: the verifier must survive every pending poll. Losing it means
     // the approval the user is about to give can never be redeemed.
