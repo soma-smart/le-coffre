@@ -1,3 +1,5 @@
 from .fake_group_ownership_gateway import FakeGroupOwnershipGateway
+from .fake_notification_preferences_repository import FakeNotificationPreferencesRepository
+from .fake_recipient_gateway import FakeRecipientGateway
 
-__all__ = ["FakeGroupOwnershipGateway"]
+__all__ = ["FakeGroupOwnershipGateway", "FakeNotificationPreferencesRepository", "FakeRecipientGateway"]

@@ -5,6 +5,7 @@ import ProfilePage from '@/pages/ProfilePage.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
+import { InMemoryNotificationPreferencesRepository } from '@/infrastructure/in_memory/InMemoryNotificationPreferencesRepository'
 import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
 import type { User } from '@/domain/user/User'
 import i18n from '@/i18n'
@@ -34,9 +35,14 @@ const router = createRouter({
   ],
 })
 
-function mountProfilePage() {
+function mountProfilePage(
+  notificationPreferencesRepository = new InMemoryNotificationPreferencesRepository(),
+) {
   const userRepository = new InMemoryUserRepository().setCurrent(sampleUser)
-  const { pinia, container } = createTestContext({ userRepository })
+  const { pinia, container } = createTestContext({
+    userRepository,
+    notificationPreferencesRepository,
+  })
   const wrapper = mount(ProfilePage, {
     global: {
       plugins: [pinia, router],
@@ -97,6 +103,102 @@ describe('ProfilePage', () => {
       expect(container.preferences.read.execute<string>({ key: PREFERENCE_KEYS.UI_LOCALE })).toBe(
         'en',
       )
+    })
+  })
+
+  describe('notification preferences', () => {
+    const switchInput = (wrapper: ReturnType<typeof mountProfilePage>['wrapper'], id: string) =>
+      wrapper.find(`#${id}`)
+
+    it('shows both vault switches off by default', async () => {
+      const { wrapper } = mountProfilePage()
+      await flushPromises()
+
+      const section = wrapper.find('[data-testid="notification-preferences"]')
+      expect(section.text()).toContain(t('pages.profile.notifications.vaultLockLabel'))
+      expect(section.text()).toContain(t('pages.profile.notifications.vaultUnlockLabel'))
+      expect(
+        (switchInput(wrapper, 'notify-on-vault-lock').element as HTMLInputElement).checked,
+      ).toBe(false)
+      expect(
+        (switchInput(wrapper, 'notify-on-vault-unlock').element as HTMLInputElement).checked,
+      ).toBe(false)
+    })
+
+    it('reflects the stored preferences', async () => {
+      const repository = new InMemoryNotificationPreferencesRepository().seed({
+        notifyOnVaultLock: true,
+        notifyOnVaultUnlock: false,
+      })
+      const { wrapper } = mountProfilePage(repository)
+      await flushPromises()
+
+      expect(
+        (switchInput(wrapper, 'notify-on-vault-lock').element as HTMLInputElement).checked,
+      ).toBe(true)
+    })
+
+    it('saves a switch as soon as it is toggled, leaving the other one as it was', async () => {
+      const repository = new InMemoryNotificationPreferencesRepository()
+      const { wrapper } = mountProfilePage(repository)
+      await flushPromises()
+
+      await switchInput(wrapper, 'notify-on-vault-unlock').setValue(true)
+      await flushPromises()
+
+      expect(await repository.get()).toEqual({
+        notifyOnVaultLock: false,
+        notifyOnVaultUnlock: true,
+      })
+    })
+
+    it('goes back to the stored value when saving fails', async () => {
+      const repository = new InMemoryNotificationPreferencesRepository().failUpdateOnce(
+        new Error('boom'),
+      )
+      const { wrapper } = mountProfilePage(repository)
+      await flushPromises()
+
+      await switchInput(wrapper, 'notify-on-vault-lock').setValue(true)
+      await flushPromises()
+
+      expect(
+        (switchInput(wrapper, 'notify-on-vault-lock').element as HTMLInputElement).checked,
+      ).toBe(false)
+      expect(await repository.get()).toEqual({
+        notifyOnVaultLock: false,
+        notifyOnVaultUnlock: false,
+      })
+    })
+
+    it('offers a retry instead of leaving the switches permanently disabled when loading fails', async () => {
+      const repository = new InMemoryNotificationPreferencesRepository().failGetOnce(
+        new Error('boom'),
+      )
+      const { wrapper } = mountProfilePage(repository)
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="notification-preferences-load-error"]').exists()).toBe(
+        true,
+      )
+      expect(switchInput(wrapper, 'notify-on-vault-lock').attributes('disabled')).toBeDefined()
+
+      await wrapper.find('[data-testid="notification-preferences-retry"]').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="notification-preferences-load-error"]').exists()).toBe(
+        false,
+      )
+      expect(switchInput(wrapper, 'notify-on-vault-lock').attributes('disabled')).toBeUndefined()
+
+      // The retry succeeded: the switch is now editable and savable again.
+      await switchInput(wrapper, 'notify-on-vault-lock').setValue(true)
+      await flushPromises()
+
+      expect(await repository.get()).toEqual({
+        notifyOnVaultLock: true,
+        notifyOnVaultUnlock: false,
+      })
     })
   })
 })

@@ -801,6 +801,20 @@ export type LogoutResponse = {
 };
 
 /**
+ * NotificationPreferencesResponse
+ */
+export type NotificationPreferencesResponse = {
+    /**
+     * Notify On Vault Lock
+     */
+    notify_on_vault_lock: boolean;
+    /**
+     * Notify On Vault Unlock
+     */
+    notify_on_vault_unlock: boolean;
+};
+
+/**
  * OneTimeLinkAuditItem
  */
 export type OneTimeLinkAuditItem = {
@@ -1242,6 +1256,20 @@ export type UpdateGroupResponse = {
      * Message
      */
     message: string;
+};
+
+/**
+ * UpdateNotificationPreferencesRequest
+ */
+export type UpdateNotificationPreferencesRequest = {
+    /**
+     * Notify On Vault Lock
+     */
+    notify_on_vault_lock: boolean;
+    /**
+     * Notify On Vault Unlock
+     */
+    notify_on_vault_unlock: boolean;
 };
 
 /**
@@ -3129,3 +3157,44 @@ export type GetStatisticForAdminIamStatisticsGetResponses = {
 };
 
 export type GetStatisticForAdminIamStatisticsGetResponse = GetStatisticForAdminIamStatisticsGetResponses[keyof GetStatisticForAdminIamStatisticsGetResponses];
+
+export type GetNotificationPreferencesNotificationsPreferencesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/notifications/preferences';
+};
+
+export type GetNotificationPreferencesNotificationsPreferencesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type GetNotificationPreferencesNotificationsPreferencesGetResponse = GetNotificationPreferencesNotificationsPreferencesGetResponses[keyof GetNotificationPreferencesNotificationsPreferencesGetResponses];
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutData = {
+    body: UpdateNotificationPreferencesRequest;
+    path?: never;
+    query?: never;
+    url: '/notifications/preferences';
+};
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutError = UpdateNotificationPreferencesNotificationsPreferencesPutErrors[keyof UpdateNotificationPreferencesNotificationsPreferencesPutErrors];
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutResponse = UpdateNotificationPreferencesNotificationsPreferencesPutResponses[keyof UpdateNotificationPreferencesNotificationsPreferencesPutResponses];

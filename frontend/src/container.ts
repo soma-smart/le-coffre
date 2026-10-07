@@ -8,6 +8,9 @@ import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
 import type { StatisticsGateway } from '@/application/ports/StatisticsGateway'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
+import type { NotificationPreferencesRepository } from '@/application/ports/NotificationPreferencesRepository'
+import { GetNotificationPreferencesUseCase } from '@/application/notification/GetNotificationPreferences'
+import { UpdateNotificationPreferencesUseCase } from '@/application/notification/UpdateNotificationPreferences'
 import { GetAdminStatisticsUseCase } from '@/application/statistics/GetAdminStatistics'
 import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
 import { GetSsoUrlUseCase } from '@/application/auth/GetSsoUrl'
@@ -87,6 +90,7 @@ export interface Ports {
   statisticsGateway: StatisticsGateway
   oneTimeLinkRepository: OneTimeLinkRepository
   serviceAccountRepository: ServiceAccountRepository
+  notificationPreferencesRepository: NotificationPreferencesRepository
 }
 
 export interface Container {
@@ -169,6 +173,10 @@ export interface Container {
     list: ListServiceAccountsUseCase
     rotate: RotateServiceAccountTokenUseCase
     revoke: RevokeServiceAccountUseCase
+  }
+  notifications: {
+    getPreferences: GetNotificationPreferencesUseCase
+    updatePreferences: UpdateNotificationPreferencesUseCase
   }
 }
 
@@ -253,6 +261,14 @@ export function buildContainer(ports: Ports): Container {
       list: new ListServiceAccountsUseCase(ports.serviceAccountRepository),
       rotate: new RotateServiceAccountTokenUseCase(ports.serviceAccountRepository),
       revoke: new RevokeServiceAccountUseCase(ports.serviceAccountRepository),
+    },
+    notifications: {
+      getPreferences: new GetNotificationPreferencesUseCase(
+        ports.notificationPreferencesRepository,
+      ),
+      updatePreferences: new UpdateNotificationPreferencesUseCase(
+        ports.notificationPreferencesRepository,
+      ),
     },
   }
 }

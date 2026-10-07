@@ -114,3 +114,25 @@ def test_given_unlocked_vault_when_locking_vault_should_store_vault_locked_event
     stored = vault_event_repository.events[0]
     assert stored["event_type"] == "VaultLockedEvent"
     assert stored["actor_user_id"] == UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+
+
+def test_given_recording_the_lock_fails_should_not_publish_it(
+    use_case,
+    vault_repository: FakeVaultRepository,
+    vault_session_gateway: FakeVaultSessionGateway,
+    event_publisher: FakeDomainEventPublisher,
+    vault_event_repository,
+):
+    # Regression: append_event() must run before publish(), not after — same
+    # reasoning as RecordVaultLockedOnStartupUseCase. If the write fails, no email
+    # must go out for a lock that was never durably recorded.
+    admin_user = AuthenticatedUser(user_id=UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5"), roles=["admin"])
+    vault_repository.save_vault_with_shares(nb_shares=3, threshold=2, encrypted_key="encrypted_vault_key_hex")
+    vault_session_gateway.store_decrypted_key("decrypted_vault_key")
+    vault_event_repository.fail_next_append()
+
+    command = LockVaultCommand(requesting_user=admin_user)
+    with pytest.raises(RuntimeError):
+        use_case.execute(command)
+
+    assert event_publisher.get_published_events_of_type(VaultLockedEvent) == []

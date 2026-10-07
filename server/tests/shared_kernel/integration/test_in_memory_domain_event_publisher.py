@@ -1,8 +1,7 @@
+import logging
 from datetime import datetime
 from unittest.mock import Mock
 from uuid import uuid4
-
-import pytest
 
 from .conftest import AnotherSampleTestEvent, SampleTestEvent
 
@@ -135,15 +134,36 @@ def test_given_event_published_when_no_handlers_exist_for_event_type_then_empty_
     test_handler.assert_not_called()
 
 
-def test_given_handler_that_raises_exception_when_event_published_then_exception_propagated(
-    event_publisher, test_event
+def test_given_handler_that_raises_when_event_published_then_error_is_logged_not_raised(
+    event_publisher, test_event, caplog
 ):
     # Arrange
     def failing_handler(event):
-        raise Exception("Handler failed")
+        raise RuntimeError("Handler failed")
 
     event_publisher.subscribe(SampleTestEvent, failing_handler)
 
-    # Act & Assert
-    with pytest.raises(Exception, match="Handler failed"):
+    # Act
+    with caplog.at_level(logging.ERROR):
         event_publisher.publish(test_event)
+
+    # Assert
+    assert "failing_handler failed on SampleTestEvent" in caplog.text
+    assert "Handler failed" in caplog.text
+
+
+def test_given_handler_that_raises_when_event_published_then_the_other_handlers_still_run(event_publisher, test_event):
+    # Arrange
+    before, after, catch_all = Mock(), Mock(), Mock()
+    event_publisher.subscribe(SampleTestEvent, before)
+    event_publisher.subscribe(SampleTestEvent, Mock(side_effect=RuntimeError("Handler failed")))
+    event_publisher.subscribe(SampleTestEvent, after)
+    event_publisher.subscribe_all(catch_all)
+
+    # Act
+    event_publisher.publish(test_event)
+
+    # Assert
+    before.assert_called_once_with(test_event)
+    after.assert_called_once_with(test_event)
+    catch_all.assert_called_once_with(test_event)

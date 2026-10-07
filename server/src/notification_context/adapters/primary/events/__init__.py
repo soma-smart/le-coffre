@@ -1,3 +1,5 @@
 from .group_owner_promoted_event_subscriber import GroupOwnerPromotedEventSubscriber
+from .user_deleted_event_subscriber import UserDeletedEventSubscriber
+from .vault_state_changed_event_subscriber import VaultStateChangedEventSubscriber
 
-__all__ = ["GroupOwnerPromotedEventSubscriber"]
+__all__ = ["GroupOwnerPromotedEventSubscriber", "UserDeletedEventSubscriber", "VaultStateChangedEventSubscriber"]

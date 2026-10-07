@@ -10,6 +10,11 @@ import type { User } from '@/domain/user/User'
 import { UserDomainError } from '@/domain/user/errors'
 import { useContainer } from '@/plugins/container'
 import { PREFERENCE_KEYS } from '@/domain/preferences/Preference'
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  type NotificationPreferences,
+} from '@/domain/notification/NotificationPreferences'
+import { NotificationDomainError } from '@/domain/notification/errors'
 import { primevueLocaleFr } from '@/i18n/primevueLocaleFr'
 import { primevueLocaleEn } from '@/i18n/primevueLocaleEn'
 import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
@@ -44,7 +49,7 @@ const handleLogout = async () => {
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async event handlers after an await.
-const { users, preferences } = useContainer()
+const { users, preferences, notifications } = useContainer()
 
 // The i18n composer drives every t() call app-wide; PrimeVue keeps its own
 // separate locale (filter labels, calendar names, the password-strength
@@ -58,6 +63,62 @@ const onLanguageChange = (newLocale: UiLocale) => {
   // private mode, ... are swallowed at the adapter) — preferences are
   // non-load-bearing UX state, so there's no failure here to react to.
   preferences.write.execute({ key: PREFERENCE_KEYS.UI_LOCALE, value: newLocale })
+}
+
+// Vault lock / unlock emails. Each switch saves on change; on failure it goes
+// back to what the server still has.
+const notificationPreferences = ref<NotificationPreferences>({
+  ...DEFAULT_NOTIFICATION_PREFERENCES,
+})
+const notificationPreferencesLoaded = ref(false)
+const notificationPreferencesLoadFailed = ref(false)
+const notificationPreferencesLoading = ref(false)
+const notificationPreferencesSaving = ref(false)
+
+const fetchNotificationPreferences = async () => {
+  notificationPreferencesLoadFailed.value = false
+  notificationPreferencesLoading.value = true
+  try {
+    notificationPreferences.value = await notifications.getPreferences.execute()
+    notificationPreferencesLoaded.value = true
+  } catch (err: unknown) {
+    console.error('Error fetching notification preferences:', err)
+    notificationPreferencesLoadFailed.value = true
+    toast.add({
+      severity: 'error',
+      summary: t('common.error'),
+      detail: t('pages.profile.notifications.loadFailed'),
+      life: 5000,
+    })
+  } finally {
+    notificationPreferencesLoading.value = false
+  }
+}
+
+const onNotificationPreferenceChange = async (
+  key: keyof NotificationPreferences,
+  value: boolean,
+) => {
+  const previous = notificationPreferences.value
+  notificationPreferences.value = { ...previous, [key]: value }
+  try {
+    notificationPreferencesSaving.value = true
+    notificationPreferences.value = await notifications.updatePreferences.execute(
+      notificationPreferences.value,
+    )
+  } catch (err: unknown) {
+    console.error('Error updating notification preferences:', err)
+    notificationPreferences.value = previous
+    // A NotificationDomainError's message is the backend's own wording — not
+    // ours to translate. Only our own fallback text is.
+    const detail =
+      err instanceof NotificationDomainError
+        ? err.message
+        : t('pages.profile.notifications.saveFailed')
+    toast.add({ severity: 'error', summary: t('common.error'), detail, life: 5000 })
+  } finally {
+    notificationPreferencesSaving.value = false
+  }
 }
 
 const user = ref<User | null>(null)
@@ -169,6 +230,7 @@ const updatePassword = async () => {
 
 onMounted(() => {
   fetchUserInfo()
+  fetchNotificationPreferences()
 })
 </script>
 
@@ -235,6 +297,61 @@ onMounted(() => {
             @click="showPasswordDialog = true"
             class="p-button-outlined"
           />
+        </div>
+
+        <!-- Notifications -->
+        <div class="border-t pt-4 mt-6" data-testid="notification-preferences">
+          <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.notifications.title') }}</h3>
+          <Message
+            v-if="notificationPreferencesLoadFailed"
+            severity="error"
+            :closable="false"
+            class="mb-4"
+            data-testid="notification-preferences-load-error"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <span>{{ t('pages.profile.notifications.loadFailed') }}</span>
+              <Button
+                :label="t('pages.profile.notifications.retryButton')"
+                size="small"
+                severity="secondary"
+                outlined
+                :loading="notificationPreferencesLoading"
+                data-testid="notification-preferences-retry"
+                @click="fetchNotificationPreferences"
+              />
+            </div>
+          </Message>
+          <div class="flex flex-col gap-4">
+            <div class="flex gap-3 items-center">
+              <ToggleSwitch
+                :modelValue="notificationPreferences.notifyOnVaultLock"
+                @update:modelValue="
+                  (v: boolean) => onNotificationPreferenceChange('notifyOnVaultLock', v)
+                "
+                inputId="notify-on-vault-lock"
+                :disabled="!notificationPreferencesLoaded || notificationPreferencesSaving"
+                data-testid="notify-on-vault-lock"
+              />
+              <label for="notify-on-vault-lock" class="font-medium">
+                {{ t('pages.profile.notifications.vaultLockLabel') }}
+              </label>
+            </div>
+            <div class="flex gap-3 items-center">
+              <ToggleSwitch
+                :modelValue="notificationPreferences.notifyOnVaultUnlock"
+                @update:modelValue="
+                  (v: boolean) => onNotificationPreferenceChange('notifyOnVaultUnlock', v)
+                "
+                inputId="notify-on-vault-unlock"
+                :disabled="!notificationPreferencesLoaded || notificationPreferencesSaving"
+                data-testid="notify-on-vault-unlock"
+              />
+              <label for="notify-on-vault-unlock" class="font-medium">
+                {{ t('pages.profile.notifications.vaultUnlockLabel') }}
+              </label>
+            </div>
+          </div>
         </div>
 
         <!-- Language -->
