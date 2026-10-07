@@ -93,7 +93,7 @@ class PasswordLoginUseCase(TracedUseCase):
                     raise UnknownCredentialError()
                 return principal
             except AuthenticationError as error:
-                reason = FAILURE_REASONS[type(error)]
+                reason = FAILURE_REASONS.get(type(error), "Authentication failed")
                 logger.warning("Login failed for email=%s reason='%s'", command.email, reason)
                 event = AdminLoginFailedEvent(email=command.email, reason=reason)
                 self._event_publisher.publish(event)

@@ -3,6 +3,9 @@ from uuid import UUID
 import pytest
 
 from identity_access_management_context.application.commands import AdminLoginCommand
+from identity_access_management_context.application.services.authentication.password_authenticator import (
+    PasswordAuthenticator,
+)
 from identity_access_management_context.application.use_cases import (
     PasswordLoginUseCase,
 )
@@ -20,6 +23,7 @@ from identity_access_management_context.domain.exceptions import (
     AdminNotFoundException,
     InvalidCredentialsException,
 )
+from shared_kernel.domain.exceptions import AuthenticationError
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.shared_kernel.fakes import FakeTimeGateway
 
@@ -113,6 +117,32 @@ def test_should_raise_exception_for_non_existent_admin(
         use_case.execute(command)
 
     assert login_lockout_gateway.failed_login_calls == ["nonexistent@lecoffre.com"]
+
+
+def test_given_an_authentication_error_without_a_reason_when_logging_in_then_it_fails_like_a_login(
+    use_case: PasswordLoginUseCase,
+    admin_event_repository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+    monkeypatch,
+):
+    """A subclass missing from the failure reasons is still audited and counted, not turned into a crash."""
+
+    class ExpiredCredentialError(AuthenticationError): ...
+
+    def expired(_self, _credential):
+        raise ExpiredCredentialError()
+
+    # Frozen dataclass: patched on the class, restored after the test
+    monkeypatch.setattr(PasswordAuthenticator, "authenticate", expired)
+    email = "expired@lecoffre.com"
+
+    with pytest.raises(AdminNotFoundException):
+        use_case.execute(AdminLoginCommand(email=email, password="any_password"))
+
+    (stored,) = admin_event_repository.events
+    assert stored["event_type"] == "AdminLoginFailedEvent"
+    assert stored["event_data"]["reason"] == "Authentication failed"
+    assert login_lockout_gateway.failed_login_calls == [email]
 
 
 def test_should_return_refresh_token_on_successful_login(
