@@ -72,3 +72,10 @@ export class ConnectedExtensionNotFoundError extends ExtensionDomainError {
     this.name = 'ConnectedExtensionNotFoundError'
   }
 }
+
+export class ExtensionUserRequiredError extends ExtensionDomainError {
+  constructor() {
+    super('Select a user before disconnecting their extensions')
+    this.name = 'ExtensionUserRequiredError'
+  }
+}

@@ -1,5 +1,5 @@
 import type { ExtensionGateway } from '@/application/ports/ExtensionGateway'
-import { ExtensionDomainError } from '@/domain/extension/errors'
+import { ExtensionUserRequiredError } from '@/domain/extension/errors'
 
 /**
  * Administrator only: cut every browser extension of another account.
@@ -12,9 +12,7 @@ export class DisconnectAllExtensionsOfUserUseCase {
   constructor(private readonly gateway: ExtensionGateway) {}
 
   async execute(input: { userId: string }): Promise<number> {
-    // Without a user id the request would target a path segment that is
-    // simply missing.
-    if (!input.userId.trim()) throw new ExtensionDomainError('A user is required')
+    if (!input.userId.trim()) throw new ExtensionUserRequiredError()
     return this.gateway.disconnectAllExtensionsOfUser(input.userId)
   }
 }

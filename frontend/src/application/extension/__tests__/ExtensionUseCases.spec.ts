@@ -8,8 +8,8 @@ import { GetPairingUseCase } from '@/application/extension/GetPairing'
 import { ListConnectedExtensionsUseCase } from '@/application/extension/ListConnectedExtensions'
 import type { ConnectedExtension } from '@/domain/extension/Extension'
 import {
-  ExtensionDomainError,
   ExtensionPairingUnavailableError,
+  ExtensionUserRequiredError,
   InvalidPairingUserCodeError,
 } from '@/domain/extension/errors'
 import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
@@ -194,7 +194,7 @@ describe('DisconnectAllExtensionsOfUserUseCase', () => {
 
     await expect(
       new DisconnectAllExtensionsOfUserUseCase(gateway).execute({ userId: '  ' }),
-    ).rejects.toBeInstanceOf(ExtensionDomainError)
+    ).rejects.toBeInstanceOf(ExtensionUserRequiredError)
     expect(gateway.disconnectedUsers).toEqual([])
   })
 })
