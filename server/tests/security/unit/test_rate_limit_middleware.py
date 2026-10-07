@@ -1,3 +1,4 @@
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from typing import Iterator
@@ -682,8 +683,6 @@ _USER_ID = "22222222-2222-2222-2222-222222222222"
 
 
 def _hash_of(token: str) -> str:
-    import hashlib
-
     return hashlib.sha256(token.encode()).hexdigest()
 
 

@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
+from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials
 
 from identity_access_management_context.application.responses import (
@@ -21,6 +22,8 @@ from identity_access_management_context.application.use_cases import (
     ValidateUserTokenUseCase,
 )
 from identity_access_management_context.domain.exceptions import ExtensionTokenRevokedError
+from main import app
+from security.rate_limit_middleware import RateLimitMiddleware
 from shared_kernel.adapters.primary.dependencies import get_current_principal
 from shared_kernel.domain.entities import ApiPrincipal, ValidatedUser
 from shared_kernel.domain.value_objects import CredentialKind
@@ -217,10 +220,6 @@ def test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes(
     containment rule itself, which until now rested on a sentence in CLAUDE.md:
     if somebody adds `get_current_principal` to a route, this test says so.
     """
-    from fastapi.routing import APIRoute
-
-    from main import app
-    from security.rate_limit_middleware import RateLimitMiddleware
 
     def api_routes(routes):
         # FastAPI 0.141 keeps an included router wrapped rather than flattening
