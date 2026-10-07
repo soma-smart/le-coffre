@@ -3,11 +3,11 @@ import {
   addOwnerToGroupGroupsGroupIdOwnersPost,
   createGroupGroupsPost,
   deleteGroupGroupsGroupIdDelete,
-  demoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDelete,
+  demoteOwnerToMemberGroupsGroupIdOwnersUserIdDelete,
   getGroupGroupsGroupIdGet,
   listGroupEventsGroupsGroupIdEventsGet,
   listGroupsGroupsGet,
-  removeMemberFromGroupGroupsGroupIdMembersPrincipalIdDelete,
+  removeMemberFromGroupGroupsGroupIdMembersUserIdDelete,
   updateGroupGroupsGroupIdPut,
 } from '@/client/sdk.gen'
 import type { GetGroupResponse, GroupEventResponse, GroupItem } from '@/client/types.gen'
@@ -74,14 +74,14 @@ export class BackendGroupRepository implements GroupRepository {
   async addMember(groupId: string, userId: string): Promise<void> {
     const response = await addMemberToGroupGroupsGroupIdMembersPost({
       path: { group_id: groupId },
-      body: { principal_id: userId },
+      body: { user_id: userId },
     })
     this.throwIfError(response.error, response.response?.status, groupId)
   }
 
   async removeMember(groupId: string, userId: string): Promise<void> {
-    const response = await removeMemberFromGroupGroupsGroupIdMembersPrincipalIdDelete({
-      path: { group_id: groupId, principal_id: userId },
+    const response = await removeMemberFromGroupGroupsGroupIdMembersUserIdDelete({
+      path: { group_id: groupId, user_id: userId },
     })
     this.throwIfError(response.error, response.response?.status, groupId)
   }
@@ -89,7 +89,7 @@ export class BackendGroupRepository implements GroupRepository {
   async promoteToOwner(groupId: string, userId: string): Promise<void> {
     const response = await addOwnerToGroupGroupsGroupIdOwnersPost({
       path: { group_id: groupId },
-      body: { principal_id: userId },
+      body: { user_id: userId },
     })
     this.throwIfError(response.error, response.response?.status, groupId)
   }
@@ -108,8 +108,8 @@ export class BackendGroupRepository implements GroupRepository {
   }
 
   async demoteToMember(groupId: string, userId: string): Promise<void> {
-    const response = await demoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDelete({
-      path: { group_id: groupId, principal_id: userId },
+    const response = await demoteOwnerToMemberGroupsGroupIdOwnersUserIdDelete({
+      path: { group_id: groupId, user_id: userId },
     })
     // 409: distinguishes "would leave the group without an owner" from a plain
     // bad request, so the caller can show a translated, name-bearing message
@@ -136,7 +136,7 @@ function toGroup(dto: GroupItem | GetGroupResponse): Group {
     id: dto.id,
     name: dto.name,
     isPersonal: dto.is_personal,
-    principalId: dto.principal_id,
+    userId: dto.user_id,
     owners: dto.owners,
     members: dto.members,
   }

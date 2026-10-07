@@ -14,9 +14,9 @@ export type AccessRoleEnum = 'owner' | 'member';
  */
 export type AddMemberToGroupRequest = {
     /**
-     * Principal Id
+     * User Id
      */
-    principal_id: string;
+    user_id: string;
 };
 
 /**
@@ -28,9 +28,9 @@ export type AddMemberToGroupResponse = {
      */
     group_id: string;
     /**
-     * Principal Id
+     * User Id
      */
-    principal_id: string;
+    user_id: string;
     /**
      * Message
      */
@@ -42,9 +42,9 @@ export type AddMemberToGroupResponse = {
  */
 export type AddOwnerToGroupRequest = {
     /**
-     * Principal Id
+     * User Id
      */
-    principal_id: string;
+    user_id: string;
 };
 
 /**
@@ -56,9 +56,9 @@ export type AddOwnerToGroupResponse = {
      */
     group_id: string;
     /**
-     * Principal Id
+     * User Id
      */
-    principal_id: string;
+    user_id: string;
     /**
      * Message
      */
@@ -386,9 +386,9 @@ export type GetGroupResponse = {
      */
     is_personal: boolean;
     /**
-     * Principal Id
+     * User Id
      */
-    principal_id: string | null;
+    user_id: string | null;
     /**
      * Owners
      */
@@ -591,9 +591,9 @@ export type GroupItem = {
      */
     is_personal: boolean;
     /**
-     * Principal Id
+     * User Id
      */
-    principal_id: string | null;
+    user_id: string | null;
     /**
      * Owners
      */
@@ -1090,9 +1090,9 @@ export type ServiceAccountSummary = {
      */
     name: string;
     /**
-     * Created By Principal Id
+     * Created By User Id
      */
-    created_by_principal_id: string | null;
+    created_by_user_id: string | null;
     /**
      * Created By User Name
      */
@@ -1319,9 +1319,9 @@ export type UpdateUserRequest = {
  */
 export type UserAccessItem = {
     /**
-     * Principal Id
+     * User Id
      */
-    principal_id: string;
+    user_id: string;
     /**
      * Group Id
      */
@@ -2758,7 +2758,7 @@ export type AddOwnerToGroupGroupsGroupIdOwnersPostResponses = {
 
 export type AddOwnerToGroupGroupsGroupIdOwnersPostResponse = AddOwnerToGroupGroupsGroupIdOwnersPostResponses[keyof AddOwnerToGroupGroupsGroupIdOwnersPostResponses];
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteData = {
+export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -2766,33 +2766,33 @@ export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteData = {
          */
         group_id: string;
         /**
-         * Principal Id
+         * User Id
          */
-        principal_id: string;
+        user_id: string;
     };
     query?: never;
-    url: '/groups/{group_id}/owners/{principal_id}';
+    url: '/groups/{group_id}/owners/{user_id}';
 };
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteErrors = {
+export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteError = DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteErrors[keyof DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteErrors];
+export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteError = DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteErrors[keyof DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteErrors];
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponses = {
+export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponses = {
     /**
      * Successful Response
      */
     200: DemoteOwnerToMemberResponse;
 };
 
-export type DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponse = DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponses[keyof DemoteOwnerToMemberGroupsGroupIdOwnersPrincipalIdDeleteResponses];
+export type DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponse = DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponses[keyof DemoteOwnerToMemberGroupsGroupIdOwnersUserIdDeleteResponses];
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteData = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteData = {
     body?: never;
     path: {
         /**
@@ -2800,31 +2800,31 @@ export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteData = {
          */
         group_id: string;
         /**
-         * Principal Id
+         * User Id
          */
-        principal_id: string;
+        user_id: string;
     };
     query?: never;
-    url: '/groups/{group_id}/members/{principal_id}';
+    url: '/groups/{group_id}/members/{user_id}';
 };
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteError = RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors[keyof RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteErrors];
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteError = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteErrors];
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses = {
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses = {
     /**
      * Successful Response
      */
     200: RemoveMemberFromGroupResponse;
 };
 
-export type RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponse = RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses[keyof RemoveMemberFromGroupGroupsGroupIdMembersPrincipalIdDeleteResponses];
+export type RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponse = RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses[keyof RemoveMemberFromGroupGroupsGroupIdMembersUserIdDeleteResponses];
 
 export type DeleteGroupGroupsGroupIdDeleteData = {
     body?: never;

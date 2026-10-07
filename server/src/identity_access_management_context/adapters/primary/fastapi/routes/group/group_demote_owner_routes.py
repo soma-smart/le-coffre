@@ -35,14 +35,14 @@ class DemoteOwnerToMemberResponse(BaseModel):
 
 
 @router.delete(
-    "/{group_id}/owners/{principal_id}",
+    "/{group_id}/owners/{user_id}",
     status_code=200,
     response_model=DemoteOwnerToMemberResponse,
     summary="Demote an owner to a regular member",
 )
 def demote_owner_to_member(
     group_id: UUID,
-    principal_id: UUID,
+    user_id: UUID,
     current_user: ValidatedUser = Depends(get_current_user),
     usecase: DemoteOwnerToMemberUseCase = Depends(get_demote_owner_to_member_usecase),
 ):
@@ -50,7 +50,7 @@ def demote_owner_to_member(
     Demote an owner back to a regular member of a group.
 
     - **group_id**: ID of the group (path parameter)
-    - **principal_id**: ID of the owner to demote (path parameter)
+    - **user_id**: ID of the owner to demote (path parameter)
     - **Authorization**: Bearer token required (access_token cookie)
     - **Permission**: Group owners can only demote themselves; only admins can demote
       an owner other than themselves
@@ -63,7 +63,7 @@ def demote_owner_to_member(
         command = DemoteOwnerToMemberCommand(
             requesting_user=current_user.to_authenticated_user(),
             group_id=group_id,
-            principal_id=principal_id,
+            principal_id=user_id,
         )
 
         usecase.execute(command)

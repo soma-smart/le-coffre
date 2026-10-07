@@ -21,7 +21,7 @@ class GroupItem(BaseModel):
     id: UUID
     name: str
     is_personal: bool
-    principal_id: UUID | None
+    user_id: UUID | None
     owners: list[UUID]
     members: list[UUID]
 
@@ -56,8 +56,8 @@ def list_groups(
     - id: The group's unique identifier
     - name: The group's name
     - is_personal: Whether this is a personal group
-    - principal_id: The owner principal ID (for personal groups) or null (for shared groups)
-    - owners: List of principal IDs who are owners of this group
+    - user_id: The owner user ID (for personal groups) or null (for shared groups)
+    - owners: List of user IDs who are owners of this group
     """
     try:
         command = ListGroupsCommand(include_personal=include_personal)
@@ -68,7 +68,7 @@ def list_groups(
                 id=group.id,
                 name=group.name,
                 is_personal=group.is_personal,
-                principal_id=group.principal_id,
+                user_id=group.principal_id,
                 owners=group.owners,
                 members=group.members,
             )

@@ -53,7 +53,7 @@ export class InMemoryGroupRepository implements GroupRepository {
       id,
       name,
       isPersonal: false,
-      principalId: null,
+      userId: null,
       owners: [],
       members: [],
     })

@@ -6,7 +6,7 @@ const g = (overrides: Partial<Group>): Group => ({
   id: 'g',
   name: 'Group',
   isPersonal: false,
-  principalId: null,
+  userId: null,
   owners: [],
   members: [],
   ...overrides,

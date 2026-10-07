@@ -25,7 +25,7 @@ const personalGroup: Group = {
   id: PERSONAL_GROUP_ID,
   name: "Ada's Personal Group",
   isPersonal: true,
-  principalId: USER_ID,
+  userId: USER_ID,
   owners: [USER_ID],
   members: [USER_ID],
 }
@@ -35,7 +35,7 @@ function sharedGroup(overrides: Partial<Group> = {}): Group {
     id: 'group-owned',
     name: 'Platform',
     isPersonal: false,
-    principalId: null,
+    userId: null,
     owners: [USER_ID],
     members: [USER_ID],
     ...overrides,

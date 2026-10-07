@@ -27,7 +27,7 @@ function makeGroup(overrides: Partial<Group> = {}): Group {
     id: 'g1',
     name: 'Group',
     isPersonal: false,
-    principalId: null,
+    userId: null,
     owners: [],
     members: ['u1'],
     ...overrides,

@@ -25,7 +25,7 @@ const personalGroup = {
   id: 'group-personal',
   name: 'Personal',
   isPersonal: true,
-  principalId: 'user-1',
+  userId: 'user-1',
   owners: ['user-1'],
   members: [],
 }

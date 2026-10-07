@@ -194,7 +194,7 @@ function toPasswordAccess(dto: ListPasswordAccessResponse): PasswordAccess {
   return {
     resourceId: dto.resource_id,
     users: dto.user_access_list.map((item) => ({
-      principalId: item.principal_id,
+      userId: item.user_id,
       groupId: item.group_id,
       roleInGroup: item.role_in_group,
       groupRole: item.group_role,

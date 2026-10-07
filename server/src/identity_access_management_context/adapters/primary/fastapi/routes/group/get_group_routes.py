@@ -21,7 +21,7 @@ router = APIRouter(prefix="/groups", tags=["Group Management"])
 
 
 class GroupMemberResponse(BaseModel):
-    principal_id: UUID
+    user_id: UUID
     is_owner: bool
 
 
@@ -29,7 +29,7 @@ class GetGroupResponse(BaseModel):
     id: UUID
     name: str
     is_personal: bool
-    principal_id: UUID | None
+    user_id: UUID | None
     owners: list[UUID]
     members: list[UUID]
 
@@ -55,9 +55,9 @@ def get_group(
     - id: The group's unique identifier
     - name: The group's name
     - is_personal: Whether this is a personal group
-    - principal_id: The owner principal ID (for personal groups) or null (for shared groups)
-    - owners: List of principal IDs who are owners of the group
-    - members: List of principal IDs who are members of the group
+    - user_id: The owner user ID (for personal groups) or null (for shared groups)
+    - owners: List of user IDs who are owners of the group
+    - members: List of user IDs who are members of the group
     """
     try:
         command = GetGroupCommand(group_id=group_id)
@@ -71,7 +71,7 @@ def get_group(
             id=response.group.id,
             name=response.group.name,
             is_personal=response.group.is_personal,
-            principal_id=response.group.principal_id,
+            user_id=response.group.principal_id,
             owners=owners,
             members=members,
         )

@@ -367,7 +367,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     assert owner_group_access["role"] == "owner"
 
     user_access = access_data["user_access_list"][0]
-    assert user_access["principal_id"] == admin_user_id
+    assert user_access["user_id"] == admin_user_id
     assert user_access["role_in_group"] == "owner"
     assert user_access["group_role"] == "owner"
     assert user_access["group_id"] == owner_group_access["group_id"]
@@ -416,7 +416,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
     assert group_roles == ["member", "owner"]
 
     # Both users appear, each linked to the group that grants them access.
-    links_by_user = {u["principal_id"]: u for u in access_data_shared["user_access_list"]}
+    links_by_user = {u["user_id"]: u for u in access_data_shared["user_access_list"]}
     assert admin_user_id in links_by_user
     assert sso_user_id in links_by_user
     assert links_by_user[admin_user_id]["group_role"] == "owner"
@@ -458,7 +458,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
 
     # Step 3.2: ADD MEMBER TO GROUP
     print("Step 3.2: Adding SSO user to group as member...")
-    add_member_data = {"principal_id": sso_user_id}
+    add_member_data = {"user_id": sso_user_id}
     add_member_response = admin_client.post(f"/api/groups/{group_id}/members", json=add_member_data)
     assert add_member_response.status_code == 201
     print("✓ SSO user added to group")

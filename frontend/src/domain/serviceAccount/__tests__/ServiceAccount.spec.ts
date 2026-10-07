@@ -18,7 +18,7 @@ function account(overrides: Partial<ServiceAccount> = {}): ServiceAccount {
     id: 'account-1',
     groupId: 'group-1',
     name: 'nightly-backup',
-    createdByPrincipalId: 'user-1',
+    createdByUserId: 'user-1',
     createdByUserName: 'Ada Owner',
     createdAt: '2026-01-01T12:00:00Z',
     revokedAt: null,

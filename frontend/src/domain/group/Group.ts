@@ -10,8 +10,8 @@ export interface Group {
   id: string
   name: string
   isPersonal: boolean
-  /** For personal groups, the id of the owning principal; null for shared groups. */
-  principalId: string | null
+  /** For personal groups, the id of the owning user; null for shared groups. */
+  userId: string | null
   owners: string[]
   members: string[]
 }
