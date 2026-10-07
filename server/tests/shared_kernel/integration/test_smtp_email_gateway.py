@@ -94,6 +94,18 @@ def test_given_recipient_not_a_single_address_when_send_should_raise_email_deliv
     assert smtpd.messages == []
 
 
+def test_given_invalid_recipient_when_send_should_fail_without_connecting(smtpd, monkeypatch):
+    connections = _count_smtp_connections(monkeypatch)
+    gateway = SmtpEmailGateway(host=smtpd.hostname, port=smtpd.port, from_address="noreply@le-coffre.local")
+
+    with pytest.raises(EmailDeliveryError):
+        gateway.send(to="alice@example.com, bob@example.com", subject="Welcome", body="Hello Alice")
+    with pytest.raises(EmailDeliveryError):
+        gateway.send(to="alice@example.com", subject="Welcome\nBcc: attacker@evil.com", body="Hello Alice")
+
+    assert connections == [0]
+
+
 def test_given_smtp_server_with_implicit_tls_when_send_should_deliver_message_to_recipient(smtpd):
     # Arrange
     smtpd.config.use_ssl = True
@@ -268,6 +280,17 @@ def test_given_one_bad_recipient_when_send_bulk_should_still_deliver_the_others(
 
     assert [to for to, _error in failures] == ["alice@example.com, bob@example.com"]
     assert [m["To"] for m in smtpd.messages] == ["alice@example.com", "carol@example.com"]
+
+
+def test_given_only_invalid_emails_when_send_bulk_should_report_them_without_connecting(smtpd, monkeypatch):
+    connections = _count_smtp_connections(monkeypatch)
+    gateway = SmtpEmailGateway(host=smtpd.hostname, port=smtpd.port, from_address="noreply@le-coffre.local")
+    emails = [OutgoingEmail(to="alice@example.com, bob@example.com", subject="Welcome", body="not a single address")]
+
+    failures = gateway.send_bulk(emails)
+
+    assert [to for to, _error in failures] == ["alice@example.com, bob@example.com"]
+    assert connections == [0]
 
 
 def test_given_smtp_server_unreachable_when_send_bulk_should_raise_email_delivery_error(unreachable_smtp_port):

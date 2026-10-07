@@ -34,7 +34,11 @@ class NotifyVaultStateChangedUseCase(TracedUseCase):
         self._app_base_url = app_base_url
 
     def execute(self, command: NotifyVaultStateChangedCommand) -> None:
-        user_ids = self._preferences_repository.list_user_ids_to_notify(command.change)
+        user_ids = (
+            self._preferences_repository.list_user_ids_to_notify_on_lock()
+            if command.change is VaultStateChange.LOCKED
+            else self._preferences_repository.list_user_ids_to_notify_on_unlock()
+        )
         if not user_ids:
             return
         recipients = self._recipient_gateway.get_recipients(user_ids)

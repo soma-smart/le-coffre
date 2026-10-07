@@ -7,7 +7,6 @@ from notification_context.adapters.secondary.sql.notification_preference_model i
 )
 from notification_context.application.gateways import NotificationPreferencesRepository
 from notification_context.domain.entities import NotificationPreferences
-from notification_context.domain.value_objects import VaultStateChange
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
 
 
@@ -34,11 +33,21 @@ class SqlNotificationPreferencesRepository(SQLBaseRepository, NotificationPrefer
         self._session.add(row)
         self.commit()
 
-    def list_user_ids_to_notify(self, change: VaultStateChange) -> list[UUID]:
-        column = (
-            NotificationPreferenceTable.notify_on_vault_lock
-            if change is VaultStateChange.LOCKED
-            else NotificationPreferenceTable.notify_on_vault_unlock
+    def delete(self, user_id: UUID) -> None:
+        row = self._session.get(NotificationPreferenceTable, user_id)
+        if row is None:
+            return
+        self._session.delete(row)
+        self.commit()
+
+    def list_user_ids_to_notify_on_lock(self) -> list[UUID]:
+        statement = select(NotificationPreferenceTable.user_id).where(
+            col(NotificationPreferenceTable.notify_on_vault_lock).is_(True)
         )
-        statement = select(NotificationPreferenceTable.user_id).where(col(column).is_(True))
+        return list(self._session.exec(statement).all())
+
+    def list_user_ids_to_notify_on_unlock(self) -> list[UUID]:
+        statement = select(NotificationPreferenceTable.user_id).where(
+            col(NotificationPreferenceTable.notify_on_vault_unlock).is_(True)
+        )
         return list(self._session.exec(statement).all())

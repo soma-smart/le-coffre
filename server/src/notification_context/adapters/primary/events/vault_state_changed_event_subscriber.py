@@ -47,16 +47,11 @@ class VaultStateChangedEventSubscriber:
         self._submit(NotifyVaultStateChangedCommand(change=VaultStateChange.UNLOCKED))
 
     def _submit(self, command: NotifyVaultStateChangedCommand) -> None:
-        # publish() calls subscribers synchronously with no safety net, from inside
-        # LockVaultUseCase/UnlockVaultUseCase, before the vault event is persisted:
-        # submit() raising (e.g. the executor was already shut down) must not escape
-        # as a 500 on an otherwise-successful lock/unlock, nor skip the audit event.
-        try:
-            self._executor.submit(self._notify, command)
-        except Exception:  # noqa: BLE001 - courtesy emails: a failure is logged, never raised into the caller
-            logger.error("Failed to submit vault %s notifications", command.change.value, exc_info=True)
+        self._executor.submit(self._notify, command)
 
     def _notify(self, command: NotifyVaultStateChangedCommand) -> None:
+        # Runs on the executor, whose Future nobody reads: without this, a failure
+        # would vanish without a trace.
         try:
             with self._session_maker() as session:
                 NotifyVaultStateChangedUseCase(

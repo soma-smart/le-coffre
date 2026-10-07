@@ -67,10 +67,11 @@ from identity_access_management_context.adapters.secondary import (
     PrivateApiSsoEncryptionGateway,
     SsoUrlValidator,
 )
-from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
+from identity_access_management_context.domain.events import OwnerAddedToGroupEvent, UserDeletedEvent
 from monitoring import setup_logging, setup_monitoring
 from notification_context.adapters.primary.events import (
     GroupOwnerPromotedEventSubscriber,
+    UserDeletedEventSubscriber,
     VaultStateChangedEventSubscriber,
 )
 from notification_context.adapters.primary.fastapi.routes import get_notification_router
@@ -281,6 +282,10 @@ async def lifespan(app: FastAPI):
     )
     owner_promoted_subscriber = GroupOwnerPromotedEventSubscriber(notify_owner_promoted_use_case)
     domain_event_publisher.subscribe(OwnerAddedToGroupEvent, owner_promoted_subscriber.handle)
+
+    # Notification: drop a deleted user's notification preferences (subscribes to UserDeletedEvent)
+    user_deleted_subscriber = UserDeletedEventSubscriber(session_maker=SessionLocal)
+    domain_event_publisher.subscribe(UserDeletedEvent, user_deleted_subscriber.handle)
 
     # Notification: vault lock / unlock emails to opted-in users (reactive, subscribes
     # to VaultLockedEvent / VaultUnlockedEvent). Sent off the request thread, in order.
