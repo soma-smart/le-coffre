@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   filterGroupsForUser,
   filterOwnedGroupsForUser,
+  isSoleMemberOf,
   isUserMemberOf,
   isUserOwnerOf,
   pickDefaultGroupForUser,
@@ -33,6 +34,34 @@ describe('isUserOwnerOf / isUserMemberOf', () => {
     expect(isUserOwnerOf(group, 'u2')).toBe(false)
     expect(isUserMemberOf(group, 'u1')).toBe(false)
     expect(isUserMemberOf(group, 'u2')).toBe(true)
+  })
+})
+
+describe('isSoleMemberOf', () => {
+  it('returns false for a null userId', () => {
+    const group = makeGroup({ owners: ['u1'] })
+    expect(isSoleMemberOf(group, null)).toBe(false)
+  })
+
+  it('returns false when the user does not belong to the group', () => {
+    const group = makeGroup({ owners: ['u1'] })
+    expect(isSoleMemberOf(group, 'someone-else')).toBe(false)
+  })
+
+  it('returns true when the user is the sole owner and there are no other members', () => {
+    const group = makeGroup({ owners: ['u1'], members: [] })
+    expect(isSoleMemberOf(group, 'u1')).toBe(true)
+  })
+
+  it('returns true when the user is the sole member and there are no owners listed', () => {
+    const group = makeGroup({ owners: [], members: ['u1'] })
+    expect(isSoleMemberOf(group, 'u1')).toBe(true)
+  })
+
+  it('returns false when another owner or member is also in the group', () => {
+    const group = makeGroup({ owners: ['u1'], members: ['u2'] })
+    expect(isSoleMemberOf(group, 'u1')).toBe(false)
+    expect(isSoleMemberOf(group, 'u2')).toBe(false)
   })
 })
 

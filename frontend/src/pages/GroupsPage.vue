@@ -9,7 +9,8 @@ import { useUserStore } from '@/stores/user'
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
-import type { Group } from '@/domain/group/Group'
+import { isSoleMemberOf, isUserMemberOf, isUserOwnerOf, type Group } from '@/domain/group/Group'
+import { GroupDomainError } from '@/domain/group/errors'
 import { sortGroups } from '../utils/groupSort'
 
 const toast = useToast()
@@ -46,6 +47,7 @@ const personalCard = computed(() => {
 const showCreateDialog = ref(false)
 const showGroupDetailsModal = ref(false)
 const showDeleteGroupModal = ref(false)
+const showLeaveGroupModal = ref(false)
 const showServiceAccountsModal = ref(false)
 // Kept apart from `selectedGroup`: sharing it would let the delete-confirmation
 // computeds read whichever group the service-accounts dialog last opened.
@@ -102,6 +104,52 @@ const deleteWarningMessage = computed(() => {
 
 const canDeleteGroup = computed(() => {
   return selectedGroup.value ? canEditGroup(selectedGroup.value) : false
+})
+
+// Whether the current user belongs to this group at all (owner or member) —
+// a shared group an admin merely sees in the list but doesn't belong to
+// shouldn't offer a "leave" action.
+const canLeaveGroup = (group: Group) => {
+  const userId = groupsStore.currentUserId
+  return isUserOwnerOf(group, userId) || isUserMemberOf(group, userId)
+}
+
+// Computed properties for the leave-group modal. Reuses `selectedGroup`,
+// same as the delete modal — the two never show at the same time.
+const isSelectedGroupSoleMember = computed(() => {
+  return selectedGroup.value ? isSoleMemberOf(selectedGroup.value, groupsStore.currentUserId) : false
+})
+
+const isSelectedGroupOwner = computed(() => {
+  return selectedGroup.value ? isUserOwnerOf(selectedGroup.value, groupsStore.currentUserId) : false
+})
+
+const isSelectedGroupSoleOwner = computed(() => {
+  return isSelectedGroupOwner.value && selectedGroup.value?.owners.length === 1
+})
+
+const leaveModalQuestion = computed(() => {
+  const name = selectedGroup.value?.name
+  if (isSelectedGroupSoleMember.value) return t('pages.groups.leaveSoleMemberQuestion', { name })
+  if (isSelectedGroupOwner.value) return t('pages.groups.leaveOwnerBlockedQuestion', { name })
+  return t('pages.groups.leaveQuestion', { name })
+})
+
+const leaveModalWarningMessage = computed(() => {
+  if (isSelectedGroupSoleMember.value || !isSelectedGroupOwner.value) return undefined
+  return isSelectedGroupSoleOwner.value
+    ? t('pages.groups.leaveBlockedSoleOwner')
+    : t('pages.groups.leaveBlockedOwner')
+})
+
+const leaveModalConfirmLabel = computed(() => {
+  if (isSelectedGroupSoleMember.value) return t('pages.groups.deleteGroup')
+  if (isSelectedGroupOwner.value) return t('common.close')
+  return t('pages.groups.leaveGroup')
+})
+
+const leaveModalCountdownSeconds = computed(() => {
+  return isSelectedGroupOwner.value || isSelectedGroupSoleMember.value ? 0 : 6
 })
 
 // Open group details modal
@@ -264,6 +312,52 @@ const handleDeleteGroup = async () => {
   }
 }
 
+// Open leave-group dialog, from either the card icon or the details modal
+// (which closes itself before emitting).
+const openLeaveGroupDialog = (group: Group) => {
+  selectedGroup.value = group
+  showLeaveGroupModal.value = true
+}
+
+const handleConfirmLeaveGroup = async () => {
+  const group = selectedGroup.value
+  if (!group) return
+
+  if (isSelectedGroupSoleMember.value) {
+    showLeaveGroupModal.value = false
+    openDeleteGroupDialog(group)
+    return
+  }
+
+  // Owner case is blocked client-side (and the backend refuses it too) — the
+  // confirm button here only closes the modal, no side effect.
+  if (isSelectedGroupOwner.value) return
+
+  try {
+    await groupsStore.removeMemberFromGroup(group.id, groupsStore.currentUserId as string)
+    toast.add({
+      severity: 'success',
+      summary: t('common.success'),
+      detail: t('pages.groups.leftGroupDetail'),
+      life: 5000,
+    })
+    selectedGroup.value = null
+    await groupsStore.refresh()
+  } catch (error) {
+    console.error('Failed to leave group:', error)
+    const detail =
+      error instanceof GroupDomainError && error.message
+        ? error.message
+        : t('pages.groups.errors.leaveFailed')
+    toast.add({
+      severity: 'error',
+      summary: t('common.error'),
+      detail,
+      life: 5000,
+    })
+  }
+}
+
 onMounted(async () => {
   await userStore.fetchCurrentUser()
   groupsStore.fetchAllGroups()
@@ -375,6 +469,16 @@ onMounted(async () => {
                   @click="openDeleteGroupDialog(group)"
                   v-tooltip.top="t('pages.groups.deleteGroup')"
                 />
+                <Button
+                  v-if="canLeaveGroup(group)"
+                  icon="pi pi-sign-out"
+                  text
+                  rounded
+                  severity="danger"
+                  size="small"
+                  @click="openLeaveGroupDialog(group)"
+                  v-tooltip.top="t('pages.groups.leaveGroup')"
+                />
               </div>
             </div>
           </template>
@@ -451,6 +555,7 @@ onMounted(async () => {
         :group="selectedGroup"
         @member-added="handleMemberChanged"
         @member-removed="handleMemberChanged"
+        @leave-group="openLeaveGroupDialog"
       />
 
       <!-- Service Accounts Modal -->
@@ -474,6 +579,20 @@ onMounted(async () => {
         :countdown-seconds="6"
         :can-proceed="canDeleteGroup"
         @confirm="handleDeleteGroup"
+      />
+
+      <!-- Leave Group Confirmation Modal -->
+      <ConfirmationModal
+        v-model:visible="showLeaveGroupModal"
+        :title="t('pages.groups.leaveGroup')"
+        :question="leaveModalQuestion"
+        :warning-message="leaveModalWarningMessage"
+        :confirm-label="leaveModalConfirmLabel"
+        :cancel-label="t('common.cancel')"
+        :severity="isSelectedGroupOwner ? 'warning' : 'danger'"
+        icon="pi pi-sign-out"
+        :countdown-seconds="leaveModalCountdownSeconds"
+        @confirm="handleConfirmLeaveGroup"
       />
     </div>
   </MainLayout>

@@ -25,6 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'memberRemoved'): void
   (e: 'memberAdded'): void
+  (e: 'leaveGroup', group: Group): void
 }>()
 
 const toast = useToast()
@@ -210,6 +211,13 @@ const handleDemoteOwner = (user: User) => {
       }
     },
   })
+}
+
+const handleLeaveGroup = () => {
+  if (!props.group) return
+  const group = props.group
+  visible.value = false
+  emit('leaveGroup', group)
 }
 
 watch(
@@ -415,6 +423,14 @@ watch(visible, (isVisible) => {
     </div>
 
     <template #footer>
+      <Button
+        v-if="group && !group.isPersonal"
+        :label="t('components.groupDetailsModal.leaveGroupButton')"
+        icon="pi pi-sign-out"
+        severity="danger"
+        outlined
+        @click="handleLeaveGroup"
+      />
       <Button :label="t('common.close')" severity="secondary" @click="visible = false" />
     </template>
   </Dialog>

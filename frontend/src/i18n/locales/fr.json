@@ -229,6 +229,7 @@
       "noMatch": "Aucun groupe ne correspond à \"{query}\".",
       "editGroup": "Modifier le groupe",
       "deleteGroup": "Supprimer le groupe",
+      "leaveGroup": "Quitter le groupe",
       "personalGroup": "Groupe personnel",
       "sharedGroup": "Groupe partagé",
       "viewMembers": "Voir les membres",
@@ -240,9 +241,15 @@
       "deleteDescription": "Cette action est irréversible.\nTous les membres du groupe perdront l'accès.",
       "cannotDeleteSummary": "Impossible de supprimer le groupe",
       "cannotDeleteHasPasswords": "Ce groupe contient des mots de passe et ne peut pas être supprimé. Veuillez d'abord supprimer tous les mots de passe.",
+      "leaveQuestion": "Êtes-vous sûr de vouloir quitter \"{name}\" ?",
+      "leaveOwnerBlockedQuestion": "Vous êtes propriétaire de \"{name}\".",
+      "leaveSoleMemberQuestion": "Vous êtes le seul membre de \"{name}\" — il n'est pas possible de le quitter.",
+      "leaveBlockedOwner": "Les propriétaires doivent se rétrograder avant de pouvoir quitter le groupe. Rétrogradez-vous d'abord au statut de membre, puis vous pourrez quitter le groupe.",
+      "leaveBlockedSoleOwner": "Vous êtes le seul propriétaire de ce groupe. Promouvez d'abord un autre membre comme propriétaire, puis rétrogradez-vous, et vous pourrez quitter le groupe.",
       "updatedDetail": "Groupe mis à jour avec succès",
       "createdDetail": "Groupe créé avec succès",
       "deletedDetail": "Groupe supprimé avec succès",
+      "leftGroupDetail": "Vous avez quitté le groupe",
       "warnings": {
         "hasPasswords": "Ce groupe contient des mots de passe et ne peut pas être supprimé. Veuillez supprimer ou réassigner tous les mots de passe avant de supprimer ce groupe.",
         "noPermission": "Vous n'avez pas la permission de supprimer ce groupe. Seuls les administrateurs et les propriétaires du groupe peuvent supprimer des groupes."
@@ -252,7 +259,8 @@
         "validationSummary": "Erreur de validation",
         "saveFailedUpdate": "Échec de la mise à jour du groupe",
         "saveFailedCreate": "Échec de la création du groupe",
-        "deleteFailed": "Échec de la suppression du groupe"
+        "deleteFailed": "Échec de la suppression du groupe",
+        "leaveFailed": "Échec pour quitter le groupe"
       }
     },
     "unlock": {
@@ -526,7 +534,8 @@
       "demoteConfirmAccept": "Rétrograder",
       "demotedDetail": "{name} rétrogradé en simple membre",
       "demoteFailed": "Échec de la rétrogradation du membre",
-      "demoteFailedLastOwner": "Impossible de rétrograder {user} : {group} se retrouverait sans propriétaire"
+      "demoteFailedLastOwner": "Impossible de rétrograder {user} : {group} se retrouverait sans propriétaire",
+      "leaveGroupButton": "Quitter le groupe"
     },
     "groupHistoryModal": {
       "title": "Historique : {name}",

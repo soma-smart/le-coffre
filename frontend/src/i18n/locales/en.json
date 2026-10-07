@@ -229,6 +229,7 @@
       "noMatch": "No groups match \"{query}\".",
       "editGroup": "Edit group",
       "deleteGroup": "Delete group",
+      "leaveGroup": "Leave group",
       "personalGroup": "Personal Group",
       "sharedGroup": "Shared Group",
       "viewMembers": "View Members",
@@ -240,9 +241,15 @@
       "deleteDescription": "This action cannot be undone.\nAll group members will lose access.",
       "cannotDeleteSummary": "Cannot Delete Group",
       "cannotDeleteHasPasswords": "This group contains passwords and cannot be deleted. Please remove all passwords first.",
+      "leaveQuestion": "Are you sure you want to leave \"{name}\"?",
+      "leaveOwnerBlockedQuestion": "You are an owner of \"{name}\".",
+      "leaveSoleMemberQuestion": "You are the only member of \"{name}\" — leaving isn't available.",
+      "leaveBlockedOwner": "Owners must step down before leaving. Demote yourself to member first, then you'll be able to leave.",
+      "leaveBlockedSoleOwner": "You are the only owner of this group. Promote another member to owner first, then demote yourself, then you'll be able to leave.",
       "updatedDetail": "Group updated successfully",
       "createdDetail": "Group created successfully",
       "deletedDetail": "Group deleted successfully",
+      "leftGroupDetail": "You have left the group",
       "warnings": {
         "hasPasswords": "This group contains passwords and cannot be deleted. Please remove or reassign all passwords before deleting this group.",
         "noPermission": "You don't have permission to delete this group. Only admins and group owners can delete groups."
@@ -252,7 +259,8 @@
         "validationSummary": "Validation Error",
         "saveFailedUpdate": "Failed to update group",
         "saveFailedCreate": "Failed to create group",
-        "deleteFailed": "Failed to delete group"
+        "deleteFailed": "Failed to delete group",
+        "leaveFailed": "Failed to leave group"
       }
     },
     "unlock": {
@@ -526,7 +534,8 @@
       "demoteConfirmAccept": "Demote",
       "demotedDetail": "{name} demoted to member",
       "demoteFailed": "Failed to demote member",
-      "demoteFailedLastOwner": "Cannot demote {user}: {group} would be left without an owner"
+      "demoteFailedLastOwner": "Cannot demote {user}: {group} would be left without an owner",
+      "leaveGroupButton": "Leave group"
     },
     "groupHistoryModal": {
       "title": "History: {name}",
