@@ -53,7 +53,7 @@ class UpdateShareExpirationUseCase(TracedUseCase):
         )
 
     def execute(self, command: UpdateShareExpirationCommand) -> None:
-        owner_group_id = self.ownership_service.ensure_user_owns_password(command.owner_id, command.password_id)
+        owner_group_id = self.ownership_service.ensure_principal_owns_password(command.owner_id, command.password_id)
 
         previous = self.password_permissions_repository.list_all_permissions_for(command.password_id).get(
             command.group_id
@@ -74,7 +74,7 @@ class UpdateShareExpirationUseCase(TracedUseCase):
             extra={
                 "password_id": str(command.password_id),
                 "shared_with_group_id": str(command.group_id),
-                "by_user_id": str(command.owner_id),
+                "by_principal_id": str(command.owner_id),
                 "expires_at": expires_at.isoformat() if expires_at else None,
             },
         )
@@ -83,7 +83,7 @@ class UpdateShareExpirationUseCase(TracedUseCase):
             password_id=command.password_id,
             owner_group_id=owner_group_id,
             shared_with_group_id=command.group_id,
-            updated_by_user_id=command.owner_id,
+            updated_by_principal_id=command.owner_id,
             previous_expires_at=previous.expires_at.isoformat() if previous.expires_at else None,
             expires_at=expires_at.isoformat() if expires_at else None,
         )

@@ -30,7 +30,7 @@ class FakeServiceAccountEventRepository(ServiceAccountEventRepository):
                     "event_id": event.event_id,
                     "event_type": event.event_type,
                     "occurred_on": event.occurred_on,
-                    "actor_user_id": event.user_id,
+                    "actor_principal_id": event.principal_id,
                     "event_data": event.event_data,
                     # Only item events name an account; a listing is group-scoped.
                     "service_account_id": (
@@ -49,7 +49,7 @@ class FakeServiceAccountEventRepository(ServiceAccountEventRepository):
             facts.append(
                 ServiceAccountCreationFacts(
                     created_at=event["occurred_on"] if event else None,
-                    created_by_user_id=event["actor_user_id"] if event else None,
+                    created_by_principal_id=event["actor_principal_id"] if event else None,
                 )
             )
         return facts

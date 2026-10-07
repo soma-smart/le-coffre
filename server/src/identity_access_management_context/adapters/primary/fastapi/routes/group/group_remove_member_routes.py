@@ -60,7 +60,7 @@ def remove_member_from_group(
         command = RemoveUserFromGroupCommand(
             requester_id=current_user.user_id,
             group_id=group_id,
-            user_id=user_id,
+            principal_id=user_id,
         )
 
         usecase.execute(command)

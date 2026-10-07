@@ -8,15 +8,15 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     UpdateUserPasswordUseCase,
 )
-from identity_access_management_context.domain.entities import User, UserPassword
+from identity_access_management_context.domain.entities import PasswordCredentialRecord, User
 from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     UserNotFoundException,
 )
 from tests.identity_access_management_context.unit.fakes import (
+    FakePasswordCredentialRecordRepository,
     FakePasswordHashingGateway,
     FakeTokenGateway,
-    FakeUserPasswordRepository,
     FakeUserRepository,
 )
 from tests.shared_kernel.fakes import FakeTimeGateway
@@ -24,7 +24,7 @@ from tests.shared_kernel.fakes import FakeTimeGateway
 
 @pytest.fixture
 def use_case(
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     user_repository: FakeUserRepository,
     auth_session_repository,
@@ -32,7 +32,7 @@ def use_case(
     time_provider: FakeTimeGateway,
 ):
     return UpdateUserPasswordUseCase(
-        user_password_repository,
+        password_credential_record_repository,
         password_hashing_gateway,
         user_repository,
         auth_session_repository,
@@ -43,7 +43,7 @@ def use_case(
 
 def test_given_valid_user_with_correct_old_password_when_updating_password_should_update_successfully(
     use_case: UpdateUserPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     user_repository: FakeUserRepository,
     auth_session_repository,
@@ -56,13 +56,12 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     new_password = "NewPassword456!"
 
     # Create existing user with hashed old password
-    user_password = UserPassword(
-        id=user_id,
+    user_password = PasswordCredentialRecord(
+        principal_id=user_id,
         email="user@example.com",
         password_hash=password_hashing_gateway.hash(old_password),
-        display_name="Test User",
     )
-    user_password_repository.save(user_password)
+    password_credential_record_repository.save(user_password)
     user_repository.save(
         User(
             id=user_id,
@@ -90,8 +89,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     result = use_case.execute(command)
 
     # Assert
-    updated_user = user_password_repository.get_by_id(user_id)
-    assert updated_user is not None
+    (updated_user,) = password_credential_record_repository.list_by_principal_id(user_id)
     assert password_hashing_gateway.verify(new_password, updated_user.password_hash)
     assert not password_hashing_gateway.verify(old_password, updated_user.password_hash)
     authenticated_user = user_repository.get_by_id(user_id)
@@ -100,7 +98,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
 
     stale_session = auth_session_repository.sessions[existing_session.id]
     assert stale_session.invalidated_at == time_provider.get_current_time().replace(microsecond=0)
-    current_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(
+    current_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(
         user_id,
         "refresh-token-jti-password-change",
     )
@@ -112,7 +110,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
 
 def test_given_incorrect_old_password_when_updating_password_should_raise_invalid_credentials(
     use_case: UpdateUserPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
 ):
     # Arrange
@@ -122,13 +120,12 @@ def test_given_incorrect_old_password_when_updating_password_should_raise_invali
     new_password = "NewPassword456!"
 
     # Create existing user with hashed password
-    user_password = UserPassword(
-        id=user_id,
+    user_password = PasswordCredentialRecord(
+        principal_id=user_id,
         email="user@example.com",
         password_hash=password_hashing_gateway.hash(actual_password),
-        display_name="Test User",
     )
-    user_password_repository.save(user_password)
+    password_credential_record_repository.save(user_password)
 
     command = UpdateUserPasswordCommand(
         user_id=user_id,
@@ -160,19 +157,18 @@ def test_given_user_not_in_password_repository_when_updating_password_should_rai
 
 def test_given_password_record_exists_but_user_missing_when_updating_password_then_does_not_persist_new_password(
     use_case: UpdateUserPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     old_password = "OldPassword123!"
     new_password = "NewPassword456!"
 
-    user_password_repository.save(
-        UserPassword(
-            id=user_id,
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(
+            principal_id=user_id,
             email="user@example.com",
             password_hash=password_hashing_gateway.hash(old_password),
-            display_name="Test User",
         )
     )
 
@@ -185,7 +181,30 @@ def test_given_password_record_exists_but_user_missing_when_updating_password_th
     with pytest.raises(UserNotFoundException):
         use_case.execute(command)
 
-    unchanged_user_password = user_password_repository.get_by_id(user_id)
-    assert unchanged_user_password is not None
+    (unchanged_user_password,) = password_credential_record_repository.list_by_principal_id(user_id)
     assert password_hashing_gateway.verify(old_password, unchanged_user_password.password_hash)
     assert not password_hashing_gateway.verify(new_password, unchanged_user_password.password_hash)
+
+
+def test_given_a_user_with_two_passwords_when_updating_then_only_the_one_matching_the_old_password_changes(
+    use_case: UpdateUserPasswordUseCase,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+    user_repository: FakeUserRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    for email, password in (("work@example.com", "WorkPassword123!"), ("home@example.com", "HomePassword123!")):
+        password_credential_record_repository.save(
+            PasswordCredentialRecord(
+                principal_id=user_id, email=email, password_hash=password_hashing_gateway.hash(password)
+            )
+        )
+    user_repository.save(User(id=user_id, username="testuser", email="work@example.com", name="Test User"))
+
+    use_case.execute(
+        UpdateUserPasswordCommand(user_id=user_id, old_password="HomePassword123!", new_password="NewPassword456!")
+    )
+
+    hashes = {c.email: c.password_hash for c in password_credential_record_repository.list_by_principal_id(user_id)}
+    assert password_hashing_gateway.verify("WorkPassword123!", hashes["work@example.com"])
+    assert password_hashing_gateway.verify("NewPassword456!", hashes["home@example.com"])

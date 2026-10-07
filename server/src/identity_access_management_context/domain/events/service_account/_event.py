@@ -13,21 +13,21 @@ from shared_kernel.domain.value_objects.event_priority import EventPriority
 class ServiceAccountEvent(DomainEvent, ABC):
     """A service-account event."""
 
-    user_id: UUID
-    """The user who fired the event."""
+    principal_id: UUID
+    """The principal who fired the event."""
 
     def __init__(
         self,
         event_id: UUID,
         occurred_on: datetime,
-        user_id: UUID,
+        principal_id: UUID,
         priority: EventPriority = EventPriority.MEDIUM,
     ) -> None:
         super().__init__(event_id, occurred_on, priority)
-        self.user_id = user_id
+        self.principal_id = principal_id
 
     def _make_event_data(self) -> dict[str, str]:
-        return {"user_id": str(self.user_id)}
+        return {"principal_id": str(self.principal_id)}
 
     @property
     def event_data(self) -> dict[str, str]:
@@ -49,12 +49,12 @@ class ServiceAccountItemEvent(ServiceAccountEvent, ABC):
         self,
         event_id: UUID,
         occurred_on: datetime,
-        user_id: UUID,
+        principal_id: UUID,
         service_account_id: UUID,
         service_account_name: str,
         priority: EventPriority = EventPriority.MEDIUM,
     ) -> None:
-        super().__init__(event_id, occurred_on, user_id, priority)
+        super().__init__(event_id, occurred_on, principal_id, priority)
         self.service_account_id = service_account_id
         self.service_account_name = service_account_name
 

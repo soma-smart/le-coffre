@@ -132,7 +132,7 @@ def test_given_user_updating_own_profile_when_updating_should_publish_user_updat
     events = event_publisher.get_published_events_of_type(UserUpdatedEvent)
     assert len(events) == 1
     assert events[0].user_id == uuid
-    assert events[0].updated_by_user_id == uuid
+    assert events[0].updated_by_principal_id == uuid
 
 
 def test_given_admin_updating_another_user_when_updating_should_record_admin_as_actor(
@@ -160,10 +160,10 @@ def test_given_admin_updating_another_user_when_updating_should_record_admin_as_
     events = event_publisher.get_published_events_of_type(UserUpdatedEvent)
     assert len(events) == 1
     assert events[0].user_id == target_uuid
-    assert events[0].updated_by_user_id == admin_uuid
+    assert events[0].updated_by_principal_id == admin_uuid
 
     assert len(user_event_repository.events) == 1
-    assert user_event_repository.events[0]["actor_user_id"] == admin_uuid
+    assert user_event_repository.events[0]["actor_principal_id"] == admin_uuid
 
 
 def test_given_user_updating_own_profile_when_updating_should_store_user_updated_event(
@@ -188,4 +188,4 @@ def test_given_user_updating_own_profile_when_updating_should_store_user_updated
     assert len(user_event_repository.events) == 1
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "UserUpdatedEvent"
-    assert stored["actor_user_id"] == uuid
+    assert stored["actor_principal_id"] == uuid

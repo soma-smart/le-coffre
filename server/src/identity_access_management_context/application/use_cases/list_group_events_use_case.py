@@ -54,9 +54,9 @@ class ListGroupEventsUseCase(TracedUseCase):
         for event in events:
             enriched_event_data = dict(event["event_data"])
 
-            target_user_id = enriched_event_data.get("user_id")
-            if target_user_id:
-                target_user = self.user_repository.get_by_id(UUID(target_user_id))
+            member_id = enriched_event_data.get("principal_id")
+            if member_id:
+                target_user = self.user_repository.get_by_id(UUID(member_id))
                 if target_user:
                     enriched_event_data["user_email"] = target_user.email
 
@@ -67,14 +67,14 @@ class ListGroupEventsUseCase(TracedUseCase):
                     occurred_on=event["occurred_on"].isoformat()
                     if hasattr(event["occurred_on"], "isoformat")
                     else event["occurred_on"],
-                    actor_user_id=str(event["actor_user_id"]),
-                    actor_email=self._get_actor_email(event["actor_user_id"]),
+                    actor_principal_id=str(event["actor_principal_id"]),
+                    actor_email=self._get_actor_email(event["actor_principal_id"]),
                     event_data=enriched_event_data,
                 )
             )
 
         return ListGroupEventsResponse(events=event_items)
 
-    def _get_actor_email(self, actor_user_id: str) -> str | None:
-        actor = self.user_repository.get_by_id(UUID(str(actor_user_id)))
+    def _get_actor_email(self, actor_principal_id: str) -> str | None:
+        actor = self.user_repository.get_by_id(UUID(str(actor_principal_id)))
         return actor.email if actor else None

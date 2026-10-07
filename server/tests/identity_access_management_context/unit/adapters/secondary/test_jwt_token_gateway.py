@@ -17,7 +17,7 @@ def test_validate_token_rejects_refresh_token() -> None:
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
 
     refresh_token = gateway.generate_refresh_token(
-        user_id=user_id,
+        principal_id=user_id,
         email="user@example.com",
         roles=["user"],
     )
@@ -32,7 +32,7 @@ def test_validate_token_accepts_access_token() -> None:
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
 
     access_token = gateway.generate_token(
-        user_id=user_id,
+        principal_id=user_id,
         email="user@example.com",
         roles=["user"],
     )
@@ -40,7 +40,7 @@ def test_validate_token_accepts_access_token() -> None:
     validated_access_token = gateway.validate_token(access_token.value)
 
     assert validated_access_token is not None
-    assert validated_access_token.user_id == user_id
+    assert validated_access_token.principal_id == user_id
 
 
 def test_validate_refresh_token_rejects_access_token() -> None:
@@ -48,7 +48,7 @@ def test_validate_refresh_token_rejects_access_token() -> None:
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
 
     access_token = gateway.generate_token(
-        user_id=user_id,
+        principal_id=user_id,
         email="user@example.com",
         roles=["user"],
     )

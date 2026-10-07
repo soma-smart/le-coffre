@@ -36,19 +36,19 @@ class ListGroupsUseCase(TracedUseCase):
         result = ListGroupResponse([])
         for group in all_groups:
             members = self.group_member_repository.get_members(group.id)
-            owner_ids = [m.user_id for m in members if m.is_owner]
-            members_ids = [m.user_id for m in members if not m.is_owner]
+            owner_ids = [m.principal_id for m in members if m.is_owner]
+            members_ids = [m.principal_id for m in members if not m.is_owner]
 
             # For personal groups, the user_id is the owner if no members in table
-            if group.is_personal and group.user_id and not owner_ids:
-                owner_ids = [group.user_id]
+            if group.is_personal and group.principal_id and not owner_ids:
+                owner_ids = [group.principal_id]
 
             result.groups.append(
                 GroupResponse(
                     id=group.id,
                     name=group.name,
                     is_personal=group.is_personal,
-                    user_id=group.user_id,
+                    principal_id=group.principal_id,
                     owners=owner_ids,
                     members=members_ids,
                 )

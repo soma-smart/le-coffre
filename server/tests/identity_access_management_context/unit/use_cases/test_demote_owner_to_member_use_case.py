@@ -70,7 +70,7 @@ def test_given_non_admin_owner_when_demoting_co_owner_then_raise_cannot_demote_o
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=co_owner_id,
+        principal_id=co_owner_id,
     )
 
     with pytest.raises(CannotDemoteOtherOwnerException):
@@ -102,7 +102,7 @@ def test_given_owner_when_demoting_self_then_becomes_member(
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=owner_id,
+        principal_id=owner_id,
     )
 
     use_case.execute(command)
@@ -130,7 +130,7 @@ def test_given_sole_owner_when_demoting_self_then_raise_cannot_demote_last_owner
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=owner_id,
+        principal_id=owner_id,
     )
 
     with pytest.raises(CannotDemoteLastOwnerException):
@@ -162,7 +162,7 @@ def test_given_non_owner_when_demoting_owner_then_raise_user_not_owner_exception
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=non_owner_id, roles=[]),
         group_id=group_id,
-        user_id=owner_id,
+        principal_id=owner_id,
     )
 
     with pytest.raises(UserNotOwnerOfGroupException):
@@ -195,7 +195,7 @@ def test_given_admin_not_owner_when_demoting_owner_then_owner_becomes_member(
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=admin_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
-        user_id=owner_id,
+        principal_id=owner_id,
     )
 
     use_case.execute(command)
@@ -217,7 +217,7 @@ def test_given_group_not_found_when_demoting_owner_then_raise_group_not_found_ex
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=requester_id, roles=[]),
         group_id=nonexistent_group_id,
-        user_id=requester_id,
+        principal_id=requester_id,
     )
 
     with pytest.raises(GroupNotFoundException):
@@ -236,14 +236,14 @@ def test_given_personal_group_when_demoting_owner_then_raise_cannot_modify_perso
     owner = User(id=owner_id, username="owner", email="owner@example.com", name="Owner User")
     user_repository.save(owner)
 
-    group = Group(id=group_id, name="Personal Group", is_personal=True, user_id=owner_id)
+    group = Group(id=group_id, name="Personal Group", is_personal=True, principal_id=owner_id)
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[]),
         group_id=group_id,
-        user_id=owner_id,
+        principal_id=owner_id,
     )
 
     with pytest.raises(CannotModifyPersonalGroupException):
@@ -274,7 +274,7 @@ def test_given_user_not_found_when_demoting_owner_then_raise_user_not_found_exce
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
-        user_id=nonexistent_user_id,
+        principal_id=nonexistent_user_id,
     )
 
     with pytest.raises(UserNotFoundException):
@@ -310,7 +310,7 @@ def test_given_user_not_member_when_demoting_owner_then_raise_user_not_member_ex
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
-        user_id=non_member_id,
+        principal_id=non_member_id,
     )
 
     with pytest.raises(UserNotMemberOfGroupException):
@@ -344,7 +344,7 @@ def test_given_owner_when_demoting_plain_member_then_operation_is_a_no_op(
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
-        user_id=member_id,
+        principal_id=member_id,
     )
 
     use_case.execute(command)
@@ -383,15 +383,15 @@ def test_given_owner_when_demoting_co_owner_then_should_publish_owner_demoted_to
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
-        user_id=co_owner_id,
+        principal_id=co_owner_id,
     )
     use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(OwnerDemotedToMemberEvent)
     assert len(events) == 1
     assert events[0].group_id == group_id
-    assert events[0].user_id == co_owner_id
-    assert events[0].demoted_by_user_id == owner_id
+    assert events[0].principal_id == co_owner_id
+    assert events[0].demoted_by_principal_id == owner_id
 
 
 def test_given_owner_when_demoting_co_owner_then_should_store_owner_demoted_to_member_event(
@@ -420,11 +420,11 @@ def test_given_owner_when_demoting_co_owner_then_should_store_owner_demoted_to_m
     command = DemoteOwnerToMemberCommand(
         requesting_user=AuthenticatedUser(user_id=owner_id, roles=[ADMIN_ROLE]),
         group_id=group_id,
-        user_id=co_owner_id,
+        principal_id=co_owner_id,
     )
     use_case.execute(command)
 
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "OwnerDemotedToMemberEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id

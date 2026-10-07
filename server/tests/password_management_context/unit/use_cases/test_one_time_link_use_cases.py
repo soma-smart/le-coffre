@@ -139,7 +139,9 @@ def test_given_owner_when_creating_should_return_a_token_and_store_only_its_hash
     one_time_link_repository: FakeOneTimeLinkRepository,
     owned_password: Password,
 ):
-    result = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    result = create_use_case.execute(
+        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID)
+    )
 
     assert result.expires_at == T0 + timedelta(days=1)
     stored = one_time_link_repository.storage[result.id]
@@ -151,8 +153,10 @@ def test_given_two_creations_should_mint_distinct_tokens(
     create_use_case: CreateOneTimeLinkUseCase,
     owned_password: Password,
 ):
-    first = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
-    second = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    first = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
+    second = create_use_case.execute(
+        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID)
+    )
 
     assert first.token != second.token
 
@@ -163,7 +167,7 @@ def test_given_non_owner_when_creating_should_raise(
     owned_password: Password,
 ):
     with pytest.raises(NotPasswordOwnerError):
-        create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OUTSIDER_ID))
+        create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OUTSIDER_ID))
 
     assert one_time_link_repository.storage == {}
 
@@ -177,14 +181,14 @@ def test_given_group_member_who_is_not_group_owner_when_creating_should_raise(
     group_access_gateway.add_group_member(GROUP_ID, OUTSIDER_ID)
 
     with pytest.raises(NotPasswordOwnerError):
-        create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OUTSIDER_ID))
+        create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OUTSIDER_ID))
 
 
 def test_given_unknown_password_when_creating_should_raise(
     create_use_case: CreateOneTimeLinkUseCase,
 ):
     with pytest.raises(PasswordNotFoundError):
-        create_use_case.execute(CreateOneTimeLinkCommand(password_id=uuid4(), requesting_user_id=OWNER_ID))
+        create_use_case.execute(CreateOneTimeLinkCommand(password_id=uuid4(), requesting_principal_id=OWNER_ID))
 
 
 def test_given_lifetime_above_the_maximum_when_creating_should_raise_and_store_nothing(
@@ -196,7 +200,7 @@ def test_given_lifetime_above_the_maximum_when_creating_should_raise_and_store_n
         create_use_case.execute(
             CreateOneTimeLinkCommand(
                 password_id=PASSWORD_ID,
-                requesting_user_id=OWNER_ID,
+                requesting_principal_id=OWNER_ID,
                 lifetime_seconds=30 * 24 * 60 * 60,
             )
         )
@@ -213,7 +217,7 @@ def test_given_lifetime_below_the_minimum_when_creating_should_raise_and_store_n
         create_use_case.execute(
             CreateOneTimeLinkCommand(
                 password_id=PASSWORD_ID,
-                requesting_user_id=OWNER_ID,
+                requesting_principal_id=OWNER_ID,
                 lifetime_seconds=30,
             )
         )
@@ -226,11 +230,11 @@ def test_given_creation_when_succeeding_should_record_an_audit_event(
     password_event_repository: FakePasswordEventRepository,
     owned_password: Password,
 ):
-    create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
 
     event = password_event_repository.events[-1]
     assert event["event_type"] == "OneTimeLinkCreatedEvent"
-    assert event["actor_user_id"] == OWNER_ID
+    assert event["actor_principal_id"] == OWNER_ID
     assert event["password_id"] == PASSWORD_ID
 
 
@@ -241,7 +245,7 @@ def _issue_link(create_use_case: CreateOneTimeLinkUseCase, lifetime_seconds: int
     result = create_use_case.execute(
         CreateOneTimeLinkCommand(
             password_id=PASSWORD_ID,
-            requesting_user_id=OWNER_ID,
+            requesting_principal_id=OWNER_ID,
             lifetime_seconds=lifetime_seconds,
         )
     )
@@ -343,7 +347,7 @@ def test_given_consumption_when_succeeding_should_record_a_read_event_attributed
 
     event = password_event_repository.events[-1]
     assert event["event_type"] == "OneTimeLinkReadEvent"
-    assert event["actor_user_id"] == OWNER_ID
+    assert event["actor_principal_id"] == OWNER_ID
     assert event["event_data"]["actor"] == "anonymous"
 
 
@@ -374,7 +378,7 @@ def test_given_owner_when_revoking_should_make_the_link_unusable(
     token = _issue_link(create_use_case)
     link_id = next(iter(one_time_link_repository.storage))
 
-    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_user_id=OWNER_ID))
+    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_principal_id=OWNER_ID))
 
     with pytest.raises(OneTimeLinkRevokedError):
         consume_use_case.execute(ConsumeOneTimeLinkCommand(token=token))
@@ -390,7 +394,7 @@ def test_given_non_owner_when_revoking_should_raise(
     link_id = next(iter(one_time_link_repository.storage))
 
     with pytest.raises(NotPasswordOwnerError):
-        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_user_id=OUTSIDER_ID))
+        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_principal_id=OUTSIDER_ID))
 
 
 def test_given_an_already_read_link_when_revoking_should_raise_and_keep_the_read_timestamp(
@@ -406,7 +410,7 @@ def test_given_an_already_read_link_when_revoking_should_raise_and_keep_the_read
     link_id = next(iter(one_time_link_repository.storage))
 
     with pytest.raises(OneTimeLinkNotFoundError):
-        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_user_id=OWNER_ID))
+        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_principal_id=OWNER_ID))
 
     link = one_time_link_repository.storage[link_id]
     assert link.read_at == T0
@@ -417,7 +421,7 @@ def test_given_unknown_link_when_revoking_should_raise(
     revoke_use_case: RevokeOneTimeLinkUseCase,
 ):
     with pytest.raises(OneTimeLinkNotFoundError):
-        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=uuid4(), requesting_user_id=OWNER_ID))
+        revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=uuid4(), requesting_principal_id=OWNER_ID))
 
 
 # ── Listing ───────────────────────────────────────────────────────────
@@ -430,7 +434,7 @@ def test_given_owner_when_listing_should_return_summaries_without_any_token(
 ):
     token = _issue_link(create_use_case)
 
-    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
 
     assert len(result.links) == 1
     assert result.total == 1
@@ -448,12 +452,12 @@ def test_given_a_consumed_link_when_listing_should_expose_when_it_was_read(
     consume_use_case.execute(ConsumeOneTimeLinkCommand(token=token))
 
     default_result = list_use_case.execute(
-        ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID)
+        ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID)
     )
     assert default_result.links == []
 
     with_history = list_use_case.execute(
-        ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, include_inactive=True)
+        ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID, include_inactive=True)
     )
     assert with_history.links[0].read_at == T0
 
@@ -474,7 +478,7 @@ def test_given_many_links_when_listing_should_cap_the_page_but_report_the_true_t
         consume_use_case.execute(ConsumeOneTimeLinkCommand(token=_issue_link(create_use_case)))
 
     result = list_use_case.execute(
-        ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, include_inactive=True)
+        ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID, include_inactive=True)
     )
 
     assert len(result.links) == MAX_LISTED_LINKS
@@ -487,7 +491,7 @@ def test_given_non_owner_when_listing_should_raise(
     owned_password: Password,
 ):
     with pytest.raises(NotPasswordOwnerError):
-        list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OUTSIDER_ID))
+        list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OUTSIDER_ID))
 
 
 # ── Cap on simultaneously active links ────────────────────────────────
@@ -533,7 +537,7 @@ def test_given_a_link_was_revoked_when_creating_should_free_a_slot(
     for _ in range(MAX_ACTIVE_LINKS_PER_PASSWORD):
         _issue_link(create_use_case)
     link_id = next(iter(one_time_link_repository.storage))
-    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_user_id=OWNER_ID))
+    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=link_id, requesting_principal_id=OWNER_ID))
 
     _issue_link(create_use_case)  # must not raise
 
@@ -564,7 +568,7 @@ def test_the_cap_is_per_password_not_global(
         _issue_link(create_use_case)
 
     create_use_case.execute(
-        CreateOneTimeLinkCommand(password_id=other_id, requesting_user_id=OWNER_ID)
+        CreateOneTimeLinkCommand(password_id=other_id, requesting_principal_id=OWNER_ID)
     )  # must not raise
 
 
@@ -577,7 +581,7 @@ def test_listing_reports_how_much_of_the_cap_is_used(
     tokens = [_issue_link(create_use_case) for _ in range(3)]
     consume_use_case.execute(ConsumeOneTimeLinkCommand(token=tokens[0]))
 
-    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
 
     assert result.active == 2
     assert result.total == 3
@@ -591,12 +595,14 @@ def test_default_listing_shows_only_links_the_owner_can_still_act_on(
     list_use_case: ListOneTimeLinksUseCase,
     owned_password: Password,
 ):
-    alive = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    alive = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
     consume_use_case.execute(ConsumeOneTimeLinkCommand(token=_issue_link(create_use_case)))
-    to_revoke = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
-    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=to_revoke.id, requesting_user_id=OWNER_ID))
+    to_revoke = create_use_case.execute(
+        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID)
+    )
+    revoke_use_case.execute(RevokeOneTimeLinkCommand(link_id=to_revoke.id, requesting_principal_id=OWNER_ID))
 
-    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
 
     assert [link.id for link in result.links] == [alive.id]
     # The counters still describe the whole set, so the owner is not misled into
@@ -613,11 +619,13 @@ def test_default_listing_surfaces_an_active_link_hidden_behind_newer_spent_ones(
 ):
     """The filter has to run in the query. Trimming a page of recent links would
     drop this one, and the owner could no longer revoke it from the UI."""
-    old_active = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    old_active = create_use_case.execute(
+        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID)
+    )
     for _ in range(MAX_LISTED_LINKS + 5):
         consume_use_case.execute(ConsumeOneTimeLinkCommand(token=_issue_link(create_use_case)))
 
-    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
 
     assert [link.id for link in result.links] == [old_active.id]
 
@@ -631,7 +639,7 @@ def test_expired_links_drop_out_of_the_default_listing(
     _issue_link(create_use_case, lifetime_seconds=600)
     time_gateway.set_current_time(T0 + timedelta(seconds=601))
 
-    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_principal_id=OWNER_ID))
 
     assert result.links == []
     assert result.active == 0

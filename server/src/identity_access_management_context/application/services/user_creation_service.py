@@ -19,7 +19,7 @@ class UserCreationService:
         personal_group = PersonalGroup(
             id=group_id,
             name=f"{username}'s Personal Group",
-            user_id=user_id,
+            principal_id=user_id,
         )
 
         group_repository.save_personal_group(personal_group)

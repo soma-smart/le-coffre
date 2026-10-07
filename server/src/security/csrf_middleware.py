@@ -8,8 +8,6 @@ from starlette.responses import JSONResponse
 
 from identity_access_management_context.adapters.secondary.sql import (
     SqlRevokedTokenRepository,
-    SqlSsoUserRepository,
-    SqlUserPasswordRepository,
     SqlUserRepository,
 )
 from identity_access_management_context.application.commands import (
@@ -106,15 +104,11 @@ class CsrfMiddleware(BaseHTTPMiddleware):
             time_provider = request.app.state.time_provider
 
             with session_maker() as session:
-                user_password_repository = SqlUserPasswordRepository(session)
                 user_repository = SqlUserRepository(session)
                 revoked_token_repository = SqlRevokedTokenRepository(session)
-                sso_user_repository = SqlSsoUserRepository(session)
 
                 validate_usecase = ValidateUserTokenUseCase(
-                    user_password_repository,
                     token_gateway,
-                    sso_user_repository,
                     user_repository,
                     revoked_token_repository,
                     time_provider,
@@ -144,13 +138,13 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                     if refresh_token_obj.jti and revoked_token_repository.is_revoked(refresh_token_obj.jti, now):
                         raise ValueError("Revoked refresh token")
 
-                    authenticated_user = user_repository.get_by_id(refresh_token_obj.user_id)
+                    authenticated_user = user_repository.get_by_id(refresh_token_obj.principal_id)
                     if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
                         session_cutoff = authenticated_user.session_invalid_before
                         if refresh_token_obj.issued_at is None or refresh_token_obj.issued_at < session_cutoff:
                             raise ValueError("Invalidated refresh token")
 
-                    user_id = refresh_token_obj.user_id
+                    user_id = refresh_token_obj.principal_id
 
                 # Validate CSRF token
                 if not csrf_token_manager.validate_token(user_id, csrf_token):

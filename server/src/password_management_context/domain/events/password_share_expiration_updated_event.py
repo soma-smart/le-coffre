@@ -26,12 +26,12 @@ class PasswordShareExpirationUpdatedEvent(BasePasswordEvent):
 
     owner_group_id: UUID
     shared_with_group_id: UUID
-    updated_by_user_id: UUID
+    updated_by_principal_id: UUID
     previous_expires_at: str | None = None
     expires_at: str | None = None
 
-    def get_actor_user_id(self) -> UUID:
-        return self.updated_by_user_id
+    def get_actor_principal_id(self) -> UUID:
+        return self.updated_by_principal_id
 
     def to_event_data(self) -> PasswordShareExpirationUpdatedEventData:
         return {

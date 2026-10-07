@@ -3,13 +3,16 @@ from uuid import UUID
 import pytest
 
 from identity_access_management_context.application.commands import AdminLoginCommand
+from identity_access_management_context.application.services.authentication.password_authenticator import (
+    PasswordAuthenticator,
+)
 from identity_access_management_context.application.use_cases import (
     PasswordLoginUseCase,
 )
 from identity_access_management_context.domain.constants import ADMIN_ROLE
 from identity_access_management_context.domain.entities import (
+    PasswordCredentialRecord,
     User,
-    UserPassword,
 )
 from identity_access_management_context.domain.events import (
     AdminLoginEvent,
@@ -20,24 +23,23 @@ from identity_access_management_context.domain.exceptions import (
     AdminNotFoundException,
     InvalidCredentialsException,
 )
+from shared_kernel.domain.exceptions import AuthenticationError
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import (
     FakeLoginLockoutGateway,
+    FakePasswordCredentialRecordRepository,
     FakePasswordHashingGateway,
     FakeTokenGateway,
-    FakeUserPasswordRepository,
     FakeUserRepository,
 )
 
 
 @pytest.fixture
 def use_case(
-    user_password_repository: FakeUserPasswordRepository,
-    user_repository: FakeUserRepository,
+    password_authenticator,
     auth_session_repository,
-    password_hashing_gateway: FakePasswordHashingGateway,
     token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
     event_publisher,
@@ -45,10 +47,8 @@ def use_case(
     login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     return PasswordLoginUseCase(
-        user_password_repository,
-        user_repository,
+        password_authenticator,
         auth_session_repository,
-        password_hashing_gateway,
         token_gateway,
         time_provider,
         event_publisher,
@@ -59,7 +59,7 @@ def use_case(
 
 def test_should_authenticate_admin_and_return_jwt_token(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
     login_lockout_gateway: FakeLoginLockoutGateway,
@@ -68,8 +68,8 @@ def test_should_authenticate_admin_and_return_jwt_token(
     email = "admin@lecoffre.com"
     password_hash = b"hashed(secure123!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
     user = User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE])
     user_repository.save(user)
 
@@ -89,15 +89,15 @@ def test_should_authenticate_admin_and_return_jwt_token(
 
 def test_should_raise_exception_for_wrong_password(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
     password_hash = b"hashed(secure123!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
 
     command = AdminLoginCommand(email=email, password="wrong_password")
 
@@ -119,9 +119,35 @@ def test_should_raise_exception_for_non_existent_admin(
     assert login_lockout_gateway.failed_login_calls == ["nonexistent@lecoffre.com"]
 
 
+def test_given_an_authentication_error_without_a_reason_when_logging_in_then_it_fails_like_a_login(
+    use_case: PasswordLoginUseCase,
+    admin_event_repository,
+    login_lockout_gateway: FakeLoginLockoutGateway,
+    monkeypatch,
+):
+    """A subclass missing from the failure reasons is still audited and counted, not turned into a crash."""
+
+    class ExpiredCredentialError(AuthenticationError): ...
+
+    def expired(_self, _credential):
+        raise ExpiredCredentialError()
+
+    # Frozen dataclass: patched on the class, restored after the test
+    monkeypatch.setattr(PasswordAuthenticator, "authenticate", expired)
+    email = "expired@lecoffre.com"
+
+    with pytest.raises(AdminNotFoundException):
+        use_case.execute(AdminLoginCommand(email=email, password="any_password"))
+
+    (stored,) = admin_event_repository.events
+    assert stored["event_type"] == "AdminLoginFailedEvent"
+    assert stored["event_data"]["reason"] == "Authentication failed"
+    assert login_lockout_gateway.failed_login_calls == [email]
+
+
 def test_should_return_refresh_token_on_successful_login(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
@@ -129,8 +155,8 @@ def test_should_return_refresh_token_on_successful_login(
     email = "admin@lecoffre.com"
     password_hash = b"hashed(secure123!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
     user = User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE])
     user_repository.save(user)
 
@@ -146,7 +172,7 @@ def test_should_return_refresh_token_on_successful_login(
 
 def test_should_publish_admin_login_event_on_successful_login(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
     event_publisher: FakeDomainEventPublisher,
@@ -155,8 +181,8 @@ def test_should_publish_admin_login_event_on_successful_login(
     email = "admin@lecoffre.com"
     password_hash = b"hashed(secure123!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
     user = User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE])
     user_repository.save(user)
     token_gateway.set_unique_jwt_part("uniqueness")
@@ -172,15 +198,15 @@ def test_should_publish_admin_login_event_on_successful_login(
 
 def test_should_publish_admin_login_failed_event_on_wrong_password(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     event_publisher: FakeDomainEventPublisher,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
     password_hash = b"hashed(secure123!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
 
     command = AdminLoginCommand(email=email, password="wrong_password")
     with pytest.raises(InvalidCredentialsException):
@@ -208,7 +234,7 @@ def test_should_publish_admin_login_failed_event_on_non_existent_admin(
 
 def test_should_store_admin_login_event_on_successful_login(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
     admin_event_repository,
@@ -217,8 +243,8 @@ def test_should_store_admin_login_event_on_successful_login(
     email = "admin@lecoffre.com"
     password_hash = b"hashed(secure123!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
     user = User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE])
     user_repository.save(user)
     token_gateway.set_unique_jwt_part("uniqueness")
@@ -229,20 +255,20 @@ def test_should_store_admin_login_event_on_successful_login(
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminLoginEvent"
-    assert stored["actor_user_id"] == user_id
+    assert stored["actor_principal_id"] == user_id
 
 
 def test_should_store_admin_login_failed_event_on_wrong_password(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     admin_event_repository,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
     password_hash = b"hashed(secure123!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
 
     command = AdminLoginCommand(email=email, password="wrong_password")
     with pytest.raises(InvalidCredentialsException):
@@ -251,7 +277,7 @@ def test_should_store_admin_login_failed_event_on_wrong_password(
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminLoginFailedEvent"
-    assert stored["actor_user_id"] is None
+    assert stored["actor_principal_id"] is None
 
 
 def test_should_store_admin_login_failed_event_on_non_existent_admin(
@@ -265,12 +291,12 @@ def test_should_store_admin_login_failed_event_on_non_existent_admin(
     assert len(admin_event_repository.events) == 1
     stored = admin_event_repository.events[0]
     assert stored["event_type"] == "AdminLoginFailedEvent"
-    assert stored["actor_user_id"] is None
+    assert stored["actor_principal_id"] is None
 
 
 def test_given_admin_user_when_logging_in_should_receive_token_with_admin_role(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
@@ -278,8 +304,8 @@ def test_given_admin_user_when_logging_in_should_receive_token_with_admin_role(
     email = "admin@lecoffre.com"
     password_hash = b"hashed(adminpass!)"
 
-    user_password = UserPassword(id=user_id, email=email, password_hash=password_hash, display_name="Admin User")
-    user_password_repository.save(user_password)
+    credential_record = PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=password_hash)
+    password_credential_record_repository.save(credential_record)
     user = User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE])
     user_repository.save(user)
 
@@ -293,7 +319,7 @@ def test_given_admin_user_when_logging_in_should_receive_token_with_admin_role(
 
 def test_given_regular_user_when_logging_in_should_receive_token_with_empty_roles(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
@@ -306,13 +332,12 @@ def test_given_regular_user_when_logging_in_should_receive_token_with_empty_role
     email = "user@lecoffre.com"
     password_hash = b"hashed(userpass!)"
 
-    user_password = UserPassword(
-        id=user_id,
+    credential_record = PasswordCredentialRecord(
+        principal_id=user_id,
         email=email,
         password_hash=password_hash,
-        display_name="Regular User",
     )
-    user_password_repository.save(user_password)
+    password_credential_record_repository.save(credential_record)
     user = User(id=user_id, username="regularuser", email=email, name="Regular User", roles=[])
     user_repository.save(user)
 
@@ -330,13 +355,13 @@ def test_given_regular_user_when_logging_in_should_receive_token_with_empty_role
 
 def test_given_locked_email_when_logging_in_should_raise_account_locked_exception(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=b"hashed(secure123!)"),
     )
     login_lockout_gateway.force_lock(email, retry_after=42)
 
@@ -350,7 +375,7 @@ def test_given_locked_email_when_logging_in_should_raise_account_locked_exceptio
 
 def test_given_locked_email_when_logging_in_should_not_call_password_verification(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     login_lockout_gateway: FakeLoginLockoutGateway,
 ):
@@ -360,8 +385,8 @@ def test_given_locked_email_when_logging_in_should_not_call_password_verificatio
     path's — an account-enumeration oracle."""
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=b"hashed(secure123!)"),
     )
     login_lockout_gateway.force_lock(email, retry_after=10)
     assert password_hashing_gateway.get_verification_count() == 0
@@ -374,15 +399,15 @@ def test_given_locked_email_when_logging_in_should_not_call_password_verificatio
 
 def test_given_locked_email_when_logging_in_should_not_record_a_new_failed_login(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
 ):
     """A locked attempt does not extend the lock — the gate short-circuits before
     the failure-recording branches in ``_lookup_and_verify`` can fire."""
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=b"hashed(secure123!)"),
     )
     login_lockout_gateway.force_lock(email, retry_after=30)
 
@@ -408,7 +433,7 @@ def test_given_nonexistent_email_should_call_hashing_gateway_verify_with_dummy_h
     """When a user lookup returns None, verify() must still be called
     (with the dummy hash) to ensure constant-time latency. This test
     verifies the mitigation for AUTH-VULN-09 (timing oracle on /api/auth/login)."""
-    from identity_access_management_context.application.use_cases.password_login_use_case import (
+    from identity_access_management_context.application.services.authentication.password_authenticator import (
         DUMMY_PASSWORD_HASH,
     )
 
@@ -466,7 +491,7 @@ def test_given_nonexistent_email_should_record_failed_login_after_dummy_verify(
 
 def test_given_record_failed_login_raises_when_credentials_are_wrong_should_still_raise_invalid_credentials(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
     event_publisher: FakeDomainEventPublisher,
     admin_event_repository,
@@ -474,8 +499,8 @@ def test_given_record_failed_login_raises_when_credentials_are_wrong_should_stil
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=b"hashed(secure123!)"),
     )
     login_lockout_gateway.make_record_failed_raise(RuntimeError("lockout store unreachable"))
 
@@ -516,7 +541,7 @@ def test_given_record_failed_login_raises_when_email_is_unknown_should_still_rai
 
 def test_given_record_successful_login_raises_when_credentials_are_correct_should_still_issue_tokens(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
     login_lockout_gateway: FakeLoginLockoutGateway,
@@ -529,8 +554,8 @@ def test_given_record_successful_login_raises_when_credentials_are_correct_shoul
     outage into a full login outage for users with correct credentials."""
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     email = "admin@lecoffre.com"
-    user_password_repository.save(
-        UserPassword(id=user_id, email=email, password_hash=b"hashed(secure123!)", display_name="Admin User"),
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=user_id, email=email, password_hash=b"hashed(secure123!)"),
     )
     user_repository.save(User(id=user_id, username="admin", email=email, name="Admin User", roles=[ADMIN_ROLE]))
     token_gateway.set_unique_jwt_part("uniqueness")
@@ -549,25 +574,24 @@ def test_given_record_successful_login_raises_when_credentials_are_correct_shoul
 
 def test_should_refuse_credentials_that_outlived_their_user(
     use_case: PasswordLoginUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     login_lockout_gateway: FakeLoginLockoutGateway,
     event_publisher,
 ):
     """Credentials with no user behind them must not authenticate.
 
-    Deleting a user used to leave its UserPassword row in place. Falling back to
+    Deleting a user used to leave its PasswordCredentialRecord row in place. Falling back to
     an empty role set meant the deleted account still got a valid token, so the
     deletion did not actually revoke the ability to log in.
     """
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e9")
     email = "deleted@lecoffre.com"
 
-    user_password_repository.save(
-        UserPassword(
-            id=user_id,
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(
+            principal_id=user_id,
             email=email,
             password_hash=b"hashed(secure123!)",
-            display_name="Deleted User",
         )
     )
     # Deliberately no matching User row.

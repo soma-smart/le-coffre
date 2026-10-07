@@ -9,7 +9,7 @@ ACCESS_TOKEN_TYPE = "access"  # noqa: S105
 @dataclass
 class Token:
     value: str
-    user_id: UUID
+    principal_id: UUID
     email: str
     roles: list[str]
     claims: dict[str, Any]
@@ -25,7 +25,7 @@ class Token:
 class TokenGateway(Protocol):
     def generate_token(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: list[str],
         claims: dict[str, Any] | None = None,
@@ -33,7 +33,7 @@ class TokenGateway(Protocol):
 
     def generate_refresh_token(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: list[str],
     ) -> Token: ...

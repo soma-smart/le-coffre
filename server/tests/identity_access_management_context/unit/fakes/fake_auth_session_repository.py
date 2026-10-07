@@ -9,10 +9,10 @@ class FakeAuthSessionRepository:
         self.sessions: dict[UUID, AuthSession] = {}
         self.purge_dead_cutoffs: list[datetime] = []
 
-    def create_session(self, user_id: UUID, refresh_token_jti: str, created_at: datetime) -> AuthSession:
+    def create_session(self, principal_id: UUID, refresh_token_jti: str, created_at: datetime) -> AuthSession:
         session = AuthSession(
             id=uuid4(),
-            user_id=user_id,
+            principal_id=principal_id,
             current_refresh_token_jti=refresh_token_jti,
             created_at=created_at,
             updated_at=created_at,
@@ -21,10 +21,12 @@ class FakeAuthSessionRepository:
         self.sessions[session.id] = session
         return session
 
-    def get_active_by_user_id_and_refresh_jti(self, user_id: UUID, refresh_token_jti: str) -> AuthSession | None:
+    def get_active_by_principal_id_and_refresh_jti(
+        self, principal_id: UUID, refresh_token_jti: str
+    ) -> AuthSession | None:
         for session in self.sessions.values():
             if (
-                session.user_id == user_id
+                session.principal_id == principal_id
                 and session.current_refresh_token_jti == refresh_token_jti
                 and session.invalidated_at is None
             ):
@@ -47,18 +49,18 @@ class FakeAuthSessionRepository:
         session.updated_at = rotated_at
         return True
 
-    def invalidate_by_user_id_and_refresh_jti(
-        self, user_id: UUID, refresh_token_jti: str, invalidated_at: datetime
+    def invalidate_by_principal_id_and_refresh_jti(
+        self, principal_id: UUID, refresh_token_jti: str, invalidated_at: datetime
     ) -> None:
-        session = self.get_active_by_user_id_and_refresh_jti(user_id, refresh_token_jti)
+        session = self.get_active_by_principal_id_and_refresh_jti(principal_id, refresh_token_jti)
         if session is None:
             return
         session.invalidated_at = invalidated_at
         session.updated_at = invalidated_at
 
-    def invalidate_all_for_user(self, user_id: UUID, invalidated_at: datetime) -> None:
+    def invalidate_all_for_principal(self, principal_id: UUID, invalidated_at: datetime) -> None:
         for session in self.sessions.values():
-            if session.user_id == user_id and session.invalidated_at is None:
+            if session.principal_id == principal_id and session.invalidated_at is None:
                 session.invalidated_at = invalidated_at
                 session.updated_at = invalidated_at
 

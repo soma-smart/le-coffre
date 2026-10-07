@@ -63,7 +63,7 @@ def demote_owner_to_member(
         command = DemoteOwnerToMemberCommand(
             requesting_user=current_user.to_authenticated_user(),
             group_id=group_id,
-            user_id=user_id,
+            principal_id=user_id,
         )
 
         usecase.execute(command)

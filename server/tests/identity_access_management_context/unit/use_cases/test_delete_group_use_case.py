@@ -10,7 +10,11 @@ from identity_access_management_context.application.gateways import (
     GroupUsageGateway,
 )
 from identity_access_management_context.application.use_cases import DeleteGroupUseCase
-from identity_access_management_context.domain.entities import Group, ServiceAccount
+from identity_access_management_context.domain.entities import (
+    Group,
+    ServiceAccount,
+    TokenCredentialRecord,
+)
 from identity_access_management_context.domain.events import GroupDeletedEvent
 from identity_access_management_context.domain.exceptions import (
     CannotDeleteGroupStillUsedException,
@@ -18,7 +22,7 @@ from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
 )
-from identity_access_management_context.domain.value_objects import ServiceAccountToken
+from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.domain.entities import AuthenticatedUser
 from shared_kernel.domain.value_objects import ADMIN_ROLE
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
@@ -35,6 +39,7 @@ def use_case(
     group_event_repository,
     service_account_repository,
     service_account_event_repository,
+    token_credential_record_repository,
     time_provider,
 ):
     time_provider.set_current_time(NOW)
@@ -46,6 +51,7 @@ def use_case(
         group_event_repository=group_event_repository,
         service_account_repository=service_account_repository,
         service_account_event_repository=service_account_event_repository,
+        token_credential_record_repository=token_credential_record_repository,
         time_provider=time_provider,
     )
 
@@ -141,7 +147,7 @@ def test_given_personal_group_when_deleting_group_then_raises_cannot_delete_pers
         id=personal_group_id,
         name="Personal Group",
         is_personal=True,
-        user_id=user_id,
+        principal_id=user_id,
     )
     group_repository.save_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_id, is_owner=True)
@@ -242,7 +248,7 @@ def test_given_owner_when_deleting_group_then_should_publish_group_deleted_event
     events = event_publisher.get_published_events_of_type(GroupDeletedEvent)
     assert len(events) == 1
     assert events[0].group_id == group_id
-    assert events[0].deleted_by_user_id == owner_id
+    assert events[0].deleted_by_principal_id == owner_id
 
 
 def test_given_owner_when_deleting_group_then_should_store_group_deleted_event(
@@ -266,11 +272,11 @@ def test_given_owner_when_deleting_group_then_should_store_group_deleted_event(
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "GroupDeletedEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id
 
 
 def _service_account(group_id, name="nightly-backup"):
-    return ServiceAccount.create(group_id=group_id, name=name, token=ServiceAccountToken.generate())
+    return ServiceAccount.create(group_id=group_id, name=name)
 
 
 def test_given_a_group_with_service_accounts_when_deleting_then_they_are_revoked(
@@ -287,6 +293,66 @@ def test_given_a_group_with_service_accounts_when_deleting_then_they_are_revoked
 
     assert all(not service_account_repository.accounts[a.id].is_active for a in accounts)
     assert all(service_account_repository.accounts[a.id].revoked_at == NOW for a in accounts)
+
+
+def test_given_a_group_with_service_accounts_when_deleting_then_their_token_records_are_deleted(
+    use_case,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+):
+    group_id = uuid4()
+    owner_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    account = _service_account(group_id)
+    service_account_repository.create([account])
+    token_credential_record_repository.create(
+        [TokenCredentialRecord(principal_id=account.id, token_hash=TokenCredential.generate().hash)]
+    )
+
+    use_case.execute(DeleteGroupCommand(requesting_user=AuthenticatedUser(owner_id, []), group_id=group_id))
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+
+
+def test_given_a_failure_while_marking_the_accounts_when_deleting_then_their_tokens_are_already_gone(
+    use_case,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+    monkeypatch,
+):
+    """A revocation cut short must leave accounts that cannot authenticate, not revoked ones that can."""
+    group_id = uuid4()
+    owner_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    account = _service_account(group_id)
+    service_account_repository.create([account])
+    token_credential_record_repository.create(
+        [TokenCredentialRecord(principal_id=account.id, token_hash=TokenCredential.generate().hash)]
+    )
+    revoke = service_account_repository.revoke
+
+    def fail(ids, now):
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(service_account_repository, "revoke", fail)
+    with pytest.raises(RuntimeError):
+        use_case.execute(DeleteGroupCommand(requesting_user=AuthenticatedUser(owner_id, []), group_id=group_id))
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+    assert group_repository.get_by_id(group_id) is not None
+
+    # Deleting again finishes the job
+    monkeypatch.setattr(service_account_repository, "revoke", revoke)
+    use_case.execute(DeleteGroupCommand(requesting_user=AuthenticatedUser(owner_id, []), group_id=group_id))
+
+    assert not service_account_repository.accounts[account.id].is_active
+    assert group_repository.get_by_id(group_id) is None
 
 
 def test_given_a_group_with_service_accounts_when_deleting_then_the_rows_survive_for_the_audit(
@@ -319,7 +385,7 @@ def test_given_a_group_with_service_accounts_when_deleting_then_each_revocation_
         e for e in service_account_event_repository.events if e["event_type"] == "ServiceAccountRevokedEvent"
     ]
     assert len(revocations) == 2
-    assert all(e["actor_user_id"] == owner_id for e in revocations)
+    assert all(e["actor_principal_id"] == owner_id for e in revocations)
 
 
 def test_given_an_already_revoked_service_account_when_deleting_the_group_then_it_is_left_alone(

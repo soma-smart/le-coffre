@@ -177,7 +177,7 @@ def test_given_admin_user_and_non_admin_target_when_promoting_should_publish_adm
     events = event_publisher.get_published_events_of_type(AdminPromotedEvent)
     assert len(events) == 1
     assert events[0].user_id == target_user_id
-    assert events[0].promoted_by_user_id == admin_id
+    assert events[0].promoted_by_principal_id == admin_id
 
 
 def test_given_admin_user_when_promoting_should_store_admin_promoted_event(
@@ -205,4 +205,4 @@ def test_given_admin_user_when_promoting_should_store_admin_promoted_event(
     assert len(user_event_repository.events) == 1
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "AdminPromotedEvent"
-    assert stored["actor_user_id"] == admin_id
+    assert stored["actor_principal_id"] == admin_id

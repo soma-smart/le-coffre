@@ -34,7 +34,7 @@ def test_given_promotion_event_when_handled_should_send_owner_promotion_email_en
     )
     subscriber = GroupOwnerPromotedEventSubscriber(notify_use_case)
 
-    event = OwnerAddedToGroupEvent(group_id=group_id, user_id=user_id, added_by_user_id=added_by_user_id)
+    event = OwnerAddedToGroupEvent(group_id=group_id, principal_id=user_id, added_by_principal_id=added_by_user_id)
     subscriber.handle(event)
 
     assert len(smtpd.messages) == 1

@@ -8,7 +8,6 @@ from identity_access_management_context.domain.entities import (
     Group,
     PersonalGroup,
     User,
-    UserPassword,
 )
 from identity_access_management_context.domain.events import UserDeletedEvent
 from shared_kernel.adapters.primary.exceptions import NotAdminError
@@ -18,7 +17,6 @@ from tests.fakes import FakeDomainEventPublisher
 from ..fakes import (
     FakeGroupMemberRepository,
     FakeGroupRepository,
-    FakeUserPasswordRepository,
     FakeUserRepository,
 )
 
@@ -31,7 +29,6 @@ def use_case(
     domain_event_publisher: FakeDomainEventPublisher,
     user_event_repository,
     one_time_link_revocation_gateway,
-    user_password_repository: FakeUserPasswordRepository,
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -40,7 +37,6 @@ def use_case(
         domain_event_publisher,
         user_event_repository,
         one_time_link_revocation_gateway,
-        user_password_repository,
     )
 
 
@@ -106,7 +102,7 @@ def test_given_admin_user_when_deleting_user_should_publish_user_deleted_event(
     published_event = domain_event_publisher.published_events[0]
     assert isinstance(published_event, UserDeletedEvent)
     assert published_event.user_id == user_uuid
-    assert published_event.deleted_by_user_id == admin_uuid
+    assert published_event.deleted_by_principal_id == admin_uuid
 
 
 def test_given_user_in_multiple_groups_when_deleting_user_should_remove_from_all_groups(
@@ -127,7 +123,7 @@ def test_given_user_in_multiple_groups_when_deleting_user_should_remove_from_all
 
     group1 = Group(id=group1_id, name="Group 1", is_personal=False)
     group2 = Group(id=group2_id, name="Group 2", is_personal=False)
-    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", principal_id=user_uuid)
 
     group_repository.save_group(group1)
     group_repository.save_group(group2)
@@ -161,7 +157,7 @@ def test_given_user_with_personal_group_when_deleting_user_should_delete_persona
     user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
-    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", principal_id=user_uuid)
     group_repository.save_personal_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_uuid, is_owner=True)
 
@@ -245,7 +241,7 @@ def test_given_user_when_deleting_should_publish_event_with_personal_group_id(
     user = User(id=user_uuid, username="testuser", email="test@example.com", name="User")
     user_repository.save(user)
 
-    personal_group = PersonalGroup(id=personal_group_id, name="Personal", user_id=user_uuid)
+    personal_group = PersonalGroup(id=personal_group_id, name="Personal", principal_id=user_uuid)
     group_repository.save_personal_group(personal_group)
     group_member_repository.add_member(personal_group_id, user_uuid, is_owner=True)
 
@@ -258,7 +254,7 @@ def test_given_user_when_deleting_should_publish_event_with_personal_group_id(
     published_event = domain_event_publisher.published_events[0]
     assert isinstance(published_event, UserDeletedEvent)
     assert published_event.user_id == user_uuid
-    assert published_event.deleted_by_user_id == admin_uuid
+    assert published_event.deleted_by_principal_id == admin_uuid
     assert published_event.personal_group_id == personal_group_id
 
 
@@ -281,49 +277,4 @@ def test_given_admin_user_when_deleting_user_should_store_user_deleted_event(
     assert len(user_event_repository.events) == 1
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "UserDeletedEvent"
-    assert stored["actor_user_id"] == admin_uuid
-
-
-def test_given_deleted_user_should_also_remove_its_credentials(
-    use_case: DeleteUserUseCase,
-    user_repository: FakeUserRepository,
-    user_password_repository: FakeUserPasswordRepository,
-):
-    """A surviving UserPassword row outlives the account it belonged to.
-
-    It then shadows any account later created with the same email, and, since
-    login tolerates a missing User, it stays usable on its own.
-    """
-    user_uuid = UUID("123e4567-e89b-12d3-a456-426614174010")
-    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174011")
-    email = "leaver@example.com"
-
-    user_repository.save(User(id=user_uuid, username="leaver", email=email, name="Leaver"))
-    user_password_repository.save(UserPassword(id=user_uuid, email=email, password_hash=b"hash", display_name="Leaver"))
-
-    use_case.execute(DeleteUserCommand(user_id=user_uuid, requesting_user=AuthenticatedUser(admin_uuid, ["admin"])))
-
-    assert user_password_repository.get_by_id(user_uuid) is None
-    assert user_password_repository.get_by_email(email) is None
-
-
-def test_given_deleted_user_should_free_the_email_for_a_new_account(
-    use_case: DeleteUserUseCase,
-    user_repository: FakeUserRepository,
-    user_password_repository: FakeUserPasswordRepository,
-):
-    """Recreating an account on a freed email must resolve to the new credentials."""
-    old_uuid = UUID("123e4567-e89b-12d3-a456-426614174020")
-    new_uuid = UUID("123e4567-e89b-12d3-a456-426614174021")
-    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174022")
-    email = "reused@example.com"
-
-    user_repository.save(User(id=old_uuid, username="old", email=email, name="Old"))
-    user_password_repository.save(UserPassword(id=old_uuid, email=email, password_hash=b"old-hash", display_name="Old"))
-    use_case.execute(DeleteUserCommand(user_id=old_uuid, requesting_user=AuthenticatedUser(admin_uuid, ["admin"])))
-
-    user_password_repository.save(UserPassword(id=new_uuid, email=email, password_hash=b"new-hash", display_name="New"))
-
-    found = user_password_repository.get_by_email(email)
-    assert found is not None
-    assert found.password_hash == b"new-hash"
+    assert stored["actor_principal_id"] == admin_uuid

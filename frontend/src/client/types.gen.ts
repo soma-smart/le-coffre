@@ -559,9 +559,9 @@ export type GroupEventResponse = {
      */
     occurred_on: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Actor Email
      */
@@ -825,9 +825,9 @@ export type OneTimeLinkAuditItem = {
      */
     group_name: string | null;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string;
+    created_by_principal_id: string;
     /**
      * Created By Display Name
      */
@@ -863,9 +863,9 @@ export type OneTimeLinkSummary = {
      */
     password_id: string;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string;
+    created_by_principal_id: string;
     /**
      * Created At
      */
@@ -905,9 +905,9 @@ export type PasswordEventByActorResponseItem = {
      */
     password_id: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Event Data
      */
@@ -933,9 +933,9 @@ export type PasswordEventResponse = {
      */
     occurred_on: string;
     /**
-     * Actor User Id
+     * Actor Principal Id
      */
-    actor_user_id: string;
+    actor_principal_id: string;
     /**
      * Actor Email
      */
@@ -1090,9 +1090,9 @@ export type ServiceAccountSummary = {
      */
     name: string;
     /**
-     * Created By User Id
+     * Created By Principal Id
      */
-    created_by_user_id: string | null;
+    created_by_principal_id: string | null;
     /**
      * Created By User Name
      */

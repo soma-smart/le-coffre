@@ -15,7 +15,7 @@ class FakePasswordEventRepository:
         event_type: str,
         occurred_on: datetime,
         password_id: UUID,
-        actor_user_id: UUID,
+        actor_principal_id: UUID,
         event_data: dict,
     ) -> None:
         """Append a password event to storage"""
@@ -25,7 +25,7 @@ class FakePasswordEventRepository:
                 "event_type": event_type,
                 "occurred_on": occurred_on,
                 "password_id": password_id,
-                "actor_user_id": actor_user_id,
+                "actor_principal_id": actor_principal_id,
                 "event_data": event_data,
             }
         )
@@ -33,7 +33,7 @@ class FakePasswordEventRepository:
     def list_events(
         self,
         password_id: UUID,
-        actor_user_id: UUID | None = None,
+        actor_principal_id: UUID | None = None,
         event_types: list[str] | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
@@ -41,8 +41,8 @@ class FakePasswordEventRepository:
         """List events for a specific password with filters"""
         filtered = [event for event in self.events if event["password_id"] == password_id]
 
-        if actor_user_id:
-            filtered = [event for event in filtered if event["actor_user_id"] == actor_user_id]
+        if actor_principal_id:
+            filtered = [event for event in filtered if event["actor_principal_id"] == actor_principal_id]
 
         if event_types:
             filtered = [event for event in filtered if event["event_type"] in event_types]
@@ -70,13 +70,13 @@ class FakePasswordEventRepository:
 
     def list_events_by_actor(
         self,
-        actor_user_id: UUID,
+        actor_principal_id: UUID,
         event_types: list[str] | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
     ) -> list[dict[str, Any]]:
         """List all events performed by a given actor across all passwords."""
-        filtered = [event for event in self.events if event["actor_user_id"] == actor_user_id]
+        filtered = [event for event in self.events if event["actor_principal_id"] == actor_principal_id]
 
         if event_types:
             filtered = [event for event in filtered if event["event_type"] in event_types]

@@ -64,14 +64,14 @@ def get_group(
         response = usecase.execute(command)
 
         # Separate owners and regular members
-        owners = [m.user_id for m in response.members if m.is_owner]
-        members = [m.user_id for m in response.members if not m.is_owner]
+        owners = [m.principal_id for m in response.members if m.is_owner]
+        members = [m.principal_id for m in response.members if not m.is_owner]
 
         return GetGroupResponse(
             id=response.group.id,
             name=response.group.name,
             is_personal=response.group.is_personal,
-            user_id=response.group.user_id,
+            user_id=response.group.principal_id,
             owners=owners,
             members=members,
         )

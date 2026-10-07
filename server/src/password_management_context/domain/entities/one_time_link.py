@@ -31,7 +31,7 @@ class OneTimeLink:
     id: UUID
     password_id: UUID
     token_hash: str
-    created_by_user_id: UUID
+    created_by_principal_id: UUID
     created_at: datetime
     expires_at: datetime
     read_at: datetime | None = None
@@ -41,7 +41,7 @@ class OneTimeLink:
     def create(
         cls,
         password_id: UUID,
-        created_by_user_id: UUID,
+        created_by_principal_id: UUID,
         token: OneTimeLinkToken,
         lifetime: OneTimeLinkLifetime,
         now: datetime,
@@ -50,7 +50,7 @@ class OneTimeLink:
             id=uuid4(),
             password_id=password_id,
             token_hash=token.hashed(),
-            created_by_user_id=created_by_user_id,
+            created_by_principal_id=created_by_principal_id,
             created_at=now,
             expires_at=now + lifetime.as_timedelta(),
             read_at=None,

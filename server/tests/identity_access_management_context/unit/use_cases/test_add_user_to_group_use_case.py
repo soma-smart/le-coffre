@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -8,7 +8,7 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     AddUserToGroupUseCase,
 )
-from identity_access_management_context.domain.entities import Group, User
+from identity_access_management_context.domain.entities import Group, ServiceAccount, User
 from identity_access_management_context.domain.events import UserAddedToGroupEvent
 from identity_access_management_context.domain.exceptions import (
     CannotModifyPersonalGroupException,
@@ -70,7 +70,7 @@ def test_given_owner_when_adding_user_to_group_then_user_is_added_as_member(
     command = AddUserToGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=new_user_id,
+        principal_id=new_user_id,
     )
 
     use_case.execute(command)
@@ -119,7 +119,7 @@ def test_given_non_owner_when_adding_user_to_group_then_raise_user_not_owner_exc
     command = AddUserToGroupCommand(
         requester_id=non_owner_id,
         group_id=group_id,
-        user_id=new_user_id,
+        principal_id=new_user_id,
     )
 
     with pytest.raises(UserNotOwnerOfGroupException):
@@ -152,7 +152,7 @@ def test_given_group_not_found_when_adding_user_then_raise_group_not_found_excep
     command = AddUserToGroupCommand(
         requester_id=requester_id,
         group_id=nonexistent_group_id,
-        user_id=user_id,
+        principal_id=user_id,
     )
 
     with pytest.raises(GroupNotFoundException):
@@ -184,7 +184,7 @@ def test_given_user_not_found_when_adding_to_group_then_raise_user_not_found_exc
     command = AddUserToGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=nonexistent_user_id,
+        principal_id=nonexistent_user_id,
     )
 
     with pytest.raises(UserNotFoundException):
@@ -223,7 +223,7 @@ def test_given_personal_group_when_adding_user_then_raise_cannot_modify_personal
     command = AddUserToGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=new_user_id,
+        principal_id=new_user_id,
     )
 
     with pytest.raises(CannotModifyPersonalGroupException):
@@ -263,7 +263,7 @@ def test_given_user_already_member_when_adding_then_do_nothing(
     command = AddUserToGroupCommand(
         requester_id=owner_id,
         group_id=group_id,
-        user_id=existing_member_id,
+        principal_id=existing_member_id,
     )
 
     use_case.execute(command)
@@ -292,14 +292,14 @@ def test_given_owner_when_adding_user_to_group_then_should_publish_user_added_to
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
-    command = AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, user_id=new_user_id)
+    command = AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, principal_id=new_user_id)
     use_case.execute(command)
 
     events = event_publisher.get_published_events_of_type(UserAddedToGroupEvent)
     assert len(events) == 1
     assert events[0].group_id == group_id
-    assert events[0].user_id == new_user_id
-    assert events[0].added_by_user_id == owner_id
+    assert events[0].principal_id == new_user_id
+    assert events[0].added_by_principal_id == owner_id
 
 
 def test_given_owner_when_adding_user_to_group_then_should_store_user_added_to_group_event(
@@ -322,10 +322,32 @@ def test_given_owner_when_adding_user_to_group_then_should_store_user_added_to_g
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
-    command = AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, user_id=new_user_id)
+    command = AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, principal_id=new_user_id)
     use_case.execute(command)
 
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "UserAddedToGroupEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id
+
+
+def test_given_a_service_account_when_adding_it_to_a_group_then_it_is_refused(
+    use_case: AddUserToGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    service_account_repository,
+):
+    """Membership is named for any principal, but a service account must not gain member rights."""
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    user_repository.save(User(id=owner_id, username="owner", email="owner@example.com", name="Owner User"))
+    group_repository.save_group(Group(id=group_id, name="Development Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    account = ServiceAccount.create(group_id=uuid4(), name="nightly-backup")
+    service_account_repository.create([account])
+
+    with pytest.raises(UserNotFoundException):
+        use_case.execute(AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, principal_id=account.id))
+
+    assert not group_member_repository.is_member(group_id, account.id)

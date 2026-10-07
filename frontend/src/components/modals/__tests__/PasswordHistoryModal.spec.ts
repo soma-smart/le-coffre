@@ -58,7 +58,7 @@ describe('PasswordHistoryModal', () => {
       eventId: 'e1',
       eventType: 'PasswordCreatedEvent',
       occurredOn: twoDaysAgo.toISOString(),
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'alice@example.com',
       eventData: { folder: 'Mail' },
     })
@@ -66,7 +66,7 @@ describe('PasswordHistoryModal', () => {
       eventId: 'e2',
       eventType: 'PasswordUpdatedEvent',
       occurredOn: yesterday.toISOString(),
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'alice@example.com',
       eventData: { hasNameChanged: true },
     })
@@ -163,7 +163,7 @@ describe('PasswordHistoryModal', () => {
       eventId: 'e3',
       eventType: 'OneTimeLinkCreatedEvent',
       occurredOn: anHourAgo.toISOString(),
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'alice@example.com',
       eventData: { linkId: 'l1', expiresAt: '2030-01-01T12:00:00Z' },
     })
@@ -171,7 +171,7 @@ describe('PasswordHistoryModal', () => {
       eventId: 'e4',
       eventType: 'OneTimeLinkReadEvent',
       occurredOn: anHourAgo.toISOString(),
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'alice@example.com',
       eventData: { linkId: 'l1', actor: 'anonymous' },
     })
@@ -204,7 +204,7 @@ describe('PasswordHistoryModal', () => {
       eventId: 'e3',
       eventType: 'PasswordSharedEvent',
       occurredOn: yesterday.toISOString(),
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'alice@example.com',
       eventData: { sharedWithGroupName: 'Contractors', expiresAt: '2026-09-01T10:00:00Z' },
     })
@@ -231,7 +231,7 @@ describe('PasswordHistoryModal', () => {
       eventId: 'e4',
       eventType: 'PasswordSharedEvent',
       occurredOn: yesterday.toISOString(),
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'alice@example.com',
       eventData: { sharedWithGroupName: 'Platform', expiresAt: null },
     })

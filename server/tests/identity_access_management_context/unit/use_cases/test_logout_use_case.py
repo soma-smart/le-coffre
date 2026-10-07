@@ -47,7 +47,7 @@ def test_given_valid_access_and_refresh_tokens_when_logout_then_revoke_tokens_an
         )
     )
 
-    active_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, "refresh-jti-1")
+    active_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, "refresh-jti-1")
     assert active_session is None
 
     now = time_provider.get_current_time()
@@ -74,7 +74,7 @@ def test_given_invalid_access_and_valid_refresh_tokens_when_logout_then_clear_ac
 
     use_case.execute(LogoutCommand(access_token=access_token, refresh_token=refresh_token))
 
-    active_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, "refresh-jti-1")
+    active_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, "refresh-jti-1")
     assert active_session is None
 
     assert revoked_token_repository.is_revoked("refresh-jti-1", now=time_provider.get_current_time()) is True
@@ -90,5 +90,5 @@ def test_given_invalid_tokens_when_logout_then_do_nothing(
 
     use_case.execute(LogoutCommand(access_token="invalid_access_token", refresh_token="invalid_refresh_token"))
 
-    unchanged_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, "refresh-jti-1")
+    unchanged_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, "refresh-jti-1")
     assert unchanged_session is not None

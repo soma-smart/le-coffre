@@ -530,7 +530,7 @@ def test_complete_password_management_workflow(client_factory, setup, configured
         assert "event_id" in event
         assert "event_type" in event
         assert "occurred_on" in event
-        assert "actor_user_id" in event
+        assert "actor_principal_id" in event
         assert "event_data" in event
     print("✓ All events have required fields")
 

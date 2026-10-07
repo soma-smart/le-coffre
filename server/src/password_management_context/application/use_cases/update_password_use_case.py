@@ -57,7 +57,7 @@ class UpdatePasswordUseCase(TracedUseCase):
             raise NotPasswordOwnerError(new_password.requester_id, new_password.id)
 
         # Check if the user owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(new_password.requester_id, owner_group_id):
+        if not self.group_access_gateway.is_principal_owner_of_group(new_password.requester_id, owner_group_id):
             raise UserNotOwnerOfGroupError(new_password.requester_id, owner_group_id)
 
         # Track what changed
@@ -109,7 +109,7 @@ class UpdatePasswordUseCase(TracedUseCase):
 
         event = PasswordUpdatedEvent(
             password_id=existing_password.id,
-            updated_by_user_id=new_password.requester_id,
+            updated_by_principal_id=new_password.requester_id,
             has_name_changed=has_name_changed,
             has_password_changed=has_password_changed,
             has_folder_changed=has_folder_changed,

@@ -15,96 +15,51 @@ from identity_access_management_context.domain.exceptions import (
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from shared_kernel.domain.value_objects.constants import ADMIN_ROLE
 
-from .model.users_model import UserTable
+from .model.credential_record import CREDENTIAL_DETAILS_TABLES, CredentialRecordTable
+from .model.principal_model import PrincipalKind, PrincipalTable
+from .model.users_model import UserPrincipalTable
 
 
 class SqlUserRepository(SQLBaseRepository, UserRepository):
+    """Users, stored as a principal registry row plus their user details."""
+
     def __init__(self, session: Session):
         super().__init__(session)
 
     def get_by_id(self, user_id: UUID) -> User | None:
-        statement = select(UserTable).where(UserTable.id == user_id)
-        result = self._session.exec(statement).first()
-        if result is None:
-            return None
-        return User(
-            id=result.id,
-            username=result.username,
-            email=result.email,
-            name=result.name,
-            roles=json.loads(result.roles),
-            current_refresh_token_jti=result.current_refresh_token_jti,
-            session_invalid_before=self._normalize_datetime(result.session_invalid_before),
-        )
+        statement = select(UserPrincipalTable).where(UserPrincipalTable.principal_id == user_id)
+        row = self._session.exec(statement).first()
+        return self._to_entity(row) if row is not None else None
 
     def get_by_email(self, email: str) -> list[User]:
-        statement = select(UserTable).where(UserTable.email == email)
-        results = self._session.exec(statement).all()
-        if not results:
-            return []
-        return [
-            User(
-                id=row.id,
-                username=row.username,
-                email=row.email,
-                name=row.name,
-                roles=json.loads(row.roles),
-                current_refresh_token_jti=row.current_refresh_token_jti,
-                session_invalid_before=self._normalize_datetime(row.session_invalid_before),
-            )
-            for row in results
-        ]
+        statement = select(UserPrincipalTable).where(UserPrincipalTable.email == email)
+        return [self._to_entity(row) for row in self._session.exec(statement).all()]
 
     def count(self) -> int:
         """Count users."""
-        statement = select(func.count()).select_from(UserTable)
+        statement = select(func.count()).select_from(UserPrincipalTable)
         return self._session.exec(statement).one()
 
     def list_all(self) -> list[User]:
-        statement = select(UserTable)
-        results = self._session.exec(statement).all()
-        if not results:
-            return []
-        return [
-            User(
-                id=row.id,
-                username=row.username,
-                email=row.email,
-                name=row.name,
-                roles=json.loads(row.roles),
-                current_refresh_token_jti=row.current_refresh_token_jti,
-                session_invalid_before=self._normalize_datetime(row.session_invalid_before),
-            )
-            for row in results
-        ]
+        statement = select(UserPrincipalTable)
+        return [self._to_entity(row) for row in self._session.exec(statement).all()]
 
     def search(self, query: str) -> list[User]:
         pattern = f"%{self._escape_like(query)}%"
-        statement = select(UserTable).where(
+        statement = select(UserPrincipalTable).where(
             or_(
-                UserTable.name.ilike(pattern, escape="\\"),
-                UserTable.username.ilike(pattern, escape="\\"),
-                cast(UserTable.id, String).ilike(pattern, escape="\\"),
+                UserPrincipalTable.name.ilike(pattern, escape="\\"),  # type: ignore[attr-defined]
+                UserPrincipalTable.username.ilike(pattern, escape="\\"),  # type: ignore[attr-defined]
+                cast(UserPrincipalTable.principal_id, String).ilike(pattern, escape="\\"),
             )
         )
-        results = self._session.exec(statement).all()
-        return [
-            User(
-                id=row.id,
-                username=row.username,
-                email=row.email,
-                name=row.name,
-                roles=json.loads(row.roles),
-                current_refresh_token_jti=row.current_refresh_token_jti,
-                session_invalid_before=self._normalize_datetime(row.session_invalid_before),
-            )
-            for row in results
-        ]
+        return [self._to_entity(row) for row in self._session.exec(statement).all()]
 
     def save(self, user: User) -> None:
-        user_dict = vars(user).copy()
-        user_dict["roles"] = json.dumps(user.roles)
-        db_obj = UserTable(**user_dict)
+        # The registry row and the details are one principal: written together or not at all.
+        self._session.add(PrincipalTable(id=user.id, kind=PrincipalKind.USER))
+        db_obj = UserPrincipalTable(principal_id=user.id)
+        self._apply(user, db_obj)
         self._session.add(db_obj)
         try:
             self.commit_and_refresh(db_obj)
@@ -112,38 +67,69 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
             raise UserAlreadyExistsError(user.username) from e
 
     def delete(self, user_id: UUID) -> None:
-        statement = select(UserTable).where(UserTable.id == user_id)
-        db_obj = self._session.exec(statement).first()
+        db_obj = self._session.get(UserPrincipalTable, user_id)
         if db_obj is None:
             raise UserNotFoundError(user_id)
+
+        # TODO: Put this on in a SQLPrincipalRepository
+        # Grab all credentials bound to the user
+        statement = select(CredentialRecordTable, *CREDENTIAL_DETAILS_TABLES).where(
+            CredentialRecordTable.principal_id == user_id
+        )
+        for details_table in CREDENTIAL_DETAILS_TABLES:
+            statement = statement.outerjoin(details_table, details_table.credential_id == CredentialRecordTable.id)
+        credentials = self._session.exec(statement).all()
+
+        # Delete the user and its credentials
+        # NOTE: We may want to enforce cascade deletion structurally
         self._session.delete(db_obj)
+        for _, *details in credentials:
+            for kind_details in details:
+                if kind_details is not None:
+                    self._session.delete(kind_details)
+        # Flushed first: the details reference the registry rows.
+        self._session.flush()
+        for credential, *_ in credentials:
+            self._session.delete(credential)
+        # Flushed first: the credentials reference the principal.
+        self._session.flush()
+        principal = self._session.get(PrincipalTable, user_id)
+        if principal is not None:
+            self._session.delete(principal)
         self.commit()
 
     def update(self, user: User) -> None:
-        statement = select(UserTable).where(UserTable.id == user.id)
-        db_obj = self._session.exec(statement).first()
+        db_obj = self._session.get(UserPrincipalTable, user.id)
         if db_obj is None:
             raise UserNotFoundError(user.id)
-        for key, value in vars(user).items():
-            if key == "roles":
-                value = json.dumps(value)
-            setattr(db_obj, key, value)
+        self._apply(user, db_obj)
         self._session.add(db_obj)
         self.commit_and_refresh(db_obj)
 
     def get_admin(self) -> User | None:
-        statement = select(UserTable).where(UserTable.roles.like(f'%"{ADMIN_ROLE}"%'))
-        result = self._session.exec(statement).first()
-        if result is None:
-            return None
+        statement = select(UserPrincipalTable).where(UserPrincipalTable.roles.like(f'%"{ADMIN_ROLE}"%'))  # type: ignore[attr-defined]
+        row = self._session.exec(statement).first()
+        return self._to_entity(row) if row is not None else None
+
+    @staticmethod
+    def _apply(user: User, db_obj: UserPrincipalTable) -> None:
+        """Copy the user's details onto its row."""
+        db_obj.username = user.username
+        db_obj.email = user.email
+        db_obj.name = user.name
+        db_obj.roles = json.dumps(user.roles)
+        db_obj.current_refresh_token_jti = user.current_refresh_token_jti
+        db_obj.session_invalid_before = user.session_invalid_before
+
+    def _to_entity(self, row: UserPrincipalTable) -> User:
         return User(
-            id=result.id,
-            username=result.username,
-            email=result.email,
-            name=result.name,
-            roles=json.loads(result.roles),
-            current_refresh_token_jti=result.current_refresh_token_jti,
-            session_invalid_before=self._normalize_datetime(result.session_invalid_before),
+            id=row.principal_id,
+            username=row.username,
+            email=row.email,
+            name=row.name,
+            roles=json.loads(row.roles),
+            current_refresh_token_jti=row.current_refresh_token_jti,
+            session_invalid_before=self._normalize_datetime(row.session_invalid_before),
         )
 
     def _normalize_datetime(self, value: datetime | None) -> datetime | None:

@@ -8,6 +8,7 @@ from identity_access_management_context.application.gateways import (
     GroupUsageGateway,
     ServiceAccountEventRepository,
     ServiceAccountRepository,
+    TokenCredentialRecordRepository,
 )
 from identity_access_management_context.domain.events import GroupDeletedEvent, ServiceAccountRevokedEvent
 from identity_access_management_context.domain.exceptions import (
@@ -31,6 +32,7 @@ class DeleteGroupUseCase(TracedUseCase):
         group_event_repository: GroupEventRepository,
         service_account_repository: ServiceAccountRepository,
         service_account_event_repository: ServiceAccountEventRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         time_provider: TimeGateway,
     ):
         self.group_repository = group_repository
@@ -40,6 +42,7 @@ class DeleteGroupUseCase(TracedUseCase):
         self._group_event_repository = group_event_repository
         self._service_account_repository = service_account_repository
         self._service_account_event_repository = service_account_event_repository
+        self._token_credential_record_repository = token_credential_record_repository
         self._time_provider = time_provider
 
     def _revoke_service_accounts(self, command: DeleteGroupCommand) -> None:
@@ -52,15 +55,19 @@ class DeleteGroupUseCase(TracedUseCase):
         if not active_accounts:
             return
 
-        # Revoke service accounts
         now = self._time_provider.get_current_time()
+
+        # Without their token records, revoked accounts can no longer authenticate.
+        self._token_credential_record_repository.delete_by_principal_ids([account.id for account in active_accounts])
+
+        # Revoke service accounts
         self._service_account_repository.revoke([account.id for account in active_accounts], now)
 
         events = tuple(
             ServiceAccountRevokedEvent(
                 event_id=uuid4(),
                 occurred_on=now,
-                user_id=command.requesting_user.user_id,
+                principal_id=command.requesting_user.user_id,
                 service_account_id=account.id,
                 service_account_name=account.name,
             )
@@ -96,13 +103,13 @@ class DeleteGroupUseCase(TracedUseCase):
 
         event = GroupDeletedEvent(
             group_id=command.group_id,
-            deleted_by_user_id=command.requesting_user.user_id,
+            deleted_by_principal_id=command.requesting_user.user_id,
         )
         self._event_publisher.publish(event)
         self._group_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={"group_id": str(command.group_id)},
         )

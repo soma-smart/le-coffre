@@ -249,7 +249,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
             token = None
         if token:
-            return Principal(kind="user", id=str(token.user_id))
+            return Principal(kind="user", id=str(token.principal_id))
         return Principal(kind="ip", id=client_ip)
 
     @staticmethod

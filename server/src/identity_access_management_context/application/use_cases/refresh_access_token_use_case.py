@@ -43,7 +43,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         if token_data is None:
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
-        user = self.user_repository.get_by_id(token_data.user_id)
+        user = self.user_repository.get_by_id(token_data.principal_id)
         if user is None:
             raise InvalidRefreshTokenException("User no longer exists")
 
@@ -66,7 +66,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
                 # the password-update flow): JWT iat has second precision, so a
                 # truncated cutoff would let the thief's same-second access token
                 # satisfy `iat < cutoff` and survive.
-                self.auth_session_repository.invalidate_all_for_user(token_data.user_id, now)
+                self.auth_session_repository.invalidate_all_for_principal(token_data.principal_id, now)
                 user.session_invalid_before = now
                 self.user_repository.update(user)
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
@@ -76,8 +76,8 @@ class RefreshAccessTokenUseCase(TracedUseCase):
             if token_data.issued_at < session_cutoff:
                 raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
-        session = self.auth_session_repository.get_active_by_user_id_and_refresh_jti(
-            user_id=token_data.user_id,
+        session = self.auth_session_repository.get_active_by_principal_id_and_refresh_jti(
+            principal_id=token_data.principal_id,
             refresh_token_jti=token_data.jti,
         )
         if session is None:
@@ -87,20 +87,20 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         # so without this cap an active session (or a stolen, undetected refresh
         # chain) could self-renew forever. Past the cap, force a re-login.
         if now - session.created_at >= timedelta(seconds=self.session_max_lifetime_seconds):
-            self.auth_session_repository.invalidate_by_user_id_and_refresh_jti(
-                user_id=token_data.user_id,
+            self.auth_session_repository.invalidate_by_principal_id_and_refresh_jti(
+                principal_id=token_data.principal_id,
                 refresh_token_jti=token_data.jti,
                 invalidated_at=now,
             )
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
         new_access_token = self.token_gateway.generate_token(
-            user_id=token_data.user_id,
+            principal_id=token_data.principal_id,
             email=token_data.email,
             roles=user.roles,
         )
         new_refresh_token = self.token_gateway.generate_refresh_token(
-            user_id=token_data.user_id,
+            principal_id=token_data.principal_id,
             email=token_data.email,
             roles=user.roles,
         )
@@ -127,5 +127,5 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         return RefreshAccessTokenResponse(
             access_token=new_access_token.value,
             refresh_token=new_refresh_token.value,
-            user_id=token_data.user_id,
+            user_id=token_data.principal_id,
         )

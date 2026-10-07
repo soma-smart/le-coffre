@@ -23,7 +23,7 @@ class _FakeTokenGateway:
         self._raises: dict[str, Exception] = {}
 
     def register(self, token: str, user_id: str) -> None:
-        self._tokens[token] = Token(value=token, user_id=UUID(user_id), email="", roles=[], claims={})
+        self._tokens[token] = Token(value=token, principal_id=UUID(user_id), email="", roles=[], claims={})
 
     def register_raising(self, token: str, exc: Exception) -> None:
         """Wire ``token`` so ``validate_token`` raises ``exc`` — lets us simulate

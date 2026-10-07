@@ -37,8 +37,8 @@ class LogoutUseCase(TracedUseCase):
         if refresh_token is not None:
             self._revoked_token_repository.revoke(refresh_token, REVOCATION_REASON_LOGOUT, now)
             if refresh_token.jti is not None:
-                self._auth_session_repository.invalidate_by_user_id_and_refresh_jti(
-                    user_id=refresh_token.user_id,
+                self._auth_session_repository.invalidate_by_principal_id_and_refresh_jti(
+                    principal_id=refresh_token.principal_id,
                     refresh_token_jti=refresh_token.jti,
                     invalidated_at=now,
                 )

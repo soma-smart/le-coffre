@@ -72,7 +72,7 @@ def test_given_user_with_read_permission_when_getting_password_should_return_dec
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_entity.id,
-        actor_user_id=user_id,
+        actor_principal_id=user_id,
         event_data={
             "password_id": str(password_entity.id),
             "password_name": "Gmail",
@@ -147,7 +147,7 @@ def test_given_user_is_owner_when_getting_password_should_return_decrypted_passw
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_entity.id,
-        actor_user_id=user_id,
+        actor_principal_id=user_id,
         event_data={
             "password_id": str(password_entity.id),
             "password_name": "Gmail",
@@ -187,7 +187,7 @@ def test_given_user_is_group_member_when_getting_password_should_return_decrypte
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_entity.id,
-        actor_user_id=user_id,
+        actor_principal_id=user_id,
         event_data={
             "password_id": str(password_entity.id),
             "password_name": "Gmail",

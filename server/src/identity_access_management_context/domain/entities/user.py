@@ -1,16 +1,15 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from uuid import UUID
 
 from identity_access_management_context.domain.constants import ADMIN_ROLE
 from identity_access_management_context.domain.exceptions import (
     UserAlreadyAdminException,
 )
+from shared_kernel.domain.entities.principal import Principal
 
 
 @dataclass
-class User:
-    id: UUID
+class User(Principal):
     username: str
     email: str
     name: str

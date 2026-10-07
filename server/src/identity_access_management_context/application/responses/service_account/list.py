@@ -20,7 +20,7 @@ class ServiceAccountSummaryResponse(ServiceAccountItemResponse):
     name: str
     """The name given to the service account."""
 
-    created_by_user_id: UUID | None
+    created_by_principal_id: UUID | None
     """ID of the user who created the service account."""
 
     created_by_user_name: str | None
