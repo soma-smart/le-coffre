@@ -44,13 +44,20 @@ class SmtpEmailGateway(EmailGateway):
         self._ssl_context = ssl_context
 
     def send(self, to: str, subject: str, body: str) -> None:
+        # Built before connecting: an invalid recipient or header fails right away,
+        # not after a full connect + TLS + auth round trip.
+        try:
+            message = self._build_message(to, subject, body)
+        except ValueError as error:
+            raise EmailDeliveryError(str(error)) from error
+
         try:
             client = self._open_connection()
         except (smtplib.SMTPException, OSError) as error:
             raise EmailDeliveryError(str(error)) from error
 
         try:
-            client.send_message(self._build_message(to, subject, body))
+            client.send_message(message)
         except (smtplib.SMTPException, OSError, ValueError) as error:
             self._close_connection(client)
             raise EmailDeliveryError(str(error)) from error
@@ -70,21 +77,29 @@ class SmtpEmailGateway(EmailGateway):
         delivered batch into a reported total failure and lose `failures`. See
         _close_connection().
         """
-        if not emails:
-            return []
+        # Built before connecting, like send(): an invalid email is recorded as a
+        # failure without a connection, and a batch with nothing valid opens none.
+        failures: list[tuple[str, EmailDeliveryError]] = []
+        messages: list[tuple[str, EmailMessage]] = []
+        for email in emails:
+            try:
+                messages.append((email.to, self._build_message(email.to, email.subject, email.body)))
+            except ValueError as error:
+                failures.append((email.to, EmailDeliveryError(str(error))))
+        if not messages:
+            return failures
 
         try:
             client = self._open_connection()
         except (smtplib.SMTPException, OSError) as error:
             raise EmailDeliveryError(str(error)) from error
 
-        failures: list[tuple[str, EmailDeliveryError]] = []
         try:
-            for email in emails:
+            for to, message in messages:
                 try:
-                    client.send_message(self._build_message(email.to, email.subject, email.body))
+                    client.send_message(message)
                 except (smtplib.SMTPException, OSError, ValueError) as error:
-                    failures.append((email.to, EmailDeliveryError(str(error))))
+                    failures.append((to, EmailDeliveryError(str(error))))
         finally:
             self._close_connection(client)
         return failures

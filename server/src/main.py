@@ -71,32 +71,28 @@ from identity_access_management_context.adapters.secondary import (
     PrivateApiSsoEncryptionGateway,
     SsoUrlValidator,
 )
-from identity_access_management_context.domain.events import ExtensionPairedEvent, OwnerAddedToGroupEvent
+from identity_access_management_context.domain.events import (
+    ExtensionPairedEvent,
+    OwnerAddedToGroupEvent,
+    UserDeletedEvent,
+)
 from monitoring import setup_logging, setup_monitoring
 from notification_context.adapters.primary.events import (
-<<<<<<< HEAD
     ExtensionPairedEventSubscriber,
     GroupOwnerPromotedEventSubscriber,
-)
-from notification_context.adapters.secondary import (
-    PrivateApiGroupOwnershipGateway,
-    PrivateApiUserContactGateway,
-)
-from notification_context.application.use_cases import (
-    NotifyExtensionPairedUseCase,
-    NotifyGroupOwnerPromotedUseCase,
-)
-=======
-    GroupOwnerPromotedEventSubscriber,
+    UserDeletedEventSubscriber,
     VaultStateChangedEventSubscriber,
 )
 from notification_context.adapters.primary.fastapi.routes import get_notification_router
 from notification_context.adapters.secondary import (
     PrivateApiGroupOwnershipGateway,
     PrivateApiRecipientGateway,
+    PrivateApiUserContactGateway,
 )
-from notification_context.application.use_cases import NotifyGroupOwnerPromotedUseCase
->>>>>>> c84eb150 (Rebase)
+from notification_context.application.use_cases import (
+    NotifyExtensionPairedUseCase,
+    NotifyGroupOwnerPromotedUseCase,
+)
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
@@ -301,7 +297,6 @@ async def lifespan(app: FastAPI):
     owner_promoted_subscriber = GroupOwnerPromotedEventSubscriber(notify_owner_promoted_use_case)
     domain_event_publisher.subscribe(OwnerAddedToGroupEvent, owner_promoted_subscriber.handle)
 
-<<<<<<< HEAD
     # Notification: a browser extension was paired (reactive, subscribes to
     # ExtensionPairedEvent). The net under the approval page: whoever approved
     # a pairing they did not start hears about it within minutes.
@@ -311,7 +306,11 @@ async def lifespan(app: FastAPI):
     )
     extension_paired_subscriber = ExtensionPairedEventSubscriber(notify_extension_paired_use_case)
     domain_event_publisher.subscribe(ExtensionPairedEvent, extension_paired_subscriber.handle)
-=======
+
+    # Notification: drop a deleted user's notification preferences (subscribes to UserDeletedEvent)
+    user_deleted_subscriber = UserDeletedEventSubscriber(session_maker=SessionLocal)
+    domain_event_publisher.subscribe(UserDeletedEvent, user_deleted_subscriber.handle)
+
     # Notification: vault lock / unlock emails to opted-in users (reactive, subscribes
     # to VaultLockedEvent / VaultUnlockedEvent). Sent off the request thread, in order.
     vault_notification_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vault-notifications")
@@ -324,7 +323,6 @@ async def lifespan(app: FastAPI):
     )
     domain_event_publisher.subscribe(VaultLockedEvent, vault_state_subscriber.handle_locked)
     domain_event_publisher.subscribe(VaultUnlockedEvent, vault_state_subscriber.handle_unlocked)
->>>>>>> c84eb150 (Rebase)
 
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()

@@ -1,9 +1,11 @@
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import Mock
 
 import pytest
 
 from notification_context.adapters.primary.events import VaultStateChangedEventSubscriber
+from shared_kernel.adapters.secondary import InMemoryDomainEventPublisher
 from vault_management_context.domain.events import VaultLockedEvent, VaultUnlockedEvent
 
 
@@ -22,29 +24,32 @@ def shutdown_executor():
 
 
 @pytest.fixture
-def subscriber(shutdown_executor):
-    return VaultStateChangedEventSubscriber(
+def publisher(shutdown_executor):
+    subscriber = VaultStateChangedEventSubscriber(
         session_maker=_session_maker_that_must_not_be_called(),
         recipient_gateway=None,
         email_gateway=None,
         app_base_url="https://le-coffre.example.com",
         executor=shutdown_executor,
     )
+    publisher = InMemoryDomainEventPublisher()
+    publisher.subscribe(VaultLockedEvent, subscriber.handle_locked)
+    publisher.subscribe(VaultUnlockedEvent, subscriber.handle_unlocked)
+    return publisher
 
 
-def test_given_executor_already_shut_down_handling_a_lock_should_not_raise(subscriber, caplog):
-    # Regression: publish() calls this handler synchronously, with no safety net,
-    # from inside LockVaultUseCase — after the decrypted key was already cleared but
-    # before the audit event is persisted. A RuntimeError from submit() escaping here
-    # would surface as a 500 on an otherwise-successful lock and skip the audit event.
+# Regression: the lock and unlock use cases publish from inside the request. A
+# RuntimeError from submit() (executor already shut down) must not turn an
+# otherwise-successful lock or unlock into a 500; the publisher contains it.
+@pytest.mark.parametrize(
+    "event", [VaultLockedEvent(locked_by_user_id=None), VaultUnlockedEvent()], ids=["lock", "unlock"]
+)
+def test_given_executor_already_shut_down_publishing_a_vault_event_should_not_raise(publisher, event, caplog):
+    other_subscriber = Mock()
+    publisher.subscribe(type(event), other_subscriber)
+
     with caplog.at_level(logging.ERROR):
-        subscriber.handle_locked(VaultLockedEvent(locked_by_user_id=None))
+        publisher.publish(event)
 
-    assert "Failed to submit vault LOCKED notifications" in caplog.text
-
-
-def test_given_executor_already_shut_down_handling_an_unlock_should_not_raise(subscriber, caplog):
-    with caplog.at_level(logging.ERROR):
-        subscriber.handle_unlocked(VaultUnlockedEvent())
-
-    assert "Failed to submit vault UNLOCKED notifications" in caplog.text
+    assert f"failed on {type(event).__name__}" in caplog.text
+    other_subscriber.assert_called_once_with(event)
