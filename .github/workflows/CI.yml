@@ -154,9 +154,26 @@ jobs:
       # reviewed allowlist appears, or if the bundle contains an inline script
       # or eval() that MV3's CSP would block at runtime with no build error.
       - name: Type Check + Build + Validate Manifest
+        id: build
         if: (success() || failure()) && steps.install.outcome == 'success'
         working-directory: extension/
         run: bun run build
+
+      # So a reviewer can try the extension a pull request builds without
+      # checking it out: download the artifact from the run's summary page,
+      # unzip it, then "Load unpacked" in chrome://extensions. dist/ is
+      # uploaded as is, since GitHub zips every artifact on download anyway;
+      # zipping it here would hand the reviewer a zip inside a zip. Only a build
+      # that passed validate-manifest is uploaded, whatever happened to lint or
+      # tests, so what is shared is at least what MV3 will accept.
+      - name: Upload the built extension
+        if: (success() || failure()) && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: le-coffre-extension-${{ github.event.pull_request.number && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
+          path: extension/dist/
+          if-no-files-found: error
+          retention-days: 14
 
   back-ci:
     timeout-minutes: 10
