@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
-import { isUserOwnerOf, type Group } from '@/domain/group/Group'
+import { isSoleMemberOf, isUserOwnerOf, type Group } from '@/domain/group/Group'
 import type { SearchUser, User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
@@ -44,6 +44,24 @@ const showHistoryModal = ref(false)
 const canViewHistory = computed(
   () => props.group != null && (isAdmin.value || isUserOwnerOf(props.group, currentUserId.value)),
 )
+
+// Same reasoning as above: compute ownership directly from the group prop
+// rather than `isOwner` from useGroupMembers, which stays false for a real
+// non-admin owner. An owner must demote themselves first — unless they're
+// the sole member of the group, in which case leaving offers deleting the
+// group instead (handled by the parent after the `leaveGroup` emit).
+const isLeaveBlockedByOwnership = computed(() => {
+  if (!props.group) return false
+  if (isSoleMemberOf(props.group, currentUserId.value)) return false
+  return isUserOwnerOf(props.group, currentUserId.value)
+})
+
+const leaveButtonTooltip = computed(() => {
+  if (!isLeaveBlockedByOwnership.value || !props.group) return undefined
+  return props.group.owners.length === 1
+    ? t('pages.groups.leaveBlockedSoleOwner')
+    : t('pages.groups.leaveBlockedOwner')
+})
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
@@ -423,15 +441,17 @@ watch(visible, (isVisible) => {
     </div>
 
     <template #footer>
+      <Button :label="t('common.close')" severity="secondary" @click="visible = false" />
       <Button
         v-if="group && !group.isPersonal"
         :label="t('components.groupDetailsModal.leaveGroupButton')"
         icon="pi pi-sign-out"
-        severity="danger"
+        severity="secondary"
         outlined
+        :disabled="isLeaveBlockedByOwnership"
+        v-tooltip.top="leaveButtonTooltip"
         @click="handleLeaveGroup"
       />
-      <Button :label="t('common.close')" severity="secondary" @click="visible = false" />
     </template>
   </Dialog>
 

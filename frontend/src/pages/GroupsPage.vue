@@ -114,42 +114,44 @@ const canLeaveGroup = (group: Group) => {
   return isUserOwnerOf(group, userId) || isUserMemberOf(group, userId)
 }
 
+// An owner must demote themselves to member before leaving — unless they're
+// the sole member of the group, in which case leaving offers deleting the
+// group instead (see `handleConfirmLeaveGroup`). Disabling the button for
+// this case, rather than opening a modal that only explains the block, is
+// what keeps the leave flow to a single actionable button everywhere else.
+const isLeaveBlockedByOwnership = (group: Group) => {
+  const userId = groupsStore.currentUserId
+  if (isSoleMemberOf(group, userId)) return false
+  return isUserOwnerOf(group, userId)
+}
+
+const leaveButtonTooltip = (group: Group) => {
+  if (isLeaveBlockedByOwnership(group)) {
+    return group.owners.length === 1
+      ? t('pages.groups.leaveBlockedSoleOwner')
+      : t('pages.groups.leaveBlockedOwner')
+  }
+  return t('pages.groups.leaveGroup')
+}
+
 // Computed properties for the leave-group modal. Reuses `selectedGroup`,
 // same as the delete modal — the two never show at the same time.
 const isSelectedGroupSoleMember = computed(() => {
   return selectedGroup.value ? isSoleMemberOf(selectedGroup.value, groupsStore.currentUserId) : false
 })
 
-const isSelectedGroupOwner = computed(() => {
-  return selectedGroup.value ? isUserOwnerOf(selectedGroup.value, groupsStore.currentUserId) : false
-})
-
-const isSelectedGroupSoleOwner = computed(() => {
-  return isSelectedGroupOwner.value && selectedGroup.value?.owners.length === 1
-})
-
 const leaveModalQuestion = computed(() => {
   const name = selectedGroup.value?.name
   if (isSelectedGroupSoleMember.value) return t('pages.groups.leaveSoleMemberQuestion', { name })
-  if (isSelectedGroupOwner.value) return t('pages.groups.leaveOwnerBlockedQuestion', { name })
   return t('pages.groups.leaveQuestion', { name })
 })
 
-const leaveModalWarningMessage = computed(() => {
-  if (isSelectedGroupSoleMember.value || !isSelectedGroupOwner.value) return undefined
-  return isSelectedGroupSoleOwner.value
-    ? t('pages.groups.leaveBlockedSoleOwner')
-    : t('pages.groups.leaveBlockedOwner')
-})
-
 const leaveModalConfirmLabel = computed(() => {
-  if (isSelectedGroupSoleMember.value) return t('pages.groups.deleteGroup')
-  if (isSelectedGroupOwner.value) return t('common.close')
-  return t('pages.groups.leaveGroup')
+  return isSelectedGroupSoleMember.value ? t('pages.groups.deleteGroup') : t('pages.groups.leaveGroup')
 })
 
 const leaveModalCountdownSeconds = computed(() => {
-  return isSelectedGroupOwner.value || isSelectedGroupSoleMember.value ? 0 : 6
+  return isSelectedGroupSoleMember.value ? 0 : 6
 })
 
 // Open group details modal
@@ -329,10 +331,6 @@ const handleConfirmLeaveGroup = async () => {
     return
   }
 
-  // Owner case is blocked client-side (and the backend refuses it too) — the
-  // confirm button here only closes the modal, no side effect.
-  if (isSelectedGroupOwner.value) return
-
   try {
     await groupsStore.removeMemberFromGroup(group.id, groupsStore.currentUserId as string)
     toast.add({
@@ -460,6 +458,17 @@ onMounted(async () => {
                   v-tooltip.top="t('pages.groups.editGroup')"
                 />
                 <Button
+                  v-if="canLeaveGroup(group)"
+                  icon="pi pi-sign-out"
+                  text
+                  rounded
+                  severity="secondary"
+                  size="small"
+                  :disabled="isLeaveBlockedByOwnership(group)"
+                  @click="openLeaveGroupDialog(group)"
+                  v-tooltip.top="leaveButtonTooltip(group)"
+                />
+                <Button
                   v-if="canEditGroup(group)"
                   icon="pi pi-times"
                   text
@@ -468,16 +477,6 @@ onMounted(async () => {
                   size="small"
                   @click="openDeleteGroupDialog(group)"
                   v-tooltip.top="t('pages.groups.deleteGroup')"
-                />
-                <Button
-                  v-if="canLeaveGroup(group)"
-                  icon="pi pi-sign-out"
-                  text
-                  rounded
-                  severity="danger"
-                  size="small"
-                  @click="openLeaveGroupDialog(group)"
-                  v-tooltip.top="t('pages.groups.leaveGroup')"
                 />
               </div>
             </div>
@@ -586,10 +585,9 @@ onMounted(async () => {
         v-model:visible="showLeaveGroupModal"
         :title="t('pages.groups.leaveGroup')"
         :question="leaveModalQuestion"
-        :warning-message="leaveModalWarningMessage"
         :confirm-label="leaveModalConfirmLabel"
         :cancel-label="t('common.cancel')"
-        :severity="isSelectedGroupOwner ? 'warning' : 'danger'"
+        severity="danger"
         icon="pi pi-sign-out"
         :countdown-seconds="leaveModalCountdownSeconds"
         @confirm="handleConfirmLeaveGroup"
