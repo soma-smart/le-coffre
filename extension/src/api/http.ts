@@ -13,7 +13,6 @@ export interface HttpRequest {
   method?: 'GET' | 'POST'
   body?: unknown
   bearerToken?: string | null
-  signal?: AbortSignal
 }
 
 /** How long the extension waits before calling a vault unreachable. */
@@ -92,7 +91,7 @@ export async function request<T>(input: HttpRequest, schema: ZodType<T>): Promis
   try {
     response = await fetch(input.url, {
       method: input.method ?? 'GET',
-      signal: input.signal ?? controller.signal,
+      signal: controller.signal,
       headers: {
         Accept: 'application/json',
         ...(input.body ? { 'Content-Type': 'application/json' } : {}),
