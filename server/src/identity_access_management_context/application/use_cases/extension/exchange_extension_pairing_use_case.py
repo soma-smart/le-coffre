@@ -167,24 +167,32 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
             )
             raise TooManyActiveExtensionTokensError(self.max_active_tokens)
 
+        # The token is committed: an audit or notification failure past this
+        # point must not cost the user the only copy of its plaintext.
         event = ExtensionPairedEvent(
             user_id=approver_id,
             token_id=stored.id,
             device_name=stored.device_name,
             created_from_ip=stored.created_from_ip,
         )
-        self.event_publisher.publish(event)
-        self.admin_event_repository.append_event(
-            event_id=event.event_id,
-            event_type=type(event).__name__,
-            occurred_on=event.occurred_on,
-            actor_user_id=approver_id,
-            event_data={
-                "token_id": str(stored.id),
-                "device_name": stored.device_name,
-                "created_from_ip": stored.created_from_ip,
-            },
-        )
+        try:
+            self.event_publisher.publish(event)
+            self.admin_event_repository.append_event(
+                event_id=event.event_id,
+                event_type=type(event).__name__,
+                occurred_on=event.occurred_on,
+                actor_user_id=approver_id,
+                event_data={
+                    "token_id": str(stored.id),
+                    "device_name": stored.device_name,
+                    "created_from_ip": stored.created_from_ip,
+                },
+            )
+        except Exception:  # noqa: BLE001 - the credential is already issued
+            logger.exception(
+                "Extension paired but its audit trail could not be recorded",
+                extra={"token_id": str(stored.id), "user_id": str(approver_id)},
+            )
 
         logger.info("Extension paired", extra={"token_id": str(stored.id), "user_id": str(approver_id)})
 

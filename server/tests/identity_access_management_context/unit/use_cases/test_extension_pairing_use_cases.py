@@ -707,6 +707,29 @@ class TestExchange:
 
         assert isinstance(result, ExchangedExtensionTokenResponse)
 
+    def test_should_still_return_the_token_when_the_audit_trail_fails(
+        self,
+        start_use_case,
+        approve_use_case,
+        exchange_use_case,
+        admin_event_repository,
+        extension_token_repository,
+        registered_user,
+    ):
+        verifier = PkceVerifier.generate()
+        started = _start(start_use_case, verifier)
+        approve_use_case.execute(
+            ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=registered_user)
+        )
+        admin_event_repository.raise_on_append = True
+
+        result = exchange_use_case.execute(
+            ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
+        )
+
+        assert isinstance(result, ExchangedExtensionTokenResponse)
+        assert extension_token_repository.get_by_id(result.token_id) is not None
+
     def test_should_record_an_audit_event_when_exchanging(
         self, start_use_case, approve_use_case, exchange_use_case, admin_event_repository, registered_user
     ):
