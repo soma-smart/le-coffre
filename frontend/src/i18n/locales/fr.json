@@ -243,7 +243,7 @@
       "cannotDeleteHasPasswords": "Ce groupe contient des mots de passe et ne peut pas être supprimé. Veuillez d'abord supprimer tous les mots de passe.",
       "leaveQuestion": "Êtes-vous sûr de vouloir quitter \"{name}\" ?",
       "leaveSoleMemberQuestion": "Vous êtes le seul membre de \"{name}\" — il n'est pas possible de le quitter.",
-      "leaveBlockedOwner": "Rétrogradez-vous d'abord au statut de membre.",
+      "leaveBlockedOwner": "Rétrogradez-vous d'abord au statut de membre",
       "leaveBlockedSoleOwner": "Promouvez un autre propriétaire, puis rétrogradez-vous.",
       "updatedDetail": "Groupe mis à jour avec succès",
       "createdDetail": "Groupe créé avec succès",
