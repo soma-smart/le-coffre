@@ -2,16 +2,21 @@ import logging
 
 from identity_access_management_context.application.commands import ApproveExtensionPairingCommand
 from identity_access_management_context.application.gateways import (
+    AdminEventRepository,
     ExtensionPairingRepository,
     ExtensionTokenRepository,
 )
-from identity_access_management_context.application.services import ExtensionPairingLookupService
+from identity_access_management_context.application.services import (
+    ExtensionAuditService,
+    ExtensionPairingLookupService,
+)
 from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER
+from identity_access_management_context.domain.events import ExtensionPairingApprovedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
     TooManyActiveExtensionTokensError,
 )
-from shared_kernel.application.gateways import TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
 logger = logging.getLogger(__name__)
@@ -31,11 +36,15 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
         self,
         extension_pairing_repository: ExtensionPairingRepository,
         extension_token_repository: ExtensionTokenRepository,
+        event_publisher: DomainEventPublisher,
+        admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
         max_active_tokens: int = MAX_ACTIVE_TOKENS_PER_USER,
     ):
         self.extension_pairing_repository = extension_pairing_repository
         self.extension_token_repository = extension_token_repository
+        self.event_publisher = event_publisher
+        self.admin_event_repository = admin_event_repository
         self.time_provider = time_provider
         self.max_active_tokens = max_active_tokens
 
@@ -61,6 +70,23 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
         pairing.approve(user_id, now)
         if not self.extension_pairing_repository.approve(pairing.id, user_id, now):
             raise ExtensionPairingAlreadyResolvedError()
+
+        ExtensionAuditService.record(
+            self.event_publisher,
+            self.admin_event_repository,
+            ExtensionPairingApprovedEvent(
+                user_id=user_id,
+                pairing_id=pairing.id,
+                device_name=pairing.device_name,
+                created_from_ip=pairing.created_from_ip,
+            ),
+            actor_user_id=user_id,
+            event_data={
+                "pairing_id": str(pairing.id),
+                "device_name": pairing.device_name,
+                "created_from_ip": pairing.created_from_ip,
+            },
+        )
 
         logger.info(
             "Extension pairing approved",

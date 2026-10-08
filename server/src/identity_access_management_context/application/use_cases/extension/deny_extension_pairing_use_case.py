@@ -1,10 +1,17 @@
 import logging
 
 from identity_access_management_context.application.commands import DenyExtensionPairingCommand
-from identity_access_management_context.application.gateways import ExtensionPairingRepository
-from identity_access_management_context.application.services import ExtensionPairingLookupService
+from identity_access_management_context.application.gateways import (
+    AdminEventRepository,
+    ExtensionPairingRepository,
+)
+from identity_access_management_context.application.services import (
+    ExtensionAuditService,
+    ExtensionPairingLookupService,
+)
+from identity_access_management_context.domain.events import ExtensionPairingDeniedEvent
 from identity_access_management_context.domain.exceptions import ExtensionPairingAlreadyResolvedError
-from shared_kernel.application.gateways import TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
 logger = logging.getLogger(__name__)
@@ -21,9 +28,13 @@ class DenyExtensionPairingUseCase(TracedUseCase):
     def __init__(
         self,
         extension_pairing_repository: ExtensionPairingRepository,
+        event_publisher: DomainEventPublisher,
+        admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
     ):
         self.extension_pairing_repository = extension_pairing_repository
+        self.event_publisher = event_publisher
+        self.admin_event_repository = admin_event_repository
         self.time_provider = time_provider
 
     def execute(self, command: DenyExtensionPairingCommand) -> None:
@@ -36,6 +47,24 @@ class DenyExtensionPairingUseCase(TracedUseCase):
         pairing.deny(now)
         if not self.extension_pairing_repository.deny(pairing.id, now):
             raise ExtensionPairingAlreadyResolvedError()
+
+        user_id = command.requesting_user.user_id
+        ExtensionAuditService.record(
+            self.event_publisher,
+            self.admin_event_repository,
+            ExtensionPairingDeniedEvent(
+                user_id=user_id,
+                pairing_id=pairing.id,
+                device_name=pairing.device_name,
+                created_from_ip=pairing.created_from_ip,
+            ),
+            actor_user_id=user_id,
+            event_data={
+                "pairing_id": str(pairing.id),
+                "device_name": pairing.device_name,
+                "created_from_ip": pairing.created_from_ip,
+            },
+        )
 
         logger.info(
             "Extension pairing denied",

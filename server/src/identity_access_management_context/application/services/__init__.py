@@ -1,4 +1,5 @@
 from .admin_existence_service import AdminExistenceService
+from .extension_audit_service import ExtensionAuditService
 from .extension_pairing_lookup_service import ExtensionPairingLookupService
 from .extension_revocation_recording_service import (
     REVOCATION_REASON_ADMIN_REVOKED,
@@ -14,6 +15,7 @@ from .user_creation_service import UserCreationService
 from .user_management_service import UserManagementService
 
 __all__ = [
+    "ExtensionAuditService",
     "ExtensionPairingLookupService",
     "ExtensionRevocationRecordingService",
     "REVOCATION_REASON_ADMIN_REVOKED",

@@ -102,18 +102,24 @@ def get_use_case(extension_pairing_repository, time_provider):
 
 
 @pytest.fixture
-def approve_use_case(extension_pairing_repository, extension_token_repository, time_provider):
+def approve_use_case(
+    extension_pairing_repository, extension_token_repository, event_publisher, admin_event_repository, time_provider
+):
     return ApproveExtensionPairingUseCase(
         extension_pairing_repository=extension_pairing_repository,
         extension_token_repository=extension_token_repository,
+        event_publisher=event_publisher,
+        admin_event_repository=admin_event_repository,
         time_provider=time_provider,
     )
 
 
 @pytest.fixture
-def deny_use_case(extension_pairing_repository, time_provider):
+def deny_use_case(extension_pairing_repository, event_publisher, admin_event_repository, time_provider):
     return DenyExtensionPairingUseCase(
         extension_pairing_repository=extension_pairing_repository,
+        event_publisher=event_publisher,
+        admin_event_repository=admin_event_repository,
         time_provider=time_provider,
     )
 
@@ -351,6 +357,55 @@ class TestApprove:
 
         with pytest.raises(TooManyActiveExtensionTokensError):
             approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+
+class TestResolutionAudit:
+    def test_should_record_the_approver_when_approving(
+        self, start_use_case, approve_use_case, admin_event_repository, user
+    ):
+        started = _start(start_use_case, PkceVerifier.generate())
+
+        approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+        (entry,) = admin_event_repository.events
+        assert entry["event_type"] == "ExtensionPairingApprovedEvent"
+        assert entry["actor_user_id"] == user.user_id
+        assert entry["event_data"]["device_name"] == "Chrome on macOS"
+        assert entry["event_data"]["created_from_ip"] == "203.0.113.5"
+
+    def test_should_record_the_denial_when_denying(self, start_use_case, deny_use_case, admin_event_repository, user):
+        # A denial is the trace of a phishing attempt the user caught; the
+        # pairing row itself is purged minutes later.
+        started = _start(start_use_case, PkceVerifier.generate())
+
+        deny_use_case.execute(DenyExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+        (entry,) = admin_event_repository.events
+        assert entry["event_type"] == "ExtensionPairingDeniedEvent"
+        assert entry["actor_user_id"] == user.user_id
+
+    def test_should_record_nothing_when_the_approval_loses_a_race(
+        self, start_use_case, approve_use_case, extension_pairing_repository, admin_event_repository, user
+    ):
+        started = _start(start_use_case, PkceVerifier.generate())
+        pairing_id = next(iter(extension_pairing_repository.pairings))
+        extension_pairing_repository.deny(pairing_id, NOW)
+
+        with pytest.raises(ExtensionPairingAlreadyResolvedError):
+            approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+        assert admin_event_repository.events == []
+
+    def test_should_keep_the_approval_when_the_audit_trail_fails(
+        self, start_use_case, approve_use_case, extension_pairing_repository, admin_event_repository, user
+    ):
+        started = _start(start_use_case, PkceVerifier.generate())
+        admin_event_repository.raise_on_append = True
+
+        approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
+
+        stored = next(iter(extension_pairing_repository.pairings.values()))
+        assert stored.approved_by_user_id == user.user_id
 
 
 class TestResolutionRaces:

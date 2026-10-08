@@ -795,20 +795,28 @@ def get_get_extension_pairing_usecase(
 def get_approve_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
     extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return ApproveExtensionPairingUseCase(
         extension_pairing_repository,
         extension_token_repository,
+        event_publisher,
+        admin_event_repository,
         time_provider,
     )
 
 
 def get_deny_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
-    return DenyExtensionPairingUseCase(extension_pairing_repository, time_provider)
+    return DenyExtensionPairingUseCase(
+        extension_pairing_repository, event_publisher, admin_event_repository, time_provider
+    )
 
 
 def get_exchange_extension_pairing_usecase(

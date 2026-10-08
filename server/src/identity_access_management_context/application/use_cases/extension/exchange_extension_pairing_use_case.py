@@ -15,7 +15,10 @@ from identity_access_management_context.application.responses import (
     ExchangedExtensionTokenResponse,
     PendingExtensionPairingResponse,
 )
-from identity_access_management_context.application.services import ExtensionPairingLookupService
+from identity_access_management_context.application.services import (
+    ExtensionAuditService,
+    ExtensionPairingLookupService,
+)
 from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, ExtensionToken
 from identity_access_management_context.domain.events import ExtensionPairedEvent
 from identity_access_management_context.domain.exceptions import (
@@ -175,24 +178,17 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
             device_name=stored.device_name,
             created_from_ip=stored.created_from_ip,
         )
-        try:
-            self.event_publisher.publish(event)
-            self.admin_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_user_id=approver_id,
-                event_data={
-                    "token_id": str(stored.id),
-                    "device_name": stored.device_name,
-                    "created_from_ip": stored.created_from_ip,
-                },
-            )
-        except Exception:  # noqa: BLE001 - the credential is already issued
-            logger.exception(
-                "Extension paired but its audit trail could not be recorded",
-                extra={"token_id": str(stored.id), "user_id": str(approver_id)},
-            )
+        ExtensionAuditService.record(
+            self.event_publisher,
+            self.admin_event_repository,
+            event,
+            actor_user_id=approver_id,
+            event_data={
+                "token_id": str(stored.id),
+                "device_name": stored.device_name,
+                "created_from_ip": stored.created_from_ip,
+            },
+        )
 
         logger.info("Extension paired", extra={"token_id": str(stored.id), "user_id": str(approver_id)})
 
