@@ -242,7 +242,6 @@
       "cannotDeleteSummary": "Cannot Delete Group",
       "cannotDeleteHasPasswords": "This group contains passwords and cannot be deleted. Please remove all passwords first.",
       "leaveQuestion": "Are you sure you want to leave \"{name}\"?",
-      "leaveOwnerBlockedQuestion": "You are an owner of \"{name}\".",
       "leaveSoleMemberQuestion": "You are the only member of \"{name}\" — leaving isn't available.",
       "leaveBlockedOwner": "Owners must step down before leaving. Demote yourself to member first, then you'll be able to leave.",
       "leaveBlockedSoleOwner": "You are the only owner of this group. Promote another member to owner first, then demote yourself, then you'll be able to leave.",
