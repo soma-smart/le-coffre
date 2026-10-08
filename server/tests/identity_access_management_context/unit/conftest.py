@@ -3,6 +3,7 @@ from uuid import UUID
 import pytest
 
 from identity_access_management_context.application.gateways import SsoUserInfo
+from identity_access_management_context.application.services import ServiceAccountPermissionService
 from identity_access_management_context.domain.entities import SsoUser
 from tests.fakes import FakeDomainEventPublisher
 from tests.shared_kernel.fakes import FakeTimeGateway
@@ -18,6 +19,8 @@ from .fakes import (
     FakeOneTimeLinkRevocationGateway,
     FakePasswordHashingGateway,
     FakeRevokedTokenRepository,
+    FakeServiceAccountEventRepository,
+    FakeServiceAccountRepository,
     FakeSsoConfigurationRepository,
     FakeSsoEncryptionGateway,
     FakeSsoEventRepository,
@@ -167,3 +170,18 @@ def create_existing_sso_user(
         sso_provider=sso_provider,
         **kwargs,
     )
+
+
+@pytest.fixture
+def service_account_repository():
+    return FakeServiceAccountRepository()
+
+
+@pytest.fixture
+def service_account_event_repository():
+    return FakeServiceAccountEventRepository()
+
+
+@pytest.fixture
+def service_account_permission_service(group_repository, group_member_repository):
+    return ServiceAccountPermissionService(group_repository, group_member_repository)

@@ -6,8 +6,12 @@ from vault_management_context.application.use_cases import (
     GetVaultStatusUseCase,
 )
 from vault_management_context.domain.entities import Share, Vault
+from vault_management_context.domain.value_objects import UnlockSessionId
 
 from ..fakes import FakeShareRepository, FakeVaultRepository, FakeVaultSessionGateway
+
+SESSION = UnlockSessionId("SESSIONAAAAAAAAA")
+OTHER_SESSION = UnlockSessionId("SESSIONBBBBBBBBB")
 
 
 @pytest.fixture()
@@ -93,12 +97,8 @@ def test_given_pending_vault_with_session_when_getting_vault_status_should_retur
     assert status.name == "UNLOCKED"
 
 
-def test_given_setuped_vault_without_session_and_shares_exist_when_getting_vault_status_should_return_pending_unlock(
-    use_case,
-    vault_repository: FakeVaultRepository,
-    vault_session_gateway: FakeVaultSessionGateway,
-    share_repository: FakeShareRepository,
-):
+@pytest.fixture()
+def locked_vault(vault_repository: FakeVaultRepository, vault_session_gateway: FakeVaultSessionGateway):
     vault_repository.save(
         Vault(
             nb_shares=3,
@@ -109,9 +109,39 @@ def test_given_setuped_vault_without_session_and_shares_exist_when_getting_vault
         )
     )
     vault_session_gateway.clear_decrypted_key()
-    share_repository.add([Share(secret="share1"), Share(secret="share2")])
 
-    command = GetVaultStatusCommand()
-    status = use_case.execute(command)
+
+@pytest.mark.usefixtures("locked_vault")
+def test_given_locked_vault_and_session_with_shares_when_getting_its_status_should_return_pending_unlock(
+    use_case,
+    share_repository: FakeShareRepository,
+):
+    share_repository.add(SESSION, [Share(secret="share1"), Share(secret="share2")])
+
+    status = use_case.execute(GetVaultStatusCommand(session_id=SESSION))
 
     assert status.name == "PENDING_UNLOCK"
+
+
+@pytest.mark.usefixtures("locked_vault")
+def test_given_locked_vault_and_shares_in_another_session_when_getting_status_should_return_locked(
+    use_case,
+    share_repository: FakeShareRepository,
+):
+    share_repository.add(OTHER_SESSION, [Share(secret="share1")])
+
+    status = use_case.execute(GetVaultStatusCommand(session_id=SESSION))
+
+    assert status.name == "LOCKED"
+
+
+@pytest.mark.usefixtures("locked_vault")
+def test_given_locked_vault_with_pending_shares_when_getting_status_without_session_should_return_locked(
+    use_case,
+    share_repository: FakeShareRepository,
+):
+    share_repository.add(SESSION, [Share(secret="share1")])
+
+    status = use_case.execute(GetVaultStatusCommand())
+
+    assert status.name == "LOCKED"

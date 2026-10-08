@@ -108,7 +108,7 @@ def get_rate_limit_auth_max_requests() -> int:
 def get_rate_limit_vault_max_requests() -> int:
     """Max requests per window on vault-mutation endpoints (per-IP vault floor). Default 30.
 
-    Covers the unauthenticated unlock flow (``/vault/unlock``, ``/vault/unlock/clear``),
+    Covers the unauthenticated unlock flow (``/vault/unlock``),
     ``/vault/setup`` and ``/vault/validate-setup``. A per-IP floor blunts flooding without
     hindering the legitimate low-volume unlock ceremony.
     """
@@ -118,10 +118,9 @@ def get_rate_limit_vault_max_requests() -> int:
 def get_rate_limit_vault_sensitive_max_requests() -> int:
     """Max destructive vault operations allowed per sensitive window, GLOBALLY. Default 1.
 
-    Applies a single shared bucket (all callers, all IPs) to the destructive ``/vault/unlock/clear``
-    and the vault-overwriting ``/vault/setup``. Combined with the window below this enforces
-    "at most once per minute" so an anonymous attacker cannot loop those operations to prevent
-    unlocking / re-initialize a setup in progress.
+    Applies a single shared bucket (all callers, all IPs) to the vault-overwriting ``/vault/setup``.
+    Combined with the window below this enforces "at most once per minute" so an anonymous
+    attacker cannot loop it to re-initialize a setup in progress.
     """
     return int(os.environ.get("RATE_LIMIT_VAULT_SENSITIVE_MAX_REQUESTS", "1"))
 
@@ -247,3 +246,11 @@ def get_smtp_tls_mode() -> str:
     if not tls_mode:
         raise ValueError('SMTP_TLS_MODE is required. Set it to "none", "implicit", or "starttls".')
     return tls_mode.lower()
+
+
+# ── Service Accounts ─────────────────────────────────────────────
+
+
+def get_max_active_service_accounts_per_group() -> int:
+    """How many service accounts may be active at once in one group. Default 10."""
+    return int(os.environ.get("MAX_ACTIVE_SERVICE_ACCOUNTS_PER_GROUP", "10"))

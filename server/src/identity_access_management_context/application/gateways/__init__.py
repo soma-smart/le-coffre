@@ -13,6 +13,16 @@ from .revoked_token_repository import (
     ActiveRevocation,
     RevokedTokenRepository,
 )
+from .service_account_event_repository import (
+    ServiceAccountCreationFacts,
+    ServiceAccountEventRepository,
+)
+from .service_account_repository import (
+    CannotRevokeServiceAccount,
+    CannotRotateServiceAccount,
+    ServiceAccountRepository,
+    ServiceAccountRepositoryException,
+)
 from .sso_configuration_repository import SsoConfigurationRepository
 from .sso_encryption_gateway import SsoEncryptionGateway
 from .sso_event_repository import SsoEventRepository
@@ -50,4 +60,10 @@ __all__ = [
     "SsoEventRepository",
     "AdminEventRepository",
     "AuthSessionRepository",
+    "ServiceAccountRepository",
+    "ServiceAccountRepositoryException",
+    "CannotRotateServiceAccount",
+    "CannotRevokeServiceAccount",
+    "ServiceAccountEventRepository",
+    "ServiceAccountCreationFacts",
 ]

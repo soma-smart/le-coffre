@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
+import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import type { Group } from '@/domain/group/Group'
 import { sortGroups } from '../utils/groupSort'
@@ -15,7 +16,7 @@ const toast = useToast()
 const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
-const { sharedGroups, loading } = storeToRefs(groupsStore)
+const { sharedGroups, userPersonalGroup, loading } = storeToRefs(groupsStore)
 const { isAdmin } = storeToRefs(userStore)
 
 // Search / filter
@@ -31,18 +32,45 @@ const sortedFilteredGroups = computed(() => {
   return sortGroups(filteredGroups.value)
 })
 
+// The personal group is not part of `sharedGroups`, but it can own service
+// accounts too, so it gets its own card. Filtered by the same search box, or a
+// search for another group would leave it stranded on screen.
+const personalCard = computed(() => {
+  const group = userPersonalGroup.value
+  if (!group) return null
+  const q = searchQuery.value.trim().toLowerCase()
+  return !q || group.name.toLowerCase().includes(q) ? group : null
+})
+
 // State
 const showCreateDialog = ref(false)
 const showGroupDetailsModal = ref(false)
 const showDeleteGroupModal = ref(false)
+const showServiceAccountsModal = ref(false)
+// Kept apart from `selectedGroup`: sharing it would let the delete-confirmation
+// computeds read whichever group the service-accounts dialog last opened.
+const serviceAccountsGroup = ref<Group | null>(null)
 const newGroupName = ref('')
 const selectedGroup = ref<Group | null>(null)
 const isEditMode = ref(false)
 const editingGroupId = ref<string | null>(null)
 
+const openServiceAccounts = (group: Group) => {
+  serviceAccountsGroup.value = group
+  showServiceAccountsModal.value = true
+}
+
 // Check if user can edit a group (admin or owner)
 const canEditGroup = (group: Group) => {
   if (isAdmin.value) return true
+  if (!groupsStore.currentUserId) return false
+  return group.owners.includes(groupsStore.currentUserId)
+}
+
+// Service accounts are owner-only, even for admins: a service account's token
+// can read the group's passwords, and admins must not gain that for a group
+// they don't own just by virtue of being an admin.
+const canManageServiceAccounts = (group: Group) => {
   if (!groupsStore.currentUserId) return false
   return group.owners.includes(groupsStore.currentUserId)
 }
@@ -262,16 +290,55 @@ onMounted(async () => {
         </IconField>
       </div>
 
+      <!-- Its own row above the grid. Kept out of the v-if chain below: as a
+           branch of it, it would disappear as soon as the shared grid renders.
+           The grid classes give it one cell's width rather than the full page. -->
+      <div
+        v-if="!loading && personalCard"
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4"
+      >
+        <Card class="hover:shadow-lg transition-shadow">
+          <template #title>
+            <div class="flex items-center gap-2">
+              <i class="pi pi-user text-primary"></i>
+              <span>{{ personalCard.name }}</span>
+            </div>
+          </template>
+          <template #content>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center gap-2 text-sm text-muted-color">
+                <i class="pi pi-tag"></i>
+                <span>{{ t('pages.groups.personalGroup') }}</span>
+              </div>
+              <!-- No edit, delete or members here: a personal group has exactly
+                   one member and cannot be renamed or removed. -->
+              <div class="flex gap-2 mt-4">
+                <Button
+                  v-if="canManageServiceAccounts(personalCard)"
+                  :label="t('pages.groups.serviceAccounts')"
+                  icon="pi pi-key"
+                  size="small"
+                  outlined
+                  severity="secondary"
+                  data-testid="service-accounts-button"
+                  @click="openServiceAccounts(personalCard)"
+                />
+              </div>
+            </div>
+          </template>
+        </Card>
+      </div>
+
       <!-- Groups List -->
       <div v-if="loading" class="flex justify-center items-center py-8">
         <ProgressSpinner />
       </div>
 
-      <div v-else-if="sharedGroups.length === 0" class="text-center py-8">
+      <div v-else-if="sharedGroups.length === 0 && !personalCard" class="text-center py-8">
         <p class="text-muted-color">{{ t('pages.groups.noGroups') }}</p>
       </div>
 
-      <div v-else-if="filteredGroups.length === 0" class="text-center py-8">
+      <div v-else-if="filteredGroups.length === 0 && !personalCard" class="text-center py-8">
         <p class="text-muted-color">{{ t('pages.groups.noMatch', { query: searchQuery }) }}</p>
       </div>
 
@@ -326,6 +393,16 @@ onMounted(async () => {
                   outlined
                   @click="openGroupDetails(group)"
                 />
+                <Button
+                  v-if="canManageServiceAccounts(group)"
+                  :label="t('pages.groups.serviceAccounts')"
+                  icon="pi pi-key"
+                  size="small"
+                  outlined
+                  severity="secondary"
+                  data-testid="service-accounts-button"
+                  @click="openServiceAccounts(group)"
+                />
               </div>
             </div>
           </template>
@@ -374,6 +451,13 @@ onMounted(async () => {
         :group="selectedGroup"
         @member-added="handleMemberChanged"
         @member-removed="handleMemberChanged"
+      />
+
+      <!-- Service Accounts Modal -->
+      <ServiceAccountsModal
+        v-model:visible="showServiceAccountsModal"
+        :group="serviceAccountsGroup"
+        @not-owner="groupsStore.refresh()"
       />
 
       <!-- Delete Group Confirmation Modal -->

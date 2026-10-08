@@ -13,17 +13,18 @@ import type { VaultSetup, VaultState, VaultStatus } from '@/domain/vault/Vault'
  *   - createVault → NOT_SETUP → PENDING, returns setupId + fake shares
  *   - validateSetup(setupId) → PENDING → SETUPED (equivalent to LOCKED
  *     from the UI's perspective: setup done, vault not yet unlocked)
- *   - unlock(shares) → if shares.length >= threshold, UNLOCKED;
- *     otherwise PENDING_UNLOCK with the last timestamp recorded
+ *   - unlock(sessionId, shares) → shares pool per session; once a session
+ *     reaches the threshold, UNLOCKED and every session is dropped
+ *   - getStatus(sessionId) → PENDING_UNLOCK with the session's last
+ *     timestamp while the vault is locked and that session holds shares
  *   - lock → UNLOCKED → LOCKED
- *   - clearPendingShares → PENDING_UNLOCK → LOCKED
  */
 export class InMemoryVaultRepository implements VaultRepository {
   private state: VaultState = { status: 'NOT_SETUP', lastShareTimestamp: null }
   private nextSetupId = 'setup-test'
   private nextShares: string[] = []
   private threshold = 2
-  private submittedShares = new Set<string>()
+  private sessions = new Map<string, { shares: Set<string>; lastShareTimestamp: string }>()
   private now: () => Date = () => new Date()
   private getStatusError: Error | null = null
 
@@ -49,11 +50,15 @@ export class InMemoryVaultRepository implements VaultRepository {
     return this
   }
 
-  async getStatus(): Promise<VaultState> {
+  async getStatus(unlockSessionId?: string): Promise<VaultState> {
     if (this.getStatusError) {
       const e = this.getStatusError
       this.getStatusError = null
       throw e
+    }
+    const session = unlockSessionId ? this.sessions.get(unlockSessionId) : undefined
+    if (session && this.isLocked()) {
+      return { status: 'PENDING_UNLOCK', lastShareTimestamp: session.lastShareTimestamp }
     }
     return { ...this.state }
   }
@@ -73,22 +78,29 @@ export class InMemoryVaultRepository implements VaultRepository {
     this.transitionTo('SETUPED')
   }
 
-  async unlock(shares: string[]): Promise<void> {
-    for (const share of shares) this.submittedShares.add(share)
-    this.state = {
-      status: this.submittedShares.size >= this.threshold ? 'UNLOCKED' : 'PENDING_UNLOCK',
-      lastShareTimestamp: this.now().toISOString(),
+  async unlock(unlockSessionId: string, shares: string[]): Promise<void> {
+    const session = this.sessions.get(unlockSessionId) ?? {
+      shares: new Set<string>(),
+      lastShareTimestamp: '',
     }
-    if (this.state.status === 'UNLOCKED') this.submittedShares.clear()
+    for (const share of shares) session.shares.add(share)
+    session.lastShareTimestamp = this.now().toISOString()
+    this.sessions.set(unlockSessionId, session)
+
+    if (session.shares.size >= this.threshold) {
+      this.sessions.clear()
+      this.transitionTo('UNLOCKED')
+    } else {
+      this.transitionTo('LOCKED')
+    }
   }
 
   async lock(): Promise<void> {
     this.transitionTo('LOCKED')
   }
 
-  async clearPendingShares(): Promise<void> {
-    this.submittedShares.clear()
-    this.state = { status: 'LOCKED', lastShareTimestamp: null }
+  private isLocked(): boolean {
+    return ['LOCKED', 'SETUPED', 'PENDING_UNLOCK'].includes(this.state.status)
   }
 
   private transitionTo(status: VaultStatus): void {

@@ -114,17 +114,24 @@ test('Full lifecycle: setup → login → create → read → lock → unlock', 
   await page.getByRole('button', { name: 'Lock Vault', exact: true }).last().click()
   await lockResponse
 
-  // Navigate home — router guard calls checkVaultStatus → Unlock Vault modal appears
+  // Navigate home — router guard calls checkVaultStatus → redirected to the unlock page,
+  // which opens a new unlock session and puts its id in the URL fragment
   await page.goto('/', { waitUntil: 'commit' })
-  await expect(page.getByRole('dialog', { name: 'Unlock Vault' })).toBeVisible({
+  await expect(page.getByRole('heading', { name: 'Unlock Vault' })).toBeVisible({
     timeout: 15000,
   })
+  await expect(page).toHaveURL(/\/unlock#id=[0-9A-Z]{16}$/)
+  const unlockUrl = page.url()
 
-  // ── Unlock vault ─────────────────────────────────────────────
+  // ── Unlock vault: one share holder, then another joining through the link ──
   await page.locator('#share-0').fill(storedShares[0])
-  await page.getByRole('button', { name: 'Add Share' }).click()
-  await page.locator('#share-1').fill(storedShares[1])
   await page.getByRole('button', { name: 'Submit Shares' }).click()
+  await expect(page.getByLabel('Unlock link')).toHaveValue(unlockUrl, { timeout: 10000 })
+
+  await page.goto(unlockUrl, { waitUntil: 'commit' })
+  await expect(page.getByLabel('Unlock link')).toHaveValue(unlockUrl, { timeout: 15000 })
+  await page.locator('#share-0').fill(storedShares[1])
+  await page.getByRole('button', { name: 'Add Shares' }).click()
 
   // After unlock, app reloads → passwords workspace is visible
   await expect(page.getByRole('button', { name: 'New Password', exact: true })).toBeVisible({

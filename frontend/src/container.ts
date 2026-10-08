@@ -2,6 +2,7 @@ import type { AuthGateway } from '@/application/ports/AuthGateway'
 import type { CsrfGateway } from '@/application/ports/CsrfGateway'
 import type { GroupRepository } from '@/application/ports/GroupRepository'
 import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
+import type { ServiceAccountRepository } from '@/application/ports/ServiceAccountRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
 import type { StatisticsGateway } from '@/application/ports/StatisticsGateway'
@@ -35,6 +36,10 @@ import { RevokeOneTimeLinkAsAdminUseCase } from '@/application/oneTimeLink/Revok
 import { CreateOneTimeLinkUseCase } from '@/application/oneTimeLink/CreateOneTimeLink'
 import { ListOneTimeLinksUseCase } from '@/application/oneTimeLink/ListOneTimeLinks'
 import { RevokeOneTimeLinkUseCase } from '@/application/oneTimeLink/RevokeOneTimeLink'
+import { CreateServiceAccountUseCase } from '@/application/serviceAccount/CreateServiceAccount'
+import { ListServiceAccountsUseCase } from '@/application/serviceAccount/ListServiceAccounts'
+import { RevokeServiceAccountUseCase } from '@/application/serviceAccount/RevokeServiceAccount'
+import { RotateServiceAccountTokenUseCase } from '@/application/serviceAccount/RotateServiceAccountToken'
 import { CreatePasswordUseCase } from '@/application/password/CreatePassword'
 import { DeletePasswordUseCase } from '@/application/password/DeletePassword'
 import { GetPasswordUseCase } from '@/application/password/GetPassword'
@@ -44,7 +49,6 @@ import { ListPasswordsUseCase } from '@/application/password/ListPasswords'
 import { SharePasswordUseCase, UnsharePasswordUseCase } from '@/application/password/SharePassword'
 import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
 import { UpdateShareExpirationUseCase } from '@/application/password/UpdateShareExpiration'
-import { ClearPendingSharesUseCase } from '@/application/vault/ClearPendingShares'
 import { CreateVaultUseCase } from '@/application/vault/CreateVault'
 import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
 import { LockVaultUseCase } from '@/application/vault/LockVault'
@@ -82,6 +86,7 @@ export interface Ports {
   preferencesGateway: PreferencesGateway
   statisticsGateway: StatisticsGateway
   oneTimeLinkRepository: OneTimeLinkRepository
+  serviceAccountRepository: ServiceAccountRepository
 }
 
 export interface Container {
@@ -130,7 +135,6 @@ export interface Container {
     validateSetup: ValidateVaultSetupUseCase
     unlock: UnlockVaultUseCase
     lock: LockVaultUseCase
-    clearPendingShares: ClearPendingSharesUseCase
   }
   auth: {
     login: LoginWithPasswordUseCase
@@ -159,6 +163,12 @@ export interface Container {
     listMine: ListMyOneTimeLinksUseCase
     revokeAsAdmin: RevokeOneTimeLinkAsAdminUseCase
     revokeAllForUser: RevokeAllOneTimeLinksForUserUseCase
+  }
+  serviceAccounts: {
+    create: CreateServiceAccountUseCase
+    list: ListServiceAccountsUseCase
+    rotate: RotateServiceAccountTokenUseCase
+    revoke: RevokeServiceAccountUseCase
   }
 }
 
@@ -209,7 +219,6 @@ export function buildContainer(ports: Ports): Container {
       validateSetup: new ValidateVaultSetupUseCase(ports.vaultRepository),
       unlock: new UnlockVaultUseCase(ports.vaultRepository),
       lock: new LockVaultUseCase(ports.vaultRepository),
-      clearPendingShares: new ClearPendingSharesUseCase(ports.vaultRepository),
     },
     auth: {
       login: new LoginWithPasswordUseCase(ports.authGateway),
@@ -238,6 +247,12 @@ export function buildContainer(ports: Ports): Container {
       listMine: new ListMyOneTimeLinksUseCase(ports.oneTimeLinkRepository),
       revokeAsAdmin: new RevokeOneTimeLinkAsAdminUseCase(ports.oneTimeLinkRepository),
       revokeAllForUser: new RevokeAllOneTimeLinksForUserUseCase(ports.oneTimeLinkRepository),
+    },
+    serviceAccounts: {
+      create: new CreateServiceAccountUseCase(ports.serviceAccountRepository),
+      list: new ListServiceAccountsUseCase(ports.serviceAccountRepository),
+      rotate: new RotateServiceAccountTokenUseCase(ports.serviceAccountRepository),
+      revoke: new RevokeServiceAccountUseCase(ports.serviceAccountRepository),
     },
   }
 }

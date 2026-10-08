@@ -98,6 +98,10 @@ client.interceptors.request.use((request, options) => {
   return request
 })
 
+function isVaultStatusRequest(request: Request): boolean {
+  return new URL(request.url, window.location.origin).pathname.endsWith('/vault/status')
+}
+
 // ── Auto-Refresh Response Interceptor ────────────────────────────────────────
 // On a 401, silently refreshes the access token (using the HTTP-only
 // refresh_token cookie) and retries the original request transparently.
@@ -108,10 +112,13 @@ client.interceptors.response.use(async (response: Response, request: Request, op
     // ── Vault Locked (503) ────────────────────────────────────
     // The backend returns 503 when a crypto operation is attempted while the
     // vault is locked (e.g. reading/writing a password mid-session after the
-    // vault key was evicted). Show the unlock modal so the user can unlock and
-    // retry — no need to tear down the session.
-    if (response.status === 503) {
-      triggerVaultUnlock()
+    // vault key was evicted). Send the user to the unlock page so they can unlock
+    // and retry — no need to tear down the session.
+    // A 503 from /vault/status itself is not a locked vault (the status route
+    // answers 200 LOCKED) but the backend still starting: reacting to it would
+    // loop, since the unlock flow starts by checking /vault/status.
+    if (response.status === 503 && !isVaultStatusRequest(request)) {
+      void triggerVaultUnlock()
       import('primevue').then(({ useToast }) => {
         try {
           useToast().add({
