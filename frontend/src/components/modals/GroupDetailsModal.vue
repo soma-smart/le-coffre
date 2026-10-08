@@ -57,10 +57,12 @@ const isLeaveBlockedByOwnership = computed(() => {
 })
 
 const leaveButtonTooltip = computed(() => {
-  if (!isLeaveBlockedByOwnership.value || !props.group) return undefined
-  return props.group.owners.length === 1
-    ? t('pages.groups.leaveBlockedSoleOwner')
-    : t('pages.groups.leaveBlockedOwner')
+  if (isLeaveBlockedByOwnership.value) {
+    return props.group && props.group.owners.length === 1
+      ? t('pages.groups.leaveBlockedSoleOwner')
+      : t('pages.groups.leaveBlockedOwner')
+  }
+  return t('components.groupDetailsModal.leaveGroupButton')
 })
 
 // Resolve use cases at setup time — inject() has no component context
@@ -334,20 +336,35 @@ watch(visible, (isVisible) => {
                   </div>
 
                   <!-- Step down to member: on your own card, or any owner's card
-                       if you're an admin. Never on a personal group (its single
-                       owner can't be demoted). -->
-                  <Button
-                    v-if="(user.id === currentUserId || isAdmin) && !group.isPersonal"
-                    icon="pi pi-arrow-circle-down"
-                    text
-                    rounded
-                    severity="warning"
-                    size="small"
-                    :aria-label="t('components.groupDetailsModal.demoteAria')"
-                    v-tooltip.top="t('components.groupDetailsModal.demoteTooltip')"
-                    :loading="isActing"
-                    @click="handleDemoteOwner(user)"
-                  />
+                       if you're an admin. Leave: only on your own card, since it
+                       only ever acts on yourself. Neither applies to a personal
+                       group (its single owner can't be demoted or leave). -->
+                  <div v-if="!group.isPersonal" class="flex gap-1">
+                    <Button
+                      v-if="user.id === currentUserId || isAdmin"
+                      icon="pi pi-arrow-circle-down"
+                      text
+                      rounded
+                      severity="warning"
+                      size="small"
+                      :aria-label="t('components.groupDetailsModal.demoteAria')"
+                      v-tooltip.top="t('components.groupDetailsModal.demoteTooltip')"
+                      :loading="isActing"
+                      @click="handleDemoteOwner(user)"
+                    />
+                    <Button
+                      v-if="user.id === currentUserId"
+                      icon="pi pi-sign-out"
+                      text
+                      rounded
+                      severity="info"
+                      size="small"
+                      :disabled="isLeaveBlockedByOwnership"
+                      :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
+                      v-tooltip.top="leaveButtonTooltip"
+                      @click="handleLeaveGroup"
+                    />
+                  </div>
                 </div>
               </template>
             </Card>
@@ -405,7 +422,10 @@ watch(visible, (isVisible) => {
                   </div>
 
                   <!-- Promote: owners of the group, or any admin. Remove: owners
-                       of the group only. Neither applies to personal groups. -->
+                       of the group only. Leave: only on your own card, since it
+                       only ever acts on yourself — shown regardless of isOwner,
+                       which is exactly the case where no other action applies.
+                       Neither applies to personal groups. -->
                   <div v-if="!group.isPersonal" class="flex gap-1">
                     <Button
                       v-if="isOwner || isAdmin"
@@ -431,6 +451,17 @@ watch(visible, (isVisible) => {
                       :loading="isActing"
                       @click="handleRemoveMember(user.id)"
                     />
+                    <Button
+                      v-if="user.id === currentUserId"
+                      icon="pi pi-sign-out"
+                      text
+                      rounded
+                      severity="info"
+                      size="small"
+                      :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
+                      v-tooltip.top="leaveButtonTooltip"
+                      @click="handleLeaveGroup"
+                    />
                   </div>
                 </div>
               </template>
@@ -442,16 +473,6 @@ watch(visible, (isVisible) => {
 
     <template #footer>
       <Button :label="t('common.close')" severity="secondary" @click="visible = false" />
-      <Button
-        v-if="group && !group.isPersonal"
-        :label="t('components.groupDetailsModal.leaveGroupButton')"
-        icon="pi pi-sign-out"
-        severity="secondary"
-        outlined
-        :disabled="isLeaveBlockedByOwnership"
-        v-tooltip.top="leaveButtonTooltip"
-        @click="handleLeaveGroup"
-      />
     </template>
   </Dialog>
 

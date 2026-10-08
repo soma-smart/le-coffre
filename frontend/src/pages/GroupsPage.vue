@@ -462,7 +462,7 @@ onMounted(async () => {
                   icon="pi pi-sign-out"
                   text
                   rounded
-                  severity="secondary"
+                  severity="info"
                   size="small"
                   :disabled="isLeaveBlockedByOwnership(group)"
                   @click="openLeaveGroupDialog(group)"
@@ -587,7 +587,7 @@ onMounted(async () => {
         :question="leaveModalQuestion"
         :confirm-label="leaveModalConfirmLabel"
         :cancel-label="t('common.cancel')"
-        severity="danger"
+        severity="info"
         icon="pi pi-sign-out"
         :countdown-seconds="leaveModalCountdownSeconds"
         @confirm="handleConfirmLeaveGroup"
