@@ -357,7 +357,7 @@ watch(visible, (isVisible) => {
                       icon="pi pi-sign-out"
                       text
                       rounded
-                      severity="info"
+                      severity="danger"
                       size="small"
                       :disabled="isLeaveBlockedByOwnership"
                       :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
@@ -456,7 +456,7 @@ watch(visible, (isVisible) => {
                       icon="pi pi-sign-out"
                       text
                       rounded
-                      severity="info"
+                      severity="danger"
                       size="small"
                       :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
                       v-tooltip.top="leaveButtonTooltip"
