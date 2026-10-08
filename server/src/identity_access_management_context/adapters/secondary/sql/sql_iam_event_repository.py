@@ -8,6 +8,7 @@ from identity_access_management_context.adapters.secondary.sql.model.iam_event i
     IamEventTable,
 )
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
+from shared_kernel.utils import to_naive_utc
 
 
 class GroupMembershipEventType(Enum):
@@ -41,7 +42,7 @@ class SqlIamEventRepository(SQLBaseRepository):
         event = IamEventTable(
             event_id=event_id,
             event_type=event_type,
-            occurred_on=occurred_on,
+            occurred_on=to_naive_utc(occurred_on),
             actor_principal_id=actor_principal_id,
             event_data=event_data,
         )

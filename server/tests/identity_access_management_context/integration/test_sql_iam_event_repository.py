@@ -1,5 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
+
+from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
 
 
 def _append(repository, event_type: str, group_id):
@@ -52,3 +54,18 @@ def test_given_unrelated_iam_event_when_listing_group_events_then_it_is_excluded
     events = sql_iam_event_repository.list_events(group_id)
 
     assert [event["event_type"] for event in events] == ["OwnerDemotedToMemberEvent"]
+
+
+def test_given_an_aware_timestamp_when_appending_then_it_is_stored_as_naive_utc(sql_iam_event_repository, session):
+    event_id = uuid4()
+    sql_iam_event_repository.append_event(
+        event_id=event_id,
+        event_type="TokenAuthenticationFailedEvent",
+        occurred_on=datetime(2026, 1, 1, 14, 0, tzinfo=timezone(timedelta(hours=2))),
+        actor_principal_id=None,
+        event_data={"reason": "unknown_token", "client_ip": "203.0.113.7"},
+    )
+
+    row = session.get(IamEventTable, event_id)
+    assert row.occurred_on == datetime(2026, 1, 1, 12, 0)
+    assert row.actor_principal_id is None
