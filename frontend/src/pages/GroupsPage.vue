@@ -588,7 +588,7 @@ onMounted(async () => {
         :confirm-label="leaveModalConfirmLabel"
         :cancel-label="t('common.cancel')"
         severity="danger"
-        icon="pi pi-sign-out"
+        icon="pi pi-exclamation-triangle"
         :countdown-seconds="leaveModalCountdownSeconds"
         @confirm="handleConfirmLeaveGroup"
       />
