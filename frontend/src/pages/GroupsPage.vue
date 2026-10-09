@@ -137,7 +137,9 @@ const leaveButtonTooltip = (group: Group) => {
 // Computed properties for the leave-group modal. Reuses `selectedGroup`,
 // same as the delete modal — the two never show at the same time.
 const isSelectedGroupSoleMember = computed(() => {
-  return selectedGroup.value ? isSoleMemberOf(selectedGroup.value, groupsStore.currentUserId) : false
+  return selectedGroup.value
+    ? isSoleMemberOf(selectedGroup.value, groupsStore.currentUserId)
+    : false
 })
 
 const leaveModalQuestion = computed(() => {
@@ -147,7 +149,9 @@ const leaveModalQuestion = computed(() => {
 })
 
 const leaveModalConfirmLabel = computed(() => {
-  return isSelectedGroupSoleMember.value ? t('pages.groups.deleteGroup') : t('pages.groups.leaveGroup')
+  return isSelectedGroupSoleMember.value
+    ? t('pages.groups.deleteGroup')
+    : t('pages.groups.leaveGroup')
 })
 
 const leaveModalCountdownSeconds = computed(() => {
