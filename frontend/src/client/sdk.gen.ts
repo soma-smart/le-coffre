@@ -1083,7 +1083,7 @@ export const demoteOwnerToMemberGroupsGroupIdOwnersUserIdDelete = <ThrowOnError 
  * - **group_id**: ID of the group (path parameter)
  * - **user_id**: ID of the user to remove (path parameter)
  * - **Authorization**: Bearer token required (access_token cookie)
- * - **Permission**: Only group owners can remove members
+ * - **Permission**: Group owners can remove any member; a user can always remove themselves (leave the group)
  *
  * Cannot remove owners from groups.
  * Cannot modify personal groups.
