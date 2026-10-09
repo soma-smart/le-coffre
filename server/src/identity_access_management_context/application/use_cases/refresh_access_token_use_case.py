@@ -5,7 +5,9 @@ from identity_access_management_context.application.commands import (
 )
 from identity_access_management_context.application.gateways import (
     REVOCATION_REASON_REFRESH_TOKEN_ROTATED,
+    AdminEventRepository,
     AuthSessionRepository,
+    ExtensionTokenRepository,
     RevokedTokenRepository,
     TokenGateway,
     UserRepository,
@@ -13,10 +15,14 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.application.responses import (
     RefreshAccessTokenResponse,
 )
+from identity_access_management_context.application.services import (
+    REVOCATION_REASON_REFRESH_TOKEN_REUSE,
+    ExtensionRevocationRecordingService,
+)
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
-from shared_kernel.application.gateways import TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
 
@@ -29,6 +35,9 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         revoked_token_repository: RevokedTokenRepository,
         time_provider: TimeGateway,
         session_max_lifetime_seconds: int,
+        extension_token_repository: ExtensionTokenRepository,
+        event_publisher: DomainEventPublisher,
+        admin_event_repository: AdminEventRepository,
     ):
         self.token_gateway = token_gateway
         self.user_repository = user_repository
@@ -36,6 +45,9 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         self.revoked_token_repository = revoked_token_repository
         self.time_provider = time_provider
         self.session_max_lifetime_seconds = session_max_lifetime_seconds
+        self.extension_token_repository = extension_token_repository
+        self.event_publisher = event_publisher
+        self.admin_event_repository = admin_event_repository
 
     def execute(self, command: RefreshAccessTokenCommand) -> RefreshAccessTokenResponse:
         token_data = self.token_gateway.validate_refresh_token(command.refresh_token)
@@ -69,6 +81,23 @@ class RefreshAccessTokenUseCase(TracedUseCase):
                 self.auth_session_repository.invalidate_all_for_user(token_data.user_id, now)
                 user.session_invalid_before = now
                 self.user_repository.update(user)
+                # "Every session" includes the browser extensions. The cutoff
+                # above already refuses their tokens, but only revoking them
+                # marks the rows dead: the connected-devices screen and the
+                # rate limiter read the row, not the cutoff, so a token cut by
+                # the cutoff alone kept showing as active and kept charging the
+                # victim's bucket. Same reasoning as the password-change flow.
+                revoked = self.extension_token_repository.revoke_all_for_user(token_data.user_id, now)
+                if revoked:
+                    ExtensionRevocationRecordingService.record(
+                        self.event_publisher,
+                        self.admin_event_repository,
+                        user_id=token_data.user_id,
+                        actor_user_id=token_data.user_id,
+                        token_id=None,
+                        reason=REVOCATION_REASON_REFRESH_TOKEN_REUSE,
+                        revoked_count=revoked,
+                    )
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
         if user.session_invalid_before is not None:

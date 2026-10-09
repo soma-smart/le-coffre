@@ -64,6 +64,30 @@ class InMemoryRateLimiter:
                 retry_after=0,
             )
 
+    def is_exhausted(self, key: str, max_requests: int, window_seconds: int, now: datetime) -> bool:
+        """Is this bucket already full, without recording anything?
+
+        For deciding whether expensive work is worth doing at all. ``check``
+        cannot answer that question: it records the attempt, so asking it would
+        consume the very budget being protected.
+
+        Reads with ``.get`` rather than by indexing: the store is a
+        ``defaultdict(deque)``, so an indexed read would create an entry for
+        every key merely asked about, which for a per-IP key means one entry per
+        address an attacker rotates through.
+        """
+        window_start = now - timedelta(seconds=window_seconds)
+
+        with self._lock:
+            timestamps = self._requests.get(key)
+            if not timestamps:
+                return False
+
+            while timestamps and timestamps[0] <= window_start:
+                timestamps.popleft()
+
+            return len(timestamps) >= max_requests
+
     def reset(self) -> None:
         """Clear all tracked state. Testing helper."""
         with self._lock:

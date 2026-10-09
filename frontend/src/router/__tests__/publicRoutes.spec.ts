@@ -14,12 +14,25 @@ describe('public routes', () => {
     expect(route?.meta.skipSetupCheck).toBe(true)
   })
 
+  it('keeps the extension approval page behind the session', () => {
+    // It was public while the pairing code rode the URL fragment and had to be
+    // stashed before sign-in. The code is typed on the page now, so nothing
+    // needs to happen before authentication, and going through the guard is
+    // what primes the CSRF token that Approve and Refuse need.
+    const route = router.getRoutes().find((entry) => entry.name === 'ExtensionConnect')
+
+    expect(route).toBeDefined()
+    expect(route?.meta.public).toBeUndefined()
+  })
+
   it('keeps every other route non-public', () => {
+    // Deliberately an exact list. Adding a route here means someone reviewed
+    // why it may be reached without a session.
     const publicRoutes = router
       .getRoutes()
       .filter((entry) => entry.meta.public)
       .map((entry) => entry.name)
 
-    expect(publicRoutes).toEqual(['OneTimeLink'])
+    expect(publicRoutes.sort()).toEqual(['OneTimeLink'])
   })
 })

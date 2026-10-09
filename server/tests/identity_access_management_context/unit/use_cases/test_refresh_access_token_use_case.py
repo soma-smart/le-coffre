@@ -10,13 +10,16 @@ from identity_access_management_context.application.gateways import (
     REVOCATION_REASON_LOGOUT,
     REVOCATION_REASON_REFRESH_TOKEN_ROTATED,
 )
+from identity_access_management_context.application.services import REVOCATION_REASON_REFRESH_TOKEN_REUSE
 from identity_access_management_context.application.use_cases import (
     RefreshAccessTokenUseCase,
 )
-from identity_access_management_context.domain.entities import User
+from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, ExtensionToken, User
+from identity_access_management_context.domain.events import ExtensionTokenRevokedEvent
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
+from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import FakeAuthSessionRepository, FakeRevokedTokenRepository, FakeTokenGateway, FakeUserRepository
@@ -29,6 +32,9 @@ def use_case(
     auth_session_repository,
     revoked_token_repository: FakeRevokedTokenRepository,
     time_provider: FakeTimeGateway,
+    extension_token_repository,
+    event_publisher,
+    admin_event_repository,
 ):
     return RefreshAccessTokenUseCase(
         token_gateway=token_gateway,
@@ -37,6 +43,9 @@ def use_case(
         revoked_token_repository=revoked_token_repository,
         time_provider=time_provider,
         session_max_lifetime_seconds=4 * 3600,
+        extension_token_repository=extension_token_repository,
+        event_publisher=event_publisher,
+        admin_event_repository=admin_event_repository,
     )
 
 
@@ -419,6 +428,53 @@ def test_given_replayed_rotated_refresh_token_when_execute_then_invalidates_all_
     # The cutoff must be the exact (non-truncated) detection time so the
     # thief's same-second access token fails `issued_at < cutoff`.
     assert contained_user.session_invalid_before == time_provider.get_current_time()
+
+
+def test_given_replayed_rotated_refresh_token_when_execute_then_revokes_extension_tokens(
+    use_case: RefreshAccessTokenUseCase,
+    token_gateway: FakeTokenGateway,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    revoked_token_repository: FakeRevokedTokenRepository,
+    time_provider: FakeTimeGateway,
+    extension_token_repository,
+    event_publisher,
+):
+    """Containment reaches the browser extensions too.
+
+    The cutoff set above already refuses their tokens at validation, but the
+    rows stayed unrevoked: the connected-devices screen listed them as live and
+    the rate limiter kept charging the victim's bucket, both reading the row
+    and not the cutoff. Revoking outright is what the password-change flow does
+    for the same reason.
+    """
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    now = time_provider.get_current_time()
+    user_repository.save(User(id=user_id, username="testuser", email="user@example.com", name="Test User"))
+    auth_session_repository.create_session(user_id, "attacker-jti", now)
+    revoked_token_repository.revoke_jti("stolen-jti", expires_at=None, reason=REVOCATION_REASON_REFRESH_TOKEN_ROTATED)
+    token_gateway.set_valid_refresh_token("stolen", user_id, "user@example.com", ["user"], jti="stolen-jti")
+    for _ in range(2):
+        extension_token_repository.add(
+            ExtensionToken.create(
+                user_id=user_id,
+                secret=ExtensionTokenSecret.generate(),
+                device_name="Chrome",
+                lifetime=timedelta(days=30),
+                now=now,
+            ),
+            MAX_ACTIVE_TOKENS_PER_USER,
+            now,
+        )
+
+    with pytest.raises(InvalidRefreshTokenException):
+        use_case.execute(RefreshAccessTokenCommand(refresh_token="stolen"))
+
+    assert extension_token_repository.count_active_for_user(user_id, now) == 0
+    revocations = [e for e in event_publisher.published_events if isinstance(e, ExtensionTokenRevokedEvent)]
+    assert len(revocations) == 1
+    assert revocations[0].reason == REVOCATION_REASON_REFRESH_TOKEN_REUSE
+    assert revocations[0].revoked_count == 2
 
 
 def test_given_replayed_logged_out_refresh_token_when_execute_then_raises_without_containment(

@@ -36,6 +36,30 @@ jobs:
             echo "image_tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
+      # Before the images, so a broken extension stops the release before
+      # anything is pushed anywhere.
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: extension/package.json
+
+      # The zip keeps the extension's own version (manifest.json), not the
+      # release tag: the extension does not change at the server's pace, and the
+      # Web Store wants the manifest version to move only when the extension
+      # does. package.sh builds, validates the manifest, and puts it at the root
+      # of the zip, which is what both the store and "Load unpacked" expect.
+      - name: Package browser extension
+        id: extension
+        working-directory: extension
+        run: |
+          bun install --frozen-lockfile
+          bun run package
+          version=$(bun --print 'require("./manifest.json").version')
+          zip="le-coffre-extension-${version}.zip"
+          sha256sum "$zip" > "$zip.sha256"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "zip=extension/${zip}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4.4.1
 
@@ -161,6 +185,8 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        env:
+          EXTENSION_VERSION: ${{ steps.extension.outputs.version }}
         run: |
           # Get previous tag
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
@@ -199,6 +225,14 @@ jobs:
           CHANGELOG="$CHANGELOG\`\`\`\n"
           CHANGELOG="$CHANGELOG helm install le-coffre oci://ghcr.io/${GITHUB_REPOSITORY_OWNER}/le-coffre --version ${SEMVER} -f values.yaml\n"
           CHANGELOG="$CHANGELOG\`\`\`\n"
+
+          EXTENSION_ZIP="le-coffre-extension-${EXTENSION_VERSION}.zip"
+          CHANGELOG="$CHANGELOG\n## 🧩 Browser extension\n"
+          CHANGELOG="$CHANGELOG\`${EXTENSION_ZIP}\` (extension version ${EXTENSION_VERSION}) is attached below, with its SHA-256.\n"
+          CHANGELOG="$CHANGELOG\`\`\`\n"
+          CHANGELOG="$CHANGELOG sha256sum -c ${EXTENSION_ZIP}.sha256\n"
+          CHANGELOG="$CHANGELOG\`\`\`\n"
+          CHANGELOG="$CHANGELOG To try it without the Chrome Web Store: unzip it, open \`chrome://extensions\`, enable Developer mode, then Load unpacked on the unzipped folder.\n"
 
           CHANGELOG="$CHANGELOG\n\n## Changes\n"
 
@@ -268,3 +302,12 @@ jobs:
                 prerelease: false,
               });
             }
+
+      # After the release exists. --clobber keeps a re-run on an existing tag
+      # (workflow_dispatch) idempotent, like the update-or-create step above.
+      - name: Attach browser extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.set_outputs.outputs.image_tag }}
+          ZIP: ${{ steps.extension.outputs.zip }}
+        run: gh release upload "$TAG" "$ZIP" "$ZIP.sha256" --clobber

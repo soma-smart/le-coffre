@@ -254,6 +254,8 @@ onMounted(() => {
           </div>
         </div>
 
+        <ConnectedExtensionsSection />
+
         <!-- Theme switcher (mobile only) -->
         <div class="md:hidden mb-6 border-t pt-4">
           <h3 class="text-lg font-semibold mb-4">{{ t('pages.profile.appearance') }}</h3>

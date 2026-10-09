@@ -1,3 +1,4 @@
+from .notify_extension_paired_use_case import NotifyExtensionPairedUseCase
 from .notify_group_owner_promoted_use_case import NotifyGroupOwnerPromotedUseCase
 
-__all__ = ["NotifyGroupOwnerPromotedUseCase"]
+__all__ = ["NotifyExtensionPairedUseCase", "NotifyGroupOwnerPromotedUseCase"]

@@ -2,6 +2,10 @@ from .admin_login_event import AdminLoginEvent
 from .admin_login_failed_event import AdminLoginFailedEvent
 from .admin_promoted_event import AdminPromotedEvent
 from .admin_registered_event import AdminRegisteredEvent
+from .extension_paired_event import ExtensionPairedEvent
+from .extension_pairing_approved_event import ExtensionPairingApprovedEvent
+from .extension_pairing_denied_event import ExtensionPairingDeniedEvent
+from .extension_token_revoked_event import ExtensionTokenRevokedEvent
 from .group_created_event import GroupCreatedEvent
 from .group_deleted_event import GroupDeletedEvent
 from .group_updated_event import GroupUpdatedEvent
@@ -22,6 +26,10 @@ from .user_removed_from_group_event import UserRemovedFromGroupEvent
 from .user_updated_event import UserUpdatedEvent
 
 __all__ = [
+    "ExtensionPairedEvent",
+    "ExtensionPairingApprovedEvent",
+    "ExtensionPairingDeniedEvent",
+    "ExtensionTokenRevokedEvent",
     "UserCreatedEvent",
     "UserDeletedEvent",
     "UserUpdatedEvent",
