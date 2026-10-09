@@ -915,7 +915,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "oidc-provider-mock", specifier = ">=0.4.7" },
+    { name = "oidc-provider-mock", specifier = ">=0.4.8" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "pytest-watcher", specifier = ">=0.6.3" },
@@ -1034,7 +1034,7 @@ wheels = [
 
 [[package]]
 name = "oidc-provider-mock"
-version = "0.4.7"
+version = "0.4.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "authlib" },
@@ -1047,9 +1047,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d2/53/570e60e4b5acb12a4777558c0772c333dfc4129dffde9db2c9ec3db16b42/oidc_provider_mock-0.4.7.tar.gz", hash = "sha256:94eab23c059f5b6440fa2c96f4a761b093f869c7b30dba38473e22571b983ea8", size = 162188, upload-time = "2026-09-16T09:18:26.032Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/e6/1b318d92f48b747de7c3f268fee066fada2b14150bd4ab7dddd19785090f/oidc_provider_mock-0.4.8.tar.gz", hash = "sha256:eae354224e7d729fac4ae1bff16de4fc7ae5f75f9c3670205e74cf63602e04de", size = 173393, upload-time = "2026-10-04T15:26:40.16Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/51/1bc70728c6f62b445bf21d3ccd6d7bb6762ab3a63dad00915f4f232db1f5/oidc_provider_mock-0.4.7-py3-none-any.whl", hash = "sha256:d5bd5c9807bbbb2590d2026d960b084284e786201709c7474b0433a91af3419d", size = 26144, upload-time = "2026-09-16T09:18:24.417Z" },
+    { url = "https://files.pythonhosted.org/packages/84/18/cdf789afd136250bc5a07cc2e5d7f06dbe755afaa704532ee499deaee1b2/oidc_provider_mock-0.4.8-py3-none-any.whl", hash = "sha256:2c4cc5933f91748f5961f9828426741f777af71ee55d4ffd30141dd1bf864030", size = 26283, upload-time = "2026-10-04T15:26:38.822Z" },
 ]
 
 [[package]]
