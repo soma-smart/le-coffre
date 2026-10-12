@@ -3713,3 +3713,44 @@ export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDelete
 };
 
 export type RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponse = RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses[keyof RevokeAllExtensionTokensForUserAdminUsersUserIdExtensionTokensDeleteResponses];
+
+export type GetNotificationPreferencesNotificationsPreferencesGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/notifications/preferences';
+};
+
+export type GetNotificationPreferencesNotificationsPreferencesGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type GetNotificationPreferencesNotificationsPreferencesGetResponse = GetNotificationPreferencesNotificationsPreferencesGetResponses[keyof GetNotificationPreferencesNotificationsPreferencesGetResponses];
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutData = {
+    body: UpdateNotificationPreferencesRequest;
+    path?: never;
+    query?: never;
+    url: '/notifications/preferences';
+};
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutError = UpdateNotificationPreferencesNotificationsPreferencesPutErrors[keyof UpdateNotificationPreferencesNotificationsPreferencesPutErrors];
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: NotificationPreferencesResponse;
+};
+
+export type UpdateNotificationPreferencesNotificationsPreferencesPutResponse = UpdateNotificationPreferencesNotificationsPreferencesPutResponses[keyof UpdateNotificationPreferencesNotificationsPreferencesPutResponses];
