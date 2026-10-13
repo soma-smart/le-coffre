@@ -95,7 +95,8 @@ class OneTimeLinkRepository(Protocol):
         """Atomically mark the link as read.
 
         Returns True if this call is the one that consumed it, False if it was
-        already read or revoked. Implementations MUST make this a single
+        already read or revoked, or if the expiry sweep has claimed it (see
+        `claim_expiry_notification`). Implementations MUST make this a single
         conditional write: checking then writing would let two concurrent
         requests both read the secret, and the link would not be single-use.
         """

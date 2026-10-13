@@ -537,6 +537,25 @@ def test_given_a_read_or_revoked_link_when_claiming_its_expiry_should_fail_and_l
     assert stored.expiry_notified_at is None
 
 
+def test_given_a_link_whose_expiry_was_claimed_when_consuming_should_fail_and_leave_it_unread(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    """The other half of the read/expiry race: a read that checked the expiry just
+    before the link ran out must not land once the sweep has claimed it, or the
+    creator would get both the "opened" and the "expired" email."""
+    link = _build_link(notify_on_expiry=True)
+    sql_one_time_link_repository.add(link)
+    assert sql_one_time_link_repository.claim_expiry_notification(link.id, _expired_at(link)) is True
+
+    assert sql_one_time_link_repository.consume(link.id, link.expires_at - timedelta(seconds=1)) is False
+
+    session.expunge_all()
+    stored = sql_one_time_link_repository.get_by_id(link.id)
+    assert stored is not None
+    assert stored.read_at is None
+
+
 def test_given_two_sessions_when_claiming_the_same_link_should_yield_a_single_winner(database_engine):
     """The real concurrency shape: two replicas, two sessions, one row."""
     from sqlmodel import Session

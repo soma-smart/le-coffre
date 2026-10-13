@@ -248,7 +248,7 @@ def test_one_time_link_notification_migration_defaults_existing_rows_and_downgra
         )
     engine.dispose()
 
-    command.upgrade(alembic_config, "head")
+    command.upgrade(alembic_config, "8a4d2c7e1b93")
 
     assert new_columns <= _one_time_link_columns(database_url)
     engine = create_engine(database_url)
@@ -268,3 +268,58 @@ def test_one_time_link_notification_migration_defaults_existing_rows_and_downgra
     with engine.connect() as conn:
         assert conn.execute(text('SELECT COUNT(*) FROM "OneTimeLink"')).scalar() == 1
     engine.dispose()
+
+
+PENDING_EXPIRY_INDEX = "ix_OneTimeLink_pending_expiry_notification"
+
+
+def _sweep_query_plan(database_url: str) -> str:
+    """The SQLite plan of the query the expiry sweep really sends, on this database.
+
+    The SQL is captured from SqlOneTimeLinkRepository itself rather than rebuilt here,
+    so the test breaks if the repository's predicate drifts from the index's.
+    """
+    from datetime import datetime, timezone
+
+    from sqlalchemy import event
+    from sqlmodel import Session
+
+    from password_management_context.adapters.secondary.sql import SqlOneTimeLinkRepository
+
+    engine = create_engine(database_url)
+    captured: list[tuple[str, tuple]] = []
+
+    def capture(conn, cursor, statement, parameters, context, executemany):
+        if statement.lstrip().upper().startswith("SELECT"):
+            captured.append((statement, parameters))
+
+    event.listen(engine, "before_cursor_execute", capture)
+    with Session(engine) as session:
+        SqlOneTimeLinkRepository(session).list_expired_pending_notification(datetime.now(timezone.utc), limit=100)
+    event.remove(engine, "before_cursor_execute", capture)
+
+    statement, parameters = captured[-1]
+    with engine.connect() as conn:
+        plan = " | ".join(row[-1] for row in conn.exec_driver_sql(f"EXPLAIN QUERY PLAN {statement}", parameters))
+    engine.dispose()
+    return plan
+
+
+def test_pending_expiry_index_migration_should_serve_the_sweep_query_and_downgrade(alembic_config, temp_database):
+    """The sweep runs every minute over a table that is never purged: its query must be
+    served by the partial index, which only happens if the migration's predicate and
+    the repository's are the same, term for term."""
+    database_url, _ = temp_database
+
+    command.upgrade(alembic_config, "8a4d2c7e1b93")
+    assert PENDING_EXPIRY_INDEX not in _one_time_link_indexes(database_url)
+    assert PENDING_EXPIRY_INDEX not in _sweep_query_plan(database_url)
+
+    command.upgrade(alembic_config, "head")
+
+    assert PENDING_EXPIRY_INDEX in _one_time_link_indexes(database_url)
+    assert f"USING INDEX {PENDING_EXPIRY_INDEX}" in _sweep_query_plan(database_url)
+
+    command.downgrade(alembic_config, "8a4d2c7e1b93")
+
+    assert PENDING_EXPIRY_INDEX not in _one_time_link_indexes(database_url)

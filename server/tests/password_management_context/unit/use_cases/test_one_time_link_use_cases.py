@@ -767,6 +767,32 @@ def test_given_a_consumption_that_fails_should_publish_nothing(
     assert domain_event_publisher.get_published_events_of_type(OneTimeLinkReadEvent) == []
 
 
+def test_given_a_link_whose_expiry_was_just_claimed_when_consuming_should_refuse_it_and_publish_nothing(
+    create_use_case: CreateOneTimeLinkUseCase,
+    consume_use_case: ConsumeOneTimeLinkUseCase,
+    one_time_link_repository: FakeOneTimeLinkRepository,
+    domain_event_publisher: FakeDomainEventPublisher,
+    owned_password: Password,
+):
+    """The read/expiry race, seen from the reader: the link was still valid when its
+    expiry was checked, but another replica's sweep claimed it in between. The secret
+    must not be released, and no "opened" email may follow the "expired" one."""
+    result = create_use_case.execute(
+        CreateOneTimeLinkCommand(
+            password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, notify_on_read=True, notify_on_expiry=True
+        )
+    )
+    link = one_time_link_repository.get_by_id(result.id)
+    assert link is not None
+    assert one_time_link_repository.claim_expiry_notification(link.id, link.expires_at) is True
+
+    with pytest.raises(OneTimeLinkAlreadyUsedError):
+        consume_use_case.execute(ConsumeOneTimeLinkCommand(token=result.token))
+
+    assert domain_event_publisher.get_published_events_of_type(OneTimeLinkReadEvent) == []
+    assert link.read_at is None
+
+
 def test_given_a_failing_subscriber_when_consuming_should_still_release_the_secret(
     create_use_case: CreateOneTimeLinkUseCase,
     one_time_link_repository: FakeOneTimeLinkRepository,
