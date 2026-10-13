@@ -8,6 +8,7 @@ from .notification_preferences_use_cases import (
 from .notify_extension_paired_use_case import NotifyExtensionPairedUseCase
 from .notify_group_owner_promoted_use_case import NotifyGroupOwnerPromotedUseCase
 from .notify_vault_state_changed_use_case import NotifyVaultStateChangedUseCase
+from .send_notification_use_case import SendNotificationUseCase
 
 __all__ = [
     "DeleteNotificationPreferencesForDeletedUserUseCase",
@@ -16,4 +17,5 @@ __all__ = [
     "NotifyVaultStateChangedUseCase",
     "UpdateNotificationPreferencesUseCase",
     "NotifyExtensionPairedUseCase",
+    "SendNotificationUseCase",
 ]

@@ -193,6 +193,18 @@ export type CreateOneTimeLinkRequest = {
      * How long the link stays valid. Defaults to 24h; bounded by the domain to 5 minutes .. 7 days.
      */
     lifetime_seconds?: number | null;
+    /**
+     * Notify On Read
+     *
+     * Email the creator when the link is opened.
+     */
+    notify_on_read?: boolean;
+    /**
+     * Notify On Expiry
+     *
+     * Email the creator if the link expires without having been opened.
+     */
+    notify_on_expiry?: boolean;
 };
 
 /**
@@ -1102,6 +1114,14 @@ export type OneTimeLinkSummary = {
      * Revoked At
      */
     revoked_at: string | null;
+    /**
+     * Notify On Read
+     */
+    notify_on_read: boolean;
+    /**
+     * Notify On Expiry
+     */
+    notify_on_expiry: boolean;
 };
 
 /**

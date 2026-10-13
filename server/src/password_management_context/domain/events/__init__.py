@@ -1,5 +1,6 @@
 from .base_password_event import BasePasswordEvent
 from .one_time_link_created_event import OneTimeLinkCreatedEvent
+from .one_time_link_expired_event import OneTimeLinkExpiredEvent
 from .one_time_link_read_event import OneTimeLinkReadEvent
 from .password_accessed_event import PasswordAccessedEvent
 from .password_created_event import PasswordCreatedEvent
@@ -19,5 +20,6 @@ __all__ = [
     "PasswordUnsharedEvent",
     "PasswordAccessedEvent",
     "OneTimeLinkCreatedEvent",
+    "OneTimeLinkExpiredEvent",
     "OneTimeLinkReadEvent",
 ]

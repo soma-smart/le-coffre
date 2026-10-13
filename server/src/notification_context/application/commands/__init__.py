@@ -8,6 +8,7 @@ from .notification_preferences_commands import (
 from .notify_extension_paired_command import NotifyExtensionPairedCommand
 from .notify_group_owner_promoted_command import NotifyGroupOwnerPromotedCommand
 from .notify_vault_state_changed_command import NotifyVaultStateChangedCommand
+from .send_notification_command import SendNotificationCommand
 
 __all__ = [
     "DeleteNotificationPreferencesForDeletedUserCommand",
@@ -16,4 +17,5 @@ __all__ = [
     "NotifyVaultStateChangedCommand",
     "UpdateNotificationPreferencesCommand",
     "NotifyExtensionPairedCommand",
+    "SendNotificationCommand",
 ]

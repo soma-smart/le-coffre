@@ -101,6 +101,25 @@ class OneTimeLinkRepository(Protocol):
         """
         ...
 
+    def list_expired_pending_notification(self, now: datetime, limit: int) -> list[OneTimeLink]:
+        """At most `limit` links whose expiry still has to be notified, oldest expiry first.
+
+        Expired, unread, unrevoked, opted in to the expiry notification, and not
+        yet claimed. Bounded on purpose: the table grows without end, so the
+        sweep works through it one batch at a time.
+        """
+        ...
+
+    def claim_expiry_notification(self, link_id: UUID, now: datetime) -> bool:
+        """Atomically record that this link's expiry is being notified.
+
+        Returns True for the single caller that claimed it, False if it was
+        already claimed, read or revoked. Same contract as `consume`: implementations
+        MUST make this one conditional write so that several replicas sweeping at
+        once never publish the same event twice.
+        """
+        ...
+
     def revoke(self, link_id: UUID, now: datetime) -> bool:
         """Atomically mark the link as revoked.
 

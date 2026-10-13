@@ -700,6 +700,8 @@
       "disclaimer": "Toute personne détenant le lien peut lire ce mot de passe une fois, sans se connecter.",
       "capReached": "Ce mot de passe a déjà {max} liens actifs. Révoquez-en un avant d'en créer un autre.",
       "validForLabel": "Valide pour",
+      "notifyOnReadLabel": "Me prévenir quand le lien est ouvert",
+      "notifyOnExpiryLabel": "Me prévenir si le lien expire sans avoir été utilisé",
       "generateButton": "Générer",
       "copyOnceWarning": "Copiez-le maintenant. Cette URL n'est affichée qu'une seule fois et ne peut pas être récupérée à nouveau.",
       "copyLinkAria": "Copier le lien",

@@ -1,6 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from sqlalchemy import false
 from sqlmodel import DateTime, Field, SQLModel
 
 
@@ -21,3 +22,20 @@ class OneTimeLinkTable(SQLModel, table=True):
     expires_at: datetime = Field(sa_type=DateTime, nullable=False, index=True)
     read_at: datetime | None = Field(sa_type=DateTime, default=None, description="When the link was consumed")
     revoked_at: datetime | None = Field(sa_type=DateTime, default=None, description="When the owner revoked the link")
+    notify_on_read: bool = Field(
+        default=False,
+        nullable=False,
+        sa_column_kwargs={"server_default": false()},
+        description="The creator asked to be emailed when the link is read",
+    )
+    notify_on_expiry: bool = Field(
+        default=False,
+        nullable=False,
+        sa_column_kwargs={"server_default": false()},
+        description="The creator asked to be emailed if the link expires unused",
+    )
+    expiry_notified_at: datetime | None = Field(
+        sa_type=DateTime,
+        default=None,
+        description="When the expiry sweep claimed this link; set at most once",
+    )

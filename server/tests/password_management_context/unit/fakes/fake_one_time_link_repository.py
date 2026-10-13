@@ -108,6 +108,26 @@ class FakeOneTimeLinkRepository(OneTimeLinkRepository):
         link.mark_read(now)
         return True
 
+    def list_expired_pending_notification(self, now: datetime, limit: int) -> list[OneTimeLink]:
+        pending = [
+            link
+            for link in self.storage.values()
+            if link.notify_on_expiry
+            and link.expiry_notified_at is None
+            and not link.is_consumed()
+            and not link.is_revoked()
+            and link.is_expired(now)
+        ]
+        return sorted(pending, key=lambda link: link.expires_at)[:limit]
+
+    def claim_expiry_notification(self, link_id: UUID, now: datetime) -> bool:
+        # Mirrors the SQL adapter's conditional UPDATE.
+        link = self.storage.get(link_id)
+        if link is None or link.expiry_notified_at is not None or link.is_consumed() or link.is_revoked():
+            return False
+        link.mark_expiry_notified(now)
+        return True
+
     def revoke(self, link_id: UUID, now: datetime) -> bool:
         link = self.storage.get(link_id)
         if link is None or link.is_consumed() or link.is_revoked():

@@ -109,4 +109,85 @@ describe('OneTimeLinkModal', () => {
     await flushPromises()
     expect(revokeSpy).toHaveBeenCalledWith('live')
   })
+
+  describe('notification options', () => {
+    const readBox = (wrapper: ReturnType<typeof mountModal>) =>
+      wrapper.find<HTMLInputElement>('#otl-notify-on-read')
+    const expiryBox = (wrapper: ReturnType<typeof mountModal>) =>
+      wrapper.find<HTMLInputElement>('#otl-notify-on-expiry')
+    const generate = async (wrapper: ReturnType<typeof mountModal>) => {
+      await wrapper.find('[data-testid="generate-link"]').trigger('click')
+      await flushPromises()
+    }
+
+    it('offers both options, unchecked by default, with their labels', async () => {
+      const wrapper = await openModal(new InMemoryOneTimeLinkRepository())
+
+      expect(readBox(wrapper).exists()).toBe(true)
+      expect(expiryBox(wrapper).exists()).toBe(true)
+      expect(readBox(wrapper).element.checked).toBe(false)
+      expect(expiryBox(wrapper).element.checked).toBe(false)
+      expect(wrapper.text()).toContain(t('components.oneTimeLinkModal.notifyOnReadLabel'))
+      expect(wrapper.text()).toContain(t('components.oneTimeLinkModal.notifyOnExpiryLabel'))
+    })
+
+    it('creates a link that notifies nobody when left untouched', async () => {
+      const repo = new InMemoryOneTimeLinkRepository()
+      const createSpy = vi.spyOn(repo, 'create')
+      const wrapper = await openModal(repo)
+
+      await generate(wrapper)
+
+      expect(createSpy).toHaveBeenCalledWith('pwd-1', {
+        lifetimeSeconds: 86400,
+        notifyOnRead: false,
+        notifyOnExpiry: false,
+      })
+    })
+
+    it('sends each choice to the creation call', async () => {
+      const repo = new InMemoryOneTimeLinkRepository()
+      const createSpy = vi.spyOn(repo, 'create')
+      const wrapper = await openModal(repo)
+
+      await readBox(wrapper).setValue(true)
+      await generate(wrapper)
+
+      expect(createSpy).toHaveBeenLastCalledWith('pwd-1', {
+        lifetimeSeconds: 86400,
+        notifyOnRead: true,
+        notifyOnExpiry: false,
+      })
+    })
+
+    it('sends both choices when both are checked', async () => {
+      const repo = new InMemoryOneTimeLinkRepository()
+      const createSpy = vi.spyOn(repo, 'create')
+      const wrapper = await openModal(repo)
+
+      await readBox(wrapper).setValue(true)
+      await expiryBox(wrapper).setValue(true)
+      await generate(wrapper)
+
+      expect(createSpy).toHaveBeenLastCalledWith('pwd-1', {
+        lifetimeSeconds: 86400,
+        notifyOnRead: true,
+        notifyOnExpiry: true,
+      })
+    })
+
+    it('resets both choices when the dialog is closed', async () => {
+      const wrapper = await openModal(new InMemoryOneTimeLinkRepository())
+      await readBox(wrapper).setValue(true)
+      await expiryBox(wrapper).setValue(true)
+      expect(readBox(wrapper).element.checked).toBe(true)
+
+      await wrapper.setProps({ visible: false })
+      await wrapper.setProps({ visible: true })
+      await flushPromises()
+
+      expect(readBox(wrapper).element.checked).toBe(false)
+      expect(expiryBox(wrapper).element.checked).toBe(false)
+    })
+  })
 })
