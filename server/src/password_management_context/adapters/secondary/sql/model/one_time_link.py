@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import false
+from sqlalchemy import Index, and_, false, true
 from sqlmodel import DateTime, Field, SQLModel
 
 
@@ -39,3 +39,23 @@ class OneTimeLinkTable(SQLModel, table=True):
         default=None,
         description="When the expiry sweep claimed this link; set at most once",
     )
+
+
+# The links the expiry sweep is looking for. Shared by the partial index below and
+# by the sweep's query: SQLite only uses a partial index when the query repeats its
+# predicate term for term, so the two must never be written separately.
+PENDING_EXPIRY_NOTIFICATION = and_(
+    OneTimeLinkTable.notify_on_expiry == true(),  # type: ignore[arg-type]
+    OneTimeLinkTable.expiry_notified_at.is_(None),  # type: ignore[union-attr]
+    OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
+    OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
+)
+
+# The table is never purged: without this, every sweep pass would walk every link
+# that ever expired to find the few still waiting for their notification.
+Index(
+    "ix_OneTimeLink_pending_expiry_notification",
+    OneTimeLinkTable.expires_at,
+    sqlite_where=PENDING_EXPIRY_NOTIFICATION,
+    postgresql_where=PENDING_EXPIRY_NOTIFICATION,
+)

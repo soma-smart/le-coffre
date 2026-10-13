@@ -25,10 +25,10 @@ class PublishExpiredOneTimeLinksUseCase(TracedUseCase):
     A link is claimed even when its password is gone or publishing is impossible, so
     it is never picked again.
 
-    Known and accepted race: a link read at the very end of its life, concurrently
-    with a sweep that sees it as expired, can yield both the "opened" and the
-    "expired" email. The window is tiny and the emails are courtesy notices, so it
-    is not worth a lock.
+    A link read at the very end of its life, concurrently with a sweep that sees it
+    as expired, yields exactly one of the two emails: the claim refuses a link that
+    was read, and `consume()` refuses a link whose expiry was claimed. Whichever
+    conditional write lands first wins.
     """
 
     def __init__(

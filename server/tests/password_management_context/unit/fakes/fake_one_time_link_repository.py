@@ -101,9 +101,9 @@ class FakeOneTimeLinkRepository(OneTimeLinkRepository):
 
     def consume(self, link_id: UUID, now: datetime) -> bool:
         # Mirrors the SQL adapter's conditional UPDATE: only the first caller on
-        # an unread, unrevoked link gets True.
+        # an unread, unrevoked link whose expiry was not claimed gets True.
         link = self.storage.get(link_id)
-        if link is None or link.is_consumed() or link.is_revoked():
+        if link is None or link.is_consumed() or link.is_revoked() or link.expiry_notified_at is not None:
             return False
         link.mark_read(now)
         return True

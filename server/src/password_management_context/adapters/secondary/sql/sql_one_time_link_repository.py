@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlmodel import Session, select, update
 
 from password_management_context.adapters.secondary.sql.model.one_time_link import (
+    PENDING_EXPIRY_NOTIFICATION,
     OneTimeLinkTable,
 )
 from password_management_context.application.gateways import OneTimeLinkRepository
@@ -189,12 +190,16 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
         # One conditional UPDATE, not a read-then-write. The WHERE clause is the
         # concurrency guard: whichever transaction gets rowcount 1 is the single
         # reader, everyone else gets 0 and is told the link is already used.
+        # expiry_notified_at closes the race with the expiry sweep: once a link's
+        # expiry has been claimed, a read that checked the expiry just before it ran
+        # out can no longer land, so the creator never gets both emails.
         statement = (
             update(OneTimeLinkTable)
             .where(
                 OneTimeLinkTable.id == link_id,  # type: ignore[arg-type]
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
+                OneTimeLinkTable.expiry_notified_at.is_(None),  # type: ignore[union-attr]
             )
             .values(read_at=to_naive_utc(now))
         )
@@ -205,13 +210,9 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
     def list_expired_pending_notification(self, now: datetime, limit: int) -> list[OneTimeLink]:
         query = (
             select(OneTimeLinkTable)
-            .where(
-                OneTimeLinkTable.notify_on_expiry.is_(True),  # type: ignore[attr-defined]
-                OneTimeLinkTable.expiry_notified_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.expires_at <= to_naive_utc(now),
-            )
+            # The exact predicate of ix_OneTimeLink_pending_expiry_notification, so the
+            # query is served by that partial index instead of every expired link.
+            .where(PENDING_EXPIRY_NOTIFICATION, OneTimeLinkTable.expires_at <= to_naive_utc(now))
             .order_by(OneTimeLinkTable.expires_at.asc())  # type: ignore[attr-defined]
             .limit(limit)
         )
