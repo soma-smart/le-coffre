@@ -61,6 +61,8 @@ class ListOneTimeLinksUseCase(TracedUseCase):
                     expires_at=link.expires_at,
                     read_at=link.read_at,
                     revoked_at=link.revoked_at,
+                    notify_on_read=link.notify_on_read,
+                    notify_on_expiry=link.notify_on_expiry,
                 )
                 for link in links
             ],

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { CreateOneTimeLinkUseCase } from '../CreateOneTimeLink'
 import { ListOneTimeLinksUseCase } from '../ListOneTimeLinks'
@@ -25,6 +25,40 @@ describe('one-time link management use cases', () => {
     expect(page.links).toHaveLength(1)
     expect(page.total).toBe(1)
     expect(JSON.stringify(page)).not.toContain('token-1')
+  })
+
+  it('creates a link that notifies nobody unless asked to', async () => {
+    await new CreateOneTimeLinkUseCase(repository).execute({ passwordId: 'password-1' })
+
+    const page = await new ListOneTimeLinksUseCase(repository).execute('password-1')
+
+    expect(page.links[0].notifyOnRead).toBe(false)
+    expect(page.links[0].notifyOnExpiry).toBe(false)
+  })
+
+  it('passes both notification choices to the repository, independently', async () => {
+    const createSpy = vi.spyOn(repository, 'create')
+    const create = new CreateOneTimeLinkUseCase(repository)
+
+    await create.execute({ passwordId: 'password-1', lifetimeSeconds: 3600, notifyOnRead: true })
+    repository.useIdGenerator(() => 'link-2').useTokenGenerator(() => 'token-2')
+    await create.execute({ passwordId: 'password-1', notifyOnExpiry: true })
+
+    expect(createSpy).toHaveBeenNthCalledWith(1, 'password-1', {
+      lifetimeSeconds: 3600,
+      notifyOnRead: true,
+      notifyOnExpiry: false,
+    })
+    expect(createSpy).toHaveBeenNthCalledWith(2, 'password-1', {
+      lifetimeSeconds: undefined,
+      notifyOnRead: false,
+      notifyOnExpiry: true,
+    })
+    const page = await new ListOneTimeLinksUseCase(repository).execute('password-1')
+    expect(page.links.map((link) => [link.id, link.notifyOnRead, link.notifyOnExpiry])).toEqual([
+      ['link-2', false, true],
+      ['link-1', true, false],
+    ])
   })
 
   it('scopes the listing to the requested password', async () => {

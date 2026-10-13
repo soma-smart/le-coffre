@@ -9,7 +9,10 @@ import {
   revokeOneTimeLinkOneTimeLinksLinkIdDelete,
 } from '@/client/sdk.gen'
 import type { OneTimeLinkAuditItem, OneTimeLinkSummary } from '@/client/types.gen'
-import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
+import type {
+  CreateOneTimeLinkOptions,
+  OneTimeLinkRepository,
+} from '@/application/ports/OneTimeLinkRepository'
 import type {
   AuditedOneTimeLink,
   AuditedOneTimeLinkPage,
@@ -31,10 +34,17 @@ import {
  * domain objects and translates HTTP status codes into domain errors.
  */
 export class BackendOneTimeLinkRepository implements OneTimeLinkRepository {
-  async create(passwordId: string, lifetimeSeconds?: number): Promise<CreatedOneTimeLink> {
+  async create(
+    passwordId: string,
+    options: CreateOneTimeLinkOptions = {},
+  ): Promise<CreatedOneTimeLink> {
     const response = await createOneTimeLinkPasswordsPasswordIdOneTimeLinksPost({
       path: { password_id: passwordId },
-      body: { lifetime_seconds: lifetimeSeconds ?? null },
+      body: {
+        lifetime_seconds: options.lifetimeSeconds ?? null,
+        notify_on_read: options.notifyOnRead ?? false,
+        notify_on_expiry: options.notifyOnExpiry ?? false,
+      },
     })
     throwOnOwnerError(response.error, response.response?.status)
     if (!response.data) throw new OneTimeLinkDomainError('Empty response from create one-time link')
@@ -154,6 +164,8 @@ function toOneTimeLink(dto: OneTimeLinkSummary): OneTimeLink {
     expiresAt: dto.expires_at,
     readAt: dto.read_at ?? null,
     revokedAt: dto.revoked_at ?? null,
+    notifyOnRead: dto.notify_on_read,
+    notifyOnExpiry: dto.notify_on_expiry,
   }
 }
 

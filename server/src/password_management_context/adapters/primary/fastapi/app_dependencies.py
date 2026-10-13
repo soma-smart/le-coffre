@@ -347,6 +347,7 @@ def get_consume_one_time_link_usecase(
     password_vault_access_gateway: PasswordVaultAccessGateway = Depends(get_password_vault_access_gateway),
     password_event_repository: PasswordEventRepository = Depends(get_password_event_repository),
     time_gateway: TimeGateway = Depends(get_time_gateway),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
 ):
     return ConsumeOneTimeLinkUseCase(
         one_time_link_repository,
@@ -355,6 +356,7 @@ def get_consume_one_time_link_usecase(
         password_vault_access_gateway,
         password_event_repository,
         time_gateway,
+        event_publisher,
     )
 
 

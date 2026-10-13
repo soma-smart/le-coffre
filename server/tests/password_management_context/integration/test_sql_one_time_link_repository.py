@@ -17,13 +17,14 @@ PASSWORD_ID = uuid4()
 CREATOR_ID = uuid4()
 
 
-def _build_link(password_id=PASSWORD_ID, now=T0) -> OneTimeLink:
+def _build_link(password_id=PASSWORD_ID, now=T0, **options) -> OneTimeLink:
     return OneTimeLink.create(
         password_id=password_id,
         created_by_user_id=CREATOR_ID,
         token=OneTimeLinkToken.generate(),
         lifetime=OneTimeLinkLifetime.default(),
         now=now,
+        **options,
     )
 
 
@@ -401,3 +402,153 @@ def test_bulk_revoke_spares_read_links_and_other_users(
     assert sql_one_time_link_repository.get_by_id(read.id).read_at is not None  # type: ignore[union-attr]
     assert not sql_one_time_link_repository.get_by_id(read.id).is_revoked()  # type: ignore[union-attr]
     assert not sql_one_time_link_repository.get_by_id(theirs.id).is_revoked()  # type: ignore[union-attr]
+
+
+# ── Notification options and the expiry sweep ─────────────────────────
+
+
+def test_given_a_link_without_options_when_reloading_should_have_both_flags_false(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    link = _build_link()
+    sql_one_time_link_repository.add(link)
+    session.expunge_all()
+
+    found = sql_one_time_link_repository.get_by_id(link.id)
+
+    assert found is not None
+    assert (found.notify_on_read, found.notify_on_expiry, found.expiry_notified_at) == (False, False, None)
+
+
+def test_given_notification_options_when_reloading_should_round_trip_them(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    link = _build_link(notify_on_read=True, notify_on_expiry=True)
+    sql_one_time_link_repository.add(link)
+    session.expunge_all()
+
+    found = sql_one_time_link_repository.get_by_id(link.id)
+
+    assert found is not None
+    assert (found.notify_on_read, found.notify_on_expiry) == (True, True)
+
+
+def _expired_at(link: OneTimeLink) -> datetime:
+    return link.expires_at + timedelta(seconds=1)
+
+
+def test_given_a_mix_of_links_when_listing_expired_pending_should_return_only_the_eligible_one(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+):
+    eligible = _build_link(notify_on_expiry=True)
+    not_opted_in = _build_link()
+    not_expired_yet = _build_link(now=T0 + timedelta(days=3), notify_on_expiry=True)
+    already_read = _build_link(notify_on_expiry=True)
+    revoked = _build_link(notify_on_expiry=True)
+    already_claimed = _build_link(notify_on_expiry=True)
+    for link in (eligible, not_opted_in, not_expired_yet, already_read, revoked, already_claimed):
+        sql_one_time_link_repository.add(link)
+    sql_one_time_link_repository.consume(already_read.id, T0)
+    sql_one_time_link_repository.revoke(revoked.id, T0)
+    sql_one_time_link_repository.claim_expiry_notification(already_claimed.id, T0)
+
+    now = _expired_at(eligible)
+    found = sql_one_time_link_repository.list_expired_pending_notification(now, limit=100)
+
+    assert [link.id for link in found] == [eligible.id]
+
+
+def test_given_a_link_at_its_exact_expiry_instant_when_listing_expired_pending_should_include_it(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+):
+    """Same boundary as OneTimeLink.is_expired: `now >= expires_at` is expired."""
+    link = _build_link(notify_on_expiry=True)
+    sql_one_time_link_repository.add(link)
+
+    assert sql_one_time_link_repository.list_expired_pending_notification(link.expires_at, limit=10)
+    assert not sql_one_time_link_repository.list_expired_pending_notification(
+        link.expires_at - timedelta(microseconds=1), limit=10
+    )
+
+
+def test_given_many_expired_links_when_listing_expired_pending_should_honour_the_limit_oldest_first(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+):
+    links = [_build_link(now=T0 + timedelta(minutes=minute), notify_on_expiry=True) for minute in (5, 1, 3, 2, 4)]
+    for link in links:
+        sql_one_time_link_repository.add(link)
+
+    found = sql_one_time_link_repository.list_expired_pending_notification(T0 + timedelta(days=30), limit=3)
+
+    assert [link.created_at for link in found] == [T0 + timedelta(minutes=minute) for minute in (1, 2, 3)]
+
+
+def test_given_a_link_when_claiming_its_expiry_twice_should_only_succeed_once(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    """Same guard as consume(): the conditional UPDATE is what keeps two replicas
+    from both publishing the expiry of the same link."""
+    link = _build_link(notify_on_expiry=True)
+    sql_one_time_link_repository.add(link)
+    claimed_at = _expired_at(link)
+
+    first = sql_one_time_link_repository.claim_expiry_notification(link.id, claimed_at)
+    second = sql_one_time_link_repository.claim_expiry_notification(link.id, claimed_at)
+
+    assert (first, second) == (True, False)
+    session.expunge_all()
+    stored = sql_one_time_link_repository.get_by_id(link.id)
+    assert stored is not None
+    assert stored.expiry_notified_at == claimed_at
+
+
+def test_given_a_claimed_link_should_leave_the_expired_pending_listing(
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+):
+    link = _build_link(notify_on_expiry=True)
+    sql_one_time_link_repository.add(link)
+    now = _expired_at(link)
+    sql_one_time_link_repository.claim_expiry_notification(link.id, now)
+
+    assert sql_one_time_link_repository.list_expired_pending_notification(now, limit=10) == []
+
+
+@pytest.mark.parametrize("spent_by", ["read", "revoked"])
+def test_given_a_read_or_revoked_link_when_claiming_its_expiry_should_fail_and_leave_it_untouched(
+    spent_by: str,
+    sql_one_time_link_repository: SqlOneTimeLinkRepository,
+    session,
+):
+    link = _build_link(notify_on_expiry=True)
+    sql_one_time_link_repository.add(link)
+    if spent_by == "read":
+        sql_one_time_link_repository.consume(link.id, T0)
+    else:
+        sql_one_time_link_repository.revoke(link.id, T0)
+
+    assert sql_one_time_link_repository.claim_expiry_notification(link.id, _expired_at(link)) is False
+
+    session.expunge_all()
+    stored = sql_one_time_link_repository.get_by_id(link.id)
+    assert stored is not None
+    assert stored.expiry_notified_at is None
+
+
+def test_given_two_sessions_when_claiming_the_same_link_should_yield_a_single_winner(database_engine):
+    """The real concurrency shape: two replicas, two sessions, one row."""
+    from sqlmodel import Session
+
+    link = _build_link(notify_on_expiry=True)
+    with Session(database_engine) as setup_session:
+        SqlOneTimeLinkRepository(setup_session).add(link)
+
+    with Session(database_engine) as first, Session(database_engine) as second:
+        results = [
+            SqlOneTimeLinkRepository(first).claim_expiry_notification(link.id, _expired_at(link)),
+            SqlOneTimeLinkRepository(second).claim_expiry_notification(link.id, _expired_at(link)),
+        ]
+
+    assert sorted(results) == [False, True]

@@ -17,7 +17,7 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
 )
 from password_management_context.domain.value_objects import OneTimeLinkToken
-from shared_kernel.application.gateways import TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,7 @@ class ConsumeOneTimeLinkUseCase(TracedUseCase):
         password_vault_access_gateway: PasswordVaultAccessGateway,
         password_event_repository: PasswordEventRepository,
         time_gateway: TimeGateway,
+        event_publisher: DomainEventPublisher,
     ):
         self.one_time_link_repository = one_time_link_repository
         self.password_repository = password_repository
@@ -41,6 +42,7 @@ class ConsumeOneTimeLinkUseCase(TracedUseCase):
         self.password_vault_access_gateway = password_vault_access_gateway
         self.password_event_repository = password_event_repository
         self.time_gateway = time_gateway
+        self.event_publisher = event_publisher
 
     def execute(self, command: ConsumeOneTimeLinkCommand) -> ConsumedOneTimeLinkResponse:
         token = OneTimeLinkToken(value=command.token)
@@ -83,8 +85,15 @@ class ConsumeOneTimeLinkUseCase(TracedUseCase):
             password_id=link.password_id,
             link_id=link.id,
             created_by_user_id=link.created_by_user_id,
+            notify_creator=link.notify_on_read,
+            password_name=password_entity.name,
+            read_at=now,
         )
         PasswordEventStorageService(self.password_event_repository).store_event(event)
+        # After the audit write, and never able to fail the read: the publisher
+        # logs a failing subscriber instead of raising it, and the secret has
+        # already been released by this point.
+        self.event_publisher.publish(event)
 
         return ConsumedOneTimeLinkResponse(
             name=password_entity.name,

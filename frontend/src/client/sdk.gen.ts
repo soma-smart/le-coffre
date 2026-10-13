@@ -302,6 +302,8 @@ export const listOneTimeLinksPasswordsPasswordIdOneTimeLinksGet = <ThrowOnError 
  *
  * - **password_id**: UUID of the password to share
  * - **lifetime_seconds**: optional validity window, 24h by default
+ * - **notify_on_read** / **notify_on_expiry**: optionally email the creator when the
+ * link is opened, or when it expires unopened. Both are off by default.
  * - **Authentication**: Requires authentication via access_token cookie (owner only)
  *
  * The token is returned here and never again: only its hash is stored.

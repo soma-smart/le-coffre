@@ -3,6 +3,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Callable
 
 from alembic.config import Config
 from fastapi import FastAPI, HTTPException, Request
@@ -30,6 +31,7 @@ from config import (
     get_jwt_secret_key,
     get_login_lockout_seconds,
     get_login_max_failed_attempts,
+    get_one_time_link_expiry_sweep_interval_seconds,
     get_rate_limit_auth_max_requests,
     get_rate_limit_bearer_miss_max_requests,
     get_rate_limit_enabled,
@@ -80,6 +82,7 @@ from monitoring import setup_logging, setup_monitoring
 from notification_context.adapters.primary.events import (
     ExtensionPairedEventSubscriber,
     GroupOwnerPromotedEventSubscriber,
+    OneTimeLinkNotificationEventSubscriber,
     UserDeletedEventSubscriber,
     VaultStateChangedEventSubscriber,
 )
@@ -89,16 +92,22 @@ from notification_context.adapters.secondary import (
     PrivateApiRecipientGateway,
     PrivateApiUserContactGateway,
 )
+from notification_context.application.templates import default_notification_catalog
 from notification_context.application.use_cases import (
     NotifyExtensionPairedUseCase,
     NotifyGroupOwnerPromotedUseCase,
+    SendNotificationUseCase,
 )
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
 from password_management_context.adapters.secondary import (
     PrivateApiPasswordEncryptionGateway,
+    SqlOneTimeLinkRepository,
+    SqlPasswordRepository,
 )
+from password_management_context.application.use_cases import PublishExpiredOneTimeLinksUseCase
+from password_management_context.domain.events import OneTimeLinkExpiredEvent, OneTimeLinkReadEvent
 from security import (
     BearerReadOnlyMiddleware,
     CsrfMiddleware,
@@ -143,9 +152,9 @@ logging.getLogger().addFilter(RequestIdFilter())
 
 logger = logging.getLogger(__name__)
 
-# Bound on draining vault_notification_executor at shutdown — see
-# _shutdown_vault_notification_executor().
-VAULT_NOTIFICATION_SHUTDOWN_TIMEOUT_SECONDS = 15
+# Bound on draining notification_executor at shutdown — see
+# _shutdown_notification_executor().
+NOTIFICATION_SHUTDOWN_TIMEOUT_SECONDS = 15
 
 
 def run_migrations() -> None:
@@ -190,8 +199,49 @@ def _record_vault_locked_on_startup(session_maker, event_publisher) -> None:
         logger.error("Failed to record the vault lock caused by this server start", exc_info=True)
 
 
-async def _shutdown_vault_notification_executor(executor: ThreadPoolExecutor, timeout_seconds: float) -> None:
-    """Drains queued vault notification emails, bounded.
+def _publish_expired_one_time_links(session_maker, event_publisher) -> None:
+    """One pass of the expiry sweep, on its own session. Runs in a worker thread."""
+    with session_maker() as session:
+        PublishExpiredOneTimeLinksUseCase(
+            SqlOneTimeLinkRepository(session),
+            SqlPasswordRepository(session),
+            event_publisher,
+            UtcTimeGateway(),
+        ).execute()
+
+
+async def _run_periodic_sweep(sweep: Callable[[], None], interval_seconds: float) -> None:
+    """Runs `sweep` in a worker thread every `interval_seconds`, until cancelled.
+
+    A failing pass is logged and the loop carries on: a transient database error
+    must not silently end the notifications for the rest of the process's life.
+    """
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            await asyncio.to_thread(sweep)
+        except Exception:  # noqa: BLE001 - logged, and the next pass must still happen
+            logger.error("One-time link expiry sweep failed", exc_info=True)
+
+
+async def _stop_expiry_sweep_task(task: "asyncio.Task[None]") -> None:
+    """Cancels the sweep task and waits for it, whatever state it ended in.
+
+    The task may already have died with an exception (cancel() is then a no-op and
+    awaiting it re-raises). That must be logged, never propagated: the executor drain
+    and the OTel flush that follow in the lifespan have to run regardless.
+    """
+    task.cancel()
+    try:
+        await asyncio.wait_for(task, timeout=5.0)
+    except (asyncio.CancelledError, asyncio.TimeoutError):
+        pass
+    except Exception:  # noqa: BLE001 - logged, shutdown must go on
+        logger.error("One-time link expiry sweep task ended with an error", exc_info=True)
+
+
+async def _shutdown_notification_executor(executor: ThreadPoolExecutor, timeout_seconds: float) -> None:
+    """Drains queued notification emails (vault, one-time link), bounded.
 
     Each email is one SmtpEmailGateway.send() with its own 10s connection timeout;
     an unreachable SMTP relay at shutdown time would otherwise make an unbounded
@@ -205,8 +255,8 @@ async def _shutdown_vault_notification_executor(executor: ThreadPoolExecutor, ti
         await asyncio.wait_for(asyncio.to_thread(executor.shutdown, wait=True), timeout=timeout_seconds)
     except asyncio.TimeoutError:
         logger.warning(
-            "Vault notification executor did not drain within %ss — SMTP relay likely "
-            "unreachable. Cancelling queued vault notifications so shutdown can proceed.",
+            "Notification executor did not drain within %ss — SMTP relay likely "
+            "unreachable. Cancelling queued notifications so shutdown can proceed.",
             timeout_seconds,
         )
         executor.shutdown(wait=False, cancel_futures=True)
@@ -216,6 +266,10 @@ async def _shutdown_vault_notification_executor(executor: ThreadPoolExecutor, ti
 async def lifespan(app: FastAPI):
     app.state.ready = False
     app.state.migration_failed = False
+
+    # Read up front like the other settings (fail-fast): an invalid value must fail the
+    # startup, not kill the background sweep task silently once the migrations are done.
+    expiry_sweep_interval_seconds = get_one_time_link_expiry_sweep_interval_seconds()
 
     engine = _build_engine(get_database_url())
 
@@ -311,18 +365,33 @@ async def lifespan(app: FastAPI):
     user_deleted_subscriber = UserDeletedEventSubscriber(session_maker=SessionLocal)
     domain_event_publisher.subscribe(UserDeletedEvent, user_deleted_subscriber.handle)
 
+    # Notification: emails sent off the request thread, in order, by one worker shared by
+    # the vault lock / unlock and the one-time link subscribers.
+    notification_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="notifications")
+
     # Notification: vault lock / unlock emails to opted-in users (reactive, subscribes
-    # to VaultLockedEvent / VaultUnlockedEvent). Sent off the request thread, in order.
-    vault_notification_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vault-notifications")
+    # to VaultLockedEvent / VaultUnlockedEvent).
     vault_state_subscriber = VaultStateChangedEventSubscriber(
         session_maker=SessionLocal,
         recipient_gateway=PrivateApiRecipientGateway(UserContactInfoApi(session_maker=SessionLocal)),
         email_gateway=email_gateway,
         app_base_url=base_url,
-        executor=vault_notification_executor,
+        executor=notification_executor,
     )
     domain_event_publisher.subscribe(VaultLockedEvent, vault_state_subscriber.handle_locked)
     domain_event_publisher.subscribe(VaultUnlockedEvent, vault_state_subscriber.handle_unlocked)
+
+    # Notification: tell a one-time link's creator when it was opened or expired unused
+    # (reactive, subscribes to OneTimeLinkReadEvent / OneTimeLinkExpiredEvent).
+    send_notification_use_case = SendNotificationUseCase(
+        recipient_gateway=PrivateApiRecipientGateway(UserContactInfoApi(session_maker=SessionLocal)),
+        email_gateway=email_gateway,
+        catalog=default_notification_catalog(),
+        app_base_url=base_url,
+    )
+    one_time_link_subscriber = OneTimeLinkNotificationEventSubscriber(send_notification_use_case, notification_executor)
+    domain_event_publisher.subscribe(OneTimeLinkReadEvent, one_time_link_subscriber.handle_read)
+    domain_event_publisher.subscribe(OneTimeLinkExpiredEvent, one_time_link_subscriber.handle_expired)
 
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()
@@ -368,7 +437,20 @@ async def lifespan(app: FastAPI):
                 exc_info=True,
             )
 
+    async def _run_expiry_sweep_once_ready():
+        # Waits for the migrations (asyncio.wait neither re-raises their failure nor
+        # cancels them if this task is cancelled): the sweep reads the OneTimeLink
+        # columns the latest migration adds, so it must never run before them.
+        await asyncio.wait({app.state.migration_task})
+        if not app.state.ready:
+            return
+        await _run_periodic_sweep(
+            lambda: _publish_expired_one_time_links(SessionLocal, domain_event_publisher),
+            expiry_sweep_interval_seconds,
+        )
+
     app.state.migration_task = asyncio.create_task(_run_migrations_in_background())
+    app.state.expiry_sweep_task = asyncio.create_task(_run_expiry_sweep_once_ready())
     logger.info("Application started — db=%s base_url=%s", db_type, base_url)
     yield
     app.state.migration_task.cancel()
@@ -376,11 +458,11 @@ async def lifespan(app: FastAPI):
         await asyncio.wait_for(app.state.migration_task, timeout=5.0)
     except (asyncio.CancelledError, asyncio.TimeoutError):
         pass
-    # Let queued vault notifications go out rather than drop them, but bounded —
-    # see _shutdown_vault_notification_executor().
-    await _shutdown_vault_notification_executor(
-        vault_notification_executor, VAULT_NOTIFICATION_SHUTDOWN_TIMEOUT_SECONDS
-    )
+    # Stop the sweep before draining the executor, so that nothing new is queued behind it.
+    await _stop_expiry_sweep_task(app.state.expiry_sweep_task)
+    # Let queued notifications go out rather than drop them, but bounded —
+    # see _shutdown_notification_executor().
+    await _shutdown_notification_executor(notification_executor, NOTIFICATION_SHUTDOWN_TIMEOUT_SECONDS)
     logger.info("Application shutting down")
     # Flush and shut down OTel providers to avoid losing buffered spans/metrics/logs
     if _otel_providers is not None:

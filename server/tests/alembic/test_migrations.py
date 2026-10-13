@@ -211,3 +211,60 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
         result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='User'"))
         assert result.fetchone() is None
     engine.dispose()
+
+
+def _one_time_link_columns(database_url: str) -> set[str]:
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        columns = {row[1] for row in conn.execute(text('PRAGMA table_info("OneTimeLink")'))}
+    engine.dispose()
+    return columns
+
+
+def _one_time_link_indexes(database_url: str) -> set[str]:
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        indexes = {row[1] for row in conn.execute(text('PRAGMA index_list("OneTimeLink")'))}
+    engine.dispose()
+    return indexes
+
+
+def test_one_time_link_notification_migration_defaults_existing_rows_and_downgrades(alembic_config, temp_database):
+    """Links created before the migration must come out with both notifications off,
+    and the downgrade must drop the new columns while keeping the rows and indexes."""
+    database_url, _ = temp_database
+    new_columns = {"notify_on_read", "notify_on_expiry", "expiry_notified_at"}
+
+    command.upgrade(alembic_config, "670fae75e21d")
+    assert not new_columns & _one_time_link_columns(database_url)
+    indexes_before = _one_time_link_indexes(database_url)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                'INSERT INTO "OneTimeLink" (id, password_id, token_hash, created_by_user_id, created_at, expires_at) '
+                "VALUES ('a', 'b', 'hash', 'c', '2026-01-01 00:00:00', '2026-01-02 00:00:00')"
+            )
+        )
+    engine.dispose()
+
+    command.upgrade(alembic_config, "head")
+
+    assert new_columns <= _one_time_link_columns(database_url)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        row = conn.execute(
+            text('SELECT notify_on_read, notify_on_expiry, expiry_notified_at FROM "OneTimeLink"')
+        ).fetchone()
+    engine.dispose()
+    assert tuple(row) == (0, 0, None)
+    assert _one_time_link_indexes(database_url) == indexes_before
+
+    command.downgrade(alembic_config, "670fae75e21d")
+
+    assert not new_columns & _one_time_link_columns(database_url)
+    assert _one_time_link_indexes(database_url) == indexes_before
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT COUNT(*) FROM "OneTimeLink"')).scalar() == 1
+    engine.dispose()

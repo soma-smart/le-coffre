@@ -1,4 +1,7 @@
-import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepository'
+import type {
+  CreateOneTimeLinkOptions,
+  OneTimeLinkRepository,
+} from '@/application/ports/OneTimeLinkRepository'
 import {
   isActive,
   type AuditedOneTimeLink,
@@ -55,11 +58,14 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
     return this
   }
 
-  async create(passwordId: string, lifetimeSeconds?: number): Promise<CreatedOneTimeLink> {
+  async create(
+    passwordId: string,
+    options: CreateOneTimeLinkOptions = {},
+  ): Promise<CreatedOneTimeLink> {
     const id = this.idGenerator()
     const token = this.tokenGenerator()
     const now = new Date()
-    const expiresAt = new Date(now.getTime() + (lifetimeSeconds ?? 86400) * 1000)
+    const expiresAt = new Date(now.getTime() + (options.lifetimeSeconds ?? 86400) * 1000)
     this.links.set(id, {
       id,
       passwordId,
@@ -68,6 +74,8 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
       expiresAt: expiresAt.toISOString(),
       readAt: null,
       revokedAt: null,
+      notifyOnRead: options.notifyOnRead ?? false,
+      notifyOnExpiry: options.notifyOnExpiry ?? false,
     })
     return { id, token, expiresAt: expiresAt.toISOString() }
   }

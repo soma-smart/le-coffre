@@ -39,6 +39,9 @@ const lifetimeOptions = computed(() => [
 ])
 
 const lifetimeSeconds = ref(86400)
+// Both off by default: being emailed is an explicit choice, made per link.
+const notifyOnRead = ref(false)
+const notifyOnExpiry = ref(false)
 const links = ref<OneTimeLink[]>([])
 const totalLinks = ref(0)
 const hiddenLinks = ref(0)
@@ -65,6 +68,8 @@ watch(
       generatedUrl.value = null
       error.value = null
       showHistory.value = false
+      notifyOnRead.value = false
+      notifyOnExpiry.value = false
       return
     }
     await refreshLinks()
@@ -101,6 +106,8 @@ async function generate() {
     const created = await oneTimeLinks.create.execute({
       passwordId: props.password.id,
       lifetimeSeconds: lifetimeSeconds.value,
+      notifyOnRead: notifyOnRead.value,
+      notifyOnExpiry: notifyOnExpiry.value,
     })
     generatedUrl.value = buildOneTimeLinkUrl(window.location.origin, created.token)
     await refreshLinks()
@@ -207,27 +214,53 @@ function severityFor(link: OneTimeLink) {
       {{ t('components.oneTimeLinkModal.capReached', { max: maxActiveLinks }) }}
     </Message>
 
-    <div v-if="!generatedUrl" class="flex gap-2 items-end mb-4">
-      <div class="grow">
-        <label class="block mb-1 text-sm">{{
-          t('components.oneTimeLinkModal.validForLabel')
-        }}</label>
-        <Select
-          v-model="lifetimeSeconds"
-          :options="lifetimeOptions"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full"
+    <div v-if="!generatedUrl" class="mb-4">
+      <div class="flex gap-2 items-end">
+        <div class="grow">
+          <label class="block mb-1 text-sm">{{
+            t('components.oneTimeLinkModal.validForLabel')
+          }}</label>
+          <Select
+            v-model="lifetimeSeconds"
+            :options="lifetimeOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+          />
+        </div>
+        <Button
+          :label="t('components.oneTimeLinkModal.generateButton')"
+          icon="pi pi-link"
+          :loading="loading"
+          :disabled="!canIssue"
+          data-testid="generate-link"
+          @click="generate"
         />
       </div>
-      <Button
-        :label="t('components.oneTimeLinkModal.generateButton')"
-        icon="pi pi-link"
-        :loading="loading"
-        :disabled="!canIssue"
-        data-testid="generate-link"
-        @click="generate"
-      />
+      <div class="flex flex-col gap-2 mt-3">
+        <div class="flex gap-2 items-center">
+          <Checkbox
+            v-model="notifyOnRead"
+            inputId="otl-notify-on-read"
+            binary
+            data-testid="notify-on-read"
+          />
+          <label for="otl-notify-on-read" class="text-sm cursor-pointer">{{
+            t('components.oneTimeLinkModal.notifyOnReadLabel')
+          }}</label>
+        </div>
+        <div class="flex gap-2 items-center">
+          <Checkbox
+            v-model="notifyOnExpiry"
+            inputId="otl-notify-on-expiry"
+            binary
+            data-testid="notify-on-expiry"
+          />
+          <label for="otl-notify-on-expiry" class="text-sm cursor-pointer">{{
+            t('components.oneTimeLinkModal.notifyOnExpiryLabel')
+          }}</label>
+        </div>
+      </div>
     </div>
 
     <div v-else class="mb-4" data-testid="generated-url">
