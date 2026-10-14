@@ -7,6 +7,9 @@ resolution-markers = [
     "python_full_version < '3.13'",
 ]
 
+[manifest]
+constraints = [{ name = "urllib3", specifier = "==2.8.0" }]
+
 [[package]]
 name = "agent-detector"
 version = "2.0.0"

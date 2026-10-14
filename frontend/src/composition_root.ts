@@ -7,6 +7,7 @@ import { BackendServiceAccountRepository } from '@/infrastructure/backend/Backen
 import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPasswordRepository'
 import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepository'
 import { BackendVaultRepository } from '@/infrastructure/backend/BackendVaultRepository'
+import { BackendNotificationPreferencesRepository } from '@/infrastructure/backend/BackendNotificationPreferencesRepository'
 import { BackendStatisticsGateway } from '@/infrastructure/backend/BackendStatisticsGateway'
 import { LocalStoragePreferencesGateway } from '@/infrastructure/local_storage/LocalStoragePreferencesGateway'
 import { SessionStorageLoginRedirectGateway } from '@/infrastructure/session_storage/SessionStorageLoginRedirectGateway'
@@ -33,5 +34,6 @@ export function installProductionContainer(): Container {
 
     extensionGateway: new BackendExtensionGateway(),
     loginRedirectGateway: new SessionStorageLoginRedirectGateway(),
+    notificationPreferencesRepository: new BackendNotificationPreferencesRepository(),
   })
 }

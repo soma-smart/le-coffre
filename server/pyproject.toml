@@ -37,6 +37,11 @@ monitoring = [
 sqlite = ["sqlite-utils==3.39.1"]
 postgres = ["psycopg2==2.9.13", "psycopg[binary]==3.3.6"]
 
+[tool.uv]
+# Pin urllib3, a transitive dependency of both `requests` and `sentry-sdk`
+# (pulled in by the `monitoring` extra), without making it a direct dependency.
+constraint-dependencies = ["urllib3==2.8.0"]
+
 [tool.pytest.ini_options]
 pythonpath = "src"
 addopts = "-ra --strict-markers --strict-config"

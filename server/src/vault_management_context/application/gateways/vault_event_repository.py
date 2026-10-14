@@ -16,3 +16,7 @@ class VaultEventRepository(Protocol):
     ) -> None:
         """Append a vault event to storage"""
         ...
+
+    def get_last_event_type(self, event_types: list[str]) -> str | None:
+        """Type of the most recent stored event among the given types, or None"""
+        ...
