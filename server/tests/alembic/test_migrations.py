@@ -211,3 +211,28 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
         result = conn.execute(text("SELECT name FROM sqlite_master WHERE type='table' AND name='User'"))
         assert result.fetchone() is None
     engine.dispose()
+
+
+def _one_time_link_subscription_schema(database_url: str) -> tuple[set[str], set[str]]:
+    """Columns and indexes of the OneTimeLinkSubscription table; two empty sets if it does not exist."""
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        columns = {row[1] for row in conn.execute(text('PRAGMA table_info("OneTimeLinkSubscription")'))}
+        indexes = {row[1] for row in conn.execute(text('PRAGMA index_list("OneTimeLinkSubscription")'))}
+    engine.dispose()
+    return columns, indexes
+
+
+def test_one_time_link_subscription_migration_should_create_the_table_and_downgrade(alembic_config, temp_database):
+    database_url, _ = temp_database
+
+    command.upgrade(alembic_config, "670fae75e21d")
+    assert _one_time_link_subscription_schema(database_url) == (set(), set())
+
+    command.upgrade(alembic_config, "55a7d471ce68")
+    columns, indexes = _one_time_link_subscription_schema(database_url)
+    assert columns == {"link_id", "user_id", "expires_at", "notify_on_read", "notify_on_expiry"}
+    assert "ix_OneTimeLinkSubscription_expires_at" in indexes
+
+    command.downgrade(alembic_config, "670fae75e21d")
+    assert _one_time_link_subscription_schema(database_url) == (set(), set())

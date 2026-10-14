@@ -21,6 +21,7 @@ from password_management_context.application.use_cases.one_time_link.list_one_ti
 )
 from password_management_context.domain.entities import Password
 from password_management_context.domain.entities.one_time_link import MAX_ACTIVE_LINKS_PER_PASSWORD
+from password_management_context.domain.events import OneTimeLinkReadEvent
 from password_management_context.domain.exceptions import (
     NotPasswordOwnerError,
     OneTimeLinkAlreadyUsedError,
@@ -34,6 +35,8 @@ from password_management_context.domain.exceptions import (
     TooManyActiveOneTimeLinksError,
 )
 from password_management_context.domain.value_objects import OneTimeLinkToken
+from shared_kernel.adapters.secondary import InMemoryDomainEventPublisher
+from tests.fakes import FakeDomainEventPublisher
 from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import (
@@ -102,6 +105,7 @@ def consume_use_case(
     password_vault_access_gateway: FakePasswordVaultAccessGateway,
     password_event_repository: FakePasswordEventRepository,
     time_gateway: FakeTimeGateway,
+    domain_event_publisher: FakeDomainEventPublisher,
 ):
     return ConsumeOneTimeLinkUseCase(
         one_time_link_repository,
@@ -110,6 +114,7 @@ def consume_use_case(
         password_vault_access_gateway,
         password_event_repository,
         time_gateway,
+        domain_event_publisher,
     )
 
 
@@ -636,3 +641,90 @@ def test_expired_links_drop_out_of_the_default_listing(
     assert result.links == []
     assert result.active == 0
     assert result.total == 1
+
+
+# ── Read event ────────────────────────────────────────────────────────
+
+
+def test_given_consumption_when_succeeding_should_publish_a_read_event_for_the_creator(
+    create_use_case: CreateOneTimeLinkUseCase,
+    consume_use_case: ConsumeOneTimeLinkUseCase,
+    domain_event_publisher: FakeDomainEventPublisher,
+    owned_password: Password,
+):
+    result = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
+
+    consume_use_case.execute(ConsumeOneTimeLinkCommand(token=result.token))
+
+    (event,) = domain_event_publisher.get_published_events_of_type(OneTimeLinkReadEvent)
+    assert event.link_id == result.id
+    assert event.password_id == PASSWORD_ID
+    assert event.created_by_user_id == OWNER_ID
+    assert event.password_name == "Production database"
+    assert event.read_at == T0
+
+
+def test_given_a_published_read_event_the_stored_audit_data_should_be_unchanged(
+    create_use_case: CreateOneTimeLinkUseCase,
+    consume_use_case: ConsumeOneTimeLinkUseCase,
+    password_event_repository: FakePasswordEventRepository,
+    owned_password: Password,
+):
+    token = _issue_link(create_use_case)
+    consume_use_case.execute(ConsumeOneTimeLinkCommand(token=token))
+
+    event_data = password_event_repository.events[-1]["event_data"]
+    assert set(event_data) == {"password_id", "link_id", "actor"}
+
+
+@pytest.mark.parametrize("failure", ["already_used", "unknown_token"])
+def test_given_a_consumption_that_fails_should_publish_nothing(
+    failure: str,
+    create_use_case: CreateOneTimeLinkUseCase,
+    consume_use_case: ConsumeOneTimeLinkUseCase,
+    domain_event_publisher: FakeDomainEventPublisher,
+    owned_password: Password,
+):
+    token = _issue_link(create_use_case)
+    if failure == "already_used":
+        consume_use_case.execute(ConsumeOneTimeLinkCommand(token=token))
+        domain_event_publisher.clear_events()
+    else:
+        token = OneTimeLinkToken.generate().value
+
+    with pytest.raises((OneTimeLinkAlreadyUsedError, OneTimeLinkNotFoundError)):
+        consume_use_case.execute(ConsumeOneTimeLinkCommand(token=token))
+
+    assert domain_event_publisher.get_published_events_of_type(OneTimeLinkReadEvent) == []
+
+
+def test_given_a_failing_subscriber_when_consuming_should_still_release_the_secret(
+    create_use_case: CreateOneTimeLinkUseCase,
+    one_time_link_repository: FakeOneTimeLinkRepository,
+    password_repository: FakePasswordRepository,
+    password_encryption_gateway: FakePasswordEncryptionGateway,
+    password_vault_access_gateway: FakePasswordVaultAccessGateway,
+    password_event_repository: FakePasswordEventRepository,
+    time_gateway: FakeTimeGateway,
+    owned_password: Password,
+    caplog: pytest.LogCaptureFixture,
+):
+    def exploding_subscriber(event: OneTimeLinkReadEvent) -> None:
+        raise RuntimeError("subscriber blew up")
+
+    publisher = InMemoryDomainEventPublisher()
+    publisher.subscribe(OneTimeLinkReadEvent, exploding_subscriber)
+    use_case = ConsumeOneTimeLinkUseCase(
+        one_time_link_repository,
+        password_repository,
+        password_encryption_gateway,
+        password_vault_access_gateway,
+        password_event_repository,
+        time_gateway,
+        publisher,
+    )
+
+    result = use_case.execute(ConsumeOneTimeLinkCommand(token=_issue_link(create_use_case)))
+
+    assert result.password == "s3cret-value"
+    assert "exploding_subscriber" in caplog.text
