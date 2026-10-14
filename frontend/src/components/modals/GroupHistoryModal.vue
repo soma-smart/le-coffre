@@ -93,8 +93,8 @@
         >
           <template #body="slotProps">
             <Tag
-              :value="formatEventType(slotProps.data.eventType)"
-              :severity="getEventSeverity(slotProps.data.eventType)"
+              :value="formatEventType(slotProps.data)"
+              :severity="getEventSeverity(slotProps.data)"
             />
           </template>
         </Column>
@@ -142,6 +142,16 @@
                 </template>
               </i18n-t>
               <i18n-t
+                v-else-if="isSelfLeave(slotProps.data)"
+                keypath="components.groupHistoryModal.leftGroup"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
+              <i18n-t
                 v-else-if="slotProps.data.eventType === 'UserRemovedFromGroupEvent'"
                 keypath="components.groupHistoryModal.removedFromGroup"
                 tag="span"
@@ -176,7 +186,12 @@
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from 'vue-i18n'
-import { groupEventSeverity, type Group, type GroupEvent } from '@/domain/group/Group'
+import {
+  groupEventSeverity,
+  type Group,
+  type GroupEvent,
+  type GroupEventSeverity,
+} from '@/domain/group/Group'
 import { useContainer } from '@/plugins/container'
 import { translateEventType } from '@/utils/eventTypeLabel'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
@@ -265,8 +280,19 @@ const targetUserLabel = (eventData: Record<string, unknown>): string => {
   return typeof userId === 'string' ? `${userId.substring(0, 8)}...` : t('common.unknownUser')
 }
 
-const formatEventType = (eventType: string): string => translateEventType(t, eventType)
-const getEventSeverity = groupEventSeverity
+// A self-removal is stored as a plain UserRemovedFromGroupEvent (same as being
+// kicked out by an owner) — the only distinguishing signal is the actor and
+// the target being the same user.
+const isSelfLeave = (event: GroupEvent): boolean =>
+  event.eventType === 'UserRemovedFromGroupEvent' && event.actorUserId === event.eventData.userId
+
+const formatEventType = (event: GroupEvent): string =>
+  isSelfLeave(event)
+    ? t('components.groupHistoryModal.leftGroupEventType')
+    : translateEventType(t, event.eventType)
+
+const getEventSeverity = (event: GroupEvent): GroupEventSeverity =>
+  isSelfLeave(event) ? 'secondary' : groupEventSeverity(event.eventType)
 
 // Fetch events when modal opens and group changes
 watch(

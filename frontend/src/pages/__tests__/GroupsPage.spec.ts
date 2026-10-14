@@ -1,12 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import GroupsPage from '@/pages/GroupsPage.vue'
+import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import type { Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
+
+const { toastAdd } = vi.hoisted(() => ({ toastAdd: vi.fn() }))
+vi.mock('primevue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('primevue')>()
+  return { ...actual, useToast: () => ({ add: toastAdd }) }
+})
 
 const USER_ID = 'user-1'
 const PERSONAL_GROUP_ID = 'group-personal'
@@ -42,8 +49,11 @@ function sharedGroup(overrides: Partial<Group> = {}): Group {
   }
 }
 
-async function mountPage(groups: Group[], user: User = currentUser) {
-  const groupRepository = new InMemoryGroupRepository()
+async function mountPage(
+  groups: Group[],
+  user: User = currentUser,
+  groupRepository: InMemoryGroupRepository = new InMemoryGroupRepository(),
+) {
   groups.forEach((group) => groupRepository.seed(group))
   const userRepository = new InMemoryUserRepository().setCurrent(user)
 
@@ -148,5 +158,73 @@ describe('GroupsPage service accounts button', () => {
     })
 
     expect(wrapper.find('[data-testid="service-accounts-button"]').exists()).toBe(true)
+  })
+})
+
+class FailingRemoveMemberGroupRepository extends InMemoryGroupRepository {
+  async removeMember(): Promise<void> {
+    // Mirrors the shape of a real client-built domain error: untranslated,
+    // carrying the raw UUID — exactly what must never reach the toast.
+    throw new Error(`Group ${PERSONAL_GROUP_ID} not found`)
+  }
+}
+
+function findConfirmationModal(wrapper: Awaited<ReturnType<typeof mountPage>>, title: string) {
+  return wrapper.findAllComponents(ConfirmationModal).find((c) => c.props('title') === title)
+}
+
+describe('GroupsPage leave group', () => {
+  it('disables the leave button for an owner who is not the sole owner', async () => {
+    const wrapper = await mountPage([sharedGroup({ owners: [USER_ID, 'owner-2'], members: ['member-1'] })])
+
+    const button = wrapper.find('.pi-sign-out').element.closest('button')
+    expect(button?.disabled).toBe(true)
+  })
+
+  it('does not disable the leave button for the sole member, and offers deletion instead', async () => {
+    const wrapper = await mountPage([sharedGroup({ owners: [USER_ID], members: [] })])
+
+    const button = wrapper.find('.pi-sign-out').element.closest('button')
+    expect(button?.disabled).toBe(false)
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+
+    const modal = findConfirmationModal(wrapper, 'Leave group')
+    expect(modal?.props('visible')).toBe(true)
+    expect(modal?.props('question')).toContain('only member')
+    expect(modal?.props('confirmLabel')).toBe('Delete group')
+  })
+
+  it('refreshes the groups list after a successful leave', async () => {
+    const group = sharedGroup({ owners: ['owner-2'], members: [USER_ID] })
+    const wrapper = await mountPage([group])
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+    const modal = findConfirmationModal(wrapper, 'Leave group')
+    modal!.vm.$emit('confirm')
+    await flushPromises()
+
+    // The store refreshed from the repository, where the user is no longer
+    // a member — so the leave action for this group is gone too.
+    expect(wrapper.find('.pi-sign-out').exists()).toBe(false)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }))
+  })
+
+  it('shows a translated error toast and refreshes, without leaking the raw error message', async () => {
+    toastAdd.mockClear()
+    const group = sharedGroup({ owners: ['owner-2'], members: [USER_ID] })
+    const wrapper = await mountPage([group], currentUser, new FailingRemoveMemberGroupRepository())
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+    const modal = findConfirmationModal(wrapper, 'Leave group')
+    modal!.vm.$emit('confirm')
+    await flushPromises()
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ severity: 'error', detail: 'Failed to leave group' }),
+    )
+    // The leave action is still offered — nothing actually changed, so a
+    // stale/removed button would otherwise strand the user.
+    expect(wrapper.find('.pi-sign-out').exists()).toBe(true)
   })
 })

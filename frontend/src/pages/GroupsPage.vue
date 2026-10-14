@@ -6,17 +6,24 @@ import MainLayout from '../layouts/MainLayout.vue'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
+import { usePasswordAccessStore } from '@/stores/passwordAccess'
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
-import { isSoleMemberOf, isUserMemberOf, isUserOwnerOf, type Group } from '@/domain/group/Group'
-import { GroupDomainError } from '@/domain/group/errors'
+import {
+  isSoleMemberOf,
+  isUserMemberOf,
+  isUserOwnerOf,
+  leaveBlockReason,
+  type Group,
+} from '@/domain/group/Group'
 import { sortGroups } from '../utils/groupSort'
 
 const toast = useToast()
 const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
+const passwordAccessStore = usePasswordAccessStore()
 const { sharedGroups, userPersonalGroup, loading } = storeToRefs(groupsStore)
 const { isAdmin } = storeToRefs(userStore)
 
@@ -53,7 +60,14 @@ const showServiceAccountsModal = ref(false)
 // computeds read whichever group the service-accounts dialog last opened.
 const serviceAccountsGroup = ref<Group | null>(null)
 const newGroupName = ref('')
-const selectedGroup = ref<Group | null>(null)
+// Only the id is kept selected state: the group itself is derived live from
+// groupsStore so a stale snapshot never drives a delete/leave decision after
+// the list refreshes underneath an open modal.
+const selectedGroupId = ref<string | null>(null)
+const selectedGroup = computed<Group | null>(() => {
+  if (!selectedGroupId.value) return null
+  return groupsStore.groups.find((g) => g.id === selectedGroupId.value) ?? null
+})
 const isEditMode = ref(false)
 const editingGroupId = ref<string | null>(null)
 
@@ -120,17 +134,13 @@ const canLeaveGroup = (group: Group) => {
 // this case, rather than opening a modal that only explains the block, is
 // what keeps the leave flow to a single actionable button everywhere else.
 const isLeaveBlockedByOwnership = (group: Group) => {
-  const userId = groupsStore.currentUserId
-  if (isSoleMemberOf(group, userId)) return false
-  return isUserOwnerOf(group, userId)
+  return leaveBlockReason(group, groupsStore.currentUserId) !== null
 }
 
 const leaveButtonTooltip = (group: Group) => {
-  if (isLeaveBlockedByOwnership(group)) {
-    return group.owners.length === 1
-      ? t('pages.groups.leaveBlockedSoleOwner')
-      : t('pages.groups.leaveBlockedOwner')
-  }
+  const reason = leaveBlockReason(group, groupsStore.currentUserId)
+  if (reason === 'sole-owner') return t('pages.groups.leaveBlockedSoleOwner')
+  if (reason === 'owner') return t('pages.groups.leaveBlockedOwner')
   return t('pages.groups.leaveGroup')
 }
 
@@ -160,7 +170,7 @@ const leaveModalCountdownSeconds = computed(() => {
 
 // Open group details modal
 const openGroupDetails = (group: Group) => {
-  selectedGroup.value = group
+  selectedGroupId.value = group.id
   showGroupDetailsModal.value = true
 }
 
@@ -255,7 +265,7 @@ const handleMemberChanged = async () => {
 
 // Open delete group dialog
 const openDeleteGroupDialog = (group: Group) => {
-  selectedGroup.value = group
+  selectedGroupId.value = group.id
   groupHasPasswords.value = false // Reset - we'll get the actual error from API if there are passwords
   showDeleteGroupModal.value = true
 }
@@ -273,7 +283,7 @@ const handleDeleteGroup = async () => {
       life: 5000,
     })
     showDeleteGroupModal.value = false
-    selectedGroup.value = null
+    selectedGroupId.value = null
   } catch (error: unknown) {
     console.error('Failed to delete group:', error)
 
@@ -321,7 +331,7 @@ const handleDeleteGroup = async () => {
 // Open leave-group dialog, from either the card icon or the details modal
 // (which closes itself before emitting).
 const openLeaveGroupDialog = (group: Group) => {
-  selectedGroup.value = group
+  selectedGroupId.value = group.id
   showLeaveGroupModal.value = true
 }
 
@@ -343,20 +353,26 @@ const handleConfirmLeaveGroup = async () => {
       detail: t('pages.groups.leftGroupDetail'),
       life: 5000,
     })
-    selectedGroup.value = null
+    selectedGroupId.value = null
+    // Leaving changes the current user's own password access for this group,
+    // not just its membership list — the passwords cache must drop its stale
+    // view alongside the groups one.
+    passwordAccessStore.invalidatePasswordAccess()
     await groupsStore.refresh()
   } catch (error) {
     console.error('Failed to leave group:', error)
-    const detail =
-      error instanceof GroupDomainError && error.message
-        ? error.message
-        : t('pages.groups.errors.leaveFailed')
+    // Never surface `error.message` here: GroupNotFoundError / GroupAccessDeniedError
+    // are client-built, untranslated, and carry the raw group UUID, and the
+    // backend's own 400 messages aren't translated either. Only i18n strings
+    // reach the toast. Refresh so a stale button (e.g. already left in
+    // another tab) doesn't keep reoffering the same failing action.
     toast.add({
       severity: 'error',
       summary: t('common.error'),
-      detail,
+      detail: t('pages.groups.errors.leaveFailed'),
       life: 5000,
     })
+    await groupsStore.refresh()
   }
 }
 

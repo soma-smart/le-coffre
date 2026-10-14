@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
-import { isSoleMemberOf, isUserOwnerOf, type Group } from '@/domain/group/Group'
+import { isUserOwnerOf, leaveBlockReason, type Group } from '@/domain/group/Group'
 import type { SearchUser, User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
@@ -38,32 +38,12 @@ const { isAdmin } = storeToRefs(userStore)
 
 const showHistoryModal = ref(false)
 
-// isOwner from useGroupMembers depends on a users.list call that's admin-only,
-// so it stays false for a real non-admin owner. Compute ownership from the
-// group prop directly (unrestricted) so History stays visible for them.
+// Computed from the group prop directly rather than from `groupDetails`
+// below, which only resolves once `loadAll()`'s async fetch completes — this
+// keeps History visible immediately on open, without waiting on that fetch.
 const canViewHistory = computed(
   () => props.group != null && (isAdmin.value || isUserOwnerOf(props.group, currentUserId.value)),
 )
-
-// Same reasoning as above: compute ownership directly from the group prop
-// rather than `isOwner` from useGroupMembers, which stays false for a real
-// non-admin owner. An owner must demote themselves first — unless they're
-// the sole member of the group, in which case leaving offers deleting the
-// group instead (handled by the parent after the `leaveGroup` emit).
-const isLeaveBlockedByOwnership = computed(() => {
-  if (!props.group) return false
-  if (isSoleMemberOf(props.group, currentUserId.value)) return false
-  return isUserOwnerOf(props.group, currentUserId.value)
-})
-
-const leaveButtonTooltip = computed(() => {
-  if (isLeaveBlockedByOwnership.value) {
-    return props.group && props.group.owners.length === 1
-      ? t('pages.groups.leaveBlockedSoleOwner')
-      : t('pages.groups.leaveBlockedOwner')
-  }
-  return t('components.groupDetailsModal.leaveGroupButton')
-})
 
 // Resolve use cases at setup time — inject() has no component context
 // inside async handlers after an await.
@@ -74,6 +54,7 @@ const selectedUser = ref<SearchUser | null>(null)
 const availableUserSuggestions = ref<SearchUser[]>([])
 
 const {
+  groupDetails,
   ownerUsers,
   memberUsers,
   isOwner,
@@ -100,6 +81,28 @@ const {
       demoteToMember: groupsStore.demoteToMember,
     },
   },
+})
+
+// Read from `groupDetails` (reloaded after every mutation via `loadAll()`),
+// not the `group` prop, which is the parent's snapshot from whenever the
+// modal was opened and goes stale the moment a promote/demote/remove inside
+// this modal changes who's blocked. Falls back to the prop only before the
+// first `loadAll()` resolves. Shared with GroupsPage.vue's own computation
+// via `leaveBlockReason` so the two screens can't diverge again.
+const groupForLeaveCheck = computed(() => groupDetails.value ?? props.group ?? null)
+
+const isLeaveBlockedByOwnership = computed(() => {
+  if (!groupForLeaveCheck.value) return false
+  return leaveBlockReason(groupForLeaveCheck.value, currentUserId.value) !== null
+})
+
+const leaveButtonTooltip = computed(() => {
+  const reason = groupForLeaveCheck.value
+    ? leaveBlockReason(groupForLeaveCheck.value, currentUserId.value)
+    : null
+  if (reason === 'sole-owner') return t('pages.groups.leaveBlockedSoleOwner')
+  if (reason === 'owner') return t('pages.groups.leaveBlockedOwner')
+  return t('components.groupDetailsModal.leaveGroupButton')
 })
 
 const handleSearchAvailableUsers = debounce(async (event: { query: string }) => {
@@ -234,8 +237,8 @@ const handleDemoteOwner = (user: User) => {
 }
 
 const handleLeaveGroup = () => {
-  if (!props.group) return
-  const group = props.group
+  const group = groupForLeaveCheck.value
+  if (!group) return
   visible.value = false
   emit('leaveGroup', group)
 }
