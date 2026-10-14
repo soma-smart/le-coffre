@@ -193,18 +193,6 @@ export type CreateOneTimeLinkRequest = {
      * How long the link stays valid. Defaults to 24h; bounded by the domain to 5 minutes .. 7 days.
      */
     lifetime_seconds?: number | null;
-    /**
-     * Notify On Read
-     *
-     * Email the creator when the link is opened.
-     */
-    notify_on_read?: boolean;
-    /**
-     * Notify On Expiry
-     *
-     * Email the creator if the link expires without having been opened.
-     */
-    notify_on_expiry?: boolean;
 };
 
 /**
@@ -1083,6 +1071,38 @@ export type OneTimeLinkAuditItem = {
 };
 
 /**
+ * OneTimeLinkSubscriptionRequest
+ */
+export type OneTimeLinkSubscriptionRequest = {
+    /**
+     * Notify On Read
+     */
+    notify_on_read: boolean;
+    /**
+     * Notify On Expiry
+     */
+    notify_on_expiry: boolean;
+};
+
+/**
+ * OneTimeLinkSubscriptionResponse
+ */
+export type OneTimeLinkSubscriptionResponse = {
+    /**
+     * Link Id
+     */
+    link_id: string;
+    /**
+     * Notify On Read
+     */
+    notify_on_read: boolean;
+    /**
+     * Notify On Expiry
+     */
+    notify_on_expiry: boolean;
+};
+
+/**
  * OneTimeLinkSummary
  */
 export type OneTimeLinkSummary = {
@@ -1114,14 +1134,6 @@ export type OneTimeLinkSummary = {
      * Revoked At
      */
     revoked_at: string | null;
-    /**
-     * Notify On Read
-     */
-    notify_on_read: boolean;
-    /**
-     * Notify On Expiry
-     */
-    notify_on_expiry: boolean;
 };
 
 /**
@@ -3774,3 +3786,33 @@ export type UpdateNotificationPreferencesNotificationsPreferencesPutResponses = 
 };
 
 export type UpdateNotificationPreferencesNotificationsPreferencesPutResponse = UpdateNotificationPreferencesNotificationsPreferencesPutResponses[keyof UpdateNotificationPreferencesNotificationsPreferencesPutResponses];
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutData = {
+    body: OneTimeLinkSubscriptionRequest;
+    path: {
+        /**
+         * Link Id
+         */
+        link_id: string;
+    };
+    query?: never;
+    url: '/notifications/one-time-links/{link_id}';
+};
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutError = SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutErrors[keyof SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutErrors];
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: OneTimeLinkSubscriptionResponse;
+};
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponse = SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponses[keyof SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponses];

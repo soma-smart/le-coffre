@@ -213,113 +213,26 @@ def test_multiple_upgrade_downgrade_cycles(alembic_config, temp_database):
     engine.dispose()
 
 
-def _one_time_link_columns(database_url: str) -> set[str]:
+def _one_time_link_subscription_schema(database_url: str) -> tuple[set[str], set[str]]:
+    """Columns and indexes of the OneTimeLinkSubscription table; two empty sets if it does not exist."""
     engine = create_engine(database_url)
     with engine.connect() as conn:
-        columns = {row[1] for row in conn.execute(text('PRAGMA table_info("OneTimeLink")'))}
+        columns = {row[1] for row in conn.execute(text('PRAGMA table_info("OneTimeLinkSubscription")'))}
+        indexes = {row[1] for row in conn.execute(text('PRAGMA index_list("OneTimeLinkSubscription")'))}
     engine.dispose()
-    return columns
+    return columns, indexes
 
 
-def _one_time_link_indexes(database_url: str) -> set[str]:
-    engine = create_engine(database_url)
-    with engine.connect() as conn:
-        indexes = {row[1] for row in conn.execute(text('PRAGMA index_list("OneTimeLink")'))}
-    engine.dispose()
-    return indexes
-
-
-def test_one_time_link_notification_migration_defaults_existing_rows_and_downgrades(alembic_config, temp_database):
-    """Links created before the migration must come out with both notifications off,
-    and the downgrade must drop the new columns while keeping the rows and indexes."""
+def test_one_time_link_subscription_migration_should_create_the_table_and_downgrade(alembic_config, temp_database):
     database_url, _ = temp_database
-    new_columns = {"notify_on_read", "notify_on_expiry", "expiry_notified_at"}
 
     command.upgrade(alembic_config, "670fae75e21d")
-    assert not new_columns & _one_time_link_columns(database_url)
-    indexes_before = _one_time_link_indexes(database_url)
-    engine = create_engine(database_url)
-    with engine.begin() as conn:
-        conn.execute(
-            text(
-                'INSERT INTO "OneTimeLink" (id, password_id, token_hash, created_by_user_id, created_at, expires_at) '
-                "VALUES ('a', 'b', 'hash', 'c', '2026-01-01 00:00:00', '2026-01-02 00:00:00')"
-            )
-        )
-    engine.dispose()
+    assert _one_time_link_subscription_schema(database_url) == (set(), set())
 
-    command.upgrade(alembic_config, "8a4d2c7e1b93")
-
-    assert new_columns <= _one_time_link_columns(database_url)
-    engine = create_engine(database_url)
-    with engine.connect() as conn:
-        row = conn.execute(
-            text('SELECT notify_on_read, notify_on_expiry, expiry_notified_at FROM "OneTimeLink"')
-        ).fetchone()
-    engine.dispose()
-    assert tuple(row) == (0, 0, None)
-    assert _one_time_link_indexes(database_url) == indexes_before
+    command.upgrade(alembic_config, "55a7d471ce68")
+    columns, indexes = _one_time_link_subscription_schema(database_url)
+    assert columns == {"link_id", "user_id", "expires_at", "notify_on_read", "notify_on_expiry"}
+    assert "ix_OneTimeLinkSubscription_expires_at" in indexes
 
     command.downgrade(alembic_config, "670fae75e21d")
-
-    assert not new_columns & _one_time_link_columns(database_url)
-    assert _one_time_link_indexes(database_url) == indexes_before
-    engine = create_engine(database_url)
-    with engine.connect() as conn:
-        assert conn.execute(text('SELECT COUNT(*) FROM "OneTimeLink"')).scalar() == 1
-    engine.dispose()
-
-
-PENDING_EXPIRY_INDEX = "ix_OneTimeLink_pending_expiry_notification"
-
-
-def _sweep_query_plan(database_url: str) -> str:
-    """The SQLite plan of the query the expiry sweep really sends, on this database.
-
-    The SQL is captured from SqlOneTimeLinkRepository itself rather than rebuilt here,
-    so the test breaks if the repository's predicate drifts from the index's.
-    """
-    from datetime import datetime, timezone
-
-    from sqlalchemy import event
-    from sqlmodel import Session
-
-    from password_management_context.adapters.secondary.sql import SqlOneTimeLinkRepository
-
-    engine = create_engine(database_url)
-    captured: list[tuple[str, tuple]] = []
-
-    def capture(conn, cursor, statement, parameters, context, executemany):
-        if statement.lstrip().upper().startswith("SELECT"):
-            captured.append((statement, parameters))
-
-    event.listen(engine, "before_cursor_execute", capture)
-    with Session(engine) as session:
-        SqlOneTimeLinkRepository(session).list_expired_pending_notification(datetime.now(timezone.utc), limit=100)
-    event.remove(engine, "before_cursor_execute", capture)
-
-    statement, parameters = captured[-1]
-    with engine.connect() as conn:
-        plan = " | ".join(row[-1] for row in conn.exec_driver_sql(f"EXPLAIN QUERY PLAN {statement}", parameters))
-    engine.dispose()
-    return plan
-
-
-def test_pending_expiry_index_migration_should_serve_the_sweep_query_and_downgrade(alembic_config, temp_database):
-    """The sweep runs every minute over a table that is never purged: its query must be
-    served by the partial index, which only happens if the migration's predicate and
-    the repository's are the same, term for term."""
-    database_url, _ = temp_database
-
-    command.upgrade(alembic_config, "8a4d2c7e1b93")
-    assert PENDING_EXPIRY_INDEX not in _one_time_link_indexes(database_url)
-    assert PENDING_EXPIRY_INDEX not in _sweep_query_plan(database_url)
-
-    command.upgrade(alembic_config, "head")
-
-    assert PENDING_EXPIRY_INDEX in _one_time_link_indexes(database_url)
-    assert f"USING INDEX {PENDING_EXPIRY_INDEX}" in _sweep_query_plan(database_url)
-
-    command.downgrade(alembic_config, "8a4d2c7e1b93")
-
-    assert PENDING_EXPIRY_INDEX not in _one_time_link_indexes(database_url)
+    assert _one_time_link_subscription_schema(database_url) == (set(), set())

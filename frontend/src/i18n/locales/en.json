@@ -702,6 +702,7 @@
       "validForLabel": "Valid for",
       "notifyOnReadLabel": "Notify me when the link is opened",
       "notifyOnExpiryLabel": "Notify me if the link expires unused",
+      "notificationsFailed": "The link was created, but the email notifications could not be set up. You will not be notified about this link.",
       "generateButton": "Generate",
       "copyOnceWarning": "Copy it now. This URL is shown once and cannot be retrieved again.",
       "copyLinkAria": "Copy link",

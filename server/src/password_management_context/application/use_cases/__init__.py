@@ -19,7 +19,6 @@ from .one_time_link.create_one_time_link_use_case import CreateOneTimeLinkUseCas
 from .one_time_link.list_my_one_time_links_use_case import ListMyOneTimeLinksUseCase
 from .one_time_link.list_one_time_links_for_admin_use_case import ListOneTimeLinksForAdminUseCase
 from .one_time_link.list_one_time_links_use_case import ListOneTimeLinksUseCase
-from .one_time_link.publish_expired_one_time_links_use_case import PublishExpiredOneTimeLinksUseCase
 from .one_time_link.revoke_all_one_time_links_for_user_use_case import RevokeAllOneTimeLinksForUserUseCase
 from .one_time_link.revoke_one_time_link_for_admin_use_case import RevokeOneTimeLinkForAdminUseCase
 from .one_time_link.revoke_one_time_link_use_case import RevokeOneTimeLinkUseCase
@@ -43,7 +42,6 @@ __all__ = [
     "GetPasswordStatisticForAdminUseCase",
     "CreateOneTimeLinkUseCase",
     "ConsumeOneTimeLinkUseCase",
-    "PublishExpiredOneTimeLinksUseCase",
     "ListOneTimeLinksUseCase",
     "RevokeOneTimeLinkUseCase",
     "ListOneTimeLinksForAdminUseCase",

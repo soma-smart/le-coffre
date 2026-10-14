@@ -82,32 +82,31 @@ from monitoring import setup_logging, setup_monitoring
 from notification_context.adapters.primary.events import (
     ExtensionPairedEventSubscriber,
     GroupOwnerPromotedEventSubscriber,
-    OneTimeLinkNotificationEventSubscriber,
+    OneTimeLinkReadEventSubscriber,
     UserDeletedEventSubscriber,
     VaultStateChangedEventSubscriber,
 )
 from notification_context.adapters.primary.fastapi.routes import get_notification_router
 from notification_context.adapters.secondary import (
     PrivateApiGroupOwnershipGateway,
+    PrivateApiOneTimeLinkGateway,
     PrivateApiRecipientGateway,
     PrivateApiUserContactGateway,
+    SqlOneTimeLinkSubscriptionRepository,
 )
-from notification_context.application.templates import default_notification_catalog
 from notification_context.application.use_cases import (
+    NotifyExpiredOneTimeLinksUseCase,
     NotifyExtensionPairedUseCase,
     NotifyGroupOwnerPromotedUseCase,
-    SendNotificationUseCase,
 )
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
+from password_management_context.adapters.primary.private_api import OneTimeLinkInfoApi
 from password_management_context.adapters.secondary import (
     PrivateApiPasswordEncryptionGateway,
-    SqlOneTimeLinkRepository,
-    SqlPasswordRepository,
 )
-from password_management_context.application.use_cases import PublishExpiredOneTimeLinksUseCase
-from password_management_context.domain.events import OneTimeLinkExpiredEvent, OneTimeLinkReadEvent
+from password_management_context.domain.events import OneTimeLinkReadEvent
 from security import (
     BearerReadOnlyMiddleware,
     CsrfMiddleware,
@@ -199,14 +198,16 @@ def _record_vault_locked_on_startup(session_maker, event_publisher) -> None:
         logger.error("Failed to record the vault lock caused by this server start", exc_info=True)
 
 
-def _publish_expired_one_time_links(session_maker, event_publisher) -> None:
+def _notify_expired_one_time_links(session_maker, email_gateway, app_base_url: str) -> None:
     """One pass of the expiry sweep, on its own session. Runs in a worker thread."""
     with session_maker() as session:
-        PublishExpiredOneTimeLinksUseCase(
-            SqlOneTimeLinkRepository(session),
-            SqlPasswordRepository(session),
-            event_publisher,
+        NotifyExpiredOneTimeLinksUseCase(
+            SqlOneTimeLinkSubscriptionRepository(session),
+            PrivateApiOneTimeLinkGateway(OneTimeLinkInfoApi(session_maker=session_maker)),
+            PrivateApiRecipientGateway(UserContactInfoApi(session_maker=session_maker)),
+            email_gateway,
             UtcTimeGateway(),
+            app_base_url,
         ).execute()
 
 
@@ -381,17 +382,17 @@ async def lifespan(app: FastAPI):
     domain_event_publisher.subscribe(VaultLockedEvent, vault_state_subscriber.handle_locked)
     domain_event_publisher.subscribe(VaultUnlockedEvent, vault_state_subscriber.handle_unlocked)
 
-    # Notification: tell a one-time link's creator when it was opened or expired unused
-    # (reactive, subscribes to OneTimeLinkReadEvent / OneTimeLinkExpiredEvent).
-    send_notification_use_case = SendNotificationUseCase(
+    # Notification: tell a one-time link's creator, if they subscribed, when it was opened
+    # (reactive, subscribes to OneTimeLinkReadEvent). "Expired unused" has no event: the
+    # expiry sweep started below handles it.
+    one_time_link_read_subscriber = OneTimeLinkReadEventSubscriber(
+        session_maker=SessionLocal,
         recipient_gateway=PrivateApiRecipientGateway(UserContactInfoApi(session_maker=SessionLocal)),
         email_gateway=email_gateway,
-        catalog=default_notification_catalog(),
         app_base_url=base_url,
+        executor=notification_executor,
     )
-    one_time_link_subscriber = OneTimeLinkNotificationEventSubscriber(send_notification_use_case, notification_executor)
-    domain_event_publisher.subscribe(OneTimeLinkReadEvent, one_time_link_subscriber.handle_read)
-    domain_event_publisher.subscribe(OneTimeLinkExpiredEvent, one_time_link_subscriber.handle_expired)
+    domain_event_publisher.subscribe(OneTimeLinkReadEvent, one_time_link_read_subscriber.handle)
 
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()
@@ -439,13 +440,13 @@ async def lifespan(app: FastAPI):
 
     async def _run_expiry_sweep_once_ready():
         # Waits for the migrations (asyncio.wait neither re-raises their failure nor
-        # cancels them if this task is cancelled): the sweep reads the OneTimeLink
-        # columns the latest migration adds, so it must never run before them.
+        # cancels them if this task is cancelled): the sweep reads the
+        # OneTimeLinkSubscription table a migration creates, so it must never run before them.
         await asyncio.wait({app.state.migration_task})
         if not app.state.ready:
             return
         await _run_periodic_sweep(
-            lambda: _publish_expired_one_time_links(SessionLocal, domain_event_publisher),
+            lambda: _notify_expired_one_time_links(SessionLocal, email_gateway, base_url),
             expiry_sweep_interval_seconds,
         )
 
@@ -458,7 +459,8 @@ async def lifespan(app: FastAPI):
         await asyncio.wait_for(app.state.migration_task, timeout=5.0)
     except (asyncio.CancelledError, asyncio.TimeoutError):
         pass
-    # Stop the sweep before draining the executor, so that nothing new is queued behind it.
+    # The sweep sends its emails itself, from its worker thread: stopping it only means
+    # no new pass starts.
     await _stop_expiry_sweep_task(app.state.expiry_sweep_task)
     # Let queued notifications go out rather than drop them, but bounded —
     # see _shutdown_notification_executor().

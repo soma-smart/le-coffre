@@ -85,7 +85,6 @@ class ConsumeOneTimeLinkUseCase(TracedUseCase):
             password_id=link.password_id,
             link_id=link.id,
             created_by_user_id=link.created_by_user_id,
-            notify_creator=link.notify_on_read,
             password_name=password_entity.name,
             read_at=now,
         )
