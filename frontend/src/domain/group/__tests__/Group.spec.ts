@@ -5,6 +5,7 @@ import {
   isSoleMemberOf,
   isUserMemberOf,
   isUserOwnerOf,
+  leaveBlockReason,
   pickDefaultGroupForUser,
   type Group,
 } from '@/domain/group/Group'
@@ -62,6 +63,33 @@ describe('isSoleMemberOf', () => {
     const group = makeGroup({ owners: ['u1'], members: ['u2'] })
     expect(isSoleMemberOf(group, 'u1')).toBe(false)
     expect(isSoleMemberOf(group, 'u2')).toBe(false)
+  })
+})
+
+describe('leaveBlockReason', () => {
+  it('returns null for a plain member', () => {
+    const group = makeGroup({ owners: ['u1'], members: ['u2'] })
+    expect(leaveBlockReason(group, 'u2')).toBeNull()
+  })
+
+  it('returns null for the sole member, even though they are also an owner', () => {
+    const group = makeGroup({ owners: ['u1'], members: [] })
+    expect(leaveBlockReason(group, 'u1')).toBeNull()
+  })
+
+  it('returns "owner" when another owner already exists', () => {
+    const group = makeGroup({ owners: ['u1', 'u2'], members: [] })
+    expect(leaveBlockReason(group, 'u1')).toBe('owner')
+  })
+
+  it('returns "sole-owner" when the user is the only owner but other members exist', () => {
+    const group = makeGroup({ owners: ['u1'], members: ['u2'] })
+    expect(leaveBlockReason(group, 'u1')).toBe('sole-owner')
+  })
+
+  it('returns null for someone outside the group', () => {
+    const group = makeGroup({ owners: ['u1'], members: ['u2'] })
+    expect(leaveBlockReason(group, 'nobody')).toBeNull()
   })
 })
 

@@ -628,6 +628,8 @@
       "addedAsMember": "Added {name} as a member",
       "promotedToOwner": "Promoted {name} to owner",
       "removedFromGroup": "Removed {name} from the group",
+      "leftGroup": "{name} left the group",
+      "leftGroupEventType": "Left Group",
       "demotedToMember": "Demoted {name} to member",
       "loadFailedSummary": "Load Failed",
       "loadFailedDetail": "Failed to load group history."

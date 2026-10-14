@@ -628,6 +628,8 @@
       "addedAsMember": "{name} ajouté comme membre",
       "promotedToOwner": "{name} promu propriétaire",
       "removedFromGroup": "{name} retiré du groupe",
+      "leftGroup": "{name} a quitté le groupe",
+      "leftGroupEventType": "A quitté le groupe",
       "demotedToMember": "{name} rétrogradé en membre",
       "loadFailedSummary": "Échec du chargement",
       "loadFailedDetail": "Échec du chargement de l'historique du groupe."
