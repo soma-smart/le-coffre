@@ -1062,7 +1062,7 @@ monitoring = [
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.66b0" },
     { name = "opentelemetry-instrumentation-httpx", specifier = ">=0.66b0" },
     { name = "opentelemetry-instrumentation-sqlalchemy", specifier = ">=0.66b0" },
-    { name = "opentelemetry-sdk", specifier = ">=1.45.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.45.1" },
 ]
 postgres = [
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },

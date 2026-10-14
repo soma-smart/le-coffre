@@ -32,7 +32,7 @@ monitoring = [
     "opentelemetry-instrumentation-httpx>=0.66b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.66b0",
     "opentelemetry-exporter-otlp-proto-http>=1.45.1",
-    "opentelemetry-sdk>=1.45.0",
+    "opentelemetry-sdk>=1.45.1",
 ]
 sqlite = ["sqlite-utils==3.39.1"]
 postgres = ["psycopg2==2.9.13", "psycopg[binary]==3.3.6"]
