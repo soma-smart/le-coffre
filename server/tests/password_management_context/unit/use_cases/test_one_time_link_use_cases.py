@@ -643,59 +643,7 @@ def test_expired_links_drop_out_of_the_default_listing(
     assert result.total == 1
 
 
-# ── Notification options ──────────────────────────────────────────────
-
-
-def test_given_no_notification_options_when_creating_should_store_both_flags_as_false(
-    create_use_case: CreateOneTimeLinkUseCase,
-    one_time_link_repository: FakeOneTimeLinkRepository,
-    owned_password: Password,
-):
-    result = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
-
-    stored = one_time_link_repository.storage[result.id]
-    assert stored.notify_on_read is False
-    assert stored.notify_on_expiry is False
-    assert stored.expiry_notified_at is None
-
-
-def test_given_notification_options_when_creating_should_store_them_independently(
-    create_use_case: CreateOneTimeLinkUseCase,
-    one_time_link_repository: FakeOneTimeLinkRepository,
-    owned_password: Password,
-):
-    only_read = create_use_case.execute(
-        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, notify_on_read=True)
-    )
-    only_expiry = create_use_case.execute(
-        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, notify_on_expiry=True)
-    )
-
-    assert (
-        one_time_link_repository.storage[only_read.id].notify_on_read,
-        one_time_link_repository.storage[only_read.id].notify_on_expiry,
-    ) == (True, False)
-    assert (
-        one_time_link_repository.storage[only_expiry.id].notify_on_read,
-        one_time_link_repository.storage[only_expiry.id].notify_on_expiry,
-    ) == (False, True)
-
-
-def test_given_notification_options_when_listing_should_expose_them(
-    create_use_case: CreateOneTimeLinkUseCase,
-    list_use_case: ListOneTimeLinksUseCase,
-    owned_password: Password,
-):
-    create_use_case.execute(
-        CreateOneTimeLinkCommand(
-            password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, notify_on_read=True, notify_on_expiry=True
-        )
-    )
-
-    result = list_use_case.execute(ListOneTimeLinksCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
-
-    assert result.links[0].notify_on_read is True
-    assert result.links[0].notify_on_expiry is True
+# ── Read event ────────────────────────────────────────────────────────
 
 
 def test_given_consumption_when_succeeding_should_publish_a_read_event_for_the_creator(
@@ -704,9 +652,7 @@ def test_given_consumption_when_succeeding_should_publish_a_read_event_for_the_c
     domain_event_publisher: FakeDomainEventPublisher,
     owned_password: Password,
 ):
-    result = create_use_case.execute(
-        CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, notify_on_read=True)
-    )
+    result = create_use_case.execute(CreateOneTimeLinkCommand(password_id=PASSWORD_ID, requesting_user_id=OWNER_ID))
 
     consume_use_case.execute(ConsumeOneTimeLinkCommand(token=result.token))
 
@@ -714,23 +660,8 @@ def test_given_consumption_when_succeeding_should_publish_a_read_event_for_the_c
     assert event.link_id == result.id
     assert event.password_id == PASSWORD_ID
     assert event.created_by_user_id == OWNER_ID
-    assert event.notify_creator is True
     assert event.password_name == "Production database"
     assert event.read_at == T0
-
-
-def test_given_a_link_without_notify_on_read_when_consuming_should_publish_an_event_flagged_as_silent(
-    create_use_case: CreateOneTimeLinkUseCase,
-    consume_use_case: ConsumeOneTimeLinkUseCase,
-    domain_event_publisher: FakeDomainEventPublisher,
-    owned_password: Password,
-):
-    token = _issue_link(create_use_case)
-
-    consume_use_case.execute(ConsumeOneTimeLinkCommand(token=token))
-
-    (event,) = domain_event_publisher.get_published_events_of_type(OneTimeLinkReadEvent)
-    assert event.notify_creator is False
 
 
 def test_given_a_published_read_event_the_stored_audit_data_should_be_unchanged(
@@ -765,32 +696,6 @@ def test_given_a_consumption_that_fails_should_publish_nothing(
         consume_use_case.execute(ConsumeOneTimeLinkCommand(token=token))
 
     assert domain_event_publisher.get_published_events_of_type(OneTimeLinkReadEvent) == []
-
-
-def test_given_a_link_whose_expiry_was_just_claimed_when_consuming_should_refuse_it_and_publish_nothing(
-    create_use_case: CreateOneTimeLinkUseCase,
-    consume_use_case: ConsumeOneTimeLinkUseCase,
-    one_time_link_repository: FakeOneTimeLinkRepository,
-    domain_event_publisher: FakeDomainEventPublisher,
-    owned_password: Password,
-):
-    """The read/expiry race, seen from the reader: the link was still valid when its
-    expiry was checked, but another replica's sweep claimed it in between. The secret
-    must not be released, and no "opened" email may follow the "expired" one."""
-    result = create_use_case.execute(
-        CreateOneTimeLinkCommand(
-            password_id=PASSWORD_ID, requesting_user_id=OWNER_ID, notify_on_read=True, notify_on_expiry=True
-        )
-    )
-    link = one_time_link_repository.get_by_id(result.id)
-    assert link is not None
-    assert one_time_link_repository.claim_expiry_notification(link.id, link.expires_at) is True
-
-    with pytest.raises(OneTimeLinkAlreadyUsedError):
-        consume_use_case.execute(ConsumeOneTimeLinkCommand(token=result.token))
-
-    assert domain_event_publisher.get_published_events_of_type(OneTimeLinkReadEvent) == []
-    assert link.read_at is None
 
 
 def test_given_a_failing_subscriber_when_consuming_should_still_release_the_secret(

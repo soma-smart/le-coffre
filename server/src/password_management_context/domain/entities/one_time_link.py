@@ -36,13 +36,6 @@ class OneTimeLink:
     expires_at: datetime
     read_at: datetime | None = None
     revoked_at: datetime | None = None
-    # The creator's opt-ins, chosen once at creation. They are stored on the link
-    # (not as a user preference) because the choice is about this one link.
-    notify_on_read: bool = False
-    notify_on_expiry: bool = False
-    # Set once, atomically, by the expiry sweep: the claim that makes the expiry
-    # notification exactly-once across replicas.
-    expiry_notified_at: datetime | None = None
 
     @classmethod
     def create(
@@ -52,8 +45,6 @@ class OneTimeLink:
         token: OneTimeLinkToken,
         lifetime: OneTimeLinkLifetime,
         now: datetime,
-        notify_on_read: bool = False,
-        notify_on_expiry: bool = False,
     ) -> "OneTimeLink":
         return cls(
             id=uuid4(),
@@ -64,9 +55,6 @@ class OneTimeLink:
             expires_at=now + lifetime.as_timedelta(),
             read_at=None,
             revoked_at=None,
-            notify_on_read=notify_on_read,
-            notify_on_expiry=notify_on_expiry,
-            expiry_notified_at=None,
         )
 
     def is_expired(self, now: datetime) -> bool:
@@ -92,6 +80,3 @@ class OneTimeLink:
 
     def mark_revoked(self, now: datetime) -> None:
         self.revoked_at = now
-
-    def mark_expiry_notified(self, now: datetime) -> None:
-        self.expiry_notified_at = now

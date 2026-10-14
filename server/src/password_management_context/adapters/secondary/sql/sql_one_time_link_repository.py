@@ -5,7 +5,6 @@ from sqlalchemy import func
 from sqlmodel import Session, select, update
 
 from password_management_context.adapters.secondary.sql.model.one_time_link import (
-    PENDING_EXPIRY_NOTIFICATION,
     OneTimeLinkTable,
 )
 from password_management_context.application.gateways import OneTimeLinkRepository
@@ -29,9 +28,6 @@ def _to_entity(row: OneTimeLinkTable) -> OneTimeLink:
         expires_at=as_utc(row.expires_at),  # type: ignore[arg-type]
         read_at=as_utc(row.read_at),
         revoked_at=as_utc(row.revoked_at),
-        notify_on_read=row.notify_on_read,
-        notify_on_expiry=row.notify_on_expiry,
-        expiry_notified_at=as_utc(row.expiry_notified_at),
     )
 
 
@@ -51,9 +47,6 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
             expires_at=to_naive_utc(link.expires_at),
             read_at=to_naive_utc(link.read_at),
             revoked_at=to_naive_utc(link.revoked_at),
-            notify_on_read=link.notify_on_read,
-            notify_on_expiry=link.notify_on_expiry,
-            expiry_notified_at=to_naive_utc(link.expiry_notified_at),
         )
         self._session.add(row)
         self.commit()
@@ -190,47 +183,14 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
         # One conditional UPDATE, not a read-then-write. The WHERE clause is the
         # concurrency guard: whichever transaction gets rowcount 1 is the single
         # reader, everyone else gets 0 and is told the link is already used.
-        # expiry_notified_at closes the race with the expiry sweep: once a link's
-        # expiry has been claimed, a read that checked the expiry just before it ran
-        # out can no longer land, so the creator never gets both emails.
         statement = (
             update(OneTimeLinkTable)
             .where(
                 OneTimeLinkTable.id == link_id,  # type: ignore[arg-type]
-                OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
-                OneTimeLinkTable.expiry_notified_at.is_(None),  # type: ignore[union-attr]
-            )
-            .values(read_at=to_naive_utc(now))
-        )
-        result = self._session.exec(statement)  # type: ignore[call-overload]
-        self.commit()
-        return result.rowcount == 1
-
-    def list_expired_pending_notification(self, now: datetime, limit: int) -> list[OneTimeLink]:
-        query = (
-            select(OneTimeLinkTable)
-            # The exact predicate of ix_OneTimeLink_pending_expiry_notification, so the
-            # query is served by that partial index instead of every expired link.
-            .where(PENDING_EXPIRY_NOTIFICATION, OneTimeLinkTable.expires_at <= to_naive_utc(now))
-            .order_by(OneTimeLinkTable.expires_at.asc())  # type: ignore[attr-defined]
-            .limit(limit)
-        )
-        return [_to_entity(row) for row in self._session.exec(query).all()]
-
-    def claim_expiry_notification(self, link_id: UUID, now: datetime) -> bool:
-        # Same pattern as consume(): the WHERE clause is the guard. Whichever
-        # replica's UPDATE matches the row first gets rowcount 1 and is the one
-        # that publishes; the others get 0 and stay silent.
-        statement = (
-            update(OneTimeLinkTable)
-            .where(
-                OneTimeLinkTable.id == link_id,  # type: ignore[arg-type]
-                OneTimeLinkTable.expiry_notified_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
             )
-            .values(expiry_notified_at=to_naive_utc(now))
+            .values(read_at=to_naive_utc(now))
         )
         result = self._session.exec(statement)  # type: ignore[call-overload]
         self.commit()

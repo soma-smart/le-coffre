@@ -120,7 +120,7 @@ def test_given_the_app_lifespan_the_sweep_should_start_only_after_migrations_and
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'lifespan.db'}")
     monkeypatch.setattr(main, "run_migrations", slow_migrations)
     monkeypatch.setattr(main, "_record_vault_locked_on_startup", lambda *_: None)
-    monkeypatch.setattr(main, "_publish_expired_one_time_links", lambda *_: sweeps.append(time.monotonic()))
+    monkeypatch.setattr(main, "_notify_expired_one_time_links", lambda *_: sweeps.append(time.monotonic()))
     monkeypatch.setattr(main, "get_one_time_link_expiry_sweep_interval_seconds", lambda: 0.02)
 
     with TestClient(main.app) as _:
@@ -152,7 +152,7 @@ def test_given_failed_migrations_the_sweep_should_never_run(monkeypatch, tmp_pat
 
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{tmp_path / 'lifespan_failed.db'}")
     monkeypatch.setattr(main, "run_migrations", broken_migrations)
-    monkeypatch.setattr(main, "_publish_expired_one_time_links", lambda *_: sweeps.append(1))
+    monkeypatch.setattr(main, "_notify_expired_one_time_links", lambda *_: sweeps.append(1))
     monkeypatch.setattr(main, "get_one_time_link_expiry_sweep_interval_seconds", lambda: 0.02)
 
     with TestClient(main.app) as _:

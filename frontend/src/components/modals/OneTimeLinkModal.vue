@@ -52,6 +52,8 @@ const showHistory = ref(false)
 const generatedUrl = ref<string | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+// Set when the link was created but its email notifications could not be registered.
+const notificationsFailed = ref(false)
 const copied = ref(false)
 
 const isVisible = computed({
@@ -67,6 +69,7 @@ watch(
       // component state after the dialog closes.
       generatedUrl.value = null
       error.value = null
+      notificationsFailed.value = false
       showHistory.value = false
       notifyOnRead.value = false
       notifyOnExpiry.value = false
@@ -102,6 +105,7 @@ async function generate() {
   if (!props.password || loading.value) return
   loading.value = true
   error.value = null
+  notificationsFailed.value = false
   try {
     const created = await oneTimeLinks.create.execute({
       passwordId: props.password.id,
@@ -110,6 +114,7 @@ async function generate() {
       notifyOnExpiry: notifyOnExpiry.value,
     })
     generatedUrl.value = buildOneTimeLinkUrl(window.location.origin, created.token)
+    notificationsFailed.value = created.subscriptionFailed
     await refreshLinks()
   } catch (err) {
     error.value =
@@ -266,6 +271,15 @@ function severityFor(link: OneTimeLink) {
     <div v-else class="mb-4" data-testid="generated-url">
       <Message severity="success" :closable="false" class="mb-2">
         {{ t('components.oneTimeLinkModal.copyOnceWarning') }}
+      </Message>
+      <Message
+        v-if="notificationsFailed"
+        severity="warn"
+        :closable="false"
+        class="mb-2"
+        data-testid="notifications-failed"
+      >
+        {{ t('components.oneTimeLinkModal.notificationsFailed') }}
       </Message>
       <!-- The URL is only ever copied, never read: the token is opaque noise. So
            it stays on one truncated line, which keeps the copy button beside it at

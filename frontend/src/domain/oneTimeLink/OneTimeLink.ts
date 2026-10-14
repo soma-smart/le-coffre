@@ -1,9 +1,6 @@
 /**
  * A single-use, time-limited link granting anonymous read access to one password.
  *
- * The two `notify*` flags are only reported by the per-password listing; they are
- * left undefined for links seen through the audit tables, which do not carry them.
- *
  * `token` only ever exists on the object returned by the creation call: the
  * backend stores its hash and can never show it again.
  */
@@ -15,10 +12,6 @@ export interface OneTimeLink {
   expiresAt: string
   readAt: string | null
   revokedAt: string | null
-  /** The creator asked to be emailed when the link is opened. */
-  notifyOnRead?: boolean
-  /** The creator asked to be emailed if the link expires unopened. */
-  notifyOnExpiry?: boolean
 }
 
 export interface CreatedOneTimeLink {

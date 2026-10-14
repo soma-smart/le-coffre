@@ -5,14 +5,8 @@ import type {
   RevealedSecret,
 } from '@/domain/oneTimeLink/OneTimeLink'
 
-export interface CreateOneTimeLinkOptions {
-  lifetimeSeconds?: number
-  notifyOnRead?: boolean
-  notifyOnExpiry?: boolean
-}
-
 export interface OneTimeLinkRepository {
-  create(passwordId: string, options?: CreateOneTimeLinkOptions): Promise<CreatedOneTimeLink>
+  create(passwordId: string, lifetimeSeconds?: number): Promise<CreatedOneTimeLink>
   /** Returns only redeemable links unless `includeInactive` is set. */
   listForPassword(passwordId: string, includeInactive?: boolean): Promise<OneTimeLinkPage>
   revoke(linkId: string): Promise<void>

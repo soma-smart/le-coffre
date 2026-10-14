@@ -23,16 +23,14 @@ class OneTimeLinkReadEvent(BasePasswordEvent):
     accountable party, and event_data marks the actual reader as anonymous. No
     client IP is recorded.
 
-    The event is also published on the bus. Besides the audit data it carries what
-    a subscriber needs to tell the creator, so no one has to call back into this
-    context: whether the creator asked to be told (`notify_creator`), the password
-    name and the read time. None of that is part of `to_event_data()`, which stays
-    exactly what is stored in the audit log.
+    The event is also published on the bus, for whoever wants to react to a read.
+    It then also carries the password name and the read time, so subscribers do
+    not have to call back into this context. Neither is part of `to_event_data()`,
+    which stays exactly what is stored in the audit log.
     """
 
     link_id: UUID
     created_by_user_id: UUID
-    notify_creator: bool
     password_name: str
     read_at: datetime
 

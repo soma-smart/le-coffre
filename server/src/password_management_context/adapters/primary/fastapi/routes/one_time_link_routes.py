@@ -54,14 +54,6 @@ class CreateOneTimeLinkRequest(BaseModel):
         default=None,
         description="How long the link stays valid. Defaults to 24h; bounded by the domain to 5 minutes .. 7 days.",
     )
-    notify_on_read: bool = Field(
-        default=False,
-        description="Email the creator when the link is opened.",
-    )
-    notify_on_expiry: bool = Field(
-        default=False,
-        description="Email the creator if the link expires without having been opened.",
-    )
 
 
 class CreateOneTimeLinkResponse(BaseModel):
@@ -78,8 +70,6 @@ class OneTimeLinkSummary(BaseModel):
     expires_at: datetime
     read_at: datetime | None
     revoked_at: datetime | None
-    notify_on_read: bool
-    notify_on_expiry: bool
 
 
 class ListOneTimeLinksResponseModel(BaseModel):
@@ -117,8 +107,6 @@ def create_one_time_link(
 
     - **password_id**: UUID of the password to share
     - **lifetime_seconds**: optional validity window, 24h by default
-    - **notify_on_read** / **notify_on_expiry**: optionally email the creator when the
-      link is opened, or when it expires unopened. Both are off by default.
     - **Authentication**: Requires authentication via access_token cookie (owner only)
 
     The token is returned here and never again: only its hash is stored.
@@ -131,8 +119,6 @@ def create_one_time_link(
             password_id=password_id,
             requesting_user_id=current_user.user_id,
             lifetime_seconds=request.lifetime_seconds,
-            notify_on_read=request.notify_on_read,
-            notify_on_expiry=request.notify_on_expiry,
         )
         result = usecase.execute(command)
         return CreateOneTimeLinkResponse(id=result.id, token=result.token, expires_at=result.expires_at)
@@ -193,8 +179,6 @@ def list_one_time_links(
                     expires_at=link.expires_at,
                     read_at=link.read_at,
                     revoked_at=link.revoked_at,
-                    notify_on_read=link.notify_on_read,
-                    notify_on_expiry=link.notify_on_expiry,
                 )
                 for link in result.links
             ],

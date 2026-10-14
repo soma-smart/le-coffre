@@ -70,8 +70,6 @@ class CreateOneTimeLinkUseCase(TracedUseCase):
             token=token,
             lifetime=lifetime,
             now=now,
-            notify_on_read=command.notify_on_read,
-            notify_on_expiry=command.notify_on_expiry,
         )
         self.one_time_link_repository.add(link)
 

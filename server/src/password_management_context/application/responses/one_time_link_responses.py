@@ -33,8 +33,6 @@ class OneTimeLinkSummaryResponse:
     expires_at: datetime
     read_at: datetime | None
     revoked_at: datetime | None
-    notify_on_read: bool = False
-    notify_on_expiry: bool = False
 
 
 @dataclass(frozen=True)
