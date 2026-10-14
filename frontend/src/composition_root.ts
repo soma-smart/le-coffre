@@ -1,13 +1,16 @@
 import { BackendAuthGateway } from '@/infrastructure/backend/BackendAuthGateway'
 import { BackendCsrfGateway } from '@/infrastructure/backend/BackendCsrfGateway'
+import { BackendExtensionGateway } from '@/infrastructure/backend/BackendExtensionGateway'
 import { BackendGroupRepository } from '@/infrastructure/backend/BackendGroupRepository'
 import { BackendOneTimeLinkRepository } from '@/infrastructure/backend/BackendOneTimeLinkRepository'
 import { BackendServiceAccountRepository } from '@/infrastructure/backend/BackendServiceAccountRepository'
 import { BackendPasswordRepository } from '@/infrastructure/backend/BackendPasswordRepository'
 import { BackendUserRepository } from '@/infrastructure/backend/BackendUserRepository'
 import { BackendVaultRepository } from '@/infrastructure/backend/BackendVaultRepository'
+import { BackendNotificationPreferencesRepository } from '@/infrastructure/backend/BackendNotificationPreferencesRepository'
 import { BackendStatisticsGateway } from '@/infrastructure/backend/BackendStatisticsGateway'
 import { LocalStoragePreferencesGateway } from '@/infrastructure/local_storage/LocalStoragePreferencesGateway'
+import { SessionStorageLoginRedirectGateway } from '@/infrastructure/session_storage/SessionStorageLoginRedirectGateway'
 import { buildContainer, type Container } from '@/container'
 
 /**
@@ -28,5 +31,9 @@ export function installProductionContainer(): Container {
     statisticsGateway: new BackendStatisticsGateway(),
     oneTimeLinkRepository: new BackendOneTimeLinkRepository(),
     serviceAccountRepository: new BackendServiceAccountRepository(),
+
+    extensionGateway: new BackendExtensionGateway(),
+    loginRedirectGateway: new SessionStorageLoginRedirectGateway(),
+    notificationPreferencesRepository: new BackendNotificationPreferencesRepository(),
   })
 }

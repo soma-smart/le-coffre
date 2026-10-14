@@ -2,7 +2,9 @@ import { createPinia, setActivePinia, type Pinia } from 'pinia'
 import { buildContainer, type Container, type Ports } from '@/container'
 import { InMemoryAuthGateway } from '@/infrastructure/in_memory/InMemoryAuthGateway'
 import { InMemoryCsrfGateway } from '@/infrastructure/in_memory/InMemoryCsrfGateway'
+import { InMemoryExtensionGateway } from '@/infrastructure/in_memory/InMemoryExtensionGateway'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
+import { InMemoryLoginRedirectGateway } from '@/infrastructure/in_memory/InMemoryLoginRedirectGateway'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
 import { InMemoryServiceAccountRepository } from '@/infrastructure/in_memory/InMemoryServiceAccountRepository'
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
@@ -10,6 +12,7 @@ import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryP
 import { InMemoryStatisticsGateway } from '@/infrastructure/in_memory/InMemoryStatisticsGateway'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
+import { InMemoryNotificationPreferencesRepository } from '@/infrastructure/in_memory/InMemoryNotificationPreferencesRepository'
 import { setContainer } from '@/plugins/container'
 
 /**
@@ -43,6 +46,9 @@ export function createTestContext(overrides: Partial<Ports> = {}): {
     statisticsGateway: new InMemoryStatisticsGateway(),
     oneTimeLinkRepository: new InMemoryOneTimeLinkRepository(),
     serviceAccountRepository: new InMemoryServiceAccountRepository(),
+    extensionGateway: new InMemoryExtensionGateway(),
+    loginRedirectGateway: new InMemoryLoginRedirectGateway(),
+    notificationPreferencesRepository: new InMemoryNotificationPreferencesRepository(),
     ...overrides,
   }
   const container = buildContainer(ports)

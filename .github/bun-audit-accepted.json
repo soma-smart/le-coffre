@@ -1,0 +1,8 @@
+[
+  {
+    "advisory": "GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "reason": "No fixed release exists: the advisory covers every version up to 3.0.3, the latest published. It reaches frontend/ and extension/ only through the lint toolchain (@vue/eslint-config-typescript > fast-glob > micromatch > braces), runs on developer and CI machines against glob patterns written in the repository, and is never part of a build output. Drop this entry as soon as a patched braces is published.",
+    "review_by": "2027-01-06"
+  }
+]

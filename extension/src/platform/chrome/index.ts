@@ -1,0 +1,203 @@
+/**
+ * The one and only place in this codebase allowed to touch `chrome.*`.
+ *
+ * eslint.config.ts scopes its `no-restricted-globals` exemption to this
+ * directory. If you find yourself wanting `chrome.` somewhere else, add a
+ * method to the `Browser` port instead, that is what keeps the Firefox port a
+ * second adapter rather than a rewrite.
+ */
+import { OFFSCREEN_PORT_NAME, offscreenReplySchema } from '@/shared/messageSchemas'
+import type { OffscreenRequest } from '@/shared/messages'
+
+import type { Browser, StorageArea } from '../browser'
+
+function area(storage: chrome.storage.StorageArea): StorageArea {
+  return {
+    async get<T>(key: string): Promise<T | undefined> {
+      const result = await storage.get(key)
+      return result[key] as T | undefined
+    },
+    async set(key: string, value: unknown): Promise<void> {
+      await storage.set({ [key]: value })
+    },
+    async remove(key: string): Promise<void> {
+      await storage.remove(key)
+    },
+    async clear(): Promise<void> {
+      await storage.clear()
+    },
+  }
+}
+
+export const chromeBrowser: Browser = {
+  local: area(chrome.storage.local),
+  session: area(chrome.storage.session),
+
+  permissions: {
+    contains: (origins) => chrome.permissions.contains({ origins }),
+    request: (origins) => chrome.permissions.request({ origins }),
+    remove: (origins) => chrome.permissions.remove({ origins }),
+    onRemoved: (listener) => chrome.permissions.onRemoved.addListener(() => listener()),
+  },
+
+  tabs: {
+    async create(url: string): Promise<void> {
+      await chrome.tabs.create({ url })
+    },
+  },
+
+  alarms: {
+    async schedule(name: string, periodInMinutes: number): Promise<void> {
+      await chrome.alarms.create(name, { periodInMinutes })
+    },
+    async clear(name: string): Promise<void> {
+      await chrome.alarms.clear(name)
+    },
+    onAlarm: (listener) => chrome.alarms.onAlarm.addListener((alarm) => listener(alarm.name)),
+  },
+
+  clipboard: {
+    async copy(value: string, clearAfterSeconds: number | null): Promise<boolean> {
+      if (!(await ensureOffscreenDocument())) return false
+      return askOffscreen({ type: 'OFFSCREEN_COPY', value, clearAfterSeconds })
+    },
+    async clear(): Promise<void> {
+      if (!(await ensureOffscreenDocument())) return
+      // Nothing to recover on failure: the clipboard holds whatever it holds.
+      await askOffscreen({ type: 'OFFSCREEN_CLEAR' })
+    },
+  },
+
+  device: {
+    describe: describeDevice,
+  },
+
+  runtime: {
+    getUrl: (path) => chrome.runtime.getURL(path),
+    sendMessage: <T>(message: unknown) => chrome.runtime.sendMessage(message) as Promise<T>,
+    onMessage(handler) {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (!isOwnPage(sender)) return false
+
+        // Returning `true` keeps the channel open for the async reply. Without
+        // it Chrome closes the port the moment this listener returns and the
+        // caller's promise resolves with undefined.
+        handler(message).then(sendResponse)
+        return true
+      })
+    },
+  },
+}
+
+/** The slice of User-Agent Client Hints this needs; lib.dom does not type it yet. */
+interface UserAgentData {
+  brands: ReadonlyArray<{ brand: string }>
+  platform: string
+  getHighEntropyValues(hints: string[]): Promise<{ platform?: string }>
+}
+
+/**
+ * "<Browser> on <OS>" from User-Agent Client Hints, which a service worker
+ * has. The platform comes from `getHighEntropyValues`, the accurate source,
+ * with the low-entropy `platform` as the fallback; the browser comes from the
+ * brands list, skipping the "Chromium" every Chromium-based browser lists and
+ * the "Not A;Brand" GREASE entry, so Edge says Edge. Null when the API is
+ * missing, and the caller's constant takes over.
+ */
+async function describeDevice(): Promise<string | null> {
+  const data = (navigator as Navigator & { userAgentData?: UserAgentData }).userAgentData
+  if (!data) return null
+
+  const brands = data.brands ?? []
+  const named = brands.find((b) => b.brand !== 'Chromium' && !/not.?a.?brand/i.test(b.brand))
+  const browser = (named ?? brands.find((b) => b.brand === 'Chromium'))?.brand ?? null
+
+  let platform = data.platform || null
+  try {
+    platform = (await data.getHighEntropyValues(['platform'])).platform || platform
+  } catch {
+    // The low-entropy value will do.
+  }
+
+  if (browser && platform) return `${browser} on ${platform}`
+  return browser ?? (platform ? `Browser on ${platform}` : null)
+}
+
+/**
+ * Only this extension's own pages get an answer: the popup and the offscreen
+ * document. Another extension can address ours by id if the manifest ever
+ * grows `externally_connectable`, and a message carrying a tab comes from a
+ * content script, of which this extension has none. Neither is a caller.
+ */
+function isOwnPage(sender: chrome.runtime.MessageSender): boolean {
+  return sender.id === chrome.runtime.id && sender.tab === undefined
+}
+
+/**
+ * One request to the offscreen document, one reply, over a named port.
+ *
+ * Not `runtime.sendMessage`: that is a broadcast to every listener in the
+ * extension, and OFFSCREEN_COPY carries the secret. A port connects to the
+ * document that accepted it and nothing else. Chrome disconnects it at once
+ * when nobody is listening, which is the "no offscreen document" failure.
+ */
+function askOffscreen(request: OffscreenRequest): Promise<boolean> {
+  return new Promise((resolve) => {
+    let port: chrome.runtime.Port
+    try {
+      port = chrome.runtime.connect({ name: OFFSCREEN_PORT_NAME })
+    } catch {
+      resolve(false)
+      return
+    }
+
+    const settle = (outcome: boolean) => {
+      resolve(outcome)
+      try {
+        port.disconnect()
+      } catch {
+        // Already gone.
+      }
+    }
+
+    port.onMessage.addListener((reply: unknown) => {
+      const parsed = offscreenReplySchema.safeParse(reply)
+      settle(parsed.success && parsed.data.ok)
+    })
+    port.onDisconnect.addListener(() => settle(false))
+    port.postMessage(request)
+  })
+}
+
+/**
+ * Open the offscreen document if it is not already open.
+ *
+ * Chrome allows exactly one per extension, and creating a second throws, so a
+ * concurrent call has to be tolerated rather than prevented: the service worker
+ * can be handling two copies at once.
+ */
+async function ensureOffscreenDocument(): Promise<boolean> {
+  if (!chrome.offscreen) return false
+
+  try {
+    if (await chrome.offscreen.hasDocument()) return true
+  } catch {
+    // Older builds lack hasDocument; fall through and let createDocument decide.
+  }
+
+  try {
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: [chrome.offscreen.Reason.CLIPBOARD],
+      justification: 'Write a vault secret to the clipboard and clear it after a timeout.',
+    })
+    return true
+  } catch {
+    // Already open (a concurrent call won the race) counts as success.
+    try {
+      return await chrome.offscreen.hasDocument()
+    } catch {
+      return false
+    }
+  }
+}

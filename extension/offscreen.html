@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Le Coffre clipboard</title>
+  </head>
+  <body>
+    <!--
+      Offscreen documents are never focused, so `navigator.clipboard.writeText`
+      rejects here. The hidden textarea below is what `document.execCommand`
+      copies from, see src/offscreen/main.ts.
+    -->
+    <textarea id="sink" aria-hidden="true" tabindex="-1"></textarea>
+    <script type="module" src="/src/offscreen/main.ts"></script>
+  </body>
+</html>

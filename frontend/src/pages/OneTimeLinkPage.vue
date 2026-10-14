@@ -44,8 +44,10 @@ async function reveal() {
   try {
     secret.value = await oneTimeLinks.consume.execute(token.value)
     // Drop the token from the address bar as soon as it is spent, so a shoulder
-    // surfer or a shared screenshot does not carry it away.
-    window.history.replaceState(null, '', window.location.pathname)
+    // surfer or a shared screenshot does not carry it away. The current state
+    // is kept: vue-router stores its own entry there, and a null would erase
+    // it, so the back button afterwards would be confused about where it is.
+    window.history.replaceState(window.history.state, '', window.location.pathname)
   } catch (err) {
     // A domain error's message is a fixed, deliberately generic wording
     // chosen upstream (or, for some subclasses, the backend's own detail) —

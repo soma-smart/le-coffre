@@ -17,6 +17,9 @@ class FakeUserRepository(UserRepository):
     def get_by_id(self, user_id: UUID) -> Optional[User]:
         return self.storage.get(user_id)
 
+    def get_by_ids(self, user_ids: list[UUID]) -> list[User]:
+        return [self.storage[user_id] for user_id in user_ids if user_id in self.storage]
+
     def get_by_email(self, email: str) -> Optional[User]:
         for user in self.storage.values():
             if user.email == email:

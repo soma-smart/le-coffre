@@ -123,6 +123,27 @@ describe('OneTimeLinkPage', () => {
     expect(window.location.hash).toBe('')
   })
 
+  it('keeps the router history entry while scrubbing the address bar', async () => {
+    // vue-router keeps its own entry in history.state (back, current,
+    // position). The scrub used to replace it with null, which leaves the
+    // router unable to tell where it is on the next back navigation.
+    const routerState = { back: '/', current: '/one-time-link', position: 3 }
+    window.history.replaceState(routerState, '', '/one-time-link#tok')
+    const repository = new InMemoryOneTimeLinkRepository().seedSecret({
+      token: 'tok',
+      secret: SECRET,
+    })
+
+    const wrapper = mountPage(repository)
+    await wrapper.find('[data-testid="reveal-button"]').trigger('click')
+    await vi.waitFor(() =>
+      expect(wrapper.find('[data-testid="revealed-secret"]').exists()).toBe(true),
+    )
+
+    expect(window.location.hash).toBe('')
+    expect(window.history.state).toEqual(routerState)
+  })
+
   it('shows a neutral error for a spent or unknown token', async () => {
     setFragment('#unknown')
 

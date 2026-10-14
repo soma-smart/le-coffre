@@ -13,6 +13,7 @@ from password_management_context.domain.exceptions import (
 from password_management_context.domain.value_objects import (
     PasswordPermission,
 )
+from shared_kernel.domain.value_objects import CredentialKind
 from tests.fakes import FakeDomainEventPublisher
 from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
 
@@ -200,3 +201,62 @@ def test_given_user_is_group_member_when_getting_password_should_return_decrypte
     result = use_case.execute(command)
 
     assert result == "supersecret"
+
+
+def test_given_an_extension_token_when_getting_password_should_record_the_credential_kind(
+    use_case: GetPasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository,
+):
+    """After a stolen extension token, the trail must say which reads were its.
+
+    The kind is recorded, never used to decide: an extension reads exactly
+    what its user can read, so the only difference is in the audit log.
+    """
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    password_entity = Password(
+        id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        name="Gmail",
+        encrypted_value="encrypted(supersecret)",
+        folder="default",
+    )
+    password_repository.save(password_entity)
+    password_permissions_repository.grant_access(group_id, password_entity.id, PasswordPermission.READ)
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    use_case.execute(
+        GetPasswordCommand(
+            requester_id=user_id, password_id=password_entity.id, credential_kind=CredentialKind.EXTENSION
+        )
+    )
+
+    accessed = [e for e in password_event_repository.events if e["event_type"] == "PasswordAccessedEvent"]
+    assert accessed[-1]["event_data"]["credential_kind"] == "extension"
+
+
+def test_given_a_session_when_getting_password_should_record_the_session_kind_by_default(
+    use_case: GetPasswordUseCase,
+    password_repository: FakePasswordRepository,
+    password_permissions_repository: FakePasswordPermissionsRepository,
+    group_access_gateway: FakeGroupAccessGateway,
+    password_event_repository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    group_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e9")
+    password_entity = Password(
+        id=UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f"),
+        name="Gmail",
+        encrypted_value="encrypted(supersecret)",
+        folder="default",
+    )
+    password_repository.save(password_entity)
+    password_permissions_repository.grant_access(group_id, password_entity.id, PasswordPermission.READ)
+    group_access_gateway.set_group_owner(group_id, user_id)
+
+    use_case.execute(GetPasswordCommand(requester_id=user_id, password_id=password_entity.id))
+
+    accessed = [e for e in password_event_repository.events if e["event_type"] == "PasswordAccessedEvent"]
+    assert accessed[-1]["event_data"]["credential_kind"] == "session"

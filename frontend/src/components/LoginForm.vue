@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { zodResolver } from '@primevue/forms/resolvers/zod'
-import { useToast } from 'primevue'
+import { useToast } from 'primevue/usetoast'
 import { useRouter, useRoute } from 'vue-router'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -135,8 +135,9 @@ const onFormSubmit = async ({ valid, values }: { valid: boolean; values: typeof 
     userStore.clearUser()
     await csrfStore.fetchCsrfToken()
 
-    const redirectPath =
-      typeof route.query.redirect === 'string' ? route.query.redirect.trim() : null
+    // Same rule as the SSO stash: the query value is input, not a path, until
+    // the use case says so. It also drops any SSO handoff this tab abandoned.
+    const redirectPath = auth.resolveLoginRedirect.execute({ requested: route.query.redirect })
 
     if (redirectPath && redirectPath !== '/') {
       await router.push(redirectPath)
@@ -186,6 +187,14 @@ const ssoLoading = ref(false)
 const handleSsoLogin = async () => {
   ssoLoading.value = true
   try {
+    // The SSO round trip leaves the app entirely, so ?redirect= cannot ride
+    // the URL the way it does for the password flow. Stash it; the callback
+    // page consumes it. Without this, "Sign in to continue" from the
+    // extension-approval page dropped SSO users on the home page and the
+    // pairing silently expired. Passed as read: a repeated ?redirect= is an
+    // array, and the use case decides what counts as a path.
+    auth.rememberLoginRedirect.execute({ path: route.query.redirect })
+
     const url = await auth.getSsoUrl.execute()
     const ssoUrl = normalizeExternalHttpUrl(url)
     if (!ssoUrl) {

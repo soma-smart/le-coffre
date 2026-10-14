@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from alembic import command
 from config import (
     get_app_base_url,
     get_database_url,
+    get_extension_token_inactivity_seconds,
     get_jwt_access_token_expiration_seconds,
     get_jwt_algorithm,
     get_jwt_refresh_token_expiration_seconds,
@@ -29,7 +31,9 @@ from config import (
     get_login_lockout_seconds,
     get_login_max_failed_attempts,
     get_rate_limit_auth_max_requests,
+    get_rate_limit_bearer_miss_max_requests,
     get_rate_limit_enabled,
+    get_rate_limit_extension_pairing_max_requests,
     get_rate_limit_one_time_link_max_requests,
     get_rate_limit_trusted_proxies,
     get_rate_limit_trusted_proxy_hops,
@@ -50,11 +54,15 @@ from config import (
 from identity_access_management_context.adapters.primary.fastapi.routes import (
     get_admin_management_router,
     get_authentication_router,
+    get_extension_router,
     get_group_management_router,
     get_service_account_router,
     get_user_management_router,
 )
-from identity_access_management_context.adapters.primary.private_api import GroupOwnershipInfoApi
+from identity_access_management_context.adapters.primary.private_api import (
+    GroupOwnershipInfoApi,
+    UserContactInfoApi,
+)
 from identity_access_management_context.adapters.secondary import (
     BcryptHashingGateway,
     InMemoryLoginLockoutGateway,
@@ -63,11 +71,28 @@ from identity_access_management_context.adapters.secondary import (
     PrivateApiSsoEncryptionGateway,
     SsoUrlValidator,
 )
-from identity_access_management_context.domain.events import OwnerAddedToGroupEvent
+from identity_access_management_context.domain.events import (
+    ExtensionPairedEvent,
+    OwnerAddedToGroupEvent,
+    UserDeletedEvent,
+)
 from monitoring import setup_logging, setup_monitoring
-from notification_context.adapters.primary.events import GroupOwnerPromotedEventSubscriber
-from notification_context.adapters.secondary import PrivateApiGroupOwnershipGateway
-from notification_context.application.use_cases import NotifyGroupOwnerPromotedUseCase
+from notification_context.adapters.primary.events import (
+    ExtensionPairedEventSubscriber,
+    GroupOwnerPromotedEventSubscriber,
+    UserDeletedEventSubscriber,
+    VaultStateChangedEventSubscriber,
+)
+from notification_context.adapters.primary.fastapi.routes import get_notification_router
+from notification_context.adapters.secondary import (
+    PrivateApiGroupOwnershipGateway,
+    PrivateApiRecipientGateway,
+    PrivateApiUserContactGateway,
+)
+from notification_context.application.use_cases import (
+    NotifyExtensionPairedUseCase,
+    NotifyGroupOwnerPromotedUseCase,
+)
 from password_management_context.adapters.primary.fastapi.routes import (
     get_password_management_router,
 )
@@ -75,6 +100,7 @@ from password_management_context.adapters.secondary import (
     PrivateApiPasswordEncryptionGateway,
 )
 from security import (
+    BearerReadOnlyMiddleware,
     CsrfMiddleware,
     CsrfTokenManager,
     InMemoryRateLimiter,
@@ -102,16 +128,24 @@ from vault_management_context.adapters.secondary import (
     CryptoShamirGateway,
     InMemoryShareRepository,
     InMemoryVaultSessionGateway,
+    SqlVaultEventRepository,
+    SqlVaultRepository,
 )
 from vault_management_context.application.use_cases import (
     DecryptUseCase,
     EncryptUseCase,
+    RecordVaultLockedOnStartupUseCase,
 )
+from vault_management_context.domain.events import VaultLockedEvent, VaultUnlockedEvent
 
 setup_logging()
 logging.getLogger().addFilter(RequestIdFilter())
 
 logger = logging.getLogger(__name__)
+
+# Bound on draining vault_notification_executor at shutdown — see
+# _shutdown_vault_notification_executor().
+VAULT_NOTIFICATION_SHUTDOWN_TIMEOUT_SECONDS = 15
 
 
 def run_migrations() -> None:
@@ -143,6 +177,39 @@ def _build_engine(database_url: str):
         kwargs["connect_args"] = {"connect_timeout": 10}
         kwargs["pool_timeout"] = 5
     return create_engine(database_url, **kwargs)
+
+
+def _record_vault_locked_on_startup(session_maker, event_publisher) -> None:
+    """A start always leaves the vault locked (its key only lives in memory): record it once."""
+    try:
+        with session_maker() as session:
+            RecordVaultLockedOnStartupUseCase(
+                SqlVaultRepository(session), event_publisher, SqlVaultEventRepository(session)
+            ).execute()
+    except Exception:  # noqa: BLE001 - bookkeeping for notifications/audit: must never keep the app from starting
+        logger.error("Failed to record the vault lock caused by this server start", exc_info=True)
+
+
+async def _shutdown_vault_notification_executor(executor: ThreadPoolExecutor, timeout_seconds: float) -> None:
+    """Drains queued vault notification emails, bounded.
+
+    Each email is one SmtpEmailGateway.send() with its own 10s connection timeout;
+    an unreachable SMTP relay at shutdown time would otherwise make an unbounded
+    queue of pending notifications block wait=True for that long, delaying — and,
+    on a SIGKILL from an orchestrator's grace period, losing — the OTel flush that
+    must run right after this. Anything still queued past the deadline is
+    cancelled; a send already in flight keeps running in its worker thread but is
+    no longer waited on.
+    """
+    try:
+        await asyncio.wait_for(asyncio.to_thread(executor.shutdown, wait=True), timeout=timeout_seconds)
+    except asyncio.TimeoutError:
+        logger.warning(
+            "Vault notification executor did not drain within %ss — SMTP relay likely "
+            "unreachable. Cancelling queued vault notifications so shutdown can proceed.",
+            timeout_seconds,
+        )
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 @asynccontextmanager
@@ -230,6 +297,33 @@ async def lifespan(app: FastAPI):
     owner_promoted_subscriber = GroupOwnerPromotedEventSubscriber(notify_owner_promoted_use_case)
     domain_event_publisher.subscribe(OwnerAddedToGroupEvent, owner_promoted_subscriber.handle)
 
+    # Notification: a browser extension was paired (reactive, subscribes to
+    # ExtensionPairedEvent). The net under the approval page: whoever approved
+    # a pairing they did not start hears about it within minutes.
+    user_contact_gateway = PrivateApiUserContactGateway(UserContactInfoApi(session_maker=SessionLocal))
+    notify_extension_paired_use_case = NotifyExtensionPairedUseCase(
+        user_contact_gateway, email_gateway, app_base_url=base_url
+    )
+    extension_paired_subscriber = ExtensionPairedEventSubscriber(notify_extension_paired_use_case)
+    domain_event_publisher.subscribe(ExtensionPairedEvent, extension_paired_subscriber.handle)
+
+    # Notification: drop a deleted user's notification preferences (subscribes to UserDeletedEvent)
+    user_deleted_subscriber = UserDeletedEventSubscriber(session_maker=SessionLocal)
+    domain_event_publisher.subscribe(UserDeletedEvent, user_deleted_subscriber.handle)
+
+    # Notification: vault lock / unlock emails to opted-in users (reactive, subscribes
+    # to VaultLockedEvent / VaultUnlockedEvent). Sent off the request thread, in order.
+    vault_notification_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vault-notifications")
+    vault_state_subscriber = VaultStateChangedEventSubscriber(
+        session_maker=SessionLocal,
+        recipient_gateway=PrivateApiRecipientGateway(UserContactInfoApi(session_maker=SessionLocal)),
+        email_gateway=email_gateway,
+        app_base_url=base_url,
+        executor=vault_notification_executor,
+    )
+    domain_event_publisher.subscribe(VaultLockedEvent, vault_state_subscriber.handle_locked)
+    domain_event_publisher.subscribe(VaultUnlockedEvent, vault_state_subscriber.handle_unlocked)
+
     # Rate limiter (in-memory sliding window)
     rate_limiter = InMemoryRateLimiter()
     app.state.rate_limiter = rate_limiter
@@ -240,6 +334,9 @@ async def lifespan(app: FastAPI):
     app.state.rate_limit_vault_sensitive_max_requests = get_rate_limit_vault_sensitive_max_requests()
     app.state.rate_limit_vault_sensitive_window_seconds = get_rate_limit_vault_sensitive_window_seconds()
     app.state.rate_limit_one_time_link_max_requests = get_rate_limit_one_time_link_max_requests()
+    app.state.rate_limit_extension_pairing_max_requests = get_rate_limit_extension_pairing_max_requests()
+    app.state.rate_limit_bearer_miss_max_requests = get_rate_limit_bearer_miss_max_requests()
+    app.state.extension_token_inactivity_seconds = get_extension_token_inactivity_seconds()
     app.state.rate_limit_window_seconds = get_rate_limit_window_seconds()
     app.state.rate_limit_trusted_proxies = get_rate_limit_trusted_proxies()
     app.state.rate_limit_trusted_proxy_hops = get_rate_limit_trusted_proxy_hops()
@@ -258,6 +355,7 @@ async def lifespan(app: FastAPI):
         try:
             logger.info("Starting database migrations...")
             await asyncio.to_thread(run_migrations)
+            await asyncio.to_thread(_record_vault_locked_on_startup, SessionLocal, domain_event_publisher)
             app.state.ready = True
             logger.info("Database migrations completed — application is ready")
         except asyncio.CancelledError:
@@ -278,6 +376,11 @@ async def lifespan(app: FastAPI):
         await asyncio.wait_for(app.state.migration_task, timeout=5.0)
     except (asyncio.CancelledError, asyncio.TimeoutError):
         pass
+    # Let queued vault notifications go out rather than drop them, but bounded —
+    # see _shutdown_vault_notification_executor().
+    await _shutdown_vault_notification_executor(
+        vault_notification_executor, VAULT_NOTIFICATION_SHUTDOWN_TIMEOUT_SECONDS
+    )
     logger.info("Application shutting down")
     # Flush and shut down OTel providers to avoid losing buffered spans/metrics/logs
     if _otel_providers is not None:
@@ -298,6 +401,7 @@ app = FastAPI(lifespan=lifespan, root_path="/api")
 # Add CSRF protection middleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CsrfMiddleware)
+app.add_middleware(BearerReadOnlyMiddleware)
 app.add_middleware(RequestIdMiddleware)
 
 # Add rate limiting middleware (runs before CSRF since middlewares execute in reverse order)
@@ -401,3 +505,5 @@ app.include_router(get_authentication_router())
 app.include_router(get_group_management_router())
 app.include_router(get_service_account_router())
 app.include_router(get_admin_management_router())
+app.include_router(get_extension_router())
+app.include_router(get_notification_router())

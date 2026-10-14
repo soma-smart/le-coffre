@@ -8,6 +8,7 @@ class FakeAdminEventRepository:
 
     def __init__(self):
         self.events: list[dict[str, Any]] = []
+        self.raise_on_append = False
 
     def append_event(
         self,
@@ -17,6 +18,8 @@ class FakeAdminEventRepository:
         actor_user_id: UUID | None,
         event_data: dict,
     ) -> None:
+        if self.raise_on_append:
+            raise RuntimeError("simulated audit storage failure")
         self.events.append(
             {
                 "event_id": event_id,

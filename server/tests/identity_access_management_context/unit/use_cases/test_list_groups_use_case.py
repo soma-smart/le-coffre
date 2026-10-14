@@ -148,3 +148,84 @@ def test_given_group_with_members_when_listing_groups_should_return_members_not_
 
     assert len(result.groups) == 1
     assert result.groups[0].members == [member_id]
+
+
+def test_given_scoped_request_when_listing_groups_should_drop_groups_the_user_is_not_in(
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    """The containment behind GET /extension/groups.
+
+    Unscoped, this use case answers with every group on the instance and leaves
+    the filtering to the browser -- fine for the web app, whose session is
+    already as privileged as the user. An extension token is not: it lives in
+    browser storage and has had its admin role stripped precisely so it cannot
+    enumerate other people's data. Letting it read the full group directory,
+    owner and member lists included, would give that back through another door.
+    """
+    caller = uuid4()
+    stranger = uuid4()
+    mine = uuid4()
+    theirs = uuid4()
+
+    group_repository.save_group(Group(id=mine, name="Marketing", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, user_id=None))
+    group_member_repository.add_member(mine, caller, is_owner=False)
+    group_member_repository.add_member(theirs, stranger, is_owner=True)
+
+    result = use_case.execute(ListGroupsCommand(only_for_user_id=caller))
+
+    assert [group.id for group in result.groups] == [mine]
+
+
+def test_given_scoped_request_when_listing_groups_should_keep_groups_the_user_owns(
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    caller = uuid4()
+    owned = uuid4()
+
+    group_repository.save_group(Group(id=owned, name="Ops", is_personal=False, user_id=None))
+    group_member_repository.add_member(owned, caller, is_owner=True)
+
+    result = use_case.execute(ListGroupsCommand(only_for_user_id=caller))
+
+    assert [group.id for group in result.groups] == [owned]
+
+
+def test_given_scoped_request_when_listing_groups_should_keep_the_callers_personal_group(
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    """A personal group carries its owner in `user_id`, with no membership row."""
+    caller = uuid4()
+    stranger = uuid4()
+    mine = uuid4()
+    theirs = uuid4()
+
+    group_repository.save_group(Group(id=mine, name="Alice", is_personal=True, user_id=caller))
+    group_repository.save_group(Group(id=theirs, name="Bob", is_personal=True, user_id=stranger))
+
+    result = use_case.execute(ListGroupsCommand(only_for_user_id=caller))
+
+    assert [group.id for group in result.groups] == [mine]
+
+
+def test_given_unscoped_request_when_listing_groups_should_still_return_everything(
+    use_case,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    """The web app's behaviour must not change: scoping is opt-in."""
+    stranger = uuid4()
+    theirs = uuid4()
+
+    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, user_id=None))
+    group_member_repository.add_member(theirs, stranger, is_owner=True)
+
+    result = use_case.execute(ListGroupsCommand())
+
+    assert [group.id for group in result.groups] == [theirs]

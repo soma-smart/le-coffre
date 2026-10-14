@@ -8,6 +8,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Images are built and scanned locally and only ever exchanged as run
+# artifacts, which need no token scope. The Grype SARIF is printed, not
+# uploaded to code scanning, so security-events stays out too.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

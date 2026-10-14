@@ -379,6 +379,53 @@ describe('PasswordsWorkspace (via HomePage)', () => {
     expect(router.currentRoute.value.query.password).toBe('p2')
   })
 
+  // The link behind "Edit in vault" in the browser extension. Ported by hand
+  // from the old PasswordsList when the three-pane view replaced it, so these
+  // pin the port as much as the behaviour.
+  describe('?edit= deep link from the browser extension', () => {
+    it('opens the edit modal once the list has loaded, then strips the param', async () => {
+      // Mounting runs the `immediate` watch before the first fetch is even
+      // requested, with an empty list and loading still false. Waiting on
+      // hasLoaded is what keeps this from reporting a real password missing.
+      const passwords = [
+        makePassword({ id: 'p1', name: 'Gmail' }),
+        makePassword({ id: 'p2', name: 'GitHub' }),
+      ]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering?edit=p2')
+
+      const modal = wrapper.findComponent({ name: 'CreatePasswordModal' })
+      expect(modal.props('visible')).toBe(true)
+      expect(modal.props('editPassword')?.id).toBe('p2')
+      expect(toastAdd).not.toHaveBeenCalled()
+      expect(router.currentRoute.value.query.edit).toBeUndefined()
+    })
+
+    it('refuses a read-only password without opening the modal', async () => {
+      const passwords = [makePassword({ id: 'p1', name: 'Gmail', canWrite: false })]
+      const { wrapper, router } = await mountWorkspace(passwords, '/passwords/Engineering?edit=p1')
+
+      expect(wrapper.findComponent({ name: 'CreatePasswordModal' }).props('visible')).toBe(false)
+      expect(toastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'warn', summary: 'Read-only password' }),
+      )
+      expect(router.currentRoute.value.query.edit).toBeUndefined()
+    })
+
+    it('reports an unknown id and strips it, so it cannot re-open on a later navigation', async () => {
+      const passwords = [makePassword({ id: 'p1', name: 'Gmail' })]
+      const { wrapper, router } = await mountWorkspace(
+        passwords,
+        '/passwords/Engineering?edit=does-not-exist',
+      )
+
+      expect(wrapper.findComponent({ name: 'CreatePasswordModal' }).props('visible')).toBe(false)
+      expect(toastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: 'warn', summary: 'Password not found' }),
+      )
+      expect(router.currentRoute.value.query.edit).toBeUndefined()
+    })
+  })
+
   it('opens the history modal from the detail pane\'s "View All"', async () => {
     const passwords = [makePassword({ id: 'p1', name: 'Gmail' })]
     const { wrapper } = await mountWorkspace(passwords, '/passwords/Engineering')

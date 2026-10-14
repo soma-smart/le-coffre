@@ -1,0 +1,15 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "include": ["vite.config.*", "vitest.config.*", "eslint.config.*", "scripts/**/*"],
+  "compilerOptions": {
+    "noEmit": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    // vitest.config.ts imports ./vite.config.ts with its extension, because
+    // Vite's native config loader warns on extensionless relative imports.
+    // Safe here: this project is noEmit.
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  }
+}

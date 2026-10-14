@@ -57,9 +57,15 @@ onMounted(async () => {
     userStore.clearUser()
     await csrfStore.fetchCsrfToken()
 
-    await router.push('/')
+    // Home unless a sign-in round trip stashed a destination, e.g. the
+    // extension-approval page. The use case re-validates the stored value, so
+    // only an in-app path can come back.
+    await router.push(auth.consumeLoginRedirect.execute() ?? '/')
   } catch (error) {
     console.error('SSO callback error:', error)
+    // The round trip is over and nothing will navigate to the stashed
+    // destination; leaving it would attach it to the next login in this tab.
+    auth.forgetLoginRedirect.execute()
     // AuthDomainError/Error messages come from the backend or an unknown
     // failure — not ours to translate. Only the final fallback we author
     // ourselves is.

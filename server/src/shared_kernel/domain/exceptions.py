@@ -9,3 +9,16 @@ class AccessDeniedError(Exception):
 class EmailDeliveryError(Exception):
     def __init__(self, reason: str):
         super().__init__(f"Failed to send email: {reason}")
+
+
+class ReadOnlyCredentialError(Exception):
+    """Raised when a read-only credential attempts a mutating request.
+
+    Maps to 403 rather than 401: the credential is valid, it simply cannot do
+    this. Telling the caller to re-authenticate would be wrong and would send a
+    browser extension into a pointless re-pairing loop.
+    """
+
+    def __init__(self, method: str):
+        super().__init__(f"This credential is read-only and cannot perform a {method.upper()} request")
+        self.method = method

@@ -79,6 +79,47 @@ updates:
           - "minor"
           - "patch"
 
+  # Browser extension: same bun-only lockfile contract as the frontend, so the
+  # same `dependabot-lockfile.yml` workflow regenerates `extension/bun.lock`
+  # after Dependabot edits `extension/package.json`.
+  - package-ecosystem: npm
+    directory: /extension
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    cooldown:
+      default-days: 3
+    open-pull-requests-limit: 4
+    labels:
+      - dependencies
+      - npm
+    reviewers:
+      - vianneybacoup
+      - Quentin-L-Inge
+      - gmalonga
+    commit-message:
+      prefix: "chore(deps)"
+    ignore:
+      # Bloquer les major bumps automatiques (risque de breaking changes)
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      extension-production-patch:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+      extension-production-minor:
+        dependency-type: "production"
+        update-types:
+          - "minor"
+      extension-dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+
   # GitHub Actions
   - package-ecosystem: github-actions
     directory: /.github/workflows

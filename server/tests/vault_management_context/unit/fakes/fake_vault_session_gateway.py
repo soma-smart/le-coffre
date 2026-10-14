@@ -16,8 +16,10 @@ class FakeVaultSessionGateway(VaultSessionGateway):
             raise ValueError("No decrypted key stored in memory")
         return self._decrypted_key
 
-    def clear_decrypted_key(self) -> None:
+    def clear_decrypted_key(self) -> bool:
+        was_unlocked = self._decrypted_key is not None
         self._decrypted_key = None
+        return was_unlocked
 
     def is_vault_locked(self) -> bool:
         return self._decrypted_key is None
