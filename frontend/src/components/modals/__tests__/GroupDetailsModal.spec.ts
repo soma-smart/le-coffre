@@ -68,11 +68,7 @@ const DialogStub = defineComponent({
   props: ['visible', 'header'],
   setup(props, { slots }) {
     return () =>
-      h('div', { 'data-testid': 'dialog' }, [
-        props.header,
-        slots.default?.(),
-        slots.footer?.(),
-      ])
+      h('div', { 'data-testid': 'dialog' }, [props.header, slots.default?.(), slots.footer?.()])
   },
 })
 

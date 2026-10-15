@@ -68,10 +68,7 @@ describe('GroupHistoryModal self-leave labelling', () => {
 
   it('tags an owner-initiated removal as a removal, not a departure', async () => {
     const repo = new InMemoryGroupRepository().seed(group)
-    repo.addEvent(
-      group.id,
-      makeEvent({ actorUserId: 'user-1', eventData: { userId: 'user-2' } }),
-    )
+    repo.addEvent(group.id, makeEvent({ actorUserId: 'user-1', eventData: { userId: 'user-2' } }))
 
     const wrapper = await mountModal(repo)
 

@@ -193,7 +193,9 @@ describe('GroupsPage leave group', () => {
   })
 
   it('disables the leave button for an owner who is not the sole owner', async () => {
-    const wrapper = await mountPage([sharedGroup({ owners: [USER_ID, 'owner-2'], members: ['member-1'] })])
+    const wrapper = await mountPage([
+      sharedGroup({ owners: [USER_ID, 'owner-2'], members: ['member-1'] }),
+    ])
 
     const button = wrapper.find('.pi-sign-out').element.closest('button')
     expect(button?.disabled).toBe(true)

@@ -149,9 +149,7 @@ def test_given_non_member_when_leaving_group_then_raise_user_not_member_exceptio
     non_member_id = UUID("323e4567-e89b-12d3-a456-426614174002")
 
     owner = User(id=owner_id, username="owner", email="owner@example.com", name="Owner User")
-    non_member = User(
-        id=non_member_id, username="nonmember", email="nonmember@example.com", name="Non Member User"
-    )
+    non_member = User(id=non_member_id, username="nonmember", email="nonmember@example.com", name="Non Member User")
     user_repository.save(owner)
     user_repository.save(non_member)
 
