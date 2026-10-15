@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import GroupsPage from '@/pages/GroupsPage.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
@@ -174,6 +174,23 @@ function findConfirmationModal(wrapper: Awaited<ReturnType<typeof mountPage>>, t
 }
 
 describe('GroupsPage leave group', () => {
+  beforeEach(() => {
+    toastAdd.mockClear()
+  })
+
+  it('disables the leave button for a sole owner with other members, with a reason', async () => {
+    const wrapper = await mountPage([
+      sharedGroup({ owners: [USER_ID], members: ['member-1', 'member-2'] }),
+    ])
+
+    const button = wrapper.find('.pi-sign-out').element.closest('button')
+    expect(button?.disabled).toBe(true)
+    expect(wrapper.find('[aria-describedby="leave-blocked-reason-group-owned"]').exists()).toBe(
+      true,
+    )
+    expect(wrapper.text()).toContain('Promote another member to owner, then demote yourself')
+  })
+
   it('disables the leave button for an owner who is not the sole owner', async () => {
     const wrapper = await mountPage([sharedGroup({ owners: [USER_ID, 'owner-2'], members: ['member-1'] })])
 
@@ -211,7 +228,6 @@ describe('GroupsPage leave group', () => {
   })
 
   it('shows a translated error toast and refreshes, without leaking the raw error message', async () => {
-    toastAdd.mockClear()
     const group = sharedGroup({ owners: ['owner-2'], members: [USER_ID] })
     const wrapper = await mountPage([group], currentUser, new FailingRemoveMemberGroupRepository())
 

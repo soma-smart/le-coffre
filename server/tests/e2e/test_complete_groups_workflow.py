@@ -8,6 +8,7 @@ This test covers the entire group management system in one comprehensive workflo
 4. Member management (add, remove, idempotency, authorization)
 5. Owner promotion (promote, idempotency, authorization)
 6. Edge cases (non-existent user/group, personal group restrictions)
+8. Leaving a group (self-removal, re-leave rejection, owner blocked)
 """
 
 from uuid import uuid4
@@ -449,7 +450,10 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     assert leave_group_response.status_code == 201
     leave_group_id = leave_group_response.json()["id"]
 
-    authenticated_admin_client.post(f"/api/groups/{leave_group_id}/members", json={"user_id": user1_id})
+    add_member_response = authenticated_admin_client.post(
+        f"/api/groups/{leave_group_id}/members", json={"user_id": user1_id}
+    )
+    assert add_member_response.status_code == 201, add_member_response.text
 
     # Step 8.2: A member can remove themselves via the same DELETE endpoint
     # used by an owner removing someone else — called with their own id.

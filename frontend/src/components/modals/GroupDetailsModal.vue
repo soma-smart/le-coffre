@@ -86,10 +86,18 @@ const {
 // Read from `groupDetails` (reloaded after every mutation via `loadAll()`),
 // not the `group` prop, which is the parent's snapshot from whenever the
 // modal was opened and goes stale the moment a promote/demote/remove inside
-// this modal changes who's blocked. Falls back to the prop only before the
-// first `loadAll()` resolves. Shared with GroupsPage.vue's own computation
-// via `leaveBlockReason` so the two screens can't diverge again.
-const groupForLeaveCheck = computed(() => groupDetails.value ?? props.group ?? null)
+// this modal changes who's blocked. Only trusted once it actually matches the
+// group currently shown — `groupDetails` isn't reset when `props.group`
+// changes, so right after switching groups it can still hold the previous
+// group's data while `loadAll()` for the new one is in flight. Falls back to
+// the prop in that case. Shared with GroupsPage.vue's own computation via
+// `leaveBlockReason` so the two screens can't diverge again.
+const groupForLeaveCheck = computed(() => {
+  if (groupDetails.value && props.group && groupDetails.value.id === props.group.id) {
+    return groupDetails.value
+  }
+  return props.group ?? null
+})
 
 const isLeaveBlockedByOwnership = computed(() => {
   if (!groupForLeaveCheck.value) return false
@@ -237,23 +245,27 @@ const handleDemoteOwner = (user: User) => {
 }
 
 const handleLeaveGroup = () => {
-  const group = groupForLeaveCheck.value
-  if (!group) return
+  // Always emit `props.group`, never `groupForLeaveCheck`: on GroupsPage,
+  // `props.group` is `selectedGroup`, a computed backed live by the store, so
+  // it's never stale — unlike `groupDetails`, which can still belong to a
+  // previously selected group right after switching.
+  if (!props.group) return
   visible.value = false
-  emit('leaveGroup', group)
+  emit('leaveGroup', props.group)
 }
 
+// Single watcher for both triggers that should (re)load the member list:
+// the modal becoming visible, or the group it's showing changing. Watching
+// `props.group` by identity rather than `.id` double-fired `loadAll()`,
+// because each `groupsStore.refresh()` rebuilds group objects via `toGroup`
+// even when the id is unchanged.
 watch(
-  () => props.group,
-  (newGroup) => {
-    if (newGroup && visible.value) void loadAll()
+  [() => props.group?.id, visible],
+  ([groupId, isVisible]) => {
+    if (groupId && isVisible) void loadAll()
   },
   { immediate: true },
 )
-
-watch(visible, (isVisible) => {
-  if (isVisible && props.group) void loadAll()
-})
 </script>
 
 <template>
@@ -355,18 +367,27 @@ watch(visible, (isVisible) => {
                       :loading="isActing"
                       @click="handleDemoteOwner(user)"
                     />
-                    <Button
-                      v-if="user.id === currentUserId"
-                      icon="pi pi-sign-out"
-                      text
-                      rounded
-                      severity="danger"
-                      size="small"
-                      :disabled="isLeaveBlockedByOwnership"
-                      :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
-                      v-tooltip.top="leaveButtonTooltip"
-                      @click="handleLeaveGroup"
-                    />
+                    <span v-if="user.id === currentUserId" v-tooltip.top="leaveButtonTooltip">
+                      <Button
+                        icon="pi pi-sign-out"
+                        text
+                        rounded
+                        severity="danger"
+                        size="small"
+                        :disabled="isLeaveBlockedByOwnership"
+                        :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
+                        :aria-describedby="
+                          isLeaveBlockedByOwnership ? 'leave-blocked-reason-modal' : undefined
+                        "
+                        @click="handleLeaveGroup"
+                      />
+                      <span
+                        v-if="isLeaveBlockedByOwnership"
+                        id="leave-blocked-reason-modal"
+                        class="sr-only"
+                        >{{ leaveButtonTooltip }}</span
+                      >
+                    </span>
                   </div>
                 </div>
               </template>

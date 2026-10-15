@@ -55,7 +55,7 @@
 
       <!-- Events Table -->
       <DataTable
-        :value="events"
+        :value="displayedEvents"
         :loading="loading"
         paginator
         :rows="10"
@@ -218,11 +218,36 @@ const loading = ref(false)
 const dateRange = ref<Date[]>([new Date(), new Date()])
 const selectedEventTypes = ref<string[]>([])
 
+// A self-leave has no eventType of its own on the backend — it's stored as a
+// plain UserRemovedFromGroupEvent (see `isSelfLeave` below) — so the filter
+// menu needs a virtual type to offer it as a distinct, correctly-labelled
+// entry instead of collapsing it under "User Removed From Group".
+const SELF_LEAVE_FILTER_TYPE = 'UserLeftGroupEvent'
+
+const filterEventType = (event: GroupEvent): string =>
+  isSelfLeave(event) ? SELF_LEAVE_FILTER_TYPE : event.eventType
+
 const availableEventTypes = computed(() => {
-  const types = new Set(events.value.map((event) => event.eventType))
+  const types = new Set(events.value.map((event) => filterEventType(event)))
   return Array.from(types)
-    .map((eventType) => ({ label: translateEventType(t, eventType), value: eventType }))
+    .map((type) => ({
+      label:
+        type === SELF_LEAVE_FILTER_TYPE
+          ? t('components.groupHistoryModal.leftGroupEventType')
+          : translateEventType(t, type),
+      value: type,
+    }))
     .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+// The virtual type above only exists client-side: the backend has a single
+// UserRemovedFromGroupEvent type, so selecting it still fetches both self-
+// leaves and real removals, then this narrows the rows actually shown down
+// to the filter's label.
+const displayedEvents = computed(() => {
+  if (selectedEventTypes.value.length === 0) return events.value
+  const selected = new Set(selectedEventTypes.value)
+  return events.value.filter((event) => selected.has(filterEventType(event)))
 })
 
 const fetchEvents = async () => {
@@ -244,9 +269,20 @@ const fetchEvents = async () => {
       endDate = end.toISOString()
     }
 
+    const backendEventTypes =
+      selectedEventTypes.value.length > 0
+        ? Array.from(
+            new Set(
+              selectedEventTypes.value.map((type) =>
+                type === SELF_LEAVE_FILTER_TYPE ? 'UserRemovedFromGroupEvent' : type,
+              ),
+            ),
+          )
+        : undefined
+
     events.value = await groupUseCases.listEvents.execute({
       groupId: props.group.id,
-      eventTypes: selectedEventTypes.value.length > 0 ? selectedEventTypes.value : undefined,
+      eventTypes: backendEventTypes,
       startDate,
       endDate,
     })
