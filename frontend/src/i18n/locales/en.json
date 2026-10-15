@@ -288,7 +288,7 @@
       "groupNamePlaceholder": "Enter group name",
       "deleteQuestion": "Are you sure you want to delete \"{name}\"?",
       "deleteDescription": "This action cannot be undone.\nAll group members will lose access.",
-      "deleteSoleMemberReason": "You are the only member of this group — leaving it would mean deleting it.",
+      "deleteSoleMemberDescription": "You are the only member of this group — leaving it would mean deleting it.\nThis action cannot be undone.",
       "cannotDeleteSummary": "Cannot Delete Group",
       "cannotDeleteHasPasswords": "This group contains passwords and cannot be deleted. Please remove all passwords first.",
       "leaveQuestion": "Are you sure you want to leave \"{name}\"?",

@@ -96,8 +96,8 @@ const canManageServiceAccounts = (group: Group) => {
 const groupHasPasswords = ref(false)
 
 // Set when the delete modal was reached via "Leave" on a sole-member group,
-// rather than via the explicit delete action — adds a line explaining why
-// deleting is what's on offer. Reset on every open, like `groupHasPasswords`.
+// rather than via the explicit delete action — swaps in a standalone
+// description explaining why. Reset on every open, like `groupHasPasswords`.
 const deleteReason = ref<'leave' | null>(null)
 
 // Computed properties for delete modal
@@ -108,8 +108,11 @@ const deleteModalQuestion = computed(() => {
 })
 
 const deleteModalDescription = computed(() => {
+  // A standalone description, not a prefix on top of `deleteDescription`:
+  // that one says "all members will lose access", which contradicts having
+  // just told the user they're the only member.
   if (deleteReason.value === 'leave') {
-    return `${t('pages.groups.deleteSoleMemberReason')}\n${t('pages.groups.deleteDescription')}`
+    return t('pages.groups.deleteSoleMemberDescription')
   }
   return t('pages.groups.deleteDescription')
 })
