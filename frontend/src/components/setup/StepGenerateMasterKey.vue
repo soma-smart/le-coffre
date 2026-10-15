@@ -2,11 +2,12 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from 'vue-i18n'
+import type { IssuedShareLink } from '@/domain/vault/ShareLink'
 import { VaultDomainError } from '@/domain/vault/errors'
 import { useContainer } from '@/plugins/container'
 
 const emit = defineEmits<{
-  (e: 'shares-generated', data: { shares: string[]; setupId: string }): void
+  (e: 'share-links-issued', data: { shareLinks: IssuedShareLink[]; setupId: string }): void
 }>()
 
 const toast = useToast()
@@ -18,6 +19,8 @@ const { vault } = useContainer()
 
 const shamirRef = ref()
 const isGeneratingMasterKey = ref(false)
+// Plain HTTP: custodians could not open their links, so do not even offer it.
+const canIssueShareLinks = vault.create.canIssueShareLinks()
 
 async function generateMasterKey() {
   isGeneratingMasterKey.value = true
@@ -26,7 +29,7 @@ async function generateMasterKey() {
       nbShares: shamirRef.value.state.shares,
       threshold: shamirRef.value.state.threshold,
     })
-    emit('shares-generated', { shares: setup.shares, setupId: setup.setupId })
+    emit('share-links-issued', { shareLinks: setup.shareLinks, setupId: setup.setupId })
   } catch (error) {
     const detail =
       error instanceof VaultDomainError
@@ -64,12 +67,22 @@ async function generateMasterKey() {
       {{ t('components.setup.generateMasterKey.description3') }}
     </p>
     <ShamirInputs ref="shamirRef" />
+    <Message
+      v-if="!canIssueShareLinks"
+      severity="error"
+      :closable="false"
+      class="mt-4"
+      data-testid="share-links-unsupported"
+    >
+      {{ t('components.setup.generateMasterKey.insecureContext') }}
+    </Message>
     <div class="flex justify-center mt-4">
       <Button
         :loading="isGeneratingMasterKey"
         @click="generateMasterKey"
         :label="t('components.setup.generateMasterKey.generateButton')"
-        :disabled="!shamirRef?.isValidSSSConfig || isGeneratingMasterKey"
+        :disabled="!canIssueShareLinks || !shamirRef?.isValidSSSConfig || isGeneratingMasterKey"
+        data-testid="generate-master-key"
       />
     </div>
   </div>

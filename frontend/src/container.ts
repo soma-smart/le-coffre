@@ -7,6 +7,7 @@ import type { OneTimeLinkRepository } from '@/application/ports/OneTimeLinkRepos
 import type { ServiceAccountRepository } from '@/application/ports/ServiceAccountRepository'
 import type { PasswordRepository } from '@/application/ports/PasswordRepository'
 import type { PreferencesGateway } from '@/application/ports/PreferencesGateway'
+import type { ShareLinkCipher } from '@/application/ports/ShareLinkCipher'
 import type { StatisticsGateway } from '@/application/ports/StatisticsGateway'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
@@ -68,6 +69,8 @@ import { UpdateShareExpirationUseCase } from '@/application/password/UpdateShare
 import { CreateVaultUseCase } from '@/application/vault/CreateVault'
 import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
 import { LockVaultUseCase } from '@/application/vault/LockVault'
+import { RetrieveVaultShareUseCase } from '@/application/vault/RetrieveVaultShare'
+import { AcknowledgeVaultShareUseCase } from '@/application/vault/AcknowledgeVaultShare'
 import { UnlockVaultUseCase } from '@/application/vault/UnlockVault'
 import { ValidateVaultSetupUseCase } from '@/application/vault/ValidateVaultSetup'
 import { ReadPreferenceUseCase } from '@/application/preferences/ReadPreference'
@@ -106,6 +109,7 @@ export interface Ports {
   extensionGateway: ExtensionGateway
   loginRedirectGateway: LoginRedirectGateway
   notificationPreferencesRepository: NotificationPreferencesRepository
+  shareLinkCipher: ShareLinkCipher
 }
 
 export interface Container {
@@ -163,6 +167,8 @@ export interface Container {
     validateSetup: ValidateVaultSetupUseCase
     unlock: UnlockVaultUseCase
     lock: LockVaultUseCase
+    retrieveShare: RetrieveVaultShareUseCase
+    acknowledgeShare: AcknowledgeVaultShareUseCase
   }
   auth: {
     login: LoginWithPasswordUseCase
@@ -260,10 +266,15 @@ export function buildContainer(ports: Ports): Container {
     },
     vault: {
       getStatus: new GetVaultStatusUseCase(ports.vaultRepository),
-      create: new CreateVaultUseCase(ports.vaultRepository),
+      create: new CreateVaultUseCase(ports.vaultRepository, ports.shareLinkCipher),
       validateSetup: new ValidateVaultSetupUseCase(ports.vaultRepository),
       unlock: new UnlockVaultUseCase(ports.vaultRepository),
       lock: new LockVaultUseCase(ports.vaultRepository),
+      retrieveShare: new RetrieveVaultShareUseCase(ports.vaultRepository, ports.shareLinkCipher),
+      acknowledgeShare: new AcknowledgeVaultShareUseCase(
+        ports.vaultRepository,
+        ports.shareLinkCipher,
+      ),
     },
     auth: {
       login: new LoginWithPasswordUseCase(ports.authGateway),
