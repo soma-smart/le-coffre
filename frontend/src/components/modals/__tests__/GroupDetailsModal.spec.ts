@@ -143,10 +143,13 @@ describe('GroupDetailsModal leave action', () => {
     await wrapper.setProps({ group: groupBeta, visible: true })
     await flushPromises()
 
-    // The fetch for Beta failed, so `groupDetails` is still unset/Alpha's —
-    // but the modal must show Beta's own data for the decision and the click.
+    // The fetch for Beta failed. The modal must show Beta's own data for the
+    // decision and the click — and `loadAll` resets `groupDetails` as soon as
+    // the group prop changes, so the member list doesn't keep showing
+    // Alpha's member ("Member One") under Beta's title either.
     expect(wrapper.text()).toContain('Beta')
     expect(wrapper.text()).not.toContain('Alpha')
+    expect(wrapper.text()).not.toContain('Member One')
 
     await wrapper.find('.pi-sign-out').trigger('click')
 

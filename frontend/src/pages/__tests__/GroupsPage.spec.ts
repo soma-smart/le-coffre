@@ -6,6 +6,7 @@ import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
+import type { ListGroupsFilters } from '@/application/ports/GroupRepository'
 import type { Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
 
@@ -169,6 +170,23 @@ class FailingRemoveMemberGroupRepository extends InMemoryGroupRepository {
   }
 }
 
+/** Fails every `list()` call from the Nth one onward (1-indexed). */
+class FailingListFromCallGroupRepository extends InMemoryGroupRepository {
+  private calls = 0
+
+  constructor(private readonly failFromCall: number) {
+    super()
+  }
+
+  async list(filters?: ListGroupsFilters): Promise<Group[]> {
+    this.calls += 1
+    if (this.calls >= this.failFromCall) {
+      throw new Error('network error listing groups')
+    }
+    return super.list(filters)
+  }
+}
+
 function findConfirmationModal(wrapper: Awaited<ReturnType<typeof mountPage>>, title: string) {
   return wrapper.findAllComponents(ConfirmationModal).find((c) => c.props('title') === title)
 }
@@ -207,6 +225,7 @@ describe('GroupsPage leave group', () => {
     expect(button?.disabled).toBe(false)
 
     await wrapper.find('.pi-sign-out').trigger('click')
+    await flushPromises()
 
     const leaveModal = findConfirmationModal(wrapper, 'Leave group')
     expect(leaveModal?.props('visible')).toBe(false)
@@ -225,6 +244,28 @@ describe('GroupsPage leave group', () => {
     const wrapper = await mountPage([sharedGroup({ owners: ['owner-2'], members: [USER_ID] })])
 
     await wrapper.find('.pi-sign-out').trigger('click')
+    await flushPromises()
+
+    const leaveModal = findConfirmationModal(wrapper, 'Leave group')
+    expect(leaveModal?.props('visible')).toBe(true)
+
+    const deleteModal = findConfirmationModal(wrapper, 'Delete group')
+    expect(deleteModal?.props('visible')).toBe(false)
+  })
+
+  it('refreshes before deciding, so a stale sole-member read cannot cause a delete', async () => {
+    const group = sharedGroup({ owners: [USER_ID], members: [] })
+    const repo = new InMemoryGroupRepository()
+    const wrapper = await mountPage([group], currentUser, repo)
+
+    // Simulates another member joining from elsewhere — within the store's
+    // 30s cache window, so the page's own cached copy still reads as
+    // sole-member until `openLeaveGroupDialog` re-reads this one group
+    // directly.
+    await repo.addMember(group.id, 'member-2')
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+    await flushPromises()
 
     const leaveModal = findConfirmationModal(wrapper, 'Leave group')
     expect(leaveModal?.props('visible')).toBe(true)
@@ -257,6 +298,7 @@ describe('GroupsPage leave group', () => {
     const wrapper = await mountPage([group])
 
     await wrapper.find('.pi-sign-out').trigger('click')
+    await flushPromises()
     const modal = findConfirmationModal(wrapper, 'Leave group')
     modal!.vm.$emit('confirm')
     await flushPromises()
@@ -267,11 +309,34 @@ describe('GroupsPage leave group', () => {
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }))
   })
 
+  it('removes the group card immediately even when the post-leave refresh fails', async () => {
+    const group = sharedGroup({ owners: ['owner-2'], members: [USER_ID] })
+    // list() calls: 1) initial mount, 2) refresh() after the successful leave
+    // — only the second should fail, mirroring a refresh that happens to
+    // error out right after a DELETE that otherwise went through fine.
+    // (openLeaveGroupDialog's own freshness check calls `get()`, not
+    // `list()`, so it doesn't count here.)
+    const repo = new FailingListFromCallGroupRepository(2)
+    const wrapper = await mountPage([group], currentUser, repo)
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+    await flushPromises()
+    const modal = findConfirmationModal(wrapper, 'Leave group')
+    modal!.vm.$emit('confirm')
+    await flushPromises()
+
+    // The DELETE succeeded and the group was dropped from the local list
+    // right away — the refresh failing afterward must not resurrect the card.
+    expect(wrapper.find('.pi-sign-out').exists()).toBe(false)
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }))
+  })
+
   it('shows a translated error toast and refreshes, without leaking the raw error message', async () => {
     const group = sharedGroup({ owners: ['owner-2'], members: [USER_ID] })
     const wrapper = await mountPage([group], currentUser, new FailingRemoveMemberGroupRepository())
 
     await wrapper.find('.pi-sign-out').trigger('click')
+    await flushPromises()
     const modal = findConfirmationModal(wrapper, 'Leave group')
     modal!.vm.$emit('confirm')
     await flushPromises()

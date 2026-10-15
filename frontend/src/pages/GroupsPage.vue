@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
 import { usePasswordAccessStore } from '@/stores/passwordAccess'
+import { useContainer } from '@/plugins/container'
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
@@ -24,6 +25,7 @@ const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
 const passwordAccessStore = usePasswordAccessStore()
+const { groups: groupUseCases } = useContainer()
 const { sharedGroups, userPersonalGroup, loading } = storeToRefs(groupsStore)
 const { isAdmin } = storeToRefs(userStore)
 
@@ -325,17 +327,41 @@ const handleDeleteGroup = async () => {
   }
 }
 
+// Which group's leave button is currently waiting on the fresh re-read
+// below, so the card can show a spinner instead of looking unresponsive.
+const checkingLeaveGroupId = ref<string | null>(null)
+
 // Open leave-group dialog, from either the card icon or the details modal
 // (which closes itself before emitting). A sole member can't leave without
 // the group ending up without anyone in it, so this routes straight to the
 // existing delete-confirmation modal instead of opening a leave modal that
 // would only explain why leaving isn't on offer — one modal, one real choice.
-const openLeaveGroupDialog = (group: Group) => {
-  if (isSoleMemberOf(group, groupsStore.currentUserId)) {
-    openDeleteGroupDialog(group, 'leave')
+//
+// That decision must not be made on `groupsStore`'s 30s-cached list: a stale
+// "sole member" reading would route a group that has since gained a member
+// straight to deletion, destroying it for everyone instead of just leaving.
+// Re-read this one group directly (bypassing the store, and its cache)
+// rather than a full `fetchAllGroups(true)` — the latter flips the store's
+// shared `loading`, which the template uses to blank out the entire grid, a
+// worse flash for a single button click than it's worth. Falls back to the
+// cached group if the re-read itself fails; the leave/delete call right
+// after will surface a real error if that cache was actually wrong.
+const openLeaveGroupDialog = async (group: Group) => {
+  checkingLeaveGroupId.value = group.id
+  let freshGroup = group
+  try {
+    freshGroup = await groupUseCases.get.execute({ groupId: group.id })
+  } catch (error) {
+    console.error('Failed to refresh group before leave/delete decision:', error)
+  } finally {
+    checkingLeaveGroupId.value = null
+  }
+
+  if (isSoleMemberOf(freshGroup, groupsStore.currentUserId)) {
+    openDeleteGroupDialog(freshGroup, 'leave')
     return
   }
-  selectedGroupId.value = group.id
+  selectedGroupId.value = freshGroup.id
   showLeaveGroupModal.value = true
 }
 
@@ -363,6 +389,12 @@ const handleConfirmLeaveGroup = async () => {
     // not just its membership list — the passwords cache must drop its stale
     // view alongside the groups one.
     passwordAccessStore.invalidatePasswordAccess()
+    // Drop the group from the local list right away, rather than relying on
+    // `refresh()` below: `fetchGroups` swallows its own errors into
+    // `error.value` instead of rejecting, so an unlucky refresh failure would
+    // otherwise leave this card in place with a "Leave" button that 400s
+    // ("not a member") on the next click.
+    groupsStore.removeGroupLocally(group.id)
     await groupsStore.refresh()
   } catch (error) {
     console.error('Failed to leave group:', error)
@@ -492,6 +524,7 @@ onMounted(async () => {
                     severity="danger"
                     size="small"
                     :disabled="isLeaveBlockedByOwnership(group)"
+                    :loading="checkingLeaveGroupId === group.id"
                     :aria-label="t('pages.groups.leaveGroup')"
                     :aria-describedby="
                       isLeaveBlockedByOwnership(group)
