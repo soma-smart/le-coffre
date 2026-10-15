@@ -291,7 +291,7 @@
       "cannotDeleteSummary": "Cannot Delete Group",
       "cannotDeleteHasPasswords": "This group contains passwords and cannot be deleted. Please remove all passwords first.",
       "leaveQuestion": "Are you sure you want to leave \"{name}\"?",
-      "leaveSoleMemberQuestion": "You are the only member of \"{name}\" — leaving isn't available.",
+      "leaveSoleMemberQuestion": "You are the only member of \"{name}\" — leaving isn't available. Confirming will delete the group instead.",
       "leaveBlockedOwner": "Demote yourself to member first",
       "leaveBlockedSoleOwner": "Promote another member to owner, then demote yourself",
       "updatedDetail": "Group updated successfully",
@@ -629,7 +629,7 @@
       "promotedToOwner": "Promoted {name} to owner",
       "removedFromGroup": "Removed {name} from the group",
       "leftGroup": "{name} left the group",
-      "leftGroupEventType": "Left Group",
+      "leftGroupEventType": "User Left Group",
       "demotedToMember": "Demoted {name} to member",
       "loadFailedSummary": "Load Failed",
       "loadFailedDetail": "Failed to load group history."

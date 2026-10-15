@@ -291,7 +291,7 @@
       "cannotDeleteSummary": "Impossible de supprimer le groupe",
       "cannotDeleteHasPasswords": "Ce groupe contient des mots de passe et ne peut pas être supprimé. Veuillez d'abord supprimer tous les mots de passe.",
       "leaveQuestion": "Êtes-vous sûr de vouloir quitter \"{name}\" ?",
-      "leaveSoleMemberQuestion": "Vous êtes le seul membre de \"{name}\" — il n'est pas possible de le quitter.",
+      "leaveSoleMemberQuestion": "Vous êtes le seul membre de \"{name}\" — il n'est pas possible de le quitter. Confirmer entraînera la suppression du groupe.",
       "leaveBlockedOwner": "Rétrogradez-vous d'abord au statut de membre",
       "leaveBlockedSoleOwner": "Promouvez un autre membre comme propriétaire, puis rétrogradez-vous",
       "updatedDetail": "Groupe mis à jour avec succès",
@@ -629,7 +629,7 @@
       "promotedToOwner": "{name} promu propriétaire",
       "removedFromGroup": "{name} retiré du groupe",
       "leftGroup": "{name} a quitté le groupe",
-      "leftGroupEventType": "A quitté le groupe",
+      "leftGroupEventType": "Utilisateur parti du groupe",
       "demotedToMember": "{name} rétrogradé en membre",
       "loadFailedSummary": "Échec du chargement",
       "loadFailedDetail": "Échec du chargement de l'historique du groupe."

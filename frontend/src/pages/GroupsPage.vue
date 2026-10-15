@@ -335,9 +335,15 @@ const openLeaveGroupDialog = (group: Group) => {
   showLeaveGroupModal.value = true
 }
 
+// Guards against a double confirm (double click, or Enter held through the
+// modal's close animation) firing two DELETE requests before
+// `selectedGroupId` is cleared — the first succeeds, the second 400s as
+// "not a member" and shows an error toast right after the success one.
+const isLeavingGroup = ref(false)
+
 const handleConfirmLeaveGroup = async () => {
   const group = selectedGroup.value
-  if (!group) return
+  if (!group || isLeavingGroup.value) return
 
   if (isSelectedGroupSoleMember.value) {
     showLeaveGroupModal.value = false
@@ -345,6 +351,7 @@ const handleConfirmLeaveGroup = async () => {
     return
   }
 
+  isLeavingGroup.value = true
   try {
     await groupsStore.removeMemberFromGroup(group.id, groupsStore.currentUserId as string)
     toast.add({
@@ -373,6 +380,8 @@ const handleConfirmLeaveGroup = async () => {
       life: 5000,
     })
     await groupsStore.refresh()
+  } finally {
+    isLeavingGroup.value = false
   }
 }
 
@@ -477,17 +486,29 @@ onMounted(async () => {
                   @click="openEditDialog(group)"
                   v-tooltip.top="t('pages.groups.editGroup')"
                 />
-                <Button
-                  v-if="canLeaveGroup(group)"
-                  icon="pi pi-sign-out"
-                  text
-                  rounded
-                  severity="danger"
-                  size="small"
-                  :disabled="isLeaveBlockedByOwnership(group)"
-                  @click="openLeaveGroupDialog(group)"
-                  v-tooltip.top="leaveButtonTooltip(group)"
-                />
+                <span v-if="canLeaveGroup(group)" v-tooltip.top="leaveButtonTooltip(group)">
+                  <Button
+                    icon="pi pi-sign-out"
+                    text
+                    rounded
+                    severity="danger"
+                    size="small"
+                    :disabled="isLeaveBlockedByOwnership(group)"
+                    :aria-label="t('pages.groups.leaveGroup')"
+                    :aria-describedby="
+                      isLeaveBlockedByOwnership(group)
+                        ? `leave-blocked-reason-${group.id}`
+                        : undefined
+                    "
+                    @click="openLeaveGroupDialog(group)"
+                  />
+                  <span
+                    v-if="isLeaveBlockedByOwnership(group)"
+                    :id="`leave-blocked-reason-${group.id}`"
+                    class="sr-only"
+                    >{{ leaveButtonTooltip(group) }}</span
+                  >
+                </span>
                 <Button
                   v-if="canEditGroup(group)"
                   icon="pi pi-times"
