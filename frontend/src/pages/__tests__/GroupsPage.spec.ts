@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import GroupsPage from '@/pages/GroupsPage.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
-import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
@@ -243,7 +242,7 @@ describe('GroupsPage leave group', () => {
     const group = sharedGroup({ owners: [USER_ID], members: [] })
     const wrapper = await mountPage([group])
 
-    wrapper.findComponent(GroupDetailsModal).vm.$emit('leaveGroup', group)
+    wrapper.findComponent({ name: 'GroupDetailsModal' }).vm.$emit('leaveGroup', group)
     await flushPromises()
 
     const leaveModal = findConfirmationModal(wrapper, 'Leave group')
