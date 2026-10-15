@@ -213,6 +213,10 @@ describe('GroupsPage leave group', () => {
     const deleteModal = findConfirmationModal(wrapper, 'Delete group')
     expect(deleteModal?.props('visible')).toBe(true)
     expect(deleteModal?.props('description')).toContain('only member')
+    // Regression: this used to prefix the generic delete description, which
+    // claims "all members will lose access" — contradicting the sole-member
+    // line right above it.
+    expect(deleteModal?.props('description')).not.toContain('members will lose access')
     expect(deleteModal?.props('countdownSeconds')).toBe(6)
   })
 
