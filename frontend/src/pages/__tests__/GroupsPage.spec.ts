@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import GroupsPage from '@/pages/GroupsPage.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
+import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGroupRepository'
@@ -198,7 +199,7 @@ describe('GroupsPage leave group', () => {
     expect(button?.disabled).toBe(true)
   })
 
-  it('does not disable the leave button for the sole member, and offers deletion instead', async () => {
+  it('routes a sole member straight to the delete modal instead of a leave modal', async () => {
     const wrapper = await mountPage([sharedGroup({ owners: [USER_ID], members: [] })])
 
     const button = wrapper.find('.pi-sign-out').element.closest('button')
@@ -206,10 +207,44 @@ describe('GroupsPage leave group', () => {
 
     await wrapper.find('.pi-sign-out').trigger('click')
 
-    const modal = findConfirmationModal(wrapper, 'Leave group')
-    expect(modal?.props('visible')).toBe(true)
-    expect(modal?.props('question')).toContain('only member')
-    expect(modal?.props('confirmLabel')).toBe('Delete group')
+    const leaveModal = findConfirmationModal(wrapper, 'Leave group')
+    expect(leaveModal?.props('visible')).toBe(false)
+
+    const deleteModal = findConfirmationModal(wrapper, 'Delete group')
+    expect(deleteModal?.props('visible')).toBe(true)
+    expect(deleteModal?.props('description')).toContain('only member')
+    expect(deleteModal?.props('countdownSeconds')).toBe(6)
+  })
+
+  it('opens the leave modal, not the delete one, for a member who is not alone', async () => {
+    const wrapper = await mountPage([sharedGroup({ owners: ['owner-2'], members: [USER_ID] })])
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+
+    const leaveModal = findConfirmationModal(wrapper, 'Leave group')
+    expect(leaveModal?.props('visible')).toBe(true)
+
+    const deleteModal = findConfirmationModal(wrapper, 'Delete group')
+    expect(deleteModal?.props('visible')).toBe(false)
+  })
+
+  it('applies the same sole-member routing to a leaveGroup emitted by the modal', async () => {
+    // GroupDetailsModal's own "Leave" button always emits `leaveGroup` with
+    // its live `props.group` (covered by GroupDetailsModal.spec.ts) — this
+    // confirms GroupsPage's `@leave-group="openLeaveGroupDialog"` wiring
+    // applies the identical sole-member routing as the card icon's click,
+    // regardless of which of the two entry points triggered it.
+    const group = sharedGroup({ owners: [USER_ID], members: [] })
+    const wrapper = await mountPage([group])
+
+    wrapper.findComponent(GroupDetailsModal).vm.$emit('leaveGroup', group)
+    await flushPromises()
+
+    const leaveModal = findConfirmationModal(wrapper, 'Leave group')
+    expect(leaveModal?.props('visible')).toBe(false)
+
+    const deleteModal = findConfirmationModal(wrapper, 'Delete group')
+    expect(deleteModal?.props('visible')).toBe(true)
   })
 
   it('refreshes the groups list after a successful leave', async () => {

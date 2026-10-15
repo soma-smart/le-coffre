@@ -95,6 +95,11 @@ const canManageServiceAccounts = (group: Group) => {
 // In a future iteration, we could fetch this info from the API
 const groupHasPasswords = ref(false)
 
+// Set when the delete modal was reached via "Leave" on a sole-member group,
+// rather than via the explicit delete action — adds a line explaining why
+// deleting is what's on offer. Reset on every open, like `groupHasPasswords`.
+const deleteReason = ref<'leave' | null>(null)
+
 // Computed properties for delete modal
 const deleteModalQuestion = computed(() => {
   const group = selectedGroup.value
@@ -103,6 +108,9 @@ const deleteModalQuestion = computed(() => {
 })
 
 const deleteModalDescription = computed(() => {
+  if (deleteReason.value === 'leave') {
+    return `${t('pages.groups.deleteSoleMemberReason')}\n${t('pages.groups.deleteDescription')}`
+  }
   return t('pages.groups.deleteDescription')
 })
 
@@ -128,11 +136,12 @@ const canLeaveGroup = (group: Group) => {
   return isUserOwnerOf(group, userId) || isUserMemberOf(group, userId)
 }
 
-// An owner must demote themselves to member before leaving — unless they're
-// the sole member of the group, in which case leaving offers deleting the
-// group instead (see `handleConfirmLeaveGroup`). Disabling the button for
-// this case, rather than opening a modal that only explains the block, is
-// what keeps the leave flow to a single actionable button everywhere else.
+// An owner must demote themselves to member before leaving. (The sole-member
+// case isn't blocked here: `openLeaveGroupDialog` routes it to the delete
+// modal instead, since leaving would empty the group anyway.) Disabling the
+// button for this case, rather than opening a modal that only explains the
+// block, is what keeps the leave flow to a single actionable button
+// everywhere else.
 const isLeaveBlockedByOwnership = (group: Group) => {
   return leaveBlockReason(group, groupsStore.currentUserId) !== null
 }
@@ -144,28 +153,10 @@ const leaveButtonTooltip = (group: Group) => {
   return t('pages.groups.leaveGroup')
 }
 
-// Computed properties for the leave-group modal. Reuses `selectedGroup`,
-// same as the delete modal — the two never show at the same time.
-const isSelectedGroupSoleMember = computed(() => {
-  return selectedGroup.value
-    ? isSoleMemberOf(selectedGroup.value, groupsStore.currentUserId)
-    : false
-})
-
+// Question for the leave-group modal. Reuses `selectedGroup`, same as the
+// delete modal — the two never show at the same time.
 const leaveModalQuestion = computed(() => {
-  const name = selectedGroup.value?.name
-  if (isSelectedGroupSoleMember.value) return t('pages.groups.leaveSoleMemberQuestion', { name })
-  return t('pages.groups.leaveQuestion', { name })
-})
-
-const leaveModalConfirmLabel = computed(() => {
-  return isSelectedGroupSoleMember.value
-    ? t('pages.groups.deleteGroup')
-    : t('pages.groups.leaveGroup')
-})
-
-const leaveModalCountdownSeconds = computed(() => {
-  return isSelectedGroupSoleMember.value ? 0 : 6
+  return t('pages.groups.leaveQuestion', { name: selectedGroup.value?.name })
 })
 
 // Open group details modal
@@ -263,10 +254,13 @@ const handleMemberChanged = async () => {
   await groupsStore.refresh()
 }
 
-// Open delete group dialog
-const openDeleteGroupDialog = (group: Group) => {
+// Open delete group dialog. `reason: 'leave'` marks that this came from the
+// sole-member branch of `openLeaveGroupDialog`, so the modal can explain why
+// deleting is what's offered instead of leaving.
+const openDeleteGroupDialog = (group: Group, reason: 'leave' | null = null) => {
   selectedGroupId.value = group.id
   groupHasPasswords.value = false // Reset - we'll get the actual error from API if there are passwords
+  deleteReason.value = reason
   showDeleteGroupModal.value = true
 }
 
@@ -329,8 +323,15 @@ const handleDeleteGroup = async () => {
 }
 
 // Open leave-group dialog, from either the card icon or the details modal
-// (which closes itself before emitting).
+// (which closes itself before emitting). A sole member can't leave without
+// the group ending up without anyone in it, so this routes straight to the
+// existing delete-confirmation modal instead of opening a leave modal that
+// would only explain why leaving isn't on offer — one modal, one real choice.
 const openLeaveGroupDialog = (group: Group) => {
+  if (isSoleMemberOf(group, groupsStore.currentUserId)) {
+    openDeleteGroupDialog(group, 'leave')
+    return
+  }
   selectedGroupId.value = group.id
   showLeaveGroupModal.value = true
 }
@@ -344,12 +345,6 @@ const isLeavingGroup = ref(false)
 const handleConfirmLeaveGroup = async () => {
   const group = selectedGroup.value
   if (!group || isLeavingGroup.value) return
-
-  if (isSelectedGroupSoleMember.value) {
-    showLeaveGroupModal.value = false
-    openDeleteGroupDialog(group)
-    return
-  }
 
   isLeavingGroup.value = true
   try {
@@ -626,11 +621,11 @@ onMounted(async () => {
         v-model:visible="showLeaveGroupModal"
         :title="t('pages.groups.leaveGroup')"
         :question="leaveModalQuestion"
-        :confirm-label="leaveModalConfirmLabel"
+        :confirm-label="t('pages.groups.leaveGroup')"
         :cancel-label="t('common.cancel')"
         severity="danger"
         icon="pi pi-exclamation-triangle"
-        :countdown-seconds="leaveModalCountdownSeconds"
+        :countdown-seconds="6"
         @confirm="handleConfirmLeaveGroup"
       />
     </div>
