@@ -8,6 +8,7 @@ import { InMemoryGroupRepository } from '@/infrastructure/in_memory/InMemoryGrou
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import type { Group } from '@/domain/group/Group'
 import type { User } from '@/domain/user/User'
+import { useUserStore } from '@/stores/user'
 
 const { toastAdd } = vi.hoisted(() => ({ toastAdd: vi.fn() }))
 vi.mock('primevue', async (importOriginal) => {
@@ -79,6 +80,13 @@ async function mountModal(groupRepository: InMemoryGroupRepository, group: Group
     .seed({ ...currentUser, id: 'owner-2', name: 'Owner Two', email: 'owner2@example.com' })
 
   const { pinia, container } = createTestContext({ groupRepository, userRepository })
+
+  // GroupDetailsModal ne récupère pas l'utilisateur courant lui-même
+  // (GroupsPage le fait, dans l'app réelle) — on amorce le store ici, sinon
+  // currentUserId reste null et aucune action « sur ma propre ligne »
+  // (quitter, se rétrograder) ne rend.
+  await useUserStore().fetchCurrentUser()
+
   const wrapper = mount(GroupDetailsModal, {
     props: { visible: true, group },
     global: {
