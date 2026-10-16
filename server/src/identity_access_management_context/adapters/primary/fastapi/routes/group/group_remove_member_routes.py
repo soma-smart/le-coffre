@@ -50,9 +50,9 @@ def remove_member_from_group(
     - **group_id**: ID of the group (path parameter)
     - **user_id**: ID of the user to remove (path parameter)
     - **Authorization**: Bearer token required (access_token cookie)
-    - **Permission**: Only group owners can remove members
+    - **Permission**: Group owners can remove any member; a user can also remove themselves (leave the group)
 
-    Cannot remove owners from groups.
+    Cannot remove owners from groups — including yourself, if you are one.
     Cannot modify personal groups.
     The user to be removed must be a member of the group.
     """
