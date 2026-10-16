@@ -124,12 +124,12 @@ describe('GroupDetailsModal leave action', () => {
     expect(wrapper.text()).toContain('Demote yourself to member first')
   })
 
-  it('emits the live group prop, never stale groupDetails from the prior group', async () => {
+  it('leaves no trace of the prior group when the new group fails to load', async () => {
     // Regression: opening Alpha, closing, then opening Beta while its
     // groups.get() fails (network error) used to leave `groupDetails` holding
-    // Alpha's data. The modal would then show Beta's title but act on Alpha
-    // when "Leave" was clicked. `props.group` (driven by the page's own
-    // `selectedGroup`) must always be the one actually emitted.
+    // Alpha's data. `loadAll` now resets `groupDetails` as soon as the group
+    // prop changes, so a failed fetch must show neither Alpha's data nor any
+    // action — there's nothing loaded to act on.
     const repo = new FlakyGroupRepository()
     repo.seed(groupAlpha).seed(groupBeta)
 
@@ -143,17 +143,35 @@ describe('GroupDetailsModal leave action', () => {
     await wrapper.setProps({ group: groupBeta, visible: true })
     await flushPromises()
 
-    // The fetch for Beta failed. The modal must show Beta's own data for the
-    // decision and the click — and `loadAll` resets `groupDetails` as soon as
-    // the group prop changes, so the member list doesn't keep showing
-    // Alpha's member ("Member One") under Beta's title either.
     expect(wrapper.text()).toContain('Beta')
     expect(wrapper.text()).not.toContain('Alpha')
     expect(wrapper.text()).not.toContain('Member One')
+    expect(wrapper.find('.pi-sign-out').exists()).toBe(false)
+  })
+
+  it('emits the live group prop, never stale groupDetails from the prior group', async () => {
+    // `groupDetails` is a fetch snapshot; `props.group` is live (backed by
+    // the store on GroupsPage). The watcher only reacts to `props.group?.id`,
+    // so replacing the prop with a same-id-but-fresher object doesn't
+    // refetch: `groupDetails` keeps the old snapshot while `props.group` is
+    // up to date. `handleLeaveGroup` must emit the live prop, not the stale
+    // snapshot — this test fails if it emits `groupForLeaveCheck` instead.
+    const alpha: Group = { ...groupAlpha, owners: [USER_ID], members: [] }
+    const repo = new InMemoryGroupRepository().seed(alpha)
+
+    const wrapper = await mountModal(repo, alpha)
+    expect(wrapper.text()).toContain('Alpha')
+
+    const freshAlpha: Group = { ...alpha, members: [...alpha.members, 'member-2'] }
+    await wrapper.setProps({ group: freshAlpha })
+    await flushPromises()
 
     await wrapper.find('.pi-sign-out').trigger('click')
 
     expect(wrapper.emitted('leaveGroup')).toBeTruthy()
-    expect(wrapper.emitted('leaveGroup')![0][0]).toMatchObject({ id: groupBeta.id })
+    expect(wrapper.emitted('leaveGroup')![0][0]).toMatchObject({
+      id: freshAlpha.id,
+      members: expect.arrayContaining(['member-2']),
+    })
   })
 })
