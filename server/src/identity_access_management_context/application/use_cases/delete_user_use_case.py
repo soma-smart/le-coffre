@@ -3,10 +3,12 @@ import logging
 from identity_access_management_context.application.commands import DeleteUserCommand
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
+    AuthSessionRepository,
     ExtensionTokenRepository,
     GroupMemberRepository,
     GroupRepository,
     OneTimeLinkRevocationGateway,
+    SsoUserRepository,
     UserEventRepository,
     UserPasswordRepository,
     UserRepository,
@@ -36,6 +38,8 @@ class DeleteUserUseCase(TracedUseCase):
         extension_token_repository: ExtensionTokenRepository,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
+        sso_user_repository: SsoUserRepository,
+        auth_session_repository: AuthSessionRepository,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
@@ -47,6 +51,8 @@ class DeleteUserUseCase(TracedUseCase):
         self._extension_token_repository = extension_token_repository
         self._admin_event_repository = admin_event_repository
         self._time_provider = time_provider
+        self._sso_user_repository = sso_user_repository
+        self._auth_session_repository = auth_session_repository
 
     def execute(self, command: DeleteUserCommand) -> None:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
@@ -69,9 +75,8 @@ class DeleteUserUseCase(TracedUseCase):
         # deletion, and skips the session_invalid_before cutoff once the user
         # row is gone. Without this revocation a deleted SSO account keeps
         # reading the vault until the token's absolute expiry, up to 30 days.
-        revoked_tokens = self._extension_token_repository.revoke_all_for_user(
-            user_id, self._time_provider.get_current_time()
-        )
+        now = self._time_provider.get_current_time()
+        revoked_tokens = self._extension_token_repository.revoke_all_for_user(user_id, now)
         if revoked_tokens:
             ExtensionRevocationRecordingService.record(
                 self.event_publisher,
@@ -82,6 +87,10 @@ class DeleteUserUseCase(TracedUseCase):
                 reason=REVOCATION_REASON_USER_DELETED,
                 revoked_count=revoked_tokens,
             )
+
+        # Kill the refresh chains. Access tokens already issued cannot be listed,
+        # they die because validation refuses a token whose user row is gone.
+        self._auth_session_repository.invalidate_all_for_user(user_id, now)
 
         personal_group = self.group_repository.get_by_user_id(user_id)
         personal_group_id = personal_group.id if personal_group else None
@@ -106,6 +115,10 @@ class DeleteUserUseCase(TracedUseCase):
         # own it, and it would shadow any account later created on that email,
         # because credentials are looked up by email.
         self._user_password_repository.delete_by_id(user_id)
+        # Same for the SSO identity: token validation used to fall back on it
+        # once the user row was gone, and a surviving row would map the next SSO
+        # login of that person onto an account that no longer exists.
+        self._sso_user_repository.delete_by_user_id(user_id)
 
         self.user_repository.delete(user_id)
 
