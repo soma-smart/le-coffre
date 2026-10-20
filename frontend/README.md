@@ -32,19 +32,29 @@ bun run build
 
 ### Lint and Format
 
+Use the package scripts — they carry the flags CI expects:
+
 ```sh
-bun eslint .
-bun prettier --check src/
-bun format
+bun run lint      # eslint . --fix
+bun run format    # prettier --write src/
+bun run type-check
 ```
 
 ## Generate TypeScript Types from OpenAPI Spec
 
-The client types under `src/client/` are auto-generated from the backend's OpenAPI schema. Regenerate them after backend API changes:
+The client types under `src/client/` are auto-generated from the backend's OpenAPI schema. Regenerate them after **any** change to a FastAPI route:
 
 ```sh
-bun run openapi-ts
+cd ../server && uv run fastapi dev src/main.py   # leave it running
+cd ../frontend && bun run openapi-ts
+git add src/client
 ```
+
+The backend must be running: `openapi-ts` reads the live schema, it does not read the source.
+
+**"Any change" is wider than it sounds.** Editing a route's docstring is enough — docstrings land in the generated SDK as descriptions. So does renaming a parameter, adding an optional field, or changing a response model. The `openapi-sync-check` CI job regenerates the client and fails the build if `src/client` comes back dirty, so a desync is caught, but only after you have pushed.
+
+Never hand-edit `src/client/`: the check compares your tree against the generator's output, not against intent.
 
 ## Configuration
 

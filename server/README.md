@@ -107,9 +107,12 @@ Tests that require OpenTelemetry are automatically skipped if the `monitoring` g
 
 ## Formatting
 
-To ensure code quality, work in the dev container that it is automatically applied, or run these command:
+To ensure code quality, work in the dev container where it is applied automatically, or run these commands:
 
 ```bash
 uv run ruff format .
-uv run ruff check .
+uv run ruff check .          # report only — this is what CI and the pre-commit hook run
+uv run ruff check --fix .    # same checks, auto-correcting what can be corrected
 ```
+
+Run them over the whole directory, not just the files you touched.
