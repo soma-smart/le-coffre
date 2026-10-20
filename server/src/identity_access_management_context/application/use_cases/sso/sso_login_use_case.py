@@ -89,6 +89,11 @@ class SsoLoginUseCase(TracedUseCase):
             existing_sso_user = self._sso_user_repository.get_by_sso_user_id(
                 sso_user_from_provider.sso_user_id, sso_user_from_provider.sso_provider
             )
+            if existing_sso_user and self._user_repository.get_by_id(existing_sso_user.internal_user_id) is None:
+                # Left behind by a deletion made before the SSO row was deleted
+                # with its account. The person signs up again as a new user.
+                self._sso_user_repository.delete_by_user_id(existing_sso_user.internal_user_id)
+                existing_sso_user = None
 
             if existing_sso_user:
                 user_id = existing_sso_user.internal_user_id

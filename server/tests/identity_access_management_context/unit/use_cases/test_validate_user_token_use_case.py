@@ -29,6 +29,10 @@ from ..fakes import (
 )
 
 
+def _save_user(user_repository: FakeUserRepository, user_id: UUID, email: str, roles: list[str]) -> None:
+    user_repository.save(User(id=user_id, username=email.split("@")[0], email=email, name="User", roles=roles))
+
+
 @pytest.fixture
 def use_case(
     user_password_repository: FakeUserPasswordRepository,
@@ -51,6 +55,7 @@ def use_case(
 def test_should_validate_token_and_return_user_details(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -66,6 +71,7 @@ def test_should_validate_token_and_return_user_details(
         display_name=display_name,
     )
     user_password_repository.save(user_password)
+    _save_user(user_repository, user_id, email, ["admin"])
 
     # Setup JWT token validation
     token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": display_name})
@@ -274,17 +280,43 @@ def test_should_raise_exception_when_user_no_longer_exists(
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     jwt_token = "jwt_token_for_deleted_user"
 
-    # Setup valid JWT token but no user
     token_gateway.set_valid_token(jwt_token, user_id, "deleted@lecoffre.com", ["admin"], {})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    with pytest.raises(UserNotFoundException):
+    with pytest.raises(InvalidTokenException):
+        use_case.execute(command)
+
+
+def test_given_deleted_sso_user_with_leftover_sso_identity_when_validating_then_refuses_the_token(
+    use_case: ValidateUserTokenUseCase,
+    sso_user_repository: FakeSsoUserRepository,
+    token_gateway: FakeTokenGateway,
+):
+    # The account is gone but its SSO identity row survived: the token used to
+    # validate from that row, with the admin role read from the JWT.
+    user_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
+    email = "sso_admin@example.com"
+    jwt_token = "jwt_token_for_deleted_sso_admin"
+    sso_user_repository.create(
+        SsoUser(
+            internal_user_id=user_id,
+            email=email,
+            display_name="SSO Admin",
+            sso_user_id="sso_admin",
+            sso_provider="default",
+        )
+    )
+    token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": "SSO Admin"})
+
+    command = ValidateUserTokenCommand(jwt_token=jwt_token, required_roles=["admin"])
+    with pytest.raises(InvalidTokenException):
         use_case.execute(command)
 
 
 def test_should_validate_token_with_admin_role(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -292,7 +324,6 @@ def test_should_validate_token_with_admin_role(
     display_name = "Admin User"
     jwt_token = "jwt_token_for_admin@lecoffre.com_abc123"
 
-    # Setup user password
     user_password = UserPassword(
         id=user_id,
         email=email,
@@ -300,8 +331,8 @@ def test_should_validate_token_with_admin_role(
         display_name=display_name,
     )
     user_password_repository.save(user_password)
+    _save_user(user_repository, user_id, email, ["admin"])
 
-    # Setup JWT token validation with admin role
     token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": display_name})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token, required_roles=["admin"])
@@ -313,9 +344,10 @@ def test_should_validate_token_with_admin_role(
     assert response.display_name == display_name
 
 
-def test_should_raise_exception_when_required_role_not_in_token(
+def test_should_raise_exception_when_user_lacks_required_role(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
@@ -323,7 +355,6 @@ def test_should_raise_exception_when_required_role_not_in_token(
     display_name = "Regular User"
     jwt_token = "jwt_token_for_user@lecoffre.com_abc123"
 
-    # Setup user password
     user_password = UserPassword(
         id=user_id,
         email=email,
@@ -331,8 +362,8 @@ def test_should_raise_exception_when_required_role_not_in_token(
         display_name=display_name,
     )
     user_password_repository.save(user_password)
+    _save_user(user_repository, user_id, email, ["user"])
 
-    # Setup JWT token validation with only "user" role (missing "admin")
     token_gateway.set_valid_token(jwt_token, user_id, email, ["user"], {"display_name": display_name})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token, required_roles=["admin"])
@@ -341,9 +372,30 @@ def test_should_raise_exception_when_required_role_not_in_token(
         use_case.execute(command)
 
 
+def test_given_token_claiming_admin_when_user_is_not_admin_then_the_stored_roles_win(
+    use_case: ValidateUserTokenUseCase,
+    user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "former_admin@lecoffre.com"
+    jwt_token = "jwt_token_with_stale_admin_role"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed_password", display_name="Former Admin")
+    )
+    _save_user(user_repository, user_id, email, [])
+    token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": "Former Admin"})
+
+    with pytest.raises(InsufficientRoleException):
+        use_case.execute(ValidateUserTokenCommand(jwt_token=jwt_token, required_roles=["admin"]))
+    assert use_case.execute(ValidateUserTokenCommand(jwt_token=jwt_token)).roles == []
+
+
 def test_should_validate_token_for_sso_user(
     use_case: ValidateUserTokenUseCase,
     sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
@@ -351,7 +403,6 @@ def test_should_validate_token_for_sso_user(
     display_name = "SSO User"
     jwt_token = "jwt_token_for_sso_user@example.com_xyz789"
 
-    # Setup SSO user
     sso_user = SsoUser(
         internal_user_id=user_id,
         email=email,
@@ -360,8 +411,8 @@ def test_should_validate_token_for_sso_user(
         sso_provider="default",
     )
     sso_user_repository.create(sso_user)
+    _save_user(user_repository, user_id, email, [])
 
-    # Setup JWT token validation
     token_gateway.set_valid_token(jwt_token, user_id, email, ["user"], {"display_name": display_name})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
@@ -375,13 +426,15 @@ def test_should_validate_token_for_sso_user(
 
 def test_should_raise_exception_when_sso_user_not_found(
     use_case: ValidateUserTokenUseCase,
+    user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
 ):
     user_id = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
     email = "nonexistent_sso@example.com"
     jwt_token = "jwt_token_for_nonexistent_sso_user"
 
-    # Setup valid JWT token but no SSO user
+    # The account exists but has neither password credentials nor an SSO identity
+    _save_user(user_repository, user_id, email, [])
     token_gateway.set_valid_token(jwt_token, user_id, email, ["user"], {})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
@@ -389,89 +442,23 @@ def test_should_raise_exception_when_sso_user_not_found(
         use_case.execute(command)
 
 
-def test_should_return_admin_roles_for_admin_user_token(
+@pytest.mark.parametrize("roles", [["admin"], ["user", "editor", "viewer"], []])
+def test_should_return_the_roles_stored_for_the_user(
     use_case: ValidateUserTokenUseCase,
     user_password_repository: FakeUserPasswordRepository,
+    user_repository: FakeUserRepository,
     token_gateway: FakeTokenGateway,
+    roles: list[str],
 ):
-    # Given an admin user with password authentication and JWT containing ["admin"] role
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "admin@lecoffre.com"
-    display_name = "Admin User"
-    jwt_token = "jwt_token_for_admin@lecoffre.com_abc123"
-
-    user_password = UserPassword(
-        id=user_id,
-        email=email,
-        password_hash=b"hashed_password",
-        display_name=display_name,
+    email = "someone@lecoffre.com"
+    jwt_token = "jwt_token_for_someone@lecoffre.com"
+    user_password_repository.save(
+        UserPassword(id=user_id, email=email, password_hash=b"hashed_password", display_name="Someone")
     )
-    user_password_repository.save(user_password)
+    _save_user(user_repository, user_id, email, roles)
+    token_gateway.set_valid_token(jwt_token, user_id, email, roles, {"display_name": "Someone"})
 
-    token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": display_name})
+    response = use_case.execute(ValidateUserTokenCommand(jwt_token=jwt_token))
 
-    # When validating the token
-    command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = use_case.execute(command)
-
-    # Then response should include roles=["admin"]
-    assert response.roles == ["admin"]
-
-
-def test_should_return_multiple_roles_when_token_has_multiple_roles(
-    use_case: ValidateUserTokenUseCase,
-    user_password_repository: FakeUserPasswordRepository,
-    token_gateway: FakeTokenGateway,
-):
-    # Given a user with JWT containing ["user", "editor", "viewer"] roles
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "multi_role@lecoffre.com"
-    display_name = "Multi Role User"
-    jwt_token = "jwt_token_for_multi_role@lecoffre.com_xyz"
-    roles = ["user", "editor", "viewer"]
-
-    user_password = UserPassword(
-        id=user_id,
-        email=email,
-        password_hash=b"hashed_password",
-        display_name=display_name,
-    )
-    user_password_repository.save(user_password)
-
-    token_gateway.set_valid_token(jwt_token, user_id, email, roles, {"display_name": display_name})
-
-    # When validating the token
-    command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = use_case.execute(command)
-
-    # Then response should include roles=["user", "editor", "viewer"]
     assert response.roles == roles
-
-
-def test_should_return_empty_roles_when_token_has_no_roles(
-    use_case: ValidateUserTokenUseCase,
-    user_password_repository: FakeUserPasswordRepository,
-    token_gateway: FakeTokenGateway,
-):
-    # Given a user with JWT containing empty roles list
-    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-    email = "no_role@lecoffre.com"
-    display_name = "No Role User"
-    jwt_token = "jwt_token_for_no_role@lecoffre.com_abc"
-
-    user_password = UserPassword(
-        id=user_id,
-        email=email,
-        password_hash=b"hashed_password",
-        display_name=display_name,
-    )
-    user_password_repository.save(user_password)
-
-    token_gateway.set_valid_token(jwt_token, user_id, email, [], {"display_name": display_name})
-
-    # When validating the token
-    command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    response = use_case.execute(command)
-
-    # Then response should include roles=[]
-    assert response.roles == []

@@ -414,10 +414,11 @@ async def test_should_store_sso_login_event_on_successful_login(
 
 
 @pytest.mark.asyncio
-async def test_should_raise_runtime_error_when_existing_sso_user_has_no_corresponding_user(
+async def test_given_sso_identity_left_by_a_deleted_account_when_logging_in_then_creates_a_new_user(
     use_case: SsoLoginUseCase,
     sso_gateway: FakeSsoGateway,
     sso_user_repository: FakeSsoUserRepository,
+    user_repository: FakeUserRepository,
     sso_configuration_repository: FakeSsoConfigurationRepository,
 ):
     sso_code = "valid_code_orphan_sso"
@@ -444,10 +445,15 @@ async def test_should_raise_runtime_error_when_existing_sso_user_has_no_correspo
 
     sso_user_repository.create(existing_sso_user)
     sso_gateway.set_valid_code(sso_code, sso_user_from_provider)
-    # Intentionally NOT seeding user_repository to trigger the RuntimeError
+    # No User row: the account was deleted before its SSO identity was removed with it
 
-    with pytest.raises(RuntimeError, match="User should exist at this point"):
-        await use_case.execute(SsoLoginCommand(code=sso_code))
+    response = await use_case.execute(SsoLoginCommand(code=sso_code))
+
+    assert response.is_new_user is True
+    assert response.user_id != user_id
+    assert user_repository.get_by_id(response.user_id) is not None
+    assert sso_user_repository.get_by_user_id(user_id) is None
+    assert sso_user_repository.get_by_sso_user_id(sso_user_id, sso_provider).internal_user_id == response.user_id
 
 
 @pytest.mark.asyncio

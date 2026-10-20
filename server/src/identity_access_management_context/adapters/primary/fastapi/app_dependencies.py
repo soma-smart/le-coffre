@@ -287,6 +287,8 @@ def get_delete_user_usecase(
     extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
+    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
+    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -299,6 +301,8 @@ def get_delete_user_usecase(
         extension_token_repository,
         admin_event_repository,
         time_provider,
+        sso_user_repository,
+        auth_session_repository,
     )
 
 
