@@ -8,6 +8,7 @@ This test covers the entire group management system in one comprehensive workflo
 4. Member management (add, remove, idempotency, authorization)
 5. Owner promotion (promote, idempotency, authorization)
 6. Edge cases (non-existent user/group, personal group restrictions)
+8. Leaving a group (self-removal, re-leave rejection, owner blocked)
 """
 
 from uuid import uuid4
@@ -439,3 +440,41 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
         "personal group" in add_owner_to_personal_response.json()["detail"].lower()
         or "cannot modify" in add_owner_to_personal_response.json()["detail"].lower()
     )
+
+    # =========================================================================
+    # PHASE 8: SELF-REMOVAL (LEAVE GROUP)
+    # =========================================================================
+
+    # Step 8.1: Create a group and add a plain member who will leave it
+    leave_group_response = authenticated_admin_client.post("/api/groups/", json={"name": "Team To Leave"})
+    assert leave_group_response.status_code == 201
+    leave_group_id = leave_group_response.json()["id"]
+
+    add_member_response = authenticated_admin_client.post(
+        f"/api/groups/{leave_group_id}/members", json={"user_id": user1_id}
+    )
+    assert add_member_response.status_code == 201, add_member_response.text
+
+    # Step 8.2: A member can remove themselves via the same DELETE endpoint
+    # used by an owner removing someone else — called with their own id.
+    leave_response = user1_client.delete(f"/api/groups/{leave_group_id}/members/{user1_id}")
+    assert leave_response.status_code == 200, leave_response.text
+    assert leave_response.json()["message"] == "Member removed successfully"
+
+    # Step 8.3: They're gone from the group, which is otherwise untouched.
+    get_after_leave_response = authenticated_admin_client.get(f"/api/groups/{leave_group_id}")
+    assert get_after_leave_response.status_code == 200
+    group_after_leave = get_after_leave_response.json()
+    assert user1_id not in group_after_leave["members"]
+    assert admin_id in group_after_leave["owners"]
+
+    # Step 8.4: Having already left, trying again is a 400 (not a member),
+    # never a 403 (not an owner) — self-removal bypasses the ownership gate.
+    leave_again_response = user1_client.delete(f"/api/groups/{leave_group_id}/members/{user1_id}")
+    assert leave_again_response.status_code == 400
+    assert "is not a member of group" in leave_again_response.json()["detail"]
+
+    # Step 8.5: An owner still cannot leave without demoting themselves first.
+    owner_leave_response = authenticated_admin_client.delete(f"/api/groups/{leave_group_id}/members/{admin_id}")
+    assert owner_leave_response.status_code == 400
+    assert "Cannot remove owner" in owner_leave_response.json()["detail"]

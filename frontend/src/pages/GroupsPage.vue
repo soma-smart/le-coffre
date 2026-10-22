@@ -6,16 +6,26 @@ import MainLayout from '../layouts/MainLayout.vue'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
+import { usePasswordAccessStore } from '@/stores/passwordAccess'
+import { useContainer } from '@/plugins/container'
 import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
-import type { Group } from '@/domain/group/Group'
+import {
+  isSoleMemberOf,
+  isUserMemberOf,
+  isUserOwnerOf,
+  leaveBlockReason,
+  type Group,
+} from '@/domain/group/Group'
 import { sortGroups } from '../utils/groupSort'
 
 const toast = useToast()
 const { t } = useI18n()
 const groupsStore = useGroupsStore()
 const userStore = useUserStore()
+const passwordAccessStore = usePasswordAccessStore()
+const { groups: groupUseCases } = useContainer()
 const { sharedGroups, userPersonalGroup, loading } = storeToRefs(groupsStore)
 const { isAdmin } = storeToRefs(userStore)
 
@@ -46,12 +56,20 @@ const personalCard = computed(() => {
 const showCreateDialog = ref(false)
 const showGroupDetailsModal = ref(false)
 const showDeleteGroupModal = ref(false)
+const showLeaveGroupModal = ref(false)
 const showServiceAccountsModal = ref(false)
 // Kept apart from `selectedGroup`: sharing it would let the delete-confirmation
 // computeds read whichever group the service-accounts dialog last opened.
 const serviceAccountsGroup = ref<Group | null>(null)
 const newGroupName = ref('')
-const selectedGroup = ref<Group | null>(null)
+// Only the id is kept selected state: the group itself is derived live from
+// groupsStore so a stale snapshot never drives a delete/leave decision after
+// the list refreshes underneath an open modal.
+const selectedGroupId = ref<string | null>(null)
+const selectedGroup = computed<Group | null>(() => {
+  if (!selectedGroupId.value) return null
+  return groupsStore.groups.find((g) => g.id === selectedGroupId.value) ?? null
+})
 const isEditMode = ref(false)
 const editingGroupId = ref<string | null>(null)
 
@@ -79,6 +97,11 @@ const canManageServiceAccounts = (group: Group) => {
 // In a future iteration, we could fetch this info from the API
 const groupHasPasswords = ref(false)
 
+// Set when the delete modal was reached via "Leave" on a sole-member group,
+// rather than via the explicit delete action — swaps in a standalone
+// description explaining why. Reset on every open, like `groupHasPasswords`.
+const deleteReason = ref<'leave' | null>(null)
+
 // Computed properties for delete modal
 const deleteModalQuestion = computed(() => {
   const group = selectedGroup.value
@@ -87,6 +110,12 @@ const deleteModalQuestion = computed(() => {
 })
 
 const deleteModalDescription = computed(() => {
+  // A standalone description, not a prefix on top of `deleteDescription`:
+  // that one says "all members will lose access", which contradicts having
+  // just told the user they're the only member.
+  if (deleteReason.value === 'leave') {
+    return t('pages.groups.deleteSoleMemberDescription')
+  }
   return t('pages.groups.deleteDescription')
 })
 
@@ -104,9 +133,40 @@ const canDeleteGroup = computed(() => {
   return selectedGroup.value ? canEditGroup(selectedGroup.value) : false
 })
 
+// Whether the current user belongs to this group at all (owner or member) —
+// a shared group an admin merely sees in the list but doesn't belong to
+// shouldn't offer a "leave" action.
+const canLeaveGroup = (group: Group) => {
+  const userId = groupsStore.currentUserId
+  return isUserOwnerOf(group, userId) || isUserMemberOf(group, userId)
+}
+
+// An owner must demote themselves to member before leaving. (The sole-member
+// case isn't blocked here: `openLeaveGroupDialog` routes it to the delete
+// modal instead, since leaving would empty the group anyway.) Disabling the
+// button for this case, rather than opening a modal that only explains the
+// block, is what keeps the leave flow to a single actionable button
+// everywhere else.
+const isLeaveBlockedByOwnership = (group: Group) => {
+  return leaveBlockReason(group, groupsStore.currentUserId) !== null
+}
+
+const leaveButtonTooltip = (group: Group) => {
+  const reason = leaveBlockReason(group, groupsStore.currentUserId)
+  if (reason === 'sole-owner') return t('pages.groups.leaveBlockedSoleOwner')
+  if (reason === 'owner') return t('pages.groups.leaveBlockedOwner')
+  return t('pages.groups.leaveGroup')
+}
+
+// Question for the leave-group modal. Reuses `selectedGroup`, same as the
+// delete modal — the two never show at the same time.
+const leaveModalQuestion = computed(() => {
+  return t('pages.groups.leaveQuestion', { name: selectedGroup.value?.name })
+})
+
 // Open group details modal
 const openGroupDetails = (group: Group) => {
-  selectedGroup.value = group
+  selectedGroupId.value = group.id
   showGroupDetailsModal.value = true
 }
 
@@ -199,10 +259,13 @@ const handleMemberChanged = async () => {
   await groupsStore.refresh()
 }
 
-// Open delete group dialog
-const openDeleteGroupDialog = (group: Group) => {
-  selectedGroup.value = group
+// Open delete group dialog. `reason: 'leave'` marks that this came from the
+// sole-member branch of `openLeaveGroupDialog`, so the modal can explain why
+// deleting is what's offered instead of leaving.
+const openDeleteGroupDialog = (group: Group, reason: 'leave' | null = null) => {
+  selectedGroupId.value = group.id
   groupHasPasswords.value = false // Reset - we'll get the actual error from API if there are passwords
+  deleteReason.value = reason
   showDeleteGroupModal.value = true
 }
 
@@ -219,7 +282,7 @@ const handleDeleteGroup = async () => {
       life: 5000,
     })
     showDeleteGroupModal.value = false
-    selectedGroup.value = null
+    selectedGroupId.value = null
   } catch (error: unknown) {
     console.error('Failed to delete group:', error)
 
@@ -261,6 +324,94 @@ const handleDeleteGroup = async () => {
       })
       showDeleteGroupModal.value = false
     }
+  }
+}
+
+// Which group's leave button is currently waiting on the fresh re-read
+// below, so the card can show a spinner instead of looking unresponsive.
+const checkingLeaveGroupId = ref<string | null>(null)
+
+// Open leave-group dialog, from either the card icon or the details modal
+// (which closes itself before emitting). A sole member can't leave without
+// the group ending up without anyone in it, so this routes straight to the
+// existing delete-confirmation modal instead of opening a leave modal that
+// would only explain why leaving isn't on offer — one modal, one real choice.
+//
+// That decision must not be made on `groupsStore`'s 30s-cached list: a stale
+// "sole member" reading would route a group that has since gained a member
+// straight to deletion, destroying it for everyone instead of just leaving.
+// Re-read this one group directly (bypassing the store, and its cache)
+// rather than a full `fetchAllGroups(true)` — the latter flips the store's
+// shared `loading`, which the template uses to blank out the entire grid, a
+// worse flash for a single button click than it's worth. Falls back to the
+// cached group if the re-read itself fails; the leave/delete call right
+// after will surface a real error if that cache was actually wrong.
+const openLeaveGroupDialog = async (group: Group) => {
+  checkingLeaveGroupId.value = group.id
+  let freshGroup = group
+  try {
+    freshGroup = await groupUseCases.get.execute({ groupId: group.id })
+  } catch (error) {
+    console.error('Failed to refresh group before leave/delete decision:', error)
+  } finally {
+    checkingLeaveGroupId.value = null
+  }
+
+  if (isSoleMemberOf(freshGroup, groupsStore.currentUserId)) {
+    openDeleteGroupDialog(freshGroup, 'leave')
+    return
+  }
+  selectedGroupId.value = freshGroup.id
+  showLeaveGroupModal.value = true
+}
+
+// Guards against a double confirm (double click, or Enter held through the
+// modal's close animation) firing two DELETE requests before
+// `selectedGroupId` is cleared — the first succeeds, the second 400s as
+// "not a member" and shows an error toast right after the success one.
+const isLeavingGroup = ref(false)
+
+const handleConfirmLeaveGroup = async () => {
+  const group = selectedGroup.value
+  if (!group || isLeavingGroup.value) return
+
+  isLeavingGroup.value = true
+  try {
+    await groupsStore.removeMemberFromGroup(group.id, groupsStore.currentUserId as string)
+    toast.add({
+      severity: 'success',
+      summary: t('common.success'),
+      detail: t('pages.groups.leftGroupDetail'),
+      life: 5000,
+    })
+    selectedGroupId.value = null
+    // Leaving changes the current user's own password access for this group,
+    // not just its membership list — the passwords cache must drop its stale
+    // view alongside the groups one.
+    passwordAccessStore.invalidatePasswordAccess()
+    // Drop the group from the local list right away, rather than relying on
+    // `refresh()` below: `fetchGroups` swallows its own errors into
+    // `error.value` instead of rejecting, so an unlucky refresh failure would
+    // otherwise leave this card in place with a "Leave" button that 400s
+    // ("not a member") on the next click.
+    groupsStore.removeGroupLocally(group.id)
+    await groupsStore.refresh()
+  } catch (error) {
+    console.error('Failed to leave group:', error)
+    // Never surface `error.message` here: GroupNotFoundError / GroupAccessDeniedError
+    // are client-built, untranslated, and carry the raw group UUID, and the
+    // backend's own 400 messages aren't translated either. Only i18n strings
+    // reach the toast. Refresh so a stale button (e.g. already left in
+    // another tab) doesn't keep reoffering the same failing action.
+    toast.add({
+      severity: 'error',
+      summary: t('common.error'),
+      detail: t('pages.groups.errors.leaveFailed'),
+      life: 5000,
+    })
+    await groupsStore.refresh()
+  } finally {
+    isLeavingGroup.value = false
   }
 }
 
@@ -365,6 +516,30 @@ onMounted(async () => {
                   @click="openEditDialog(group)"
                   v-tooltip.top="t('pages.groups.editGroup')"
                 />
+                <span v-if="canLeaveGroup(group)" v-tooltip.top="leaveButtonTooltip(group)">
+                  <Button
+                    icon="pi pi-sign-out"
+                    text
+                    rounded
+                    severity="danger"
+                    size="small"
+                    :disabled="isLeaveBlockedByOwnership(group)"
+                    :loading="checkingLeaveGroupId === group.id"
+                    :aria-label="t('pages.groups.leaveGroup')"
+                    :aria-describedby="
+                      isLeaveBlockedByOwnership(group)
+                        ? `leave-blocked-reason-${group.id}`
+                        : undefined
+                    "
+                    @click="openLeaveGroupDialog(group)"
+                  />
+                  <span
+                    v-if="isLeaveBlockedByOwnership(group)"
+                    :id="`leave-blocked-reason-${group.id}`"
+                    class="sr-only"
+                    >{{ leaveButtonTooltip(group) }}</span
+                  >
+                </span>
                 <Button
                   v-if="canEditGroup(group)"
                   icon="pi pi-times"
@@ -451,6 +626,7 @@ onMounted(async () => {
         :group="selectedGroup"
         @member-added="handleMemberChanged"
         @member-removed="handleMemberChanged"
+        @leave-group="openLeaveGroupDialog"
       />
 
       <!-- Service Accounts Modal -->
@@ -474,6 +650,19 @@ onMounted(async () => {
         :countdown-seconds="6"
         :can-proceed="canDeleteGroup"
         @confirm="handleDeleteGroup"
+      />
+
+      <!-- Leave Group Confirmation Modal -->
+      <ConfirmationModal
+        v-model:visible="showLeaveGroupModal"
+        :title="t('pages.groups.leaveGroup')"
+        :question="leaveModalQuestion"
+        :confirm-label="t('pages.groups.leaveGroup')"
+        :cancel-label="t('common.cancel')"
+        severity="danger"
+        icon="pi pi-exclamation-triangle"
+        :countdown-seconds="6"
+        @confirm="handleConfirmLeaveGroup"
       />
     </div>
   </MainLayout>

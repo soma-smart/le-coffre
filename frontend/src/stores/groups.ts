@@ -124,6 +124,17 @@ export const useGroupsStore = defineStore('groups', () => {
   }
 
   /**
+   * Drops a group from the local lists without waiting on a fetch. Used right
+   * after a self-leave: `fetchGroups` stores its failures in `error` instead
+   * of rejecting, so a `refresh()` that happens to fail must not be able to
+   * resurrect a card for a group the user just successfully left.
+   */
+  function removeGroupLocally(groupId: string): void {
+    groups.value = groups.value.filter((g) => g.id !== groupId)
+    sharedGroups.value = sharedGroups.value.filter((g) => g.id !== groupId)
+  }
+
+  /**
    * Reset on logout — prevents user A's group sidebar from leaking into
    * user B's session when they log in on the same SPA tab.
    */
@@ -165,6 +176,7 @@ export const useGroupsStore = defineStore('groups', () => {
     promoteToOwner,
     demoteToMember,
     deleteGroup,
+    removeGroupLocally,
     invalidateCache,
     clear,
     refresh,
