@@ -10,6 +10,20 @@ export type ClientOptions = {
 export type AccessRoleEnum = 'owner' | 'member';
 
 /**
+ * AcknowledgeShareLinkRequest
+ */
+export type AcknowledgeShareLinkRequest = {
+    /**
+     * Lookup Hash
+     */
+    lookup_hash: string;
+    /**
+     * Ack Key
+     */
+    ack_key: string;
+};
+
+/**
  * AddMemberToGroupRequest
  */
 export type AddMemberToGroupRequest = {
@@ -322,9 +336,9 @@ export type CreateVaultPostResponse = {
      */
     setup_id: string;
     /**
-     * Shares
+     * Share Links
      */
-    shares: Array<ShareResponse>;
+    share_links: Array<IssuedShareLinkResponse>;
 };
 
 /**
@@ -806,6 +820,24 @@ export type IsSsoConfigSetResponse = {
      * Is Set
      */
     is_set: boolean;
+};
+
+/**
+ * IssuedShareLinkResponse
+ */
+export type IssuedShareLinkResponse = {
+    /**
+     * Share Index
+     */
+    share_index: number;
+    /**
+     * Token
+     */
+    token: string;
+    /**
+     * Expires At
+     */
+    expires_at: string;
 };
 
 /**
@@ -1294,6 +1326,46 @@ export type RemoveMemberFromGroupResponse = {
 };
 
 /**
+ * RetrieveShareLinkRequest
+ */
+export type RetrieveShareLinkRequest = {
+    /**
+     * Lookup Hash
+     */
+    lookup_hash: string;
+};
+
+/**
+ * RetrieveShareLinkResponse
+ */
+export type RetrieveShareLinkResponse = {
+    /**
+     * Setup Id
+     */
+    setup_id: string;
+    /**
+     * Share Index
+     */
+    share_index: number;
+    /**
+     * Sealed Share
+     */
+    sealed_share: string;
+    /**
+     * First Retrieved At
+     */
+    first_retrieved_at: string;
+    /**
+     * Reopenable Until
+     */
+    reopenable_until: string;
+    /**
+     * Reopened
+     */
+    reopened: boolean;
+};
+
+/**
  * RevokeAllExtensionTokensForUserResponse
  */
 export type RevokeAllExtensionTokensForUserResponse = {
@@ -1411,16 +1483,6 @@ export type SharePasswordResponse = {
      * Message
      */
     message: string;
-};
-
-/**
- * ShareResponse
- */
-export type ShareResponse = {
-    /**
-     * Secret
-     */
-    secret: string;
 };
 
 /**
@@ -1865,6 +1927,68 @@ export type GetVaultStatusVaultStatusGetResponses = {
 };
 
 export type GetVaultStatusVaultStatusGetResponse = GetVaultStatusVaultStatusGetResponses[keyof GetVaultStatusVaultStatusGetResponses];
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostData = {
+    body: RetrieveShareLinkRequest;
+    path?: never;
+    query?: never;
+    url: '/vault/share-links/retrieve';
+};
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostErrors = {
+    /**
+     * The link is invalid, expired, closed or past its reopen window
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostError = RetrieveShareLinkVaultShareLinksRetrievePostErrors[keyof RetrieveShareLinkVaultShareLinksRetrievePostErrors];
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RetrieveShareLinkResponse;
+};
+
+export type RetrieveShareLinkVaultShareLinksRetrievePostResponse = RetrieveShareLinkVaultShareLinksRetrievePostResponses[keyof RetrieveShareLinkVaultShareLinksRetrievePostResponses];
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostData = {
+    body: AcknowledgeShareLinkRequest;
+    path?: never;
+    query?: never;
+    url: '/vault/share-links/acknowledge';
+};
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostErrors = {
+    /**
+     * The acknowledgement key does not come from the link's token
+     */
+    403: unknown;
+    /**
+     * The link is invalid, not yet retrieved, or already closed
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostError = AcknowledgeShareLinkVaultShareLinksAcknowledgePostErrors[keyof AcknowledgeShareLinkVaultShareLinksAcknowledgePostErrors];
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponses = {
+    /**
+     * Successful Response
+     */
+    204: void;
+};
+
+export type AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponse = AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponses[keyof AcknowledgeShareLinkVaultShareLinksAcknowledgePostResponses];
 
 export type GetPasswordStatisticForAdminPasswordsStatisticsGetData = {
     body?: never;

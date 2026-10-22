@@ -23,7 +23,7 @@ from password_management_context.adapters.secondary.sql import (
     PasswordTable,
     PermissionsTable,
 )
-from vault_management_context.adapters.secondary.sql import VaultTable
+from vault_management_context.adapters.secondary.sql import VaultShareLinkTable, VaultTable
 from vault_management_context.adapters.secondary.sql.models.vault_event import VaultEventTable
 
 # Silence ruff unused-import warnings for model registration
@@ -42,6 +42,7 @@ _ = (
     VaultTable,
     NotificationPreferenceTable,
     VaultEventTable,
+    VaultShareLinkTable,
     IamEventTable,
     ServiceAccountTable,
     ServiceAccountTable,

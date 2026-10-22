@@ -33,6 +33,8 @@ from identity_access_management_context.domain.exceptions import (
     SessionNotFoundException,
     UserNotFoundException,
 )
+from shared_kernel.adapters.secondary.sql import SqlTransactionGateway
+from shared_kernel.application.gateways import TransactionGateway
 from shared_kernel.domain.entities import ApiPrincipal, ValidatedUser
 from shared_kernel.domain.entities.api_principal import EXTENSION_ROLE
 from shared_kernel.domain.exceptions import ReadOnlyCredentialError
@@ -59,6 +61,11 @@ def get_session(request: Request) -> Generator[Session, None, None]:
     session_maker = request.app.state.session_maker
     with session_maker() as session:
         yield session
+
+
+def get_transaction_gateway(session: Session = Depends(get_session)) -> TransactionGateway:
+    """Atomic blocks over the same session as the request's repositories."""
+    return SqlTransactionGateway(session)
 
 
 def get_validate_token_usecase(

@@ -25,6 +25,16 @@ describe('public routes', () => {
     expect(route?.meta.public).toBeUndefined()
   })
 
+  it('marks the vault share page as public', () => {
+    // Custodians collect their Shamir share before any account exists, and
+    // often never get one. Bouncing them to /login would lose the share.
+    const route = router.getRoutes().find((entry) => entry.name === 'VaultShare')
+
+    expect(route).toBeDefined()
+    expect(route?.meta.public).toBe(true)
+    expect(route?.meta.skipSetupCheck).toBe(true)
+  })
+
   it('keeps every other route non-public', () => {
     // Deliberately an exact list. Adding a route here means someone reviewed
     // why it may be reached without a session.
@@ -33,6 +43,6 @@ describe('public routes', () => {
       .filter((entry) => entry.meta.public)
       .map((entry) => entry.name)
 
-    expect(publicRoutes.sort()).toEqual(['OneTimeLink'])
+    expect(publicRoutes.sort()).toEqual(['OneTimeLink', 'VaultShare'])
   })
 })

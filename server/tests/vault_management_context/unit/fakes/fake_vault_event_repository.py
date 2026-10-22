@@ -9,6 +9,7 @@ class FakeVaultEventRepository:
     def __init__(self):
         self.events: list[dict[str, Any]] = []
         self._should_fail = False
+        self.error: Exception | None = None
 
     def fail_next_append(self) -> None:
         """The next append_event() call raises once, instead of storing anything."""
@@ -26,6 +27,8 @@ class FakeVaultEventRepository:
         if self._should_fail:
             self._should_fail = False
             raise RuntimeError("simulated database failure")
+        if self.error is not None:
+            raise self.error
         self.events.append(
             {
                 "event_id": event_id,
