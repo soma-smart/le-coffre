@@ -243,6 +243,19 @@ def get_rate_limit_bearer_miss_max_requests() -> int:
     return int(os.environ.get("RATE_LIMIT_BEARER_MISS_MAX_REQUESTS", "30"))
 
 
+def get_one_time_link_expiry_sweep_interval_seconds() -> int:
+    """How often the app looks for one-time links that expired unread, to tell their creators. Default 60.
+
+    Expiry is a clock comparison, so nothing fires when a link runs out: a periodic
+    sweep notices. This is therefore also the worst-case delay of an "expired unused"
+    email. It must be at least 1 second.
+    """
+    interval = int(os.environ.get("ONE_TIME_LINK_EXPIRY_SWEEP_INTERVAL_SECONDS", "60"))
+    if interval < 1:
+        raise ValueError("ONE_TIME_LINK_EXPIRY_SWEEP_INTERVAL_SECONDS must be at least 1.")
+    return interval
+
+
 def get_expired_share_retention_seconds() -> int:
     """How long an expired share stays visible before being purged. Default 7 days.
 

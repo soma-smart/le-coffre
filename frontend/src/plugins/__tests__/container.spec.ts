@@ -16,6 +16,7 @@ import { InMemoryStatisticsGateway } from '@/infrastructure/in_memory/InMemorySt
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
 import { InMemoryNotificationPreferencesRepository } from '@/infrastructure/in_memory/InMemoryNotificationPreferencesRepository'
+import { InMemoryOneTimeLinkSubscriptionRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkSubscriptionRepository'
 
 function makeTestContainer(): Container {
   return buildContainer({
@@ -32,6 +33,7 @@ function makeTestContainer(): Container {
     extensionGateway: new InMemoryExtensionGateway(),
     loginRedirectGateway: new InMemoryLoginRedirectGateway(),
     notificationPreferencesRepository: new InMemoryNotificationPreferencesRepository(),
+    oneTimeLinkSubscriptionRepository: new InMemoryOneTimeLinkSubscriptionRepository(),
   })
 }
 
@@ -102,5 +104,6 @@ describe('container plugin', () => {
     expect(container.statistics.get).toBeDefined()
     expect(container.notifications.getPreferences).toBeDefined()
     expect(container.notifications.updatePreferences).toBeDefined()
+    expect(container.notifications.subscribeToOneTimeLink).toBeDefined()
   })
 })
