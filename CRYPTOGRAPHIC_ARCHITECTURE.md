@@ -83,9 +83,14 @@ retrieve their share while the vault is locked, which is when the shares are nee
 
 The database alone cannot rebuild the Master Key: it holds lookup hashes, hashes of ack keys and sealed
 shares, and none of them reveals a link key. Nor can it close a link: that takes the ack key, which only
-the token yields. The setup does not wait for the custodians, and no listing of the links is exposed;
-openings and closings are only recorded in the vault audit events, by share index. A share whose link
-expires unopened is lost.
+the token yields. The setup does not wait for the custodians. A share whose link expires unopened is
+lost.
+
+Administrators can follow the state of each link of the current setup (pending, opened, opened but never
+confirmed, confirmed, expired) in a read-only admin page. The state is derived from the links still
+stored and from the audit events, since a link is deleted once confirmed and purged once expired, and
+events of an abandoned setup are ignored. It only ever shows share indexes, dates and opening counts,
+never a token, a hash or a sealed share.
 
 ```mermaid
 flowchart TD

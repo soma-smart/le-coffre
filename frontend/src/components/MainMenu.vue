@@ -189,6 +189,25 @@
           </div>
           <div
             class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
+            :class="isAdminShareLinksActive ? 'bg-primary/10' : ''"
+            @click="goToAdminShareLinks()"
+          >
+            <span
+              class="pi pi-send transition-colors text-sm"
+              :class="
+                isAdminShareLinksActive
+                  ? 'text-primary'
+                  : 'text-muted-color group-hover:text-primary'
+              "
+            />
+            <span
+              class="ml-2 transition-colors text-sm"
+              :class="{ 'font-semibold': isAdminShareLinksActive }"
+              >{{ t('components.mainMenu.shareLinks') }}</span
+            >
+          </div>
+          <div
+            class="flex items-center px-4 py-2 cursor-pointer group transition-colors hover:bg-emphasis"
             :class="isAdminStatisticsActive ? 'bg-primary/10' : ''"
             @click="goToAdminStatistics()"
           >
@@ -277,6 +296,7 @@ const isAdminActive = computed(() => route.path.startsWith('/admin'))
 const isAdminConfigActive = computed(() => route.path === '/admin/config')
 const isAdminUsersActive = computed(() => route.path === '/admin/users')
 const isAdminOneTimeLinksActive = computed(() => route.path === '/admin/one-time-links')
+const isAdminShareLinksActive = computed(() => route.path === '/admin/share-links')
 const isMyLinksActive = computed(() => route.path === '/my-links')
 const isAdminStatisticsActive = computed(() => route.path === '/admin/statistics')
 const selectedGroupSlug = computed(() => (route.params.groupSlug as string | undefined) ?? null)
@@ -458,6 +478,10 @@ const goToAdminUsers = () => {
 
 const goToAdminOneTimeLinks = () => {
   router.push('/admin/one-time-links')
+}
+
+const goToAdminShareLinks = () => {
+  router.push('/admin/share-links')
 }
 
 const goToMyLinks = () => {

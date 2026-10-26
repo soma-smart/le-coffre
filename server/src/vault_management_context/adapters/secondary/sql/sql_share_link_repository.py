@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlmodel import Session, delete, or_, select, update
+from sqlmodel import Session, col, delete, or_, select, update
 
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from shared_kernel.utils import as_utc, to_naive_utc
@@ -55,6 +55,15 @@ class SqlShareLinkRepository(SQLBaseRepository, ShareLinkRepository):
             select(VaultShareLinkTable).where(VaultShareLinkTable.lookup_hash == lookup_hash)
         ).first()
         return _to_entity(row) if row else None
+
+    def list_by_setup(self, setup_id: str) -> list[ShareLink]:
+        rows = self._session.exec(
+            select(VaultShareLinkTable)
+            .where(VaultShareLinkTable.setup_id == setup_id)
+            .order_by(col(VaultShareLinkTable.share_index))
+            .execution_options(populate_existing=True)
+        ).all()
+        return [_to_entity(row) for row in rows]
 
     def deliver(self, link_id: UUID, now: datetime, reopenable_until: datetime) -> ShareLinkDelivery | None:
         naive_now = to_naive_utc(now)

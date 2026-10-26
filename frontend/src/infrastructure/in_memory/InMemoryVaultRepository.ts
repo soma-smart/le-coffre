@@ -1,7 +1,12 @@
 import type { CreateVaultInput, VaultRepository } from '@/application/ports/VaultRepository'
 import type { SealedShare } from '@/domain/vault/ShareLink'
 import type { VaultSetup, VaultState, VaultStatus } from '@/domain/vault/Vault'
-import { ShareLinkAckRejectedError, ShareLinkUnusableError } from '@/domain/vault/errors'
+import type { ShareLinksOverview } from '@/domain/vault/ShareLinksOverview'
+import {
+  ShareLinkAckRejectedError,
+  ShareLinkUnusableError,
+  VaultNotConfiguredError,
+} from '@/domain/vault/errors'
 
 /** What a test seeds for a link; the delivery fields come from retrieval. */
 export interface SeededSealedShare {
@@ -35,6 +40,8 @@ const REOPEN_WINDOW_MS = 15 * 60 * 1000
  *   - getStatus(sessionId) → PENDING_UNLOCK with the session's last
  *     timestamp while the vault is locked and that session holds shares
  *   - lock → UNLOCKED → LOCKED
+ *   - getShareLinksOverview → the seeded overview, or VaultNotConfiguredError
+ *     when none was seeded (no vault)
  */
 export class InMemoryVaultRepository implements VaultRepository {
   private state: VaultState = { status: 'NOT_SETUP', lastShareTimestamp: null }
@@ -48,6 +55,8 @@ export class InMemoryVaultRepository implements VaultRepository {
   private sessions = new Map<string, { shares: Set<string>; lastShareTimestamp: string }>()
   private now: () => Date = () => new Date()
   private getStatusError: Error | null = null
+  private shareLinksOverview: ShareLinksOverview | null = null
+  private shareLinksOverviewError: Error | null = null
 
   useClock(now: () => Date): this {
     this.now = now
@@ -74,6 +83,18 @@ export class InMemoryVaultRepository implements VaultRepository {
   /** Force the next getStatus() call to throw — for testing error paths. */
   failGetStatusOnce(error: Error): this {
     this.getStatusError = error
+    return this
+  }
+
+  /** The overview the admin panel will read; none seeded means no vault yet. */
+  seedShareLinksOverview(overview: ShareLinksOverview | null): this {
+    this.shareLinksOverview = overview
+    return this
+  }
+
+  /** Force the next getShareLinksOverview() call to throw — for testing error paths. */
+  failGetShareLinksOverviewOnce(error: Error): this {
+    this.shareLinksOverviewError = error
     return this
   }
 
@@ -160,6 +181,16 @@ export class InMemoryVaultRepository implements VaultRepository {
     if (!link || !link.firstRetrievedAt) throw new ShareLinkUnusableError()
     if (link.ackKey !== ackKey) throw new ShareLinkAckRejectedError()
     this.sealedShares.delete(lookupHash)
+  }
+
+  async getShareLinksOverview(): Promise<ShareLinksOverview> {
+    if (this.shareLinksOverviewError) {
+      const e = this.shareLinksOverviewError
+      this.shareLinksOverviewError = null
+      throw e
+    }
+    if (!this.shareLinksOverview) throw new VaultNotConfiguredError()
+    return structuredClone(this.shareLinksOverview)
   }
 
   private transitionTo(status: VaultStatus): void {

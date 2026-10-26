@@ -1462,6 +1462,93 @@ export type ServiceAccountSummary = {
 };
 
 /**
+ * ShareLinkOverviewResponse
+ */
+export type ShareLinkOverviewResponse = {
+    /**
+     * Share Index
+     */
+    share_index: number;
+    /**
+     * Status
+     */
+    status: 'PENDING' | 'OPENED' | 'OPENED_UNCONFIRMED' | 'ACKNOWLEDGED' | 'EXPIRED';
+    /**
+     * Expires At
+     */
+    expires_at: string | null;
+    /**
+     * First Opened At
+     */
+    first_opened_at: string | null;
+    /**
+     * Reopenable Until
+     */
+    reopenable_until: string | null;
+    /**
+     * Acknowledged At
+     */
+    acknowledged_at: string | null;
+    /**
+     * Open Count
+     */
+    open_count: number;
+};
+
+/**
+ * ShareLinkStatusCounts
+ */
+export type ShareLinkStatusCounts = {
+    /**
+     * Pending
+     */
+    pending: number;
+    /**
+     * Opened
+     */
+    opened: number;
+    /**
+     * Opened Unconfirmed
+     */
+    opened_unconfirmed: number;
+    /**
+     * Acknowledged
+     */
+    acknowledged: number;
+    /**
+     * Expired
+     */
+    expired: number;
+};
+
+/**
+ * ShareLinksOverviewResponse
+ */
+export type ShareLinksOverviewResponse = {
+    /**
+     * Setup Id
+     */
+    setup_id: string;
+    /**
+     * Nb Shares
+     */
+    nb_shares: number;
+    /**
+     * Threshold
+     */
+    threshold: number;
+    /**
+     * Created At
+     */
+    created_at: string | null;
+    /**
+     * Links
+     */
+    links: Array<ShareLinkOverviewResponse>;
+    counts: ShareLinkStatusCounts;
+};
+
+/**
  * SharePasswordRequest
  */
 export type SharePasswordRequest = {
@@ -1927,6 +2014,33 @@ export type GetVaultStatusVaultStatusGetResponses = {
 };
 
 export type GetVaultStatusVaultStatusGetResponse = GetVaultStatusVaultStatusGetResponses[keyof GetVaultStatusVaultStatusGetResponses];
+
+export type GetShareLinksOverviewVaultShareLinksGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/vault/share-links';
+};
+
+export type GetShareLinksOverviewVaultShareLinksGetErrors = {
+    /**
+     * Only administrators can view the share links
+     */
+    403: unknown;
+    /**
+     * The vault has not been set up yet
+     */
+    404: unknown;
+};
+
+export type GetShareLinksOverviewVaultShareLinksGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ShareLinksOverviewResponse;
+};
+
+export type GetShareLinksOverviewVaultShareLinksGetResponse = GetShareLinksOverviewVaultShareLinksGetResponses[keyof GetShareLinksOverviewVaultShareLinksGetResponses];
 
 export type RetrieveShareLinkVaultShareLinksRetrievePostData = {
     body: RetrieveShareLinkRequest;

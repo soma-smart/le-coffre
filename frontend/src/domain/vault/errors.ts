@@ -5,6 +5,14 @@ export class VaultDomainError extends Error {
   }
 }
 
+/** No vault has been set up yet, so there is nothing to follow (the backend answers 404). */
+export class VaultNotConfiguredError extends VaultDomainError {
+  constructor() {
+    super('The vault has not been set up yet')
+    this.name = 'VaultNotConfiguredError'
+  }
+}
+
 /**
  * Raised when a crypto operation is attempted while the vault is locked
  * (the backend returns 503). The global HTTP interceptor already surfaces the

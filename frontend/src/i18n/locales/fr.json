@@ -382,6 +382,7 @@
       "config": "Configuration",
       "users": "Utilisateurs",
       "oneTimeLinks": "Liens à usage unique",
+      "shareLinks": "Liens de parts",
       "statistics": "Statistiques",
       "logout": "Déconnexion",
       "logoutSuccessSummary": "Déconnexion réussie",
@@ -475,6 +476,32 @@
         "fetchFailed": "Impossible de récupérer les liens à usage unique",
         "bulkRevoked": "{count} lien révoqué | {count} liens révoqués",
         "bulkRevokeFailed": "Échec de la révocation des liens"
+      },
+      "shareLinks": {
+        "title": "Liens de parts",
+        "refreshButton": "Rafraîchir",
+        "summary": "Seuil : {threshold} parts sur {total} nécessaires pour déverrouiller le coffre",
+        "createdAt": "liens émis le {date}",
+        "notConfigured": "Le coffre n'est pas encore configuré : il n'y a aucun lien de part à suivre.",
+        "fetchFailed": "Échec de la récupération des liens de parts",
+        "empty": "Aucun lien de part pour ce setup",
+        "thresholdAlert": "Seule(s) {recoverable} part(s) peuvent encore être récupérées, moins que les {threshold} nécessaires : le coffre risque de ne plus pouvoir être déverrouillé. Contactez les dépositaires sans attendre.",
+        "multipleOpeningsAlert": "Ouvert {count} fois : peut-être par un tiers. Vérifiez auprès du dépositaire.",
+        "shareHeader": "Part",
+        "shareLabel": "Part {index}",
+        "statusHeader": "Statut",
+        "expiresHeader": "Expiration",
+        "firstOpenedHeader": "Première ouverture",
+        "reopenableHeader": "Réouverture possible jusqu'à",
+        "acknowledgedHeader": "Confirmation",
+        "openCountHeader": "Ouvertures",
+        "status": {
+          "PENDING": "En attente",
+          "OPENED": "Ouvert, en attente de confirmation",
+          "OPENED_UNCONFIRMED": "Ouvert, jamais confirmé",
+          "ACKNOWLEDGED": "Confirmé",
+          "EXPIRED": "Expiré, part perdue"
+        }
       },
       "statistics": {
         "title": "Statistiques",

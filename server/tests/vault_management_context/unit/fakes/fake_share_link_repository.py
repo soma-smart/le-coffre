@@ -35,6 +35,9 @@ class FakeShareLinkRepository(ShareLinkRepository):
                 return replace(link)
         return None
 
+    def list_by_setup(self, setup_id: str) -> list[ShareLink]:
+        return [link for link in self.stored() if link.setup_id == setup_id]
+
     def deliver(self, link_id: UUID, now: datetime, reopenable_until: datetime) -> ShareLinkDelivery | None:
         link = self._links.get(link_id)
         if link is None or not link.can_be_delivered(now):

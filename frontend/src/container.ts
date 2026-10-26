@@ -68,6 +68,7 @@ import { UpdatePasswordUseCase } from '@/application/password/UpdatePassword'
 import { UpdateShareExpirationUseCase } from '@/application/password/UpdateShareExpiration'
 import { CreateVaultUseCase } from '@/application/vault/CreateVault'
 import { GetVaultStatusUseCase } from '@/application/vault/GetVaultStatus'
+import { GetShareLinksOverviewUseCase } from '@/application/vault/GetShareLinksOverview'
 import { LockVaultUseCase } from '@/application/vault/LockVault'
 import { RetrieveVaultShareUseCase } from '@/application/vault/RetrieveVaultShare'
 import { AcknowledgeVaultShareUseCase } from '@/application/vault/AcknowledgeVaultShare'
@@ -169,6 +170,7 @@ export interface Container {
     lock: LockVaultUseCase
     retrieveShare: RetrieveVaultShareUseCase
     acknowledgeShare: AcknowledgeVaultShareUseCase
+    getShareLinksOverview: GetShareLinksOverviewUseCase
   }
   auth: {
     login: LoginWithPasswordUseCase
@@ -275,6 +277,7 @@ export function buildContainer(ports: Ports): Container {
         ports.vaultRepository,
         ports.shareLinkCipher,
       ),
+      getShareLinksOverview: new GetShareLinksOverviewUseCase(ports.vaultRepository),
     },
     auth: {
       login: new LoginWithPasswordUseCase(ports.authGateway),

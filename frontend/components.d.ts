@@ -67,6 +67,7 @@ declare module 'vue' {
     ShamirInputs: typeof import('./src/components/setup/shamir/ShamirInputs.vue')['default']
     ShareDurationPicker: typeof import('./src/components/shared/ShareDurationPicker.vue')['default']
     ShareLinksModal: typeof import('./src/components/setup/shamir/ShareLinksModal.vue')['default']
+    ShareLinksTrackingCard: typeof import('./src/components/admin/ShareLinksTrackingCard.vue')['default']
     SharePasswordModal: typeof import('./src/components/modals/SharePasswordModal.vue')['default']
     Skeleton: typeof import('primevue/skeleton')['default']
     Slider: typeof import('primevue/slider')['default']

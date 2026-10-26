@@ -19,6 +19,14 @@ class ShareLinkRepository(Protocol):
 
     def get_by_lookup_hash(self, lookup_hash: str) -> ShareLink | None: ...
 
+    def list_by_setup(self, setup_id: str) -> list[ShareLink]:
+        """The links of this setup still stored, ordered by share index.
+
+        Not every link of the setup: acknowledged ones are deleted and expired
+        ones purged, so a missing index says nothing by itself.
+        """
+        ...
+
     # The conditions below restate ShareLink's rules (can_be_delivered,
     # can_be_acknowledged, is_purgeable) as conditional writes: the use cases
     # decide with the entity, and these writes only guard against a concurrent

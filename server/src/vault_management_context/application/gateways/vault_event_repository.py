@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from vault_management_context.domain.value_objects import StoredVaultEvent
+
 
 class VaultEventRepository(Protocol):
     """Repository for vault audit events"""
@@ -19,4 +21,8 @@ class VaultEventRepository(Protocol):
 
     def get_last_event_type(self, event_types: list[str]) -> str | None:
         """Type of the most recent stored event among the given types, or None"""
+        ...
+
+    def list_events(self, event_types: list[str]) -> list[StoredVaultEvent]:
+        """Every stored event among the given types, oldest first"""
         ...

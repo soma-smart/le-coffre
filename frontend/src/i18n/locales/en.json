@@ -382,6 +382,7 @@
       "config": "Config",
       "users": "Users",
       "oneTimeLinks": "One-time links",
+      "shareLinks": "Share links",
       "statistics": "Statistics",
       "logout": "Logout",
       "logoutSuccessSummary": "Logout Successful",
@@ -475,6 +476,32 @@
         "fetchFailed": "Failed to fetch one-time links",
         "bulkRevoked": "{count} link revoked | {count} links revoked",
         "bulkRevokeFailed": "Failed to revoke the links"
+      },
+      "shareLinks": {
+        "title": "Share links",
+        "refreshButton": "Refresh",
+        "summary": "Threshold: {threshold} of {total} shares needed to unlock the vault",
+        "createdAt": "links issued on {date}",
+        "notConfigured": "The vault has not been set up yet, so there are no share links to follow.",
+        "fetchFailed": "Failed to fetch the share links",
+        "empty": "No share links for this setup",
+        "thresholdAlert": "Only {recoverable} share(s) can still be recovered, fewer than the {threshold} needed: the vault may no longer be unlockable. Check with the custodians right away.",
+        "multipleOpeningsAlert": "Opened {count} times: possibly by someone else. Check with the custodian.",
+        "shareHeader": "Share",
+        "shareLabel": "Share {index}",
+        "statusHeader": "Status",
+        "expiresHeader": "Expires",
+        "firstOpenedHeader": "First opened",
+        "reopenableHeader": "Reopenable until",
+        "acknowledgedHeader": "Confirmed",
+        "openCountHeader": "Openings",
+        "status": {
+          "PENDING": "Pending",
+          "OPENED": "Opened, awaiting confirmation",
+          "OPENED_UNCONFIRMED": "Opened, never confirmed",
+          "ACKNOWLEDGED": "Confirmed",
+          "EXPIRED": "Expired, share lost"
+        }
       },
       "statistics": {
         "title": "Statistics",

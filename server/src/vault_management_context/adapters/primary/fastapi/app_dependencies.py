@@ -24,6 +24,7 @@ from vault_management_context.application.gateways import (
 from vault_management_context.application.use_cases import (
     AcknowledgeShareLinkUseCase,
     CreateVaultUseCase,
+    GetShareLinksOverviewUseCase,
     GetVaultStatusUseCase,
     LockVaultUseCase,
     RetrieveShareLinkUseCase,
@@ -169,3 +170,12 @@ def get_acknowledge_share_link_usecase(
     return AcknowledgeShareLinkUseCase(
         share_link_repository, event_publisher, vault_event_repository, time_gateway, transaction_gateway
     )
+
+
+def get_share_links_overview_usecase(
+    vault_repository: VaultRepository = Depends(get_vault_repository),
+    share_link_repository: ShareLinkRepository = Depends(get_share_link_repository),
+    vault_event_repository: VaultEventRepository = Depends(get_vault_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return GetShareLinksOverviewUseCase(vault_repository, share_link_repository, vault_event_repository, time_gateway)

@@ -71,6 +71,34 @@ def test_replace_all_drops_the_links_of_a_previous_setup(repository):
     assert _indexes(repository, new) == [1, 2]
 
 
+def test_list_by_setup_returns_the_links_of_that_setup_ordered_by_share_index(repository):
+    links = _links("s1", 3)
+    repository.replace_all([links[2], links[0], links[1]])
+    _deliver(repository, links[1], NOW + timedelta(hours=1))
+
+    listed = repository.list_by_setup("s1")
+
+    assert [link.share_index for link in listed] == [1, 2, 3]
+    assert listed[0] == links[0]
+    assert listed[1].delivered_at == NOW + timedelta(hours=1)
+    assert listed[1].reopenable_until == NOW + timedelta(hours=1) + SHARE_LINK_REOPEN_WINDOW
+
+
+def test_list_by_setup_ignores_other_setups_and_unknown_ones(repository):
+    repository.replace_all(_links("s1", 2))
+
+    assert repository.list_by_setup("other") == []
+
+
+def test_list_by_setup_keeps_expired_links_until_they_are_purged(repository):
+    links = _links("s1", 2)
+    repository.replace_all(links)
+
+    assert [link.share_index for link in repository.list_by_setup("s1")] == [1, 2]
+    repository.purge_expired(EXPIRY)
+    assert repository.list_by_setup("s1") == []
+
+
 def test_first_delivery_starts_the_reopen_window_and_keeps_the_link(repository):
     link = _links("s1", 1)[0]
     repository.replace_all([link])

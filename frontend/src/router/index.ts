@@ -143,6 +143,12 @@ const router = createRouter({
       meta: { requiresAdmin: true },
     },
     {
+      path: '/admin/share-links',
+      name: 'AdminShareLinks',
+      component: () => import('@/pages/admin/AdminShareLinksPage.vue'),
+      meta: { requiresAdmin: true },
+    },
+    {
       path: '/admin/statistics',
       name: 'AdminStatistics',
       component: () => import('@/pages/admin/AdminStatisticsPage.vue'),
