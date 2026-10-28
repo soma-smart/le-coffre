@@ -692,7 +692,7 @@ def test_should_key_an_extension_to_its_user_when_it_sends_a_bearer_and_no_cooki
     """The whole point of bearer keying, and it was dead.
 
     An extension never sends a cookie: they are SameSite=strict. A version of
-    _resolve_principal that returned the IP principal as soon as the cookie was
+    _resolve_caller that returned the IP caller as soon as the cookie was
     absent made the bearer branch unreachable for its only caller, leaving every
     extension in the shared anonymous bucket, which is what it exists to avoid.
     """
