@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
@@ -24,7 +22,6 @@ from identity_access_management_context.adapters.secondary.private_api import (
 from identity_access_management_context.adapters.secondary.sql import (
     SqlAuthSessionRepository,
     SqlExtensionPairingRepository,
-    SqlExtensionTokenRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlIamEventRepository,
@@ -42,7 +39,6 @@ from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
     ExtensionPairingRepository,
-    ExtensionTokenRepository,
     GroupEventRepository,
     GroupMemberRepository,
     GroupRepository,
@@ -182,14 +178,6 @@ def get_extension_pairing_repository(
     return SqlExtensionPairingRepository(session)
 
 
-def get_extension_token_repository(
-    session: Session = Depends(get_session),
-) -> ExtensionTokenRepository:
-    return SqlExtensionTokenRepository(
-        session, dormant_after=timedelta(seconds=get_extension_token_inactivity_seconds())
-    )
-
-
 def get_group_repository(session: Session = Depends(get_session)) -> GroupRepository:
     return SqlGroupRepository(session)
 
@@ -304,7 +292,9 @@ def get_delete_user_usecase(
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
     one_time_link_revocation_gateway: OneTimeLinkRevocationGateway = Depends(get_one_time_link_revocation_gateway),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
@@ -316,7 +306,7 @@ def get_delete_user_usecase(
         event_publisher,
         user_event_repository,
         one_time_link_revocation_gateway,
-        extension_token_repository,
+        token_credential_record_repository,
         admin_event_repository,
         time_provider,
         auth_session_repository,
@@ -348,7 +338,9 @@ def get_update_user_password_usecase(
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
@@ -359,7 +351,7 @@ def get_update_user_password_usecase(
         auth_session_repository,
         token_gateway,
         time_provider,
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
     )
@@ -555,7 +547,9 @@ def get_refresh_access_token_usecase(
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     revoked_token_repository: RevokedTokenRepository = Depends(get_revoked_token_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
@@ -566,7 +560,7 @@ def get_refresh_access_token_usecase(
         revoked_token_repository,
         time_provider,
         get_session_max_lifetime_seconds(),
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
     )
@@ -855,14 +849,16 @@ def get_get_extension_pairing_usecase(
 
 def get_approve_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return ApproveExtensionPairingUseCase(
         extension_pairing_repository,
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
         time_provider,
@@ -882,7 +878,9 @@ def get_deny_extension_pairing_usecase(
 
 def get_exchange_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     user_repository: UserRepository = Depends(get_user_repository),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
@@ -890,36 +888,37 @@ def get_exchange_extension_pairing_usecase(
 ):
     return ExchangeExtensionPairingUseCase(
         extension_pairing_repository,
-        extension_token_repository,
+        token_credential_record_repository,
         user_repository,
         event_publisher,
         admin_event_repository,
         time_provider,
         get_extension_token_lifetime_seconds(),
+        get_extension_token_inactivity_seconds(),
         get_extension_pairing_poll_interval_seconds(),
     )
 
 
 def get_list_extension_tokens_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
-    return ListExtensionTokensUseCase(
-        extension_token_repository, time_provider, get_extension_token_inactivity_seconds()
-    )
+    return ListExtensionTokensUseCase(token_credential_record_repository, time_provider)
 
 
 def get_revoke_extension_token_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RevokeExtensionTokenUseCase(
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
-        time_provider,
     )
 
 
@@ -944,28 +943,28 @@ def get_revoke_service_account_usecase(
 
 
 def get_revoke_all_extension_tokens_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RevokeAllExtensionTokensUseCase(
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
-        time_provider,
     )
 
 
 def get_revoke_all_extension_tokens_for_user_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RevokeAllExtensionTokensForUserUseCase(
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
-        time_provider,
     )

@@ -46,7 +46,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
 from typing import Literal
 
 from fastapi import Request
@@ -54,12 +53,12 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from identity_access_management_context.adapters.secondary.sql import SqlExtensionTokenRepository
+from identity_access_management_context.adapters.secondary.sql import SqlTokenCredentialRecordRepository
 from identity_access_management_context.domain.exceptions import (
-    InvalidExtensionTokenError,
+    InvalidTokenCredentialError,
     InvalidTokenException,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
+from identity_access_management_context.domain.value_objects import TokenCredential
 from security.bearer_principal_cache import BearerPrincipalCache
 from security.client_ip import resolve_client_ip
 from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
@@ -392,8 +391,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # while every extension silently dropped from the per-user bucket into
         # the anonymous IP one, with nothing logged.
         try:
-            secret = ExtensionTokenSecret(value=authorization[7:].strip())
-        except InvalidExtensionTokenError:
+            token = TokenCredential(value=authorization[7:].strip())
+        except InvalidTokenCredentialError:
             # Cheap format gate before any database access, so junk bearers
             # never reach a query. An attacker sending well-formed unknown
             # tokens still falls back to the IP bucket, which caps them at the
@@ -406,11 +405,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # to IP keying rather than to a 429: this function decides which bucket
         # to charge, never whether the request is allowed.
         miss_key = f"ip:{client_ip}:bearer-miss"
-        token_hash = secret.hashed()
+        token_hash = token.hash
         try:
             rate_limiter = request.app.state.rate_limiter
             miss_max = request.app.state.rate_limit_bearer_miss_max_requests
-            dormant_after = timedelta(seconds=request.app.state.extension_token_inactivity_seconds)
             window = request.app.state.rate_limit_window_seconds
             time_provider = request.app.state.time_provider
             now = time_provider.get_current_time()
@@ -436,7 +434,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             def lookup():
                 with session_maker() as session:
-                    return SqlExtensionTokenRepository(session).get_by_token_hash(token_hash)
+                    return SqlTokenCredentialRecordRepository(session).get_by_token_hash(token_hash)
 
             token_row = await run_in_threadpool(lookup)
         except Exception:  # noqa: BLE001 - bucket selection must never fail a request
@@ -446,15 +444,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
             return Principal(kind="ip", id=client_ip)
 
-        if token_row is None or not token_row.is_active(now, dormant_after):
+        if token_row is None or not token_row.is_usable(now):
             # The lookup was wasted. Charge it, so a caller producing nothing
             # but misses runs out of budget while a real extension never does.
             rate_limiter.check(miss_key, miss_max, window, now)
             return Principal(kind="ip", id=client_ip)
 
-        user_id = str(token_row.user_id)
-        self._bearer_cache.put(token_hash, user_id, now)
-        return Principal(kind="user", id=user_id)
+        principal_id = str(token_row.principal_id)
+        self._bearer_cache.put(token_hash, principal_id, now)
+        return Principal(kind="user", id=principal_id)
 
     @staticmethod
     def _build_429_response(result: RateLimitResult) -> JSONResponse:

@@ -4,10 +4,10 @@ from identity_access_management_context.application.commands import DeleteUserCo
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
-    ExtensionTokenRepository,
     GroupMemberRepository,
     GroupRepository,
     OneTimeLinkRevocationGateway,
+    TokenCredentialRecordRepository,
     UserEventRepository,
     UserRepository,
 )
@@ -32,7 +32,7 @@ class DeleteUserUseCase(TracedUseCase):
         event_publisher: DomainEventPublisher,
         user_event_repository: UserEventRepository,
         one_time_link_revocation_gateway: OneTimeLinkRevocationGateway,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
         auth_session_repository: AuthSessionRepository,
@@ -43,7 +43,7 @@ class DeleteUserUseCase(TracedUseCase):
         self.event_publisher = event_publisher
         self._user_event_repository = user_event_repository
         self._one_time_link_revocation_gateway = one_time_link_revocation_gateway
-        self._extension_token_repository = extension_token_repository
+        self._token_credential_record_repository = token_credential_record_repository
         self._admin_event_repository = admin_event_repository
         self._time_provider = time_provider
         self._auth_session_repository = auth_session_repository
@@ -70,7 +70,7 @@ class DeleteUserUseCase(TracedUseCase):
         # row is gone. Without this revocation a deleted SSO account keeps
         # reading the vault until the token's absolute expiry, up to 30 days.
         now = self._time_provider.get_current_time()
-        revoked_tokens = self._extension_token_repository.revoke_all_for_user(user_id, now)
+        revoked_tokens = self._token_credential_record_repository.delete_by_principal_ids([user_id])
         if revoked_tokens:
             ExtensionRevocationRecordingService.record(
                 self.event_publisher,

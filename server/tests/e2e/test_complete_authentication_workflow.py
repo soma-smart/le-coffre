@@ -981,13 +981,11 @@ async def test_complete_authentication_workflow(
     )
     print("✅ Bearer refused on device management, admin reads and every mutation")
 
-    # Step 9.12: revoking disconnects the device, and is idempotent.
+    # Step 9.12: revoking disconnects the device; its history is in the audit trail.
     revoke_response = extension_client.delete(f"/api/extension/tokens/{token_id}")
     assert revoke_response.status_code == 204, revoke_response.text
-    after_revoke = extension_client.get("/api/extension/tokens").json()["tokens"]
-    assert after_revoke[0]["is_active"] is False
-    assert after_revoke[0]["revoked_at"] is not None
-    print("✅ Device revoked and still listed for audit")
+    assert extension_client.get("/api/extension/tokens").json()["tokens"] == []
+    print("✅ Device revoked")
 
     # Step 9.13: denial is a real path, so a phished user is not stuck waiting.
     deny_register = anonymous_client.post(

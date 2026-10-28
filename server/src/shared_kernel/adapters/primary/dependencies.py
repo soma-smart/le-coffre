@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import Generator
 
 from fastapi import Depends, HTTPException
@@ -7,10 +6,10 @@ from fastapi.security.api_key import APIKeyCookie, APIKeyHeader
 from sqlmodel import Session
 from starlette.requests import Request
 
-from config import get_extension_last_used_coarsening_seconds, get_extension_token_inactivity_seconds
+from config import get_extension_last_used_coarsening_seconds
 from identity_access_management_context.adapters.secondary.sql import (
-    SqlExtensionTokenRepository,
     SqlRevokedTokenRepository,
+    SqlTokenCredentialRecordRepository,
     SqlUserRepository,
 )
 from identity_access_management_context.application.commands import (
@@ -115,13 +114,11 @@ def get_validate_extension_token_usecase(
     request: Request,
     session: Session = Depends(get_session),
 ) -> ValidateExtensionTokenUseCase:
-    inactivity_seconds = get_extension_token_inactivity_seconds()
     return ValidateExtensionTokenUseCase(
-        SqlExtensionTokenRepository(session, dormant_after=timedelta(seconds=inactivity_seconds)),
+        SqlTokenCredentialRecordRepository(session),
         SqlUserRepository(session),
         request.app.state.time_provider,
         get_extension_last_used_coarsening_seconds(),
-        inactivity_seconds,
     )
 
 

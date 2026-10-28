@@ -6,7 +6,7 @@ from identity_access_management_context.application.commands import ExchangeExte
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     ExtensionPairingRepository,
-    ExtensionTokenRepository,
+    TokenCredentialRecordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.responses import (
@@ -17,7 +17,7 @@ from identity_access_management_context.application.services import (
     ExtensionAuditService,
     ExtensionPairingLookupService,
 )
-from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, ExtensionToken
+from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, TokenCredentialRecord
 from identity_access_management_context.domain.events import ExtensionPairedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
@@ -28,7 +28,7 @@ from identity_access_management_context.domain.exceptions import (
     TooManyActiveExtensionTokensError,
     UserNotFoundException,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret, PkceVerifier
+from identity_access_management_context.domain.value_objects import PkceVerifier, TokenCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
@@ -55,22 +55,24 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
     def __init__(
         self,
         extension_pairing_repository: ExtensionPairingRepository,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         user_repository: UserRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
         token_lifetime_seconds: int,
+        token_inactivity_seconds: int,
         poll_interval_seconds: int,
         max_active_tokens: int = MAX_ACTIVE_TOKENS_PER_USER,
     ):
         self.extension_pairing_repository = extension_pairing_repository
-        self.extension_token_repository = extension_token_repository
+        self.token_credential_record_repository = token_credential_record_repository
         self.user_repository = user_repository
         self.event_publisher = event_publisher
         self.admin_event_repository = admin_event_repository
         self.time_provider = time_provider
         self.token_lifetime_seconds = token_lifetime_seconds
+        self.token_inactivity_seconds = token_inactivity_seconds
         self.poll_interval_seconds = poll_interval_seconds
         self.max_active_tokens = max_active_tokens
 
@@ -136,7 +138,7 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         # someone at four tokens from collecting any number of approvals, each
         # seeing 4 < 5, and redeeming them afterwards. This read is the friendly
         # exit that leaves the pairing intact; the insert below is the guard.
-        if self.extension_token_repository.count_active_for_user(approver_id, now) >= self.max_active_tokens:
+        if self.token_credential_record_repository.count_usable(approver_id, now) >= self.max_active_tokens:
             raise TooManyActiveExtensionTokensError(self.max_active_tokens)
 
         # Single conditional write. Two concurrent exchanges both reach here,
@@ -144,17 +146,23 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         if not self.extension_pairing_repository.consume(pairing.id, now):
             raise ExtensionPairingAlreadyResolvedError()
 
-        secret = ExtensionTokenSecret.generate()
-        token = ExtensionToken.create(
-            user_id=approver_id,
-            secret=secret,
-            device_name=pairing.device_name,
-            lifetime=timedelta(seconds=self.token_lifetime_seconds),
-            now=now,
-            created_from_ip=pairing.created_from_ip,
+        token = TokenCredential.generate()
+        credential_record = TokenCredentialRecord(
+            principal_id=approver_id,
+            token_hash=token.hash,
+            # An extension reads what its user can read, and nothing more: it
+            # lives in a browser profile, far from where the user logged in.
+            read_only=True,
+            label=pairing.device_name,
+            expires_at=now + timedelta(seconds=self.token_lifetime_seconds),
+            # Counted from issuance, so an exchange whose response the extension
+            # lost does not leave a live credential behind forever.
+            last_used_at=now,
+            max_idle=timedelta(seconds=self.token_inactivity_seconds),
         )
-        stored = self.extension_token_repository.add(token, self.max_active_tokens, now)
-        if stored is None:
+        if not self.token_credential_record_repository.create_within_limit(
+            credential_record, self.max_active_tokens, now
+        ):
             # Only reachable when a concurrent exchange took the last slot
             # between the count above and this insert. The pairing is already
             # consumed, so this one has to be re-paired after freeing a slot.
@@ -168,9 +176,9 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         # point must not cost the user the only copy of its plaintext.
         event = ExtensionPairedEvent(
             user_id=approver_id,
-            token_id=stored.id,
-            device_name=stored.device_name,
-            created_from_ip=stored.created_from_ip,
+            token_id=credential_record.id,
+            device_name=pairing.device_name,
+            created_from_ip=pairing.created_from_ip,
         )
         ExtensionAuditService.record(
             self.event_publisher,
@@ -178,18 +186,18 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
             event,
             actor_user_id=approver_id,
             event_data={
-                "token_id": str(stored.id),
-                "device_name": stored.device_name,
-                "created_from_ip": stored.created_from_ip,
+                "token_id": str(credential_record.id),
+                "device_name": pairing.device_name,
+                "created_from_ip": pairing.created_from_ip,
             },
         )
 
-        logger.info("Extension paired", extra={"token_id": str(stored.id), "user_id": str(approver_id)})
+        logger.info("Extension paired", extra={"token_id": str(credential_record.id), "user_id": str(approver_id)})
 
         return ExchangedExtensionTokenResponse(
-            token=secret.value,
-            token_id=stored.id,
-            expires_at=stored.expires_at,
+            token=token.value,
+            token_id=credential_record.id,
+            expires_at=credential_record.expires_at,
             user_id=approver_id,
             email=email,
             display_name=display_name,

@@ -66,6 +66,10 @@ class TokenCredentialRecordRepository(ABC):
         Coarsened so that a busy client does not write on every request.
         """
 
+    def count_usable(self, principal_id: UUID, now: datetime) -> int:
+        """How many of the principal's token credential records still prove it."""
+        return sum(record.is_usable(now) for record in self.list_by_principal_ids((principal_id,)))
+
     def rotate(self, token_hashes: Iterable[str]) -> Sequence[str]:
         """Rotate token hashes.
 

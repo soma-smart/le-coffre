@@ -21,7 +21,7 @@ from identity_access_management_context.application.use_cases import (
     ValidateExtensionTokenUseCase,
     ValidateUserTokenUseCase,
 )
-from identity_access_management_context.domain.exceptions import ExtensionTokenRevokedError
+from identity_access_management_context.domain.exceptions import ExtensionTokenExpiredError
 from main import app
 from security.rate_limit_middleware import RateLimitMiddleware
 from shared_kernel.adapters.primary.dependencies import get_current_principal
@@ -191,7 +191,7 @@ def test_should_reject_when_no_credential_is_present():
 def test_should_report_a_generic_message_when_the_extension_token_is_revoked():
     # A token holder must not be able to tell revoked from expired from unknown.
     revoked = Mock(spec=ValidateExtensionTokenUseCase)
-    revoked.execute = Mock(side_effect=ExtensionTokenRevokedError())
+    revoked.execute = Mock(side_effect=ExtensionTokenExpiredError())
 
     with pytest.raises(HTTPException) as error:
         get_current_principal(

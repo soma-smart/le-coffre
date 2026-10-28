@@ -7,8 +7,8 @@ from identity_access_management_context.application.gateways import (
     REVOCATION_REASON_REFRESH_TOKEN_ROTATED,
     AdminEventRepository,
     AuthSessionRepository,
-    ExtensionTokenRepository,
     RevokedTokenRepository,
+    TokenCredentialRecordRepository,
     TokenGateway,
     UserRepository,
 )
@@ -35,7 +35,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         revoked_token_repository: RevokedTokenRepository,
         time_provider: TimeGateway,
         session_max_lifetime_seconds: int,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
     ):
@@ -45,7 +45,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         self.revoked_token_repository = revoked_token_repository
         self.time_provider = time_provider
         self.session_max_lifetime_seconds = session_max_lifetime_seconds
-        self.extension_token_repository = extension_token_repository
+        self.token_credential_record_repository = token_credential_record_repository
         self.event_publisher = event_publisher
         self.admin_event_repository = admin_event_repository
 
@@ -87,7 +87,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
                 # rate limiter read the row, not the cutoff, so a token cut by
                 # the cutoff alone kept showing as active and kept charging the
                 # victim's bucket. Same reasoning as the password-change flow.
-                revoked = self.extension_token_repository.revoke_all_for_user(token_data.principal_id, now)
+                revoked = self.token_credential_record_repository.delete_by_principal_ids([token_data.principal_id])
                 if revoked:
                     ExtensionRevocationRecordingService.record(
                         self.event_publisher,

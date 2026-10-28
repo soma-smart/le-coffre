@@ -7,7 +7,6 @@ from .model.credential_record import (
     TokenCredentialRecordTable,
 )
 from .model.extension_pairing_model import ExtensionPairingTable
-from .model.extension_token_model import ExtensionTokenTable
 from .model.group_member_model import GroupMemberTable
 from .model.group_model import GroupTable
 from .model.iam_event import IamEventTable
@@ -18,7 +17,6 @@ from .model.sso_configuration_model import SsoConfigurationTable
 from .model.users_model import UserPrincipalTable
 from .sql_auth_session_repository import SqlAuthSessionRepository
 from .sql_extension_pairing_repository import SqlExtensionPairingRepository
-from .sql_extension_token_repository import SqlExtensionTokenRepository
 from .sql_group_member_repository import SqlGroupMemberRepository
 from .sql_group_repository import SqlGroupRepository
 from .sql_iam_event_repository import SqlIamEventRepository
@@ -34,7 +32,6 @@ from .sql_user_repository import SqlUserRepository
 
 __all__ = [
     "SqlExtensionPairingRepository",
-    "SqlExtensionTokenRepository",
     "SqlGroupRepository",
     "SqlGroupMemberRepository",
     "SqlIamEventRepository",
@@ -46,7 +43,6 @@ __all__ = [
     "SqlSsoConfigurationRepository",
     "SqlAuthSessionRepository",
     "ExtensionPairingTable",
-    "ExtensionTokenTable",
     "GroupTable",
     "GroupMemberTable",
     "IamEventTable",

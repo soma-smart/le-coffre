@@ -1,6 +1,5 @@
 from .auth_session import AuthSession
-from .extension_pairing import ExtensionPairing
-from .extension_token import MAX_ACTIVE_TOKENS_PER_USER, ExtensionToken
+from .extension_pairing import MAX_ACTIVE_TOKENS_PER_USER, ExtensionPairing
 from .group import Group
 from .group_member import GroupMember
 from .password_credential_record import PasswordCredentialRecord
@@ -14,7 +13,6 @@ from .user import User
 __all__ = [
     "AuthSession",
     "ExtensionPairing",
-    "ExtensionToken",
     "MAX_ACTIVE_TOKENS_PER_USER",
     "User",
     "SsoConfiguration",

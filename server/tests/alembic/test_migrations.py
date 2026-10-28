@@ -657,3 +657,106 @@ def test_payload_keys_migration_renames_only_principal_keys(alembic_config, temp
     iam, password = payloads()
     assert iam == iam_events
     assert password == password_event
+
+
+TOKEN_LIFECYCLE_REVISION = "a237709960ce"
+EXTENSION_TOKENS_REVISION = "e41b6f0c2d93"
+
+
+def test_extension_tokens_migration_moves_only_usable_tokens_and_keeps_their_hash(alembic_config, temp_database):
+    """A usable extension token becomes a read-only token credential of its user; the rest stay behind."""
+    database_url, _ = temp_database
+    user_id = uuid4()
+    usable, revoked, expired, orphaned = uuid4(), uuid4(), uuid4(), uuid4()
+
+    command.upgrade(alembic_config, TOKEN_LIFECYCLE_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'user')"), {"id": user_id.hex})
+        for token_id, owner, expires_at, revoked_at in (
+            (usable, user_id, "2999-01-01 00:00:00", None),
+            (revoked, user_id, "2999-01-01 00:00:00", "2026-01-01 00:00:00"),
+            (expired, user_id, "2000-01-01 00:00:00", None),
+            (orphaned, uuid4(), "2999-01-01 00:00:00", None),
+        ):
+            conn.execute(
+                text(
+                    'INSERT INTO "ExtensionToken" (id, user_id, token_hash, device_name, created_at, expires_at, '
+                    "last_used_at, revoked_at) VALUES (:id, :user_id, :hash, 'Laptop', '2026-01-01 00:00:00', "
+                    ":expires_at, NULL, :revoked_at)"
+                ),
+                {
+                    "id": token_id.hex,
+                    "user_id": owner.hex,
+                    "hash": f"hash-{token_id.hex}",
+                    "expires_at": expires_at,
+                    "revoked_at": revoked_at,
+                },
+            )
+    engine.dispose()
+
+    command.upgrade(alembic_config, EXTENSION_TOKENS_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        moved = conn.execute(
+            text(
+                "SELECT c.id, c.principal_id, t.token_hash, t.read_only, t.label, t.last_used_at, t.max_idle_seconds "
+                "FROM iam__credential c JOIN iam__credential__token t ON t.credential_id = c.id"
+            )
+        ).all()
+        tables = conn.execute(text("SELECT name FROM sqlite_master WHERE type = 'table'")).scalars().all()
+    engine.dispose()
+
+    assert [tuple(row) for row in moved] == [
+        (usable.hex, user_id.hex, f"hash-{usable.hex}", 1, "Laptop", "2026-01-01 00:00:00", 14 * 86400)
+    ]
+    assert "ExtensionToken" not in tables
+
+
+def test_extension_tokens_downgrade_gives_back_read_only_tokens_only(alembic_config, temp_database):
+    """Going back restores the extension tokens and leaves service-account tokens where they are."""
+    database_url, _ = temp_database
+    user_id, account_id = uuid4(), uuid4()
+    extension_credential, account_credential = uuid4(), uuid4()
+
+    command.upgrade(alembic_config, EXTENSION_TOKENS_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for principal_id, kind in ((user_id, "user"), (account_id, "service_account")):
+            conn.execute(
+                text("INSERT INTO iam__principal (id, kind) VALUES (:id, :kind)"),
+                {"id": principal_id.hex, "kind": kind},
+            )
+        for credential_id, principal_id, read_only, expires_at in (
+            (extension_credential, user_id, True, "2999-01-01 00:00:00"),
+            (account_credential, account_id, False, None),
+        ):
+            conn.execute(
+                text("INSERT INTO iam__credential (id, kind, principal_id) VALUES (:id, 'token', :principal_id)"),
+                {"id": credential_id.hex, "principal_id": principal_id.hex},
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__credential__token (credential_id, token_hash, read_only, label, expires_at, "
+                    "last_used_at) VALUES (:id, :hash, :read_only, 'Laptop', :expires_at, '2026-01-01 00:00:00')"
+                ),
+                {
+                    "id": credential_id.hex,
+                    "hash": f"hash-{credential_id.hex}",
+                    "read_only": read_only,
+                    "expires_at": expires_at,
+                },
+            )
+    engine.dispose()
+
+    command.downgrade(alembic_config, TOKEN_LIFECYCLE_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        restored = conn.execute(text('SELECT id, user_id, token_hash, device_name FROM "ExtensionToken"')).all()
+        remaining = conn.execute(text("SELECT id FROM iam__credential")).scalars().all()
+    engine.dispose()
+
+    assert [tuple(row) for row in restored] == [
+        (extension_credential.hex, user_id.hex, f"hash-{extension_credential.hex}", "Laptop")
+    ]
+    assert remaining == [account_credential.hex]

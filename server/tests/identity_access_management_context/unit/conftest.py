@@ -16,7 +16,6 @@ from .fakes import (
     FakeAdminEventRepository,
     FakeAuthSessionRepository,
     FakeExtensionPairingRepository,
-    FakeExtensionTokenRepository,
     FakeGroupEventRepository,
     FakeGroupMemberRepository,
     FakeGroupRepository,
@@ -206,11 +205,6 @@ def service_account_event_repository():
 @pytest.fixture
 def service_account_permission_service(group_repository, group_member_repository):
     return ServiceAccountPermissionService(group_repository, group_member_repository)
-
-
-@pytest.fixture
-def extension_token_repository():
-    return FakeExtensionTokenRepository()
 
 
 @pytest.fixture

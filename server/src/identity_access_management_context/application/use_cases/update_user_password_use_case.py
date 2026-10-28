@@ -4,9 +4,9 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
-    ExtensionTokenRepository,
     PasswordCredentialRecordRepository,
     PasswordHashingGateway,
+    TokenCredentialRecordRepository,
     TokenGateway,
     UserRepository,
 )
@@ -35,7 +35,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         auth_session_repository: AuthSessionRepository,
         token_gateway: TokenGateway,
         time_provider: TimeGateway,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
     ):
@@ -45,7 +45,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         self.auth_session_repository = auth_session_repository
         self.token_gateway = token_gateway
         self.time_provider = time_provider
-        self._extension_token_repository = extension_token_repository
+        self._token_credential_record_repository = token_credential_record_repository
         self._event_publisher = event_publisher
         self._admin_event_repository = admin_event_repository
 
@@ -104,7 +104,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         # extensions" screen listed a dead credential as live, and the
         # rate limiter still charged its requests to this user's bucket. Both
         # read the row, not the cutoff.
-        revoked = self._extension_token_repository.revoke_all_for_user(user.id, now)
+        revoked = self._token_credential_record_repository.delete_by_principal_ids([user.id])
         if revoked:
             ExtensionRevocationRecordingService.record(
                 self._event_publisher,

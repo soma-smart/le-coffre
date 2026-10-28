@@ -7,11 +7,27 @@ from identity_access_management_context.application.gateways import (
     TokenCredentialRecordRepository,
 )
 from identity_access_management_context.domain.entities import TokenCredentialRecord
+from identity_access_management_context.domain.value_objects import TokenCredential
 
 
 class FakeTokenCredentialRecordRepository(TokenCredentialRecordRepository):
     def __init__(self):
         self.credential_records: list[TokenCredentialRecord] = []
+
+    def issue(self, principal_id: UUID, now: datetime, **lifecycle) -> TokenCredential:
+        """Test helper: store a token for this principal, shaped like an extension's unless told otherwise."""
+        token = TokenCredential.generate()
+        fields = {
+            "read_only": True,
+            "label": "Browser extension",
+            "expires_at": now + timedelta(days=30),
+            "last_used_at": now,
+            "max_idle": timedelta(days=14),
+        } | lifecycle
+        self.credential_records.append(
+            TokenCredentialRecord(principal_id=principal_id, token_hash=token.hash, **fields)
+        )
+        return token
 
     def list_by_principal_id(self, principal_id: UUID) -> list[TokenCredentialRecord]:
         """Test helper: the records an account holds."""

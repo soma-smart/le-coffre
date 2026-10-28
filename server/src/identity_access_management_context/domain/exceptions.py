@@ -290,36 +290,12 @@ class ExtensionDomainError(IdentityAccessManagementDomainError):
     pass
 
 
-class InvalidExtensionTokenError(ExtensionDomainError):
-    """Raised when a value too short to have come from generate() is offered as a token.
-
-    Callers map every token failure (this one, expiry, revocation and the
-    session cutoff) to one indistinguishable 401, so a token holder cannot
-    learn *why* their credential stopped working.
-    """
-
-    def __init__(self):
-        super().__init__("Invalid extension token")
-
-
 class ExtensionTokenNotFoundError(ExtensionDomainError):
     def __init__(self):
         super().__init__("Invalid extension token")
 
 
 class ExtensionTokenExpiredError(ExtensionDomainError):
-    def __init__(self):
-        super().__init__("Invalid extension token")
-
-
-class ExtensionTokenDormantError(ExtensionDomainError):
-    """Raised when a credential has gone unused for longer than the inactivity limit."""
-
-    def __init__(self):
-        super().__init__("Invalid extension token")
-
-
-class ExtensionTokenRevokedError(ExtensionDomainError):
     def __init__(self):
         super().__init__("Invalid extension token")
 

@@ -4,16 +4,17 @@ from uuid import UUID
 
 from identity_access_management_context.application.commands import ValidateExtensionTokenCommand
 from identity_access_management_context.application.gateways import (
-    ExtensionTokenRepository,
+    TokenCredentialRecordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.responses import ValidatedExtensionTokenResponse
 from identity_access_management_context.domain.exceptions import (
+    ExtensionTokenExpiredError,
     ExtensionTokenNotFoundError,
-    ExtensionTokenRevokedError,
+    InvalidTokenCredentialError,
     UserNotFoundException,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
+from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.application.gateways import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 
@@ -38,66 +39,51 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
 
     def __init__(
         self,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         user_repository: UserRepository,
         time_provider: TimeGateway,
         last_used_coarsening_seconds: int,
-        inactivity_seconds: int,
     ):
-        self.extension_token_repository = extension_token_repository
+        self.token_credential_record_repository = token_credential_record_repository
         self.user_repository = user_repository
         self.time_provider = time_provider
-        self.last_used_coarsening_seconds = last_used_coarsening_seconds
-        self.dormant_after = timedelta(seconds=inactivity_seconds)
+        self.last_used_coarsening = timedelta(seconds=last_used_coarsening_seconds)
 
     def execute(self, command: ValidateExtensionTokenCommand) -> ValidatedExtensionTokenResponse:
         try:
-            secret = ExtensionTokenSecret(value=command.raw_token)
-        except Exception as error:
+            token = TokenCredential(value=command.raw_token)
+        except InvalidTokenCredentialError as error:
             # Too short to have come from generate(), so it never reaches a
             # database lookup.
             raise ExtensionTokenNotFoundError() from error
 
-        token = self.extension_token_repository.get_by_token_hash(secret.hashed())
-        if token is None:
+        credential_record = self.token_credential_record_repository.get_by_token_hash(token.hash)
+        if credential_record is None:
             raise ExtensionTokenNotFoundError()
 
         now = self.time_provider.get_current_time()
-        # Raises ExtensionTokenRevokedError, ExtensionTokenExpiredError or
-        # ExtensionTokenDormantError. The absolute lifetime bounds a token in
-        # use; the inactivity limit bounds one that is not, so a laptop in a
-        # drawer does not hold a live grant for the rest of the month.
-        token.ensure_usable(now, self.dormant_after)
+        # The absolute lifetime bounds a token in use; the inactivity limit
+        # bounds one that is not, so a laptop in a drawer does not hold a live
+        # grant for the rest of the month.
+        if not credential_record.is_usable(now):
+            raise ExtensionTokenExpiredError()
 
-        authenticated_user = self.user_repository.get_by_id(token.user_id)
-        if authenticated_user is None:
-            # Fail closed. The identity lookup below would still succeed for an
-            # SSO user, whose row outlives the account, and a missing account
-            # has no cutoff to honour: an earlier version skipped the check and
-            # let a deleted account keep reading until the token expired.
-            raise ExtensionTokenRevokedError()
-        if authenticated_user.session_invalid_before is not None:
-            # The same cutoff that kills cookie sessions on a password change or
-            # on refresh-token reuse detection. Without honouring it here,
-            # "change my password to log everything out" would silently leave
-            # every paired extension alive.
-            if token.created_at < authenticated_user.session_invalid_before:
-                raise ExtensionTokenRevokedError()
+        email, display_name = self._resolve_identity(credential_record.principal_id)
 
-        email, display_name = self._resolve_identity(token.user_id)
-
-        # Best-effort telemetry for the connected-devices screen. It must never
-        # fail authentication, so a storage hiccup here is swallowed.
+        # Best-effort: it must never fail authentication, so a storage hiccup
+        # here is swallowed.
         try:
-            self.extension_token_repository.touch_last_used(token.id, now, self.last_used_coarsening_seconds)
-        except Exception:  # noqa: BLE001 - telemetry must not break auth
+            self.token_credential_record_repository.touch_last_used(
+                credential_record.id, now, self.last_used_coarsening
+            )
+        except Exception:  # noqa: BLE001 - recording use must not break auth
             logger.warning("Could not record extension token usage", exc_info=True)
 
         return ValidatedExtensionTokenResponse(
-            user_id=token.user_id,
+            user_id=credential_record.principal_id,
             email=email,
             display_name=display_name,
-            token_id=token.id,
+            token_id=credential_record.id,
         )
 
     def _resolve_identity(self, user_id: UUID) -> tuple[str, str]:

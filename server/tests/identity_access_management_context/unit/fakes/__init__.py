@@ -1,7 +1,6 @@
 from .fake_admin_event_repository import FakeAdminEventRepository
 from .fake_auth_session_repository import FakeAuthSessionRepository
 from .fake_extension_pairing_repository import FakeExtensionPairingRepository
-from .fake_extension_token_repository import FakeExtensionTokenRepository
 from .fake_group_event_repository import FakeGroupEventRepository
 from .fake_group_member_repository import FakeGroupMemberRepository
 from .fake_group_repository import FakeGroupRepository
@@ -26,7 +25,6 @@ from .fake_user_repository import FakeUserRepository
 
 __all__ = [
     "FakeExtensionPairingRepository",
-    "FakeExtensionTokenRepository",
     "FakeTokenGateway",
     "FakePasswordHashingGateway",
     "FakePrincipalRepository",

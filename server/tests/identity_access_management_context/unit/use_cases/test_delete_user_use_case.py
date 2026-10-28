@@ -1,4 +1,3 @@
-from datetime import timedelta
 from uuid import UUID
 
 import pytest
@@ -6,8 +5,6 @@ import pytest
 from identity_access_management_context.application.commands import DeleteUserCommand
 from identity_access_management_context.application.use_cases import DeleteUserUseCase
 from identity_access_management_context.domain.entities import (
-    MAX_ACTIVE_TOKENS_PER_USER,
-    ExtensionToken,
     Group,
     PersonalGroup,
     User,
@@ -16,7 +13,6 @@ from identity_access_management_context.domain.events import (
     ExtensionTokenRevokedEvent,
     UserDeletedEvent,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes import FakeDomainEventPublisher
@@ -37,7 +33,7 @@ def use_case(
     domain_event_publisher: FakeDomainEventPublisher,
     user_event_repository,
     one_time_link_revocation_gateway,
-    extension_token_repository,
+    token_credential_record_repository,
     admin_event_repository,
     time_provider,
     auth_session_repository,
@@ -49,7 +45,7 @@ def use_case(
         domain_event_publisher,
         user_event_repository,
         one_time_link_revocation_gateway,
-        extension_token_repository,
+        token_credential_record_repository,
         admin_event_repository,
         time_provider,
         auth_session_repository,
@@ -318,7 +314,7 @@ def test_given_deleted_user_should_invalidate_all_its_sessions(
 def test_given_user_with_extension_tokens_when_deleted_should_revoke_them_all(
     use_case: DeleteUserUseCase,
     user_repository: FakeUserRepository,
-    extension_token_repository,
+    token_credential_record_repository,
     time_provider,
     domain_event_publisher: FakeDomainEventPublisher,
 ):
@@ -336,18 +332,8 @@ def test_given_user_with_extension_tokens_when_deleted_should_revoke_them_all(
 
     user_repository.save(User(id=user_uuid, username="u", email="u@example.com", name="U"))
     for _ in range(2):
-        extension_token_repository.add(
-            ExtensionToken.create(
-                user_id=user_uuid,
-                secret=ExtensionTokenSecret.generate(),
-                device_name="Browser extension",
-                lifetime=timedelta(days=30),
-                now=now,
-            ),
-            MAX_ACTIVE_TOKENS_PER_USER,
-            now,
-        )
-    assert extension_token_repository.count_active_for_user(user_uuid, now) == 2
+        token_credential_record_repository.issue(user_uuid, now)
+    assert token_credential_record_repository.count_usable(user_uuid, now) == 2
 
     use_case.execute(
         DeleteUserCommand(
@@ -356,7 +342,7 @@ def test_given_user_with_extension_tokens_when_deleted_should_revoke_them_all(
         )
     )
 
-    assert extension_token_repository.count_active_for_user(user_uuid, now) == 0
+    assert token_credential_record_repository.count_usable(user_uuid, now) == 0
     revocations = [
         event for event in domain_event_publisher.published_events if isinstance(event, ExtensionTokenRevokedEvent)
     ]
@@ -368,7 +354,7 @@ def test_given_user_with_extension_tokens_when_deleted_should_revoke_them_all(
 def test_given_admin_deletion_when_revoking_extensions_then_credits_the_admin_not_the_victim(
     use_case: DeleteUserUseCase,
     user_repository: FakeUserRepository,
-    extension_token_repository,
+    token_credential_record_repository,
     admin_event_repository,
     time_provider,
 ):
@@ -386,17 +372,7 @@ def test_given_admin_deletion_when_revoking_extensions_then_credits_the_admin_no
     now = time_provider.get_current_time()
 
     user_repository.save(User(id=user_id, username="u", email="u@example.com", name="U"))
-    extension_token_repository.add(
-        ExtensionToken.create(
-            user_id=user_id,
-            secret=ExtensionTokenSecret.generate(),
-            device_name="Browser extension",
-            lifetime=timedelta(days=30),
-            now=now,
-        ),
-        MAX_ACTIVE_TOKENS_PER_USER,
-        now,
-    )
+    token_credential_record_repository.issue(user_id, now)
 
     use_case.execute(
         DeleteUserCommand(
