@@ -1071,6 +1071,38 @@ export type OneTimeLinkAuditItem = {
 };
 
 /**
+ * OneTimeLinkSubscriptionRequest
+ */
+export type OneTimeLinkSubscriptionRequest = {
+    /**
+     * Notify On Read
+     */
+    notify_on_read: boolean;
+    /**
+     * Notify On Expiry
+     */
+    notify_on_expiry: boolean;
+};
+
+/**
+ * OneTimeLinkSubscriptionResponse
+ */
+export type OneTimeLinkSubscriptionResponse = {
+    /**
+     * Link Id
+     */
+    link_id: string;
+    /**
+     * Notify On Read
+     */
+    notify_on_read: boolean;
+    /**
+     * Notify On Expiry
+     */
+    notify_on_expiry: boolean;
+};
+
+/**
  * OneTimeLinkSummary
  */
 export type OneTimeLinkSummary = {
@@ -3754,3 +3786,33 @@ export type UpdateNotificationPreferencesNotificationsPreferencesPutResponses = 
 };
 
 export type UpdateNotificationPreferencesNotificationsPreferencesPutResponse = UpdateNotificationPreferencesNotificationsPreferencesPutResponses[keyof UpdateNotificationPreferencesNotificationsPreferencesPutResponses];
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutData = {
+    body: OneTimeLinkSubscriptionRequest;
+    path: {
+        /**
+         * Link Id
+         */
+        link_id: string;
+    };
+    query?: never;
+    url: '/notifications/one-time-links/{link_id}';
+};
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutError = SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutErrors[keyof SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutErrors];
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponses = {
+    /**
+     * Successful Response
+     */
+    200: OneTimeLinkSubscriptionResponse;
+};
+
+export type SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponse = SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponses[keyof SubscribeToOneTimeLinkNotificationsOneTimeLinksLinkIdPutResponses];
