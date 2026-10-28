@@ -69,13 +69,13 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         result = self._session.exec(statement).first()
         return result is not None and result.is_owner
 
-    def promote_to_owner(self, group_id: UUID, user_id: UUID) -> bool:
+    def promote_to_owner(self, group_id: UUID, principal_id: UUID) -> bool:
         """Atomically mark an existing member as owner; see Protocol docstring for the concurrency guarantee."""
         statement = (
             update(GroupMemberTable)
             .where(
                 GroupMemberTable.group_id == group_id,
-                GroupMemberTable.user_id == user_id,
+                GroupMemberTable.principal_id == principal_id,
                 GroupMemberTable.is_owner.is_(False),
             )
             .values(is_owner=True)

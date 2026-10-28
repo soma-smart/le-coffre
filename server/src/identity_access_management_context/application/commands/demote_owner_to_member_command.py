@@ -8,4 +8,4 @@ from shared_kernel.domain.entities import AuthenticatedUser
 class DemoteOwnerToMemberCommand:
     requesting_user: AuthenticatedUser
     group_id: UUID
-    user_id: UUID
+    principal_id: UUID

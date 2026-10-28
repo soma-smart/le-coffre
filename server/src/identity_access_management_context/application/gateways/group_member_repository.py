@@ -21,7 +21,7 @@ class GroupMemberRepository(Protocol):
         """Check if a principal is an owner of a group."""
         ...
 
-    def promote_to_owner(self, group_id: UUID, user_id: UUID) -> bool:
+    def promote_to_owner(self, group_id: UUID, principal_id: UUID) -> bool:
         """Atomically mark an existing member as owner.
 
         Returns True only for the call that actually performed the non-owner -> owner

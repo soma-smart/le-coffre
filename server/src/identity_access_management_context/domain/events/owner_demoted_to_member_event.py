@@ -9,8 +9,8 @@ class OwnerDemotedToMemberEvent(DomainEvent):
     def __init__(
         self,
         group_id: UUID,
-        user_id: UUID,
-        demoted_by_user_id: UUID,
+        principal_id: UUID,
+        demoted_by_principal_id: UUID,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -20,5 +20,5 @@ class OwnerDemotedToMemberEvent(DomainEvent):
             priority=EventPriority.MEDIUM,
         )
         self.group_id = group_id
-        self.user_id = user_id
-        self.demoted_by_user_id = demoted_by_user_id
+        self.principal_id = principal_id
+        self.demoted_by_principal_id = demoted_by_principal_id

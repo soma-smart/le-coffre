@@ -12,7 +12,7 @@ class GroupOwnerPromotedEventSubscriber:
     def handle(self, event: OwnerAddedToGroupEvent) -> None:
         command = NotifyGroupOwnerPromotedCommand(
             group_id=event.group_id,
-            user_id=event.user_id,
-            added_by_user_id=event.added_by_user_id,
+            user_id=event.principal_id,
+            added_by_user_id=event.added_by_principal_id,
         )
         self._notify_use_case.execute(command)
