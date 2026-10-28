@@ -19,16 +19,16 @@
     "package": "./scripts/package.sh"
   },
   "dependencies": {
-    "vue": "3.5.43",
+    "vue": "3.5.44",
     "zod": "4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
-    "@tsconfig/node22": "22.0.5",
+    "@tsconfig/node22": "22.0.6",
     "@types/chrome": "0.1.28",
     "@types/jsdom": "28.0.1",
-    "@types/node": "25.9.5",
-    "@vitejs/plugin-vue": "6.0.8",
+    "@types/node": "25.9.9",
+    "@vitejs/plugin-vue": "6.0.10",
     "@vitest/eslint-plugin": "1.6.27",
     "@vue/eslint-config-prettier": "10.2.0",
     "@vue/eslint-config-typescript": "14.9.0",
@@ -39,12 +39,12 @@
     "jiti": "2.7.0",
     "jsdom": "29.1.1",
     "npm-run-all2": "8.0.4",
-    "prettier": "3.9.6",
+    "prettier": "3.9.10",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "vite": "8.2.1",
-    "vitest": "4.1.10",
-    "vue-tsc": "3.3.9"
+    "vite": "8.3.5",
+    "vitest": "4.1.12",
+    "vue-tsc": "3.3.13"
   },
   "overrides": {
     "@vue/server-renderer": "3.5.43",
