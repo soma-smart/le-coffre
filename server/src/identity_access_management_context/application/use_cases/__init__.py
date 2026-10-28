@@ -18,6 +18,8 @@ from .extension import (
     StartExtensionPairingUseCase,
 )
 from .get_group_use_case import GetGroupUseCase
+from .get_principal_use_case import GetPrincipalUseCase
+from .get_service_account_me_use_case import GetServiceAccountMeUseCase
 from .get_statistic_for_admin_use_case import GetStatisticForAdminUseCase
 from .get_user_me_use_case import GetUserMeUseCase
 from .get_user_use_case import GetUserUseCase
@@ -59,6 +61,9 @@ __all__ = [
     "RevokeExtensionTokenUseCase",
     "StartExtensionPairingUseCase",
     "AuthenticateTokenUseCase",
+    "ValidateExtensionTokenUseCase",
+    "GetPrincipalUseCase",
+    "GetServiceAccountMeUseCase",
     "CreateUserUseCase",
     "DeleteUserUseCase",
     "GetUserUseCase",

@@ -160,6 +160,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     BEARER_REACHABLE_PATHS: tuple[str, ...] = (
         "/api/extension/session",
         "/api/extension/groups",
+        "/api/iam/service-accounts/me",
     )
     BEARER_REACHABLE_PREFIXES: tuple[str, ...] = ("/api/passwords/",)
 

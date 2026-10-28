@@ -17,6 +17,7 @@ import type {
   ListGroupsFilters,
 } from '@/application/ports/GroupRepository'
 import type { Group, GroupEvent } from '@/domain/group/Group'
+import { toEventActor } from './eventActor'
 import {
   GroupAccessDeniedError,
   GroupDomainError,
@@ -148,7 +149,7 @@ function toGroupEvent(dto: GroupEventResponse): GroupEvent {
     eventType: dto.event_type,
     occurredOn: dto.occurred_on,
     actorPrincipalId: dto.actor_principal_id,
-    actorEmail: dto.actor_email,
+    actor: toEventActor(dto.actor),
     eventData: toGroupEventData(dto.event_data),
   }
 }

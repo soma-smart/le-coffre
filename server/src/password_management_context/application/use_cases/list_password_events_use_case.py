@@ -12,6 +12,7 @@ from password_management_context.application.gateways import (
     UserInfoGateway,
 )
 from password_management_context.application.responses import (
+    EventActor,
     ListPasswordEventsResponse,
     PasswordEventItem,
 )
@@ -61,6 +62,17 @@ class ListPasswordEventsUseCase(TracedUseCase):
             end_date=command.end_date,
         )
 
+        actors: dict[UUID, EventActor | None] = {}
+
+        def actor_of(principal_id: UUID) -> EventActor | None:
+            # A history repeats the same few actors: each is looked up once.
+            if principal_id not in actors:
+                info = self.user_info_gateway.get_principal(principal_id)
+                actors[principal_id] = (
+                    None if info is None else EventActor(kind=info.kind, display_name=info.display_name)
+                )
+            return actors[principal_id]
+
         event_items = []
         for event in events:
             enriched_event_data = dict(event["event_data"])
@@ -87,7 +99,7 @@ class ListPasswordEventsUseCase(TracedUseCase):
                     if hasattr(event["occurred_on"], "isoformat")
                     else event["occurred_on"],
                     actor_principal_id=str(event["actor_principal_id"]),
-                    actor_email=self.user_info_gateway.get_user_email(UUID(str(event["actor_principal_id"]))),
+                    actor=actor_of(UUID(str(event["actor_principal_id"]))),
                     event_data=enriched_event_data,
                 )
             )

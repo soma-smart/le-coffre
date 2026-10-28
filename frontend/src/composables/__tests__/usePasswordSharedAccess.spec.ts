@@ -40,7 +40,7 @@ function makeShareEvent(overrides: Partial<PasswordEvent> = {}): PasswordEvent {
     eventType: 'PasswordSharedEvent',
     occurredOn: '2026-04-01T10:00:00Z',
     actorPrincipalId: 'admin',
-    actorEmail: 'admin@example.com',
+    actor: { kind: 'user', displayName: 'admin@example.com' },
     eventData: { sharedWithGroupId: 'g1' },
     ...overrides,
   }
@@ -114,9 +114,12 @@ describe('usePasswordSharedAccess', () => {
     })
   })
 
-  it('falls back to actorEmail when the user lookup fails', async () => {
+  it('falls back to the actor display name when the user lookup fails', async () => {
     const events = [
-      makeShareEvent({ actorPrincipalId: 'absent', actorEmail: 'fallback@example.com' }),
+      makeShareEvent({
+        actorPrincipalId: 'absent',
+        actor: { kind: 'user', displayName: 'Fallback Name' },
+      }),
     ]
     const { sharedAccessInfo } = usePasswordSharedAccess({
       password: ref(makePassword()),
@@ -134,7 +137,7 @@ describe('usePasswordSharedAccess', () => {
     })
 
     await flushMicrotasks()
-    expect(sharedAccessInfo.value?.actorUsername).toBe('fallback@example.com')
+    expect(sharedAccessInfo.value?.actorUsername).toBe('Fallback Name')
   })
 
   it('without a context group, only matches shares with one of the user belonging groups', async () => {

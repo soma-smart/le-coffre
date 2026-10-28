@@ -105,12 +105,7 @@
           :style="{ width: '20%' }"
         >
           <template #body="slotProps">
-            <div class="flex items-center gap-2">
-              <i class="pi pi-user text-sm"></i>
-              <span class="text-sm">{{
-                slotProps.data.actorEmail || t('common.unknownUser')
-              }}</span>
-            </div>
+            <EventActorLabel :actor="slotProps.data.actor" />
           </template>
         </Column>
 
@@ -226,6 +221,7 @@ import { useContainer } from '@/plugins/container'
 import { translateEventType } from '@/utils/eventTypeLabel'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
 import { activeLocale } from '@/utils/relativeTime'
+import EventActorLabel from '@/components/shared/EventActorLabel.vue'
 
 const props = defineProps<{
   password: Password | null

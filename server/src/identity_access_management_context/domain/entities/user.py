@@ -17,6 +17,9 @@ class User(Principal):
     current_refresh_token_jti: str | None = None
     session_invalid_before: datetime | None = None
 
+    def _get_display_name(self) -> str:
+        return self.name
+
     def promote_to_admin(self) -> None:
         if ADMIN_ROLE in self.roles:
             raise UserAlreadyAdminException(self.id)

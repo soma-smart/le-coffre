@@ -11,7 +11,6 @@ from uuid import UUID
 import pytest
 from fastapi import HTTPException
 from fastapi.routing import APIRoute
-from fastapi.security import HTTPAuthorizationCredentials
 
 from identity_access_management_context.application.responses import (
     AuthenticateTokenResponse,
@@ -28,6 +27,7 @@ from shared_kernel.adapters.primary.dependencies import (
     get_current_credential,
     get_current_principal,
     get_current_requesting_user,
+    get_current_service_account,
 )
 from shared_kernel.domain.entities import AuthenticatedPrincipal, AuthenticatedUser, PresentedCredential
 from shared_kernel.domain.exceptions import RejectedCredentialError
@@ -36,9 +36,10 @@ USER_ID = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
 CREDENTIAL_ID = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
 
-def _request(method: str = "GET"):
+def _request(method: str = "GET", authorization: str | None = None):
     request = Mock()
     request.method = method
+    request.headers = {} if authorization is None else {"Authorization": authorization}
     return request
 
 
@@ -71,14 +72,13 @@ def _token_usecase(read_only: bool = True, roles: list[str] | None = None, kind:
 
 
 def _bearer(value: str = "a-token"):
-    return HTTPAuthorizationCredentials(scheme="Bearer", credentials=value)
+    return f"Bearer {value}"
 
 
 def _authenticate_with(method="GET", access_token=None, credentials=None, session=None, token=None):
     return _authenticate(
-        request=_request(method),
+        request=_request(method, credentials),
         access_token=access_token,
-        credentials=credentials,
         client_ip="203.0.113.7",
         validate_usecase=session or _session_usecase(["admin"]),
         authenticate_token_usecase=token or _token_usecase(),
@@ -187,7 +187,7 @@ def test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes(
                 yield from api_routes(included.routes)
 
     def accepts_a_token(dependant) -> bool:
-        if dependant.call is _authenticate:
+        if dependant.call in (_authenticate, get_current_service_account):
             return True
         return any(accepts_a_token(child) for child in dependant.dependencies)
 
@@ -198,6 +198,7 @@ def test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes(
         "/extension/groups",
         "/passwords/list",
         "/passwords/{password_id}",
+        "/iam/service-accounts/me",
     }
 
     # Every one of them must be covered by the middleware's filter. Paths here

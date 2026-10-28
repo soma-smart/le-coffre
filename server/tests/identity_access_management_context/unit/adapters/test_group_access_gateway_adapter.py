@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -5,17 +6,18 @@ import pytest
 from identity_access_management_context.adapters.secondary.group_access_gateway_adapter import (
     GroupAccessGatewayAdapter,
 )
-from identity_access_management_context.domain.entities import Group, PersonalGroup
+from identity_access_management_context.domain.entities import Group, PersonalGroup, ServiceAccount
 
-from ..fakes import FakeGroupMemberRepository, FakeGroupRepository
+from ..fakes import FakeGroupMemberRepository, FakeGroupRepository, FakeServiceAccountRepository
 
 
 @pytest.fixture
 def adapter(
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
+    service_account_repository: FakeServiceAccountRepository,
 ):
-    return GroupAccessGatewayAdapter(group_repository, group_member_repository)
+    return GroupAccessGatewayAdapter(group_repository, group_member_repository, service_account_repository)
 
 
 def test_should_return_true_when_user_owns_group(
@@ -122,3 +124,69 @@ def test_should_return_empty_member_list_for_personal_group(
     group_repository.save_personal_group(PersonalGroup(id=group_id, name="Personal", principal_id=user_id))
 
     assert adapter.get_group_member_principals(group_id) == []
+
+
+# ── Service accounts ─────────────────────────────────────────────────
+
+
+@pytest.fixture
+def shared_group(group_repository: FakeGroupRepository) -> Group:
+    group = Group(id=uuid4(), name="Deployments", is_personal=False)
+    group_repository.save_group(group)
+    return group
+
+
+def test_given_an_active_service_account_when_checking_its_group_then_it_is_a_member_but_not_an_owner(
+    adapter, shared_group, service_account_repository: FakeServiceAccountRepository
+):
+    account = ServiceAccount.create(group_id=shared_group.id, name="nightly-backup")
+    service_account_repository.create([account])
+
+    assert adapter.is_principal_member_of_group(account.id, shared_group.id) is True
+    assert adapter.is_principal_owner_of_group(account.id, shared_group.id) is False
+
+
+def test_given_a_service_account_when_checking_another_group_then_it_is_not_a_member(
+    adapter, shared_group, group_repository: FakeGroupRepository, service_account_repository
+):
+    other_group = Group(id=uuid4(), name="Other", is_personal=False)
+    group_repository.save_group(other_group)
+    account = ServiceAccount.create(group_id=shared_group.id, name="nightly-backup")
+    service_account_repository.create([account])
+
+    assert adapter.is_principal_member_of_group(account.id, other_group.id) is False
+
+
+def test_given_a_revoked_service_account_when_checking_its_group_then_it_is_no_longer_a_member(
+    adapter, shared_group, service_account_repository: FakeServiceAccountRepository
+):
+    account = ServiceAccount.create(group_id=shared_group.id, name="nightly-backup")
+    service_account_repository.create([account])
+    service_account_repository.revoke([account.id], datetime.now(UTC))
+
+    assert adapter.is_principal_member_of_group(account.id, shared_group.id) is False
+
+
+def test_given_a_service_account_of_a_personal_group_when_checking_it_then_it_is_a_member_not_the_owner(
+    adapter, group_repository: FakeGroupRepository, service_account_repository
+):
+    owner_id = uuid4()
+    personal = Group(id=uuid4(), name="Alice", is_personal=True, principal_id=owner_id)
+    group_repository.save_group(personal)
+    account = ServiceAccount.create(group_id=personal.id, name="laptop-sync")
+    service_account_repository.create([account])
+
+    assert adapter.is_principal_member_of_group(account.id, personal.id) is True
+    assert adapter.is_principal_owner_of_group(account.id, personal.id) is False
+    assert adapter.get_group_member_principals(personal.id) == []
+
+
+def test_given_a_service_account_when_listing_group_principals_then_it_is_not_among_them(
+    adapter, shared_group, service_account_repository
+):
+    """Membership lists drive notifications and the members UI: a machine has no place there."""
+    account = ServiceAccount.create(group_id=shared_group.id, name="nightly-backup")
+    service_account_repository.create([account])
+
+    assert account.id not in adapter.get_group_member_principals(shared_group.id)
+    assert account.id not in adapter.get_group_owner_principals(shared_group.id)

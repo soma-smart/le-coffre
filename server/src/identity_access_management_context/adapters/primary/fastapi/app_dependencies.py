@@ -80,6 +80,8 @@ from identity_access_management_context.application.use_cases import (
     ExchangeExtensionPairingUseCase,
     GetExtensionPairingUseCase,
     GetGroupUseCase,
+    GetPrincipalUseCase,
+    GetServiceAccountMeUseCase,
     GetSsoAuthorizeUrlUseCase,
     GetStatisticForAdminUseCase,
     GetUserMeUseCase,
@@ -673,21 +675,30 @@ def get_list_group_events_usecase(
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
     user_repository: UserRepository = Depends(get_user_repository),
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
+    principal_repository: PrincipalRepository = Depends(get_principal_repository),
 ):
     return ListGroupEventsUseCase(
         group_repository,
         group_member_repository,
         user_repository,
         group_event_repository,
+        principal_repository,
     )
+
+
+def get_get_principal_usecase(
+    principal_repository: PrincipalRepository = Depends(get_principal_repository),
+) -> GetPrincipalUseCase:
+    return GetPrincipalUseCase(principal_repository)
 
 
 def get_user_info_api(
     get_user_usecase: GetUserUseCase = Depends(get_get_user_usecase),
     get_group_usecase: GetGroupUseCase = Depends(get_get_group_usecase),
+    get_principal_usecase: GetPrincipalUseCase = Depends(get_get_principal_usecase),
 ) -> UserInfoApi:
     """Private API for other contexts to query user information"""
-    return UserInfoApi(get_user_usecase, get_group_usecase)
+    return UserInfoApi(get_user_usecase, get_group_usecase, get_principal_usecase)
 
 
 def get_list_groups_usecase(
@@ -968,3 +979,10 @@ def get_revoke_all_extension_tokens_for_user_usecase(
         event_publisher,
         admin_event_repository,
     )
+
+
+def get_service_account_me_usecase(
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    group_repository: GroupRepository = Depends(get_group_repository),
+) -> GetServiceAccountMeUseCase:
+    return GetServiceAccountMeUseCase(service_account_repository, group_repository)

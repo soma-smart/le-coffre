@@ -59,6 +59,9 @@ class ServiceAccount(Principal):
             revoked_at=None,
         )
 
+    def _get_display_name(self) -> str:
+        return self.name
+
     @property
     def is_active(self) -> bool:
         return self.revoked_at is None

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Generator
 
 from fastapi import Depends, HTTPException, Security
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPBearer
 from fastapi.security.api_key import APIKeyCookie, APIKeyHeader
 from fastapi.security.utils import get_authorization_scheme_param
 from sqlmodel import Session
@@ -170,7 +170,9 @@ class _Authentication:
 def _authenticate(
     request: Request,
     access_token: str | None = Depends(cookie_scheme),
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    # Read from the raw header below, declared for the OpenAPI security scheme only:
+    # HTTPBearer folds a missing and a malformed header into the same `None`.
+    _bearer: object = Security(bearer_scheme),
     client_ip: str = Depends(get_client_ip),
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
     authenticate_token_usecase: AuthenticateTokenUseCase = Depends(get_authenticate_token_usecase),
@@ -196,13 +198,12 @@ def _authenticate(
             credential=None,
         )
 
-    if credentials is None or not credentials.credentials:
+    token = _read_bearer_token(request)
+    if token is None:
         raise HTTPException(status_code=401, detail="No authentication token provided")
 
     try:
-        response = authenticate_token_usecase.execute(
-            AuthenticateTokenCommand(token=credentials.credentials, client_ip=client_ip)
-        )
+        response = authenticate_token_usecase.execute(AuthenticateTokenCommand(token=token, client_ip=client_ip))
     except CredentialAuthenticationError as e:
         # One generic 401 for malformed, unknown, expired and idle alike, so a
         # token holder cannot tell which happened.

@@ -5,7 +5,7 @@ from .password_event_repository import PasswordEventRepository
 from .password_permissions_repository import PasswordPermissionsRepository
 from .password_repository import PasswordRepository
 from .password_vault_access_gateway import PasswordVaultAccessGateway
-from .user_info_gateway import UserInfoGateway
+from .user_info_gateway import PrincipalInfo, UserInfoGateway
 
 __all__ = [
     "PasswordRepository",
@@ -14,6 +14,7 @@ __all__ = [
     "PasswordEncryptionGateway",
     "PasswordVaultAccessGateway",
     "PasswordEventRepository",
+    "PrincipalInfo",
     "UserInfoGateway",
     "OneTimeLinkRepository",
 ]

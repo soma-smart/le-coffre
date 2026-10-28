@@ -28,6 +28,7 @@ declare module 'vue' {
     Dialog: typeof import('primevue/dialog')['default']
     Divider: typeof import('primevue/divider')['default']
     Drawer: typeof import('primevue/drawer')['default']
+    EventActorLabel: typeof import('./src/components/shared/EventActorLabel.vue')['default']
     Form: typeof import('@primevue/forms/form')['default']
     GroupDetailsModal: typeof import('./src/components/modals/GroupDetailsModal.vue')['default']
     GroupHistoryModal: typeof import('./src/components/modals/GroupHistoryModal.vue')['default']

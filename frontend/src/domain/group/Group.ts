@@ -1,3 +1,5 @@
+import type { EventActor } from '@/domain/principal/EventActor'
+
 /**
  * Group domain types. Pure TypeScript — no Vue, no fetch, no SDK.
  *
@@ -21,7 +23,7 @@ export interface GroupEvent {
   eventType: string
   occurredOn: string
   actorPrincipalId: string
-  actorEmail: string | null
+  actor: EventActor | null
   eventData: Record<string, unknown>
 }
 

@@ -9,6 +9,7 @@ from .list_password_events_by_actor_response import (
     PasswordEventByActorItem,
 )
 from .list_password_events_response import (
+    EventActor,
     ListPasswordEventsResponse,
     PasswordEventItem,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "ListAccessResponse",
     "UserAccessResponse",
     "GroupAccessResponse",
+    "EventActor",
     "ListPasswordEventsResponse",
     "PasswordEventItem",
     "ListPasswordEventsByActorResponse",

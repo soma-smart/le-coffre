@@ -29,6 +29,7 @@ import {
   ShareExpirationInvalidError,
 } from '@/domain/password/errors'
 import { VaultLockedError } from '@/domain/vault/errors'
+import { toEventActor } from './eventActor'
 
 /**
  * Backend adapter for PasswordRepository. Two jobs:
@@ -216,7 +217,7 @@ function toPasswordEvent(dto: PasswordEventResponse): PasswordEvent {
     eventType: dto.event_type,
     occurredOn: dto.occurred_on,
     actorPrincipalId: dto.actor_principal_id,
-    actorEmail: dto.actor_email,
+    actor: toEventActor(dto.actor),
     eventData: toPasswordEventData(dto.event_data),
   }
 }

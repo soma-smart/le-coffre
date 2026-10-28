@@ -15,6 +15,7 @@ from identity_access_management_context.adapters.secondary.group_access_gateway_
 from identity_access_management_context.adapters.secondary.sql import (
     SqlGroupMemberRepository,
     SqlGroupRepository,
+    SqlServiceAccountRepository,
 )
 from password_management_context.adapters.secondary import (
     PrivateApiPasswordVaultAccessGateway,
@@ -100,7 +101,8 @@ def get_group_access_gateway(
 ) -> GroupAccessGateway:
     group_repository = SqlGroupRepository(session)
     group_member_repository = SqlGroupMemberRepository(session)
-    return GroupAccessGatewayAdapter(group_repository, group_member_repository)
+    service_account_repository = SqlServiceAccountRepository(session)
+    return GroupAccessGatewayAdapter(group_repository, group_member_repository, service_account_repository)
 
 
 def get_user_info_gateway(

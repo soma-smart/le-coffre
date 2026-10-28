@@ -13,6 +13,8 @@ from .deny_extension_pairing_command import DenyExtensionPairingCommand
 from .exchange_extension_pairing_command import ExchangeExtensionPairingCommand
 from .get_extension_pairing_command import GetExtensionPairingCommand
 from .get_group_command import GetGroupCommand
+from .get_principal_command import GetPrincipalCommand
+from .get_service_account_me_command import GetServiceAccountMeCommand
 from .get_sso_authorize_url_command import GetSsoAuthorizeUrlCommand
 from .get_statistic_for_admin_command import GetStatisticForAdminCommand
 from .get_user_command import GetUserCommand
@@ -53,6 +55,9 @@ __all__ = [
     "RevokeExtensionTokenCommand",
     "StartExtensionPairingCommand",
     "AuthenticateTokenCommand",
+    "ValidateExtensionTokenCommand",
+    "GetPrincipalCommand",
+    "GetServiceAccountMeCommand",
     "CreateUserCommand",
     "UpdateUserCommand",
     "UpdateUserPasswordCommand",
