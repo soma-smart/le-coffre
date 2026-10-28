@@ -1,5 +1,5 @@
 from datetime import datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlmodel import Session, select
 
@@ -24,7 +24,7 @@ class SqlSSOCredentialRecordRepository(SQLBaseRepository):
                 f"SSO subject {credential_record.subject} with provider {credential_record.provider} already exists"
             )
 
-        credential_id = uuid4()
+        credential_id = credential_record.id
         self._session.add(
             CredentialRecordTable(
                 id=credential_id, kind=CredentialKind.SSO, principal_id=credential_record.principal_id
@@ -91,6 +91,7 @@ class SqlSSOCredentialRecordRepository(SQLBaseRepository):
     @staticmethod
     def _to_entity(registry: CredentialRecordTable, details: SSOCredentialRecordTable) -> SSOCredentialRecord:
         return SSOCredentialRecord(
+            id=registry.id,
             principal_id=registry.principal_id,
             provider=details.provider,
             subject=details.subject,

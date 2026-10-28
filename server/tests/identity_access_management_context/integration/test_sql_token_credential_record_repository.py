@@ -1,3 +1,4 @@
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -44,7 +45,7 @@ def test_given_a_credential_when_rotating_it_then_only_the_new_token_is_found(
 
     new_hash = TokenCredential(new_token).hash
     assert sql_token_credential_record_repository.get_by_token_hash(new_hash) == TokenCredentialRecord(
-        principal_id=old.principal_id, token_hash=new_hash
+        id=old.id, principal_id=old.principal_id, token_hash=new_hash
     )
     assert sql_token_credential_record_repository.get_by_token_hash(old.token_hash) is None
 
@@ -141,3 +142,82 @@ def test_given_tokens_of_another_account_when_rotating_then_they_are_untouched(
     session.expunge_all()
 
     assert sql_token_credential_record_repository.get_by_token_hash(bystander.token_hash) == bystander
+
+
+NOW = datetime(2026, 10, 29, 12, 0, tzinfo=UTC)
+
+
+def test_given_a_credential_with_a_lifecycle_when_reading_it_back_then_every_field_is_kept(
+    sql_token_credential_record_repository, session
+):
+    record = TokenCredentialRecord(
+        principal_id=uuid4(),
+        token_hash=TokenCredential.generate().hash,
+        read_only=True,
+        label="Work laptop",
+        expires_at=NOW + timedelta(days=30),
+        last_used_at=NOW,
+        max_idle=timedelta(days=14),
+    )
+    sql_token_credential_record_repository.create([record])
+    session.expunge_all()
+
+    assert sql_token_credential_record_repository.get_by_id(record.id) == record
+    assert sql_token_credential_record_repository.get_by_token_hash(record.token_hash) == record
+
+
+def test_given_credentials_when_deleting_some_by_id_then_only_those_go_and_their_count_is_returned(
+    sql_token_credential_record_repository,
+):
+    kept, gone = _credential_record(), _credential_record()
+    sql_token_credential_record_repository.create([kept, gone])
+
+    assert sql_token_credential_record_repository.delete([gone.id, uuid4()]) == 1
+    assert sql_token_credential_record_repository.get_by_id(gone.id) is None
+    assert sql_token_credential_record_repository.get_by_id(kept.id) is not None
+
+
+def test_given_credentials_of_a_principal_when_deleting_them_then_their_count_is_returned(
+    sql_token_credential_record_repository,
+):
+    principal_id = uuid4()
+    sql_token_credential_record_repository.create(
+        [_credential_record(principal_id=principal_id), _credential_record(principal_id=principal_id)]
+    )
+
+    assert sql_token_credential_record_repository.delete_by_principal_ids([principal_id]) == 2
+    assert sql_token_credential_record_repository.list_by_principal_ids([principal_id]) == []
+
+
+def test_given_a_recent_use_when_touching_again_then_the_last_use_is_only_moved_once_coarsening_elapsed(
+    sql_token_credential_record_repository, session
+):
+    record = TokenCredentialRecord(principal_id=uuid4(), token_hash=TokenCredential.generate().hash, last_used_at=NOW)
+    sql_token_credential_record_repository.create([record])
+    coarsening = timedelta(minutes=5)
+
+    sql_token_credential_record_repository.touch_last_used(record.id, NOW + timedelta(minutes=4), coarsening)
+    session.expunge_all()
+    assert sql_token_credential_record_repository.get_by_id(record.id).last_used_at == NOW
+
+    sql_token_credential_record_repository.touch_last_used(record.id, NOW + timedelta(minutes=6), coarsening)
+    session.expunge_all()
+    assert sql_token_credential_record_repository.get_by_id(record.id).last_used_at == NOW + timedelta(minutes=6)
+
+
+def test_given_a_principal_at_its_limit_when_creating_within_it_then_only_unusable_records_free_a_slot(
+    sql_token_credential_record_repository,
+):
+    principal_id = uuid4()
+    usable = TokenCredentialRecord(principal_id=principal_id, token_hash=TokenCredential.generate().hash)
+    expired = TokenCredentialRecord(
+        principal_id=principal_id, token_hash=TokenCredential.generate().hash, expires_at=NOW
+    )
+    sql_token_credential_record_repository.create([usable, expired])
+
+    assert sql_token_credential_record_repository.create_within_limit(
+        _credential_record(principal_id=principal_id), 2, NOW
+    )
+    refused = _credential_record(principal_id=principal_id)
+    assert not sql_token_credential_record_repository.create_within_limit(refused, 2, NOW)
+    assert sql_token_credential_record_repository.get_by_id(refused.id) is None

@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from datetime import datetime, timedelta
 from uuid import UUID
 
 from identity_access_management_context.application.gateways import (
@@ -19,9 +20,34 @@ class FakeTokenCredentialRecordRepository(TokenCredentialRecordRepository):
     def create(self, credential_records: Iterable[TokenCredentialRecord]) -> None:
         self.credential_records.extend(credential_records)
 
-    def delete_by_principal_ids(self, principal_ids: Iterable[UUID]) -> None:
+    def create_within_limit(self, credential_record: TokenCredentialRecord, limit: int, now: datetime) -> bool:
+        held = self.list_by_principal_id(credential_record.principal_id)
+        if sum(c.is_usable(now) for c in held) >= limit:
+            return False
+        self.credential_records.append(credential_record)
+        return True
+
+    def get_by_id(self, credential_id: UUID) -> TokenCredentialRecord | None:
+        return next((c for c in self.credential_records if c.id == credential_id), None)
+
+    def delete(self, credential_ids: Iterable[UUID]) -> int:
+        deleted = set(credential_ids)
+        kept = [c for c in self.credential_records if c.id not in deleted]
+        count = len(self.credential_records) - len(kept)
+        self.credential_records = kept
+        return count
+
+    def delete_by_principal_ids(self, principal_ids: Iterable[UUID]) -> int:
         deleted = set(principal_ids)
-        self.credential_records = [c for c in self.credential_records if c.principal_id not in deleted]
+        kept = [c for c in self.credential_records if c.principal_id not in deleted]
+        count = len(self.credential_records) - len(kept)
+        self.credential_records = kept
+        return count
+
+    def touch_last_used(self, credential_id: UUID, now: datetime, coarsening: timedelta) -> None:
+        record = self.get_by_id(credential_id)
+        if record is not None and (record.last_used_at is None or now - record.last_used_at >= coarsening):
+            record.last_used_at = now
 
     def list_by_principal_ids(self, principal_ids: Iterable[UUID]) -> list[TokenCredentialRecord]:
         wanted = set(principal_ids)

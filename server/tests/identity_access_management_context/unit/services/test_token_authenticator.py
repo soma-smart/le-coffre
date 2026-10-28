@@ -1,3 +1,4 @@
+from datetime import timedelta
 from uuid import uuid4
 
 import pytest
@@ -7,16 +8,17 @@ from identity_access_management_context.application.services.authentication impo
 )
 from identity_access_management_context.domain.entities import ServiceAccount, TokenCredentialRecord
 from identity_access_management_context.domain.value_objects import TokenCredential
-from shared_kernel.domain.exceptions import AuthenticationError, UnknownCredentialError
+from shared_kernel.domain.exceptions import AuthenticationError, RejectedCredentialError, UnknownCredentialError
 
 from ..fakes import FakeServiceAccountRepository, FakeTokenCredentialRecordRepository
 
 
 @pytest.fixture
-def authenticator(principal_repository, token_credential_record_repository):
+def authenticator(principal_repository, token_credential_record_repository, time_provider):
     return TokenAuthenticator(
         principal_repository=principal_repository,
         token_credential_record_repository=token_credential_record_repository,
+        time_provider=time_provider,
     )
 
 
@@ -99,3 +101,48 @@ def test_when_parsing_a_malformed_token_then_it_fails_like_an_unknown_token():
     """A malformed value fails before any lookup: no record could ever hold it."""
     with pytest.raises(UnknownCredentialError):
         TokenCredential("too-short")
+
+
+@pytest.fixture
+def issue_with(
+    service_account_repository: FakeServiceAccountRepository,
+    token_credential_record_repository: FakeTokenCredentialRecordRepository,
+):
+    def _issue(**lifecycle) -> TokenCredential:
+        token = TokenCredential.generate()
+        account = ServiceAccount.create(group_id=uuid4(), name="nightly-backup")
+        service_account_repository.create([account])
+        token_credential_record_repository.create(
+            [TokenCredentialRecord(principal_id=account.id, token_hash=token.hash, **lifecycle)]
+        )
+        return token
+
+    return _issue
+
+
+def test_given_an_expired_token_when_authenticating_then_it_is_rejected(authenticator, issue_with, time_provider):
+    token = issue_with(expires_at=time_provider.get_current_time())
+
+    with pytest.raises(RejectedCredentialError):
+        authenticator.authenticate(token)
+
+
+def test_given_a_token_unused_for_too_long_when_authenticating_then_it_is_rejected(
+    authenticator, issue_with, time_provider
+):
+    now = time_provider.get_current_time()
+    token = issue_with(last_used_at=now - timedelta(days=14), max_idle=timedelta(days=14))
+
+    with pytest.raises(RejectedCredentialError):
+        authenticator.authenticate(token)
+
+
+def test_given_a_token_used_within_its_idle_limit_when_authenticating_then_it_is_accepted(
+    authenticator, issue_with, time_provider
+):
+    now = time_provider.get_current_time()
+    token = issue_with(
+        last_used_at=now - timedelta(days=13), max_idle=timedelta(days=14), expires_at=now + timedelta(days=1)
+    )
+
+    assert authenticator.authenticate(token) is not None

@@ -5,6 +5,7 @@ from identity_access_management_context.application.gateways import TokenCredent
 from identity_access_management_context.domain.entities import TokenCredentialRecord
 from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.application.authenticator import Authenticator
+from shared_kernel.application.gateways import TimeGateway
 from shared_kernel.domain.exceptions import UnknownCredentialError
 
 
@@ -14,10 +15,12 @@ class TokenAuthenticator(Authenticator[TokenCredential, TokenCredentialRecord]):
 
     A value that does not parse never gets here: building the TokenCredential
     is what rejects it, before any lookup. A principal whose token records were
-    deleted, like a revoked service account, is never found.
+    deleted, like a revoked service account, is never found. A record that
+    expired or went unused for too long is found, and rejected.
     """
 
     token_credential_record_repository: TokenCredentialRecordRepository
+    time_provider: TimeGateway
 
     @override
     def _retrieve(self, credential: TokenCredential) -> TokenCredentialRecord:
@@ -28,5 +31,6 @@ class TokenAuthenticator(Authenticator[TokenCredential, TokenCredentialRecord]):
 
     @override
     def _check(self, credential: TokenCredential, credential_record: TokenCredentialRecord) -> bool:
-        # The token is 256 bits of randomness, finding a record by its hash is the proof.
-        return True
+        # The token is 256 bits of randomness, finding a record by its hash is the
+        # proof. What is left to check is whether the record still stands.
+        return credential_record.is_usable(self.time_provider.get_current_time())

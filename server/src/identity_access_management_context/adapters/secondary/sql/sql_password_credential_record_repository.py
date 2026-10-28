@@ -1,4 +1,4 @@
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlmodel import Session, select
 
@@ -17,7 +17,7 @@ class SqlPasswordCredentialRecordRepository(SQLBaseRepository):
     @staticmethod
     def _to_entity(registry: CredentialRecordTable, details: PasswordCredentialRecordTable) -> PasswordCredentialRecord:
         return PasswordCredentialRecord(
-            principal_id=registry.principal_id, email=details.email, password_hash=details.password_hash
+            id=registry.id, principal_id=registry.principal_id, email=details.email, password_hash=details.password_hash
         )
 
     def _find_all(self, condition) -> list[tuple[CredentialRecordTable, PasswordCredentialRecordTable]]:
@@ -31,7 +31,7 @@ class SqlPasswordCredentialRecordRepository(SQLBaseRepository):
         return [(row[0], row[1]) for row in self._session.exec(statement).all()]
 
     def save(self, credential_record: PasswordCredentialRecord) -> None:
-        credential_id = uuid4()
+        credential_id = credential_record.id
         self._session.add(
             CredentialRecordTable(
                 id=credential_id, kind=CredentialKind.PASSWORD, principal_id=credential_record.principal_id
