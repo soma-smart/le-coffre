@@ -1,6 +1,6 @@
 """The middleware-level belt on the bearer read-only rule.
 
-Redundant with `ApiPrincipal.ensure_method_allowed` on purpose: CsrfMiddleware
+Redundant with the read-only check behind `get_current_principal` on purpose: CsrfMiddleware
 only engages when a session cookie is present, so the whole bearer class sits
 outside CSRF by construction. That is only safe while a bearer can never reach a
 mutating route, and this restores that guarantee at the layer where the

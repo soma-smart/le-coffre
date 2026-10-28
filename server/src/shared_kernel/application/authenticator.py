@@ -38,10 +38,18 @@ class Authenticator[C: Credential, R: CredentialRecord](ABC):
             RejectedCredentialError: if the credential does not match its record.
             OrphanedCredentialError: if the record's principal no longer exists.
         """
+        principal, _ = self.authenticate_with_record(credential)
+        return principal
+
+    def authenticate_with_record(self, credential: C) -> tuple[Principal, R]:
+        """Return the principal behind this proof, and the record that proved it.
+
+        Raises the same errors as `authenticate`.
+        """
         credential_record = self._retrieve(credential)
         if not self._check(credential, credential_record):
             raise RejectedCredentialError()
         principal = self.principal_repository.get_by_id(credential_record.principal_id)
         if principal is None:
             raise OrphanedCredentialError()
-        return principal
+        return principal, credential_record

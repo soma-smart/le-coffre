@@ -1,4 +1,4 @@
-"""Validating a bearer credential, and managing connected devices."""
+"""Managing connected devices."""
 
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
@@ -10,7 +10,6 @@ from identity_access_management_context.application.commands import (
     RevokeAllExtensionTokensCommand,
     RevokeAllExtensionTokensForUserCommand,
     RevokeExtensionTokenCommand,
-    ValidateExtensionTokenCommand,
 )
 from identity_access_management_context.application.services import REVOCATION_REASON_ADMIN_REVOKED
 from identity_access_management_context.application.use_cases import (
@@ -18,12 +17,10 @@ from identity_access_management_context.application.use_cases import (
     RevokeAllExtensionTokensForUserUseCase,
     RevokeAllExtensionTokensUseCase,
     RevokeExtensionTokenUseCase,
-    ValidateExtensionTokenUseCase,
 )
 from identity_access_management_context.domain.entities import TokenCredentialRecord, User
 from identity_access_management_context.domain.events import ExtensionTokenRevokedEvent
 from identity_access_management_context.domain.exceptions import (
-    ExtensionTokenExpiredError,
     ExtensionTokenNotFoundError,
 )
 from identity_access_management_context.domain.value_objects import TokenCredential
@@ -53,17 +50,6 @@ def registered_user(user, user_repository):
         )
     )
     return user
-
-
-@pytest.fixture
-def validate_use_case(token_credential_record_repository, user_repository, time_provider):
-    time_provider.set_current_time(NOW)
-    return ValidateExtensionTokenUseCase(
-        token_credential_record_repository=token_credential_record_repository,
-        user_repository=user_repository,
-        time_provider=time_provider,
-        last_used_coarsening_seconds=COARSENING,
-    )
 
 
 @pytest.fixture
@@ -116,81 +102,6 @@ def _issue(
     )
     repository.create([record])
     return token, record
-
-
-class TestValidate:
-    def test_should_resolve_the_owner_when_the_credential_is_live(
-        self, validate_use_case, token_credential_record_repository, registered_user
-    ):
-        token, record = _issue(token_credential_record_repository, registered_user.user_id)
-
-        result = validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=token.value))
-
-        assert result.user_id == registered_user.user_id
-        assert result.email == registered_user.email
-        assert result.token_id == record.id
-
-    def test_should_reject_when_the_credential_is_unknown(self, validate_use_case, registered_user):
-        with pytest.raises(ExtensionTokenNotFoundError):
-            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=TokenCredential.generate().value))
-
-    def test_should_reject_when_the_value_could_not_have_been_issued(self, validate_use_case):
-        with pytest.raises(ExtensionTokenNotFoundError):
-            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token="short"))
-
-    def test_should_reject_when_the_credential_is_expired(
-        self, validate_use_case, token_credential_record_repository, registered_user, time_provider
-    ):
-        token, _ = _issue(token_credential_record_repository, registered_user.user_id)
-        time_provider.set_current_time(NOW + TOKEN_LIFETIME)
-
-        with pytest.raises(ExtensionTokenExpiredError):
-            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=token.value))
-
-    def test_should_reject_when_the_credential_has_gone_unused_past_the_inactivity_limit(
-        self, validate_use_case, token_credential_record_repository, registered_user, time_provider
-    ):
-        token, _ = _issue(token_credential_record_repository, registered_user.user_id)
-        time_provider.set_current_time(NOW + INACTIVITY)
-
-        with pytest.raises(ExtensionTokenExpiredError):
-            validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=token.value))
-
-    def test_should_accept_when_the_credential_was_used_within_the_inactivity_limit(
-        self, validate_use_case, token_credential_record_repository, registered_user, time_provider
-    ):
-        token, _ = _issue(token_credential_record_repository, registered_user.user_id)
-        time_provider.set_current_time(NOW + INACTIVITY - timedelta(days=1))
-        validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=token.value))
-        time_provider.set_current_time(NOW + INACTIVITY + timedelta(days=1))
-
-        result = validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=token.value))
-
-        assert result.user_id == registered_user.user_id
-
-    def test_should_record_usage_when_the_credential_is_validated(
-        self, validate_use_case, token_credential_record_repository, registered_user, time_provider
-    ):
-        token, record = _issue(token_credential_record_repository, registered_user.user_id)
-        time_provider.set_current_time(NOW + timedelta(hours=1))
-
-        validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=token.value))
-
-        assert token_credential_record_repository.get_by_id(record.id).last_used_at == NOW + timedelta(hours=1)
-
-    def test_should_still_authenticate_when_recording_usage_fails(
-        self, validate_use_case, token_credential_record_repository, registered_user, monkeypatch
-    ):
-        token, _ = _issue(token_credential_record_repository, registered_user.user_id)
-
-        def fail(*_args):
-            raise RuntimeError("storage hiccup")
-
-        monkeypatch.setattr(token_credential_record_repository, "touch_last_used", fail)
-
-        result = validate_use_case.execute(ValidateExtensionTokenCommand(raw_token=token.value))
-
-        assert result.user_id == registered_user.user_id
 
 
 class TestListDevices:

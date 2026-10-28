@@ -59,7 +59,7 @@ class GetPasswordUseCase(TracedUseCase):
             password_id=password_entity.id,
             password_name=password_entity.name,
             accessed_by_principal_id=command.requester_id,
-            credential_kind=command.credential_kind,
+            credential_id=command.credential_id,
         )
         event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)

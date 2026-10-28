@@ -1,5 +1,5 @@
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -13,7 +13,6 @@ from password_management_context.domain.exceptions import (
 from password_management_context.domain.value_objects import (
     PasswordPermission,
 )
-from shared_kernel.domain.value_objects import CredentialKind
 from tests.fakes import FakeDomainEventPublisher
 from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
 
@@ -203,7 +202,7 @@ def test_given_user_is_group_member_when_getting_password_should_return_decrypte
     assert result == "supersecret"
 
 
-def test_given_an_extension_token_when_getting_password_should_record_the_credential_kind(
+def test_given_a_token_when_getting_password_should_record_the_credential_it_came_through(
     use_case: GetPasswordUseCase,
     password_repository: FakePasswordRepository,
     password_permissions_repository: FakePasswordPermissionsRepository,
@@ -227,17 +226,16 @@ def test_given_an_extension_token_when_getting_password_should_record_the_creden
     password_permissions_repository.grant_access(group_id, password_entity.id, PasswordPermission.READ)
     group_access_gateway.set_group_owner(group_id, user_id)
 
+    credential_id = uuid4()
     use_case.execute(
-        GetPasswordCommand(
-            requester_id=user_id, password_id=password_entity.id, credential_kind=CredentialKind.EXTENSION
-        )
+        GetPasswordCommand(requester_id=user_id, password_id=password_entity.id, credential_id=credential_id)
     )
 
     accessed = [e for e in password_event_repository.events if e["event_type"] == "PasswordAccessedEvent"]
-    assert accessed[-1]["event_data"]["credential_kind"] == "extension"
+    assert accessed[-1]["event_data"]["credential_id"] == str(credential_id)
 
 
-def test_given_a_session_when_getting_password_should_record_the_session_kind_by_default(
+def test_given_a_session_when_getting_password_should_record_no_credential(
     use_case: GetPasswordUseCase,
     password_repository: FakePasswordRepository,
     password_permissions_repository: FakePasswordPermissionsRepository,
@@ -259,4 +257,4 @@ def test_given_a_session_when_getting_password_should_record_the_session_kind_by
     use_case.execute(GetPasswordCommand(requester_id=user_id, password_id=password_entity.id))
 
     accessed = [e for e in password_event_repository.events if e["event_type"] == "PasswordAccessedEvent"]
-    assert accessed[-1]["event_data"]["credential_kind"] == "session"
+    assert accessed[-1]["event_data"]["credential_id"] is None

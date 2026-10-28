@@ -13,7 +13,7 @@ from identity_access_management_context.domain.exceptions import (
     IdentityAccessManagementDomainError,
 )
 from shared_kernel.adapters.primary.dependencies import get_current_principal
-from shared_kernel.domain.entities import ApiPrincipal
+from shared_kernel.domain.entities import AuthenticatedPrincipal
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class ListExtensionGroupsResponse(BaseModel):
     summary="List the groups the caller belongs to",
 )
 def list_extension_groups(
-    principal: ApiPrincipal = Depends(get_current_principal),
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
     usecase: ListGroupsUseCase = Depends(get_list_groups_usecase),
 ):
     """
@@ -60,14 +60,14 @@ def list_extension_groups(
     to decide whether to show "Add a password".
     """
     try:
-        result = usecase.execute(ListGroupsCommand(include_personal=True, only_for_user_id=principal.user.user_id))
+        result = usecase.execute(ListGroupsCommand(include_personal=True, only_for_user_id=principal.principal_id))
 
         groups = [
             ExtensionGroupItem(
                 id=group.id,
                 name=group.name,
                 is_personal=group.is_personal,
-                is_owner=principal.user.user_id in group.owners,
+                is_owner=principal.principal_id in group.owners,
             )
             for group in result.groups
         ]
