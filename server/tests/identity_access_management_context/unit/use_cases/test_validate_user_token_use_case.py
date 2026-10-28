@@ -12,7 +12,6 @@ from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.exceptions import (
     InsufficientRoleException,
     InvalidTokenException,
-    UserNotFoundException,
 )
 from tests.shared_kernel.fakes import FakeTimeGateway
 
@@ -226,7 +225,7 @@ def test_should_raise_exception_when_user_no_longer_exists(
     token_gateway.set_valid_token(jwt_token, user_id, "deleted@lecoffre.com", ["admin"], {})
 
     command = ValidateUserTokenCommand(jwt_token=jwt_token)
-    with pytest.raises(UserNotFoundException):
+    with pytest.raises(InvalidTokenException):
         use_case.execute(command)
 
 
@@ -240,7 +239,7 @@ def test_should_validate_token_with_admin_role(
     display_name = "Admin User"
     jwt_token = "jwt_token_for_admin@lecoffre.com_abc123"
 
-    user_repository.save(User(id=user_id, username="user", email=email, name=display_name))
+    user_repository.save(User(id=user_id, username="user", email=email, name=display_name, roles=["admin"]))
 
     # Setup JWT token validation with admin role
     token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": display_name})
@@ -303,7 +302,7 @@ def test_should_return_admin_roles_for_admin_user_token(
     display_name = "Admin User"
     jwt_token = "jwt_token_for_admin@lecoffre.com_abc123"
 
-    user_repository.save(User(id=user_id, username="user", email=email, name=display_name))
+    user_repository.save(User(id=user_id, username="user", email=email, name=display_name, roles=["admin"]))
 
     token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": display_name})
 
@@ -327,7 +326,7 @@ def test_should_return_multiple_roles_when_token_has_multiple_roles(
     jwt_token = "jwt_token_for_multi_role@lecoffre.com_xyz"
     roles = ["user", "editor", "viewer"]
 
-    user_repository.save(User(id=user_id, username="user", email=email, name=display_name))
+    user_repository.save(User(id=user_id, username="user", email=email, name=display_name, roles=roles))
 
     token_gateway.set_valid_token(jwt_token, user_id, email, roles, {"display_name": display_name})
 
@@ -360,3 +359,19 @@ def test_should_return_empty_roles_when_token_has_no_roles(
 
     # Then response should include roles=[]
     assert response.roles == []
+
+
+def test_given_token_claiming_admin_when_user_is_not_admin_then_the_stored_roles_win(
+    use_case: ValidateUserTokenUseCase,
+    user_repository: FakeUserRepository,
+    token_gateway: FakeTokenGateway,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    email = "former_admin@lecoffre.com"
+    jwt_token = "jwt_token_with_stale_admin_role"
+    user_repository.save(User(id=user_id, username="former_admin", email=email, name="Former Admin", roles=[]))
+    token_gateway.set_valid_token(jwt_token, user_id, email, ["admin"], {"display_name": "Former Admin"})
+
+    with pytest.raises(InsufficientRoleException):
+        use_case.execute(ValidateUserTokenCommand(jwt_token=jwt_token, required_roles=["admin"]))
+    assert use_case.execute(ValidateUserTokenCommand(jwt_token=jwt_token)).roles == []

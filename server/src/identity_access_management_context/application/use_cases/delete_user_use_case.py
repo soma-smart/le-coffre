@@ -84,7 +84,7 @@ class DeleteUserUseCase(TracedUseCase):
 
         # Kill the refresh chains. Access tokens already issued cannot be listed,
         # they die because validation refuses a token whose user row is gone.
-        self._auth_session_repository.invalidate_all_for_user(user_id, now)
+        self._auth_session_repository.invalidate_all_for_principal(user_id, now)
 
         personal_group = self.group_repository.get_by_principal_id(user_id)
         personal_group_id = personal_group.id if personal_group else None

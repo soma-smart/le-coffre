@@ -87,13 +87,13 @@ class RefreshAccessTokenUseCase(TracedUseCase):
                 # rate limiter read the row, not the cutoff, so a token cut by
                 # the cutoff alone kept showing as active and kept charging the
                 # victim's bucket. Same reasoning as the password-change flow.
-                revoked = self.extension_token_repository.revoke_all_for_user(token_data.user_id, now)
+                revoked = self.extension_token_repository.revoke_all_for_user(token_data.principal_id, now)
                 if revoked:
                     ExtensionRevocationRecordingService.record(
                         self.event_publisher,
                         self.admin_event_repository,
-                        user_id=token_data.user_id,
-                        actor_user_id=token_data.user_id,
+                        user_id=token_data.principal_id,
+                        actor_user_id=token_data.principal_id,
                         token_id=None,
                         reason=REVOCATION_REASON_REFRESH_TOKEN_REUSE,
                         revoked_count=revoked,

@@ -8,7 +8,7 @@ from sqlmodel import Session, col, func, select, update
 from identity_access_management_context.adapters.secondary.sql.model.extension_token_model import (
     ExtensionTokenTable,
 )
-from identity_access_management_context.adapters.secondary.sql.model.users_model import UserTable
+from identity_access_management_context.adapters.secondary.sql.model.users_model import UserPrincipalTable
 from identity_access_management_context.application.gateways import ExtensionTokenRepository
 from identity_access_management_context.domain.entities import ExtensionToken
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
@@ -45,7 +45,9 @@ class SqlExtensionTokenRepository(SQLBaseRepository, ExtensionTokenRepository):
         writer already serialises the two statements; that is also why the
         integration tests cannot show the difference.
         """
-        self._session.exec(select(UserTable).where(UserTable.id == token.user_id).with_for_update())
+        self._session.exec(
+            select(UserPrincipalTable).where(UserPrincipalTable.principal_id == token.user_id).with_for_update()
+        )
 
         table = cast(Any, ExtensionTokenTable).__table__
         row = {

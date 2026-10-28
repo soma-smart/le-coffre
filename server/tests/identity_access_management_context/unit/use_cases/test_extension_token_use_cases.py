@@ -24,7 +24,6 @@ from identity_access_management_context.domain.entities import (
     MAX_ACTIVE_TOKENS_PER_USER,
     ExtensionToken,
     User,
-    UserPassword,
 )
 from identity_access_management_context.domain.events import ExtensionTokenRevokedEvent
 from identity_access_management_context.domain.exceptions import (
@@ -49,15 +48,7 @@ def user():
 
 
 @pytest.fixture
-def registered_user(user, user_password_repository, user_repository):
-    user_password_repository.save(
-        UserPassword(
-            id=user.user_id,
-            email=user.email,
-            display_name=user.display_name,
-            password_hash=b"hashed",
-        )
-    )
+def registered_user(user, user_repository):
     user_repository.save(
         User(
             id=user.user_id,
@@ -71,14 +62,10 @@ def registered_user(user, user_password_repository, user_repository):
 
 
 @pytest.fixture
-def validate_use_case(
-    extension_token_repository, user_password_repository, sso_user_repository, user_repository, time_provider
-):
+def validate_use_case(extension_token_repository, user_repository, time_provider):
     time_provider.set_current_time(NOW)
     return ValidateExtensionTokenUseCase(
         extension_token_repository=extension_token_repository,
-        user_password_repository=user_password_repository,
-        sso_user_repository=sso_user_repository,
         user_repository=user_repository,
         time_provider=time_provider,
         last_used_coarsening_seconds=COARSENING,
@@ -437,7 +424,7 @@ class TestAdminRevokeAll:
         )
 
         (entry,) = admin_event_repository.events
-        assert entry["actor_user_id"] == admin.user_id
+        assert entry["actor_principal_id"] == admin.user_id
         assert entry["event_data"]["user_id"] == str(user.user_id)
 
     def test_should_refuse_when_the_caller_is_not_an_admin(

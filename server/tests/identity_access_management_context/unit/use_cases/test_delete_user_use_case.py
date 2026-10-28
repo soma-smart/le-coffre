@@ -296,7 +296,6 @@ def test_given_admin_user_when_deleting_user_should_store_user_deleted_event(
     assert stored["actor_principal_id"] == admin_uuid
 
 
-
 def test_given_deleted_user_should_invalidate_all_its_sessions(
     use_case: DeleteUserUseCase,
     user_repository: FakeUserRepository,
@@ -409,5 +408,5 @@ def test_given_admin_deletion_when_revoking_extensions_then_credits_the_admin_no
     entry = next(
         event for event in admin_event_repository.events if event["event_type"] == "ExtensionTokenRevokedEvent"
     )
-    assert entry["actor_user_id"] == admin_id
+    assert entry["actor_principal_id"] == admin_id
     assert entry["event_data"]["user_id"] == str(user_id)

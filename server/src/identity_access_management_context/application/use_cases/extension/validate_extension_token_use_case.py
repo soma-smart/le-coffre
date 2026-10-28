@@ -5,8 +5,6 @@ from uuid import UUID
 from identity_access_management_context.application.commands import ValidateExtensionTokenCommand
 from identity_access_management_context.application.gateways import (
     ExtensionTokenRepository,
-    SsoUserRepository,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.responses import ValidatedExtensionTokenResponse
@@ -41,16 +39,12 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
     def __init__(
         self,
         extension_token_repository: ExtensionTokenRepository,
-        user_password_repository: UserPasswordRepository,
-        sso_user_repository: SsoUserRepository,
         user_repository: UserRepository,
         time_provider: TimeGateway,
         last_used_coarsening_seconds: int,
         inactivity_seconds: int,
     ):
         self.extension_token_repository = extension_token_repository
-        self.user_password_repository = user_password_repository
-        self.sso_user_repository = sso_user_repository
         self.user_repository = user_repository
         self.time_provider = time_provider
         self.last_used_coarsening_seconds = last_used_coarsening_seconds
@@ -107,11 +101,7 @@ class ValidateExtensionTokenUseCase(TracedUseCase):
         )
 
     def _resolve_identity(self, user_id: UUID) -> tuple[str, str]:
-        user_password = self.user_password_repository.get_by_id(user_id)
-        if user_password:
-            return user_password.email, user_password.display_name
-
-        sso_user = self.sso_user_repository.get_by_user_id(user_id)
-        if not sso_user:
+        user = self.user_repository.get_by_id(user_id)
+        if user is None:
             raise UserNotFoundException(user_id)
-        return sso_user.email, sso_user.display_name
+        return user.email, user.name

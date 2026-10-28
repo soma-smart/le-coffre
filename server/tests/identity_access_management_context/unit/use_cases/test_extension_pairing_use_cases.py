@@ -33,7 +33,6 @@ from identity_access_management_context.domain.entities import (
     MAX_ACTIVE_TOKENS_PER_USER,
     ExtensionToken,
     User,
-    UserPassword,
 )
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
@@ -60,15 +59,7 @@ def user():
 
 
 @pytest.fixture
-def registered_user(user, user_password_repository, user_repository):
-    user_password_repository.save(
-        UserPassword(
-            id=user.user_id,
-            email=user.email,
-            display_name=user.display_name,
-            password_hash=b"hashed",
-        )
-    )
+def registered_user(user, user_repository):
     user_repository.save(
         User(
             id=user.user_id,
@@ -128,8 +119,6 @@ def deny_use_case(extension_pairing_repository, event_publisher, admin_event_rep
 def exchange_use_case(
     extension_pairing_repository,
     extension_token_repository,
-    user_password_repository,
-    sso_user_repository,
     user_repository,
     event_publisher,
     admin_event_repository,
@@ -138,8 +127,6 @@ def exchange_use_case(
     return ExchangeExtensionPairingUseCase(
         extension_pairing_repository=extension_pairing_repository,
         extension_token_repository=extension_token_repository,
-        user_password_repository=user_password_repository,
-        sso_user_repository=sso_user_repository,
         user_repository=user_repository,
         event_publisher=event_publisher,
         admin_event_repository=admin_event_repository,
@@ -369,7 +356,7 @@ class TestResolutionAudit:
 
         (entry,) = admin_event_repository.events
         assert entry["event_type"] == "ExtensionPairingApprovedEvent"
-        assert entry["actor_user_id"] == user.user_id
+        assert entry["actor_principal_id"] == user.user_id
         assert entry["event_data"]["device_name"] == "Chrome on macOS"
         assert entry["event_data"]["created_from_ip"] == "203.0.113.5"
 
@@ -382,7 +369,7 @@ class TestResolutionAudit:
 
         (entry,) = admin_event_repository.events
         assert entry["event_type"] == "ExtensionPairingDeniedEvent"
-        assert entry["actor_user_id"] == user.user_id
+        assert entry["actor_principal_id"] == user.user_id
 
     def test_should_record_nothing_when_the_approval_loses_a_race(
         self, start_use_case, approve_use_case, extension_pairing_repository, admin_event_repository, user

@@ -883,8 +883,6 @@ def get_deny_extension_pairing_usecase(
 def get_exchange_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
     extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
     user_repository: UserRepository = Depends(get_user_repository),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
@@ -893,8 +891,6 @@ def get_exchange_extension_pairing_usecase(
     return ExchangeExtensionPairingUseCase(
         extension_pairing_repository,
         extension_token_repository,
-        user_password_repository,
-        sso_user_repository,
         user_repository,
         event_publisher,
         admin_event_repository,

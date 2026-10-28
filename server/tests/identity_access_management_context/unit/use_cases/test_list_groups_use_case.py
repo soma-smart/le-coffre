@@ -169,8 +169,8 @@ def test_given_scoped_request_when_listing_groups_should_drop_groups_the_user_is
     mine = uuid4()
     theirs = uuid4()
 
-    group_repository.save_group(Group(id=mine, name="Marketing", is_personal=False, user_id=None))
-    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=mine, name="Marketing", is_personal=False, principal_id=None))
+    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, principal_id=None))
     group_member_repository.add_member(mine, caller, is_owner=False)
     group_member_repository.add_member(theirs, stranger, is_owner=True)
 
@@ -187,7 +187,7 @@ def test_given_scoped_request_when_listing_groups_should_keep_groups_the_user_ow
     caller = uuid4()
     owned = uuid4()
 
-    group_repository.save_group(Group(id=owned, name="Ops", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=owned, name="Ops", is_personal=False, principal_id=None))
     group_member_repository.add_member(owned, caller, is_owner=True)
 
     result = use_case.execute(ListGroupsCommand(only_for_user_id=caller))
@@ -206,8 +206,8 @@ def test_given_scoped_request_when_listing_groups_should_keep_the_callers_person
     mine = uuid4()
     theirs = uuid4()
 
-    group_repository.save_group(Group(id=mine, name="Alice", is_personal=True, user_id=caller))
-    group_repository.save_group(Group(id=theirs, name="Bob", is_personal=True, user_id=stranger))
+    group_repository.save_group(Group(id=mine, name="Alice", is_personal=True, principal_id=caller))
+    group_repository.save_group(Group(id=theirs, name="Bob", is_personal=True, principal_id=stranger))
 
     result = use_case.execute(ListGroupsCommand(only_for_user_id=caller))
 
@@ -223,7 +223,7 @@ def test_given_unscoped_request_when_listing_groups_should_still_return_everythi
     stranger = uuid4()
     theirs = uuid4()
 
-    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, principal_id=None))
     group_member_repository.add_member(theirs, stranger, is_owner=True)
 
     result = use_case.execute(ListGroupsCommand())

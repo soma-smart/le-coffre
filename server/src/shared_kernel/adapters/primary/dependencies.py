@@ -118,8 +118,6 @@ def get_validate_extension_token_usecase(
     inactivity_seconds = get_extension_token_inactivity_seconds()
     return ValidateExtensionTokenUseCase(
         SqlExtensionTokenRepository(session, dormant_after=timedelta(seconds=inactivity_seconds)),
-        SqlUserPasswordRepository(session),
-        SqlSsoUserRepository(session),
         SqlUserRepository(session),
         request.app.state.time_provider,
         get_extension_last_used_coarsening_seconds(),

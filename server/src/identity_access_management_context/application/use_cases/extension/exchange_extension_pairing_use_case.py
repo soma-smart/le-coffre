@@ -7,8 +7,6 @@ from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     ExtensionPairingRepository,
     ExtensionTokenRepository,
-    SsoUserRepository,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.responses import (
@@ -58,8 +56,6 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         self,
         extension_pairing_repository: ExtensionPairingRepository,
         extension_token_repository: ExtensionTokenRepository,
-        user_password_repository: UserPasswordRepository,
-        sso_user_repository: SsoUserRepository,
         user_repository: UserRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
@@ -70,8 +66,6 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
     ):
         self.extension_pairing_repository = extension_pairing_repository
         self.extension_token_repository = extension_token_repository
-        self.user_password_repository = user_password_repository
-        self.sso_user_repository = sso_user_repository
         self.user_repository = user_repository
         self.event_publisher = event_publisher
         self.admin_event_repository = admin_event_repository
@@ -202,13 +196,7 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         )
 
     def _resolve_identity(self, user_id: UUID) -> tuple[str, str]:
-        # Password users and SSO users live in different tables; mirrors how
-        # ValidateUserTokenUseCase resolves an identity.
-        user_password = self.user_password_repository.get_by_id(user_id)
-        if user_password:
-            return user_password.email, user_password.display_name
-
-        sso_user = self.sso_user_repository.get_by_user_id(user_id)
-        if not sso_user:
+        user = self.user_repository.get_by_id(user_id)
+        if user is None:
             raise UserNotFoundException(user_id)
-        return sso_user.email, sso_user.display_name
+        return user.email, user.name
