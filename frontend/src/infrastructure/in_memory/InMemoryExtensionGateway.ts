@@ -76,22 +76,14 @@ export class InMemoryExtensionGateway implements ExtensionGateway {
   async disconnectExtension(extensionId: string): Promise<void> {
     this.throwIfFailing()
     this.disconnected.push(extensionId)
-    this.extensions = this.extensions.map((extension) =>
-      extension.id === extensionId
-        ? { ...extension, isActive: false, revokedAt: new Date() }
-        : extension,
-    )
+    this.extensions = this.extensions.filter((extension) => extension.id !== extensionId)
   }
 
   async disconnectAllExtensions(): Promise<number> {
     this.throwIfFailing()
-    const active = this.extensions.filter((extension) => extension.isActive).length
-    this.extensions = this.extensions.map((extension) => ({
-      ...extension,
-      isActive: false,
-      revokedAt: extension.revokedAt ?? new Date(),
-    }))
-    return active
+    const disconnected = this.extensions.length
+    this.extensions = []
+    return disconnected
   }
 
   async disconnectAllExtensionsOfUser(userId: string): Promise<number> {

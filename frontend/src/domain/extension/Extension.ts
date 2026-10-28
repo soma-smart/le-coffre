@@ -47,24 +47,22 @@ export interface ExtensionPairingDetails {
 /** One browser extension connected to the account. */
 export interface ConnectedExtension {
   id: string
-  deviceName: string
-  createdAt: Date
-  expiresAt: Date
+  deviceName: string | null
+  expiresAt: Date | null
   lastUsedAt: Date | null
-  revokedAt: Date | null
-  createdFromIp: string | null
+  /** False once expired or unused for too long. A disconnected extension is not listed at all. */
   isActive: boolean
 }
 
 /**
  * Sort for the connected-devices list: live entries first, then most recently
- * created. Someone scanning the list is looking for what still has access.
+ * used. Someone scanning the list is looking for what still has access.
  */
 export function sortConnectedExtensions(
   extensions: readonly ConnectedExtension[],
 ): ConnectedExtension[] {
   return [...extensions].sort((left, right) => {
     if (left.isActive !== right.isActive) return left.isActive ? -1 : 1
-    return right.createdAt.getTime() - left.createdAt.getTime()
+    return (right.lastUsedAt?.getTime() ?? 0) - (left.lastUsedAt?.getTime() ?? 0)
   })
 }

@@ -462,27 +462,15 @@ export type ExtensionTokenItem = {
     /**
      * Device Name
      */
-    device_name: string;
-    /**
-     * Created At
-     */
-    created_at: string;
+    device_name: string | null;
     /**
      * Expires At
      */
-    expires_at: string;
+    expires_at: string | null;
     /**
      * Last Used At
      */
     last_used_at: string | null;
-    /**
-     * Revoked At
-     */
-    revoked_at: string | null;
-    /**
-     * Created From Ip
-     */
-    created_from_ip: string | null;
     /**
      * Is Active
      */
