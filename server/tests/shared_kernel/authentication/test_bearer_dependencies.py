@@ -16,12 +16,15 @@ from identity_access_management_context.domain.exceptions import InvalidTokenExc
 from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.adapters.primary.dependencies import (
     get_authenticate_token_usecase,
+    get_client_ip,
     get_current_principal,
     get_current_service_account,
     get_validate_token_usecase,
 )
 from shared_kernel.domain.entities import AuthenticatedPrincipal
+from tests.fakes import FakeDomainEventPublisher
 from tests.identity_access_management_context.unit.fakes import (
+    FakeAdminEventRepository,
     FakePrincipalRepository,
     FakeServiceAccountRepository,
     FakeTokenCredentialRecordRepository,
@@ -32,6 +35,7 @@ from tests.shared_kernel.fakes import FakeTimeGateway
 GROUP_ID = UUID("00000000-0000-0000-0000-0000000000b1")
 USER_ID = UUID("00000000-0000-0000-0000-0000000000a1")
 VALID_COOKIE = "valid-session-cookie"
+CLIENT_IP = "203.0.113.7"
 
 
 @pytest.fixture
@@ -41,7 +45,12 @@ def service_account_and_token():
 
 
 @pytest.fixture
-def client(service_account_and_token):
+def admin_event_repository():
+    return FakeAdminEventRepository()
+
+
+@pytest.fixture
+def client(service_account_and_token, admin_event_repository):
     account, token = service_account_and_token
     service_account_repository = FakeServiceAccountRepository()
     service_account_repository.create([account])
@@ -55,6 +64,8 @@ def client(service_account_and_token):
             time_provider=time_provider,
         ),
         token_credential_record_repository,
+        FakeDomainEventPublisher(),
+        admin_event_repository,
         time_provider,
         300,
     )
@@ -81,6 +92,7 @@ def client(service_account_and_token):
 
     app.dependency_overrides[get_authenticate_token_usecase] = lambda: authenticate_usecase
     app.dependency_overrides[get_validate_token_usecase] = lambda: validate_usecase
+    app.dependency_overrides[get_client_ip] = lambda: CLIENT_IP
     return TestClient(app)
 
 
@@ -129,6 +141,15 @@ def test_given_an_unusable_token_when_calling_a_machine_only_route_should_answer
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid token"}
     assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+def test_given_a_refused_token_when_calling_should_record_the_failure_with_the_caller_ip(
+    client, admin_event_repository
+):
+    client.get("/machine-only", headers={"Authorization": "Bearer short"})
+
+    (event,) = admin_event_repository.events
+    assert event["event_data"] == {"reason": "malformed_token", "client_ip": CLIENT_IP}
 
 
 def test_given_only_a_session_cookie_when_calling_a_machine_only_route_should_refuse(client):

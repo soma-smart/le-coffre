@@ -19,6 +19,7 @@ from .service_account import (
 )
 from .sso_configured_event import SsoConfiguredEvent
 from .sso_login_event import SsoLoginEvent
+from .token_authentication_failed_event import TokenAuthenticationFailedEvent
 from .user_added_to_group_event import UserAddedToGroupEvent
 from .user_created_event import UserCreatedEvent
 from .user_deleted_event import UserDeletedEvent
@@ -30,6 +31,7 @@ __all__ = [
     "ExtensionPairingApprovedEvent",
     "ExtensionPairingDeniedEvent",
     "ExtensionTokenRevokedEvent",
+    "TokenAuthenticationFailedEvent",
     "UserCreatedEvent",
     "UserDeletedEvent",
     "UserUpdatedEvent",

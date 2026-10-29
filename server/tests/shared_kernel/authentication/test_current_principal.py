@@ -79,6 +79,7 @@ def _authenticate_with(method="GET", access_token=None, credentials=None, sessio
         request=_request(method),
         access_token=access_token,
         credentials=credentials,
+        client_ip="203.0.113.7",
         validate_usecase=session or _session_usecase(["admin"]),
         authenticate_token_usecase=token or _token_usecase(),
     )
