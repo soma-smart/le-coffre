@@ -151,7 +151,9 @@ class CsrfMiddleware(BaseHTTPMiddleware):
                         raise ValueError("Revoked refresh token")
 
                     authenticated_user = user_repository.get_by_id(refresh_token_obj.user_id)
-                    if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
+                    if authenticated_user is None:
+                        raise ValueError("Refresh token of a deleted user")
+                    if authenticated_user.session_invalid_before is not None:
                         session_cutoff = authenticated_user.session_invalid_before
                         if refresh_token_obj.issued_at is None or refresh_token_obj.issued_at < session_cutoff:
                             raise ValueError("Invalidated refresh token")

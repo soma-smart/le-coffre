@@ -46,3 +46,11 @@ class SqlSsoUserRepository(SQLBaseRepository):
         statement = select(SsoUsersTable).where(SsoUsersTable.internal_user_id == user_id)
         results = self._session.exec(statement).first()
         return results
+
+    def delete_by_user_id(self, user_id: UUID) -> None:
+        sso_user_table = self._session.exec(
+            select(SsoUsersTable).where(SsoUsersTable.internal_user_id == user_id)
+        ).first()
+        if sso_user_table:
+            self._session.delete(sso_user_table)
+            self.commit()

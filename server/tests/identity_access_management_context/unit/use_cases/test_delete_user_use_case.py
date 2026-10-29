@@ -10,6 +10,7 @@ from identity_access_management_context.domain.entities import (
     ExtensionToken,
     Group,
     PersonalGroup,
+    SsoUser,
     User,
     UserPassword,
 )
@@ -23,8 +24,10 @@ from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes import FakeDomainEventPublisher
 
 from ..fakes import (
+    FakeAuthSessionRepository,
     FakeGroupMemberRepository,
     FakeGroupRepository,
+    FakeSsoUserRepository,
     FakeUserPasswordRepository,
     FakeUserRepository,
 )
@@ -42,6 +45,8 @@ def use_case(
     extension_token_repository,
     admin_event_repository,
     time_provider,
+    sso_user_repository,
+    auth_session_repository,
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -54,6 +59,8 @@ def use_case(
         extension_token_repository,
         admin_event_repository,
         time_provider,
+        sso_user_repository,
+        auth_session_repository,
     )
 
 
@@ -318,6 +325,50 @@ def test_given_deleted_user_should_also_remove_its_credentials(
 
     assert user_password_repository.get_by_id(user_uuid) is None
     assert user_password_repository.get_by_email(email) is None
+
+
+def test_given_deleted_sso_user_should_also_remove_its_sso_identity(
+    use_case: DeleteUserUseCase,
+    user_repository: FakeUserRepository,
+    sso_user_repository: FakeSsoUserRepository,
+):
+    user_uuid = UUID("123e4567-e89b-12d3-a456-426614174020")
+    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174021")
+    email = "sso_leaver@example.com"
+    user_repository.save(User(id=user_uuid, username="sso_leaver", email=email, name="SSO Leaver"))
+    sso_user_repository.create(
+        SsoUser(
+            internal_user_id=user_uuid,
+            email=email,
+            display_name="SSO Leaver",
+            sso_user_id="sso_leaver",
+            sso_provider="default",
+        )
+    )
+
+    use_case.execute(DeleteUserCommand(user_id=user_uuid, requesting_user=AuthenticatedUser(admin_uuid, ["admin"])))
+
+    assert sso_user_repository.get_by_user_id(user_uuid) is None
+    assert sso_user_repository.get_by_sso_user_id("sso_leaver") is None
+
+
+def test_given_deleted_user_should_invalidate_all_its_sessions(
+    use_case: DeleteUserUseCase,
+    user_repository: FakeUserRepository,
+    auth_session_repository: FakeAuthSessionRepository,
+    time_provider,
+):
+    user_uuid = UUID("123e4567-e89b-12d3-a456-426614174030")
+    admin_uuid = UUID("123e4567-e89b-12d3-a456-426614174031")
+    user_repository.save(User(id=user_uuid, username="leaver", email="leaver@example.com", name="Leaver"))
+    now = time_provider.get_current_time()
+    sessions = [auth_session_repository.create_session(user_uuid, f"refresh-jti-{i}", now) for i in range(2)]
+    admin_session = auth_session_repository.create_session(admin_uuid, "admin-refresh-jti", now)
+
+    use_case.execute(DeleteUserCommand(user_id=user_uuid, requesting_user=AuthenticatedUser(admin_uuid, ["admin"])))
+
+    assert all(session.invalidated_at == now for session in sessions)
+    assert admin_session.invalidated_at is None
 
 
 def test_given_deleted_user_should_free_the_email_for_a_new_account(

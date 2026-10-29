@@ -47,7 +47,13 @@ class ValidateUserTokenUseCase(TracedUseCase):
             raise InvalidTokenException()
 
         authenticated_user = self._user_repository.get_by_id(token_obj.user_id)
-        if authenticated_user is not None and authenticated_user.session_invalid_before is not None:
+        if authenticated_user is None:
+            # Fail closed. The identity lookup below would still succeed from a
+            # leftover SSO row, and a deleted account has no cutoff to honour:
+            # an earlier version let a deleted admin keep its rights until the
+            # access token expired.
+            raise InvalidTokenException()
+        if authenticated_user.session_invalid_before is not None:
             session_cutoff = authenticated_user.session_invalid_before
             if token_obj.issued_at is None or token_obj.issued_at < session_cutoff:
                 raise InvalidTokenException()
@@ -66,17 +72,16 @@ class ValidateUserTokenUseCase(TracedUseCase):
 
         email, display_name = _lookup_user()
 
-        # Check required roles if specified
-        if command.required_roles:
-            if not token_obj.roles:
-                raise InsufficientRoleException()
-            if not set(command.required_roles).issubset(set(token_obj.roles)):
-                raise InsufficientRoleException()
+        # Roles come from the database, not the token, so a change of rights
+        # applies now rather than when the access token expires.
+        roles = list(authenticated_user.roles)
+        if command.required_roles and not set(command.required_roles).issubset(set(roles)):
+            raise InsufficientRoleException()
 
         return ValidateUserTokenResponse(
             is_valid=True,
             user_id=token_obj.user_id,
             email=email,
             display_name=display_name,
-            roles=token_obj.roles if token_obj.roles else [],
+            roles=roles,
         )

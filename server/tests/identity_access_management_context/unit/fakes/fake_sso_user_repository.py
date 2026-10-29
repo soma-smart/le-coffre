@@ -34,3 +34,6 @@ class FakeSsoUserRepository:
             if user.internal_user_id == user_id:
                 return user
         return None
+
+    def delete_by_user_id(self, user_id: UUID) -> None:
+        self._users = {key: user for key, user in self._users.items() if user.internal_user_id != user_id}
