@@ -3,22 +3,33 @@ from uuid import uuid4
 
 from password_management_context.application.commands import CheckAccessCommand
 from password_management_context.application.use_cases.access.check_access_use_case import CheckAccessUseCase
+from password_management_context.domain.value_objects import PasswordGroupAccess, PasswordPermission
 from shared_kernel.domain.value_objects import Granted
+from tests.shared_kernel.fakes.fake_time_gateway import FakeTimeGateway
 
 _COUNTER_PATH = (
     "password_management_context.application.use_cases.access.check_access_use_case.access_check_not_found_counter"
 )
 
 
+_GROUP_ID = uuid4()
+
+
 def _make_use_case(is_owner=False, has_access=False):
     repo = MagicMock()
-    repo.is_owner.return_value = is_owner
-    repo.has_access_ignoring_expiry.return_value = has_access
-    return CheckAccessUseCase(repo)
+    if is_owner:
+        repo.list_all_permissions_for.return_value = {_GROUP_ID: PasswordGroupAccess(is_owner=True)}
+    elif has_access:
+        repo.list_all_permissions_for.return_value = {
+            _GROUP_ID: PasswordGroupAccess(is_owner=False, permissions={PasswordPermission.READ})
+        }
+    else:
+        repo.list_all_permissions_for.return_value = {}
+    return CheckAccessUseCase(repo, FakeTimeGateway())
 
 
 def _make_command():
-    return CheckAccessCommand(user_id=uuid4(), resource_id=uuid4())
+    return CheckAccessCommand(user_id=_GROUP_ID, resource_id=uuid4())
 
 
 def test_check_access_not_found_increments_counter():
