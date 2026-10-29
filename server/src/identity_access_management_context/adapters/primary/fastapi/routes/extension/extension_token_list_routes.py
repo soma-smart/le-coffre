@@ -21,12 +21,9 @@ router = APIRouter(prefix="/extension/tokens", tags=["Browser Extension"])
 
 class ExtensionTokenItem(BaseModel):
     id: UUID
-    device_name: str
-    created_at: datetime
-    expires_at: datetime
+    device_name: str | None
+    expires_at: datetime | None
     last_used_at: datetime | None
-    revoked_at: datetime | None
-    created_from_ip: str | None
     is_active: bool
 
 
@@ -60,11 +57,8 @@ def list_extension_tokens(
                 ExtensionTokenItem(
                     id=token.id,
                     device_name=token.device_name,
-                    created_at=token.created_at,
                     expires_at=token.expires_at,
                     last_used_at=token.last_used_at,
-                    revoked_at=token.revoked_at,
-                    created_from_ip=token.created_from_ip,
                     is_active=token.is_active,
                 )
                 for token in result.tokens

@@ -20,7 +20,7 @@ class SqlVaultEventRepository(SQLBaseRepository):
         event_id: UUID,
         event_type: str,
         occurred_on: datetime,
-        actor_user_id: UUID | None,
+        actor_principal_id: UUID | None,
         event_data: dict,
     ) -> None:
         """Append a vault event to storage"""
@@ -28,7 +28,7 @@ class SqlVaultEventRepository(SQLBaseRepository):
             event_id=event_id,
             event_type=event_type,
             occurred_on=occurred_on,
-            actor_user_id=actor_user_id,
+            actor_principal_id=actor_principal_id,
             event_data=event_data,
         )
         self._session.add(event)

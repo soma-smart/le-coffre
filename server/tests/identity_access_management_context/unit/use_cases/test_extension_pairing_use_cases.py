@@ -31,9 +31,7 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.entities import (
     MAX_ACTIVE_TOKENS_PER_USER,
-    ExtensionToken,
     User,
-    UserPassword,
 )
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
@@ -45,12 +43,13 @@ from identity_access_management_context.domain.exceptions import (
     TooManyActiveExtensionTokensError,
     UnsupportedPkceMethodError,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret, PkceVerifier
+from identity_access_management_context.domain.value_objects import PkceVerifier
 from shared_kernel.domain.entities import ValidatedUser
 
 NOW = datetime(2026, 8, 26, 12, 0, 0, tzinfo=UTC)
 PAIRING_LIFETIME = 300
 TOKEN_LIFETIME = 30 * 86400
+TOKEN_INACTIVITY = 14 * 86400
 POLL_INTERVAL = 5
 
 
@@ -60,15 +59,7 @@ def user():
 
 
 @pytest.fixture
-def registered_user(user, user_password_repository, user_repository):
-    user_password_repository.save(
-        UserPassword(
-            id=user.user_id,
-            email=user.email,
-            display_name=user.display_name,
-            password_hash=b"hashed",
-        )
-    )
+def registered_user(user, user_repository):
     user_repository.save(
         User(
             id=user.user_id,
@@ -103,11 +94,15 @@ def get_use_case(extension_pairing_repository, time_provider):
 
 @pytest.fixture
 def approve_use_case(
-    extension_pairing_repository, extension_token_repository, event_publisher, admin_event_repository, time_provider
+    extension_pairing_repository,
+    token_credential_record_repository,
+    event_publisher,
+    admin_event_repository,
+    time_provider,
 ):
     return ApproveExtensionPairingUseCase(
         extension_pairing_repository=extension_pairing_repository,
-        extension_token_repository=extension_token_repository,
+        token_credential_record_repository=token_credential_record_repository,
         event_publisher=event_publisher,
         admin_event_repository=admin_event_repository,
         time_provider=time_provider,
@@ -127,9 +122,7 @@ def deny_use_case(extension_pairing_repository, event_publisher, admin_event_rep
 @pytest.fixture
 def exchange_use_case(
     extension_pairing_repository,
-    extension_token_repository,
-    user_password_repository,
-    sso_user_repository,
+    token_credential_record_repository,
     user_repository,
     event_publisher,
     admin_event_repository,
@@ -137,14 +130,13 @@ def exchange_use_case(
 ):
     return ExchangeExtensionPairingUseCase(
         extension_pairing_repository=extension_pairing_repository,
-        extension_token_repository=extension_token_repository,
-        user_password_repository=user_password_repository,
-        sso_user_repository=sso_user_repository,
+        token_credential_record_repository=token_credential_record_repository,
         user_repository=user_repository,
         event_publisher=event_publisher,
         admin_event_repository=admin_event_repository,
         time_provider=time_provider,
         token_lifetime_seconds=TOKEN_LIFETIME,
+        token_inactivity_seconds=TOKEN_INACTIVITY,
         poll_interval_seconds=POLL_INTERVAL,
     )
 
@@ -294,7 +286,7 @@ class TestApprove:
         assert stored.approved_at == NOW
 
     def test_should_mint_no_credential_when_approving(
-        self, start_use_case, approve_use_case, extension_token_repository, user
+        self, start_use_case, approve_use_case, token_credential_record_repository, user
     ):
         # The token is created during the exchange, so its plaintext never has
         # to wait anywhere for the extension to collect it.
@@ -302,7 +294,7 @@ class TestApprove:
 
         approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
 
-        assert extension_token_repository.tokens == {}
+        assert token_credential_record_repository.credential_records == []
 
     def test_should_approve_when_the_code_is_lowercase(
         self, start_use_case, approve_use_case, extension_pairing_repository, user
@@ -335,24 +327,14 @@ class TestApprove:
             approve_use_case.execute(ApproveExtensionPairingCommand(user_code=started.user_code, requesting_user=user))
 
     def test_should_refuse_when_the_user_is_at_the_device_cap(
-        self, start_use_case, approve_use_case, extension_token_repository, user
+        self, start_use_case, approve_use_case, token_credential_record_repository, user
     ):
         # Checked at approval, while the user is still looking at a screen that
         # can explain it, rather than letting the extension fail silently later.
         # The check that actually bounds anything runs at the exchange, see
         # TestExchange.test_should_refuse_when_the_cap_filled_up_after_approval.
         for _ in range(MAX_ACTIVE_TOKENS_PER_USER):
-            extension_token_repository.add(
-                ExtensionToken.create(
-                    user_id=user.user_id,
-                    secret=ExtensionTokenSecret.generate(),
-                    device_name="existing",
-                    lifetime=timedelta(seconds=TOKEN_LIFETIME),
-                    now=NOW,
-                ),
-                MAX_ACTIVE_TOKENS_PER_USER,
-                NOW,
-            )
+            token_credential_record_repository.issue(user.user_id, NOW)
         started = _start(start_use_case, PkceVerifier.generate())
 
         with pytest.raises(TooManyActiveExtensionTokensError):
@@ -369,7 +351,7 @@ class TestResolutionAudit:
 
         (entry,) = admin_event_repository.events
         assert entry["event_type"] == "ExtensionPairingApprovedEvent"
-        assert entry["actor_user_id"] == user.user_id
+        assert entry["actor_principal_id"] == user.user_id
         assert entry["event_data"]["device_name"] == "Chrome on macOS"
         assert entry["event_data"]["created_from_ip"] == "203.0.113.5"
 
@@ -382,7 +364,7 @@ class TestResolutionAudit:
 
         (entry,) = admin_event_repository.events
         assert entry["event_type"] == "ExtensionPairingDeniedEvent"
-        assert entry["actor_user_id"] == user.user_id
+        assert entry["actor_principal_id"] == user.user_id
 
     def test_should_record_nothing_when_the_approval_loses_a_race(
         self, start_use_case, approve_use_case, extension_pairing_repository, admin_event_repository, user
@@ -504,7 +486,7 @@ class TestExchange:
         assert len(result.token) >= 43
 
     def test_should_store_only_the_hash_when_exchanging(
-        self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
+        self, start_use_case, approve_use_case, exchange_use_case, token_credential_record_repository, registered_user
     ):
         verifier = PkceVerifier.generate()
         started = _start(start_use_case, verifier)
@@ -516,7 +498,7 @@ class TestExchange:
             ExchangeExtensionPairingCommand(user_code=started.user_code, code_verifier=verifier.value)
         )
 
-        stored = extension_token_repository.tokens[result.token_id]
+        stored = token_credential_record_repository.get_by_id(result.token_id)
         # The plaintext exists in this response and in the extension's storage,
         # nowhere else.
         assert stored.token_hash != result.token
@@ -564,7 +546,7 @@ class TestExchange:
             )
 
     def test_should_mint_nothing_when_the_verifier_is_wrong(
-        self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
+        self, start_use_case, approve_use_case, exchange_use_case, token_credential_record_repository, registered_user
     ):
         started = _start(start_use_case, PkceVerifier.generate())
         approve_use_case.execute(
@@ -578,7 +560,7 @@ class TestExchange:
                 )
             )
 
-        assert extension_token_repository.tokens == {}
+        assert token_credential_record_repository.credential_records == []
 
     def test_should_report_pending_when_the_pairing_is_unapproved(
         self, start_use_case, exchange_use_case, registered_user
@@ -624,7 +606,7 @@ class TestExchange:
             )
 
     def test_should_yield_exactly_one_credential_when_exchanging_twice(
-        self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
+        self, start_use_case, approve_use_case, exchange_use_case, token_credential_record_repository, registered_user
     ):
         # The single-mint guarantee. A second exchange must not walk away with
         # another credential from the same approval.
@@ -639,10 +621,10 @@ class TestExchange:
 
         with pytest.raises(ExtensionPairingAlreadyResolvedError):
             exchange_use_case.execute(command)
-        assert len(extension_token_repository.tokens) == 1
+        assert len(token_credential_record_repository.credential_records) == 1
 
     def test_should_refuse_when_the_cap_filled_up_after_approval(
-        self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
+        self, start_use_case, approve_use_case, exchange_use_case, token_credential_record_repository, registered_user
     ):
         # The approval-time check bounds nothing on its own: approving mints no
         # token, so every one of these approvals sees the same count and passes.
@@ -668,11 +650,11 @@ class TestExchange:
                 refused += 1
 
         assert refused == 3
-        active = extension_token_repository.count_active_for_user(registered_user.user_id, NOW)
+        active = token_credential_record_repository.count_usable(registered_user.user_id, NOW)
         assert active == MAX_ACTIVE_TOKENS_PER_USER
 
     def test_should_stay_redeemable_when_a_slot_frees_after_being_refused(
-        self, start_use_case, approve_use_case, exchange_use_case, extension_token_repository, registered_user
+        self, start_use_case, approve_use_case, exchange_use_case, token_credential_record_repository, registered_user
     ):
         # Refusing over the cap must not burn the pairing: the user revokes a
         # device from their profile and the extension's next poll goes through,
@@ -697,7 +679,7 @@ class TestExchange:
         with pytest.raises(TooManyActiveExtensionTokensError):
             exchange_use_case.execute(command)
 
-        extension_token_repository.revoke(next(iter(extension_token_repository.tokens)), NOW)
+        token_credential_record_repository.delete([token_credential_record_repository.credential_records[0].id])
 
         assert isinstance(exchange_use_case.execute(command), ExchangedExtensionTokenResponse)
 
@@ -768,7 +750,7 @@ class TestExchange:
         approve_use_case,
         exchange_use_case,
         admin_event_repository,
-        extension_token_repository,
+        token_credential_record_repository,
         registered_user,
     ):
         verifier = PkceVerifier.generate()
@@ -783,7 +765,7 @@ class TestExchange:
         )
 
         assert isinstance(result, ExchangedExtensionTokenResponse)
-        assert extension_token_repository.get_by_id(result.token_id) is not None
+        assert token_credential_record_repository.get_by_id(result.token_id) is not None
 
     def test_should_record_an_audit_event_when_exchanging(
         self, start_use_case, approve_use_case, exchange_use_case, admin_event_repository, registered_user

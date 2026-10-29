@@ -44,8 +44,8 @@ class CreatePasswordUseCase(TracedUseCase):
         if not self.group_access_gateway.group_exists(command.group_id):
             raise GroupNotFoundError(command.group_id)
 
-        if not self.group_access_gateway.is_user_owner_of_group(command.user_id, command.group_id):
-            raise UserNotOwnerOfGroupError(command.user_id, command.group_id)
+        if not self.group_access_gateway.is_principal_owner_of_group(command.principal_id, command.group_id):
+            raise UserNotOwnerOfGroupError(command.principal_id, command.group_id)
 
         encrypted_value = self.password_encryption_gateway.encrypt(command.decrypted_password)
 
@@ -66,7 +66,7 @@ class CreatePasswordUseCase(TracedUseCase):
             password_id=password.id,
             password_name=password.name,
             owner_group_id=command.group_id,
-            created_by_user_id=command.user_id,
+            created_by_principal_id=command.principal_id,
             folder=password.folder,
             login=password.login,
             url=password.url,

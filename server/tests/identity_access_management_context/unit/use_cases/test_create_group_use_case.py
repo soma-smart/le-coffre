@@ -133,7 +133,7 @@ def test_given_valid_data_when_creating_group_then_should_publish_group_created_
     assert len(events) == 1
     assert events[0].group_id == group_id
     assert events[0].group_name == "Development Team"
-    assert events[0].created_by_user_id == creator_id
+    assert events[0].created_by_principal_id == creator_id
 
 
 def test_given_valid_data_when_creating_group_then_should_store_group_created_event(
@@ -153,7 +153,7 @@ def test_given_valid_data_when_creating_group_then_should_store_group_created_ev
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "GroupCreatedEvent"
-    assert stored["actor_user_id"] == creator_id
+    assert stored["actor_principal_id"] == creator_id
 
 
 def test_given_group_already_existing_when_creating_group_then_should_raise_exception(

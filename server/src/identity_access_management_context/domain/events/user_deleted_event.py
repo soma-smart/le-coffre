@@ -9,7 +9,7 @@ class UserDeletedEvent(DomainEvent):
     def __init__(
         self,
         user_id: UUID,
-        deleted_by_user_id: UUID,
+        deleted_by_principal_id: UUID,
         personal_group_id: UUID | None,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
@@ -20,5 +20,5 @@ class UserDeletedEvent(DomainEvent):
             priority=EventPriority.HIGH,
         )
         self.user_id = user_id
-        self.deleted_by_user_id = deleted_by_user_id
+        self.deleted_by_principal_id = deleted_by_principal_id
         self.personal_group_id = personal_group_id

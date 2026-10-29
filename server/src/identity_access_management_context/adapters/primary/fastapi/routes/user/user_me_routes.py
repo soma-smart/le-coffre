@@ -56,7 +56,7 @@ def get_user_me(
         user_response = usecase.execute(command)
 
         # Get personal group ID
-        personal_group = group_repository.get_by_user_id(user_response.id)
+        personal_group = group_repository.get_by_principal_id(user_response.id)
         personal_group_id = personal_group.id if personal_group else None
 
         return GetUserMeResponse(

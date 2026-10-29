@@ -45,7 +45,7 @@ class LockVaultUseCase(TracedUseCase):
             raise VaultLockedException()
 
         logger.info("Vault locked", extra={"user_id": str(command.requesting_user.user_id)})
-        event = VaultLockedEvent(locked_by_user_id=command.requesting_user.user_id)
+        event = VaultLockedEvent(locked_by_principal_id=command.requesting_user.user_id)
         # append_event() before publish(): if the write fails, this raises before any
         # notification email goes out for a lock that was never durably recorded —
         # which a later restart (RecordVaultLockedOnStartupUseCase) would otherwise
@@ -54,7 +54,7 @@ class LockVaultUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={},
         )
         self._event_publisher.publish(event)

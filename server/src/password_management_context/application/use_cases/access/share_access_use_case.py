@@ -67,7 +67,7 @@ class ShareAccessUseCase(TracedUseCase):
             raise PasswordAccessDeniedError(command.owner_id, command.password_id)
 
         # Check if the requester owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(command.owner_id, owner_group_id):
+        if not self.group_access_gateway.is_principal_owner_of_group(command.owner_id, owner_group_id):
             raise UserNotOwnerOfGroupError(command.owner_id, owner_group_id)
 
         expiration = self._validate_expiration(command)
@@ -83,7 +83,7 @@ class ShareAccessUseCase(TracedUseCase):
             extra={
                 "password_id": str(command.password_id),
                 "shared_with_group_id": str(command.group_id),
-                "by_user_id": str(command.owner_id),
+                "by_principal_id": str(command.owner_id),
                 "expires_at": expires_at.isoformat() if expires_at else None,
             },
         )
@@ -93,7 +93,7 @@ class ShareAccessUseCase(TracedUseCase):
             password_id=command.password_id,
             owner_group_id=owner_group_id,
             shared_with_group_id=command.group_id,
-            shared_by_user_id=command.owner_id,
+            shared_by_principal_id=command.owner_id,
             expires_at=expires_at.isoformat() if expires_at else None,
         )
         event_storage_service = PasswordEventStorageService(self.password_event_repository)

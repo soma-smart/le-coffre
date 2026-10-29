@@ -77,20 +77,28 @@ class FakeOneTimeLinkRepository(OneTimeLinkRepository):
         return len(self._matching(now, include_inactive))
 
     def list_for_creator(
-        self, created_by_user_id: UUID, now: datetime, include_inactive: bool, limit: int
+        self, created_by_principal_id: UUID, now: datetime, include_inactive: bool, limit: int
     ) -> list[OneTimeLink]:
-        mine = [link for link in self._matching(now, include_inactive) if link.created_by_user_id == created_by_user_id]
+        mine = [
+            link
+            for link in self._matching(now, include_inactive)
+            if link.created_by_principal_id == created_by_principal_id
+        ]
         return mine[:limit]
 
-    def count_for_creator(self, created_by_user_id: UUID, now: datetime, include_inactive: bool) -> int:
+    def count_for_creator(self, created_by_principal_id: UUID, now: datetime, include_inactive: bool) -> int:
         return len(
-            [link for link in self._matching(now, include_inactive) if link.created_by_user_id == created_by_user_id]
+            [
+                link
+                for link in self._matching(now, include_inactive)
+                if link.created_by_principal_id == created_by_principal_id
+            ]
         )
 
-    def revoke_all_for_creator(self, created_by_user_id: UUID, now: datetime) -> int:
+    def revoke_all_for_creator(self, created_by_principal_id: UUID, now: datetime) -> int:
         revoked = 0
         for link in self.storage.values():
-            if link.created_by_user_id != created_by_user_id:
+            if link.created_by_principal_id != created_by_principal_id:
                 continue
             # Mirrors the SQL guard: an already-read link keeps its read timestamp.
             if link.is_consumed() or link.is_revoked():

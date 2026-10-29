@@ -54,13 +54,13 @@ class UpdateGroupUseCase(TracedUseCase):
         event = GroupUpdatedEvent(
             group_id=command.group_id,
             new_name=command.name,
-            updated_by_user_id=command.requesting_user.user_id,
+            updated_by_principal_id=command.requesting_user.user_id,
         )
         self._event_publisher.publish(event)
         self._group_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={"group_id": str(command.group_id), "new_name": command.name},
         )

@@ -100,7 +100,7 @@
         </Column>
 
         <Column
-          field="actorUserId"
+          field="actorPrincipalId"
           :header="t('components.passwordHistoryModal.actorHeader')"
           :style="{ width: '20%' }"
         >

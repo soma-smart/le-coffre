@@ -63,7 +63,7 @@ class ListAccessUseCase(TracedUseCase):
 
         permissions = self.password_permissions_repository.list_all_permissions_for(command.password_id)
 
-        if not self._user_has_access_through_groups(command.requester_id, permissions, now):
+        if not self._principal_has_access_through_groups(command.requester_id, permissions, now):
             raise PasswordAccessDeniedError(command.requester_id, command.password_id)
 
         user_accesses: list[UserAccessResponse] = []
@@ -81,17 +81,27 @@ class ListAccessUseCase(TracedUseCase):
                 )
             )
 
-            for owner_user_id in self.group_access_gateway.get_group_owner_users(group_id):
+            for owner_principal_id in self.group_access_gateway.get_group_owner_principals(group_id):
                 user_accesses.append(
                     self._link(
-                        owner_user_id, group_id, AccessRole.OWNER, group_role, access.permissions, access.expires_at
+                        owner_principal_id,
+                        group_id,
+                        AccessRole.OWNER,
+                        group_role,
+                        access.permissions,
+                        access.expires_at,
                     )
                 )
 
-            for member_user_id in self.group_access_gateway.get_group_member_users(group_id):
+            for member_principal_id in self.group_access_gateway.get_group_member_principals(group_id):
                 user_accesses.append(
                     self._link(
-                        member_user_id, group_id, AccessRole.MEMBER, group_role, access.permissions, access.expires_at
+                        member_principal_id,
+                        group_id,
+                        AccessRole.MEMBER,
+                        group_role,
+                        access.permissions,
+                        access.expires_at,
                     )
                 )
 
@@ -99,7 +109,7 @@ class ListAccessUseCase(TracedUseCase):
 
     @staticmethod
     def _link(
-        user_id: UUID,
+        principal_id: UUID,
         group_id: UUID,
         role_in_group: AccessRole,
         group_role: AccessRole,
@@ -107,7 +117,7 @@ class ListAccessUseCase(TracedUseCase):
         expires_at: datetime | None,
     ) -> UserAccessResponse:
         return UserAccessResponse(
-            user_id=user_id,
+            principal_id=principal_id,
             group_id=group_id,
             role_in_group=role_in_group,
             group_role=group_role,
@@ -115,16 +125,18 @@ class ListAccessUseCase(TracedUseCase):
             expires_at=expires_at,
         )
 
-    def _user_has_access_through_groups(self, user_id: UUID, permissions: GroupPermissions, now: datetime) -> bool:
-        """Check if user still has live access to password through any of their groups"""
+    def _principal_has_access_through_groups(
+        self, principal_id: UUID, permissions: GroupPermissions, now: datetime
+    ) -> bool:
+        """Check if a principal still has live access to the password through any of its groups"""
         for group_id, access in permissions.items():
             if not access.grants_read(now):
                 continue
 
-            is_user_owner = self.group_access_gateway.is_user_owner_of_group(user_id, group_id)
-            is_user_member = self.group_access_gateway.is_user_member_of_group(user_id, group_id)
+            is_owner = self.group_access_gateway.is_principal_owner_of_group(principal_id, group_id)
+            is_member = self.group_access_gateway.is_principal_member_of_group(principal_id, group_id)
 
-            if is_user_owner or is_user_member:
+            if is_owner or is_member:
                 return True
 
         return False

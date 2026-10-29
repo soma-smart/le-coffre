@@ -1,4 +1,4 @@
-"""Short-lived memory of which user an extension bearer token belongs to.
+"""Short-lived memory of which principal a bearer token belongs to.
 
 Exists for two reasons, in this order.
 
@@ -38,7 +38,7 @@ MAX_ENTRIES = 10_000
 
 
 class BearerPrincipalCache:
-    """Maps a token hash to its user id for a short while. Thread-safe."""
+    """Maps a token hash to its principal id for a short while. Thread-safe."""
 
     def __init__(self, ttl_seconds: int = DEFAULT_TTL_SECONDS) -> None:
         self._ttl = timedelta(seconds=ttl_seconds)
@@ -46,23 +46,23 @@ class BearerPrincipalCache:
         self._lock = threading.Lock()
 
     def get(self, token_hash: str, now: datetime) -> str | None:
-        """The user id this token resolved to, or None if unknown or stale."""
+        """The principal id this token resolved to, or None if unknown or stale."""
         with self._lock:
             entry = self._entries.get(token_hash)
             if entry is None:
                 return None
-            user_id, stored_at = entry
+            principal_id, stored_at = entry
             if now - stored_at >= self._ttl:
                 del self._entries[token_hash]
                 return None
-            return user_id
+            return principal_id
 
-    def put(self, token_hash: str, user_id: str, now: datetime) -> None:
+    def put(self, token_hash: str, principal_id: str, now: datetime) -> None:
         """Record a lookup that succeeded. Only ever called with a real token."""
         with self._lock:
             if len(self._entries) >= MAX_ENTRIES and token_hash not in self._entries:
                 self._entries.clear()
-            self._entries[token_hash] = (user_id, now)
+            self._entries[token_hash] = (principal_id, now)
 
     def clear(self) -> None:
         """Testing helper."""

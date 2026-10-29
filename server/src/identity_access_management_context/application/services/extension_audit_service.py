@@ -30,7 +30,7 @@ class ExtensionAuditService:
                 event_id=event.event_id,
                 event_type=type(event).__name__,
                 occurred_on=event.occurred_on,
-                actor_user_id=actor_user_id,
+                actor_principal_id=actor_user_id,
                 event_data=event_data,
             )
         except Exception:  # noqa: BLE001 - the audited action is already committed

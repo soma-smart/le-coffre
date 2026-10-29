@@ -15,7 +15,7 @@ def test_given_user_deleted_should_remove_their_preferences_row(session, session
     publisher = InMemoryDomainEventPublisher()
     publisher.subscribe(UserDeletedEvent, UserDeletedEventSubscriber(session_maker).handle)
 
-    publisher.publish(UserDeletedEvent(user_id=deleted, deleted_by_user_id=uuid4(), personal_group_id=None))
+    publisher.publish(UserDeletedEvent(user_id=deleted, deleted_by_principal_id=uuid4(), personal_group_id=None))
 
     session.expire_all()
     assert repository.get(deleted) is None

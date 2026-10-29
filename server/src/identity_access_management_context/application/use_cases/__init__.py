@@ -1,5 +1,6 @@
 from .add_owner_to_group_use_case import AddOwnerToGroupUseCase
 from .add_user_to_group_use_case import AddUserToGroupUseCase
+from .authenticate_token_use_case import AuthenticateTokenUseCase
 from .create_group_use_case import CreateGroupUseCase
 from .create_user_use_case import CreateUserUseCase
 from .delete_group_use_case import DeleteGroupUseCase
@@ -15,7 +16,6 @@ from .extension import (
     RevokeAllExtensionTokensUseCase,
     RevokeExtensionTokenUseCase,
     StartExtensionPairingUseCase,
-    ValidateExtensionTokenUseCase,
 )
 from .get_group_use_case import GetGroupUseCase
 from .get_statistic_for_admin_use_case import GetStatisticForAdminUseCase
@@ -58,7 +58,7 @@ __all__ = [
     "RevokeAllExtensionTokensUseCase",
     "RevokeExtensionTokenUseCase",
     "StartExtensionPairingUseCase",
-    "ValidateExtensionTokenUseCase",
+    "AuthenticateTokenUseCase",
     "CreateUserUseCase",
     "DeleteUserUseCase",
     "GetUserUseCase",

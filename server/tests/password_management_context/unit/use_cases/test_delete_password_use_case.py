@@ -166,7 +166,7 @@ def test_given_password_with_one_time_links_when_deleting_should_drop_them(
         one_time_link_repository.add(
             OneTimeLink.create(
                 password_id=password_id,
-                created_by_user_id=owner_id,
+                created_by_principal_id=owner_id,
                 token=OneTimeLinkToken.generate(),
                 lifetime=OneTimeLinkLifetime.default(),
                 now=datetime.now(UTC),

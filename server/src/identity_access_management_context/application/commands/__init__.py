@@ -2,6 +2,7 @@ from .add_owner_to_group_command import AddOwnerToGroupCommand
 from .add_user_to_group_command import AddUserToGroupCommand
 from .admin_login_command import AdminLoginCommand
 from .approve_extension_pairing_command import ApproveExtensionPairingCommand
+from .authenticate_token_command import AuthenticateTokenCommand
 from .configure_sso_provider_command import ConfigureSsoProviderCommand
 from .create_group_command import CreateGroupCommand
 from .create_user_command import CreateUserCommand
@@ -39,7 +40,6 @@ from .start_extension_pairing_command import StartExtensionPairingCommand
 from .update_group_command import UpdateGroupCommand
 from .update_user_command import UpdateUserCommand
 from .update_user_password_command import UpdateUserPasswordCommand
-from .validate_extension_token_command import ValidateExtensionTokenCommand
 from .validate_user_token_command import ValidateUserTokenCommand
 
 __all__ = [
@@ -52,7 +52,7 @@ __all__ = [
     "RevokeAllExtensionTokensForUserCommand",
     "RevokeExtensionTokenCommand",
     "StartExtensionPairingCommand",
-    "ValidateExtensionTokenCommand",
+    "AuthenticateTokenCommand",
     "CreateUserCommand",
     "UpdateUserCommand",
     "UpdateUserPasswordCommand",

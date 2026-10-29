@@ -11,7 +11,7 @@ class UserCreatedEvent(DomainEvent):
         user_id: UUID,
         username: str,
         email: str,
-        created_by_user_id: UUID,
+        created_by_principal_id: UUID,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -23,4 +23,4 @@ class UserCreatedEvent(DomainEvent):
         self.user_id = user_id
         self.username = username
         self.email = email
-        self.created_by_user_id = created_by_user_id
+        self.created_by_principal_id = created_by_principal_id

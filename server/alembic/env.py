@@ -6,13 +6,16 @@ from config import get_database_url
 
 # Import all models so they are registered with SQLModel.metadata
 from identity_access_management_context.adapters.secondary.sql import (
+    CredentialRecordTable,
     GroupMemberTable,
     GroupTable,
-    ServiceAccountTable,
+    PasswordCredentialRecordTable,
+    PrincipalTable,
+    ServiceAccountPrincipalTable,
     SsoConfigurationTable,
-    SsoUsersTable,
-    UserPasswordTable,
-    UserTable,
+    SSOCredentialRecordTable,
+    TokenCredentialRecordTable,
+    UserPrincipalTable,
 )
 from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
 from notification_context.adapters.secondary.sql import NotificationPreferenceTable
@@ -28,12 +31,14 @@ from vault_management_context.adapters.secondary.sql.models.vault_event import V
 
 # Silence ruff unused-import warnings for model registration
 _ = (
-    UserTable,
+    PrincipalTable,
+    UserPrincipalTable,
     GroupTable,
     GroupMemberTable,
     SsoConfigurationTable,
-    SsoUsersTable,
-    UserPasswordTable,
+    CredentialRecordTable,
+    PasswordCredentialRecordTable,
+    SSOCredentialRecordTable,
     PermissionsTable,
     OwnershipTable,
     PasswordTable,
@@ -43,8 +48,8 @@ _ = (
     NotificationPreferenceTable,
     VaultEventTable,
     IamEventTable,
-    ServiceAccountTable,
-    ServiceAccountTable,
+    ServiceAccountPrincipalTable,
+    TokenCredentialRecordTable,
 )
 
 # this is the Alembic Config object, which provides

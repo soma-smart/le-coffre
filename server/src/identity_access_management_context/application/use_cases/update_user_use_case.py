@@ -3,7 +3,11 @@ from uuid import UUID
 from identity_access_management_context.application.commands import UpdateUserCommand
 from identity_access_management_context.application.gateways import UserEventRepository, UserRepository
 from identity_access_management_context.domain.events import UserUpdatedEvent
-from identity_access_management_context.domain.exceptions import UserNotFoundError, UserUpdateNotAllowedException
+from identity_access_management_context.domain.exceptions import (
+    EmailAlreadyUsedException,
+    UserNotFoundError,
+    UserUpdateNotAllowedException,
+)
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
@@ -29,6 +33,9 @@ class UpdateUserUseCase(TracedUseCase):
         if not user:
             raise UserNotFoundError(command.id)
 
+        if command.email != user.email and self.user_repository.get_by_email(command.email) is not None:
+            raise EmailAlreadyUsedException(command.email)
+
         user.username = command.username
         user.email = command.email
         user.name = command.name
@@ -37,14 +44,14 @@ class UpdateUserUseCase(TracedUseCase):
 
         event = UserUpdatedEvent(
             user_id=command.id,
-            updated_by_user_id=requesting_user.user_id,
+            updated_by_principal_id=requesting_user.user_id,
         )
         self._event_publisher.publish(event)
         self._user_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=requesting_user.user_id,
+            actor_principal_id=requesting_user.user_id,
             event_data={"user_id": str(command.id)},
         )
 

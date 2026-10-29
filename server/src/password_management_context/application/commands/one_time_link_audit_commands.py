@@ -24,5 +24,5 @@ class RevokeAllOneTimeLinksForUserCommand:
 
 @dataclass
 class ListMyOneTimeLinksCommand:
-    requesting_user_id: UUID
+    requesting_principal_id: UUID
     include_inactive: bool = False

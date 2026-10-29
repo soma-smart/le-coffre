@@ -10,6 +10,7 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.use_cases import CreateUserUseCase
 from identity_access_management_context.domain.exceptions import (
+    EmailAlreadyUsedException,
     IdentityAccessManagementDomainError,
     UserAlreadyExistsException,
 )
@@ -66,6 +67,8 @@ def create_user(
         user_id = usecase.execute(command)
 
         return CreateUserResponse(id=user_id)
+    except EmailAlreadyUsedException as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except UserAlreadyExistsException as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except AccessDeniedError as e:

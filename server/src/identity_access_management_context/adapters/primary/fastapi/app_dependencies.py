@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
@@ -24,44 +22,49 @@ from identity_access_management_context.adapters.secondary.private_api import (
 from identity_access_management_context.adapters.secondary.sql import (
     SqlAuthSessionRepository,
     SqlExtensionPairingRepository,
-    SqlExtensionTokenRepository,
     SqlGroupMemberRepository,
     SqlGroupRepository,
     SqlIamEventRepository,
+    SqlPasswordCredentialRecordRepository,
+    SQLPrincipalRepository,
     SqlRevokedTokenRepository,
     SqlServiceAccountEventRepository,
     SqlServiceAccountRepository,
     SqlSsoConfigurationRepository,
-    SqlSsoUserRepository,
-    SqlUserPasswordRepository,
+    SqlSSOCredentialRecordRepository,
+    SqlTokenCredentialRecordRepository,
     SqlUserRepository,
 )
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
     ExtensionPairingRepository,
-    ExtensionTokenRepository,
     GroupEventRepository,
     GroupMemberRepository,
     GroupRepository,
     GroupUsageGateway,
     LoginLockoutGateway,
     OneTimeLinkRevocationGateway,
+    PasswordCredentialRecordRepository,
     PasswordHashingGateway,
     RevokedTokenRepository,
     ServiceAccountEventRepository,
     ServiceAccountRepository,
     SsoConfigurationRepository,
+    SSOCredentialRecordRepository,
     SsoEncryptionGateway,
     SsoEventRepository,
     SsoGateway,
-    SsoUserRepository,
+    TokenCredentialRecordRepository,
     TokenGateway,
     UserEventRepository,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.services import ServiceAccountPermissionService
+from identity_access_management_context.application.services.authentication import (
+    PasswordAuthenticator,
+    SSOAuthenticator,
+)
 from identity_access_management_context.application.use_cases import (
     AddOwnerToGroupUseCase,
     AddUserToGroupUseCase,
@@ -117,7 +120,7 @@ from password_management_context.application.use_cases import IsGroupUsedUseCase
 from security.client_ip import resolve_client_ip
 from shared_kernel.adapters.primary.dependencies import get_session
 from shared_kernel.adapters.secondary.utc_time_gateway import UtcTimeGateway
-from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, PrincipalRepository, TimeGateway
 
 
 def get_event_publisher(request: Request) -> DomainEventPublisher:
@@ -140,6 +143,12 @@ def get_service_account_repository(
     session: Session = Depends(get_session),
 ) -> ServiceAccountRepository:
     return SqlServiceAccountRepository(session)
+
+
+def get_token_credential_record_repository(
+    session: Session = Depends(get_session),
+) -> TokenCredentialRecordRepository:
+    return SqlTokenCredentialRecordRepository(session)
 
 
 def get_service_account_event_repository(
@@ -167,14 +176,6 @@ def get_extension_pairing_repository(
     session: Session = Depends(get_session),
 ) -> ExtensionPairingRepository:
     return SqlExtensionPairingRepository(session)
-
-
-def get_extension_token_repository(
-    session: Session = Depends(get_session),
-) -> ExtensionTokenRepository:
-    return SqlExtensionTokenRepository(
-        session, dormant_after=timedelta(seconds=get_extension_token_inactivity_seconds())
-    )
 
 
 def get_group_repository(session: Session = Depends(get_session)) -> GroupRepository:
@@ -219,10 +220,18 @@ def get_user_repository(session: Session = Depends(get_session)) -> UserReposito
     return SqlUserRepository(session)
 
 
-def get_user_password_repository(
+def get_principal_repository(
     session: Session = Depends(get_session),
-) -> UserPasswordRepository:
-    return SqlUserPasswordRepository(session)
+    user_repository: UserRepository = Depends(get_user_repository),
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+) -> PrincipalRepository:
+    return SQLPrincipalRepository(session, user_repository, service_account_repository)
+
+
+def get_password_credential_record_repository(
+    session: Session = Depends(get_session),
+) -> PasswordCredentialRecordRepository:
+    return SqlPasswordCredentialRecordRepository(session)
 
 
 def get_revoked_token_repository(
@@ -237,10 +246,10 @@ def get_auth_session_repository(
     return SqlAuthSessionRepository(session)
 
 
-def get_sso_user_repository(
+def get_sso_credential_record_repository(
     session: Session = Depends(get_session),
-) -> SsoUserRepository:
-    return SqlSsoUserRepository(session)
+) -> SSOCredentialRecordRepository:
+    return SqlSSOCredentialRecordRepository(session)
 
 
 def get_sso_configuration_repository(
@@ -283,11 +292,11 @@ def get_delete_user_usecase(
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
     one_time_link_revocation_gateway: OneTimeLinkRevocationGateway = Depends(get_one_time_link_revocation_gateway),
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
 ):
     return DeleteUserUseCase(
@@ -297,11 +306,9 @@ def get_delete_user_usecase(
         event_publisher,
         user_event_repository,
         one_time_link_revocation_gateway,
-        user_password_repository,
-        extension_token_repository,
+        token_credential_record_repository,
         admin_event_repository,
         time_provider,
-        sso_user_repository,
         auth_session_repository,
     )
 
@@ -323,24 +330,28 @@ def get_update_user_usecase(
 
 
 def get_update_user_password_usecase(
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
+        get_password_credential_record_repository
+    ),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
     user_repository: UserRepository = Depends(get_user_repository),
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
     return UpdateUserPasswordUseCase(
-        user_password_repository,
+        password_credential_record_repository,
         password_hashing_gateway,
         user_repository,
         auth_session_repository,
         token_gateway,
         time_provider,
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
     )
@@ -348,7 +359,9 @@ def get_update_user_password_usecase(
 
 def get_create_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
+        get_password_credential_record_repository
+    ),
     group_repository: GroupRepository = Depends(get_group_repository),
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
@@ -357,7 +370,7 @@ def get_create_user_usecase(
 ):
     return CreateUserUseCase(
         user_repository,
-        user_password_repository,
+        password_credential_record_repository,
         group_repository,
         group_member_repository,
         password_hashing_gateway,
@@ -380,9 +393,9 @@ def get_search_users_usecase(
 
 def get_get_user_me_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
+    sso_credential_record_repository: SSOCredentialRecordRepository = Depends(get_sso_credential_record_repository),
 ):
-    return GetUserMeUseCase(user_repository, sso_user_repository)
+    return GetUserMeUseCase(user_repository, sso_credential_record_repository)
 
 
 # Authentication Use Cases
@@ -390,11 +403,23 @@ def get_login_lockout_gateway(request: Request) -> LoginLockoutGateway:
     return request.app.state.login_lockout_gateway
 
 
-def get_password_login_usecase(
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
-    user_repository: UserRepository = Depends(get_user_repository),
-    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
+def get_password_authenticator(
+    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
+        get_password_credential_record_repository
+    ),
+    principal_repository: PrincipalRepository = Depends(get_principal_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
+) -> PasswordAuthenticator:
+    return PasswordAuthenticator(
+        principal_repository=principal_repository,
+        password_credential_record_repository=password_credential_record_repository,
+        password_hashing_gateway=password_hashing_gateway,
+    )
+
+
+def get_password_login_usecase(
+    password_authenticator: PasswordAuthenticator = Depends(get_password_authenticator),
+    auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     token_gateway: TokenGateway = Depends(get_token_gateway),
     time_provider: TimeGateway = Depends(get_time_provider),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
@@ -402,10 +427,8 @@ def get_password_login_usecase(
     login_lockout_gateway: LoginLockoutGateway = Depends(get_login_lockout_gateway),
 ):
     return PasswordLoginUseCase(
-        user_password_repository,
-        user_repository,
+        password_authenticator,
         auth_session_repository,
-        password_hashing_gateway,
         token_gateway,
         time_provider,
         event_publisher,
@@ -415,7 +438,9 @@ def get_password_login_usecase(
 
 
 def get_register_admin_with_password_usecase(
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
+    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
+        get_password_credential_record_repository
+    ),
     group_repository: GroupRepository = Depends(get_group_repository),
     group_member_repository: GroupMemberRepository = Depends(get_group_member_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
@@ -424,7 +449,7 @@ def get_register_admin_with_password_usecase(
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
     return RegisterAdminWithPasswordUseCase(
-        user_password_repository,
+        password_credential_record_repository,
         password_hashing_gateway,
         user_repository,
         group_repository,
@@ -472,9 +497,20 @@ def get_is_sso_config_set_usecase(
     return IsSsoConfigSetUseCase(sso_configuration_repository)
 
 
+def get_sso_authenticator(
+    sso_credential_record_repository: SSOCredentialRecordRepository = Depends(get_sso_credential_record_repository),
+    principal_repository: PrincipalRepository = Depends(get_principal_repository),
+) -> SSOAuthenticator:
+    return SSOAuthenticator(
+        principal_repository=principal_repository,
+        sso_credential_record_repository=sso_credential_record_repository,
+    )
+
+
 def get_sso_login_usecase(
     sso_gateway: SsoGateway = Depends(get_sso_gateway),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
+    sso_authenticator: SSOAuthenticator = Depends(get_sso_authenticator),
+    sso_credential_record_repository: SSOCredentialRecordRepository = Depends(get_sso_credential_record_repository),
     user_repository: UserRepository = Depends(get_user_repository),
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     password_hashing_gateway: PasswordHashingGateway = Depends(get_password_hashing_gateway),
@@ -489,7 +525,8 @@ def get_sso_login_usecase(
 ):
     return SsoLoginUseCase(
         sso_gateway,
-        sso_user_repository,
+        sso_authenticator,
+        sso_credential_record_repository,
         user_repository,
         auth_session_repository,
         password_hashing_gateway,
@@ -510,7 +547,9 @@ def get_refresh_access_token_usecase(
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
     revoked_token_repository: RevokedTokenRepository = Depends(get_revoked_token_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
@@ -521,7 +560,7 @@ def get_refresh_access_token_usecase(
         revoked_token_repository,
         time_provider,
         get_session_max_lifetime_seconds(),
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
     )
@@ -680,6 +719,9 @@ def get_delete_group_usecase(
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return DeleteGroupUseCase(
@@ -690,6 +732,7 @@ def get_delete_group_usecase(
         group_event_repository,
         service_account_repository,
         service_account_event_repository,
+        token_credential_record_repository,
         time_provider,
     )
 
@@ -703,6 +746,9 @@ def get_statistic_for_admin_usecase(
 
 def get_create_service_account_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
@@ -710,6 +756,7 @@ def get_create_service_account_usecase(
 ):
     return CreateServiceAccountUseCase(
         service_account_repository,
+        token_credential_record_repository,
         permission_service,
         event_publisher,
         service_account_event_repository,
@@ -743,6 +790,9 @@ def get_list_service_accounts_usecase(
 
 def get_rotate_service_account_token_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
@@ -750,6 +800,7 @@ def get_rotate_service_account_token_usecase(
 ):
     return RotateServiceAccountTokenUseCase(
         service_account_repository,
+        token_credential_record_repository,
         permission_service,
         event_publisher,
         service_account_event_repository,
@@ -798,14 +849,16 @@ def get_get_extension_pairing_usecase(
 
 def get_approve_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return ApproveExtensionPairingUseCase(
         extension_pairing_repository,
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
         time_provider,
@@ -825,9 +878,9 @@ def get_deny_extension_pairing_usecase(
 
 def get_exchange_extension_pairing_usecase(
     extension_pairing_repository: ExtensionPairingRepository = Depends(get_extension_pairing_repository),
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
-    user_password_repository: UserPasswordRepository = Depends(get_user_password_repository),
-    sso_user_repository: SsoUserRepository = Depends(get_sso_user_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     user_repository: UserRepository = Depends(get_user_repository),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
@@ -835,43 +888,45 @@ def get_exchange_extension_pairing_usecase(
 ):
     return ExchangeExtensionPairingUseCase(
         extension_pairing_repository,
-        extension_token_repository,
-        user_password_repository,
-        sso_user_repository,
+        token_credential_record_repository,
         user_repository,
         event_publisher,
         admin_event_repository,
         time_provider,
         get_extension_token_lifetime_seconds(),
+        get_extension_token_inactivity_seconds(),
         get_extension_pairing_poll_interval_seconds(),
     )
 
 
 def get_list_extension_tokens_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     time_provider: TimeGateway = Depends(get_time_provider),
 ):
-    return ListExtensionTokensUseCase(
-        extension_token_repository, time_provider, get_extension_token_inactivity_seconds()
-    )
+    return ListExtensionTokensUseCase(token_credential_record_repository, time_provider)
 
 
 def get_revoke_extension_token_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RevokeExtensionTokenUseCase(
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
-        time_provider,
     )
 
 
 def get_revoke_service_account_usecase(
     service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     permission_service: ServiceAccountPermissionService = Depends(get_service_account_permission_service),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
@@ -879,6 +934,7 @@ def get_revoke_service_account_usecase(
 ):
     return RevokeServiceAccountUseCase(
         service_account_repository,
+        token_credential_record_repository,
         permission_service,
         event_publisher,
         service_account_event_repository,
@@ -887,28 +943,28 @@ def get_revoke_service_account_usecase(
 
 
 def get_revoke_all_extension_tokens_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RevokeAllExtensionTokensUseCase(
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
-        time_provider,
     )
 
 
 def get_revoke_all_extension_tokens_for_user_usecase(
-    extension_token_repository: ExtensionTokenRepository = Depends(get_extension_token_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
-    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return RevokeAllExtensionTokensForUserUseCase(
-        extension_token_repository,
+        token_credential_record_repository,
         event_publisher,
         admin_event_repository,
-        time_provider,
     )

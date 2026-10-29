@@ -4,10 +4,10 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
-    ExtensionTokenRepository,
+    PasswordCredentialRecordRepository,
     PasswordHashingGateway,
+    TokenCredentialRecordRepository,
     TokenGateway,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.responses import (
@@ -29,32 +29,41 @@ from shared_kernel.application.tracing import TracedUseCase
 class UpdateUserPasswordUseCase(TracedUseCase):
     def __init__(
         self,
-        user_password_repository: UserPasswordRepository,
+        password_credential_record_repository: PasswordCredentialRecordRepository,
         password_hashing_gateway: PasswordHashingGateway,
         user_repository: UserRepository,
         auth_session_repository: AuthSessionRepository,
         token_gateway: TokenGateway,
         time_provider: TimeGateway,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
     ):
-        self.user_password_repository = user_password_repository
+        self.password_credential_record_repository = password_credential_record_repository
         self.password_hashing_gateway = password_hashing_gateway
         self.user_repository = user_repository
         self.auth_session_repository = auth_session_repository
         self.token_gateway = token_gateway
         self.time_provider = time_provider
-        self._extension_token_repository = extension_token_repository
+        self._token_credential_record_repository = token_credential_record_repository
         self._event_publisher = event_publisher
         self._admin_event_repository = admin_event_repository
 
     def execute(self, command: UpdateUserPasswordCommand) -> UpdateUserPasswordResponse:
-        user_password = self.user_password_repository.get_by_id(command.user_id)
-        if not user_password:
+        credential_records = self.password_credential_record_repository.list_by_principal_id(command.user_id)
+        if not credential_records:
             raise UserNotFoundException(command.user_id)
 
-        if not self.password_hashing_gateway.verify(command.old_password, user_password.password_hash):
+        # A user may hold several passwords: the old one names which to change.
+        credential_record = next(
+            (
+                credential_record
+                for credential_record in credential_records
+                if self.password_hashing_gateway.verify(command.old_password, credential_record.password_hash)
+            ),
+            None,
+        )
+        if credential_record is None:
             raise InvalidCredentialsException("Invalid old password")
 
         # Checked after the old password so a wrong current password still answers 401
@@ -67,20 +76,20 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         new_password_hash = self.password_hashing_gateway.hash(new_password.value)
 
-        self.user_password_repository.update_password(command.user_id, new_password_hash)
+        self.password_credential_record_repository.update_password_hash(credential_record.email, new_password_hash)
 
         now = self.time_provider.get_current_time().replace(microsecond=0)
 
-        self.auth_session_repository.invalidate_all_for_user(user.id, now)
+        self.auth_session_repository.invalidate_all_for_principal(user.id, now)
 
         access_token = self.token_gateway.generate_token(
-            user_id=user.id,
+            principal_id=user.id,
             email=user.email,
             roles=user.roles,
             claims={"display_name": user.name},
         )
         refresh_token = self.token_gateway.generate_refresh_token(
-            user_id=user.id,
+            principal_id=user.id,
             email=user.email,
             roles=user.roles,
         )
@@ -95,7 +104,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
         # extensions" screen listed a dead credential as live, and the
         # rate limiter still charged its requests to this user's bucket. Both
         # read the row, not the cutoff.
-        revoked = self._extension_token_repository.revoke_all_for_user(user.id, now)
+        revoked = self._token_credential_record_repository.delete_by_principal_ids([user.id])
         if revoked:
             ExtensionRevocationRecordingService.record(
                 self._event_publisher,
@@ -109,7 +118,7 @@ class UpdateUserPasswordUseCase(TracedUseCase):
 
         if refresh_token.jti is not None:
             self.auth_session_repository.create_session(
-                user_id=user.id,
+                principal_id=user.id,
                 refresh_token_jti=refresh_token.jti,
                 created_at=now,
             )

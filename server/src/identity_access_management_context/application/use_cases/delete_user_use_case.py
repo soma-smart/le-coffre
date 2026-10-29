@@ -4,13 +4,11 @@ from identity_access_management_context.application.commands import DeleteUserCo
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     AuthSessionRepository,
-    ExtensionTokenRepository,
     GroupMemberRepository,
     GroupRepository,
     OneTimeLinkRevocationGateway,
-    SsoUserRepository,
+    TokenCredentialRecordRepository,
     UserEventRepository,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.services import (
@@ -34,11 +32,9 @@ class DeleteUserUseCase(TracedUseCase):
         event_publisher: DomainEventPublisher,
         user_event_repository: UserEventRepository,
         one_time_link_revocation_gateway: OneTimeLinkRevocationGateway,
-        user_password_repository: UserPasswordRepository,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
-        sso_user_repository: SsoUserRepository,
         auth_session_repository: AuthSessionRepository,
     ):
         self.user_repository = user_repository
@@ -47,11 +43,9 @@ class DeleteUserUseCase(TracedUseCase):
         self.event_publisher = event_publisher
         self._user_event_repository = user_event_repository
         self._one_time_link_revocation_gateway = one_time_link_revocation_gateway
-        self._user_password_repository = user_password_repository
-        self._extension_token_repository = extension_token_repository
+        self._token_credential_record_repository = token_credential_record_repository
         self._admin_event_repository = admin_event_repository
         self._time_provider = time_provider
-        self._sso_user_repository = sso_user_repository
         self._auth_session_repository = auth_session_repository
 
     def execute(self, command: DeleteUserCommand) -> None:
@@ -76,7 +70,7 @@ class DeleteUserUseCase(TracedUseCase):
         # row is gone. Without this revocation a deleted SSO account keeps
         # reading the vault until the token's absolute expiry, up to 30 days.
         now = self._time_provider.get_current_time()
-        revoked_tokens = self._extension_token_repository.revoke_all_for_user(user_id, now)
+        revoked_tokens = self._token_credential_record_repository.delete_by_principal_ids([user_id])
         if revoked_tokens:
             ExtensionRevocationRecordingService.record(
                 self.event_publisher,
@@ -90,9 +84,9 @@ class DeleteUserUseCase(TracedUseCase):
 
         # Kill the refresh chains. Access tokens already issued cannot be listed,
         # they die because validation refuses a token whose user row is gone.
-        self._auth_session_repository.invalidate_all_for_user(user_id, now)
+        self._auth_session_repository.invalidate_all_for_principal(user_id, now)
 
-        personal_group = self.group_repository.get_by_user_id(user_id)
+        personal_group = self.group_repository.get_by_principal_id(user_id)
         personal_group_id = personal_group.id if personal_group else None
 
         # Delete groups where user is the sole owner (excluding personal group)
@@ -108,23 +102,14 @@ class DeleteUserUseCase(TracedUseCase):
                     self.group_repository.delete_group(group.id)
 
         # Remove user from all remaining groups (including as owner/member) in one operation
-        self.group_member_repository.remove_user_from_all_groups(user_id)
+        self.group_member_repository.remove_principal_from_all_groups(user_id)
 
-        # Credentials live in their own table, keyed by the same id. Leaving the
-        # row behind would keep an authentication secret alive with no user to
-        # own it, and it would shadow any account later created on that email,
-        # because credentials are looked up by email.
-        self._user_password_repository.delete_by_id(user_id)
-        # Same for the SSO identity: token validation used to fall back on it
-        # once the user row was gone, and a surviving row would map the next SSO
-        # login of that person onto an account that no longer exists.
-        self._sso_user_repository.delete_by_user_id(user_id)
-
+        # Takes the user's credentials of every kind with it.
         self.user_repository.delete(user_id)
 
         event = UserDeletedEvent(
             user_id=user_id,
-            deleted_by_user_id=command.requesting_user.user_id,
+            deleted_by_principal_id=command.requesting_user.user_id,
             personal_group_id=personal_group_id,
         )
         self.event_publisher.publish(event)
@@ -132,7 +117,7 @@ class DeleteUserUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={
                 "user_id": str(user_id),
                 "personal_group_id": str(personal_group_id) if personal_group_id else None,

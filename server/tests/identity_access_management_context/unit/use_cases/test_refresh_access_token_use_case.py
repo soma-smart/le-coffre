@@ -14,12 +14,11 @@ from identity_access_management_context.application.services import REVOCATION_R
 from identity_access_management_context.application.use_cases import (
     RefreshAccessTokenUseCase,
 )
-from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, ExtensionToken, User
+from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import ExtensionTokenRevokedEvent
 from identity_access_management_context.domain.exceptions import (
     InvalidRefreshTokenException,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 from tests.shared_kernel.fakes import FakeTimeGateway
 
 from ..fakes import FakeAuthSessionRepository, FakeRevokedTokenRepository, FakeTokenGateway, FakeUserRepository
@@ -32,7 +31,7 @@ def use_case(
     auth_session_repository,
     revoked_token_repository: FakeRevokedTokenRepository,
     time_provider: FakeTimeGateway,
-    extension_token_repository,
+    token_credential_record_repository,
     event_publisher,
     admin_event_repository,
 ):
@@ -43,7 +42,7 @@ def use_case(
         revoked_token_repository=revoked_token_repository,
         time_provider=time_provider,
         session_max_lifetime_seconds=4 * 3600,
-        extension_token_repository=extension_token_repository,
+        token_credential_record_repository=token_credential_record_repository,
         event_publisher=event_publisher,
         admin_event_repository=admin_event_repository,
     )
@@ -86,7 +85,7 @@ def test_given_valid_refresh_token_when_execute_then_returns_new_access_token(
     assert result.access_token == f"jwt_token_for_{user_id}_new_access_token"
     assert result.refresh_token == f"refresh_token_for_{user_id}_new_access_token"
     assert result.user_id == user_id
-    rotated_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(
+    rotated_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(
         user_id,
         "refresh-token-jti-new_access_token",
     )
@@ -422,7 +421,7 @@ def test_given_replayed_rotated_refresh_token_when_execute_then_invalidates_all_
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
-    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, attacker_jti) is None
+    assert auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, attacker_jti) is None
     contained_user = user_repository.get_by_id(user_id)
     assert contained_user is not None
     # The cutoff must be the exact (non-truncated) detection time so the
@@ -437,7 +436,7 @@ def test_given_replayed_rotated_refresh_token_when_execute_then_revokes_extensio
     auth_session_repository: FakeAuthSessionRepository,
     revoked_token_repository: FakeRevokedTokenRepository,
     time_provider: FakeTimeGateway,
-    extension_token_repository,
+    token_credential_record_repository,
     event_publisher,
 ):
     """Containment reaches the browser extensions too.
@@ -455,22 +454,12 @@ def test_given_replayed_rotated_refresh_token_when_execute_then_revokes_extensio
     revoked_token_repository.revoke_jti("stolen-jti", expires_at=None, reason=REVOCATION_REASON_REFRESH_TOKEN_ROTATED)
     token_gateway.set_valid_refresh_token("stolen", user_id, "user@example.com", ["user"], jti="stolen-jti")
     for _ in range(2):
-        extension_token_repository.add(
-            ExtensionToken.create(
-                user_id=user_id,
-                secret=ExtensionTokenSecret.generate(),
-                device_name="Chrome",
-                lifetime=timedelta(days=30),
-                now=now,
-            ),
-            MAX_ACTIVE_TOKENS_PER_USER,
-            now,
-        )
+        token_credential_record_repository.issue(user_id, now)
 
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(RefreshAccessTokenCommand(refresh_token="stolen"))
 
-    assert extension_token_repository.count_active_for_user(user_id, now) == 0
+    assert token_credential_record_repository.count_usable(user_id, now) == 0
     revocations = [e for e in event_publisher.published_events if isinstance(e, ExtensionTokenRevokedEvent)]
     assert len(revocations) == 1
     assert revocations[0].reason == REVOCATION_REASON_REFRESH_TOKEN_REUSE
@@ -513,7 +502,7 @@ def test_given_replayed_logged_out_refresh_token_when_execute_then_raises_withou
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
-    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, other_device_jti) is not None
+    assert auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, other_device_jti) is not None
     unchanged_user = user_repository.get_by_id(user_id)
     assert unchanged_user is not None
     assert unchanged_user.session_invalid_before is None
@@ -598,7 +587,7 @@ def test_given_session_older_than_max_lifetime_when_execute_then_raises_and_inva
     with pytest.raises(InvalidRefreshTokenException):
         use_case.execute(command)
 
-    assert auth_session_repository.get_active_by_user_id_and_refresh_jti(user_id, refresh_token_jti) is None
+    assert auth_session_repository.get_active_by_principal_id_and_refresh_jti(user_id, refresh_token_jti) is None
     unchanged_user = user_repository.get_by_id(user_id)
     assert unchanged_user is not None
     assert unchanged_user.session_invalid_before is None

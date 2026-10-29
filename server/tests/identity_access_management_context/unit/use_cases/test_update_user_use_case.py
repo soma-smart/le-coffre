@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -6,7 +6,10 @@ from identity_access_management_context.application.commands import UpdateUserCo
 from identity_access_management_context.application.use_cases import UpdateUserUseCase
 from identity_access_management_context.domain.entities import User
 from identity_access_management_context.domain.events import UserUpdatedEvent
-from identity_access_management_context.domain.exceptions import UserUpdateNotAllowedException
+from identity_access_management_context.domain.exceptions import (
+    EmailAlreadyUsedException,
+    UserUpdateNotAllowedException,
+)
 from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 
@@ -132,7 +135,7 @@ def test_given_user_updating_own_profile_when_updating_should_publish_user_updat
     events = event_publisher.get_published_events_of_type(UserUpdatedEvent)
     assert len(events) == 1
     assert events[0].user_id == uuid
-    assert events[0].updated_by_user_id == uuid
+    assert events[0].updated_by_principal_id == uuid
 
 
 def test_given_admin_updating_another_user_when_updating_should_record_admin_as_actor(
@@ -160,10 +163,10 @@ def test_given_admin_updating_another_user_when_updating_should_record_admin_as_
     events = event_publisher.get_published_events_of_type(UserUpdatedEvent)
     assert len(events) == 1
     assert events[0].user_id == target_uuid
-    assert events[0].updated_by_user_id == admin_uuid
+    assert events[0].updated_by_principal_id == admin_uuid
 
     assert len(user_event_repository.events) == 1
-    assert user_event_repository.events[0]["actor_user_id"] == admin_uuid
+    assert user_event_repository.events[0]["actor_principal_id"] == admin_uuid
 
 
 def test_given_user_updating_own_profile_when_updating_should_store_user_updated_event(
@@ -188,4 +191,46 @@ def test_given_user_updating_own_profile_when_updating_should_store_user_updated
     assert len(user_event_repository.events) == 1
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "UserUpdatedEvent"
-    assert stored["actor_user_id"] == uuid
+    assert stored["actor_principal_id"] == uuid
+
+
+def test_given_an_email_of_another_user_when_updating_should_refuse_it(
+    use_case: UpdateUserUseCase,
+    user_repository: FakeUserRepository,
+):
+    alice, bob = uuid4(), uuid4()
+    user_repository.save(User(id=alice, username="alice", email="alice@example.com", name="Alice"))
+    user_repository.save(User(id=bob, username="bob", email="bob@example.com", name="Bob"))
+
+    with pytest.raises(EmailAlreadyUsedException):
+        use_case.execute(
+            UpdateUserCommand(
+                requesting_user=AuthenticatedUser(user_id=alice, roles=[]),
+                id=alice,
+                username="alice",
+                email="bob@example.com",
+                name="Alice",
+            )
+        )
+
+    assert user_repository.get_by_id(alice).email == "alice@example.com"
+
+
+def test_given_an_unchanged_email_when_updating_should_accept_it(
+    use_case: UpdateUserUseCase,
+    user_repository: FakeUserRepository,
+):
+    alice = uuid4()
+    user_repository.save(User(id=alice, username="alice", email="alice@example.com", name="Alice"))
+
+    use_case.execute(
+        UpdateUserCommand(
+            requesting_user=AuthenticatedUser(user_id=alice, roles=[]),
+            id=alice,
+            username="alice",
+            email="alice@example.com",
+            name="Alice Liddell",
+        )
+    )
+
+    assert user_repository.get_by_id(alice).name == "Alice Liddell"
