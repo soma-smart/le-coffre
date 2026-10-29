@@ -7,7 +7,7 @@ from identity_access_management_context.application.commands import Authenticate
 from identity_access_management_context.application.services.authentication import TokenAuthenticator
 from identity_access_management_context.application.use_cases import AuthenticateTokenUseCase
 from identity_access_management_context.domain.entities import ServiceAccount, User
-from shared_kernel.domain.exceptions import AuthenticationError
+from shared_kernel.domain.exceptions import CredentialAuthenticationError
 
 COARSENING = timedelta(minutes=5)
 
@@ -90,5 +90,5 @@ def test_given_recording_the_use_fails_when_authenticating_then_the_caller_is_st
 
 @pytest.mark.parametrize("value", ["short", "x" * 43])
 def test_given_a_malformed_or_unknown_token_when_authenticating_then_it_is_refused(use_case, value):
-    with pytest.raises(AuthenticationError):
+    with pytest.raises(CredentialAuthenticationError):
         use_case.execute(AuthenticateTokenCommand(token=value))

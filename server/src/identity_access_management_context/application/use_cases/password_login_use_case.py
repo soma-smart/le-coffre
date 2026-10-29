@@ -26,7 +26,7 @@ from identity_access_management_context.domain.value_objects import PasswordCred
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.exceptions import (
-    AuthenticationError,
+    CredentialAuthenticationError,
     OrphanedCredentialError,
     RejectedCredentialError,
     UnknownCredentialError,
@@ -35,7 +35,7 @@ from shared_kernel.domain.exceptions import (
 logger = logging.getLogger(__name__)
 
 # The audit reason recorded for each way an email and password fail to prove a user.
-FAILURE_REASONS: dict[type[AuthenticationError], str] = {
+FAILURE_REASONS: dict[type[CredentialAuthenticationError], str] = {
     UnknownCredentialError: "User not found",
     RejectedCredentialError: "Invalid credentials",
     OrphanedCredentialError: "Orphaned credentials",
@@ -92,7 +92,7 @@ class PasswordLoginUseCase(TracedUseCase):
                     # Only users open a session: any other principal answers like an unknown email.
                     raise UnknownCredentialError()
                 return principal
-            except AuthenticationError as error:
+            except CredentialAuthenticationError as error:
                 reason = FAILURE_REASONS.get(type(error), "Authentication failed")
                 logger.warning("Login failed for email=%s reason='%s'", command.email, reason)
                 event = AdminLoginFailedEvent(email=command.email, reason=reason)

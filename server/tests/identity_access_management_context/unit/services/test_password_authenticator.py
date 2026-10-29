@@ -5,7 +5,7 @@ import pytest
 from identity_access_management_context.domain.entities import PasswordCredentialRecord, ServiceAccount, User
 from identity_access_management_context.domain.value_objects import PasswordCredential
 from shared_kernel.domain.exceptions import (
-    AuthenticationError,
+    CredentialAuthenticationError,
     OrphanedCredentialError,
     RejectedCredentialError,
     UnknownCredentialError,
@@ -68,7 +68,7 @@ def test_given_a_credential_whose_user_is_gone_when_authenticating_then_it_is_re
 
 
 def test_when_a_password_is_refused_then_it_is_an_authentication_error(password_authenticator):
-    with pytest.raises(AuthenticationError):
+    with pytest.raises(CredentialAuthenticationError):
         password_authenticator.authenticate(PasswordCredential(EMAIL, PASSWORD))
 
 

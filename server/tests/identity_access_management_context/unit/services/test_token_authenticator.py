@@ -8,7 +8,11 @@ from identity_access_management_context.application.services.authentication impo
 )
 from identity_access_management_context.domain.entities import ServiceAccount, TokenCredentialRecord
 from identity_access_management_context.domain.value_objects import TokenCredential
-from shared_kernel.domain.exceptions import AuthenticationError, RejectedCredentialError, UnknownCredentialError
+from shared_kernel.domain.exceptions import (
+    CredentialAuthenticationError,
+    RejectedCredentialError,
+    UnknownCredentialError,
+)
 
 from ..fakes import FakeServiceAccountRepository, FakeTokenCredentialRecordRepository
 
@@ -93,7 +97,7 @@ def test_given_a_refused_token_when_reading_the_error_then_it_does_not_echo_the_
 
 
 def test_when_a_token_is_refused_then_it_is_an_authentication_error(authenticator):
-    with pytest.raises(AuthenticationError):
+    with pytest.raises(CredentialAuthenticationError):
         authenticator.authenticate(TokenCredential.generate())
 
 

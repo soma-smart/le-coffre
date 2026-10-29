@@ -11,17 +11,17 @@ class EmailDeliveryError(Exception):
         super().__init__(f"Failed to send email: {reason}")
 
 
-class AuthenticationError(Exception):
+class CredentialAuthenticationError(Exception):
     """Raised when a `Credential` proves no principal."""
 
 
-class UnknownCredentialError(AuthenticationError):
+class UnknownCredentialError(CredentialAuthenticationError):
     """Raised when no credential record holds the presented credential."""
 
 
-class RejectedCredentialError(AuthenticationError):
+class RejectedCredentialError(CredentialAuthenticationError):
     """Raised when a credential record holds the credential, but the credential does not match it."""
 
 
-class OrphanedCredentialError(AuthenticationError):
+class OrphanedCredentialError(CredentialAuthenticationError):
     """Raised when the credential record matches, but its principal no longer exists."""

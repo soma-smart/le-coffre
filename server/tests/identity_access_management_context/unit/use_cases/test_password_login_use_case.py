@@ -23,7 +23,7 @@ from identity_access_management_context.domain.exceptions import (
     AdminNotFoundException,
     InvalidCredentialsException,
 )
-from shared_kernel.domain.exceptions import AuthenticationError
+from shared_kernel.domain.exceptions import CredentialAuthenticationError
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.shared_kernel.fakes import FakeTimeGateway
 
@@ -127,7 +127,7 @@ def test_given_an_authentication_error_without_a_reason_when_logging_in_then_it_
 ):
     """A subclass missing from the failure reasons is still audited and counted, not turned into a crash."""
 
-    class ExpiredCredentialError(AuthenticationError): ...
+    class ExpiredCredentialError(CredentialAuthenticationError): ...
 
     def expired(_self, _credential):
         raise ExpiredCredentialError()

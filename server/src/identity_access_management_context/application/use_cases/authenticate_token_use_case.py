@@ -17,7 +17,7 @@ class AuthenticateTokenUseCase(TracedUseCase):
     """Resolves a presented token to the principal it proves, whatever its kind.
 
     Raises:
-        AuthenticationError: for a malformed, unknown, expired or idle token, or
+        CredentialAuthenticationError: for a malformed, unknown, expired or idle token, or
             one whose principal is gone. The caller answers all of them the same
             way, so a token holder cannot tell which happened.
     """

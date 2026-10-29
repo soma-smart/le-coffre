@@ -4,7 +4,11 @@ import pytest
 
 from identity_access_management_context.domain.entities import SSOCredentialRecord, User
 from identity_access_management_context.domain.value_objects import SSOCredential
-from shared_kernel.domain.exceptions import AuthenticationError, OrphanedCredentialError, UnknownCredentialError
+from shared_kernel.domain.exceptions import (
+    CredentialAuthenticationError,
+    OrphanedCredentialError,
+    UnknownCredentialError,
+)
 
 USER_ID = UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e6")
 PROVIDER = "google"
@@ -47,5 +51,5 @@ def test_given_a_credential_whose_user_is_gone_when_authenticating_then_it_is_re
 
 
 def test_when_a_subject_is_refused_then_it_is_an_authentication_error(sso_authenticator):
-    with pytest.raises(AuthenticationError):
+    with pytest.raises(CredentialAuthenticationError):
         sso_authenticator.authenticate(SSOCredential(PROVIDER, SUBJECT))

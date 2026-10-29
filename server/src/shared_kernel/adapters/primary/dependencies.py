@@ -39,7 +39,7 @@ from shared_kernel.domain.entities import (
     PresentedCredential,
     ValidatedUser,
 )
-from shared_kernel.domain.exceptions import AuthenticationError
+from shared_kernel.domain.exceptions import CredentialAuthenticationError
 
 from .exceptions import (
     MissingTokenError,
@@ -184,7 +184,7 @@ def _authenticate(
 
     try:
         response = authenticate_token_usecase.execute(AuthenticateTokenCommand(token=credentials.credentials))
-    except AuthenticationError as e:
+    except CredentialAuthenticationError as e:
         # One generic 401 for malformed, unknown, expired and idle alike, so a
         # token holder cannot tell which happened.
         raise HTTPException(status_code=401, detail="Invalid token") from e
