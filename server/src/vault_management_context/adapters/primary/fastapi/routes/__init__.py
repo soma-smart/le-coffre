@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from . import (
     vault_lock_routes,
     vault_setup_routes,
+    vault_share_link_routes,
     vault_status_get_routes,
     vault_unlock_routes,
     vault_validate_setup_routes,
@@ -17,5 +18,6 @@ def get_vault_management_router():
     vault_management_router.include_router(vault_unlock_routes.router)
     vault_management_router.include_router(vault_lock_routes.router)
     vault_management_router.include_router(vault_status_get_routes.router)
+    vault_management_router.include_router(vault_share_link_routes.router)
 
     return vault_management_router

@@ -98,3 +98,32 @@ class InvalidUnlockSessionIdError(VaultManagementDomainError):
 
     def __init__(self):
         super().__init__("Invalid unlock session id")
+
+
+class ShareLinkUnusableError(VaultManagementDomainError):
+    """Raised when a share link cannot be retrieved or acknowledged.
+
+    Unknown, expired, acknowledged and past-their-reopen-window links all raise
+    this same error, so an anonymous caller cannot probe which links exist.
+    """
+
+    def __init__(self):
+        super().__init__("This share link is invalid, expired or has already been used")
+
+
+class InvalidShareLinkLookupError(VaultManagementDomainError):
+    """Raised when a share link lookup hash is not a SHA-256 hex digest"""
+
+    def __init__(self):
+        super().__init__("Malformed share link")
+
+
+class ShareLinkAckRejectedError(VaultManagementDomainError):
+    """Raised when a share link acknowledgement does not come from the link's token.
+
+    Knowing the lookup hash is not enough to close a link: the database holds
+    it, the token is needed.
+    """
+
+    def __init__(self):
+        super().__init__("This acknowledgement does not match the share link")

@@ -1,13 +1,23 @@
 import {
+  acknowledgeShareLinkVaultShareLinksAcknowledgePost,
   createVaultVaultSetupPost,
+  getShareLinksOverviewVaultShareLinksGet,
   getVaultStatusVaultStatusGet,
   lockVaultVaultLockPost,
+  retrieveShareLinkVaultShareLinksRetrievePost,
   unlockVaultVaultUnlockPost,
   validateVaultSetupVaultValidateSetupPost,
 } from '@/client/sdk.gen'
 import type { CreateVaultInput, VaultRepository } from '@/application/ports/VaultRepository'
+import type { SealedShare } from '@/domain/vault/ShareLink'
 import type { VaultSetup, VaultState } from '@/domain/vault/Vault'
-import { VaultDomainError } from '@/domain/vault/errors'
+import type { ShareLinksOverview } from '@/domain/vault/ShareLinksOverview'
+import {
+  ShareLinkAckRejectedError,
+  ShareLinkUnusableError,
+  VaultDomainError,
+  VaultNotConfiguredError,
+} from '@/domain/vault/errors'
 
 /**
  * Backend adapter for VaultRepository. Wraps every /vault/* SDK
@@ -42,7 +52,11 @@ export class BackendVaultRepository implements VaultRepository {
     if (!response.data) throw new VaultDomainError('Empty response from create vault')
     return {
       setupId: response.data.setup_id,
-      shares: response.data.shares.map((s) => s.secret),
+      shareLinks: response.data.share_links.map((link) => ({
+        shareIndex: link.share_index,
+        token: link.token,
+        expiresAt: link.expires_at,
+      })),
     }
   }
 
@@ -63,6 +77,70 @@ export class BackendVaultRepository implements VaultRepository {
   async lock(): Promise<void> {
     const response = await lockVaultVaultLockPost()
     this.throwIfError(response.error)
+  }
+
+  async retrieveSealedShare(lookupHash: string): Promise<SealedShare> {
+    const response = await retrieveShareLinkVaultShareLinksRetrievePost({
+      body: { lookup_hash: lookupHash },
+    })
+    if (response.error) {
+      // 404 covers unknown, expired, closed and past-the-window alike; the
+      // backend keeps them indistinguishable on purpose. 400 is a hash that no link
+      // could have produced, which to the custodian is the same dead link.
+      const status = response.response?.status
+      if (status === 404 || status === 400) throw new ShareLinkUnusableError()
+      this.throwIfError(response.error)
+    }
+    if (!response.data) throw new ShareLinkUnusableError()
+    return {
+      setupId: response.data.setup_id,
+      shareIndex: response.data.share_index,
+      sealedShare: response.data.sealed_share,
+      firstRetrievedAt: response.data.first_retrieved_at,
+      reopenableUntil: response.data.reopenable_until,
+      reopened: response.data.reopened,
+    }
+  }
+
+  async acknowledgeShare(lookupHash: string, ackKey: string): Promise<void> {
+    const response = await acknowledgeShareLinkVaultShareLinksAcknowledgePost({
+      body: { lookup_hash: lookupHash, ack_key: ackKey },
+    })
+    if (!response.error) return
+    const status = response.response?.status
+    if (status === 403) throw new ShareLinkAckRejectedError()
+    if (status === 404 || status === 400) throw new ShareLinkUnusableError()
+    this.throwIfError(response.error)
+  }
+
+  async getShareLinksOverview(): Promise<ShareLinksOverview> {
+    const response = await getShareLinksOverviewVaultShareLinksGet()
+    if (response.error && response.response?.status === 404) throw new VaultNotConfiguredError()
+    this.throwIfError(response.error)
+    if (!response.data) throw new VaultDomainError('Empty response from /vault/share-links')
+    const data = response.data
+    return {
+      setupId: data.setup_id,
+      nbShares: data.nb_shares,
+      threshold: data.threshold,
+      createdAt: data.created_at,
+      links: data.links.map((link) => ({
+        shareIndex: link.share_index,
+        status: link.status,
+        expiresAt: link.expires_at,
+        firstOpenedAt: link.first_opened_at,
+        reopenableUntil: link.reopenable_until,
+        acknowledgedAt: link.acknowledged_at,
+        openCount: link.open_count,
+      })),
+      counts: {
+        PENDING: data.counts.pending,
+        OPENED: data.counts.opened,
+        OPENED_UNCONFIRMED: data.counts.opened_unconfirmed,
+        ACKNOWLEDGED: data.counts.acknowledged,
+        EXPIRED: data.counts.expired,
+      },
+    }
   }
 
   private throwIfError(error: unknown): void {

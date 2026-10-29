@@ -113,7 +113,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # generic unauthenticated per-IP bucket with the recipient's normal browsing.
     # Its own per-IP floor, charged INSTEAD of that bucket, keeps several
     # recipients behind one NAT working while bounding abuse of the endpoint.
-    ONE_TIME_LINK_CONSUME_OPS: tuple[tuple[str, str], ...] = (("POST", "/api/one-time-links/consume"),)
+    # Retrieving and acknowledging a vault share link are the same kind of
+    # anonymous redemption and share that floor.
+    ONE_TIME_LINK_CONSUME_OPS: tuple[tuple[str, str], ...] = (
+        ("POST", "/api/one-time-links/consume"),
+        ("POST", "/api/vault/share-links/retrieve"),
+        ("POST", "/api/vault/share-links/acknowledge"),
+    )
 
     # Anonymous browser-extension pairing. Same reasoning as the one-time link
     # floor: no session exists yet, so without a bucket of its own (and only

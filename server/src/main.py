@@ -123,8 +123,10 @@ from vault_management_context.adapters.primary.fastapi.routes import (
     get_vault_management_router,
 )
 from vault_management_context.adapters.primary.private_api import EncryptionApi
+from vault_management_context.adapters.primary.scheduled import ExpiredShareLinkPurgeJob
 from vault_management_context.adapters.secondary import (
     AesEncryptionGateway,
+    AesGcmShareSealingGateway,
     CryptoShamirGateway,
     InMemoryShareRepository,
     InMemoryVaultSessionGateway,
@@ -228,11 +230,13 @@ async def lifespan(app: FastAPI):
     encryption_gateway = AesEncryptionGateway()
     vault_session_gateway = InMemoryVaultSessionGateway()
     share_repository = InMemoryShareRepository()
+    share_sealing_gateway = AesGcmShareSealingGateway()
 
     app.state.shamir_gateway = shamir_gateway
     app.state.encryption_gateway = encryption_gateway
     app.state.vault_session_gateway = vault_session_gateway
     app.state.share_repository = share_repository
+    app.state.share_sealing_gateway = share_sealing_gateway
 
     # Encryption use cases and API (stateless)
     encrypt_use_case = EncryptUseCase(encryption_gateway, vault_session_gateway)
@@ -369,13 +373,20 @@ async def lifespan(app: FastAPI):
             )
 
     app.state.migration_task = asyncio.create_task(_run_migrations_in_background())
+    # Starts purging once the migrations are done
+    share_link_purge_job = ExpiredShareLinkPurgeJob(SessionLocal, app.state.time_provider)
+    app.state.share_link_purge_task = asyncio.create_task(
+        share_link_purge_job.run_forever(is_ready=lambda: app.state.ready)
+    )
     logger.info("Application started — db=%s base_url=%s", db_type, base_url)
     yield
+    app.state.share_link_purge_task.cancel()
     app.state.migration_task.cancel()
-    try:
-        await asyncio.wait_for(app.state.migration_task, timeout=5.0)
-    except (asyncio.CancelledError, asyncio.TimeoutError):
-        pass
+    for task in (app.state.share_link_purge_task, app.state.migration_task):
+        try:
+            await asyncio.wait_for(task, timeout=5.0)
+        except (asyncio.CancelledError, asyncio.TimeoutError):
+            pass
     # Let queued vault notifications go out rather than drop them, but bounded —
     # see _shutdown_vault_notification_executor().
     await _shutdown_vault_notification_executor(

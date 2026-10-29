@@ -2,25 +2,32 @@ from fastapi import Depends
 from sqlmodel import Session
 from starlette.requests import Request
 
-from shared_kernel.adapters.primary.dependencies import get_session
-from shared_kernel.application.gateways import DomainEventPublisher
+from shared_kernel.adapters.primary.dependencies import get_session, get_transaction_gateway
+from shared_kernel.adapters.secondary import UtcTimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway, TransactionGateway
 from vault_management_context.adapters.primary.private_api import VaultStatusApi
 from vault_management_context.adapters.secondary import (
+    SqlShareLinkRepository,
     SqlVaultEventRepository,
     SqlVaultRepository,
 )
 from vault_management_context.application.gateways import (
     EncryptionGateway,
     ShamirGateway,
+    ShareLinkRepository,
     ShareRepository,
+    ShareSealingGateway,
     VaultEventRepository,
     VaultRepository,
     VaultSessionGateway,
 )
 from vault_management_context.application.use_cases import (
+    AcknowledgeShareLinkUseCase,
     CreateVaultUseCase,
+    GetShareLinksOverviewUseCase,
     GetVaultStatusUseCase,
     LockVaultUseCase,
+    RetrieveShareLinkUseCase,
     UnlockVaultUseCase,
     ValidateVaultSetupUseCase,
 )
@@ -36,6 +43,14 @@ def get_vault_event_repository(session: Session = Depends(get_session)) -> Vault
 
 def get_vault_repository(session: Session = Depends(get_session)) -> VaultRepository:
     return SqlVaultRepository(session)
+
+
+def get_share_link_repository(session: Session = Depends(get_session)) -> ShareLinkRepository:
+    return SqlShareLinkRepository(session)
+
+
+def get_time_gateway() -> TimeGateway:
+    return UtcTimeGateway()
 
 
 def get_shamir_gateway(request: Request) -> ShamirGateway:
@@ -54,6 +69,10 @@ def get_share_repository(request: Request) -> ShareRepository:
     return request.app.state.share_repository
 
 
+def get_share_sealing_gateway(request: Request) -> ShareSealingGateway:
+    return request.app.state.share_sealing_gateway
+
+
 def get_create_vault_usecase(
     vault_repository: VaultRepository = Depends(get_vault_repository),
     shamir_gateway: ShamirGateway = Depends(get_shamir_gateway),
@@ -61,6 +80,10 @@ def get_create_vault_usecase(
     vault_session_gateway: VaultSessionGateway = Depends(get_vault_session_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     vault_event_repository: VaultEventRepository = Depends(get_vault_event_repository),
+    share_link_repository: ShareLinkRepository = Depends(get_share_link_repository),
+    share_sealing_gateway: ShareSealingGateway = Depends(get_share_sealing_gateway),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+    transaction_gateway: TransactionGateway = Depends(get_transaction_gateway),
 ):
     return CreateVaultUseCase(
         vault_repository,
@@ -69,6 +92,10 @@ def get_create_vault_usecase(
         vault_session_gateway,
         event_publisher,
         vault_event_repository,
+        share_link_repository,
+        share_sealing_gateway,
+        time_gateway,
+        transaction_gateway,
     )
 
 
@@ -119,3 +146,36 @@ def get_validate_vault_setup_usecase(
     vault_repository: VaultRepository = Depends(get_vault_repository),
 ):
     return ValidateVaultSetupUseCase(vault_repository)
+
+
+def get_retrieve_share_link_usecase(
+    share_link_repository: ShareLinkRepository = Depends(get_share_link_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    vault_event_repository: VaultEventRepository = Depends(get_vault_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+    transaction_gateway: TransactionGateway = Depends(get_transaction_gateway),
+):
+    return RetrieveShareLinkUseCase(
+        share_link_repository, event_publisher, vault_event_repository, time_gateway, transaction_gateway
+    )
+
+
+def get_acknowledge_share_link_usecase(
+    share_link_repository: ShareLinkRepository = Depends(get_share_link_repository),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    vault_event_repository: VaultEventRepository = Depends(get_vault_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+    transaction_gateway: TransactionGateway = Depends(get_transaction_gateway),
+):
+    return AcknowledgeShareLinkUseCase(
+        share_link_repository, event_publisher, vault_event_repository, time_gateway, transaction_gateway
+    )
+
+
+def get_share_links_overview_usecase(
+    vault_repository: VaultRepository = Depends(get_vault_repository),
+    share_link_repository: ShareLinkRepository = Depends(get_share_link_repository),
+    vault_event_repository: VaultEventRepository = Depends(get_vault_event_repository),
+    time_gateway: TimeGateway = Depends(get_time_gateway),
+):
+    return GetShareLinksOverviewUseCase(vault_repository, share_link_repository, vault_event_repository, time_gateway)

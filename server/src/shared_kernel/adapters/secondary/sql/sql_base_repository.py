@@ -10,6 +10,8 @@ from typing import Any
 
 from sqlmodel import Session
 
+from .sql_transaction_gateway import in_atomic_block
+
 try:
     import opentelemetry.trace as otel_trace
     from opentelemetry.trace import StatusCode
@@ -51,7 +53,8 @@ class SQLBaseRepository:
 
     All write operations (commit) are automatically wrapped with rollback
     on exception handling. Each operation is also instrumented with an
-    OTEL span for distributed tracing.
+    OTEL span for distributed tracing. Inside a SqlTransactionGateway.atomic()
+    block, commit() only flushes: the block commits once for every repository.
 
     Usage:
         class SqlUserRepository(SQLBaseRepository, UserRepository):
@@ -74,6 +77,11 @@ class SQLBaseRepository:
         Raises:
             The original exception after rolling back the transaction.
         """
+        if in_atomic_block(self._session):
+            # Flushing still sends the SQL now, so a constraint violation is
+            # raised by the write that caused it; the block then rolls back.
+            self._session.flush()
+            return
         with tracer.start_as_current_span("db.commit") as span:
             span.set_attribute("db.operation", "commit")  # safe: hardcoded constant
             try:
@@ -97,6 +105,10 @@ class SQLBaseRepository:
         Raises:
             The original exception after rolling back the transaction.
         """
+        if in_atomic_block(self._session):
+            self._session.flush()
+            self._session.refresh(obj)
+            return
         with tracer.start_as_current_span("db.commit_and_refresh") as span:
             span.set_attribute("db.operation", "commit_and_refresh")  # safe: hardcoded constant
             try:

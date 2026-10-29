@@ -12,6 +12,7 @@ import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemo
 import { InMemoryPasswordRepository } from '@/infrastructure/in_memory/InMemoryPasswordRepository'
 import { InMemoryPreferencesGateway } from '@/infrastructure/in_memory/InMemoryPreferencesGateway'
 import { InMemoryServiceAccountRepository } from '@/infrastructure/in_memory/InMemoryServiceAccountRepository'
+import { InMemoryShareLinkCipher } from '@/infrastructure/in_memory/InMemoryShareLinkCipher'
 import { InMemoryStatisticsGateway } from '@/infrastructure/in_memory/InMemoryStatisticsGateway'
 import { InMemoryUserRepository } from '@/infrastructure/in_memory/InMemoryUserRepository'
 import { InMemoryVaultRepository } from '@/infrastructure/in_memory/InMemoryVaultRepository'
@@ -32,6 +33,7 @@ function makeTestContainer(): Container {
     extensionGateway: new InMemoryExtensionGateway(),
     loginRedirectGateway: new InMemoryLoginRedirectGateway(),
     notificationPreferencesRepository: new InMemoryNotificationPreferencesRepository(),
+    shareLinkCipher: new InMemoryShareLinkCipher(),
   })
 }
 

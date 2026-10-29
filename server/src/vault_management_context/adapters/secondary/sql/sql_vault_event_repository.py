@@ -4,9 +4,11 @@ from uuid import UUID
 from sqlmodel import Session, col, select
 
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
+from shared_kernel.utils import as_utc
 from vault_management_context.adapters.secondary.sql.models.vault_event import (
     VaultEventTable,
 )
+from vault_management_context.domain.value_objects import StoredVaultEvent
 
 
 class SqlVaultEventRepository(SQLBaseRepository):
@@ -42,3 +44,18 @@ class SqlVaultEventRepository(SQLBaseRepository):
             .limit(1)
         )
         return self._session.exec(statement).first()
+
+    def list_events(self, event_types: list[str]) -> list[StoredVaultEvent]:
+        statement = (
+            select(VaultEventTable)
+            .where(col(VaultEventTable.event_type).in_(event_types))
+            .order_by(col(VaultEventTable.occurred_on))
+        )
+        return [
+            StoredVaultEvent(
+                event_type=row.event_type,
+                occurred_on=as_utc(row.occurred_on),  # type: ignore[arg-type]
+                event_data=dict(row.event_data or {}),
+            )
+            for row in self._session.exec(statement).all()
+        ]
