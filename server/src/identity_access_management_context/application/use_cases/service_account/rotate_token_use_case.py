@@ -13,6 +13,7 @@ from identity_access_management_context.application.services import ServiceAccou
 from identity_access_management_context.domain.events import ServiceAccountTokenRotatedEvent
 from identity_access_management_context.domain.exceptions import (
     ServiceAccountAlreadyRevokedException,
+    ServiceAccountHasSeveralTokensException,
     ServiceAccountNotFoundException,
 )
 from identity_access_management_context.domain.value_objects import TokenCredential
@@ -69,21 +70,22 @@ class RotateServiceAccountTokenUseCase(
         if not credential_records:
             # The account was revoked since the check above
             raise ServiceAccountAlreadyRevokedException(account.id)
+        if len(credential_records) > 1:
+            # The response carries a single token: refuse before rotating anything,
+            # rather than replace them all and hand back only one.
+            raise ServiceAccountHasSeveralTokensException(account.id)
+        (credential_record,) = credential_records
 
         now = self._time_provider.get_current_time()
 
-        # Rotate the tokens: generate new ones, then store their hashes in place of the old ones
-        new_tokens = [TokenCredential.generate() for _ in credential_records]
+        # Rotate the token: generate a new one, then store its hash in place of the old one
+        token = TokenCredential.generate()
         try:
             self._token_credential_record_repository.replace_token_hashes(
-                (credential_record.token_hash for credential_record in credential_records),
-                (token.hash for token in new_tokens),
+                (credential_record.token_hash,), (token.hash,)
             )
         except CannotRotateTokenCredentialError as e:
             raise ServiceAccountAlreadyRevokedException(account.id) from e
-
-        # The response carries a single token: an account holds one until several can be issued
-        (token,) = (token.value for token in new_tokens)
 
         event = ServiceAccountTokenRotatedEvent(
             event_id=uuid4(),
@@ -92,6 +94,6 @@ class RotateServiceAccountTokenUseCase(
             service_account_id=account.id,
             service_account_name=account.name,
         )
-        response = RotateServiceAccountTokenResponse(id=account.id, token=token)
+        response = RotateServiceAccountTokenResponse(id=account.id, token=token.value)
 
         return event, response

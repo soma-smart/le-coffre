@@ -253,6 +253,13 @@ class ServiceAccountAlreadyRevokedException(IdentityAccessManagementDomainError)
         super().__init__(f"Service account '{service_account_id}' has already been revoked")
 
 
+class ServiceAccountHasSeveralTokensException(IdentityAccessManagementDomainError):
+    """Raised when rotating the token of a service account that holds more than one"""
+
+    def __init__(self, service_account_id: UUID):
+        super().__init__(f"Service account '{service_account_id}' holds several tokens, rotating them is not supported")
+
+
 class TooManyActiveServiceAccountsError(IdentityAccessManagementDomainError):
     """Raised when a group already has the maximum of active service accounts"""
 

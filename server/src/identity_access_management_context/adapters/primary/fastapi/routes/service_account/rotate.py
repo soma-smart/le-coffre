@@ -13,6 +13,7 @@ from identity_access_management_context.application.use_cases import RotateServi
 from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
     ServiceAccountAlreadyRevokedException,
+    ServiceAccountHasSeveralTokensException,
     ServiceAccountNotFoundException,
     UserNotOwnerOfGroupException,
 )
@@ -58,7 +59,7 @@ def rotate_service_account_token(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except UserNotOwnerOfGroupException as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
-    except ServiceAccountAlreadyRevokedException as e:
+    except (ServiceAccountAlreadyRevokedException, ServiceAccountHasSeveralTokensException) as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in rotate service account token")

@@ -14,12 +14,14 @@ from identity_access_management_context.application.use_cases import (
     CreateServiceAccountUseCase,
     RotateServiceAccountTokenUseCase,
 )
-from identity_access_management_context.domain.entities import Group
+from identity_access_management_context.domain.entities import Group, TokenCredentialRecord
 from identity_access_management_context.domain.exceptions import (
     ServiceAccountAlreadyRevokedException,
+    ServiceAccountHasSeveralTokensException,
     ServiceAccountNotFoundException,
     UserNotOwnerOfGroupException,
 )
+from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.domain.entities import AuthenticatedUser
 
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
@@ -227,3 +229,19 @@ def test_given_a_rotation_when_it_succeeds_then_it_is_audited_without_the_token(
     payload = json.dumps(event["event_data"])
     assert rotated.token not in payload
     assert hashlib.sha256(rotated.token.encode()).hexdigest() not in payload
+
+
+def test_given_an_account_holding_several_tokens_when_rotating_then_it_is_refused_and_nothing_is_rotated(
+    use_case, owner, account, token_credential_record_repository
+):
+    """The response carries one token: rotating several would hand back one and lock the others out."""
+    token_credential_record_repository.create(
+        [TokenCredentialRecord(principal_id=account.id, token_hash=TokenCredential.generate().hash)]
+    )
+    before = {record.token_hash for record in token_credential_record_repository.list_by_principal_id(account.id)}
+
+    with pytest.raises(ServiceAccountHasSeveralTokensException):
+        _rotate(use_case, owner, account.id)
+
+    after = {record.token_hash for record in token_credential_record_repository.list_by_principal_id(account.id)}
+    assert after == before
