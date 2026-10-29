@@ -5,10 +5,18 @@ from identity_access_management_context.application.commands import Authenticate
 from identity_access_management_context.application.gateways import TokenCredentialRecordRepository
 from identity_access_management_context.application.responses import AuthenticateTokenResponse
 from identity_access_management_context.application.services.authentication import TokenAuthenticator
-from identity_access_management_context.domain.entities import User
+from identity_access_management_context.domain.entities import ServiceAccount, User
+from identity_access_management_context.domain.exceptions import (
+    InvalidTokenCredentialError,
+    TokenAuthenticationError,
+)
+from identity_access_management_context.domain.exceptions import (
+    TokenAuthenticationFailureReason as Reason,
+)
 from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.application.gateways import TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
+from shared_kernel.domain.exceptions import OrphanedCredentialError, RejectedCredentialError, UnknownCredentialError
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +25,11 @@ class AuthenticateTokenUseCase(TracedUseCase):
     """Resolves a presented token to the principal it proves, whatever its kind.
 
     Raises:
-        CredentialAuthenticationError: for a malformed, unknown, expired or idle token, or
-            one whose principal is gone. The caller answers all of them the same
-            way, so a token holder cannot tell which happened.
+        TokenAuthenticationError: for a missing, malformed, unknown, expired or
+            idle token, for a principal of another kind than required, or for an
+            inactive service account. Only its reason differs, and errors are
+            re-raised `from None` so the presented value never travels in a
+            traceback.
     """
 
     def __init__(
@@ -35,9 +45,25 @@ class AuthenticateTokenUseCase(TracedUseCase):
         self._last_used_coarsening = timedelta(seconds=last_used_coarsening_seconds)
 
     def execute(self, command: AuthenticateTokenCommand) -> AuthenticateTokenResponse:
-        principal, credential_record = self._token_authenticator.authenticate_with_record(
-            TokenCredential(value=command.token)
-        )
+        if command.token is None:
+            raise TokenAuthenticationError(Reason.MISSING_TOKEN)
+        try:
+            token = TokenCredential(value=command.token)
+        except InvalidTokenCredentialError:
+            raise TokenAuthenticationError(Reason.MALFORMED_TOKEN) from None
+        try:
+            principal, credential_record = self._token_authenticator.authenticate_with_record(token)
+        except RejectedCredentialError:
+            raise TokenAuthenticationError(Reason.UNUSABLE_TOKEN) from None
+        except (UnknownCredentialError, OrphanedCredentialError):
+            raise TokenAuthenticationError(Reason.UNKNOWN_TOKEN) from None
+
+        kind = "user" if isinstance(principal, User) else "service_account"
+        if command.required_kind is not None and kind != command.required_kind:
+            raise TokenAuthenticationError(Reason.PRINCIPAL_NOT_ALLOWED, principal.id)
+        # Revoking deletes the account's tokens, this only guards a revocation that failed halfway.
+        if isinstance(principal, ServiceAccount) and not principal.is_active:
+            raise TokenAuthenticationError(Reason.INACTIVE_PRINCIPAL, principal.id)
 
         # Best-effort: recording the use must never fail an authentication that succeeded.
         try:
@@ -47,11 +73,10 @@ class AuthenticateTokenUseCase(TracedUseCase):
         except Exception:  # noqa: BLE001
             logger.warning("Could not record the use of a token credential", exc_info=True)
 
-        is_user = isinstance(principal, User)
         return AuthenticateTokenResponse(
             principal_id=principal.id,
-            principal_kind="user" if is_user else "service_account",
-            roles=list(principal.roles) if is_user else [],
+            principal_kind=kind,
+            roles=list(principal.roles) if isinstance(principal, User) else [],
             credential_id=credential_record.id,
             read_only=credential_record.read_only,
         )

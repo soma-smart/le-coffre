@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import Generator
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.security.api_key import APIKeyCookie, APIKeyHeader
+from fastapi.security.utils import get_authorization_scheme_param
 from sqlmodel import Session
 from starlette.requests import Request
 
@@ -187,7 +188,7 @@ def _authenticate(
     except CredentialAuthenticationError as e:
         # One generic 401 for malformed, unknown, expired and idle alike, so a
         # token holder cannot tell which happened.
-        raise HTTPException(status_code=401, detail="Invalid token") from e
+        raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"}) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service error") from e
 
@@ -245,3 +246,35 @@ def _validate_session(
         raise HTTPException(status_code=401, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service error") from e
+
+
+def _read_bearer_token(request: Request) -> str | None:
+    authorization = request.headers.get("Authorization")
+    if authorization is None:
+        return None
+    scheme, token = get_authorization_scheme_param(authorization)
+    # A header that is not a Bearer one is a malformed token, not a missing one.
+    return token if scheme.lower() == "bearer" else ""
+
+
+def get_current_service_account(
+    request: Request,
+    # Read from the raw header below, declared for the OpenAPI security scheme only:
+    # HTTPBearer folds a missing and a malformed header into the same `None`.
+    _bearer: object = Security(bearer_scheme),
+    authenticate_token_usecase: AuthenticateTokenUseCase = Depends(get_authenticate_token_usecase),
+) -> AuthenticatedPrincipal:
+    """The service account calling, from its token in the 'Authorization: Bearer' header.
+
+    Never reads the cookie: a route depending on this is a machine-only route.
+    Every failure gets the same 401, so probing cannot tell why a token was refused.
+    """
+    try:
+        response = authenticate_token_usecase.execute(
+            AuthenticateTokenCommand(token=_read_bearer_token(request), required_kind="service_account")
+        )
+    except CredentialAuthenticationError as e:
+        raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"}) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Authentication service error") from e
+    return AuthenticatedPrincipal(principal_id=response.principal_id, kind=response.principal_kind)

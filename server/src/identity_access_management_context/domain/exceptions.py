@@ -1,6 +1,7 @@
+from enum import StrEnum
 from uuid import UUID
 
-from shared_kernel.domain.exceptions import UnknownCredentialError
+from shared_kernel.domain.exceptions import CredentialAuthenticationError, UnknownCredentialError
 
 
 class IdentityAccessManagementDomainError(Exception):
@@ -383,3 +384,35 @@ class ExtensionPairingApprovalWithdrawnError(ExtensionDomainError):
 UserNotFoundError = UserNotFoundException
 UserAlreadyExistsError = UserAlreadyExistsException
 AdminAlreadyExistsError = AdminAlreadyExistsException
+
+
+class TokenAuthenticationFailureReason(StrEnum):
+    """Why a presented token was refused, whichever kind of principal it was meant for.
+
+    Revoking deletes the token records and rotating overwrites them, so a revoked
+    or rotated token is indistinguishable from one never issued: all three are
+    `UNKNOWN_TOKEN`.
+    """
+
+    MISSING_TOKEN = "missing_token"  # noqa: S105
+    MALFORMED_TOKEN = "malformed_token"  # noqa: S105
+    UNKNOWN_TOKEN = "unknown_token"  # noqa: S105
+    UNUSABLE_TOKEN = "unusable_token"  # noqa: S105
+    """Expired, or unused for too long."""
+    PRINCIPAL_NOT_ALLOWED = "principal_not_allowed"
+    INACTIVE_PRINCIPAL = "inactive_principal"
+
+
+class TokenAuthenticationError(IdentityAccessManagementDomainError, CredentialAuthenticationError):
+    """Raised when a presented token proves no principal this caller may act as.
+
+    The reason is for the audit log only: the caller always gets the same answer,
+    so probing cannot tell a malformed token from a revoked one. The message
+    never echoes the token.
+    """
+
+    def __init__(self, reason: TokenAuthenticationFailureReason, principal_id: UUID | None = None) -> None:
+        super().__init__("Invalid token")
+        self.reason = reason
+        self.principal_id = principal_id
+        """The principal holding the token, when the token itself was valid."""

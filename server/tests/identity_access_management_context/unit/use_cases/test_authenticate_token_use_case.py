@@ -7,6 +7,7 @@ from identity_access_management_context.application.commands import Authenticate
 from identity_access_management_context.application.services.authentication import TokenAuthenticator
 from identity_access_management_context.application.use_cases import AuthenticateTokenUseCase
 from identity_access_management_context.domain.entities import ServiceAccount, User
+from identity_access_management_context.domain.exceptions import TokenAuthenticationError
 from shared_kernel.domain.exceptions import CredentialAuthenticationError
 
 COARSENING = timedelta(minutes=5)
@@ -92,3 +93,54 @@ def test_given_recording_the_use_fails_when_authenticating_then_the_caller_is_st
 def test_given_a_malformed_or_unknown_token_when_authenticating_then_it_is_refused(use_case, value):
     with pytest.raises(CredentialAuthenticationError):
         use_case.execute(AuthenticateTokenCommand(token=value))
+
+
+@pytest.mark.parametrize(
+    ("value", "reason"),
+    [(None, "missing_token"), ("short", "malformed_token"), ("x" * 43, "unknown_token")],
+)
+def test_given_an_unusable_value_when_authenticating_then_the_reason_is_told(use_case, value, reason):
+    with pytest.raises(TokenAuthenticationError) as error:
+        use_case.execute(AuthenticateTokenCommand(token=value))
+
+    assert error.value.reason == reason
+
+
+def test_given_an_expired_token_when_authenticating_then_it_is_refused_as_unusable(
+    use_case, user, token_credential_record_repository, time_provider
+):
+    now = time_provider.get_current_time()
+    token = token_credential_record_repository.issue(user.id, now, expires_at=now)
+
+    with pytest.raises(TokenAuthenticationError) as error:
+        use_case.execute(AuthenticateTokenCommand(token=token.value))
+
+    assert error.value.reason == "unusable_token"
+
+
+def test_given_a_user_token_when_a_service_account_is_required_then_it_is_refused(
+    use_case, user, token_credential_record_repository, time_provider
+):
+    token = token_credential_record_repository.issue(user.id, time_provider.get_current_time())
+
+    with pytest.raises(TokenAuthenticationError) as error:
+        use_case.execute(AuthenticateTokenCommand(token=token.value, required_kind="service_account"))
+
+    assert error.value.reason == "principal_not_allowed"
+    assert error.value.principal_id == user.id
+
+
+def test_given_the_token_of_a_revoked_service_account_when_authenticating_then_it_is_refused(
+    use_case, service_account_repository, token_credential_record_repository, time_provider
+):
+    """Revoking deletes the tokens: this guards a revocation that failed halfway."""
+    now = time_provider.get_current_time()
+    account = ServiceAccount.create(group_id=uuid4(), name="nightly-backup")
+    service_account_repository.create([account])
+    token = token_credential_record_repository.issue(account.id, now, read_only=False)
+    service_account_repository.revoke([account.id], now)
+
+    with pytest.raises(TokenAuthenticationError) as error:
+        use_case.execute(AuthenticateTokenCommand(token=token.value))
+
+    assert error.value.reason == "inactive_principal"
