@@ -1,12 +1,13 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
 from identity_access_management_context.application.commands import CreateUserCommand
 from identity_access_management_context.application.use_cases import CreateUserUseCase
+from identity_access_management_context.domain.entities import PasswordCredentialRecord
 from identity_access_management_context.domain.events import UserCreatedEvent
 from identity_access_management_context.domain.exceptions import (
-    UserAlreadyExistsError,
+    EmailAlreadyUsedException,
 )
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
@@ -121,7 +122,7 @@ def test_given_user_with_password_when_creating_user_should_store_hashed_passwor
     assert created_credential.password_hash == b"hashed(secure_password123)"
 
 
-def test_given_existing_user_when_creating_user_should_raise_user_already_exists_error(
+def test_given_existing_user_when_creating_it_again_should_refuse_its_email(
     use_case: CreateUserUseCase,
 ):
     uuid = UUID("123e4567-e89b-12d3-a456-426614174000")
@@ -140,7 +141,7 @@ def test_given_existing_user_when_creating_user_should_raise_user_already_exists
     )
 
     use_case.execute(command)
-    with pytest.raises(UserAlreadyExistsError) as _:
+    with pytest.raises(EmailAlreadyUsedException):
         use_case.execute(command)
 
 
@@ -217,3 +218,41 @@ def test_given_valid_user_data_when_creating_user_should_store_user_created_even
     stored = user_event_repository.events[0]
     assert stored["event_type"] == "UserCreatedEvent"
     assert stored["actor_principal_id"] == admin_id
+
+
+def _create_command(email: str, user_id: UUID | None = None) -> CreateUserCommand:
+    return CreateUserCommand(
+        requesting_user=AuthenticatedUser(UUID("423e4567-e89b-12d3-a456-426614174000"), [ADMIN_ROLE]),
+        id=user_id or uuid4(),
+        username=email.split("@")[0],
+        email=email,
+        name="Someone",
+        password="secure_password123",
+    )
+
+
+def test_given_an_email_used_by_another_user_when_creating_a_user_should_refuse_before_writing_anything(
+    use_case: CreateUserUseCase,
+    user_repository: FakeUserRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
+):
+    use_case.execute(_create_command("taken@example.com"))
+    newcomer = _create_command("taken@example.com")
+
+    with pytest.raises(EmailAlreadyUsedException):
+        use_case.execute(newcomer)
+
+    assert user_repository.get_by_id(newcomer.id) is None
+    assert password_credential_record_repository.list_by_principal_id(newcomer.id) == []
+
+
+def test_given_an_email_used_to_sign_in_by_another_user_when_creating_a_user_should_refuse_it(
+    use_case: CreateUserUseCase,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
+):
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=uuid4(), email="signin@example.com", password_hash=b"hash")
+    )
+
+    with pytest.raises(EmailAlreadyUsedException):
+        use_case.execute(_create_command("signin@example.com"))

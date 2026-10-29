@@ -12,6 +12,7 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.application.services import UserCreationService
 from identity_access_management_context.domain.entities import PasswordCredentialRecord, User
 from identity_access_management_context.domain.events import UserCreatedEvent
+from identity_access_management_context.domain.exceptions import EmailAlreadyUsedException
 from identity_access_management_context.domain.value_objects import RawPassword
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
@@ -43,6 +44,14 @@ class CreateUserUseCase(TracedUseCase):
         # Must run before the User is saved below: a late failure would leave an
         # orphaned User row with no PasswordCredentialRecord.
         password = RawPassword(command.password)
+
+        # Checked before anything is written. The sign-in email is checked too: it is
+        # unique on its own, and starts equal to the user's email.
+        if (
+            self.user_repository.get_by_email(command.email) is not None
+            or self.password_credential_record_repository.get_by_email(command.email) is not None
+        ):
+            raise EmailAlreadyUsedException(command.email)
 
         user = User(
             id=command.id,

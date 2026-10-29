@@ -760,3 +760,42 @@ def test_extension_tokens_downgrade_gives_back_read_only_tokens_only(alembic_con
         (extension_credential.hex, user_id.hex, f"hash-{extension_credential.hex}", "Laptop")
     ]
     assert remaining == [account_credential.hex]
+
+
+UNIQUE_EMAIL_REVISION = "f2c8a61d4b07"
+
+
+def _insert_users(database_url, emails):
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for email in emails:
+            user_id = uuid4().hex
+            conn.execute(text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'user')"), {"id": user_id})
+            conn.execute(
+                text(
+                    "INSERT INTO iam__principal__user (principal_id, username, email, name, roles) "
+                    "VALUES (:id, :username, :email, 'Someone', '[]')"
+                ),
+                {"id": user_id, "username": email.split("@")[0], "email": email},
+            )
+    engine.dispose()
+
+
+def test_unique_email_migration_refuses_to_run_and_names_the_duplicates(alembic_config, temp_database):
+    database_url, _ = temp_database
+    command.upgrade(alembic_config, EXTENSION_TOKENS_REVISION)
+    _insert_users(database_url, ["twice@example.com", "twice@example.com", "once@example.com"])
+
+    with pytest.raises(RuntimeError, match=r"twice@example\.com \(2 users\)"):
+        command.upgrade(alembic_config, UNIQUE_EMAIL_REVISION)
+
+
+def test_unique_email_migration_then_refuses_a_second_user_with_the_same_email(alembic_config, temp_database):
+    database_url, _ = temp_database
+    command.upgrade(alembic_config, EXTENSION_TOKENS_REVISION)
+    _insert_users(database_url, ["alice@example.com"])
+
+    command.upgrade(alembic_config, UNIQUE_EMAIL_REVISION)
+
+    with pytest.raises(IntegrityError):
+        _insert_users(database_url, ["alice@example.com"])

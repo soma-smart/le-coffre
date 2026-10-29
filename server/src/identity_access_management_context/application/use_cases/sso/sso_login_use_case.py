@@ -30,6 +30,7 @@ from identity_access_management_context.application.services.authentication.sso_
 )
 from identity_access_management_context.domain.entities import SSOCredentialRecord, User
 from identity_access_management_context.domain.events import SsoLoginEvent
+from identity_access_management_context.domain.exceptions import EmailAlreadyUsedException
 from identity_access_management_context.domain.value_objects import SSOCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
@@ -113,6 +114,12 @@ class SsoLoginUseCase(TracedUseCase):
                 )
             else:
                 is_new_user = True
+
+                # Never linked automatically: whoever controls this email at the
+                # provider would otherwise take over the existing account and what
+                # it can read. An administrator has to sort it out.
+                if self._user_repository.get_by_email(sso_user_from_provider.email) is not None:
+                    raise EmailAlreadyUsedException(sso_user_from_provider.email)
 
                 user_management_service = UserManagementService(self._user_repository, self._password_hashing_gateway)
                 user = user_management_service.create_user(

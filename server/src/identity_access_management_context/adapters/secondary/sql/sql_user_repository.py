@@ -38,9 +38,10 @@ class SqlUserRepository(SQLBaseRepository, UserRepository):
         statement = select(UserPrincipalTable).where(UserPrincipalTable.principal_id.in_(user_ids))  # type: ignore[attr-defined]
         return [self._to_entity(row) for row in self._session.exec(statement).all()]
 
-    def get_by_email(self, email: str) -> list[User]:
+    def get_by_email(self, email: str) -> User | None:
         statement = select(UserPrincipalTable).where(UserPrincipalTable.email == email)
-        return [self._to_entity(row) for row in self._session.exec(statement).all()]
+        row = self._session.exec(statement).first()
+        return self._to_entity(row) if row is not None else None
 
     def count(self) -> int:
         """Count users."""

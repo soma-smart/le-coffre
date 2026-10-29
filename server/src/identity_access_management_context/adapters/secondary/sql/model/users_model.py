@@ -11,7 +11,8 @@ class UserPrincipalTable(PrincipalDetailsTable, table=True):
     __table_suffix__ = PrincipalKind.USER.value
 
     username: str = Field(nullable=False)
-    email: str = Field(nullable=False)
+    # Identifies the person: one account per email, whichever way it signs in.
+    email: str = Field(nullable=False, unique=True, index=True)
     name: str = Field(nullable=False)
     roles: str = Field(default="[]", description="Roles as JSON string")
     current_refresh_token_jti: str | None = Field(default=None, nullable=True)

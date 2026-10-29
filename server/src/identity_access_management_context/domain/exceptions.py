@@ -107,6 +107,13 @@ class UserNotFoundException(IdentityAccessManagementDomainError):
         super().__init__(f"The requested user with {uuid_or_email} was not found")
 
 
+class EmailAlreadyUsedException(IdentityAccessManagementDomainError):
+    """Raised when an email is already the email of another user"""
+
+    def __init__(self, email: str):
+        super().__init__(f"The email '{email}' already belongs to another account")
+
+
 class UserAlreadyExistsException(IdentityAccessManagementDomainError):
     """Raised when attempting to create a user that already exists"""
 

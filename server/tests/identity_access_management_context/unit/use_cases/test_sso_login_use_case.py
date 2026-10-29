@@ -1,5 +1,5 @@
 from datetime import datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -11,7 +11,11 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.entities import SsoConfiguration, User
 from identity_access_management_context.domain.events import SsoLoginEvent
-from identity_access_management_context.domain.exceptions import InvalidSsoCodeException, SsoConfigurationNotFoundError
+from identity_access_management_context.domain.exceptions import (
+    EmailAlreadyUsedException,
+    InvalidSsoCodeException,
+    SsoConfigurationNotFoundError,
+)
 from tests.fakes.fake_domain_event_publisher import FakeDomainEventPublisher
 from tests.identity_access_management_context.unit.conftest import (
     create_sso_credential,
@@ -624,3 +628,28 @@ async def test_should_take_email_and_name_from_the_user_when_it_changed_since_li
     assert response.email == "new@example.com"
     assert response.display_name == "New Name"
     assert token_gateway.get_last_generated_token().claims["display_name"] == "New Name"
+
+
+@pytest.mark.asyncio
+async def test_given_a_first_sso_login_with_the_email_of_an_existing_user_then_it_is_refused_and_nothing_is_linked(
+    use_case: SsoLoginUseCase,
+    sso_gateway: FakeSsoGateway,
+    sso_credential_record_repository: FakeSSOCredentialRecordRepository,
+    user_repository: FakeUserRepository,
+    sso_configuration_repository: FakeSsoConfigurationRepository,
+):
+    """Linking on email alone would hand the account to whoever controls that email at the provider."""
+    existing = User(id=uuid4(), username="alice", email="alice@example.com", name="Alice")
+    user_repository.save(existing)
+    sso_configuration_repository.save(
+        SsoConfiguration("client_id", "encrypted(client_secret)", "url", "auth", "token", "userinfo", None)
+    )
+    sso_gateway.set_valid_code(
+        "code", create_sso_user_from_provider("alice@example.com", "Alice", "subject-1", "default")
+    )
+
+    with pytest.raises(EmailAlreadyUsedException):
+        await use_case.execute(SsoLoginCommand(code="code"))
+
+    assert sso_credential_record_repository.get_by_subject("default", "subject-1") is None
+    assert [user.id for user in user_repository.list_all()] == [existing.id]

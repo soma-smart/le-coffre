@@ -361,3 +361,18 @@ def test_given_a_deleted_user_then_its_email_and_subject_are_free_for_a_new_acco
     found = sql_sso_credential_record_repository.get_by_subject("google", "reused")
     assert found is not None
     assert found.principal_id == new.id
+
+
+def test_given_an_email_already_used_when_saving_another_user_then_it_is_refused(sql_user_repository):
+    sql_user_repository.save(User(id=uuid4(), username="alice", email="shared@test.fr", name="Alice", roles=[]))
+
+    with pytest.raises(UserAlreadyExistsError):
+        sql_user_repository.save(User(id=uuid4(), username="bob", email="shared@test.fr", name="Bob", roles=[]))
+
+
+def test_given_a_user_when_getting_it_by_email_then_it_is_returned(sql_user_repository):
+    user = User(id=uuid4(), username="alice", email="alice@test.fr", name="Alice", roles=[])
+    sql_user_repository.save(user)
+
+    assert sql_user_repository.get_by_email("alice@test.fr").id == user.id
+    assert sql_user_repository.get_by_email("nobody@test.fr") is None
