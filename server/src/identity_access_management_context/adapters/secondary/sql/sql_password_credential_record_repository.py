@@ -2,13 +2,14 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
+from identity_access_management_context.application.gateways import PasswordCredentialRecordRepository
 from identity_access_management_context.domain.entities import PasswordCredentialRecord
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
 from .model.credential_record import CredentialKind, CredentialRecordTable, PasswordCredentialRecordTable
 
 
-class SqlPasswordCredentialRecordRepository(SQLBaseRepository):
+class SqlPasswordCredentialRecordRepository(SQLBaseRepository, PasswordCredentialRecordRepository):
     """Password credential records, stored as a credential registry row plus the password details."""
 
     def __init__(self, session: Session):

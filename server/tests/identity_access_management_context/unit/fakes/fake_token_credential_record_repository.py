@@ -6,7 +6,7 @@ from identity_access_management_context.application.gateways import (
     CannotRotateTokenCredentialError,
     TokenCredentialRecordRepository,
 )
-from identity_access_management_context.domain.entities import TokenCredentialRecord
+from identity_access_management_context.domain.entities import TokenCredentialRecord, count_usable
 from identity_access_management_context.domain.value_objects import TokenCredential
 
 
@@ -28,6 +28,10 @@ class FakeTokenCredentialRecordRepository(TokenCredentialRecordRepository):
             TokenCredentialRecord(principal_id=principal_id, token_hash=token.hash, **fields)
         )
         return token
+
+    def count_usable(self, principal_id: UUID, now: datetime) -> int:
+        """Test helper: how many of the principal's tokens still prove it."""
+        return count_usable(self.list_by_principal_id(principal_id), now)
 
     def list_by_principal_id(self, principal_id: UUID) -> list[TokenCredentialRecord]:
         """Test helper: the records an account holds."""
@@ -69,7 +73,7 @@ class FakeTokenCredentialRecordRepository(TokenCredentialRecordRepository):
         wanted = set(principal_ids)
         return [c for c in self.credential_records if c.principal_id in wanted]
 
-    def _replace(self, token_hashes: Iterable[str], new_token_hashes: Iterable[str]) -> None:
+    def replace_token_hashes(self, token_hashes: Iterable[str], new_token_hashes: Iterable[str]) -> None:
         new_token_hash_by_old = dict(zip(token_hashes, new_token_hashes, strict=True))
         stored = {c.token_hash for c in self.credential_records}
         # Refused whole, as the SQL adapter does.

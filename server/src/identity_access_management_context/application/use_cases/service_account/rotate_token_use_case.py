@@ -15,6 +15,7 @@ from identity_access_management_context.domain.exceptions import (
     ServiceAccountAlreadyRevokedException,
     ServiceAccountNotFoundException,
 )
+from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
 from ._use_case import ServiceAccountUseCase
@@ -71,16 +72,18 @@ class RotateServiceAccountTokenUseCase(
 
         now = self._time_provider.get_current_time()
 
-        # Rotate the tokens
+        # Rotate the tokens: generate new ones, then store their hashes in place of the old ones
+        new_tokens = [TokenCredential.generate() for _ in credential_records]
         try:
-            tokens = self._token_credential_record_repository.rotate(
-                credential_record.token_hash for credential_record in credential_records
+            self._token_credential_record_repository.replace_token_hashes(
+                (credential_record.token_hash for credential_record in credential_records),
+                (token.hash for token in new_tokens),
             )
         except CannotRotateTokenCredentialError as e:
             raise ServiceAccountAlreadyRevokedException(account.id) from e
 
         # The response carries a single token: an account holds one until several can be issued
-        (token,) = tokens
+        (token,) = (token.value for token in new_tokens)
 
         event = ServiceAccountTokenRotatedEvent(
             event_id=uuid4(),

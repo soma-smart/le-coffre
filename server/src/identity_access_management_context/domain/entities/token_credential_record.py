@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -54,3 +55,8 @@ class TokenCredentialRecord(CredentialRecord):
     def is_usable(self, now: datetime) -> bool:
         """Whether presenting this token still proves its principal."""
         return not self.is_expired(now) and not self.is_idle(now)
+
+
+def count_usable(credential_records: Iterable[TokenCredentialRecord], now: datetime) -> int:
+    """How many of these token credential records still prove their principal."""
+    return sum(credential_record.is_usable(now) for credential_record in credential_records)

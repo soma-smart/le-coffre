@@ -113,7 +113,7 @@ class SqlTokenCredentialRecordRepository(SQLBaseRepository, TokenCredentialRecor
         return True
 
     @override
-    def _replace(self, token_hashes: Iterable[str], new_token_hashes: Iterable[str]) -> None:
+    def replace_token_hashes(self, token_hashes: Iterable[str], new_token_hashes: Iterable[str]) -> None:
         new_token_hash_by_old = dict(zip(token_hashes, new_token_hashes, strict=True))
         result = self._session.exec(  # type: ignore[call-overload]
             update(TokenCredentialRecordTable)

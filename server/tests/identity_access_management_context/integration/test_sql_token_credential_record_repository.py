@@ -16,6 +16,13 @@ def _credential_record(principal_id=None, token=None) -> TokenCredentialRecord:
     return TokenCredentialRecord(principal_id=principal_id or uuid4(), token_hash=token.hash)
 
 
+def _rotate(repository, token_hashes) -> list[str]:
+    """Replace each hash with a fresh token's, as the rotate use case does, and return the new tokens."""
+    new_tokens = [TokenCredential.generate() for _ in token_hashes]
+    repository.replace_token_hashes(token_hashes, [token.hash for token in new_tokens])
+    return [token.value for token in new_tokens]
+
+
 def test_given_a_credential_when_looking_up_its_token_hash_then_it_is_found(
     sql_token_credential_record_repository, session
 ):
@@ -40,7 +47,7 @@ def test_given_a_credential_when_rotating_it_then_only_the_new_token_is_found(
     old = _credential_record()
     sql_token_credential_record_repository.create([old])
 
-    (new_token,) = sql_token_credential_record_repository.rotate([old.token_hash])
+    (new_token,) = _rotate(sql_token_credential_record_repository, [old.token_hash])
     session.expunge_all()
 
     new_hash = TokenCredential(new_token).hash
@@ -94,7 +101,7 @@ def test_given_two_tokens_of_one_account_when_rotating_both_then_each_gets_its_o
     first, second = _credential_record(principal_id=principal_id), _credential_record(principal_id=principal_id)
     sql_token_credential_record_repository.create([first, second])
 
-    new_tokens = sql_token_credential_record_repository.rotate([first.token_hash, second.token_hash])
+    new_tokens = _rotate(sql_token_credential_record_repository, [first.token_hash, second.token_hash])
     session.expunge_all()
 
     new_hashes = [TokenCredential(token).hash for token in new_tokens]
@@ -112,7 +119,7 @@ def test_given_a_token_no_longer_stored_when_rotating_then_it_is_refused_and_not
     gone = _credential_record()
 
     with pytest.raises(CannotRotateTokenCredentialError):
-        sql_token_credential_record_repository.rotate([gone.token_hash])
+        _rotate(sql_token_credential_record_repository, [gone.token_hash])
     session.expunge_all()
 
     assert session.exec(select(CredentialRecordTable)).all() == []
@@ -126,7 +133,7 @@ def test_given_a_batch_with_one_token_no_longer_stored_when_rotating_then_none_a
     sql_token_credential_record_repository.create([held])
 
     with pytest.raises(CannotRotateTokenCredentialError):
-        sql_token_credential_record_repository.rotate([held.token_hash, gone.token_hash])
+        _rotate(sql_token_credential_record_repository, [held.token_hash, gone.token_hash])
     session.expunge_all()
 
     assert sql_token_credential_record_repository.get_by_token_hash(held.token_hash) == held
@@ -138,7 +145,7 @@ def test_given_tokens_of_another_account_when_rotating_then_they_are_untouched(
     rotated, bystander = _credential_record(), _credential_record()
     sql_token_credential_record_repository.create([rotated, bystander])
 
-    sql_token_credential_record_repository.rotate([rotated.token_hash])
+    _rotate(sql_token_credential_record_repository, [rotated.token_hash])
     session.expunge_all()
 
     assert sql_token_credential_record_repository.get_by_token_hash(bystander.token_hash) == bystander

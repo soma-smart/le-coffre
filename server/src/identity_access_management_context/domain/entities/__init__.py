@@ -7,7 +7,7 @@ from .personal_group import PersonalGroup
 from .service_account import ServiceAccount
 from .sso_configuration import SsoConfiguration
 from .sso_credential_record import SSOCredentialRecord
-from .token_credential_record import TokenCredentialRecord
+from .token_credential_record import TokenCredentialRecord, count_usable
 from .user import User
 
 __all__ = [
@@ -19,6 +19,7 @@ __all__ = [
     "PasswordCredentialRecord",
     "SSOCredentialRecord",
     "TokenCredentialRecord",
+    "count_usable",
     "PersonalGroup",
     "Group",
     "GroupMember",

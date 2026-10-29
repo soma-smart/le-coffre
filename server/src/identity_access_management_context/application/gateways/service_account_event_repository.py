@@ -1,7 +1,7 @@
-from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Protocol
 from uuid import UUID
 
 from identity_access_management_context.domain.events.service_account._event import ServiceAccountEvent
@@ -19,14 +19,13 @@ class ServiceAccountCreationFacts:
     created_by_principal_id: UUID | None
 
 
-class ServiceAccountEventRepository(ABC):
+class ServiceAccountEventRepository(Protocol):
     """Repository for service-account IAM audit events.
 
     Unlike the other IAM event ports this one also reads, because the creation
     event is where a listing gets its creation date and creator.
     """
 
-    @abstractmethod
     def extend(self, events: Sequence[ServiceAccountEvent]) -> None:
         """Append service account events to storage.
 
@@ -35,6 +34,5 @@ class ServiceAccountEventRepository(ABC):
         per event instead of at every call site.
         """
 
-    @abstractmethod
     def get_creation_facts(self, service_account_ids: Sequence[UUID]) -> Sequence[ServiceAccountCreationFacts]:
         """Return creation facts for these accounts, in order."""

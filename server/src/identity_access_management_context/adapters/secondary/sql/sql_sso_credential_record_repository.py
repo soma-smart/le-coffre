@@ -3,6 +3,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
+from identity_access_management_context.application.gateways import SSOCredentialRecordRepository
 from identity_access_management_context.domain.entities import SSOCredentialRecord
 from identity_access_management_context.domain.exceptions import (
     SSOCredentialAlreadyExistsException,
@@ -12,7 +13,7 @@ from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 from .model.credential_record import CredentialKind, CredentialRecordTable, SSOCredentialRecordTable
 
 
-class SqlSSOCredentialRecordRepository(SQLBaseRepository):
+class SqlSSOCredentialRecordRepository(SQLBaseRepository, SSOCredentialRecordRepository):
     """SSO credential records, stored as a credential registry row plus the provider's subject."""
 
     def __init__(self, session: Session):

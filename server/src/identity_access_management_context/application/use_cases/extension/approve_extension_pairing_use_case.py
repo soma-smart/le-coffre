@@ -10,7 +10,7 @@ from identity_access_management_context.application.services import (
     ExtensionAuditService,
     ExtensionPairingLookupService,
 )
-from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER
+from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, count_usable
 from identity_access_management_context.domain.events import ExtensionPairingApprovedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
@@ -59,7 +59,7 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
         # token is created. This one exists so the user is told they are at the
         # cap while still looking at a screen that can explain it, instead of
         # the extension failing a moment later with no context.
-        active = self.token_credential_record_repository.count_usable(user_id, now)
+        active = count_usable(self.token_credential_record_repository.list_by_principal_ids((user_id,)), now)
         if active >= self.max_active_tokens:
             raise TooManyActiveExtensionTokensError(self.max_active_tokens)
 

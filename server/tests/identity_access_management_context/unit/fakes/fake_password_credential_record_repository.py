@@ -1,9 +1,10 @@
 from uuid import UUID
 
+from identity_access_management_context.application.gateways import PasswordCredentialRecordRepository
 from identity_access_management_context.domain.entities import PasswordCredentialRecord
 
 
-class FakePasswordCredentialRecordRepository:
+class FakePasswordCredentialRecordRepository(PasswordCredentialRecordRepository):
     def __init__(self):
         self._credential_records: list[PasswordCredentialRecord] = []
 

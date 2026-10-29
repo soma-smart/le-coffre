@@ -17,7 +17,11 @@ from identity_access_management_context.application.services import (
     ExtensionAuditService,
     ExtensionPairingLookupService,
 )
-from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, TokenCredentialRecord
+from identity_access_management_context.domain.entities import (
+    MAX_ACTIVE_TOKENS_PER_USER,
+    TokenCredentialRecord,
+    count_usable,
+)
 from identity_access_management_context.domain.events import ExtensionPairedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
@@ -138,7 +142,8 @@ class ExchangeExtensionPairingUseCase(TracedUseCase):
         # someone at four tokens from collecting any number of approvals, each
         # seeing 4 < 5, and redeeming them afterwards. This read is the friendly
         # exit that leaves the pairing intact; the insert below is the guard.
-        if self.token_credential_record_repository.count_usable(approver_id, now) >= self.max_active_tokens:
+        held = self.token_credential_record_repository.list_by_principal_ids((approver_id,))
+        if count_usable(held, now) >= self.max_active_tokens:
             raise TooManyActiveExtensionTokensError(self.max_active_tokens)
 
         # Single conditional write. Two concurrent exchanges both reach here,

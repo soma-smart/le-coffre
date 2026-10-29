@@ -69,7 +69,7 @@ def test_given_a_rotated_token_when_authenticating_with_the_old_one_then_it_is_r
     authenticator, issue, token_credential_record_repository
 ):
     account, old_token = issue()
-    token_credential_record_repository.rotate([old_token.hash])
+    token_credential_record_repository.replace_token_hashes([old_token.hash], [TokenCredential.generate().hash])
 
     with pytest.raises(UnknownCredentialError):
         authenticator.authenticate(old_token)

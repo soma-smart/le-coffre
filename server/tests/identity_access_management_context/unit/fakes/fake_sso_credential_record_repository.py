@@ -1,13 +1,14 @@
 from datetime import datetime
 from uuid import UUID
 
+from identity_access_management_context.application.gateways import SSOCredentialRecordRepository
 from identity_access_management_context.domain.entities import SSOCredentialRecord
 from identity_access_management_context.domain.exceptions import (
     SSOCredentialAlreadyExistsException,
 )
 
 
-class FakeSSOCredentialRecordRepository:
+class FakeSSOCredentialRecordRepository(SSOCredentialRecordRepository):
     def __init__(self):
         self._credential_records: dict[tuple[str, str], SSOCredentialRecord] = {}
 
