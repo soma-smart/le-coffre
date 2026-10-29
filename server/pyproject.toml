@@ -3,7 +3,7 @@ name = "Le-Coffre"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "alembic>=1.20.0",
+  "alembic>=1.20.1",
   "authlib>=1.9.1",
   "bcrypt>=5.0.0",
   "cryptography>=50.0.2",
@@ -24,7 +24,7 @@ dev = [
   "pytest-asyncio>=1.4.0",
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.17.1",
+  "ruff>=0.17.2",
   "smtpdfix>=0.5.3",
 ]
 monitoring = [
