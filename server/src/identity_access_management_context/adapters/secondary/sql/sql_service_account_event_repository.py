@@ -37,7 +37,7 @@ class SqlServiceAccountEventRepository(SQLBaseRepository, ServiceAccountEventRep
                 event_type=event.event_type,
                 # Read back as a creation date, so normalised here rather than left to the driver.
                 occurred_on=to_naive_utc(event.occurred_on),
-                actor_principal_id=event.principal_id,
+                actor_principal_id=event.actor_principal_id,
                 event_data=event.event_data,
             )
             for event in events

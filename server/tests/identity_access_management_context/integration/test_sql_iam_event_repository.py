@@ -8,7 +8,7 @@ def _append(repository, event_type: str, group_id):
         event_type=event_type,
         occurred_on=datetime.now(timezone.utc),
         actor_principal_id=uuid4(),
-        event_data={"group_id": str(group_id), "principal_id": str(uuid4())},
+        event_data={"group_id": str(group_id), "user_id": str(uuid4())},
     )
 
 

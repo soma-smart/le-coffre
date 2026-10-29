@@ -44,16 +44,16 @@ class AddUserToGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_owner(command.group_id, command.requester_id):
             raise UserNotOwnerOfGroupException(command.requester_id, command.group_id)
 
-        user = self.user_repository.get_by_id(command.principal_id)
+        user = self.user_repository.get_by_id(command.user_id)
         if user is None:
-            raise UserNotFoundException(command.principal_id)
+            raise UserNotFoundException(command.user_id)
 
-        if not self.group_member_repository.is_member(command.group_id, command.principal_id):
-            self.group_member_repository.add_member(command.group_id, command.principal_id, is_owner=False)
+        if not self.group_member_repository.is_member(command.group_id, command.user_id):
+            self.group_member_repository.add_member(command.group_id, command.user_id, is_owner=False)
             event = UserAddedToGroupEvent(
                 group_id=command.group_id,
-                principal_id=command.principal_id,
-                added_by_principal_id=command.requester_id,
+                user_id=command.user_id,
+                added_by_user_id=command.requester_id,
             )
             self._event_publisher.publish(event)
             self._group_event_repository.append_event(
@@ -61,5 +61,5 @@ class AddUserToGroupUseCase(TracedUseCase):
                 event_type=type(event).__name__,
                 occurred_on=event.occurred_on,
                 actor_principal_id=command.requester_id,
-                event_data={"group_id": str(command.group_id), "principal_id": str(command.principal_id)},
+                event_data={"group_id": str(command.group_id), "user_id": str(command.user_id)},
             )

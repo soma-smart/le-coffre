@@ -81,7 +81,7 @@ class CreateServiceAccountUseCase(
         event = ServiceAccountCreatedEvent(
             event_id=uuid4(),
             occurred_on=now,
-            principal_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             service_account_id=account.id,
             service_account_name=account.name,
         )

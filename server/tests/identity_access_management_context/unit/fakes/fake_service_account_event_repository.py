@@ -30,7 +30,7 @@ class FakeServiceAccountEventRepository(ServiceAccountEventRepository):
                     "event_id": event.event_id,
                     "event_type": event.event_type,
                     "occurred_on": event.occurred_on,
-                    "actor_principal_id": event.principal_id,
+                    "actor_principal_id": event.actor_principal_id,
                     "event_data": event.event_data,
                     # Only item events name an account; a listing is group-scoped.
                     "service_account_id": (

@@ -602,7 +602,7 @@ def test_principal_columns_migration_keeps_every_value(alembic_config, temp_data
 
 
 PAYLOAD_KEYS_REVISION = "76b9210560fd"
-"""Revision renaming the user keys that hold any principal in stored event payloads."""
+"""Revision renaming the user keys that hold an actor in stored event payloads."""
 
 
 def test_payload_keys_migration_renames_only_principal_keys(alembic_config, temp_database):
@@ -648,8 +648,8 @@ def test_payload_keys_migration_renames_only_principal_keys(alembic_config, temp
 
     command.upgrade(alembic_config, PAYLOAD_KEYS_REVISION)
     iam, password = payloads()
-    assert iam["UserAddedToGroupEvent"] == {"group_id": "g-1", "principal_id": principal_id}
-    assert iam["ServiceAccountCreatedEvent"] == {"principal_id": principal_id, "service_account_id": "sa-1"}
+    assert iam["UserAddedToGroupEvent"] == {"group_id": "g-1", "user_id": principal_id}
+    assert iam["ServiceAccountCreatedEvent"] == {"actor_principal_id": principal_id, "service_account_id": "sa-1"}
     assert iam["UserCreatedEvent"] == {"user_id": principal_id, "username": "alice"}
     assert password == {"password_id": "p-1", "by_principal_id": principal_id, "issued_by_principal_id": principal_id}
 

@@ -1,9 +1,10 @@
 """rename user keys in event payloads
 
 Stored event payloads name a principal the same way their columns now do:
-the member of a membership event, the actor of a service-account event, and
-the actor and issuer of password events. Payloads whose subject is a user by
-construction (user created, updated, deleted, promoted) keep `user_id`.
+the actor of a service-account event, and the actor and issuer of password
+events. Payloads whose subject is a user by construction keep `user_id`: user
+created, updated, deleted, promoted, and group membership, which only users
+can hold.
 
 Revision ID: 76b9210560fd
 Revises: 83cc85f63482
@@ -22,18 +23,14 @@ down_revision: Union[str, Sequence[str], None] = '83cc85f63482'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-# IamEvent payloads carrying a principal under `user_id`, by event type.
+# IamEvent payloads carrying their actor under `user_id`, by event type.
 IAM_EVENT_TYPES = (
-    'UserAddedToGroupEvent',
-    'OwnerAddedToGroupEvent',
-    'UserRemovedFromGroupEvent',
-    'OwnerDemotedToMemberEvent',
     'ServiceAccountCreatedEvent',
     'ServiceAccountTokenRotatedEvent',
     'ServiceAccountRevokedEvent',
     'ServiceAccountsListedEvent',
 )
-IAM_KEYS = {'user_id': 'principal_id'}
+IAM_KEYS = {'user_id': 'actor_principal_id'}
 # PasswordEvent payloads: these keys only ever hold a principal, whatever the event.
 PASSWORD_KEYS = {'by_user_id': 'by_principal_id', 'issued_by_user_id': 'issued_by_principal_id'}
 

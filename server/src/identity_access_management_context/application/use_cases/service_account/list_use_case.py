@@ -107,7 +107,7 @@ class ListServiceAccountsUseCase(
         event = ServiceAccountsListedEvent(
             event_id=uuid4(),
             occurred_on=self._time_provider.get_current_time(),
-            principal_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             group_id=command.group_id,
         )
         # Counted on the accounts rather than the summaries: the account row is the

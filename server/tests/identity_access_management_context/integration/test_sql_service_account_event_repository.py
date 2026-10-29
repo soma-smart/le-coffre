@@ -15,7 +15,7 @@ def _created(service_account_id, user_id, name="nightly-backup", occurred_on=NOW
     return ServiceAccountCreatedEvent(
         event_id=uuid4(),
         occurred_on=occurred_on,
-        principal_id=user_id,
+        actor_principal_id=user_id,
         service_account_id=service_account_id,
         service_account_name=name,
     )
@@ -87,11 +87,11 @@ def test_given_other_service_account_events_when_reading_facts_then_only_creatio
             ServiceAccountRevokedEvent(
                 event_id=uuid4(),
                 occurred_on=NOW,
-                principal_id=revoker,
+                actor_principal_id=revoker,
                 service_account_id=account_id,
                 service_account_name="nightly-backup",
             ),
-            ServiceAccountsListedEvent(event_id=uuid4(), occurred_on=NOW, principal_id=revoker, group_id=uuid4()),
+            ServiceAccountsListedEvent(event_id=uuid4(), occurred_on=NOW, actor_principal_id=revoker, group_id=uuid4()),
         ]
     )
 
