@@ -234,3 +234,41 @@ class TestPasswordPolicyEnforcement:
 
         assert result == user_id
         assert password_credential_record_repository.list_by_principal_id(user_id) != []
+
+
+@pytest.mark.parametrize("failing_step", ["credential", "event"])
+def test_given_a_step_failing_after_the_admin_is_created_when_registering_then_nothing_is_left_and_setup_can_be_retried(
+    use_case: RegisterAdminWithPasswordUseCase,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    admin_event_repository,
+    event_publisher: FakeDomainEventPublisher,
+    monkeypatch,
+    failing_step,
+):
+    """A half-created admin would make can_create_admin() refuse every retry, locking the instance out."""
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    command = RegisterAdminWithPasswordCommand(
+        id=user_id, email="admin@lecoffre.com", password="securepass12345!", display_name="Admin User"
+    )
+    target, method = {
+        "credential": (password_credential_record_repository, "save"),
+        "event": (admin_event_repository, "append_event"),
+    }[failing_step]
+    original = getattr(target, method)
+
+    def fail(*_args, **_kwargs):
+        raise RuntimeError("database unavailable")
+
+    monkeypatch.setattr(target, method, fail)
+
+    with pytest.raises(RuntimeError):
+        use_case.execute(command)
+
+    assert user_repository.get_by_id(user_id) is None
+    assert group_repository.get_by_principal_id(user_id) is None
+    assert event_publisher.published_events == []
+
+    monkeypatch.setattr(target, method, original)
+    assert use_case.execute(command) == user_id

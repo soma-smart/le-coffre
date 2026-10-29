@@ -56,6 +56,9 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
             if not user_management_service.can_create_admin():
                 raise AdminAlreadyExistsException("An admin account already exists")
 
+            # Hashed before anything is written: it is the step most likely to fail.
+            password_hash = self._password_hashing_gateway.hash(password.value)
+
             user = user_management_service.create_admin(
                 user_id=command.id,
                 email=command.email,
@@ -63,29 +66,46 @@ class RegisterAdminWithPasswordUseCase(TracedUseCase):
                 name=command.display_name,
             )
 
-            # Saved after the user: a credential refers to its principal.
-            password_hash = self._password_hashing_gateway.hash(password.value)
-            self._password_credential_record_repository.save(
-                PasswordCredentialRecord(principal_id=user.id, email=command.email, password_hash=password_hash)
-            )
+            # Each step commits on its own. Once the admin exists, can_create_admin()
+            # refuses every retry, so a failure past this point must undo it: an admin
+            # without a password would lock the instance out for good.
+            try:
+                # Saved after the user: a credential refers to its principal.
+                self._password_credential_record_repository.save(
+                    PasswordCredentialRecord(principal_id=user.id, email=command.email, password_hash=password_hash)
+                )
 
-            UserCreationService.create_personal_group_and_set_ownership(
-                user_id=user.id,
-                username=user.username,
-                group_repository=self._group_repository,
-                group_member_repository=self._group_member_repository,
-            )
+                UserCreationService.create_personal_group_and_set_ownership(
+                    user_id=user.id,
+                    username=user.username,
+                    group_repository=self._group_repository,
+                    group_member_repository=self._group_member_repository,
+                )
 
-            event = AdminRegisteredEvent(admin_id=user.id, email=command.email)
+                event = AdminRegisteredEvent(admin_id=user.id, email=command.email)
+                # Recorded before it is published: nothing announces a setup that may still be undone.
+                self._admin_event_repository.append_event(
+                    event_id=event.event_id,
+                    event_type=type(event).__name__,
+                    occurred_on=event.occurred_on,
+                    actor_principal_id=user.id,
+                    event_data={"email": command.email},
+                )
+            except Exception:
+                self._undo_admin(user.id)
+                raise
+
             self._event_publisher.publish(event)
-            self._admin_event_repository.append_event(
-                event_id=event.event_id,
-                event_type=type(event).__name__,
-                occurred_on=event.occurred_on,
-                actor_principal_id=user.id,
-                event_data={"email": command.email},
-            )
 
             return user.id
 
         return _run()
+
+    def _undo_admin(self, user_id: UUID) -> None:
+        """Remove whatever a failed setup created, so that it can simply be retried."""
+        personal_group = self._group_repository.get_by_principal_id(user_id)
+        if personal_group is not None:
+            self._group_member_repository.delete_by_group_id(personal_group.id)
+            self._group_repository.delete_group(personal_group.id)
+        # Takes the user's credential records with it.
+        self._user_repository.delete(user_id)
