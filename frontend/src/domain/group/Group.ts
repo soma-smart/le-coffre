@@ -45,6 +45,30 @@ export function isUserMemberOf(group: Group, userId: string | null): boolean {
 }
 
 /**
+ * True when the user belongs to the group (owner or member) and is the
+ * only person in it — used to offer deleting the group instead of leaving it.
+ */
+export function isSoleMemberOf(group: Group, userId: string | null): boolean {
+  if (!userId) return false
+  if (!isUserOwnerOf(group, userId) && !isUserMemberOf(group, userId)) return false
+  return new Set([...group.owners, ...group.members]).size === 1
+}
+
+export type LeaveBlockReason = 'sole-owner' | 'owner' | null
+
+/**
+ * Why leaving this group would currently be blocked for this user by the
+ * ownership rule, or null if it isn't. A sole member is never blocked here —
+ * they're offered deleting the group instead, handled separately by
+ * `isSoleMemberOf`.
+ */
+export function leaveBlockReason(group: Group, userId: string | null): LeaveBlockReason {
+  if (isSoleMemberOf(group, userId)) return null
+  if (!isUserOwnerOf(group, userId)) return null
+  return group.owners.length === 1 ? 'sole-owner' : 'owner'
+}
+
+/**
  * Groups where the user is either an owner or a member.
  */
 export function filterGroupsForUser(groups: Group[], userId: string | null): Group[] {
