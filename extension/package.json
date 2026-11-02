@@ -25,7 +25,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
     "@tsconfig/node22": "22.0.6",
-    "@types/chrome": "0.3.6",
+    "@types/chrome": "0.3.7",
     "@types/jsdom": "28.0.1",
     "@types/node": "25.9.9",
     "@vitejs/plugin-vue": "6.0.10",
@@ -44,7 +44,7 @@
     "typescript": "6.0.3",
     "vite": "8.3.5",
     "vitest": "4.1.12",
-    "vue-tsc": "3.3.13"
+    "vue-tsc": "3.3.14"
   },
   "overrides": {
     "@vue/server-renderer": "3.5.44",
