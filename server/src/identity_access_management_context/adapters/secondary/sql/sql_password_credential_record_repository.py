@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session, and_, select
 
 from identity_access_management_context.application.gateways import PasswordCredentialRecordRepository
 from identity_access_management_context.domain.entities import PasswordCredentialRecord
@@ -52,6 +52,15 @@ class SqlPasswordCredentialRecordRepository(SQLBaseRepository, PasswordCredentia
     def update_password_hash(self, email: str, new_password_hash: bytes) -> None:
         for _, details in self._find_all(PasswordCredentialRecordTable.email == email):
             details.password_hash = new_password_hash
+            self._session.add(details)
+        self.commit()
+
+    def update_email(self, principal_id: UUID, email: str, new_email: str) -> None:
+        condition = and_(
+            CredentialRecordTable.principal_id == principal_id, PasswordCredentialRecordTable.email == email
+        )
+        for _, details in self._find_all(condition):
+            details.email = new_email
             self._session.add(details)
         self.commit()
 

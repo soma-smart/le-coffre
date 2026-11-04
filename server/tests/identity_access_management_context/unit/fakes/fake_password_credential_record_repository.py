@@ -16,6 +16,11 @@ class FakePasswordCredentialRecordRepository(PasswordCredentialRecordRepository)
             if credential_record.email == email:
                 credential_record.password_hash = new_password_hash
 
+    def update_email(self, principal_id: UUID, email: str, new_email: str) -> None:
+        for credential_record in self._credential_records:
+            if credential_record.principal_id == principal_id and credential_record.email == email:
+                credential_record.email = new_email
+
     def list_by_principal_id(self, principal_id: UUID) -> list[PasswordCredentialRecord]:
         return [c for c in self._credential_records if c.principal_id == principal_id]
 

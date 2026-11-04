@@ -323,10 +323,15 @@ def get_promote_admin_usecase(
 
 def get_update_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
+        get_password_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
 ):
-    return UpdateUserUseCase(user_repository, event_publisher, user_event_repository)
+    return UpdateUserUseCase(
+        user_repository, password_credential_record_repository, event_publisher, user_event_repository
+    )
 
 
 def get_update_user_password_usecase(
