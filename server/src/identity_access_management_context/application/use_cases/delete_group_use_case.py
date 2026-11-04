@@ -1,23 +1,19 @@
-from uuid import uuid4
-
 from identity_access_management_context.application.commands import DeleteGroupCommand
 from identity_access_management_context.application.gateways import (
     GroupEventRepository,
     GroupMemberRepository,
     GroupRepository,
     GroupUsageGateway,
-    ServiceAccountEventRepository,
-    ServiceAccountRepository,
-    TokenCredentialRecordRepository,
 )
-from identity_access_management_context.domain.events import GroupDeletedEvent, ServiceAccountRevokedEvent
+from identity_access_management_context.application.services import ServiceAccountRevocationService
+from identity_access_management_context.domain.events import GroupDeletedEvent
 from identity_access_management_context.domain.exceptions import (
     CannotDeleteGroupStillUsedException,
     CannotDeletePersonalGroupException,
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
 )
-from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
+from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
@@ -30,52 +26,14 @@ class DeleteGroupUseCase(TracedUseCase):
         group_usage_gateway: GroupUsageGateway,
         event_publisher: DomainEventPublisher,
         group_event_repository: GroupEventRepository,
-        service_account_repository: ServiceAccountRepository,
-        service_account_event_repository: ServiceAccountEventRepository,
-        token_credential_record_repository: TokenCredentialRecordRepository,
-        time_provider: TimeGateway,
+        service_account_revocation_service: ServiceAccountRevocationService,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.group_usage_gateway = group_usage_gateway
         self._event_publisher = event_publisher
         self._group_event_repository = group_event_repository
-        self._service_account_repository = service_account_repository
-        self._service_account_event_repository = service_account_event_repository
-        self._token_credential_record_repository = token_credential_record_repository
-        self._time_provider = time_provider
-
-    def _revoke_service_accounts(self, command: DeleteGroupCommand) -> None:
-        """Revoke the group's active service accounts."""
-        accounts = self._service_account_repository.list_for_groups((command.group_id,))
-
-        # Skip already-revoked accounts to avoid errors
-        active_accounts = tuple(account for account in accounts if account.is_active)
-
-        if not active_accounts:
-            return
-
-        now = self._time_provider.get_current_time()
-
-        # Without their token records, revoked accounts can no longer authenticate.
-        self._token_credential_record_repository.delete_by_principal_ids([account.id for account in active_accounts])
-
-        # Revoke service accounts
-        self._service_account_repository.revoke([account.id for account in active_accounts], now)
-
-        events = tuple(
-            ServiceAccountRevokedEvent(
-                event_id=uuid4(),
-                occurred_on=now,
-                actor_principal_id=command.requesting_user.user_id,
-                service_account_id=account.id,
-                service_account_name=account.name,
-            )
-            for account in active_accounts
-        )
-        self._service_account_event_repository.extend(events)
-        for event in events:
-            self._event_publisher.publish(event)
+        self._service_account_revocation_service = service_account_revocation_service
 
     def execute(self, command: DeleteGroupCommand) -> None:
         group = self.group_repository.get_by_id(command.group_id)
@@ -96,7 +54,7 @@ class DeleteGroupUseCase(TracedUseCase):
             raise CannotDeleteGroupStillUsedException(command.group_id)
 
         # Revoke service accounts associated with the group
-        self._revoke_service_accounts(command)
+        self._service_account_revocation_service.revoke_for_groups((command.group_id,), command.requesting_user.user_id)
 
         self.group_member_repository.delete_by_group_id(command.group_id)
         self.group_repository.delete_group(command.group_id)

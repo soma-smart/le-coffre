@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -7,12 +7,15 @@ from identity_access_management_context.application.use_cases import DeleteUserU
 from identity_access_management_context.domain.entities import (
     Group,
     PersonalGroup,
+    ServiceAccount,
+    TokenCredentialRecord,
     User,
 )
 from identity_access_management_context.domain.events import (
     ExtensionTokenRevokedEvent,
     UserDeletedEvent,
 )
+from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
 from tests.fakes import FakeDomainEventPublisher
@@ -37,6 +40,7 @@ def use_case(
     admin_event_repository,
     time_provider,
     auth_session_repository,
+    service_account_revocation_service,
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -49,6 +53,7 @@ def use_case(
         admin_event_repository,
         time_provider,
         auth_session_repository,
+        service_account_revocation_service,
     )
 
 
@@ -386,3 +391,135 @@ def test_given_admin_deletion_when_revoking_extensions_then_credits_the_admin_no
     )
     assert entry["actor_principal_id"] == admin_id
     assert entry["event_data"]["user_id"] == str(user_id)
+
+
+def _user_with_personal_group(user_repository, group_repository, group_member_repository) -> tuple[UUID, UUID]:
+    user_id, personal_group_id = uuid4(), uuid4()
+    user_repository.save(User(id=user_id, username="bob", email="bob@example.com", name="Bob"))
+    group_repository.save_personal_group(PersonalGroup(id=personal_group_id, name="Personal", principal_id=user_id))
+    group_member_repository.add_member(personal_group_id, user_id, is_owner=True)
+    return user_id, personal_group_id
+
+
+def _service_account_with_token(
+    service_account_repository, token_credential_record_repository, group_id, name="deploy"
+):
+    account = ServiceAccount.create(group_id=group_id, name=name)
+    service_account_repository.create([account])
+    token_credential_record_repository.create(
+        [TokenCredentialRecord(principal_id=account.id, token_hash=TokenCredential.generate().hash)]
+    )
+    return account
+
+
+def test_given_a_service_account_on_the_personal_group_when_deleting_the_user_then_it_is_revoked(
+    use_case: DeleteUserUseCase,
+    user_repository,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+):
+    user_id, personal_group_id = _user_with_personal_group(user_repository, group_repository, group_member_repository)
+    account = _service_account_with_token(
+        service_account_repository, token_credential_record_repository, personal_group_id
+    )
+
+    use_case.execute(DeleteUserCommand(user_id=user_id, requesting_user=AuthenticatedUser(uuid4(), ["admin"])))
+
+    assert not service_account_repository.accounts[account.id].is_active
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+
+
+def test_given_a_service_account_on_a_solely_owned_group_when_deleting_the_user_then_it_is_revoked(
+    use_case: DeleteUserUseCase,
+    user_repository,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+):
+    user_id, _ = _user_with_personal_group(user_repository, group_repository, group_member_repository)
+    group_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="CI-Prod", is_personal=False))
+    group_member_repository.add_member(group_id, user_id, is_owner=True)
+    account = _service_account_with_token(service_account_repository, token_credential_record_repository, group_id)
+
+    use_case.execute(DeleteUserCommand(user_id=user_id, requesting_user=AuthenticatedUser(uuid4(), ["admin"])))
+
+    assert group_repository.get_by_id(group_id) is None
+    assert not service_account_repository.accounts[account.id].is_active
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+
+
+def test_given_a_group_with_another_owner_when_deleting_the_user_then_its_service_accounts_stay_active(
+    use_case: DeleteUserUseCase,
+    user_repository,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+):
+    user_id, _ = _user_with_personal_group(user_repository, group_repository, group_member_repository)
+    group_id = uuid4()
+    group_repository.save_group(Group(id=group_id, name="CI-Prod", is_personal=False))
+    group_member_repository.add_member(group_id, user_id, is_owner=True)
+    group_member_repository.add_member(group_id, uuid4(), is_owner=True)
+    account = _service_account_with_token(service_account_repository, token_credential_record_repository, group_id)
+
+    use_case.execute(DeleteUserCommand(user_id=user_id, requesting_user=AuthenticatedUser(uuid4(), ["admin"])))
+
+    assert service_account_repository.accounts[account.id].is_active
+    assert len(token_credential_record_repository.list_by_principal_id(account.id)) == 1
+
+
+def test_given_service_accounts_when_deleting_the_user_then_each_revocation_credits_the_admin(
+    use_case: DeleteUserUseCase,
+    user_repository,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+    service_account_event_repository,
+):
+    user_id, personal_group_id = _user_with_personal_group(user_repository, group_repository, group_member_repository)
+    account = _service_account_with_token(
+        service_account_repository, token_credential_record_repository, personal_group_id
+    )
+    admin_id = uuid4()
+
+    use_case.execute(DeleteUserCommand(user_id=user_id, requesting_user=AuthenticatedUser(admin_id, ["admin"])))
+
+    revocations = [
+        e for e in service_account_event_repository.events if e["event_type"] == "ServiceAccountRevokedEvent"
+    ]
+    assert [(e["event_data"]["service_account_id"], e["actor_principal_id"]) for e in revocations] == [
+        (str(account.id), admin_id)
+    ]
+
+
+def test_given_a_failure_while_revoking_when_deleting_the_user_then_nothing_is_deleted_yet(
+    use_case: DeleteUserUseCase,
+    user_repository,
+    group_repository,
+    group_member_repository,
+    service_account_repository,
+    token_credential_record_repository,
+    monkeypatch,
+):
+    """Revoked before any group goes: a retry still finds the groups, and so the accounts."""
+    user_id, personal_group_id = _user_with_personal_group(user_repository, group_repository, group_member_repository)
+    account = _service_account_with_token(
+        service_account_repository, token_credential_record_repository, personal_group_id
+    )
+
+    def fail(ids, now):
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(service_account_repository, "revoke", fail)
+    with pytest.raises(RuntimeError):
+        use_case.execute(DeleteUserCommand(user_id=user_id, requesting_user=AuthenticatedUser(uuid4(), ["admin"])))
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+    assert group_repository.get_by_id(personal_group_id) is not None
+    assert user_repository.get_by_id(user_id) is not None
