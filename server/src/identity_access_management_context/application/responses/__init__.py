@@ -1,4 +1,5 @@
 from .admin_login_response import AdminLoginResponse
+from .authenticate_token_response import AuthenticateTokenResponse
 from .exchange_extension_pairing_response import (
     ExchangedExtensionTokenResponse,
     PendingExtensionPairingResponse,
@@ -27,7 +28,6 @@ from .service_account import (
 from .sso_login_response import SsoLoginResponse
 from .start_extension_pairing_response import StartedExtensionPairingResponse
 from .update_user_password_response import UpdateUserPasswordResponse
-from .validate_extension_token_response import ValidatedExtensionTokenResponse
 from .validate_user_token_response import ValidateUserTokenResponse
 
 __all__ = [
@@ -37,7 +37,7 @@ __all__ = [
     "ListExtensionTokensResponse",
     "PendingExtensionPairingResponse",
     "StartedExtensionPairingResponse",
-    "ValidatedExtensionTokenResponse",
+    "AuthenticateTokenResponse",
     "AdminLoginResponse",
     "ValidateUserTokenResponse",
     "SsoLoginResponse",

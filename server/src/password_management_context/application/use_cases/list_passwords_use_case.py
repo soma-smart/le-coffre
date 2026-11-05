@@ -107,7 +107,7 @@ class ListPasswordsUseCase(TracedUseCase):
 
     def _access_entry_for(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         password: Password,
         all_permissions: BulkGroupPermissions,
         is_admin: bool,
@@ -122,10 +122,10 @@ class ListPasswordsUseCase(TracedUseCase):
         # An expired share is dropped here rather than filtered downstream, so it
         # can neither grant the password nor show up as a group it reaches.
         all_group_ids = [gid for gid, access in permissions.items() if access.is_active(now)]
-        user_access = self._find_user_access(user_id, permissions, cache, now)
+        user_access = self._find_principal_access(principal_id, permissions, cache, now)
 
         if user_access is not None:
-            visible_ids = self._visible_group_ids_for_user(user_id, owner_group_id, all_group_ids, cache)
+            visible_ids = self._visible_group_ids_for_principal(principal_id, owner_group_id, all_group_ids, cache)
             return _PasswordAccessEntry(
                 password,
                 owner_group_id,
@@ -163,22 +163,24 @@ class ListPasswordsUseCase(TracedUseCase):
     def _find_owner_group_id(self, permissions: GroupPermissions) -> UUID | None:
         return next((gid for gid, access in permissions.items() if access.is_owner), None)
 
-    def _visible_group_ids_for_user(
+    def _visible_group_ids_for_principal(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         owner_group_id: UUID,
         all_group_ids: list[UUID],
         cache: MembershipCache,
     ) -> list[UUID]:
-        if self._user_belongs_to_group(user_id, owner_group_id, cache):
+        if self._principal_belongs_to_group(principal_id, owner_group_id, cache):
             return all_group_ids
         return [
-            gid for gid in all_group_ids if gid == owner_group_id or self._user_belongs_to_group(user_id, gid, cache)
+            gid
+            for gid in all_group_ids
+            if gid == owner_group_id or self._principal_belongs_to_group(principal_id, gid, cache)
         ]
 
-    def _find_user_access(
+    def _find_principal_access(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         permissions: GroupPermissions,
         cache: MembershipCache,
         now: datetime,
@@ -186,7 +188,7 @@ class ListPasswordsUseCase(TracedUseCase):
         temporary: _UserAccess | None = None
 
         for group_id, access in permissions.items():
-            if not access.grants_read(now) or not self._user_belongs_to_group(user_id, group_id, cache):
+            if not access.grants_read(now) or not self._principal_belongs_to_group(principal_id, group_id, cache):
                 continue
             if access.is_owner:
                 return _UserAccess(can_write=True, expires_at=None)
@@ -206,14 +208,14 @@ class ListPasswordsUseCase(TracedUseCase):
             return False
         return candidate > current
 
-    def _user_belongs_to_group(self, user_id: UUID, group_id: UUID, cache: MembershipCache) -> bool:
-        is_owner, is_member = self._cached_membership(user_id, group_id, cache)
+    def _principal_belongs_to_group(self, principal_id: UUID, group_id: UUID, cache: MembershipCache) -> bool:
+        is_owner, is_member = self._cached_membership(principal_id, group_id, cache)
         return is_owner or is_member
 
-    def _cached_membership(self, user_id: UUID, group_id: UUID, cache: MembershipCache) -> tuple[bool, bool]:
+    def _cached_membership(self, principal_id: UUID, group_id: UUID, cache: MembershipCache) -> tuple[bool, bool]:
         if group_id not in cache:
             cache[group_id] = (
-                self.group_access_gateway.is_user_owner_of_group(user_id, group_id),
-                self.group_access_gateway.is_user_member_of_group(user_id, group_id),
+                self.group_access_gateway.is_principal_owner_of_group(principal_id, group_id),
+                self.group_access_gateway.is_principal_member_of_group(principal_id, group_id),
             )
         return cache[group_id]

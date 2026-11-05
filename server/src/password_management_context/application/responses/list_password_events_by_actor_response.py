@@ -9,7 +9,7 @@ class PasswordEventByActorItem:
     event_type: str
     occurred_on: str
     password_id: str
-    actor_user_id: str
+    actor_principal_id: str
     event_data: dict
 
 

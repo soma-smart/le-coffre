@@ -20,15 +20,15 @@ class PasswordUpdatedEventData(TypedDict):
 class PasswordUpdatedEvent(BasePasswordEvent):
     """Domain event for password update"""
 
-    updated_by_user_id: UUID
+    updated_by_principal_id: UUID
     has_name_changed: bool
     has_password_changed: bool
     has_folder_changed: bool
     has_login_changed: bool
     has_url_changed: bool
 
-    def get_actor_user_id(self) -> UUID:
-        return self.updated_by_user_id
+    def get_actor_principal_id(self) -> UUID:
+        return self.updated_by_principal_id
 
     def to_event_data(self) -> PasswordUpdatedEventData:
         return {

@@ -22,32 +22,22 @@ function connected(overrides: Partial<ConnectedExtension> = {}): ConnectedExtens
   return {
     id: 'ext-active',
     deviceName: 'Chrome on macOS',
-    createdAt: NOW,
     expiresAt: new Date(NOW.getTime() + 30 * DAY),
-    lastUsedAt: null,
-    revokedAt: null,
-    createdFromIp: '203.0.113.5',
+    lastUsedAt: NOW,
     isActive: true,
     ...overrides,
   }
 }
 
-/** One live device, one the user revoked, one that simply ran out. */
-function threeDevices() {
+/** One live device, one that simply ran out. A disconnected one is not listed at all. */
+function twoDevices() {
   return [
     connected(),
     connected({
-      id: 'ext-revoked',
-      deviceName: 'Firefox on Linux',
-      createdAt: new Date(NOW.getTime() - 5 * DAY),
-      revokedAt: new Date(NOW.getTime() - DAY),
-      isActive: false,
-    }),
-    connected({
       id: 'ext-expired',
       deviceName: 'Edge on Windows',
-      createdAt: new Date(NOW.getTime() - 40 * DAY),
       expiresAt: new Date(NOW.getTime() - 10 * DAY),
+      lastUsedAt: new Date(NOW.getTime() - 40 * DAY),
       isActive: false,
     }),
   ]
@@ -83,45 +73,37 @@ describe('ConnectedExtensionsSection', () => {
     vi.setSystemTime(NOW)
   })
 
-  it('should list every device, including the revoked and expired ones', async () => {
-    // The dead entries stay visible: the list is also the record of what has
-    // had access, which is what someone checking for a device they do not
-    // recognise is reading it for.
-    const wrapper = await mountSection(
-      new InMemoryExtensionGateway().seedExtensions(threeDevices()),
-    )
+  it('should list live and expired devices', async () => {
+    const wrapper = await mountSection(new InMemoryExtensionGateway().seedExtensions(twoDevices()))
 
     const listed = rows(wrapper)
-    expect(listed).toHaveLength(3)
     expect(listed.map((row) => row.text())).toEqual([
       expect.stringContaining('Chrome on macOS'),
-      expect.stringContaining('Firefox on Linux'),
       expect.stringContaining('Edge on Windows'),
     ])
     expect(wrapper.findAll('[data-testid="extension-active"]')).toHaveLength(1)
-    expect(listed[1]!.text()).toContain('Disconnected')
-    expect(listed[2]!.text()).toContain('Disconnected')
+    expect(listed[1]!.text()).toContain('Expired')
   })
 
-  it('should offer Disconnect only on a live device', async () => {
-    const wrapper = await mountSection(
-      new InMemoryExtensionGateway().seedExtensions(threeDevices()),
-    )
+  it('should offer Disconnect on every device, expired ones included', async () => {
+    // An expired device stays listed until disconnected: it must be removable.
+    const wrapper = await mountSection(new InMemoryExtensionGateway().seedExtensions(twoDevices()))
 
     const buttons = rows(wrapper).map((row) => row.findAll('button').length)
 
-    expect(buttons).toEqual([1, 0, 0])
+    expect(buttons).toEqual([1, 1])
   })
 
-  it('should show where a device was connected from', async () => {
-    // A foreign address is what gives away a pairing the user did not make.
-    const wrapper = await mountSection(new InMemoryExtensionGateway().seedExtensions([connected()]))
+  it('should name a device without a label', async () => {
+    const wrapper = await mountSection(
+      new InMemoryExtensionGateway().seedExtensions([connected({ deviceName: null })]),
+    )
 
-    expect(rows(wrapper)[0]!.text()).toContain('from 203.0.113.5')
+    expect(rows(wrapper)[0]!.text()).toContain('Unnamed device')
   })
 
   it('should disconnect one device once the confirmation is accepted', async () => {
-    const gateway = new InMemoryExtensionGateway().seedExtensions(threeDevices())
+    const gateway = new InMemoryExtensionGateway().seedExtensions(twoDevices())
     const wrapper = await mountSection(gateway)
 
     await rows(wrapper)[0]!.find('button').trigger('click')
@@ -130,9 +112,11 @@ describe('ConnectedExtensionsSection', () => {
 
     expect(gateway.disconnected).toEqual(['ext-active'])
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }))
-    // Reloaded, not patched locally: the row now reads as the backend says.
+    // Reloaded, not patched locally: the list now reads as the backend says.
+    expect(rows(wrapper).map((row) => row.text())).toEqual([
+      expect.stringContaining('Edge on Windows'),
+    ])
     expect(wrapper.findAll('[data-testid="extension-active"]')).toHaveLength(0)
-    expect(wrapper.find('[data-testid="disconnect-all"]').exists()).toBe(false)
   })
 
   it('should disconnect every device once the confirmation is accepted', async () => {
@@ -145,16 +129,14 @@ describe('ConnectedExtensionsSection', () => {
     await wrapper.find('[data-testid="disconnect-all"]').trigger('click')
     await acceptConfirmation()
 
-    expect(wrapper.findAll('[data-testid="extension-active"]')).toHaveLength(0)
+    expect(rows(wrapper)).toHaveLength(0)
     expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({ severity: 'success', detail: '2 extensions disconnected' }),
     )
   })
 
-  it('should hide Disconnect all when nothing is live', async () => {
-    const wrapper = await mountSection(
-      new InMemoryExtensionGateway().seedExtensions(threeDevices().slice(1)),
-    )
+  it('should hide Disconnect all when no device is listed', async () => {
+    const wrapper = await mountSection(new InMemoryExtensionGateway())
 
     expect(wrapper.find('[data-testid="disconnect-all"]').exists()).toBe(false)
   })

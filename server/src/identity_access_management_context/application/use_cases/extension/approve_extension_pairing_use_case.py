@@ -4,13 +4,13 @@ from identity_access_management_context.application.commands import ApproveExten
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
     ExtensionPairingRepository,
-    ExtensionTokenRepository,
+    TokenCredentialRecordRepository,
 )
 from identity_access_management_context.application.services import (
     ExtensionAuditService,
     ExtensionPairingLookupService,
 )
-from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER
+from identity_access_management_context.domain.entities import MAX_ACTIVE_TOKENS_PER_USER, count_usable
 from identity_access_management_context.domain.events import ExtensionPairingApprovedEvent
 from identity_access_management_context.domain.exceptions import (
     ExtensionPairingAlreadyResolvedError,
@@ -35,14 +35,14 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
     def __init__(
         self,
         extension_pairing_repository: ExtensionPairingRepository,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
         max_active_tokens: int = MAX_ACTIVE_TOKENS_PER_USER,
     ):
         self.extension_pairing_repository = extension_pairing_repository
-        self.extension_token_repository = extension_token_repository
+        self.token_credential_record_repository = token_credential_record_repository
         self.event_publisher = event_publisher
         self.admin_event_repository = admin_event_repository
         self.time_provider = time_provider
@@ -59,7 +59,7 @@ class ApproveExtensionPairingUseCase(TracedUseCase):
         # token is created. This one exists so the user is told they are at the
         # cap while still looking at a screen that can explain it, instead of
         # the extension failing a moment later with no context.
-        active = self.extension_token_repository.count_active_for_user(user_id, now)
+        active = count_usable(self.token_credential_record_repository.list_by_principal_ids((user_id,)), now)
         if active >= self.max_active_tokens:
             raise TooManyActiveExtensionTokensError(self.max_active_tokens)
 

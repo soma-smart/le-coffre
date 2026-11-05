@@ -34,11 +34,8 @@ function connected(overrides: Partial<ConnectedExtension> = {}): ConnectedExtens
   return {
     id: 'ext-1',
     deviceName: 'Chrome on macOS',
-    createdAt: NOW,
     expiresAt: new Date(NOW.getTime() + 30 * 86_400_000),
-    lastUsedAt: null,
-    revokedAt: null,
-    createdFromIp: '203.0.113.5',
+    lastUsedAt: NOW,
     isActive: true,
     ...overrides,
   }
@@ -114,11 +111,11 @@ describe('DenyPairingUseCase', () => {
 })
 
 describe('ListConnectedExtensionsUseCase', () => {
-  it('should sort active extensions before disconnected ones', async () => {
+  it('should sort active extensions before expired ones', async () => {
     // Someone scanning this list is looking for what still has access.
     const gateway = new InMemoryExtensionGateway().seedExtensions([
-      connected({ id: 'dead', isActive: false, createdAt: new Date(NOW.getTime() + 10_000) }),
-      connected({ id: 'live', isActive: true, createdAt: NOW }),
+      connected({ id: 'dead', isActive: false, lastUsedAt: new Date(NOW.getTime() + 10_000) }),
+      connected({ id: 'live', isActive: true, lastUsedAt: NOW }),
     ])
 
     const result = await new ListConnectedExtensionsUseCase(gateway).execute()
@@ -126,10 +123,10 @@ describe('ListConnectedExtensionsUseCase', () => {
     expect(result.map((extension) => extension.id)).toEqual(['live', 'dead'])
   })
 
-  it('should sort the newest first within the same state', async () => {
+  it('should sort the most recently used first within the same state', async () => {
     const gateway = new InMemoryExtensionGateway().seedExtensions([
-      connected({ id: 'older', createdAt: new Date(NOW.getTime() - 10_000) }),
-      connected({ id: 'newer', createdAt: NOW }),
+      connected({ id: 'older', lastUsedAt: new Date(NOW.getTime() - 10_000) }),
+      connected({ id: 'newer', lastUsedAt: NOW }),
     ])
 
     const result = await new ListConnectedExtensionsUseCase(gateway).execute()
@@ -139,40 +136,27 @@ describe('ListConnectedExtensionsUseCase', () => {
 })
 
 describe('DisconnectExtensionUseCase', () => {
-  it('should mark the extension inactive', async () => {
+  it('should remove the extension', async () => {
     const gateway = new InMemoryExtensionGateway().seedExtensions([connected()])
 
     await new DisconnectExtensionUseCase(gateway).execute({ extensionId: 'ext-1' })
 
-    const remaining = await gateway.listConnectedExtensions()
-    expect(remaining[0].isActive).toBe(false)
-    expect(remaining[0].revokedAt).not.toBeNull()
+    expect(await gateway.listConnectedExtensions()).toEqual([])
   })
 })
 
 describe('DisconnectAllExtensionsUseCase', () => {
-  it('should report how many were still active', async () => {
+  it('should remove every extension, expired ones included, and report how many', async () => {
     const gateway = new InMemoryExtensionGateway().seedExtensions([
       connected({ id: 'a', isActive: true }),
       connected({ id: 'b', isActive: true }),
-      connected({ id: 'c', isActive: false, revokedAt: NOW }),
+      connected({ id: 'c', isActive: false }),
     ])
 
     const revoked = await new DisconnectAllExtensionsUseCase(gateway).execute()
 
-    expect(revoked).toBe(2)
-  })
-
-  it('should leave the original timestamp on an already disconnected extension', async () => {
-    const earlier = new Date(NOW.getTime() - 86_400_000)
-    const gateway = new InMemoryExtensionGateway().seedExtensions([
-      connected({ id: 'c', isActive: false, revokedAt: earlier }),
-    ])
-
-    await new DisconnectAllExtensionsUseCase(gateway).execute()
-
-    const remaining = await gateway.listConnectedExtensions()
-    expect(remaining[0].revokedAt).toEqual(earlier)
+    expect(revoked).toBe(3)
+    expect(await gateway.listConnectedExtensions()).toEqual([])
   })
 })
 

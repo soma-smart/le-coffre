@@ -23,7 +23,7 @@ class FakeTokenGateway(TokenGateway):
     def set_valid_token(
         self,
         token: str,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: List[str],
         claims: Dict[str, Any] | None = None,
@@ -33,7 +33,7 @@ class FakeTokenGateway(TokenGateway):
             claims = {}
         token_obj = Token(
             value=token,
-            user_id=user_id,
+            principal_id=principal_id,
             email=email,
             roles=roles,
             claims=claims,
@@ -44,23 +44,23 @@ class FakeTokenGateway(TokenGateway):
 
     def generate_token(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: List[str],
         claims: Dict[str, Any] | None = None,
     ) -> Token:
         if claims is None:
             claims = {}
-        self.generation_calls.append((user_id, email, roles, claims))
-        # Use user_id for the token string to maintain consistency
-        token_str = f"jwt_token_for_{user_id}_{self.unique_part}"
+        self.generation_calls.append((principal_id, email, roles, claims))
+        # Use principal_id for the token string to maintain consistency
+        token_str = f"jwt_token_for_{principal_id}_{self.unique_part}"
         issued_at = datetime.now(UTC)
         token_obj = Token(
             value=token_str,
-            user_id=user_id,
+            principal_id=principal_id,
             email=email,
             roles=roles,
-            claims={"user_id": str(user_id), "email": email, "roles": roles, **claims},
+            claims={"user_id": str(principal_id), "email": email, "roles": roles, **claims},
             jti=f"access-token-jti-{self.unique_part}",
             issued_at=issued_at,
             token_type="access",
@@ -71,17 +71,17 @@ class FakeTokenGateway(TokenGateway):
 
     def generate_refresh_token(
         self,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: List[str],
     ) -> Token:
-        refresh_token_str = f"refresh_token_for_{user_id}_{self.unique_part}"
+        refresh_token_str = f"refresh_token_for_{principal_id}_{self.unique_part}"
         return Token(
             value=refresh_token_str,
-            user_id=user_id,
+            principal_id=principal_id,
             email=email,
             roles=roles,
-            claims={"user_id": str(user_id), "email": email, "roles": roles},
+            claims={"user_id": str(principal_id), "email": email, "roles": roles},
             jti=f"refresh-token-jti-{self.unique_part}",
             issued_at=datetime.now(UTC),
             token_type="refresh",
@@ -93,17 +93,17 @@ class FakeTokenGateway(TokenGateway):
     def set_valid_refresh_token(
         self,
         refresh_token: str,
-        user_id: UUID,
+        principal_id: UUID,
         email: str,
         roles: List[str],
         jti: str | None = None,
     ) -> None:
         token_obj = Token(
             value=refresh_token,
-            user_id=user_id,
+            principal_id=principal_id,
             email=email,
             roles=roles,
-            claims={"user_id": str(user_id), "email": email, "roles": roles},
+            claims={"user_id": str(principal_id), "email": email, "roles": roles},
             jti=jti,
             issued_at=datetime.now(UTC),
             token_type="refresh",

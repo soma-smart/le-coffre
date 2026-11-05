@@ -63,7 +63,7 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
     this.links.set(id, {
       id,
       passwordId,
-      createdByUserId: 'user-1',
+      createdByPrincipalId: 'user-1',
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       readAt: null,
@@ -108,7 +108,7 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
       passwordName: this.passwordNames.get(link.passwordId) ?? null,
       groupName: this.groupNames.get(link.passwordId) ?? null,
       createdByDisplayName: withIssuers
-        ? (this.issuerNames.get(link.createdByUserId) ?? null)
+        ? (this.issuerNames.get(link.createdByPrincipalId) ?? null)
         : null,
     }
   }
@@ -131,7 +131,7 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
 
   async listMine(includeInactive = false): Promise<AuditedOneTimeLinkPage> {
     const mine = [...this.links.values()].filter(
-      (link) => link.createdByUserId === this.currentUserId,
+      (link) => link.createdByPrincipalId === this.currentUserId,
     )
     return this.auditPage(mine, includeInactive, false)
   }
@@ -144,7 +144,7 @@ export class InMemoryOneTimeLinkRepository implements OneTimeLinkRepository {
     let revoked = 0
     for (const [id, link] of this.links) {
       // An already-read link keeps its trail rather than being marked revoked.
-      if (link.createdByUserId !== userId || link.readAt || link.revokedAt) continue
+      if (link.createdByPrincipalId !== userId || link.readAt || link.revokedAt) continue
       this.links.set(id, { ...link, revokedAt: new Date().toISOString() })
       revoked += 1
     }

@@ -509,9 +509,8 @@
       "disconnectedCount": "{count} extension disconnected | {count} extensions disconnected",
       "empty": "No browser extension has been connected to this account.",
       "activeTag": "Active",
-      "disconnectedTag": "Disconnected",
-      "connectedAt": "Connected {date}",
-      "fromAddress": "from {address}",
+      "expiredTag": "Expired",
+      "unnamedDevice": "Unnamed device",
       "lastUsed": "Last used {date}",
       "expires": "Expires {date}",
       "passwordChangeNote": "Changing your password disconnects every extension."

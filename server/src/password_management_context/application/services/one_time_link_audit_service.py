@@ -45,8 +45,8 @@ class OneTimeLinkAuditAssembler:
                 # None when the password was deleted after the link was issued.
                 password_name=names.get(link.password_id),
                 group_name=groups.get(link.password_id),
-                created_by_user_id=link.created_by_user_id,
-                created_by_display_name=issuers.get(link.created_by_user_id),
+                created_by_principal_id=link.created_by_principal_id,
+                created_by_display_name=issuers.get(link.created_by_principal_id),
                 created_at=link.created_at,
                 expires_at=link.expires_at,
                 read_at=link.read_at,
@@ -86,5 +86,5 @@ class OneTimeLinkAuditAssembler:
         # people, so this stays a handful of lookups rather than one per row.
         return {
             user_id: self.user_info_gateway.get_user_display_name(user_id)
-            for user_id in {link.created_by_user_id for link in links}
+            for user_id in {link.created_by_principal_id for link in links}
         }

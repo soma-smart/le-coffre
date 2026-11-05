@@ -223,4 +223,4 @@ def test_given_valid_vault_config_when_creating_vault_should_store_vault_created
     assert len(vault_event_repository.events) == 1
     stored = vault_event_repository.events[0]
     assert stored["event_type"] == "VaultCreatedEvent"
-    assert stored["actor_user_id"] is None
+    assert stored["actor_principal_id"] is None

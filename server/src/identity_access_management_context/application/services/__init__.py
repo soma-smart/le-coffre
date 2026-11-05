@@ -10,6 +10,7 @@ from .extension_revocation_recording_service import (
     ExtensionRevocationRecordingService,
 )
 from .service_account_permission_service import ServiceAccountPermissionService
+from .service_account_revocation_service import ServiceAccountRevocationService
 from .sso_configuration_decrypting_service import SsoConfigurationDecryptingService
 from .user_creation_service import UserCreationService
 from .user_management_service import UserManagementService
@@ -28,4 +29,5 @@ __all__ = [
     "UserManagementService",
     "SsoConfigurationDecryptingService",
     "ServiceAccountPermissionService",
+    "ServiceAccountRevocationService",
 ]

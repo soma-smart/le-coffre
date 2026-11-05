@@ -42,7 +42,7 @@ def publisher(shutdown_executor):
 # RuntimeError from submit() (executor already shut down) must not turn an
 # otherwise-successful lock or unlock into a 500; the publisher contains it.
 @pytest.mark.parametrize(
-    "event", [VaultLockedEvent(locked_by_user_id=None), VaultUnlockedEvent()], ids=["lock", "unlock"]
+    "event", [VaultLockedEvent(locked_by_principal_id=None), VaultUnlockedEvent()], ids=["lock", "unlock"]
 )
 def test_given_executor_already_shut_down_publishing_a_vault_event_should_not_raise(publisher, event, caplog):
     other_subscriber = Mock()

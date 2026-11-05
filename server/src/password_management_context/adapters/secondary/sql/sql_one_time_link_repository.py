@@ -23,7 +23,7 @@ def _to_entity(row: OneTimeLinkTable) -> OneTimeLink:
         id=row.id,
         password_id=row.password_id,
         token_hash=row.token_hash,
-        created_by_user_id=row.created_by_user_id,
+        created_by_principal_id=row.created_by_principal_id,
         created_at=as_utc(row.created_at),  # type: ignore[arg-type]
         expires_at=as_utc(row.expires_at),  # type: ignore[arg-type]
         read_at=as_utc(row.read_at),
@@ -42,7 +42,7 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
             id=link.id,
             password_id=link.password_id,
             token_hash=link.token_hash,
-            created_by_user_id=link.created_by_user_id,
+            created_by_principal_id=link.created_by_principal_id,
             created_at=to_naive_utc(link.created_at),
             expires_at=to_naive_utc(link.expires_at),
             read_at=to_naive_utc(link.read_at),
@@ -145,31 +145,31 @@ class SqlOneTimeLinkRepository(SQLBaseRepository, OneTimeLinkRepository):
         return self._session.exec(statement).one()  # type: ignore[call-overload]
 
     def list_for_creator(
-        self, created_by_user_id: UUID, now: datetime, include_inactive: bool, limit: int
+        self, created_by_principal_id: UUID, now: datetime, include_inactive: bool, limit: int
     ) -> list[OneTimeLink]:
-        query = select(OneTimeLinkTable).where(OneTimeLinkTable.created_by_user_id == created_by_user_id)
+        query = select(OneTimeLinkTable).where(OneTimeLinkTable.created_by_principal_id == created_by_principal_id)
         if not include_inactive:
             query = query.where(*self._redeemable_only(now))
         query = query.order_by(OneTimeLinkTable.created_at.desc()).limit(limit)  # type: ignore[attr-defined]
         return [_to_entity(row) for row in self._session.exec(query).all()]
 
-    def count_for_creator(self, created_by_user_id: UUID, now: datetime, include_inactive: bool) -> int:
+    def count_for_creator(self, created_by_principal_id: UUID, now: datetime, include_inactive: bool) -> int:
         statement = (
             select(func.count())
             .select_from(OneTimeLinkTable)
-            .where(OneTimeLinkTable.created_by_user_id == created_by_user_id)
+            .where(OneTimeLinkTable.created_by_principal_id == created_by_principal_id)
         )
         if not include_inactive:
             statement = statement.where(*self._redeemable_only(now))
         return self._session.exec(statement).one()  # type: ignore[call-overload]
 
-    def revoke_all_for_creator(self, created_by_user_id: UUID, now: datetime) -> int:
+    def revoke_all_for_creator(self, created_by_principal_id: UUID, now: datetime) -> int:
         # Same guard as the single revoke: an already-read link keeps its read
         # timestamp, which is the audit trail of an actual disclosure.
         statement = (
             update(OneTimeLinkTable)
             .where(
-                OneTimeLinkTable.created_by_user_id == created_by_user_id,  # type: ignore[arg-type]
+                OneTimeLinkTable.created_by_principal_id == created_by_principal_id,  # type: ignore[arg-type]
                 OneTimeLinkTable.read_at.is_(None),  # type: ignore[union-attr]
                 OneTimeLinkTable.revoked_at.is_(None),  # type: ignore[union-attr]
             )

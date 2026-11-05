@@ -58,7 +58,7 @@ class ExtensionRevocationRecordingService:
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=actor_user_id,
+            actor_principal_id=actor_user_id,
             event_data={
                 # The owner belongs in the payload, not only in the actor
                 # column: on a cascade the two differ, and without it the row

@@ -8,7 +8,7 @@ from shared_kernel.domain.value_objects import EventPriority
 class SsoConfiguredEvent(DomainEvent):
     def __init__(
         self,
-        configured_by_user_id: UUID,
+        configured_by_principal_id: UUID,
         discovery_url: str,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
@@ -18,5 +18,5 @@ class SsoConfiguredEvent(DomainEvent):
             occurred_on=occurred_on or datetime.now(),
             priority=EventPriority.HIGH,
         )
-        self.configured_by_user_id = configured_by_user_id
+        self.configured_by_principal_id = configured_by_principal_id
         self.discovery_url = discovery_url

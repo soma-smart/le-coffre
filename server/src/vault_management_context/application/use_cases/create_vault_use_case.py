@@ -78,7 +78,7 @@ class CreateVaultUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=None,
+            actor_principal_id=None,
             event_data={
                 "setup_id": str(command.setup_id),
                 "nb_shares": command.nb_shares,

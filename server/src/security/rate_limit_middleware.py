@@ -3,8 +3,8 @@
 Two mutually-exclusive principal buckets govern every non-exempt ``/api/*``
 request that has no floor of its own:
 
-- ``user:<id>:api``   , requests with a valid ``access_token`` cookie, or a valid
-  browser-extension bearer token (per-user bucket).
+- ``principal:<id>:api``, requests with a valid ``access_token`` cookie, or a
+  valid bearer token (per-principal bucket).
 - ``ip:<client_ip>:api`` — requests without a valid token (per-IP bucket).
 
 Some routes have a per-IP floor instead of, or on top of, the principal
@@ -20,9 +20,9 @@ The client IP is extracted via :func:`resolve_client_ip`, which honors
 ``app.state.time_provider`` so the middleware never reads a real clock — tests
 use :class:`UtcTimeGateway` directly, no monkeypatching needed.
 
-Principal resolution is inline: if the access-token cookie decodes against
-``app.state.token_gateway``, the request is keyed on ``user:<id>:api``.  Failing
-that, a browser-extension bearer token is resolved against the database, since
+Caller resolution is inline: if the access-token cookie decodes against
+``app.state.token_gateway``, the request is keyed on ``principal:<id>:api``.
+Failing that, a bearer token is resolved against the database, since
 an extension cannot send cookies at all (they are ``SameSite=strict``) and would
 otherwise be stuck in the anonymous bucket, which is unusable behind a NAT.
 Everything else keys on ``ip:<client_ip>:api``.  Keeping this inline avoids a
@@ -32,7 +32,7 @@ that's allowed to read primary-adapter state directly.
 That lookup is the only database access in this middleware, and it happens
 before any bucket has been consulted, on a request that may carry no valid
 credential at all.  Three guards bound it, all in
-``_resolve_bearer_principal``: it runs only on the handful of routes where a
+``_resolve_bearer_caller``: it runs only on the handful of routes where a
 bearer can authenticate (``BEARER_REACHABLE_PATHS``); a token seen working in
 the last minute answers from :class:`BearerPrincipalCache` without any query;
 and a per-IP budget charged *only for lookups that find nothing* stops a caller
@@ -46,7 +46,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
 from typing import Literal
 
 from fastapi import Request
@@ -54,12 +53,12 @@ from starlette.concurrency import run_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from identity_access_management_context.adapters.secondary.sql import SqlExtensionTokenRepository
+from identity_access_management_context.adapters.secondary.sql import SqlTokenCredentialRecordRepository
 from identity_access_management_context.domain.exceptions import (
-    InvalidExtensionTokenError,
+    InvalidTokenCredentialError,
     InvalidTokenException,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
+from identity_access_management_context.domain.value_objects import TokenCredential
 from security.bearer_principal_cache import BearerPrincipalCache
 from security.client_ip import resolve_client_ip
 from security.rate_limiter import InMemoryRateLimiter, RateLimitResult
@@ -69,8 +68,10 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class Principal:
-    kind: Literal["user", "ip"]
+class Caller:
+    """Whose bucket a request is charged to: an authenticated principal's, or its address's."""
+
+    kind: Literal["principal", "ip"]
     id: str
 
 
@@ -150,7 +151,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     # `/api/passwords/` is a prefix because `GET /passwords/{password_id}` is
     # parameterised. It therefore also covers a couple of sibling GETs that a
     # bearer cannot actually reach; erring wide here is cheap, and the miss
-    # budget in _resolve_bearer_principal bounds the difference.
+    # budget in _resolve_bearer_caller bounds the difference.
     #
     # Kept honest by test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes
     # (tests/shared_kernel/authentication), which derives the real set from the
@@ -283,12 +284,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return self._build_429_response(floor_result)
             return await self._respond(request, call_next, floor_result)
 
-        principal = await self._resolve_principal(request, client_ip, path)
-        if principal.kind == "user":
-            principal_key = f"user:{principal.id}:api"
+        caller = await self._resolve_caller(request, client_ip, path)
+        if caller.kind == "principal":
+            principal_key = f"principal:{caller.id}:api"
             principal_limit = user_max
         else:
-            principal_key = f"ip:{principal.id}:api"
+            principal_key = f"ip:{caller.id}:api"
             principal_limit = unauth_max
         principal_result = rate_limiter.check(principal_key, principal_limit, window, now=now)
         if principal_result.is_limited:
@@ -331,7 +332,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     def _is_vault_mutation(self, path: str) -> bool:
         return any(path.startswith(p) for p in self.VAULT_MUTATION_PREFIXES)
 
-    async def _resolve_principal(self, request: Request, client_ip: str, path: str) -> Principal:
+    async def _resolve_caller(self, request: Request, client_ip: str, path: str) -> Caller:
         access_token = request.cookies.get("access_token")
         token_gateway = getattr(request.app.state, "token_gateway", None)
 
@@ -353,7 +354,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
                 token = None
             if token:
-                return Principal(kind="user", id=str(token.user_id))
+                return Caller(kind="principal", id=str(token.principal_id))
 
         # No cookie at all is the EXTENSION's normal case, not an edge one: its
         # requests carry a bearer and never a cookie, because cookies here are
@@ -362,10 +363,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # below unreachable for the only caller it was written for, and left
         # every extension in the shared anonymous bucket. Do not reinstate that
         # early return: it looks free and costs the feature.
-        return await self._resolve_bearer_principal(request, client_ip, path)
+        return await self._resolve_bearer_caller(request, client_ip, path)
 
-    async def _resolve_bearer_principal(self, request: Request, client_ip: str, path: str) -> Principal:
-        """Key a browser-extension caller to its user, not to its IP.
+    async def _resolve_bearer_caller(self, request: Request, client_ip: str, path: str) -> Caller:
+        """Key a bearer caller to its principal, not to its IP.
 
         Without this the extension lands in the 30/min anonymous IP bucket
         instead of the 300/min per-user one, which is unusable behind a
@@ -379,11 +380,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         parsed. See BEARER_REACHABLE_PATHS and the miss budget.
         """
         if not self._is_bearer_reachable(request.method, path):
-            return Principal(kind="ip", id=client_ip)
+            return Caller(kind="ip", id=client_ip)
 
         authorization = request.headers.get("Authorization", "")
         if not authorization.lower().startswith("bearer "):
-            return Principal(kind="ip", id=client_ip)
+            return Caller(kind="ip", id=client_ip)
 
         # The value object owns both the shape of a token and how it hashes.
         # Restating either here is how the two drift: an earlier version of this
@@ -392,13 +393,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # while every extension silently dropped from the per-user bucket into
         # the anonymous IP one, with nothing logged.
         try:
-            secret = ExtensionTokenSecret(value=authorization[7:].strip())
-        except InvalidExtensionTokenError:
+            token = TokenCredential(value=authorization[7:].strip())
+        except InvalidTokenCredentialError:
             # Cheap format gate before any database access, so junk bearers
             # never reach a query. An attacker sending well-formed unknown
             # tokens still falls back to the IP bucket, which caps them at the
             # anonymous limit.
-            return Principal(kind="ip", id=client_ip)
+            return Caller(kind="ip", id=client_ip)
 
         # A miss budget, not a request budget. Consumed only when the lookup
         # comes back empty, so a caller guessing tokens spends it in a few
@@ -406,11 +407,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # to IP keying rather than to a 429: this function decides which bucket
         # to charge, never whether the request is allowed.
         miss_key = f"ip:{client_ip}:bearer-miss"
-        token_hash = secret.hashed()
+        token_hash = token.hash
         try:
             rate_limiter = request.app.state.rate_limiter
             miss_max = request.app.state.rate_limit_bearer_miss_max_requests
-            dormant_after = timedelta(seconds=request.app.state.extension_token_inactivity_seconds)
             window = request.app.state.rate_limit_window_seconds
             time_provider = request.app.state.time_provider
             now = time_provider.get_current_time()
@@ -421,12 +421,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # shared NAT would push every colleague's extension into the
             # anonymous bucket the attacker has just filled, turning the guard
             # into a sharper attack than the one it prevents.
-            cached_user_id = self._bearer_cache.get(token_hash, now)
-            if cached_user_id is not None:
-                return Principal(kind="user", id=cached_user_id)
+            cached_principal_id = self._bearer_cache.get(token_hash, now)
+            if cached_principal_id is not None:
+                return Caller(kind="principal", id=cached_principal_id)
 
             if rate_limiter.is_exhausted(miss_key, miss_max, window, now):
-                return Principal(kind="ip", id=client_ip)
+                return Caller(kind="ip", id=client_ip)
 
             # Off the event loop: this is a synchronous query inside an async
             # dispatch, and with the budget above it is the one place a caller
@@ -436,25 +436,25 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             def lookup():
                 with session_maker() as session:
-                    return SqlExtensionTokenRepository(session).get_by_token_hash(token_hash)
+                    return SqlTokenCredentialRecordRepository(session).get_by_token_hash(token_hash)
 
             token_row = await run_in_threadpool(lookup)
         except Exception:  # noqa: BLE001 - bucket selection must never fail a request
             logger.warning(
-                "Could not resolve an extension token for rate-limit keying; bucketing as anonymous",
+                "Could not resolve a token credential for rate-limit keying; bucketing as anonymous",
                 exc_info=True,
             )
-            return Principal(kind="ip", id=client_ip)
+            return Caller(kind="ip", id=client_ip)
 
-        if token_row is None or not token_row.is_active(now, dormant_after):
+        if token_row is None or not token_row.is_usable(now):
             # The lookup was wasted. Charge it, so a caller producing nothing
             # but misses runs out of budget while a real extension never does.
             rate_limiter.check(miss_key, miss_max, window, now)
-            return Principal(kind="ip", id=client_ip)
+            return Caller(kind="ip", id=client_ip)
 
-        user_id = str(token_row.user_id)
-        self._bearer_cache.put(token_hash, user_id, now)
-        return Principal(kind="user", id=user_id)
+        principal_id = str(token_row.principal_id)
+        self._bearer_cache.put(token_hash, principal_id, now)
+        return Caller(kind="principal", id=principal_id)
 
     @staticmethod
     def _build_429_response(result: RateLimitResult) -> JSONResponse:

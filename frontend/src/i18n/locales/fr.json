@@ -509,9 +509,8 @@
       "disconnectedCount": "{count} extension déconnectée | {count} extensions déconnectées",
       "empty": "Aucune extension de navigateur n'a été connectée à ce compte.",
       "activeTag": "Active",
-      "disconnectedTag": "Déconnectée",
-      "connectedAt": "Connectée le {date}",
-      "fromAddress": "depuis {address}",
+      "expiredTag": "Expirée",
+      "unnamedDevice": "Appareil sans nom",
       "lastUsed": "Dernière utilisation : {date}",
       "expires": "Expire le {date}",
       "passwordChangeNote": "Changer votre mot de passe déconnecte toutes les extensions."

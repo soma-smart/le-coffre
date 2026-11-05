@@ -33,8 +33,8 @@ class RevokeOneTimeLinkUseCase(TracedUseCase):
         # someone leaves a team, loses the ownership that let them issue a link,
         # and must still be able to cut the grant they left behind. Revoking only
         # ever removes access, never grants it, so widening this is safe.
-        if link.created_by_user_id != command.requesting_user_id:
-            self.ownership_service.ensure_user_owns_password(command.requesting_user_id, link.password_id)
+        if link.created_by_principal_id != command.requesting_principal_id:
+            self.ownership_service.ensure_principal_owns_password(command.requesting_principal_id, link.password_id)
 
         now = self.time_gateway.get_current_time()
         if not self.one_time_link_repository.revoke(command.link_id, now):
@@ -47,6 +47,6 @@ class RevokeOneTimeLinkUseCase(TracedUseCase):
             extra={
                 "password_id": str(link.password_id),
                 "link_id": str(link.id),
-                "by_user_id": str(command.requesting_user_id),
+                "by_principal_id": str(command.requesting_principal_id),
             },
         )

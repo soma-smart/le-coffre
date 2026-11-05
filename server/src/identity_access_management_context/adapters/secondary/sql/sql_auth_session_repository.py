@@ -14,9 +14,9 @@ class SqlAuthSessionRepository(SQLBaseRepository, AuthSessionRepository):
     def __init__(self, session: Session):
         super().__init__(session)
 
-    def create_session(self, user_id: UUID, refresh_token_jti: str, created_at: datetime) -> AuthSession:
+    def create_session(self, principal_id: UUID, refresh_token_jti: str, created_at: datetime) -> AuthSession:
         db_obj = AuthSessionTable(
-            user_id=user_id,
+            principal_id=principal_id,
             current_refresh_token_jti=refresh_token_jti,
             created_at=created_at,
             updated_at=created_at,
@@ -26,9 +26,11 @@ class SqlAuthSessionRepository(SQLBaseRepository, AuthSessionRepository):
         self.commit_and_refresh(db_obj)
         return self._to_entity(db_obj)
 
-    def get_active_by_user_id_and_refresh_jti(self, user_id: UUID, refresh_token_jti: str) -> AuthSession | None:
+    def get_active_by_principal_id_and_refresh_jti(
+        self, principal_id: UUID, refresh_token_jti: str
+    ) -> AuthSession | None:
         statement = select(AuthSessionTable).where(
-            AuthSessionTable.user_id == user_id,
+            AuthSessionTable.principal_id == principal_id,
             AuthSessionTable.current_refresh_token_jti == refresh_token_jti,
             AuthSessionTable.invalidated_at.is_(None),
         )
@@ -57,11 +59,11 @@ class SqlAuthSessionRepository(SQLBaseRepository, AuthSessionRepository):
         self.commit()
         return cast(Any, result).rowcount > 0
 
-    def invalidate_by_user_id_and_refresh_jti(
-        self, user_id: UUID, refresh_token_jti: str, invalidated_at: datetime
+    def invalidate_by_principal_id_and_refresh_jti(
+        self, principal_id: UUID, refresh_token_jti: str, invalidated_at: datetime
     ) -> None:
         statement = select(AuthSessionTable).where(
-            AuthSessionTable.user_id == user_id,
+            AuthSessionTable.principal_id == principal_id,
             AuthSessionTable.current_refresh_token_jti == refresh_token_jti,
             AuthSessionTable.invalidated_at.is_(None),
         )
@@ -74,9 +76,9 @@ class SqlAuthSessionRepository(SQLBaseRepository, AuthSessionRepository):
         self._session.add(row)
         self.commit_and_refresh(row)
 
-    def invalidate_all_for_user(self, user_id: UUID, invalidated_at: datetime) -> None:
+    def invalidate_all_for_principal(self, principal_id: UUID, invalidated_at: datetime) -> None:
         statement = select(AuthSessionTable).where(
-            AuthSessionTable.user_id == user_id,
+            AuthSessionTable.principal_id == principal_id,
             AuthSessionTable.invalidated_at.is_(None),
         )
         rows = self._session.exec(statement).all()
@@ -100,7 +102,7 @@ class SqlAuthSessionRepository(SQLBaseRepository, AuthSessionRepository):
     def _to_entity(self, table: AuthSessionTable) -> AuthSession:
         return AuthSession(
             id=table.id,
-            user_id=table.user_id,
+            principal_id=table.principal_id,
             current_refresh_token_jti=table.current_refresh_token_jti,
             created_at=self._normalize_datetime(table.created_at),
             updated_at=self._normalize_datetime(table.updated_at),

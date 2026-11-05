@@ -20,7 +20,7 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
             id=group.id,
             name=group.name,
             is_personal=True,
-            user_id=group.user_id,
+            principal_id=group.principal_id,
         )
         self._session.add(group_table)
         self.commit()
@@ -39,21 +39,21 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
                 id=result.id,
                 name=result.name,
                 is_personal=result.is_personal,
-                user_id=result.user_id,
+                principal_id=result.principal_id,
             )
             for result in results
         ]
 
-    def get_by_user_id(self, user_id: UUID) -> PersonalGroup | None:
+    def get_by_principal_id(self, principal_id: UUID) -> PersonalGroup | None:
         """Get a personal group by user ID."""
-        statement = select(GroupTable).where(GroupTable.user_id == user_id, GroupTable.is_personal)
+        statement = select(GroupTable).where(GroupTable.principal_id == principal_id, GroupTable.is_personal)
         result = self._session.exec(statement).first()
         if result is None:
             return None
         return PersonalGroup(
             id=result.id,
             name=result.name,
-            user_id=result.user_id,  # type: ignore
+            principal_id=result.principal_id,  # type: ignore
         )
 
     def save_group(self, group: Group) -> None:
@@ -62,7 +62,7 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
             id=group.id,
             name=group.name,
             is_personal=group.is_personal,
-            user_id=group.user_id,
+            principal_id=group.principal_id,
         )
         self._session.merge(group_table)
         self.commit()
@@ -77,7 +77,7 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
             id=result.id,
             name=result.name,
             is_personal=result.is_personal,
-            user_id=result.user_id,
+            principal_id=result.principal_id,
         )
 
     def delete_group(self, group_id: UUID) -> None:
@@ -98,5 +98,5 @@ class SqlGroupRepository(SQLBaseRepository, GroupRepository):
             id=result.id,
             name=result.name,
             is_personal=result.is_personal,
-            user_id=result.user_id,
+            principal_id=result.principal_id,
         )
