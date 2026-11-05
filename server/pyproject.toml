@@ -20,7 +20,7 @@ dependencies = [
 [dependency-groups]
 dev = [
   "oidc-provider-mock>=0.4.8",
-  "pytest>=9.1.1",
+  "pytest>=9.2.0",
   "pytest-asyncio>=1.4.1",
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
