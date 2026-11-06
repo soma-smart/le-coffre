@@ -119,7 +119,7 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v5
         with:
-          version: v3.17.3
+          version: v3.22.1
 
       - name: Lint chart
         run: helm lint ./helm/le-coffre -f ./helm/le-coffre/values-ci.yaml
