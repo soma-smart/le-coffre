@@ -22,7 +22,7 @@ COPY . ./
 # =============================================================================
 # Stage 2: Production Image
 # =============================================================================
-FROM python:3.13-slim
+FROM python:3.15-slim
 
 # Apply latest security patches, then install runtime dependencies
 RUN apt-get update \
