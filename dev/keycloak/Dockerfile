@@ -5,5 +5,5 @@
 # docker-outside-of-docker: a relative bind mount would be resolved against the
 # host daemon, which has no /app/... path, but a build context is streamed to
 # the daemon and therefore works from either location.
-FROM quay.io/keycloak/keycloak:26.0
+FROM quay.io/keycloak/keycloak:26.8
 COPY lecoffre-realm.json /opt/keycloak/data/import/lecoffre-realm.json
