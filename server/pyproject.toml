@@ -34,7 +34,7 @@ monitoring = [
     "opentelemetry-exporter-otlp-proto-http>=1.45.1",
     "opentelemetry-sdk>=1.45.1",
 ]
-sqlite = ["sqlite-utils==3.39.1"]
+sqlite = ["sqlite-utils==4.2.1"]
 postgres = ["psycopg2==2.9.13", "psycopg[binary]==3.3.6"]
 
 [tool.uv]

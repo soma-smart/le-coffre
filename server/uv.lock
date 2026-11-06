@@ -1069,7 +1069,7 @@ postgres = [
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.6" },
     { name = "psycopg2", specifier = "==2.9.13" },
 ]
-sqlite = [{ name = "sqlite-utils", specifier = "==3.39.1" }]
+sqlite = [{ name = "sqlite-utils", specifier = "==4.2.1" }]
 
 [[package]]
 name = "mako"
@@ -2142,7 +2142,7 @@ wheels = [
 
 [[package]]
 name = "sqlite-utils"
-version = "3.39.1"
+version = "4.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -2153,9 +2153,9 @@ dependencies = [
     { name = "sqlite-fts4" },
     { name = "tabulate" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/35/0b/8e1768d0bb5ccfff7702fc6b46453a3505e27ef584ed96ac087dd6ba556d/sqlite_utils-3.39.1.tar.gz", hash = "sha256:b2f9da6b374e6aeb7ae070e99762cf6c4ab393016f376a8419104dd76fed69ac", size = 215518, upload-time = "2026-07-26T04:41:19.639Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/6b/4a7b3d20c92e6c7acedc96ef620df8e1ea8f94a26a41ab788c1c08055815/sqlite_utils-4.2.1.tar.gz", hash = "sha256:76114b6a5414714e6c70e5fa5c4781b301b590f6951b5da39c8cc60c21382ba1", size = 311722, upload-time = "2026-08-13T23:59:17.848Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/12/c5/e5316c4de7fb4a74bdd1add3711ffe97946f4535ff84c145aa7cef2fa986/sqlite_utils-3.39.1-py3-none-any.whl", hash = "sha256:33a9ebc4d9084394e1c513cb6fd95f18b83aa18bf0d3ba9dac4557a57e6ca5cf", size = 68489, upload-time = "2026-07-26T04:41:18.265Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/d0/a20b9ea8686ea14f171582f3ce9f9b40b8fbb858fea744896191c09f2c2f/sqlite_utils-4.2.1-py3-none-any.whl", hash = "sha256:7fbaee670713b25eceba05779b844f0895efaf680d9a226fa5ba7dfe165721c5", size = 99482, upload-time = "2026-08-13T23:59:16.796Z" },
 ]
 
 [[package]]
