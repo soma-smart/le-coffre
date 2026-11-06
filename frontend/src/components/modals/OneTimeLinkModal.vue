@@ -39,6 +39,9 @@ const lifetimeOptions = computed(() => [
 ])
 
 const lifetimeSeconds = ref(86400)
+// Both off by default: being emailed is an explicit choice, made per link.
+const notifyOnRead = ref(false)
+const notifyOnExpiry = ref(false)
 const links = ref<OneTimeLink[]>([])
 const totalLinks = ref(0)
 const hiddenLinks = ref(0)
@@ -49,6 +52,8 @@ const showHistory = ref(false)
 const generatedUrl = ref<string | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
+// Set when the link was created but its email notifications could not be registered.
+const notificationsFailed = ref(false)
 const copied = ref(false)
 
 const isVisible = computed({
@@ -64,7 +69,10 @@ watch(
       // component state after the dialog closes.
       generatedUrl.value = null
       error.value = null
+      notificationsFailed.value = false
       showHistory.value = false
+      notifyOnRead.value = false
+      notifyOnExpiry.value = false
       return
     }
     await refreshLinks()
@@ -97,12 +105,16 @@ async function generate() {
   if (!props.password || loading.value) return
   loading.value = true
   error.value = null
+  notificationsFailed.value = false
   try {
     const created = await oneTimeLinks.create.execute({
       passwordId: props.password.id,
       lifetimeSeconds: lifetimeSeconds.value,
+      notifyOnRead: notifyOnRead.value,
+      notifyOnExpiry: notifyOnExpiry.value,
     })
     generatedUrl.value = buildOneTimeLinkUrl(window.location.origin, created.token)
+    notificationsFailed.value = created.subscriptionFailed
     await refreshLinks()
   } catch (err) {
     error.value =
@@ -207,32 +219,67 @@ function severityFor(link: OneTimeLink) {
       {{ t('components.oneTimeLinkModal.capReached', { max: maxActiveLinks }) }}
     </Message>
 
-    <div v-if="!generatedUrl" class="flex gap-2 items-end mb-4">
-      <div class="grow">
-        <label class="block mb-1 text-sm">{{
-          t('components.oneTimeLinkModal.validForLabel')
-        }}</label>
-        <Select
-          v-model="lifetimeSeconds"
-          :options="lifetimeOptions"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full"
+    <div v-if="!generatedUrl" class="mb-4">
+      <div class="flex gap-2 items-end">
+        <div class="grow">
+          <label class="block mb-1 text-sm">{{
+            t('components.oneTimeLinkModal.validForLabel')
+          }}</label>
+          <Select
+            v-model="lifetimeSeconds"
+            :options="lifetimeOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+          />
+        </div>
+        <Button
+          :label="t('components.oneTimeLinkModal.generateButton')"
+          icon="pi pi-link"
+          :loading="loading"
+          :disabled="!canIssue"
+          data-testid="generate-link"
+          @click="generate"
         />
       </div>
-      <Button
-        :label="t('components.oneTimeLinkModal.generateButton')"
-        icon="pi pi-link"
-        :loading="loading"
-        :disabled="!canIssue"
-        data-testid="generate-link"
-        @click="generate"
-      />
+      <div class="flex flex-col gap-2 mt-3">
+        <div class="flex gap-2 items-center">
+          <Checkbox
+            v-model="notifyOnRead"
+            inputId="otl-notify-on-read"
+            binary
+            data-testid="notify-on-read"
+          />
+          <label for="otl-notify-on-read" class="text-sm cursor-pointer">{{
+            t('components.oneTimeLinkModal.notifyOnReadLabel')
+          }}</label>
+        </div>
+        <div class="flex gap-2 items-center">
+          <Checkbox
+            v-model="notifyOnExpiry"
+            inputId="otl-notify-on-expiry"
+            binary
+            data-testid="notify-on-expiry"
+          />
+          <label for="otl-notify-on-expiry" class="text-sm cursor-pointer">{{
+            t('components.oneTimeLinkModal.notifyOnExpiryLabel')
+          }}</label>
+        </div>
+      </div>
     </div>
 
     <div v-else class="mb-4" data-testid="generated-url">
       <Message severity="success" :closable="false" class="mb-2">
         {{ t('components.oneTimeLinkModal.copyOnceWarning') }}
+      </Message>
+      <Message
+        v-if="notificationsFailed"
+        severity="warn"
+        :closable="false"
+        class="mb-2"
+        data-testid="notifications-failed"
+      >
+        {{ t('components.oneTimeLinkModal.notificationsFailed') }}
       </Message>
       <!-- The URL is only ever copied, never read: the token is opaque noise. So
            it stays on one truncated line, which keeps the copy button beside it at

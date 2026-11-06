@@ -5,6 +5,8 @@ from tests.shared_kernel.fakes import FakeEmailGateway
 from .fakes import (
     FakeGroupOwnershipGateway,
     FakeNotificationPreferencesRepository,
+    FakeOneTimeLinkGateway,
+    FakeOneTimeLinkSubscriptionRepository,
     FakeRecipientGateway,
     FakeUserContactGateway,
 )
@@ -38,3 +40,13 @@ def preferences_repository():
 @pytest.fixture
 def recipient_gateway():
     return FakeRecipientGateway()
+
+
+@pytest.fixture
+def subscription_repository():
+    return FakeOneTimeLinkSubscriptionRepository()
+
+
+@pytest.fixture
+def one_time_link_gateway():
+    return FakeOneTimeLinkGateway()

@@ -15,7 +15,7 @@ from identity_access_management_context.adapters.secondary.sql import (
     UserTable,
 )
 from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
-from notification_context.adapters.secondary.sql import NotificationPreferenceTable
+from notification_context.adapters.secondary.sql import NotificationPreferenceTable, OneTimeLinkSubscriptionTable
 from password_management_context.adapters.secondary.sql import (
     OneTimeLinkTable,
     OwnershipTable,
@@ -41,6 +41,7 @@ _ = (
     OneTimeLinkTable,
     VaultTable,
     NotificationPreferenceTable,
+    OneTimeLinkSubscriptionTable,
     VaultEventTable,
     IamEventTable,
     ServiceAccountTable,

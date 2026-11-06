@@ -11,8 +11,10 @@ import type { StatisticsGateway } from '@/application/ports/StatisticsGateway'
 import type { UserRepository } from '@/application/ports/UserRepository'
 import type { VaultRepository } from '@/application/ports/VaultRepository'
 import type { NotificationPreferencesRepository } from '@/application/ports/NotificationPreferencesRepository'
+import type { OneTimeLinkSubscriptionRepository } from '@/application/ports/OneTimeLinkSubscriptionRepository'
 import { GetNotificationPreferencesUseCase } from '@/application/notification/GetNotificationPreferences'
 import { UpdateNotificationPreferencesUseCase } from '@/application/notification/UpdateNotificationPreferences'
+import { SubscribeToOneTimeLinkUseCase } from '@/application/notification/SubscribeToOneTimeLink'
 import { GetAdminStatisticsUseCase } from '@/application/statistics/GetAdminStatistics'
 import { ConfigureSsoProviderUseCase } from '@/application/auth/ConfigureSsoProvider'
 import { ConsumeLoginRedirectUseCase } from '@/application/auth/ConsumeLoginRedirect'
@@ -106,6 +108,7 @@ export interface Ports {
   extensionGateway: ExtensionGateway
   loginRedirectGateway: LoginRedirectGateway
   notificationPreferencesRepository: NotificationPreferencesRepository
+  oneTimeLinkSubscriptionRepository: OneTimeLinkSubscriptionRepository
 }
 
 export interface Container {
@@ -205,6 +208,7 @@ export interface Container {
   notifications: {
     getPreferences: GetNotificationPreferencesUseCase
     updatePreferences: UpdateNotificationPreferencesUseCase
+    subscribeToOneTimeLink: SubscribeToOneTimeLinkUseCase
   }
 }
 
@@ -288,7 +292,10 @@ export function buildContainer(ports: Ports): Container {
       get: new GetAdminStatisticsUseCase(ports.statisticsGateway),
     },
     oneTimeLinks: {
-      create: new CreateOneTimeLinkUseCase(ports.oneTimeLinkRepository),
+      create: new CreateOneTimeLinkUseCase(
+        ports.oneTimeLinkRepository,
+        ports.oneTimeLinkSubscriptionRepository,
+      ),
       list: new ListOneTimeLinksUseCase(ports.oneTimeLinkRepository),
       revoke: new RevokeOneTimeLinkUseCase(ports.oneTimeLinkRepository),
       consume: new ConsumeOneTimeLinkUseCase(ports.oneTimeLinkRepository),
@@ -309,6 +316,9 @@ export function buildContainer(ports: Ports): Container {
       ),
       updatePreferences: new UpdateNotificationPreferencesUseCase(
         ports.notificationPreferencesRepository,
+      ),
+      subscribeToOneTimeLink: new SubscribeToOneTimeLinkUseCase(
+        ports.oneTimeLinkSubscriptionRepository,
       ),
     },
   }

@@ -5,6 +5,7 @@ import OneTimeLinkModal from '@/components/modals/OneTimeLinkModal.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryOneTimeLinkRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkRepository'
+import { InMemoryOneTimeLinkSubscriptionRepository } from '@/infrastructure/in_memory/InMemoryOneTimeLinkSubscriptionRepository'
 import type { Password } from '@/domain/password/Password'
 import type { OneTimeLink } from '@/domain/oneTimeLink/OneTimeLink'
 import i18n from '@/i18n'
@@ -61,8 +62,14 @@ const ConfirmationStub = defineComponent({
   },
 })
 
-function mountModal(repo: InMemoryOneTimeLinkRepository) {
-  const { pinia, container } = createTestContext({ oneTimeLinkRepository: repo })
+function mountModal(
+  repo: InMemoryOneTimeLinkRepository,
+  subscriptions = new InMemoryOneTimeLinkSubscriptionRepository(),
+) {
+  const { pinia, container } = createTestContext({
+    oneTimeLinkRepository: repo,
+    oneTimeLinkSubscriptionRepository: subscriptions,
+  })
   return mount(OneTimeLinkModal, {
     props: { visible: false, password },
     global: {
@@ -73,8 +80,11 @@ function mountModal(repo: InMemoryOneTimeLinkRepository) {
   })
 }
 
-async function openModal(repo: InMemoryOneTimeLinkRepository) {
-  const wrapper = mountModal(repo)
+async function openModal(
+  repo: InMemoryOneTimeLinkRepository,
+  subscriptions?: InMemoryOneTimeLinkSubscriptionRepository,
+) {
+  const wrapper = mountModal(repo, subscriptions)
   // The list only loads when the dialog opens, mirroring production.
   await wrapper.setProps({ visible: true })
   await flushPromises()
@@ -108,5 +118,103 @@ describe('OneTimeLinkModal', () => {
     await wrapper.find('[data-testid="confirm-yes"]').trigger('click')
     await flushPromises()
     expect(revokeSpy).toHaveBeenCalledWith('live')
+  })
+
+  describe('notification options', () => {
+    const readBox = (wrapper: ReturnType<typeof mountModal>) =>
+      wrapper.find<HTMLInputElement>('#otl-notify-on-read')
+    const expiryBox = (wrapper: ReturnType<typeof mountModal>) =>
+      wrapper.find<HTMLInputElement>('#otl-notify-on-expiry')
+    const generate = async (wrapper: ReturnType<typeof mountModal>) => {
+      await wrapper.find('[data-testid="generate-link"]').trigger('click')
+      await flushPromises()
+    }
+
+    const openWithSubscriptions = async () => {
+      const repo = new InMemoryOneTimeLinkRepository().useIdGenerator(() => 'link-1')
+      const subscriptions = new InMemoryOneTimeLinkSubscriptionRepository()
+      const wrapper = await openModal(repo, subscriptions)
+      return { repo, subscriptions, wrapper }
+    }
+
+    it('offers both options, unchecked by default, with their labels', async () => {
+      const wrapper = await openModal(new InMemoryOneTimeLinkRepository())
+
+      expect(readBox(wrapper).exists()).toBe(true)
+      expect(expiryBox(wrapper).exists()).toBe(true)
+      expect(readBox(wrapper).element.checked).toBe(false)
+      expect(expiryBox(wrapper).element.checked).toBe(false)
+      expect(wrapper.text()).toContain(t('components.oneTimeLinkModal.notifyOnReadLabel'))
+      expect(wrapper.text()).toContain(t('components.oneTimeLinkModal.notifyOnExpiryLabel'))
+    })
+
+    it('creates a link that notifies nobody when left untouched', async () => {
+      const { repo, subscriptions, wrapper } = await openWithSubscriptions()
+      const createSpy = vi.spyOn(repo, 'create')
+      const subscribeSpy = vi.spyOn(subscriptions, 'subscribeToOneTimeLink')
+
+      await generate(wrapper)
+
+      expect(createSpy).toHaveBeenCalledWith('pwd-1', 86400)
+      expect(subscribeSpy).not.toHaveBeenCalled()
+      expect(wrapper.find('[data-testid="generated-url"]').exists()).toBe(true)
+    })
+
+    it('subscribes the created link to the chosen notification', async () => {
+      const { subscriptions, wrapper } = await openWithSubscriptions()
+      const subscribeSpy = vi.spyOn(subscriptions, 'subscribeToOneTimeLink')
+
+      await readBox(wrapper).setValue(true)
+      await generate(wrapper)
+
+      expect(subscribeSpy).toHaveBeenCalledTimes(1)
+      expect(subscribeSpy).toHaveBeenLastCalledWith('link-1', {
+        notifyOnRead: true,
+        notifyOnExpiry: false,
+      })
+    })
+
+    it('subscribes to both notifications when both are checked', async () => {
+      const { subscriptions, wrapper } = await openWithSubscriptions()
+      const subscribeSpy = vi.spyOn(subscriptions, 'subscribeToOneTimeLink')
+
+      await readBox(wrapper).setValue(true)
+      await expiryBox(wrapper).setValue(true)
+      await generate(wrapper)
+
+      expect(subscribeSpy).toHaveBeenLastCalledWith('link-1', {
+        notifyOnRead: true,
+        notifyOnExpiry: true,
+      })
+      expect(wrapper.find('[data-testid="notifications-failed"]').exists()).toBe(false)
+    })
+
+    it('keeps the link and warns when the notifications could not be set up', async () => {
+      const { subscriptions, wrapper } = await openWithSubscriptions()
+      subscriptions.failSubscribeOnce(new Error('boom'))
+
+      await expiryBox(wrapper).setValue(true)
+      await generate(wrapper)
+
+      expect(wrapper.find('[data-testid="generated-url"]').exists()).toBe(true)
+      expect(wrapper.find('code').text()).toContain('/')
+      expect(wrapper.find('[data-testid="notifications-failed"]').text()).toContain(
+        t('components.oneTimeLinkModal.notificationsFailed'),
+      )
+    })
+
+    it('resets both choices when the dialog is closed', async () => {
+      const wrapper = await openModal(new InMemoryOneTimeLinkRepository())
+      await readBox(wrapper).setValue(true)
+      await expiryBox(wrapper).setValue(true)
+      expect(readBox(wrapper).element.checked).toBe(true)
+
+      await wrapper.setProps({ visible: false })
+      await wrapper.setProps({ visible: true })
+      await flushPromises()
+
+      expect(readBox(wrapper).element.checked).toBe(false)
+      expect(expiryBox(wrapper).element.checked).toBe(false)
+    })
   })
 })

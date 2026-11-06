@@ -96,6 +96,7 @@ def consume_use_case(
     password_vault_access_gateway,
     password_event_repository,
     time_gateway,
+    domain_event_publisher,
 ):
     return ConsumeOneTimeLinkUseCase(
         one_time_link_repository,
@@ -104,6 +105,7 @@ def consume_use_case(
         password_vault_access_gateway,
         password_event_repository,
         time_gateway,
+        domain_event_publisher,
     )
 
 
