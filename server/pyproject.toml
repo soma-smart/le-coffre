@@ -35,7 +35,7 @@ monitoring = [
     "opentelemetry-sdk>=1.45.1",
 ]
 sqlite = ["sqlite-utils==3.39.1"]
-postgres = ["psycopg2==2.9.13", "psycopg[binary]==3.3.6"]
+postgres = ["psycopg2==2.9.13", "psycopg[binary]==3.3.8"]
 
 [tool.uv]
 # Pin urllib3, a transitive dependency of both `requests` and `sentry-sdk`
