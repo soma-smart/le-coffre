@@ -60,7 +60,10 @@ from identity_access_management_context.application.gateways import (
     UserEventRepository,
     UserRepository,
 )
-from identity_access_management_context.application.services import ServiceAccountPermissionService
+from identity_access_management_context.application.services import (
+    ServiceAccountPermissionService,
+    ServiceAccountRevocationService,
+)
 from identity_access_management_context.application.services.authentication import (
     PasswordAuthenticator,
     SSOAuthenticator,
@@ -280,6 +283,24 @@ def get_sso_encryption_gateway(request: Request) -> SsoEncryptionGateway:
     return request.app.state.sso_encryption_gateway
 
 
+def get_service_account_revocation_service(
+    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
+    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
+    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
+        get_token_credential_record_repository
+    ),
+    event_publisher: DomainEventPublisher = Depends(get_event_publisher),
+    time_provider: TimeGateway = Depends(get_time_provider),
+) -> ServiceAccountRevocationService:
+    return ServiceAccountRevocationService(
+        service_account_repository,
+        service_account_event_repository,
+        token_credential_record_repository,
+        event_publisher,
+        time_provider,
+    )
+
+
 # User Management Use Cases
 def get_get_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
@@ -300,6 +321,9 @@ def get_delete_user_usecase(
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
     time_provider: TimeGateway = Depends(get_time_provider),
     auth_session_repository: AuthSessionRepository = Depends(get_auth_session_repository),
+    service_account_revocation_service: ServiceAccountRevocationService = Depends(
+        get_service_account_revocation_service
+    ),
 ):
     return DeleteUserUseCase(
         user_repository,
@@ -312,6 +336,7 @@ def get_delete_user_usecase(
         admin_event_repository,
         time_provider,
         auth_session_repository,
+        service_account_revocation_service,
     )
 
 
@@ -325,10 +350,15 @@ def get_promote_admin_usecase(
 
 def get_update_user_usecase(
     user_repository: UserRepository = Depends(get_user_repository),
+    password_credential_record_repository: PasswordCredentialRecordRepository = Depends(
+        get_password_credential_record_repository
+    ),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     user_event_repository: UserEventRepository = Depends(get_user_event_repository),
 ):
-    return UpdateUserUseCase(user_repository, event_publisher, user_event_repository)
+    return UpdateUserUseCase(
+        user_repository, password_credential_record_repository, event_publisher, user_event_repository
+    )
 
 
 def get_update_user_password_usecase(
@@ -728,12 +758,9 @@ def get_delete_group_usecase(
     group_usage_gateway: GroupUsageGateway = Depends(get_group_usage_gateway),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     group_event_repository: GroupEventRepository = Depends(get_group_event_repository),
-    service_account_repository: ServiceAccountRepository = Depends(get_service_account_repository),
-    service_account_event_repository: ServiceAccountEventRepository = Depends(get_service_account_event_repository),
-    token_credential_record_repository: TokenCredentialRecordRepository = Depends(
-        get_token_credential_record_repository
+    service_account_revocation_service: ServiceAccountRevocationService = Depends(
+        get_service_account_revocation_service
     ),
-    time_provider: TimeGateway = Depends(get_time_provider),
 ):
     return DeleteGroupUseCase(
         group_repository,
@@ -741,10 +768,7 @@ def get_delete_group_usecase(
         group_usage_gateway,
         event_publisher,
         group_event_repository,
-        service_account_repository,
-        service_account_event_repository,
-        token_credential_record_repository,
-        time_provider,
+        service_account_revocation_service,
     )
 
 

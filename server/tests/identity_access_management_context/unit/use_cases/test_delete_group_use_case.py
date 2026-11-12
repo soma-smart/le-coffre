@@ -37,9 +37,7 @@ def use_case(
     group_usage_gateway: GroupUsageGateway,
     event_publisher,
     group_event_repository,
-    service_account_repository,
-    service_account_event_repository,
-    token_credential_record_repository,
+    service_account_revocation_service,
     time_provider,
 ):
     time_provider.set_current_time(NOW)
@@ -49,10 +47,7 @@ def use_case(
         group_usage_gateway=group_usage_gateway,
         event_publisher=event_publisher,
         group_event_repository=group_event_repository,
-        service_account_repository=service_account_repository,
-        service_account_event_repository=service_account_event_repository,
-        token_credential_record_repository=token_credential_record_repository,
-        time_provider=time_provider,
+        service_account_revocation_service=service_account_revocation_service,
     )
 
 

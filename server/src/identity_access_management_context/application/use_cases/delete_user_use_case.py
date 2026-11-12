@@ -14,6 +14,7 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.application.services import (
     REVOCATION_REASON_USER_DELETED,
     ExtensionRevocationRecordingService,
+    ServiceAccountRevocationService,
 )
 from identity_access_management_context.domain.events import UserDeletedEvent
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
@@ -36,6 +37,7 @@ class DeleteUserUseCase(TracedUseCase):
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
         auth_session_repository: AuthSessionRepository,
+        service_account_revocation_service: ServiceAccountRevocationService,
     ):
         self.user_repository = user_repository
         self.group_repository = group_repository
@@ -47,6 +49,7 @@ class DeleteUserUseCase(TracedUseCase):
         self._admin_event_repository = admin_event_repository
         self._time_provider = time_provider
         self._auth_session_repository = auth_session_repository
+        self._service_account_revocation_service = service_account_revocation_service
 
     def execute(self, command: DeleteUserCommand) -> None:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
@@ -89,17 +92,23 @@ class DeleteUserUseCase(TracedUseCase):
         personal_group = self.group_repository.get_by_principal_id(user_id)
         personal_group_id = personal_group.id if personal_group else None
 
-        # Delete groups where user is the sole owner (excluding personal group)
-        all_groups = self.group_repository.get_all()
-        for group in all_groups:
-            if group.is_personal:
-                continue
+        orphaned_groups = [
+            group
+            for group in self.group_repository.get_all()
+            if not group.is_personal
+            and self.group_member_repository.is_owner(group.id, user_id)
+            and self.group_member_repository.count_owners(group.id) == 1
+        ]
 
-            if self.group_member_repository.is_owner(group.id, user_id):
-                owner_count = self.group_member_repository.count_owners(group.id)
-                if owner_count == 1:
-                    self.group_member_repository.delete_by_group_id(group.id)
-                    self.group_repository.delete_group(group.id)
+        # Revoke the service accounts of every group about to go
+        doomed_group_ids = [group.id for group in orphaned_groups]
+        if personal_group_id is not None:
+            doomed_group_ids.append(personal_group_id)
+        self._service_account_revocation_service.revoke_for_groups(doomed_group_ids, command.requesting_user.user_id)
+
+        for group in orphaned_groups:
+            self.group_member_repository.delete_by_group_id(group.id)
+            self.group_repository.delete_group(group.id)
 
         # Remove user from all remaining groups (including as owner/member) in one operation
         self.group_member_repository.remove_principal_from_all_groups(user_id)

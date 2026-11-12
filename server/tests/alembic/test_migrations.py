@@ -413,10 +413,14 @@ def test_credentials_downgrade_restores_a_hash_for_every_service_account(alembic
     database_url, _ = temp_database
     revoked_id, multi_id, single_id = uuid4(), uuid4(), uuid4()
     hashes = {multi_id: ["b" * 64, "a" * 64], single_id: ["c" * 64]}
+    group_id = uuid4()
 
     command.upgrade(alembic_config, CREDENTIALS_REVISION)
     engine = create_engine(database_url)
     with engine.begin() as conn:
+        conn.execute(
+            text("""INSERT INTO "Group" (id, name, is_personal) VALUES (:id, 'Team', 0)"""), {"id": group_id.hex}
+        )
         for principal_id, revoked_at in ((revoked_id, "2026-01-01 12:00:00"), (multi_id, None), (single_id, None)):
             conn.execute(
                 text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'service_account')"), {"id": principal_id.hex}
@@ -426,7 +430,7 @@ def test_credentials_downgrade_restores_a_hash_for_every_service_account(alembic
                     "INSERT INTO iam__principal__service_account (principal_id, group_id, name, revoked_at) "
                     "VALUES (:id, :group_id, 'nightly-backup', :revoked_at)"
                 ),
-                {"id": principal_id.hex, "group_id": uuid4().hex, "revoked_at": revoked_at},
+                {"id": principal_id.hex, "group_id": group_id.hex, "revoked_at": revoked_at},
             )
             for token_hash in hashes.get(principal_id, []):
                 credential_id = uuid4()
@@ -799,3 +803,56 @@ def test_unique_email_migration_then_refuses_a_second_user_with_the_same_email(a
 
     with pytest.raises(IntegrityError):
         _insert_users(database_url, ["alice@example.com"])
+
+
+ORPHANED_ACCOUNTS_REVISION = "9c4e1a7b3d52"
+"""Revision revoking the service accounts whose group was deleted without them."""
+
+
+def test_orphaned_accounts_migration_revokes_only_accounts_whose_group_is_gone(alembic_config, temp_database):
+    """An account of a deleted group loses its token and is revoked; one of a live group is untouched."""
+    database_url, _ = temp_database
+    live_group_id, gone_group_id = uuid4(), uuid4()
+    live_id, orphan_id = uuid4(), uuid4()
+
+    command.upgrade(alembic_config, UNIQUE_EMAIL_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("""INSERT INTO "Group" (id, name, is_personal) VALUES (:id, 'CI-Prod', 0)"""),
+            {"id": live_group_id.hex},
+        )
+        for principal_id, group_id in ((live_id, live_group_id), (orphan_id, gone_group_id)):
+            credential_id = uuid4()
+            conn.execute(
+                text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'service_account')"), {"id": principal_id.hex}
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__principal__service_account (principal_id, group_id, name, revoked_at) "
+                    "VALUES (:id, :group_id, 'deploy', NULL)"
+                ),
+                {"id": principal_id.hex, "group_id": group_id.hex},
+            )
+            conn.execute(
+                text("INSERT INTO iam__credential (id, kind, principal_id) VALUES (:id, 'token', :principal_id)"),
+                {"id": credential_id.hex, "principal_id": principal_id.hex},
+            )
+            conn.execute(
+                text("INSERT INTO iam__credential__token (credential_id, token_hash) VALUES (:id, :hash)"),
+                {"id": credential_id.hex, "hash": f"hash-{principal_id.hex}"},
+            )
+    engine.dispose()
+
+    command.upgrade(alembic_config, ORPHANED_ACCOUNTS_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        registered = conn.execute(text("SELECT principal_id FROM iam__credential")).scalars().all()
+        hashes = conn.execute(text("SELECT token_hash FROM iam__credential__token")).scalars().all()
+        revoked = dict(conn.execute(text("SELECT principal_id, revoked_at FROM iam__principal__service_account")).all())
+    engine.dispose()
+
+    assert registered == [live_id.hex]
+    assert hashes == [f"hash-{live_id.hex}"]
+    assert revoked[live_id.hex] is None
+    assert revoked[orphan_id.hex] is not None, "the orphaned account must be revoked, its row kept"

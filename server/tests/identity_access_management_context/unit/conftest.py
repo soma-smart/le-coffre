@@ -3,7 +3,10 @@ from uuid import UUID
 import pytest
 
 from identity_access_management_context.application.gateways import SsoUserInfo
-from identity_access_management_context.application.services import ServiceAccountPermissionService
+from identity_access_management_context.application.services import (
+    ServiceAccountPermissionService,
+    ServiceAccountRevocationService,
+)
 from identity_access_management_context.application.services.authentication import (
     PasswordAuthenticator,
     SSOAuthenticator,
@@ -205,6 +208,23 @@ def service_account_event_repository():
 @pytest.fixture
 def service_account_permission_service(group_repository, group_member_repository):
     return ServiceAccountPermissionService(group_repository, group_member_repository)
+
+
+@pytest.fixture
+def service_account_revocation_service(
+    service_account_repository,
+    service_account_event_repository,
+    token_credential_record_repository,
+    event_publisher,
+    time_provider,
+):
+    return ServiceAccountRevocationService(
+        service_account_repository,
+        service_account_event_repository,
+        token_credential_record_repository,
+        event_publisher,
+        time_provider,
+    )
 
 
 @pytest.fixture

@@ -94,3 +94,51 @@ def test_given_an_email_already_held_when_saving_another_password_with_it_then_i
         sql_password_credential_record_repository.save(
             PasswordCredentialRecord(principal_id=uuid4(), email=email, password_hash=b"second-hash")
         )
+
+
+def test_given_a_new_email_when_updating_it_then_the_record_is_found_by_it_with_its_hash(
+    sql_password_credential_record_repository,
+):
+    principal_id = uuid4()
+    sql_password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=principal_id, email="alice@old.fr", password_hash=b"alice-hash")
+    )
+
+    sql_password_credential_record_repository.update_email(principal_id, "alice@old.fr", "alice@new.fr")
+
+    assert sql_password_credential_record_repository.get_by_email("alice@old.fr") is None
+    updated = sql_password_credential_record_repository.get_by_email("alice@new.fr")
+    assert updated.principal_id == principal_id
+    assert updated.password_hash == b"alice-hash"
+
+
+def test_given_two_passwords_when_updating_one_email_then_the_other_is_untouched(
+    sql_password_credential_record_repository,
+):
+    principal_id = uuid4()
+    sql_password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=principal_id, email="work@example.com", password_hash=b"work-hash")
+    )
+    sql_password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=principal_id, email="home@example.com", password_hash=b"home-hash")
+    )
+
+    sql_password_credential_record_repository.update_email(principal_id, "home@example.com", "house@example.com")
+
+    emails = {c.email for c in sql_password_credential_record_repository.list_by_principal_id(principal_id)}
+    assert emails == {"work@example.com", "house@example.com"}
+
+
+def test_given_another_principals_record_when_updating_its_email_then_it_is_untouched(
+    sql_password_credential_record_repository,
+):
+    """Scoped to the principal: a stale ownership check upstream cannot rename someone else's login."""
+    bob = uuid4()
+    sql_password_credential_record_repository.save(
+        PasswordCredentialRecord(principal_id=bob, email="shared@old.fr", password_hash=b"bob-hash")
+    )
+
+    sql_password_credential_record_repository.update_email(uuid4(), "shared@old.fr", "alice@new.fr")
+
+    assert sql_password_credential_record_repository.get_by_email("shared@old.fr").principal_id == bob
+    assert sql_password_credential_record_repository.get_by_email("alice@new.fr") is None
