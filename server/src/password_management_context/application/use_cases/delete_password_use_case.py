@@ -56,7 +56,7 @@ class DeletePasswordUseCase(TracedUseCase):
             raise NotPasswordOwnerError(command.requester_id, command.password_id)
 
         # Check if the user owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(command.requester_id, owner_group_id):
+        if not self.group_access_gateway.is_principal_owner_of_group(command.requester_id, owner_group_id):
             raise UserNotOwnerOfGroupError(command.requester_id, owner_group_id)
 
         self.password_repository.delete(command.password_id)
@@ -70,7 +70,7 @@ class DeletePasswordUseCase(TracedUseCase):
         # Store domain event
         event = PasswordDeletedEvent(
             password_id=command.password_id,
-            deleted_by_user_id=command.requester_id,
+            deleted_by_principal_id=command.requester_id,
             owner_group_id=owner_group_id,
         )
         event_storage_service = PasswordEventStorageService(self.password_event_repository)

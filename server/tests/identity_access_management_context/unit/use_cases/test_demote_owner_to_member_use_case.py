@@ -236,7 +236,7 @@ def test_given_personal_group_when_demoting_owner_then_raise_cannot_modify_perso
     owner = User(id=owner_id, username="owner", email="owner@example.com", name="Owner User")
     user_repository.save(owner)
 
-    group = Group(id=group_id, name="Personal Group", is_personal=True, user_id=owner_id)
+    group = Group(id=group_id, name="Personal Group", is_personal=True, principal_id=owner_id)
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
 
@@ -427,4 +427,4 @@ def test_given_owner_when_demoting_co_owner_then_should_store_owner_demoted_to_m
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "OwnerDemotedToMemberEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id

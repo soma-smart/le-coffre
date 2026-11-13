@@ -29,10 +29,10 @@ class ListMyOneTimeLinksUseCase(TracedUseCase):
     def execute(self, command: ListMyOneTimeLinksCommand) -> ListOneTimeLinkAuditResponse:
         now = self.time_gateway.get_current_time()
         links = self.one_time_link_repository.list_for_creator(
-            command.requesting_user_id, now, command.include_inactive, limit=MAX_AUDITED_LINKS
+            command.requesting_principal_id, now, command.include_inactive, limit=MAX_AUDITED_LINKS
         )
         total = self.one_time_link_repository.count_for_creator(
-            command.requesting_user_id, now, command.include_inactive
+            command.requesting_principal_id, now, command.include_inactive
         )
 
         return ListOneTimeLinkAuditResponse(

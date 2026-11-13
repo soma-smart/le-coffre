@@ -82,7 +82,7 @@ class ConsumeOneTimeLinkUseCase(TracedUseCase):
         event = OneTimeLinkReadEvent(
             password_id=link.password_id,
             link_id=link.id,
-            created_by_user_id=link.created_by_user_id,
+            created_by_principal_id=link.created_by_principal_id,
         )
         PasswordEventStorageService(self.password_event_repository).store_event(event)
 

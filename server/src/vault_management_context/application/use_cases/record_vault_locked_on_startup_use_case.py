@@ -51,7 +51,7 @@ class RecordVaultLockedOnStartupUseCase(TracedUseCase):
             return
 
         logger.info("Vault locked by server start")
-        event = VaultLockedEvent(locked_by_user_id=None)
+        event = VaultLockedEvent(locked_by_principal_id=None)
         # append_event() before publish(): the DB is least stable right here, just
         # after migrations. If it fails, execute() raises before any notification
         # email is sent (the caller logs and moves on; the next start retries from
@@ -61,7 +61,7 @@ class RecordVaultLockedOnStartupUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=None,
+            actor_principal_id=None,
             event_data={"reason": "server_start"},
         )
         self._event_publisher.publish(event)

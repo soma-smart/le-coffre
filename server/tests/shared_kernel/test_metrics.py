@@ -18,7 +18,7 @@ def _make_use_case(is_owner=False, has_access=False):
 
 
 def _make_command():
-    return CheckAccessCommand(user_id=uuid4(), resource_id=uuid4())
+    return CheckAccessCommand(principal_id=uuid4(), resource_id=uuid4())
 
 
 def test_check_access_not_found_increments_counter():

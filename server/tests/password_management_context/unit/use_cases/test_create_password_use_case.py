@@ -56,7 +56,7 @@ def test_given_user_owns_group_when_creating_password_with_all_optional_fields_s
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=password_id,
         name=name,
@@ -89,7 +89,7 @@ def test_given_user_owns_group_when_creating_password_without_optional_fields_sh
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=password_id,
         name=name,
@@ -118,7 +118,7 @@ def test_given_user_not_owner_when_creating_password_should_raise_user_not_owner
     group_access_gateway.set_group_owner(group_id, other_user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=password_id,
         name="My Password",
@@ -142,7 +142,7 @@ def test_given_group_not_exists_when_creating_password_should_raise_group_not_fo
     group_id = UUID("2d742e0e-bb76-4728-83ef-8d546d7c62e7")
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=password_id,
         name="My Password",
@@ -169,7 +169,7 @@ def test_given_valid_password_when_creating_password_should_set_group_as_owner(
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=password_id,
         name="My Password",
@@ -200,7 +200,7 @@ def test_given_password_with_uuid_when_creating_password_should_store_encrypted_
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=uuid,
         name=name,
@@ -239,7 +239,7 @@ def test_given_password_with_folder_when_creating_password_should_store_in_folde
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=uuid,
         name=name,
@@ -276,7 +276,7 @@ def test_given_no_folder_specified_when_creating_password_should_use_default_fol
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=uuid,
         name=name,
@@ -311,7 +311,7 @@ def test_given_valid_user_when_creating_password_should_set_permissions_for_user
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=uuid,
         name=name,
@@ -342,7 +342,7 @@ def test_given_valid_password_when_creating_password_should_store_password_creat
     group_access_gateway.set_group_owner(group_id, user_id)
 
     command = CreatePasswordCommand(
-        user_id=user_id,
+        principal_id=user_id,
         group_id=group_id,
         id=uuid,
         name=name,
@@ -359,5 +359,5 @@ def test_given_valid_password_when_creating_password_should_store_password_creat
     stored_event = password_event_repository.events[0]
     assert stored_event["event_type"] == "PasswordCreatedEvent"
     assert stored_event["password_id"] == uuid
-    assert stored_event["actor_user_id"] == user_id
+    assert stored_event["actor_principal_id"] == user_id
     assert str(group_id) in str(stored_event["event_data"]["owner_group_id"])

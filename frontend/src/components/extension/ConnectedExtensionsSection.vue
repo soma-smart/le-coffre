@@ -39,10 +39,14 @@ function formatDate(value: Date | null): string {
   return value ? value.toLocaleString(activeLocale()) : t('components.connectedExtensions.never')
 }
 
+function deviceLabel(extension: ConnectedExtension): string {
+  return extension.deviceName ?? t('components.connectedExtensions.unnamedDevice')
+}
+
 function disconnect(extension: ConnectedExtension) {
   confirm.require({
     message: t('components.connectedExtensions.disconnectQuestion', {
-      device: extension.deviceName,
+      device: deviceLabel(extension),
     }),
     header: t('components.connectedExtensions.disconnectDialogTitle'),
     icon: 'pi pi-exclamation-triangle',
@@ -56,7 +60,7 @@ function disconnect(extension: ConnectedExtension) {
           severity: 'success',
           summary: t('components.connectedExtensions.disconnectedSummary'),
           detail: t('components.connectedExtensions.disconnectedDetail', {
-            device: extension.deviceName,
+            device: deviceLabel(extension),
           }),
           life: 4000,
         })
@@ -117,7 +121,7 @@ function disconnectAll() {
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold">{{ t('components.connectedExtensions.title') }}</h3>
       <Button
-        v-if="extensions.some((extension) => extension.isActive)"
+        v-if="extensions.length > 0"
         :label="t('components.connectedExtensions.disconnectAll')"
         icon="pi pi-times-circle"
         severity="danger"
@@ -149,7 +153,7 @@ function disconnectAll() {
       >
         <div class="flex flex-col gap-1 text-sm">
           <div class="flex items-center gap-2">
-            <span class="font-medium">{{ extension.deviceName }}</span>
+            <span class="font-medium">{{ deviceLabel(extension) }}</span>
             <Tag
               v-if="extension.isActive"
               :value="t('components.connectedExtensions.activeTag')"
@@ -158,24 +162,10 @@ function disconnectAll() {
             />
             <Tag
               v-else
-              :value="t('components.connectedExtensions.disconnectedTag')"
+              :value="t('components.connectedExtensions.expiredTag')"
               severity="secondary"
             />
           </div>
-          <span class="text-surface-500">
-            {{
-              t('components.connectedExtensions.connectedAt', {
-                date: formatDate(extension.createdAt),
-              })
-            }}
-            <span v-if="extension.createdFromIp">
-              {{
-                t('components.connectedExtensions.fromAddress', {
-                  address: extension.createdFromIp,
-                })
-              }}
-            </span>
-          </span>
           <span class="text-surface-500">
             {{
               t('components.connectedExtensions.lastUsed', {
@@ -192,7 +182,6 @@ function disconnectAll() {
         </div>
 
         <Button
-          v-if="extension.isActive"
           :label="t('components.connectedExtensions.disconnect')"
           icon="pi pi-times"
           severity="danger"

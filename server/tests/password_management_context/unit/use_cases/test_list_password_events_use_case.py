@@ -86,7 +86,7 @@ def test_should_return_events_when_admin_user(
         event_type="password.created",
         occurred_on=occurred_on1,
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={"title": "Gmail", "folder_id": None},
     )
     password_event_repository.append_event(
@@ -94,7 +94,7 @@ def test_should_return_events_when_admin_user(
         event_type="password.updated",
         occurred_on=occurred_on2,
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={"title": "Gmail Account", "folder_id": None},
     )
 
@@ -142,7 +142,7 @@ def test_should_return_events_when_owner_has_group_access(
         event_type="password.created",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=REGULAR_USER.user_id,
+        actor_principal_id=REGULAR_USER.user_id,
         event_data={},
     )
 
@@ -179,7 +179,7 @@ def test_should_filter_events_by_event_types_when_specified(
         event_type="password.created",
         occurred_on=datetime(2026, 2, 6, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -187,7 +187,7 @@ def test_should_filter_events_by_event_types_when_specified(
         event_type="password.accessed",
         occurred_on=datetime(2026, 2, 6, 11, 0, 0),
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -195,7 +195,7 @@ def test_should_filter_events_by_event_types_when_specified(
         event_type="password.updated",
         occurred_on=datetime(2026, 2, 6, 12, 0, 0),
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={},
     )
 
@@ -235,7 +235,7 @@ def test_should_filter_events_by_date_range_when_specified(
         event_type="password.created",
         occurred_on=datetime(2026, 2, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -243,7 +243,7 @@ def test_should_filter_events_by_date_range_when_specified(
         event_type="password.accessed",
         occurred_on=datetime(2026, 2, 5, 11, 0, 0),
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -251,7 +251,7 @@ def test_should_filter_events_by_date_range_when_specified(
         event_type="password.updated",
         occurred_on=datetime(2026, 2, 10, 12, 0, 0),
         password_id=password_id,
-        actor_user_id=ADMIN_USER.user_id,
+        actor_principal_id=ADMIN_USER.user_id,
         event_data={},
     )
 

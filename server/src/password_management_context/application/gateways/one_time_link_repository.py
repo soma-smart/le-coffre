@@ -70,16 +70,16 @@ class OneTimeLinkRepository(Protocol):
         ...
 
     def list_for_creator(
-        self, created_by_user_id: UUID, now: datetime, include_inactive: bool, limit: int
+        self, created_by_principal_id: UUID, now: datetime, include_inactive: bool, limit: int
     ) -> list[OneTimeLink]:
         """Same listing, restricted to the links one user issued"""
         ...
 
-    def count_for_creator(self, created_by_user_id: UUID, now: datetime, include_inactive: bool) -> int:
+    def count_for_creator(self, created_by_principal_id: UUID, now: datetime, include_inactive: bool) -> int:
         """How many links the equivalent list_for_creator would have without its limit"""
         ...
 
-    def revoke_all_for_creator(self, created_by_user_id: UUID, now: datetime) -> int:
+    def revoke_all_for_creator(self, created_by_principal_id: UUID, now: datetime) -> int:
         """Revoke every still-redeemable link a user issued, returning the count.
 
         One conditional UPDATE, so links already read keep their read timestamp:

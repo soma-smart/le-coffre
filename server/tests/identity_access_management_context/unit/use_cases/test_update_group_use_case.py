@@ -52,7 +52,7 @@ def test_given_user_is_owner_when_updating_group_should_update_group_name(
         id=group_id,
         name="Old Name",
         is_personal=False,
-        user_id=None,
+        principal_id=None,
     )
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, requester_id, is_owner=True)
@@ -82,7 +82,7 @@ def test_given_user_is_admin_when_updating_group_should_update_group_name(
         id=group_id,
         name="Old Name",
         is_personal=False,
-        user_id=None,
+        principal_id=None,
     )
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, requester_id, is_owner=True)
@@ -129,7 +129,7 @@ def test_given_user_not_owner_nor_admin_when_updating_group_should_raise_user_no
         id=group_id,
         name="Old Name",
         is_personal=False,
-        user_id=None,
+        principal_id=None,
     )
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
@@ -157,7 +157,7 @@ def test_given_personal_group_when_updating_group_should_raise_cannot_modify_per
         id=group_id,
         name="Personal Group",
         is_personal=True,
-        user_id=requester_id,
+        principal_id=requester_id,
     )
     group_repository.save_group(personal_group)
     group_member_repository.add_member(group_id, requester_id, is_owner=True)
@@ -181,7 +181,7 @@ def test_given_user_is_owner_when_updating_group_should_publish_group_updated_ev
     group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
-    group = Group(id=group_id, name="Old Name", is_personal=False, user_id=None)
+    group = Group(id=group_id, name="Old Name", is_personal=False, principal_id=None)
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, requester_id, is_owner=True)
 
@@ -197,7 +197,7 @@ def test_given_user_is_owner_when_updating_group_should_publish_group_updated_ev
     assert len(events) == 1
     assert events[0].group_id == group_id
     assert events[0].new_name == "New Name"
-    assert events[0].updated_by_user_id == requester_id
+    assert events[0].updated_by_principal_id == requester_id
 
 
 def test_given_user_is_owner_when_updating_group_should_store_group_updated_event(
@@ -209,7 +209,7 @@ def test_given_user_is_owner_when_updating_group_should_store_group_updated_even
     group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
-    group = Group(id=group_id, name="Old Name", is_personal=False, user_id=None)
+    group = Group(id=group_id, name="Old Name", is_personal=False, principal_id=None)
     group_repository.save_group(group)
     group_member_repository.add_member(group_id, requester_id, is_owner=True)
 
@@ -224,7 +224,7 @@ def test_given_user_is_owner_when_updating_group_should_store_group_updated_even
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "GroupUpdatedEvent"
-    assert stored["actor_user_id"] == requester_id
+    assert stored["actor_principal_id"] == requester_id
 
 
 def test_given_group_when_updating_group_to_existing_name_should_raise_group_already_exists_exception(
@@ -235,9 +235,9 @@ def test_given_group_when_updating_group_to_existing_name_should_raise_group_alr
     group_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     requester_id = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
-    group = Group(id=group_id, name="Old Name", is_personal=False, user_id=None)
+    group = Group(id=group_id, name="Old Name", is_personal=False, principal_id=None)
     existing_group = Group(
-        id=UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e5"), name="Existing Name", is_personal=False, user_id=None
+        id=UUID("8d742e0e-bb76-4728-83ef-8d546d7c62e5"), name="Existing Name", is_personal=False, principal_id=None
     )
     group_repository.save_group(group)
     group_repository.save_group(existing_group)

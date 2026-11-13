@@ -10,6 +10,7 @@ from identity_access_management_context.adapters.primary.fastapi.app_dependencie
 from identity_access_management_context.application.commands import UpdateUserCommand
 from identity_access_management_context.application.use_cases import UpdateUserUseCase
 from identity_access_management_context.domain.exceptions import (
+    EmailAlreadyUsedException,
     UserNotFoundError,
     UserUpdateNotAllowedException,
 )
@@ -67,6 +68,8 @@ def update_user(
         raise HTTPException(status_code=404, detail=str(e)) from e
     except UserUpdateNotAllowedException as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+    except EmailAlreadyUsedException as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in update user")
         raise HTTPException(status_code=500, detail="Internal server error") from e

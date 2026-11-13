@@ -52,7 +52,7 @@ class DeletePasswordsForDeletedUserUseCase(TracedUseCase):
         for password_id in password_ids_owned:
             event = PasswordDeletedEvent(
                 password_id=password_id,
-                deleted_by_user_id=command.deleted_by_user_id,
+                deleted_by_principal_id=command.deleted_by_principal_id,
                 owner_group_id=personal_group_id,
             )
             self.event_publisher.publish(event)

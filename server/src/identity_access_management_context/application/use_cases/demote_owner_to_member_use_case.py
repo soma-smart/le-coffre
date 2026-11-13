@@ -85,6 +85,6 @@ class DemoteOwnerToMemberUseCase(TracedUseCase):
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=requester_id,
+            actor_principal_id=requester_id,
             event_data={"group_id": str(command.group_id), "user_id": str(command.user_id)},
         )

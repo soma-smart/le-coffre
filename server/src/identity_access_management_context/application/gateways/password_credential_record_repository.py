@@ -1,0 +1,21 @@
+from typing import Protocol
+from uuid import UUID
+
+from identity_access_management_context.domain.entities import PasswordCredentialRecord
+
+
+class PasswordCredentialRecordRepository(Protocol):
+    def save(self, credential_record: PasswordCredentialRecord) -> None:
+        """Save a password credential record"""
+
+    def update_password_hash(self, email: str, new_password_hash: bytes) -> None:
+        """Replace the password hash of the credential record holding this email"""
+
+    def update_email(self, principal_id: UUID, email: str, new_email: str) -> None:
+        """Replace the email of this principal's credential record holding this email"""
+
+    def list_by_principal_id(self, principal_id: UUID) -> list[PasswordCredentialRecord]:
+        """List every password credential record of a principal"""
+
+    def get_by_email(self, email: str) -> PasswordCredentialRecord | None:
+        """Get the password credential record holding this email"""

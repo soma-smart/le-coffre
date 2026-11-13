@@ -105,7 +105,10 @@ export function usePasswordSharedAccess(options: UsePasswordSharedAccessOptions)
 
       if (!matching || currentVersion !== loadVersion) return
 
-      const actorUsername = await resolveActorUsername(matching.actorUserId, matching.actorEmail)
+      const actorUsername = await resolveActorUsername(
+        matching.actorPrincipalId,
+        matching.actorEmail,
+      )
       if (currentVersion !== loadVersion) return
 
       sharedAccessInfo.value = { occurredOn: matching.occurredOn, actorUsername }

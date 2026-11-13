@@ -32,7 +32,7 @@ function makeLink(overrides: Partial<AuditedOneTimeLink> = {}): AuditedOneTimeLi
     id: 'link-1',
     passwordId: 'password-1',
     passwordName: 'Prod DB',
-    createdByUserId: 'alice',
+    createdByPrincipalId: 'alice',
     groupName: 'Platform team',
     createdByDisplayName: 'Alice Martin',
     createdAt: new Date(now - HOUR).toISOString(),

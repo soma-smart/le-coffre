@@ -4,7 +4,7 @@ from uuid import UUID
 
 @dataclass
 class CreatePasswordCommand:
-    user_id: UUID
+    principal_id: UUID
     group_id: UUID
     id: UUID
     name: str

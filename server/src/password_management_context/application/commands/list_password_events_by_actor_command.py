@@ -9,7 +9,7 @@ from shared_kernel.domain.entities import AuthenticatedUser
 class ListPasswordEventsByActorCommand:
     """List every password event performed by a given actor (admin-only)."""
 
-    actor_user_id: UUID
+    actor_principal_id: UUID
     requesting_user: AuthenticatedUser
     event_types: list[str] | None = None
     start_date: datetime | None = None

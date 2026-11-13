@@ -16,7 +16,7 @@ class BasePasswordEvent(ABC):
     occurred_on: datetime = field(default_factory=datetime.now)
 
     @abstractmethod
-    def get_actor_user_id(self) -> UUID:
+    def get_actor_principal_id(self) -> UUID:
         """Return the user ID who triggered this event"""
         ...
 

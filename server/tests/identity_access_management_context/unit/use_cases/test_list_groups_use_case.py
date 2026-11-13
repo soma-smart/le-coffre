@@ -33,8 +33,8 @@ def test_given_groups_when_listing_groups_should_return_list_of_groups(
     user1 = uuid4()
     user2 = uuid4()
 
-    group_repository.save_group(Group(id=group1, name="Group 1", is_personal=False, user_id=None))
-    group_repository.save_group(Group(id=group2, name="Group 2", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=group1, name="Group 1", is_personal=False, principal_id=None))
+    group_repository.save_group(Group(id=group2, name="Group 2", is_personal=False, principal_id=None))
 
     # Add owners to the groups
     group_member_repository.add_member(group1, user1, is_owner=True)
@@ -47,13 +47,13 @@ def test_given_groups_when_listing_groups_should_return_list_of_groups(
     assert result.groups[0].id == group1
     assert result.groups[0].name == "Group 1"
     assert result.groups[0].is_personal is False
-    assert result.groups[0].user_id is None
+    assert result.groups[0].principal_id is None
     assert result.groups[0].owners == [user1]
 
     assert result.groups[1].id == group2
     assert result.groups[1].name == "Group 2"
     assert result.groups[1].is_personal is False
-    assert result.groups[1].user_id is None
+    assert result.groups[1].principal_id is None
     assert result.groups[1].owners == [user2]
 
 
@@ -72,10 +72,10 @@ def test_given_mixed_groups_when_listing_with_personal_should_return_all(
             id=personal_group_id,
             name="Personal Group",
             is_personal=True,
-            user_id=user_id,
+            principal_id=user_id,
         )
     )
-    group_repository.save_group(Group(id=shared_group_id, name="Shared Group", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=shared_group_id, name="Shared Group", is_personal=False, principal_id=None))
 
     # Add owner to shared group
     group_member_repository.add_member(shared_group_id, owner_id, is_owner=True)
@@ -88,13 +88,13 @@ def test_given_mixed_groups_when_listing_with_personal_should_return_all(
     # Check personal group
     personal_group = next(g for g in result.groups if g.id == personal_group_id)
     assert personal_group.is_personal is True
-    assert personal_group.user_id == user_id
+    assert personal_group.principal_id == user_id
     assert personal_group.owners == [user_id]  # Personal group owner is user_id
 
     # Check shared group
     shared_group = next(g for g in result.groups if g.id == shared_group_id)
     assert shared_group.is_personal is False
-    assert shared_group.user_id is None
+    assert shared_group.principal_id is None
     assert shared_group.owners == [owner_id]
 
 
@@ -113,10 +113,10 @@ def test_given_mixed_groups_when_listing_without_personal_should_return_only_sha
             id=personal_group_id,
             name="Personal Group",
             is_personal=True,
-            user_id=user_id,
+            principal_id=user_id,
         )
     )
-    group_repository.save_group(Group(id=shared_group_id, name="Shared Group", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=shared_group_id, name="Shared Group", is_personal=False, principal_id=None))
 
     # Add owner to shared group
     group_member_repository.add_member(shared_group_id, owner_id, is_owner=True)
@@ -139,7 +139,7 @@ def test_given_group_with_members_when_listing_groups_should_return_members_not_
     owner_id = uuid4()
     member_id = uuid4()
 
-    group_repository.save_group(Group(id=group_id, name="Group 1", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=group_id, name="Group 1", is_personal=False, principal_id=None))
     group_member_repository.add_member(group_id, owner_id, is_owner=True)
     group_member_repository.add_member(group_id, member_id, is_owner=False)
 
@@ -169,8 +169,8 @@ def test_given_scoped_request_when_listing_groups_should_drop_groups_the_user_is
     mine = uuid4()
     theirs = uuid4()
 
-    group_repository.save_group(Group(id=mine, name="Marketing", is_personal=False, user_id=None))
-    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=mine, name="Marketing", is_personal=False, principal_id=None))
+    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, principal_id=None))
     group_member_repository.add_member(mine, caller, is_owner=False)
     group_member_repository.add_member(theirs, stranger, is_owner=True)
 
@@ -187,7 +187,7 @@ def test_given_scoped_request_when_listing_groups_should_keep_groups_the_user_ow
     caller = uuid4()
     owned = uuid4()
 
-    group_repository.save_group(Group(id=owned, name="Ops", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=owned, name="Ops", is_personal=False, principal_id=None))
     group_member_repository.add_member(owned, caller, is_owner=True)
 
     result = use_case.execute(ListGroupsCommand(only_for_user_id=caller))
@@ -206,8 +206,8 @@ def test_given_scoped_request_when_listing_groups_should_keep_the_callers_person
     mine = uuid4()
     theirs = uuid4()
 
-    group_repository.save_group(Group(id=mine, name="Alice", is_personal=True, user_id=caller))
-    group_repository.save_group(Group(id=theirs, name="Bob", is_personal=True, user_id=stranger))
+    group_repository.save_group(Group(id=mine, name="Alice", is_personal=True, principal_id=caller))
+    group_repository.save_group(Group(id=theirs, name="Bob", is_personal=True, principal_id=stranger))
 
     result = use_case.execute(ListGroupsCommand(only_for_user_id=caller))
 
@@ -223,7 +223,7 @@ def test_given_unscoped_request_when_listing_groups_should_still_return_everythi
     stranger = uuid4()
     theirs = uuid4()
 
-    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, user_id=None))
+    group_repository.save_group(Group(id=theirs, name="Legal", is_personal=False, principal_id=None))
     group_member_repository.add_member(theirs, stranger, is_owner=True)
 
     result = use_case.execute(ListGroupsCommand())

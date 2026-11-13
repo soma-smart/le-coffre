@@ -95,7 +95,7 @@ def test_given_admin_when_personal_groups_exist_should_not_count_them(
         PersonalGroup(
             id=UUID("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
             name="Personal",
-            user_id=UUID("11111111-1111-1111-1111-111111111111"),
+            principal_id=UUID("11111111-1111-1111-1111-111111111111"),
         )
     )
 
