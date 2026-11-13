@@ -4,14 +4,14 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.20.1",
-  "authlib>=1.9.1",
+  "authlib>=1.9.5",
   "bcrypt>=5.0.0",
   "cryptography>=50.0.2",
   "fastapi[standard]>=0.162.0",
   "httpx>=0.28.1",
   "passlib[bcrypt]>=1.7.4",
   "PyCryptodome>=3.23.0",
-  "python-multipart>=0.0.32",
+  "python-multipart>=0.0.33",
   "pyjwt>=2.15.1",
   "sqlmodel>=0.0.48",
   "tenacity>=9.2.1",
@@ -21,21 +21,21 @@ dependencies = [
 dev = [
   "oidc-provider-mock>=0.4.8",
   "pytest>=9.1.1",
-  "pytest-asyncio>=1.4.0",
+  "pytest-asyncio>=1.4.1.post1",
   "pytest-watcher>=0.6.3",
   "pytest-xdist>=3.8.0",
-  "ruff>=0.17.2",
+  "ruff>=0.17.4",
   "smtpdfix>=0.5.3",
 ]
 monitoring = [
     "opentelemetry-instrumentation-fastapi>=0.66b0",
     "opentelemetry-instrumentation-httpx>=0.66b0",
     "opentelemetry-instrumentation-sqlalchemy>=0.66b0",
-    "opentelemetry-exporter-otlp-proto-http>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.2",
     "opentelemetry-sdk>=1.45.1",
 ]
 sqlite = ["sqlite-utils==3.39.1"]
-postgres = ["psycopg2==2.9.13", "psycopg[binary]==3.3.6"]
+postgres = ["psycopg2==2.9.13", "psycopg[binary]==3.3.8"]
 
 [tool.uv]
 # Pin urllib3, a transitive dependency of both `requests` and `sentry-sdk`
