@@ -54,7 +54,7 @@ class DeleteGroupUseCase(TracedUseCase):
             raise CannotDeleteGroupStillUsedException(command.group_id)
 
         # Revoke service accounts associated with the group
-        self._service_account_revocation_service.revoke_for_groups((command.group_id,), command.requesting_user.user_id)
+        self._service_account_revocation_service.revoke_for_groups((group,), command.requesting_user.user_id)
 
         self.group_member_repository.delete_by_group_id(command.group_id)
         self.group_repository.delete_group(command.group_id)

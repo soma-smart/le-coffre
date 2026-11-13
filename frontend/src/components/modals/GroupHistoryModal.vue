@@ -156,6 +156,16 @@
                   <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
                 </template>
               </i18n-t>
+              <i18n-t
+                v-else-if="serviceAccountDetailKey(slotProps.data.eventType)"
+                :keypath="serviceAccountDetailKey(slotProps.data.eventType)!"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ serviceAccountLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
               <span v-else>
                 {{ JSON.stringify(slotProps.data.eventData) }}
               </span>
@@ -262,6 +272,20 @@ const targetUserLabel = (eventData: Record<string, unknown>): string => {
     ? `${principalId.substring(0, 8)}...`
     : t('common.unknownUser')
 }
+
+const SERVICE_ACCOUNT_DETAIL_KEYS: Record<string, string> = {
+  ServiceAccountCreatedEvent: 'components.groupHistoryModal.serviceAccountCreated',
+  ServiceAccountTokenRotatedEvent: 'components.groupHistoryModal.serviceAccountTokenRotated',
+  ServiceAccountRevokedEvent: 'components.groupHistoryModal.serviceAccountRevoked',
+}
+
+const serviceAccountDetailKey = (eventType: string): string | undefined =>
+  SERVICE_ACCOUNT_DETAIL_KEYS[eventType]
+
+const serviceAccountLabel = (eventData: Record<string, unknown>): string =>
+  typeof eventData.serviceAccountName === 'string'
+    ? eventData.serviceAccountName
+    : t('common.unknown')
 
 const formatEventType = (eventType: string): string => translateEventType(t, eventType)
 const getEventSeverity = groupEventSeverity

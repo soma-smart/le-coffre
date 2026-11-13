@@ -1208,10 +1208,11 @@ export const listGroupsGroupsGet = <ThrowOnError extends boolean = false>(option
 });
 
 /**
- * List membership events for a group
+ * List a group's history: membership and service account events
  *
- * Retrieve the membership event history for a group: members added, owners
- * added/promoted, and members removed.
+ * Retrieve the history of a group: members added, owners added/promoted,
+ * members removed, and service accounts created, given a new token, or revoked.
+ * Service account events name the account and never carry its token.
  *
  * Only group owners and admins can list events for a group.
  *

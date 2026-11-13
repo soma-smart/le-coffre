@@ -62,7 +62,10 @@
       "UserAddedToGroupEvent": "User Added To Group",
       "OwnerAddedToGroupEvent": "Owner Added To Group",
       "UserRemovedFromGroupEvent": "User Removed From Group",
-      "OwnerDemotedToMemberEvent": "Owner Demoted To Member"
+      "OwnerDemotedToMemberEvent": "Owner Demoted To Member",
+      "ServiceAccountCreatedEvent": "Service account created",
+      "ServiceAccountTokenRotatedEvent": "Service account token rotated",
+      "ServiceAccountRevokedEvent": "Service account revoked"
     },
     "passwordEvents": {
       "createdInFolder": "Created in folder:",
@@ -288,7 +291,7 @@
       "groupNameLabel": "Group Name",
       "groupNamePlaceholder": "Enter group name",
       "deleteQuestion": "Are you sure you want to delete \"{name}\"?",
-      "deleteDescription": "This action cannot be undone.\nAll group members will lose access.",
+      "deleteDescription": "This action cannot be undone.\nAll group members will lose access.\nIts service accounts will be revoked: their tokens stop working immediately.",
       "cannotDeleteSummary": "Cannot Delete Group",
       "cannotDeleteHasPasswords": "This group contains passwords and cannot be deleted. Please remove all passwords first.",
       "updatedDetail": "Group updated successfully",
@@ -622,6 +625,9 @@
       "promotedToOwner": "Promoted {name} to owner",
       "removedFromGroup": "Removed {name} from the group",
       "demotedToMember": "Demoted {name} to member",
+      "serviceAccountCreated": "Service account {name} created",
+      "serviceAccountTokenRotated": "Token of service account {name} rotated",
+      "serviceAccountRevoked": "Service account {name} revoked",
       "loadFailedSummary": "Load Failed",
       "loadFailedDetail": "Failed to load group history."
     },
@@ -773,7 +779,14 @@
       "revokeQuestion": "Revoke \"{name}\"?",
       "revokeDescriptionPermanent": "Its token stops working immediately and cannot be restored. Create a new service account if you need one again.",
       "revokeDescriptionHistory": "The account leaves the active list but stays in this group's history, with its revocation date.",
-      "revokeConfirmLabel": "Revoke"
+      "revokeConfirmLabel": "Revoke",
+      "historyButton": "History",
+      "notOwnerError": "Only the owners of this group can manage its service accounts.",
+      "capReachedError": "This group has reached its maximum of active service accounts. Revoke one before creating another.",
+      "alreadyRevokedError": "This service account was already revoked. The list has been refreshed.",
+      "notFoundError": "This service account no longer exists. The list has been refreshed.",
+      "rotateConflictError": "Could not rotate this token: the account was revoked in the meantime, or it holds several tokens. The list has been refreshed.",
+      "groupNotFoundError": "This group no longer exists."
     },
     "oneTimeLinksTable": {
       "emptyMessage": "No one-time link to show.",

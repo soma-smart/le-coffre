@@ -35,6 +35,9 @@ export function groupEventSeverity(eventType: string): GroupEventSeverity {
   if (eventType === 'OwnerAddedToGroupEvent') return 'info'
   if (eventType === 'UserRemovedFromGroupEvent') return 'danger'
   if (eventType === 'OwnerDemotedToMemberEvent') return 'warn'
+  if (eventType === 'ServiceAccountCreatedEvent') return 'success'
+  if (eventType === 'ServiceAccountTokenRotatedEvent') return 'warn'
+  if (eventType === 'ServiceAccountRevokedEvent') return 'danger'
   return 'secondary'
 }
 

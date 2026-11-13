@@ -7,6 +7,7 @@ from identity_access_management_context.application.gateways import (
     ServiceAccountRepository,
     TokenCredentialRecordRepository,
 )
+from identity_access_management_context.domain.entities import Group, PersonalGroup
 from identity_access_management_context.domain.events import ServiceAccountRevokedEvent
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 
@@ -38,14 +39,20 @@ class ServiceAccountRevocationService:
     time_provider: TimeGateway
     """Time provider."""
 
-    def revoke_for_groups(self, group_ids: Sequence[UUID], actor_principal_id: UUID) -> int:
+    def revoke_for_groups(self, groups: Sequence[Group | PersonalGroup], actor_principal_id: UUID) -> int:
         """Revoke the active service accounts of these groups. Returns how many were revoked.
+
+        Takes the groups rather than their ids: each revocation records the name
+        of its group, which is about to be deleted.
 
         Already-revoked accounts are left alone: revoking them again would raise,
         and would overwrite the original revocation time.
         """
-        if not group_ids:
+        if not groups:
             return 0
+
+        group_names = {group.id: group.name for group in groups}
+        group_ids = list(group_names)
 
         accounts = self.service_account_repository.list_for_groups(group_ids)
         active_accounts = tuple(account for account in accounts if account.is_active)
@@ -66,6 +73,8 @@ class ServiceAccountRevocationService:
                 actor_principal_id=actor_principal_id,
                 service_account_id=account.id,
                 service_account_name=account.name,
+                group_id=account.group_id,
+                group_name=group_names[account.group_id],
             )
             for account in active_accounts
         )

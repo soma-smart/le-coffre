@@ -45,6 +45,12 @@ class ServiceAccountItemEvent(ServiceAccountEvent, ABC):
     service_account_name: str
     """Name of the service account."""
 
+    group_id: UUID
+    """ID of the group the account belongs to: what files the event in that group's history."""
+
+    group_name: str
+    """Name of that group when the event happened, still readable once the group is deleted."""
+
     def __init__(
         self,
         event_id: UUID,
@@ -52,14 +58,20 @@ class ServiceAccountItemEvent(ServiceAccountEvent, ABC):
         actor_principal_id: UUID,
         service_account_id: UUID,
         service_account_name: str,
+        group_id: UUID,
+        group_name: str,
         priority: EventPriority = EventPriority.MEDIUM,
     ) -> None:
         super().__init__(event_id, occurred_on, actor_principal_id, priority)
         self.service_account_id = service_account_id
         self.service_account_name = service_account_name
+        self.group_id = group_id
+        self.group_name = group_name
 
     def _make_event_data(self) -> dict[str, str]:
         return super()._make_event_data() | {
             "service_account_id": str(self.service_account_id),
             "service_account_name": self.service_account_name,
+            "group_id": str(self.group_id),
+            "group_name": self.group_name,
         }

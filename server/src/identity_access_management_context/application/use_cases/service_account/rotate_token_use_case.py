@@ -59,7 +59,7 @@ class RotateServiceAccountTokenUseCase(
             raise ServiceAccountNotFoundException(command.service_account_id)
 
         # Check the user has permission to manage the service account
-        self._permissions.ensure_user_can_manage_group(command.requesting_user, account.group_id)
+        group = self._permissions.ensure_user_can_manage_group(command.requesting_user, account.group_id)
 
         # Check the service account is active
         if not account.is_active:
@@ -93,6 +93,8 @@ class RotateServiceAccountTokenUseCase(
             actor_principal_id=command.requesting_user.user_id,
             service_account_id=account.id,
             service_account_name=account.name,
+            group_id=account.group_id,
+            group_name=group.name,
         )
         response = RotateServiceAccountTokenResponse(id=account.id, token=token.value)
 

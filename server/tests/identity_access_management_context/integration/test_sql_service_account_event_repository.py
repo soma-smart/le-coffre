@@ -11,13 +11,15 @@ from identity_access_management_context.domain.value_objects import TokenCredent
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
-def _created(service_account_id, user_id, name="nightly-backup", occurred_on=NOW):
+def _created(service_account_id, user_id, name="nightly-backup", occurred_on=NOW, group_id=None):
     return ServiceAccountCreatedEvent(
         event_id=uuid4(),
         occurred_on=occurred_on,
         actor_principal_id=user_id,
         service_account_id=service_account_id,
         service_account_name=name,
+        group_id=group_id or uuid4(),
+        group_name="Platform",
     )
 
 
@@ -90,6 +92,8 @@ def test_given_other_service_account_events_when_reading_facts_then_only_creatio
                 actor_principal_id=revoker,
                 service_account_id=account_id,
                 service_account_name="nightly-backup",
+                group_id=uuid4(),
+                group_name="Platform",
             ),
             ServiceAccountsListedEvent(event_id=uuid4(), occurred_on=NOW, actor_principal_id=revoker, group_id=uuid4()),
         ]

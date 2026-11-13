@@ -62,7 +62,10 @@
       "UserAddedToGroupEvent": "Utilisateur ajouté au groupe",
       "OwnerAddedToGroupEvent": "Propriétaire ajouté au groupe",
       "UserRemovedFromGroupEvent": "Utilisateur retiré du groupe",
-      "OwnerDemotedToMemberEvent": "Propriétaire rétrogradé en membre"
+      "OwnerDemotedToMemberEvent": "Propriétaire rétrogradé en membre",
+      "ServiceAccountCreatedEvent": "Compte de service créé",
+      "ServiceAccountTokenRotatedEvent": "Jeton de compte de service renouvelé",
+      "ServiceAccountRevokedEvent": "Compte de service révoqué"
     },
     "passwordEvents": {
       "createdInFolder": "Créé dans le dossier :",
@@ -288,7 +291,7 @@
       "groupNameLabel": "Nom du groupe",
       "groupNamePlaceholder": "Saisissez le nom du groupe",
       "deleteQuestion": "Êtes-vous sûr de vouloir supprimer \"{name}\" ?",
-      "deleteDescription": "Cette action est irréversible.\nTous les membres du groupe perdront l'accès.",
+      "deleteDescription": "Cette action est irréversible.\nTous les membres du groupe perdront l'accès.\nSes comptes de service seront révoqués : leurs jetons cesseront immédiatement de fonctionner.",
       "cannotDeleteSummary": "Impossible de supprimer le groupe",
       "cannotDeleteHasPasswords": "Ce groupe contient des mots de passe et ne peut pas être supprimé. Veuillez d'abord supprimer tous les mots de passe.",
       "updatedDetail": "Groupe mis à jour avec succès",
@@ -622,6 +625,9 @@
       "promotedToOwner": "{name} promu propriétaire",
       "removedFromGroup": "{name} retiré du groupe",
       "demotedToMember": "{name} rétrogradé en membre",
+      "serviceAccountCreated": "Compte de service {name} créé",
+      "serviceAccountTokenRotated": "Jeton du compte de service {name} renouvelé",
+      "serviceAccountRevoked": "Compte de service {name} révoqué",
       "loadFailedSummary": "Échec du chargement",
       "loadFailedDetail": "Échec du chargement de l'historique du groupe."
     },
@@ -766,14 +772,21 @@
       "rotateQuestion": "Renouveler le jeton de \"{name}\" ?",
       "rotateDescriptionNewToken": "Un nouveau jeton est généré et affiché une seule fois — copiez-le avant de fermer cette fenêtre.",
       "rotateDescriptionOldToken": "Le jeton actuel cesse de fonctionner immédiatement : tout ce qui l'utilise encore échouera dès votre confirmation.",
-      "rotateDescriptionKept": "Le compte conserve son nom, son groupe et son historique. Seul l'identifiant change.",
+      "rotateDescriptionKept": "Le compte conserve son nom, son groupe et son historique. Seul le jeton change.",
       "rotateWarning": "Tout script ou intégration utilisant le jeton actuel cessera de fonctionner jusqu'à ce que vous déployiez le nouveau.",
       "rotateConfirmLabel": "Renouveler le jeton",
       "revokeConfirmTitle": "Révoquer le compte de service",
       "revokeQuestion": "Révoquer \"{name}\" ?",
       "revokeDescriptionPermanent": "Son jeton cesse de fonctionner immédiatement et ne peut pas être restauré. Créez un nouveau compte de service si vous en avez de nouveau besoin.",
       "revokeDescriptionHistory": "Le compte quitte la liste des comptes actifs mais reste dans l'historique de ce groupe, avec sa date de révocation.",
-      "revokeConfirmLabel": "Révoquer"
+      "revokeConfirmLabel": "Révoquer",
+      "historyButton": "Historique",
+      "notOwnerError": "Seuls les propriétaires de ce groupe peuvent gérer ses comptes de service.",
+      "capReachedError": "Ce groupe a atteint le nombre maximal de comptes de service actifs. Révoquez-en un avant d'en créer un autre.",
+      "alreadyRevokedError": "Ce compte de service a déjà été révoqué. La liste a été actualisée.",
+      "notFoundError": "Ce compte de service n'existe plus. La liste a été actualisée.",
+      "rotateConflictError": "Impossible de renouveler ce jeton : le compte a été révoqué entre-temps, ou il détient plusieurs jetons. La liste a été actualisée.",
+      "groupNotFoundError": "Ce groupe n'existe plus."
     },
     "oneTimeLinksTable": {
       "emptyMessage": "Aucun lien à usage unique à afficher.",

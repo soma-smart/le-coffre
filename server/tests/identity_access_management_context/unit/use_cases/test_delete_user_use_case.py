@@ -493,9 +493,10 @@ def test_given_service_accounts_when_deleting_the_user_then_each_revocation_cred
     revocations = [
         e for e in service_account_event_repository.events if e["event_type"] == "ServiceAccountRevokedEvent"
     ]
-    assert [(e["event_data"]["service_account_id"], e["actor_principal_id"]) for e in revocations] == [
-        (str(account.id), admin_id)
-    ]
+    assert [
+        (e["event_data"]["service_account_id"], e["event_data"]["group_name"], e["actor_principal_id"])
+        for e in revocations
+    ] == [(str(account.id), "Personal", admin_id)]
 
 
 def test_given_a_failure_while_revoking_when_deleting_the_user_then_nothing_is_deleted_yet(

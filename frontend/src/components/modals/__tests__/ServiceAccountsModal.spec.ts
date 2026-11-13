@@ -1,12 +1,17 @@
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
+import GroupHistoryModal from '@/components/modals/GroupHistoryModal.vue'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryServiceAccountRepository } from '@/infrastructure/in_memory/InMemoryServiceAccountRepository'
 import type { Group } from '@/domain/group/Group'
 import type { ServiceAccount, ServiceAccountPage } from '@/domain/serviceAccount/ServiceAccount'
+import {
+  ServiceAccountAlreadyRevokedError,
+  ServiceAccountNotFoundError,
+} from '@/domain/serviceAccount/errors'
 
 const group: Group = {
   id: 'group-1',
@@ -233,11 +238,71 @@ describe('ServiceAccountsModal', () => {
     const repo = new InMemoryServiceAccountRepository().seed(makeAccount()).denyGroup('group-1')
     const wrapper = await openModal(repo)
 
-    expect(wrapper.text()).toContain('Only an owner of this group can manage its service accounts')
+    expect(wrapper.text()).toContain(
+      'Only the owners of this group can manage its service accounts.',
+    )
     expect(wrapper.find('[data-testid="create-account"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="rotate-account"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="revoke-account"]').exists()).toBe(false)
     expect(wrapper.emitted('notOwner')).toBeTruthy()
+  })
+
+  it('translates a cap reached behind its back, and reloads the list', async () => {
+    const repo = new InMemoryServiceAccountRepository()
+      .withMaxActive(2)
+      .seed(makeAccount({ id: 'a1' }))
+    const wrapper = await openModal(repo)
+    // Another owner fills the last slot while this dialog is open.
+    repo.seed(makeAccount({ id: 'a2', name: 'other-session' }))
+
+    await createAccount(wrapper, 'one-too-many')
+
+    expect(wrapper.text()).toContain(
+      'This group has reached its maximum of active service accounts.',
+    )
+    expect(wrapper.text()).not.toContain('maximum 2')
+    expect(wrapper.find('[data-testid="active-accounts"]').text()).toBe('2/2 active')
+    expect(wrapper.find('[data-testid="cap-reached"]').exists()).toBe(true)
+  })
+
+  it('does not reload over and over when the group is gone', async () => {
+    const repo = new InMemoryServiceAccountRepository()
+    const list = vi.spyOn(repo, 'listForGroup').mockRejectedValue(new ServiceAccountNotFoundError())
+    const wrapper = await openModal(repo)
+    await flushPromises()
+
+    expect(list).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('This group no longer exists.')
+  })
+
+  it('names both causes when a rotation is refused as a conflict, and reloads', async () => {
+    const repo = new InMemoryServiceAccountRepository().seed(makeAccount())
+    const wrapper = await openModal(repo)
+    vi.spyOn(repo, 'rotate').mockRejectedValueOnce(
+      new ServiceAccountAlreadyRevokedError('holds several tokens'),
+    )
+    const list = vi.spyOn(repo, 'listForGroup')
+
+    await wrapper.find('[data-testid="rotate-account"]').trigger('click')
+    await wrapper.find('[data-testid="confirm-yes"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(
+      'the account was revoked in the meantime, or it holds several tokens',
+    )
+    expect(list).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens the group history, where the lifecycle of its accounts is audited', async () => {
+    const wrapper = await openModal(new InMemoryServiceAccountRepository().seed(makeAccount()))
+    expect(wrapper.findComponent(GroupHistoryModal).exists()).toBe(false)
+
+    await wrapper.find('[data-testid="group-history"]').trigger('click')
+    await flushPromises()
+
+    const history = wrapper.findComponent(GroupHistoryModal)
+    expect(history.exists()).toBe(true)
+    expect(history.props('group')).toEqual(group)
   })
 
   it('ignores a list response that arrives after the dialog moved on to another group', async () => {

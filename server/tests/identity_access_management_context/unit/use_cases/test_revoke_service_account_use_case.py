@@ -26,6 +26,7 @@ from shared_kernel.domain.entities import AuthenticatedUser
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 LATER = datetime(2026, 2, 1, 12, 0, 0, tzinfo=UTC)
 GROUP_ID = UUID("00000000-0000-0000-0000-0000000000b1")
+GROUP_NAME = "Team"
 OWNER_ID = UUID("00000000-0000-0000-0000-0000000000a1")
 MEMBER_ID = UUID("00000000-0000-0000-0000-0000000000a2")
 ADMIN_ID = UUID("00000000-0000-0000-0000-0000000000a3")
@@ -38,7 +39,7 @@ def owner():
 
 @pytest.fixture
 def groups(group_repository, group_member_repository):
-    group_repository.save_group(Group(id=GROUP_ID, name="Team", is_personal=False))
+    group_repository.save_group(Group(id=GROUP_ID, name=GROUP_NAME, is_personal=False))
     group_member_repository.add_member(GROUP_ID, OWNER_ID, is_owner=True)
     group_member_repository.add_member(GROUP_ID, MEMBER_ID, is_owner=False)
 
@@ -201,6 +202,8 @@ def test_given_a_revocation_when_it_succeeds_then_it_is_audited_with_its_author(
     event = service_account_event_repository.events[-1]
     assert event["event_type"] == "ServiceAccountRevokedEvent"
     assert event["actor_principal_id"] == OWNER_ID
+    assert event["event_data"]["group_id"] == str(GROUP_ID)
+    assert event["event_data"]["group_name"] == GROUP_NAME
     assert account.token not in json.dumps(event["event_data"])
 
 

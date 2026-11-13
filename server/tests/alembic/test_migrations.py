@@ -856,3 +856,91 @@ def test_orphaned_accounts_migration_revokes_only_accounts_whose_group_is_gone(a
     assert hashes == [f"hash-{live_id.hex}"]
     assert revoked[live_id.hex] is None
     assert revoked[orphan_id.hex] is not None, "the orphaned account must be revoked, its row kept"
+
+
+EVENT_GROUP_REVISION = "d5a8c3f1e7b9"
+"""Revision giving service account lifecycle events the group of their account."""
+
+
+def test_event_group_migration_gives_lifecycle_events_their_group(alembic_config, temp_database):
+    """Lifecycle events take their account's group id, in dashed form, and its name while the group exists.
+
+    A listing, or an event whose account is unknown, is untouched. A downgrade keeps both keys.
+    """
+    database_url, _ = temp_database
+    group_id, account_id = uuid4(), uuid4()
+    deleted_group_id, account_of_deleted_group_id = uuid4(), uuid4()
+    lifecycle = {
+        "ServiceAccountCreatedEvent": {"actor_principal_id": "u-1", "service_account_id": str(account_id)},
+        "ServiceAccountRevokedEvent": {"actor_principal_id": "u-1", "service_account_id": str(account_id)},
+    }
+    listed = {"actor_principal_id": "u-1", "group_id": "listed-group"}
+    unknown_account = {"actor_principal_id": "u-1", "service_account_id": str(uuid4())}
+    of_a_deleted_group = {"actor_principal_id": "u-1", "service_account_id": str(account_of_deleted_group_id)}
+
+    command.upgrade(alembic_config, ORPHANED_ACCOUNTS_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("""INSERT INTO "Group" (id, name, is_personal) VALUES (:id, 'CI-Prod', 0)"""), {"id": group_id.hex}
+        )
+        for principal_id, principal_group_id in (
+            (account_id, group_id),
+            (account_of_deleted_group_id, deleted_group_id),
+        ):
+            conn.execute(
+                text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'service_account')"), {"id": principal_id.hex}
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__principal__service_account (principal_id, group_id, name) "
+                    "VALUES (:id, :group_id, 'deploy')"
+                ),
+                {"id": principal_id.hex, "group_id": principal_group_id.hex},
+            )
+        for event_type, data in [
+            *lifecycle.items(),
+            ("ServiceAccountsListedEvent", listed),
+            ("ServiceAccountTokenRotatedEvent", unknown_account),
+        ]:
+            conn.execute(
+                text(
+                    'INSERT INTO "IamEvent" (event_id, event_type, occurred_on, event_data) '
+                    "VALUES (:id, :type, '2026-01-01 12:00:00', :data)"
+                ),
+                {"id": uuid4().hex, "type": event_type, "data": json.dumps(data)},
+            )
+        # Keyed apart from the others below: same event type, other account.
+        conn.execute(
+            text(
+                'INSERT INTO "IamEvent" (event_id, event_type, occurred_on, event_data) '
+                "VALUES (:id, 'ServiceAccountTokenRotatedEvent', '2026-01-01 13:00:00', :data)"
+            ),
+            {"id": uuid4().hex, "data": json.dumps(of_a_deleted_group)},
+        )
+    engine.dispose()
+
+    def payloads() -> dict:
+        engine = create_engine(database_url)
+        with engine.connect() as conn:
+            rows = conn.execute(text('SELECT event_type, event_data FROM "IamEvent" ORDER BY occurred_on')).all()
+        engine.dispose()
+        by_type = {}
+        for event_type, data in rows:
+            payload = json.loads(data)
+            key = (
+                "deleted-group" if payload.get("service_account_id") == str(account_of_deleted_group_id) else event_type
+            )
+            by_type[key] = payload
+        return by_type
+
+    command.upgrade(alembic_config, EVENT_GROUP_REVISION)
+    upgraded = payloads()
+    for event_type, data in lifecycle.items():
+        assert upgraded[event_type] == data | {"group_id": str(group_id), "group_name": "CI-Prod"}
+    assert upgraded["deleted-group"] == of_a_deleted_group | {"group_id": str(deleted_group_id)}, "no group, no name"
+    assert upgraded["ServiceAccountsListedEvent"] == listed
+    assert upgraded["ServiceAccountTokenRotatedEvent"] == unknown_account, "no account row, nothing to take"
+
+    command.downgrade(alembic_config, ORPHANED_ACCOUNTS_REVISION)
+    assert payloads() == upgraded, "the code before ignores the keys: removing them would lose the names"

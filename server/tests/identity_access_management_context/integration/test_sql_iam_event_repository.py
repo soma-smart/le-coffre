@@ -2,6 +2,12 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from identity_access_management_context.adapters.secondary.sql.model.iam_event import IamEventTable
+from identity_access_management_context.domain.events import (
+    ServiceAccountCreatedEvent,
+    ServiceAccountRevokedEvent,
+    ServiceAccountsListedEvent,
+    ServiceAccountTokenRotatedEvent,
+)
 
 
 def _append(repository, event_type: str, group_id):
@@ -54,6 +60,46 @@ def test_given_unrelated_iam_event_when_listing_group_events_then_it_is_excluded
     events = sql_iam_event_repository.list_events(group_id)
 
     assert [event["event_type"] for event in events] == ["OwnerDemotedToMemberEvent"]
+
+
+def test_given_service_account_events_when_listing_group_events_then_the_lifecycle_of_its_accounts_is_included(
+    sql_iam_event_repository, sql_service_account_event_repository
+):
+    group_id, other_group_id, account_id, owner_id = uuid4(), uuid4(), uuid4(), uuid4()
+    lifecycle = [
+        ServiceAccountCreatedEvent,
+        ServiceAccountTokenRotatedEvent,
+        ServiceAccountRevokedEvent,
+    ]
+    sql_service_account_event_repository.extend(
+        [
+            *(
+                event_class(
+                    event_id=uuid4(),
+                    occurred_on=datetime.now(timezone.utc),
+                    actor_principal_id=owner_id,
+                    service_account_id=account_id,
+                    service_account_name="nightly-deploy",
+                    group_id=gid,
+                    group_name="Platform",
+                )
+                for event_class in lifecycle
+                for gid in (group_id, other_group_id)
+            ),
+            # A listing records a read, once per opening of the dialog: never history.
+            ServiceAccountsListedEvent(
+                event_id=uuid4(), occurred_on=datetime.now(timezone.utc), actor_principal_id=owner_id, group_id=group_id
+            ),
+        ]
+    )
+
+    events = sql_iam_event_repository.list_events(group_id)
+
+    assert sorted(event["event_type"] for event in events) == sorted(cls.__name__ for cls in lifecycle)
+    for event in events:
+        assert event["actor_principal_id"] == str(owner_id)
+        assert event["event_data"]["service_account_name"] == "nightly-deploy"
+        assert event["event_data"]["group_id"] == str(group_id)
 
 
 def test_given_an_aware_timestamp_when_appending_then_it_is_stored_as_naive_utc(sql_iam_event_repository, session):

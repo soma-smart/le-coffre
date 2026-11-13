@@ -51,7 +51,7 @@ class CreateServiceAccountUseCase(
         self, command: CreateServiceAccountCommand
     ) -> tuple[ServiceAccountCreatedEvent, CreateServiceAccountResponse]:
         # Check the user has the right permissions
-        self._permissions.ensure_user_can_manage_group(command.requesting_user, command.group_id)
+        group = self._permissions.ensure_user_can_manage_group(command.requesting_user, command.group_id)
 
         # Check the service account name
         name = ServiceAccount.validated_service_account_name(command.name)
@@ -84,6 +84,8 @@ class CreateServiceAccountUseCase(
             actor_principal_id=command.requesting_user.user_id,
             service_account_id=account.id,
             service_account_name=account.name,
+            group_id=account.group_id,
+            group_name=group.name,
         )
         response = CreateServiceAccountResponse(
             id=account.id,

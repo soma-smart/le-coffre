@@ -44,7 +44,7 @@ class ListGroupEventsResponse(BaseModel):
     "/{group_id}/events",
     response_model=ListGroupEventsResponse,
     status_code=200,
-    summary="List membership events for a group",
+    summary="List a group's history: membership and service account events",
 )
 def list_group_events(
     group_id: UUID,
@@ -55,8 +55,9 @@ def list_group_events(
     usecase: ListGroupEventsUseCase = Depends(get_list_group_events_usecase),
 ):
     """
-    Retrieve the membership event history for a group: members added, owners
-    added/promoted, and members removed.
+    Retrieve the history of a group: members added, owners added/promoted,
+    members removed, and service accounts created, given a new token, or revoked.
+    Service account events name the account and never carry its token.
 
     Only group owners and admins can list events for a group.
 
