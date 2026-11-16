@@ -27,7 +27,7 @@ class ListPasswordEventsByActorUseCase(TracedUseCase):
         AdminPermissionChecker.ensure_admin(command.requesting_user, "list password events by actor")
 
         events = self.password_event_repository.list_events_by_actor(
-            actor_user_id=command.actor_user_id,
+            actor_principal_id=command.actor_principal_id,
             event_types=command.event_types,
             start_date=command.start_date,
             end_date=command.end_date,
@@ -42,7 +42,7 @@ class ListPasswordEventsByActorUseCase(TracedUseCase):
                     if hasattr(event["occurred_on"], "isoformat")
                     else event["occurred_on"],
                     password_id=str(event["password_id"]),
-                    actor_user_id=str(event["actor_user_id"]),
+                    actor_principal_id=str(event["actor_principal_id"]),
                     event_data=event["event_data"],
                 )
                 for event in events

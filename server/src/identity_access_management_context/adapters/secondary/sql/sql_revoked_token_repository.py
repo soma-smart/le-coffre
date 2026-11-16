@@ -26,7 +26,7 @@ class SqlRevokedTokenRepository(SQLBaseRepository, RevokedTokenRepository):
         self._session.add(
             RevokedTokenTable(
                 jti=token.jti,
-                user_id=token.user_id,
+                principal_id=token.principal_id,
                 token_type=token.token_type,
                 expires_at=token.expires_at,
                 revoked_at=revoked_at,

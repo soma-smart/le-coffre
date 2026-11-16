@@ -1,4 +1,3 @@
-from datetime import timedelta
 from uuid import UUID
 
 import pytest
@@ -10,20 +9,17 @@ from identity_access_management_context.application.use_cases import (
     UpdateUserPasswordUseCase,
 )
 from identity_access_management_context.domain.entities import (
-    MAX_ACTIVE_TOKENS_PER_USER,
-    ExtensionToken,
+    PasswordCredentialRecord,
     User,
-    UserPassword,
 )
 from identity_access_management_context.domain.exceptions import (
     InvalidCredentialsException,
     UserNotFoundException,
 )
-from identity_access_management_context.domain.value_objects import ExtensionTokenSecret
 from tests.identity_access_management_context.unit.fakes import (
+    FakePasswordCredentialRecordRepository,
     FakePasswordHashingGateway,
     FakeTokenGateway,
-    FakeUserPasswordRepository,
     FakeUserRepository,
 )
 from tests.shared_kernel.fakes import FakeTimeGateway
@@ -31,24 +27,24 @@ from tests.shared_kernel.fakes import FakeTimeGateway
 
 @pytest.fixture
 def use_case(
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     user_repository: FakeUserRepository,
     auth_session_repository,
     token_gateway: FakeTokenGateway,
     time_provider: FakeTimeGateway,
-    extension_token_repository,
+    token_credential_record_repository,
     domain_event_publisher,
     admin_event_repository,
 ):
     return UpdateUserPasswordUseCase(
-        user_password_repository,
+        password_credential_record_repository,
         password_hashing_gateway,
         user_repository,
         auth_session_repository,
         token_gateway,
         time_provider,
-        extension_token_repository,
+        token_credential_record_repository,
         domain_event_publisher,
         admin_event_repository,
     )
@@ -56,7 +52,7 @@ def use_case(
 
 def test_given_valid_user_with_correct_old_password_when_updating_password_should_update_successfully(
     use_case: UpdateUserPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
     user_repository: FakeUserRepository,
     auth_session_repository,
@@ -69,13 +65,12 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     new_password = "NewPassword456!"
 
     # Create existing user with hashed old password
-    user_password = UserPassword(
-        id=user_id,
+    user_password = PasswordCredentialRecord(
+        principal_id=user_id,
         email="user@example.com",
         password_hash=password_hashing_gateway.hash(old_password),
-        display_name="Test User",
     )
-    user_password_repository.save(user_password)
+    password_credential_record_repository.save(user_password)
     user_repository.save(
         User(
             id=user_id,
@@ -103,8 +98,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
     result = use_case.execute(command)
 
     # Assert
-    updated_user = user_password_repository.get_by_id(user_id)
-    assert updated_user is not None
+    (updated_user,) = password_credential_record_repository.list_by_principal_id(user_id)
     assert password_hashing_gateway.verify(new_password, updated_user.password_hash)
     assert not password_hashing_gateway.verify(old_password, updated_user.password_hash)
     authenticated_user = user_repository.get_by_id(user_id)
@@ -113,7 +107,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
 
     stale_session = auth_session_repository.sessions[existing_session.id]
     assert stale_session.invalidated_at == time_provider.get_current_time().replace(microsecond=0)
-    current_session = auth_session_repository.get_active_by_user_id_and_refresh_jti(
+    current_session = auth_session_repository.get_active_by_principal_id_and_refresh_jti(
         user_id,
         "refresh-token-jti-password-change",
     )
@@ -125,7 +119,7 @@ def test_given_valid_user_with_correct_old_password_when_updating_password_shoul
 
 def test_given_incorrect_old_password_when_updating_password_should_raise_invalid_credentials(
     use_case: UpdateUserPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
 ):
     # Arrange
@@ -135,13 +129,12 @@ def test_given_incorrect_old_password_when_updating_password_should_raise_invali
     new_password = "NewPassword456!"
 
     # Create existing user with hashed password
-    user_password = UserPassword(
-        id=user_id,
+    user_password = PasswordCredentialRecord(
+        principal_id=user_id,
         email="user@example.com",
         password_hash=password_hashing_gateway.hash(actual_password),
-        display_name="Test User",
     )
-    user_password_repository.save(user_password)
+    password_credential_record_repository.save(user_password)
 
     command = UpdateUserPasswordCommand(
         user_id=user_id,
@@ -173,19 +166,18 @@ def test_given_user_not_in_password_repository_when_updating_password_should_rai
 
 def test_given_password_record_exists_but_user_missing_when_updating_password_then_does_not_persist_new_password(
     use_case: UpdateUserPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
 ):
     user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
     old_password = "OldPassword123!"
     new_password = "NewPassword456!"
 
-    user_password_repository.save(
-        UserPassword(
-            id=user_id,
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(
+            principal_id=user_id,
             email="user@example.com",
             password_hash=password_hashing_gateway.hash(old_password),
-            display_name="Test User",
         )
     )
 
@@ -198,53 +190,37 @@ def test_given_password_record_exists_but_user_missing_when_updating_password_th
     with pytest.raises(UserNotFoundException):
         use_case.execute(command)
 
-    unchanged_user_password = user_password_repository.get_by_id(user_id)
-    assert unchanged_user_password is not None
+    (unchanged_user_password,) = password_credential_record_repository.list_by_principal_id(user_id)
     assert password_hashing_gateway.verify(old_password, unchanged_user_password.password_hash)
     assert not password_hashing_gateway.verify(new_password, unchanged_user_password.password_hash)
 
 
 def test_given_paired_extensions_when_password_changes_then_revokes_them_outright(
     use_case: UpdateUserPasswordUseCase,
-    user_password_repository: FakeUserPasswordRepository,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
     user_repository: FakeUserRepository,
     password_hashing_gateway: FakePasswordHashingGateway,
-    extension_token_repository,
+    token_credential_record_repository,
     time_provider: FakeTimeGateway,
 ):
-    """Revoked on the row, not merely shadowed by session_invalid_before.
+    """Deleted outright: token credentials do not look at the session cutoff.
 
-    The cutoff alone did stop an extension token authenticating, but it left
-    revoked_at empty, so `is_active` stayed true. Two things read the row rather
-    than the cutoff and both then lied: the "Connected extensions" screen listed
-    a dead credential as live, and the rate limiter kept charging its requests
-    to this user's per-user bucket, which a thief holding the dead token could
-    burn at the victim's expense.
+    A password change is the user saying "log everything out", so every token
+    issued to their extensions goes with it.
     """
     user_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     now = time_provider.get_current_time()
 
     user_repository.save(User(id=user_id, username="u", email="u@example.com", name="U"))
-    user_password_repository.save(
-        UserPassword(
-            id=user_id,
+    password_credential_record_repository.save(
+        PasswordCredentialRecord(
+            principal_id=user_id,
             email="u@example.com",
-            display_name="U",
             password_hash=password_hashing_gateway.hash("old-password-long-enough"),
         )
     )
-    extension_token_repository.add(
-        ExtensionToken.create(
-            user_id=user_id,
-            secret=ExtensionTokenSecret.generate(),
-            device_name="Browser extension",
-            lifetime=timedelta(days=30),
-            now=now,
-        ),
-        MAX_ACTIVE_TOKENS_PER_USER,
-        now,
-    )
-    assert extension_token_repository.count_active_for_user(user_id, now) == 1
+    token_credential_record_repository.issue(user_id, now)
+    assert token_credential_record_repository.count_usable(user_id, now) == 1
 
     use_case.execute(
         UpdateUserPasswordCommand(
@@ -254,6 +230,28 @@ def test_given_paired_extensions_when_password_changes_then_revokes_them_outrigh
         )
     )
 
-    assert extension_token_repository.count_active_for_user(user_id, now) == 0
-    stored = extension_token_repository.list_for_user(user_id)[0]
-    assert stored.revoked_at is not None
+    assert token_credential_record_repository.list_by_principal_id(user_id) == []
+
+
+def test_given_a_user_with_two_passwords_when_updating_then_only_the_one_matching_the_old_password_changes(
+    use_case: UpdateUserPasswordUseCase,
+    password_credential_record_repository: FakePasswordCredentialRecordRepository,
+    password_hashing_gateway: FakePasswordHashingGateway,
+    user_repository: FakeUserRepository,
+):
+    user_id = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
+    for email, password in (("work@example.com", "WorkPassword123!"), ("home@example.com", "HomePassword123!")):
+        password_credential_record_repository.save(
+            PasswordCredentialRecord(
+                principal_id=user_id, email=email, password_hash=password_hashing_gateway.hash(password)
+            )
+        )
+    user_repository.save(User(id=user_id, username="testuser", email="work@example.com", name="Test User"))
+
+    use_case.execute(
+        UpdateUserPasswordCommand(user_id=user_id, old_password="HomePassword123!", new_password="NewPassword456!")
+    )
+
+    hashes = {c.email: c.password_hash for c in password_credential_record_repository.list_by_principal_id(user_id)}
+    assert password_hashing_gateway.verify("WorkPassword123!", hashes["work@example.com"])
+    assert password_hashing_gateway.verify("NewPassword456!", hashes["home@example.com"])

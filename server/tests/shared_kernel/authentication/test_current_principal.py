@@ -1,12 +1,12 @@
-"""The opt-in bearer path, and its containment rules.
+"""The opt-in token path, and its containment rules.
 
-`get_current_principal` is the only dependency that accepts a browser-extension
-bearer token, and only four read routes declare it. These tests pin the rules
-that make that safe, including which routes those four are.
+Only the routes depending on `get_current_principal`, or on a dependency built
+on the same authentication, accept a bearer token. These tests pin the rules
+that make that safe, including which routes those are.
 """
 
 from unittest.mock import Mock
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from fastapi import HTTPException
@@ -14,22 +14,26 @@ from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials
 
 from identity_access_management_context.application.responses import (
-    ValidatedExtensionTokenResponse,
+    AuthenticateTokenResponse,
     ValidateUserTokenResponse,
 )
 from identity_access_management_context.application.use_cases import (
-    ValidateExtensionTokenUseCase,
+    AuthenticateTokenUseCase,
     ValidateUserTokenUseCase,
 )
-from identity_access_management_context.domain.exceptions import ExtensionTokenRevokedError
 from main import app
 from security.rate_limit_middleware import RateLimitMiddleware
-from shared_kernel.adapters.primary.dependencies import get_current_principal
-from shared_kernel.domain.entities import ApiPrincipal, ValidatedUser
-from shared_kernel.domain.value_objects import CredentialKind
+from shared_kernel.adapters.primary.dependencies import (
+    _authenticate,
+    get_current_credential,
+    get_current_principal,
+    get_current_requesting_user,
+)
+from shared_kernel.domain.entities import AuthenticatedPrincipal, AuthenticatedUser, PresentedCredential
+from shared_kernel.domain.exceptions import RejectedCredentialError
 
 USER_ID = UUID("7d742e0e-bb76-4728-83ef-8d546d7c62e5")
-TOKEN_ID = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
+CREDENTIAL_ID = UUID("1d742e0e-bb76-4728-83ef-8d546d7c62e6")
 
 
 def _request(method: str = "GET"):
@@ -52,14 +56,15 @@ def _session_usecase(roles: list[str]):
     return usecase
 
 
-def _extension_usecase():
-    usecase = Mock(spec=ValidateExtensionTokenUseCase)
+def _token_usecase(read_only: bool = True, roles: list[str] | None = None, kind: str = "user"):
+    usecase = Mock(spec=AuthenticateTokenUseCase)
     usecase.execute = Mock(
-        return_value=ValidatedExtensionTokenResponse(
-            user_id=USER_ID,
-            email="admin@lecoffre.com",
-            display_name="Admin User",
-            token_id=TOKEN_ID,
+        return_value=AuthenticateTokenResponse(
+            principal_id=USER_ID,
+            principal_kind=kind,
+            roles=["admin"] if roles is None else roles,
+            credential_id=CREDENTIAL_ID,
+            read_only=read_only,
         )
     )
     return usecase
@@ -69,141 +74,89 @@ def _bearer(value: str = "a-token"):
     return HTTPAuthorizationCredentials(scheme="Bearer", credentials=value)
 
 
-def test_should_return_a_session_principal_when_the_cookie_is_valid():
-    principal = get_current_principal(
-        request=_request(),
-        access_token="valid-cookie",
-        credentials=None,
-        validate_usecase=_session_usecase(["admin"]),
-        validate_extension_usecase=_extension_usecase(),
+def _authenticate_with(method="GET", access_token=None, credentials=None, session=None, token=None):
+    return _authenticate(
+        request=_request(method),
+        access_token=access_token,
+        credentials=credentials,
+        validate_usecase=session or _session_usecase(["admin"]),
+        authenticate_token_usecase=token or _token_usecase(),
     )
 
-    assert principal.kind is CredentialKind.SESSION
-    assert principal.is_read_only is False
-    assert principal.user.roles == ["admin"]
+
+def test_should_resolve_the_user_with_its_roles_when_the_cookie_is_valid():
+    authentication = _authenticate_with(access_token="valid-cookie")
+
+    assert get_current_principal(authentication) == AuthenticatedPrincipal(principal_id=USER_ID, kind="user")
+    assert get_current_credential(authentication) is None
+    assert get_current_requesting_user(authentication) == AuthenticatedUser(user_id=USER_ID, roles=["admin"])
 
 
-def test_should_strip_the_admin_role_when_authenticating_with_a_bearer():
-    # The single most important assertion here. ListPasswordsUseCase hands an
-    # admin every password on the instance, and echoing the user's own roles
-    # would put that list (names, logins, URLs) into a browser profile.
-    extension_usecase = _extension_usecase()
+def test_should_not_fall_back_to_the_token_when_the_cookie_is_invalid():
+    """A cookie wins, and a bad one is fatal: a token must not rescue it."""
+    session = Mock(spec=ValidateUserTokenUseCase)
+    session.execute = Mock(side_effect=Exception("expired"))
+    token = _token_usecase()
 
-    principal = get_current_principal(
-        request=_request(),
-        access_token=None,
-        credentials=_bearer(),
-        validate_usecase=_session_usecase(["admin"]),
-        validate_extension_usecase=extension_usecase,
-    )
+    with pytest.raises(HTTPException):
+        _authenticate_with(access_token="expired-cookie", credentials=_bearer(), session=session, token=token)
 
-    assert principal.kind is CredentialKind.EXTENSION
-    assert principal.user.roles == ["user"]
-    assert "admin" not in principal.user.roles
+    token.execute.assert_not_called()
 
 
-def test_should_strip_the_roles_in_the_constructor_whatever_the_caller_passed():
-    # The dependency strips them too, but the constructor is the one place a
-    # future call site cannot forget.
-    admin = ValidatedUser(user_id=uuid4(), email="root@example.com", display_name="Root", roles=["admin", "user"])
-
-    principal = ApiPrincipal.extension(admin)
-
-    assert principal.user.roles == ["user"]
-    assert principal.kind is CredentialKind.EXTENSION
-
-
-def test_should_ignore_the_bearer_when_a_cookie_is_present():
-    extension_usecase = _extension_usecase()
-
-    principal = get_current_principal(
-        request=_request(),
-        access_token="valid-cookie",
-        credentials=_bearer(),
-        validate_usecase=_session_usecase(["admin"]),
-        validate_extension_usecase=extension_usecase,
-    )
-
-    assert principal.kind is CredentialKind.SESSION
-    extension_usecase.execute.assert_not_called()
-
-
-def test_should_reject_when_the_cookie_is_invalid_even_if_a_bearer_is_present():
-    # Falling through would let an attacker-supplied bearer rescue an expired
-    # cookie, and would break the SPA's 401-then-refresh flow.
-    failing_session = Mock(spec=ValidateUserTokenUseCase)
-    failing_session.execute = Mock(side_effect=Exception("expired"))
-    extension_usecase = _extension_usecase()
-
+def test_should_refuse_when_neither_cookie_nor_token_is_presented():
     with pytest.raises(HTTPException) as error:
-        get_current_principal(
-            request=_request(),
-            access_token="expired-cookie",
-            credentials=_bearer(),
-            validate_usecase=failing_session,
-            validate_extension_usecase=extension_usecase,
-        )
+        _authenticate_with()
 
-    assert error.value.status_code in (401, 500)
-    extension_usecase.execute.assert_not_called()
+    assert error.value.status_code == 401
+
+
+def test_should_resolve_the_principal_and_its_credential_when_the_token_is_valid():
+    authentication = _authenticate_with(credentials=_bearer())
+
+    assert get_current_principal(authentication) == AuthenticatedPrincipal(principal_id=USER_ID, kind="user")
+    assert get_current_credential(authentication) == PresentedCredential(credential_id=CREDENTIAL_ID, read_only=True)
+
+
+def test_should_drop_the_roles_when_the_token_is_read_only():
+    """An admin's extension must not make `/passwords/list` return every secret of the instance."""
+    authentication = _authenticate_with(credentials=_bearer(), token=_token_usecase(read_only=True, roles=["admin"]))
+
+    assert get_current_requesting_user(authentication).roles == []
+
+
+def test_should_keep_the_roles_when_the_token_is_not_read_only():
+    authentication = _authenticate_with(credentials=_bearer(), token=_token_usecase(read_only=False, roles=["admin"]))
+
+    assert get_current_requesting_user(authentication).roles == ["admin"]
 
 
 @pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
-def test_should_refuse_when_a_bearer_attempts_a_mutating_request(method: str):
+def test_should_refuse_a_mutating_request_when_the_token_is_read_only(method):
     with pytest.raises(HTTPException) as error:
-        get_current_principal(
-            request=_request(method),
-            access_token=None,
-            credentials=_bearer(),
-            validate_usecase=_session_usecase(["user"]),
-            validate_extension_usecase=_extension_usecase(),
-        )
+        _authenticate_with(method=method, credentials=_bearer(), token=_token_usecase(read_only=True))
 
     assert error.value.status_code == 403
 
 
-@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH", "DELETE"])
-def test_should_allow_a_session_to_mutate(method: str):
-    principal = get_current_principal(
-        request=_request(method),
-        access_token="valid-cookie",
-        credentials=None,
-        validate_usecase=_session_usecase(["user"]),
-        validate_extension_usecase=_extension_usecase(),
-    )
-
-    assert principal.kind is CredentialKind.SESSION
-
-
-def test_should_reject_when_no_credential_is_present():
-    with pytest.raises(HTTPException) as error:
-        get_current_principal(
-            request=_request(),
-            access_token=None,
-            credentials=None,
-            validate_usecase=_session_usecase(["user"]),
-            validate_extension_usecase=_extension_usecase(),
-        )
-
-    assert error.value.status_code == 401
-
-
-def test_should_report_a_generic_message_when_the_extension_token_is_revoked():
-    # A token holder must not be able to tell revoked from expired from unknown.
-    revoked = Mock(spec=ValidateExtensionTokenUseCase)
-    revoked.execute = Mock(side_effect=ExtensionTokenRevokedError())
+def test_should_answer_one_generic_401_when_the_token_is_refused():
+    token = Mock(spec=AuthenticateTokenUseCase)
+    token.execute = Mock(side_effect=RejectedCredentialError())
 
     with pytest.raises(HTTPException) as error:
-        get_current_principal(
-            request=_request(),
-            access_token=None,
-            credentials=_bearer(),
-            validate_usecase=_session_usecase(["user"]),
-            validate_extension_usecase=revoked,
-        )
+        _authenticate_with(credentials=_bearer(), token=token)
 
     assert error.value.status_code == 401
-    assert error.value.detail == "Invalid extension token"
+    assert error.value.detail == "Invalid token"
+
+
+def test_should_refuse_a_route_meant_for_users_when_the_principal_is_a_service_account():
+    authentication = _authenticate_with(credentials=_bearer(), token=_token_usecase(kind="service_account"))
+
+    with pytest.raises(HTTPException) as error:
+        get_current_requesting_user(authentication)
+
+    assert error.value.status_code == 403
 
 
 def test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes():
@@ -213,12 +166,11 @@ def test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes(
     it does not spend a database lookup deciding the bucket of a request that is
     going to 401 anyway. That knowledge really lives in the route declarations,
     and a copy of it in the middleware is exactly the kind of restatement that
-    drifts in silence: adding a fifth bearer route would leave its callers in
-    the anonymous bucket with nothing logged.
+    drifts in silence.
 
     Deriving the truth from the application's own dependency graph also pins the
-    containment rule itself, which until now rested on a sentence in CLAUDE.md:
-    if somebody adds `get_current_principal` to a route, this test says so.
+    containment rule itself: if somebody makes a route depend on the token
+    authentication, this test says so.
     """
 
     def api_routes(routes):
@@ -233,12 +185,12 @@ def test_should_match_the_rate_limiter_when_listing_the_bearer_reachable_routes(
             if included is not None:
                 yield from api_routes(included.routes)
 
-    def declares_current_principal(dependant) -> bool:
-        if dependant.call is get_current_principal:
+    def accepts_a_token(dependant) -> bool:
+        if dependant.call is _authenticate:
             return True
-        return any(declares_current_principal(child) for child in dependant.dependencies)
+        return any(accepts_a_token(child) for child in dependant.dependencies)
 
-    reachable = {route.path for route in api_routes(app.routes) if declares_current_principal(route.dependant)}
+    reachable = {route.path for route in api_routes(app.routes) if accepts_a_token(route.dependant)}
 
     assert reachable == {
         "/extension/session",

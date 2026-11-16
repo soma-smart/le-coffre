@@ -65,7 +65,7 @@ def test_given_user_with_passwords_when_user_deleted_should_delete_all_passwords
 
     command = DeletePasswordsForDeletedUserCommand(
         personal_group_id=personal_group_id,
-        deleted_by_user_id=admin_user_id,
+        deleted_by_principal_id=admin_user_id,
     )
 
     use_case.execute(command)
@@ -100,7 +100,7 @@ def test_given_user_with_passwords_when_user_deleted_should_remove_all_permissio
 
     command = DeletePasswordsForDeletedUserCommand(
         personal_group_id=personal_group_id,
-        deleted_by_user_id=admin_user_id,
+        deleted_by_principal_id=admin_user_id,
     )
 
     use_case.execute(command)
@@ -142,7 +142,7 @@ def test_given_user_with_passwords_when_user_deleted_should_publish_events(
 
     command = DeletePasswordsForDeletedUserCommand(
         personal_group_id=personal_group_id,
-        deleted_by_user_id=admin_user_id,
+        deleted_by_principal_id=admin_user_id,
     )
 
     use_case.execute(command)
@@ -151,7 +151,7 @@ def test_given_user_with_passwords_when_user_deleted_should_publish_events(
     for event in domain_event_publisher.published_events:
         assert isinstance(event, PasswordDeletedEvent)
         assert event.owner_group_id == personal_group_id
-        assert event.deleted_by_user_id == admin_user_id
+        assert event.deleted_by_principal_id == admin_user_id
 
 
 def test_given_user_without_passwords_when_user_deleted_should_do_nothing(
@@ -163,7 +163,7 @@ def test_given_user_without_passwords_when_user_deleted_should_do_nothing(
 
     command = DeletePasswordsForDeletedUserCommand(
         personal_group_id=personal_group_id,
-        deleted_by_user_id=admin_user_id,
+        deleted_by_principal_id=admin_user_id,
     )
 
     use_case.execute(command)

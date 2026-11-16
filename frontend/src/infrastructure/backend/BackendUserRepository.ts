@@ -194,7 +194,7 @@ function toUserPasswordEvent(dto: PasswordEventByActorResponseItem): UserPasswor
     eventType: dto.event_type,
     occurredOn: dto.occurred_on,
     passwordId: dto.password_id,
-    actorUserId: dto.actor_user_id,
+    actorPrincipalId: dto.actor_principal_id,
     eventData: out,
   }
 }

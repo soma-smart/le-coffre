@@ -119,7 +119,7 @@ function toServiceAccount(dto: ServiceAccountSummary): ServiceAccount {
     id: dto.id,
     groupId: dto.group_id,
     name: dto.name,
-    createdByUserId: dto.created_by_user_id ?? null,
+    createdByUserId: dto.created_by_principal_id ?? null,
     createdByUserName: dto.created_by_user_name ?? null,
     createdAt: dto.created_at ?? null,
     revokedAt: dto.revoked_at ?? null,

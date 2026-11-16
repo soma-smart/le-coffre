@@ -20,7 +20,7 @@ export interface GroupEvent {
   eventId: string
   eventType: string
   occurredOn: string
-  actorUserId: string
+  actorPrincipalId: string
   actorEmail: string | null
   eventData: Record<string, unknown>
 }

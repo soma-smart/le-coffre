@@ -59,11 +59,9 @@ def test_admin_can_disconnect_another_users_extensions(e2e_client, client_factor
     assert revoked.status_code == 200, revoked.text
     assert revoked.json()["revoked_count"] == 1
 
-    # The credential is dead on its next request, and the owner can see why.
+    # The credential is dead on its next request, and gone from the owner's devices.
     assert bearer.get("/api/extension/session", headers=headers).status_code == 401
-    devices = user_client.get("/api/extension/tokens").json()["tokens"]
-    assert devices[0]["is_active"] is False
-    assert devices[0]["revoked_at"] is not None
+    assert user_client.get("/api/extension/tokens").json()["tokens"] == []
 
     # Idempotent: nothing left to cut.
     assert admin_client.delete(f"/api/admin/users/{user_id}/extension-tokens").json()["revoked_count"] == 0

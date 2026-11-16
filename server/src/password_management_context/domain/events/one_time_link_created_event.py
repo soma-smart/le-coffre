@@ -19,10 +19,10 @@ class OneTimeLinkCreatedEvent(BasePasswordEvent):
 
     link_id: UUID
     expires_at: str
-    created_by_user_id: UUID
+    created_by_principal_id: UUID
 
-    def get_actor_user_id(self) -> UUID:
-        return self.created_by_user_id
+    def get_actor_principal_id(self) -> UUID:
+        return self.created_by_principal_id
 
     def to_event_data(self) -> OneTimeLinkCreatedEventData:
         return {

@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -8,7 +8,7 @@ from identity_access_management_context.application.commands import (
 from identity_access_management_context.application.use_cases import (
     AddUserToGroupUseCase,
 )
-from identity_access_management_context.domain.entities import Group, User
+from identity_access_management_context.domain.entities import Group, ServiceAccount, User
 from identity_access_management_context.domain.events import UserAddedToGroupEvent
 from identity_access_management_context.domain.exceptions import (
     CannotModifyPersonalGroupException,
@@ -328,4 +328,26 @@ def test_given_owner_when_adding_user_to_group_then_should_store_user_added_to_g
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "UserAddedToGroupEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id
+
+
+def test_given_a_service_account_when_adding_it_to_a_group_then_it_is_refused(
+    use_case: AddUserToGroupUseCase,
+    user_repository: FakeUserRepository,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    service_account_repository,
+):
+    """Membership is named for any principal, but a service account must not gain member rights."""
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    user_repository.save(User(id=owner_id, username="owner", email="owner@example.com", name="Owner User"))
+    group_repository.save_group(Group(id=group_id, name="Development Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    account = ServiceAccount.create(group_id=uuid4(), name="nightly-backup")
+    service_account_repository.create([account])
+
+    with pytest.raises(UserNotFoundException):
+        use_case.execute(AddUserToGroupCommand(requester_id=owner_id, group_id=group_id, user_id=account.id))
+
+    assert not group_member_repository.is_member(group_id, account.id)

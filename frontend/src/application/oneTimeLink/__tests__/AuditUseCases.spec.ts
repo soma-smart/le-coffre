@@ -14,7 +14,7 @@ function makeLink(overrides: Partial<OneTimeLink> = {}): OneTimeLink {
   return {
     id: 'link-1',
     passwordId: 'password-1',
-    createdByUserId: 'alice',
+    createdByPrincipalId: 'alice',
     createdAt: new Date(now - HOUR).toISOString(),
     expiresAt: new Date(now + HOUR).toISOString(),
     readAt: null,
@@ -29,7 +29,7 @@ describe('one-time link audit use cases', () => {
   beforeEach(() => {
     repository = new InMemoryOneTimeLinkRepository()
       .seed(makeLink({ id: 'alice-live' }))
-      .seed(makeLink({ id: 'bob-live', createdByUserId: 'bob' }))
+      .seed(makeLink({ id: 'bob-live', createdByPrincipalId: 'bob' }))
       .seed(makeLink({ id: 'alice-read', readAt: new Date().toISOString() }))
       .seedPasswordName('password-1', 'Prod DB')
       .seedIssuerName('alice', 'Alice Martin')

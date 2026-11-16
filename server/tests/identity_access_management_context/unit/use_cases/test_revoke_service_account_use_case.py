@@ -46,6 +46,7 @@ def groups(group_repository, group_member_repository):
 @pytest.fixture
 def create_use_case(
     service_account_repository,
+    token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -54,6 +55,7 @@ def create_use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
+        token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -65,6 +67,7 @@ def create_use_case(
 @pytest.fixture
 def use_case(
     service_account_repository,
+    token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -72,6 +75,7 @@ def use_case(
 ):
     return RevokeServiceAccountUseCase(
         service_account_repository,
+        token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -100,6 +104,14 @@ def test_given_an_active_account_when_revoking_then_it_becomes_inactive(
     stored = service_account_repository.accounts[account.id]
     assert not stored.is_active
     assert stored.revoked_at == LATER
+
+
+def test_given_an_active_account_when_revoking_then_its_token_records_are_deleted(
+    use_case, owner, account, token_credential_record_repository
+):
+    _revoke(use_case, owner, account.id)
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
 
 
 def test_given_a_revoked_account_when_listing_the_group_then_the_row_survives(
@@ -143,6 +155,29 @@ def test_given_an_account_revoked_concurrently_when_revoking_then_it_is_refused(
         _revoke(use_case, owner, account.id)
 
 
+def test_given_a_failure_while_marking_the_account_when_revoking_then_its_token_is_already_gone(
+    use_case, owner, account, service_account_repository, token_credential_record_repository, monkeypatch
+):
+    """A revocation cut short must leave an account that cannot authenticate, not a revoked one that can."""
+    revoke = service_account_repository.revoke
+
+    def fail(ids, now):
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(service_account_repository, "revoke", fail)
+    with pytest.raises(RuntimeError):
+        _revoke(use_case, owner, account.id)
+
+    assert token_credential_record_repository.list_by_principal_id(account.id) == []
+    assert service_account_repository.accounts[account.id].is_active
+
+    # Revoking again finishes the job
+    monkeypatch.setattr(service_account_repository, "revoke", revoke)
+    _revoke(use_case, owner, account.id)
+
+    assert not service_account_repository.accounts[account.id].is_active
+
+
 def test_given_a_plain_member_when_revoking_then_it_is_refused(use_case, account, groups):
     with pytest.raises(UserNotOwnerOfGroupException):
         _revoke(use_case, AuthenticatedUser(user_id=MEMBER_ID, roles=[]), account.id)
@@ -165,7 +200,7 @@ def test_given_a_revocation_when_it_succeeds_then_it_is_audited_with_its_author(
 
     event = service_account_event_repository.events[-1]
     assert event["event_type"] == "ServiceAccountRevokedEvent"
-    assert event["actor_user_id"] == OWNER_ID
+    assert event["actor_principal_id"] == OWNER_ID
     assert account.token not in json.dumps(event["event_data"])
 
 

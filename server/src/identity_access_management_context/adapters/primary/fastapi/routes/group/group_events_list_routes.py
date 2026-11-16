@@ -30,7 +30,7 @@ class GroupEventResponse(BaseModel):
     event_id: str
     event_type: str
     occurred_on: str
-    actor_user_id: str
+    actor_principal_id: str
     actor_email: str | None
     event_data: dict
 
@@ -81,7 +81,7 @@ def list_group_events(
                     event_id=event.event_id,
                     event_type=event.event_type,
                     occurred_on=event.occurred_on,
-                    actor_user_id=event.actor_user_id,
+                    actor_principal_id=event.actor_principal_id,
                     actor_email=event.actor_email,
                     event_data=event.event_data,
                 )
