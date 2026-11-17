@@ -86,9 +86,7 @@ class SsoLoginUseCase(TracedUseCase):
         ).decrypt()
 
         # Step 1: Validate SSO code with the provider — truly async network call.
-        sso_user_from_provider = await self._sso_gateway.validate_callback(
-            sso_config, command.code, redirect_uri=command.redirect_uri
-        )
+        sso_user_from_provider = await self._sso_gateway.validate_callback(sso_config, command.code)
 
         # Steps 2-4: All remaining DB reads/writes are synchronous.
         # Called directly (no asyncio.to_thread) because the underlying synchronous
