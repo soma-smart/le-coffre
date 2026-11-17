@@ -2,7 +2,15 @@ name: Helm Integration Test
 
 on:
   workflow_dispatch:
+  # Ce test construit les images backend et frontend et déploie le chart : ni
+  # l'extension, ni la documentation, ni l'outillage de dev ne l'alimentent.
   pull_request:
+    paths-ignore:
+      - "extension/**"
+      - "docs/**"
+      - "media/**"
+      - "dev/**"
+      - "*.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
