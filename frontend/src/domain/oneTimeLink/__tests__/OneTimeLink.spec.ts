@@ -13,7 +13,7 @@ function makeLink(overrides: Partial<OneTimeLink> = {}): OneTimeLink {
   return {
     id: 'link-1',
     passwordId: 'password-1',
-    createdByUserId: 'user-1',
+    createdByPrincipalId: 'user-1',
     createdAt: '2026-01-01T11:00:00Z',
     expiresAt: '2026-01-02T11:00:00Z',
     readAt: null,

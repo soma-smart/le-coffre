@@ -20,7 +20,7 @@ def _stored(vault_event_repository: FakeVaultEventRepository, event_type: str, m
         event_id=uuid4(),
         event_type=event_type,
         occurred_on=datetime.now() - timedelta(minutes=minutes_ago),
-        actor_user_id=None,
+        actor_principal_id=None,
         event_data={},
     )
 
@@ -48,10 +48,10 @@ def test_given_vault_last_known_unlocked_when_starting_should_record_and_publish
 
     locks = _published_locks(event_publisher)
     assert len(locks) == 1
-    assert locks[0].locked_by_user_id is None
+    assert locks[0].locked_by_principal_id is None
     stored = vault_event_repository.events[-1]
     assert stored["event_type"] == "VaultLockedEvent"
-    assert stored["actor_user_id"] is None
+    assert stored["actor_principal_id"] is None
     assert stored["event_data"] == {"reason": "server_start"}
 
 

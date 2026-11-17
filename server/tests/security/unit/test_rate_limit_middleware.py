@@ -24,7 +24,7 @@ class _FakeTokenGateway:
         self._raises: dict[str, Exception] = {}
 
     def register(self, token: str, user_id: str) -> None:
-        self._tokens[token] = Token(value=token, user_id=UUID(user_id), email="", roles=[], claims={})
+        self._tokens[token] = Token(value=token, principal_id=UUID(user_id), email="", roles=[], claims={})
 
     def register_raising(self, token: str, exc: Exception) -> None:
         """Wire ``token`` so ``validate_token`` raises ``exc`` — lets us simulate
@@ -70,7 +70,6 @@ def _create_app(
     app.state.rate_limit_one_time_link_max_requests = one_time_link_max
     app.state.rate_limit_extension_pairing_max_requests = extension_pairing_max
     app.state.rate_limit_bearer_miss_max_requests = bearer_miss_max
-    app.state.extension_token_inactivity_seconds = 14 * 86400
     app.state.rate_limit_window_seconds = window
     if session_maker is not None:
         app.state.session_maker = session_maker
@@ -640,8 +639,8 @@ class _FakeSession:
     def exec(self, statement):
         """Answer the repository's SELECT without a database.
 
-        The middleware builds a real SqlExtensionTokenRepository, so the fake
-        has to sit one layer lower, at the session. `first()` is the only
+        The middleware builds a real SqlTokenCredentialRecordRepository, so the
+        fake has to sit one layer lower, at the session. `all()` is the only
         accessor `get_by_token_hash` uses.
         """
         return _FakeResult(self._row_for(statement))
@@ -653,28 +652,31 @@ class _FakeSession:
         # rendered SQL is enough to tell "the token we know" from any other.
         if self._known_hash not in str(statement.compile(compile_kwargs={"literal_binds": True})):
             return None
-        return _FakeTokenRow(self._user_id, self._active)
+        return (_FakeRegistryRow(self._user_id), _FakeTokenDetailsRow(self._active))
 
 
 class _FakeResult:
     def __init__(self, row):
         self._row = row
 
-    def first(self):
-        return self._row
+    def all(self):
+        return [] if self._row is None else [self._row]
 
 
-class _FakeTokenRow:
-    def __init__(self, user_id, active):
+class _FakeRegistryRow:
+    def __init__(self, principal_id):
         self.id = UUID("11111111-1111-1111-1111-111111111111")
-        self.user_id = UUID(user_id)
+        self.principal_id = UUID(principal_id)
+
+
+class _FakeTokenDetailsRow:
+    def __init__(self, active):
         self.token_hash = ""
-        self.device_name = "Chrome"
-        self.created_at = datetime(2026, 1, 1, tzinfo=UTC)
-        self.expires_at = datetime(2026, 2, 1, tzinfo=UTC) if active else datetime(2026, 1, 1, tzinfo=UTC)
-        self.last_used_at = None
-        self.revoked_at = None if active else datetime(2026, 1, 1, tzinfo=UTC)
-        self.created_from_ip = None
+        self.read_only = True
+        self.label = "Chrome"
+        self.expires_at = datetime(2026, 2, 1) if active else datetime(2026, 1, 1)
+        self.last_used_at = datetime(2026, 1, 1)
+        self.max_idle_seconds = 14 * 86400
 
 
 _VALID_TOKEN = "v" * 43
@@ -690,7 +692,7 @@ def test_should_key_an_extension_to_its_user_when_it_sends_a_bearer_and_no_cooki
     """The whole point of bearer keying, and it was dead.
 
     An extension never sends a cookie: they are SameSite=strict. A version of
-    _resolve_principal that returned the IP principal as soon as the cookie was
+    _resolve_caller that returned the IP caller as soon as the cookie was
     absent made the bearer branch unreachable for its only caller, leaving every
     extension in the shared anonymous bucket, which is what it exists to avoid.
     """

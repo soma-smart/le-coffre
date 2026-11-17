@@ -27,7 +27,7 @@ def test_given_user_with_read_permission_when_checking_access_should_grant_acces
 ):
     password_permissions_repository.grant_access(USER_ID, RESOURCE_ID, PasswordPermission.READ)
 
-    command = CheckAccessCommand(user_id=USER_ID, resource_id=RESOURCE_ID, permission=PasswordPermission.READ)
+    command = CheckAccessCommand(principal_id=USER_ID, resource_id=RESOURCE_ID, permission=PasswordPermission.READ)
     result = use_case.execute(command)
 
     assert result.granted is Granted.ACCESS
@@ -36,7 +36,7 @@ def test_given_user_with_read_permission_when_checking_access_should_grant_acces
 def test_given_user_without_permission_when_checking_access_should_deny_access(
     use_case: CheckAccessUseCase,
 ):
-    command = CheckAccessCommand(user_id=USER_ID, resource_id=RESOURCE_ID, permission=PasswordPermission.READ)
+    command = CheckAccessCommand(principal_id=USER_ID, resource_id=RESOURCE_ID, permission=PasswordPermission.READ)
     result = use_case.execute(command)
 
     assert result.granted is Granted.NOT_FOUND

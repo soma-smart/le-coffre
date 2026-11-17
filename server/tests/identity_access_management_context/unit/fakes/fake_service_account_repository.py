@@ -4,7 +4,6 @@ from uuid import UUID
 
 from identity_access_management_context.application.gateways import (
     CannotRevokeServiceAccount,
-    CannotRotateServiceAccount,
     ServiceAccountRepository,
 )
 from identity_access_management_context.domain.entities import ServiceAccount
@@ -31,14 +30,6 @@ class FakeServiceAccountRepository(ServiceAccountRepository):
     def list_for_groups(self, group_ids: Sequence[UUID]) -> Iterable[ServiceAccount]:
         wanted = set(group_ids)
         return [account for account in self.accounts.values() if account.group_id in wanted]
-
-    def rotate(self, ids: Sequence[UUID], hashes: Sequence[str]) -> None:
-        for account_id in ids:
-            account = self.accounts.get(account_id)
-            if account is None or not account.is_active:
-                raise CannotRotateServiceAccount(account_id)
-        for account_id, token_hash in zip(ids, hashes, strict=True):
-            self.accounts[account_id].token_hash = token_hash
 
     def revoke(self, ids: Iterable[UUID], now: datetime) -> None:
         ids = list(ids)

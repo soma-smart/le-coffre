@@ -21,7 +21,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
         event_type: str,
         occurred_on: datetime,
         password_id: UUID,
-        actor_user_id: UUID,
+        actor_principal_id: UUID,
         event_data: dict,
     ) -> None:
         """Append a password event to storage"""
@@ -30,7 +30,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
             event_type=event_type,
             occurred_on=occurred_on,
             password_id=password_id,
-            actor_user_id=actor_user_id,
+            actor_principal_id=actor_principal_id,
             event_data=event_data,
         )
         self._session.add(event)
@@ -39,7 +39,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
     def list_events(
         self,
         password_id: UUID,
-        actor_user_id: UUID | None = None,
+        actor_principal_id: UUID | None = None,
         event_types: list[str] | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
@@ -47,8 +47,8 @@ class SqlPasswordEventRepository(SQLBaseRepository):
         """List events for a specific password with filters"""
         query = select(PasswordEventTable).where(PasswordEventTable.password_id == password_id)
 
-        if actor_user_id:
-            query = query.where(PasswordEventTable.actor_user_id == actor_user_id)
+        if actor_principal_id:
+            query = query.where(PasswordEventTable.actor_principal_id == actor_principal_id)
 
         if event_types:
             query = query.where(PasswordEventTable.event_type.in_(event_types))  # type: ignore[attr-defined]
@@ -69,7 +69,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
                 "event_type": event.event_type,
                 "occurred_on": event.occurred_on.isoformat(),
                 "password_id": str(event.password_id),
-                "actor_user_id": str(event.actor_user_id),
+                "actor_principal_id": str(event.actor_principal_id),
                 "event_data": event.event_data,
             }
             for event in results
@@ -101,7 +101,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
                 "event_type": event.event_type,
                 "occurred_on": event.occurred_on.isoformat(),
                 "password_id": str(event.password_id),
-                "actor_user_id": str(event.actor_user_id),
+                "actor_principal_id": str(event.actor_principal_id),
                 "event_data": event.event_data,
             }
             for event in results
@@ -109,13 +109,13 @@ class SqlPasswordEventRepository(SQLBaseRepository):
 
     def list_events_by_actor(
         self,
-        actor_user_id: UUID,
+        actor_principal_id: UUID,
         event_types: list[str] | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
     ) -> list[dict]:
         """List all password events performed by a given actor across all passwords."""
-        query = select(PasswordEventTable).where(PasswordEventTable.actor_user_id == actor_user_id)
+        query = select(PasswordEventTable).where(PasswordEventTable.actor_principal_id == actor_principal_id)
 
         if event_types:
             query = query.where(PasswordEventTable.event_type.in_(event_types))  # type: ignore[attr-defined]
@@ -136,7 +136,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
                 "event_type": event.event_type,
                 "occurred_on": event.occurred_on.isoformat(),
                 "password_id": str(event.password_id),
-                "actor_user_id": str(event.actor_user_id),
+                "actor_principal_id": str(event.actor_principal_id),
                 "event_data": event.event_data,
             }
             for event in results

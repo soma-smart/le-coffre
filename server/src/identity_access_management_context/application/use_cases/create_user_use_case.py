@@ -4,14 +4,15 @@ from identity_access_management_context.application.commands import CreateUserCo
 from identity_access_management_context.application.gateways import (
     GroupMemberRepository,
     GroupRepository,
+    PasswordCredentialRecordRepository,
     PasswordHashingGateway,
     UserEventRepository,
-    UserPasswordRepository,
     UserRepository,
 )
 from identity_access_management_context.application.services import UserCreationService
-from identity_access_management_context.domain.entities import User, UserPassword
+from identity_access_management_context.domain.entities import PasswordCredentialRecord, User
 from identity_access_management_context.domain.events import UserCreatedEvent
+from identity_access_management_context.domain.exceptions import EmailAlreadyUsedException
 from identity_access_management_context.domain.value_objects import RawPassword
 from shared_kernel.application.gateways import DomainEventPublisher
 from shared_kernel.application.tracing import TracedUseCase
@@ -22,7 +23,7 @@ class CreateUserUseCase(TracedUseCase):
     def __init__(
         self,
         user_repository: UserRepository,
-        user_password_repository: UserPasswordRepository,
+        password_credential_record_repository: PasswordCredentialRecordRepository,
         group_repository: GroupRepository,
         group_member_repository: GroupMemberRepository,
         password_hashing_gateway: PasswordHashingGateway,
@@ -30,7 +31,7 @@ class CreateUserUseCase(TracedUseCase):
         user_event_repository: UserEventRepository,
     ):
         self.user_repository = user_repository
-        self.user_password_repository = user_password_repository
+        self.password_credential_record_repository = password_credential_record_repository
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.password_hashing_gateway = password_hashing_gateway
@@ -41,8 +42,16 @@ class CreateUserUseCase(TracedUseCase):
         AdminPermissionChecker().ensure_admin(command.requesting_user, "Create User")
 
         # Must run before the User is saved below: a late failure would leave an
-        # orphaned User row with no UserPassword.
+        # orphaned User row with no PasswordCredentialRecord.
         password = RawPassword(command.password)
+
+        # Checked before anything is written. The sign-in email is checked too: it is
+        # unique on its own, and starts equal to the user's email.
+        if (
+            self.user_repository.get_by_email(command.email) is not None
+            or self.password_credential_record_repository.get_by_email(command.email) is not None
+        ):
+            raise EmailAlreadyUsedException(command.email)
 
         user = User(
             id=command.id,
@@ -55,14 +64,9 @@ class CreateUserUseCase(TracedUseCase):
 
         password_hash = self.password_hashing_gateway.hash(password.value)
 
-        user_password = UserPassword(
-            id=command.id,
-            email=command.email,
-            password_hash=password_hash,
-            display_name=command.name,
+        self.password_credential_record_repository.save(
+            PasswordCredentialRecord(principal_id=command.id, email=command.email, password_hash=password_hash)
         )
-
-        self.user_password_repository.save(user_password)
 
         UserCreationService.create_personal_group_and_set_ownership(
             user_id=user.id,
@@ -75,14 +79,14 @@ class CreateUserUseCase(TracedUseCase):
             user_id=user.id,
             username=user.username,
             email=user.email,
-            created_by_user_id=command.requesting_user.user_id,
+            created_by_principal_id=command.requesting_user.user_id,
         )
         self._event_publisher.publish(event)
         self._user_event_repository.append_event(
             event_id=event.event_id,
             event_type=type(event).__name__,
             occurred_on=event.occurred_on,
-            actor_user_id=command.requesting_user.user_id,
+            actor_principal_id=command.requesting_user.user_id,
             event_data={"user_id": str(user.id), "username": user.username, "email": user.email},
         )
 

@@ -21,8 +21,8 @@ class GroupRepository(Protocol):
         """Get a group by ID."""
         ...
 
-    def get_by_user_id(self, user_id: UUID) -> PersonalGroup | None:
-        """Get a personal group by user ID."""
+    def get_by_principal_id(self, principal_id: UUID) -> PersonalGroup | None:
+        """Get a personal group by its owner's principal ID."""
         ...
 
     def delete_group(self, group_id: UUID) -> None:

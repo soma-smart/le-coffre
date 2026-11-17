@@ -215,7 +215,7 @@ function toPasswordEvent(dto: PasswordEventResponse): PasswordEvent {
     eventId: dto.event_id,
     eventType: dto.event_type,
     occurredOn: dto.occurred_on,
-    actorUserId: dto.actor_user_id,
+    actorPrincipalId: dto.actor_principal_id,
     actorEmail: dto.actor_email,
     eventData: toPasswordEventData(dto.event_data),
   }

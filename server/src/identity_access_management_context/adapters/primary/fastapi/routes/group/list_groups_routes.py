@@ -68,7 +68,7 @@ def list_groups(
                 id=group.id,
                 name=group.name,
                 is_personal=group.is_personal,
-                user_id=group.user_id,
+                user_id=group.principal_id,
                 owners=group.owners,
                 members=group.members,
             )

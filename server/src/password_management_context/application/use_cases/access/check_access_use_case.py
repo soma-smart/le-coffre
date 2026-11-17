@@ -12,11 +12,11 @@ class CheckAccessUseCase(TracedUseCase):
         self.permission_repository = permission_repository
 
     def execute(self, command: CheckAccessCommand) -> AccessResult:
-        if self.permission_repository.is_owner(command.user_id, command.resource_id):
+        if self.permission_repository.is_owner(command.principal_id, command.resource_id):
             return AccessResult(granted=Granted.ACCESS, is_owner=True)
 
         has_permission = self.permission_repository.has_access_ignoring_expiry(
-            command.user_id, command.resource_id, command.permission
+            command.principal_id, command.resource_id, command.permission
         )
 
         if not has_permission:

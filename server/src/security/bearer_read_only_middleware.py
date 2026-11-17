@@ -1,7 +1,7 @@
 """Refuse mutating requests that authenticate with a bearer token.
 
-This looks redundant next to `ApiPrincipal.ensure_method_allowed`, and it is
-not. Please read before deleting it.
+This looks redundant next to the read-only check behind `get_current_principal`,
+and it is not. Please read before deleting it.
 
 `CsrfMiddleware` only engages when a session cookie is present (see its
 `dispatch`: no access_token and no refresh_token means it steps aside and lets

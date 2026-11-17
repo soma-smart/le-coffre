@@ -13,7 +13,6 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.entities import Group, ServiceAccount, User
 from identity_access_management_context.domain.exceptions import UserNotOwnerOfGroupException
-from identity_access_management_context.domain.value_objects import ServiceAccountToken
 from shared_kernel.domain.entities import AuthenticatedUser
 
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
@@ -41,6 +40,7 @@ def groups(group_repository, group_member_repository, user_repository):
 @pytest.fixture
 def create_use_case(
     service_account_repository,
+    token_credential_record_repository,
     service_account_permission_service,
     event_publisher,
     service_account_event_repository,
@@ -49,6 +49,7 @@ def create_use_case(
     time_provider.set_current_time(NOW)
     return CreateServiceAccountUseCase(
         service_account_repository,
+        token_credential_record_repository,
         service_account_permission_service,
         event_publisher,
         service_account_event_repository,
@@ -94,7 +95,7 @@ def test_given_an_account_when_listing_then_the_creation_facts_come_from_the_eve
 
     assert summary.name == "nightly"
     assert summary.created_at == NOW
-    assert summary.created_by_user_id == OWNER_ID
+    assert summary.created_by_principal_id == OWNER_ID
     assert summary.created_by_user_name == "Ada Owner"
     assert summary.revoked_at is None
 
@@ -115,14 +116,14 @@ def test_given_a_revoked_account_when_listing_then_it_appears_with_its_status(
 def test_given_an_account_with_no_creation_event_when_listing_then_it_still_appears(
     use_case, owner, groups, service_account_repository
 ):
-    orphan = ServiceAccount.create(group_id=GROUP_ID, name="orphan", token=ServiceAccountToken.generate())
+    orphan = ServiceAccount.create(group_id=GROUP_ID, name="orphan")
     service_account_repository.create([orphan])
 
     summary = _list(use_case, owner).items[0]
 
     assert summary.name == "orphan"
     assert summary.created_at is None
-    assert summary.created_by_user_id is None
+    assert summary.created_by_principal_id is None
     assert summary.created_by_user_name is None
 
 
@@ -134,7 +135,7 @@ def test_given_a_deleted_creator_when_listing_then_the_display_name_is_empty(
 
     summary = _list(use_case, owner).items[0]
 
-    assert summary.created_by_user_id == OWNER_ID
+    assert summary.created_by_principal_id == OWNER_ID
     assert summary.created_by_user_name is None
 
 
@@ -143,9 +144,7 @@ def test_given_accounts_with_and_without_creation_events_when_listing_then_undat
 ):
     create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="dated"))
     for name in ("orphan-one", "orphan-two"):
-        service_account_repository.create(
-            [ServiceAccount.create(group_id=GROUP_ID, name=name, token=ServiceAccountToken.generate())]
-        )
+        service_account_repository.create([ServiceAccount.create(group_id=GROUP_ID, name=name)])
 
     names = [summary.name for summary in _list(use_case, owner).items]
 
@@ -167,9 +166,7 @@ def test_given_an_admin_who_is_not_an_owner_when_listing_a_group_then_it_is_refu
 def test_given_another_groups_account_when_listing_then_it_is_not_included(
     use_case, owner, groups, service_account_repository
 ):
-    service_account_repository.create(
-        [ServiceAccount.create(group_id=uuid4(), name="elsewhere", token=ServiceAccountToken.generate())]
-    )
+    service_account_repository.create([ServiceAccount.create(group_id=uuid4(), name="elsewhere")])
 
     assert _list(use_case, owner).items == ()
 
@@ -204,9 +201,7 @@ def test_given_no_group_when_an_admin_lists_then_every_group_is_covered(
     other_group_id = uuid4()
     group_repository.save_group(Group(id=other_group_id, name="Other", is_personal=False))
     create_use_case.execute(CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="here"))
-    service_account_repository.create(
-        [ServiceAccount.create(group_id=other_group_id, name="theirs", token=ServiceAccountToken.generate())]
-    )
+    service_account_repository.create([ServiceAccount.create(group_id=other_group_id, name="theirs")])
     admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
 
     names = {summary.name for summary in _list(use_case, admin, group_id=None).items}
@@ -242,7 +237,7 @@ def test_given_an_account_with_no_creation_event_when_listing_then_it_still_coun
     use_case, owner, groups, service_account_repository
 ):
     """The counter guards the cap, so it must follow the rows rather than the events."""
-    orphan = ServiceAccount.create(group_id=GROUP_ID, name="orphan", token=ServiceAccountToken.generate())
+    orphan = ServiceAccount.create(group_id=GROUP_ID, name="orphan")
     service_account_repository.create([orphan])
 
     assert _list(use_case, owner).active == 1

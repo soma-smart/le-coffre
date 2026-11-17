@@ -17,15 +17,21 @@ from identity_access_management_context.domain.value_objects.pkce_challenge impo
     PkceVerifier,
 )
 
+# Each active token is an independent, long-lived read grant living in a browser
+# profile. Capping how many can exist at once bounds that exposure and makes an
+# accidental burst of pairings visible. Revoked, expired and idle tokens free
+# their slot, so this never blocks someone who re-pairs over time.
+MAX_ACTIVE_TOKENS_PER_USER = 5
+
 
 @dataclass
 class ExtensionPairing:
     """An in-flight request to connect one browser extension to one account.
 
-    Deliberately a separate entity from ExtensionToken rather than a "pending"
-    state on it: a pending or denied pairing must never occupy a row in the
-    credential table, so that "a row exists in ExtensionToken" always means "a
-    credential was actually issued". Any future code that reads existence as
+    Deliberately a separate entity from the token credential record it ends in,
+    rather than a "pending" state on it: a pending or denied pairing must never
+    occupy a credential row, so that "a token credential record exists" always
+    means "a credential was actually issued". Any future code that reads existence as
     validity is then correct by construction.
 
     Rows are not an audit trail: every start purges whatever has expired,

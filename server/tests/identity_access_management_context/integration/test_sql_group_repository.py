@@ -8,17 +8,17 @@ def test_given_personal_group_when_saving_then_group_is_stored(sql_group_reposit
     group_id = uuid4()
     user_id = uuid4()
     name = "testuser's Personal Group"
-    personal_group = PersonalGroup(id=group_id, name=name, user_id=user_id)
+    personal_group = PersonalGroup(id=group_id, name=name, principal_id=user_id)
 
     # When
     sql_group_repository.save_personal_group(personal_group)
 
     # Then - PersonalGroup is retrieved by user_id, not by get_by_id (which is for Group entities)
-    retrieved_group = sql_group_repository.get_by_user_id(user_id)
+    retrieved_group = sql_group_repository.get_by_principal_id(user_id)
     assert retrieved_group is not None
     assert retrieved_group.id == group_id
     assert retrieved_group.name == name
-    assert retrieved_group.user_id == user_id
+    assert retrieved_group.principal_id == user_id
 
 
 def test_given_personal_group_when_getting_by_user_id_then_group_is_retrieved(
@@ -28,17 +28,17 @@ def test_given_personal_group_when_getting_by_user_id_then_group_is_retrieved(
     group_id = uuid4()
     user_id = uuid4()
     name = "testuser's Personal Group"
-    personal_group = PersonalGroup(id=group_id, name=name, user_id=user_id)
+    personal_group = PersonalGroup(id=group_id, name=name, principal_id=user_id)
     sql_group_repository.save_personal_group(personal_group)
 
     # When
-    retrieved_group = sql_group_repository.get_by_user_id(user_id)
+    retrieved_group = sql_group_repository.get_by_principal_id(user_id)
 
     # Then
     assert retrieved_group is not None
     assert retrieved_group.id == group_id
     assert retrieved_group.name == name
-    assert retrieved_group.user_id == user_id
+    assert retrieved_group.principal_id == user_id
 
 
 def test_given_no_group_when_getting_by_user_id_then_returns_none(sql_group_repository):
@@ -46,7 +46,7 @@ def test_given_no_group_when_getting_by_user_id_then_returns_none(sql_group_repo
     non_existent_user_id = uuid4()
 
     # When
-    retrieved_group = sql_group_repository.get_by_user_id(non_existent_user_id)
+    retrieved_group = sql_group_repository.get_by_principal_id(non_existent_user_id)
 
     # Then
     assert retrieved_group is None
@@ -58,11 +58,11 @@ def test_given_multiple_groups_when_getting_all_then_all_groups_are_retrieved(
     # Given
     group1_id = uuid4()
     user1_id = uuid4()
-    group1 = PersonalGroup(id=group1_id, name="User1's Personal Group", user_id=user1_id)
+    group1 = PersonalGroup(id=group1_id, name="User1's Personal Group", principal_id=user1_id)
 
     group2_id = uuid4()
     user2_id = uuid4()
-    group2 = PersonalGroup(id=group2_id, name="User2's Personal Group", user_id=user2_id)
+    group2 = PersonalGroup(id=group2_id, name="User2's Personal Group", principal_id=user2_id)
 
     sql_group_repository.save_personal_group(group1)
     sql_group_repository.save_personal_group(group2)
@@ -254,7 +254,7 @@ def test_given_only_non_personal_groups_when_counting_then_returns_all(sql_group
 def test_given_personal_groups_when_counting_non_personal_then_excludes_them(sql_group_repository):
     # Given
     sql_group_repository.save_group(Group(id=uuid4(), name="Team A", is_personal=False))
-    sql_group_repository.save_personal_group(PersonalGroup(id=uuid4(), name="Personal Group", user_id=uuid4()))
+    sql_group_repository.save_personal_group(PersonalGroup(id=uuid4(), name="Personal Group", principal_id=uuid4()))
 
     # When
     count = sql_group_repository.count_non_personal()

@@ -81,12 +81,9 @@ export class BackendExtensionGateway implements ExtensionGateway {
 
     return response.data.tokens.map((token) => ({
       id: token.id,
-      deviceName: token.device_name,
-      createdAt: new Date(token.created_at),
-      expiresAt: new Date(token.expires_at),
+      deviceName: token.device_name ?? null,
+      expiresAt: token.expires_at ? new Date(token.expires_at) : null,
       lastUsedAt: token.last_used_at ? new Date(token.last_used_at) : null,
-      revokedAt: token.revoked_at ? new Date(token.revoked_at) : null,
-      createdFromIp: token.created_from_ip ?? null,
       isActive: token.is_active,
     }))
   }

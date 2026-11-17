@@ -18,7 +18,7 @@ def test_should_store_and_find_revoked_token(sql_revoked_token_repository):
     now = datetime(2026, 7, 13, tzinfo=UTC)
     token = Token(
         value="revoked-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -38,7 +38,7 @@ def test_should_expose_active_revocation_reason(sql_revoked_token_repository):
     now = datetime(2026, 7, 14, tzinfo=UTC)
     rotated_token = Token(
         value="rotated-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -49,7 +49,7 @@ def test_should_expose_active_revocation_reason(sql_revoked_token_repository):
     )
     expired_token = Token(
         value="expired-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -74,7 +74,7 @@ def test_should_keep_first_revocation_when_same_jti_revoked_twice(sql_revoked_to
     later = datetime(2026, 7, 13, 1, tzinfo=UTC)
     token = Token(
         value="raced-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -98,7 +98,7 @@ def test_should_purge_expired_revoked_token(sql_revoked_token_repository):
     now = datetime(2026, 7, 14, tzinfo=UTC)
     token = Token(
         value="expired-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -119,7 +119,7 @@ def test_should_not_purge_expired_tokens_implicitly_on_revoke(sql_revoked_token_
 
     expired_token = Token(
         value="expired-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -130,7 +130,7 @@ def test_should_not_purge_expired_tokens_implicitly_on_revoke(sql_revoked_token_
     )
     active_token = Token(
         value="active-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -153,7 +153,7 @@ def test_should_purge_expired_tokens_when_called_explicitly(sql_revoked_token_re
 
     expired_token = Token(
         value="expired-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},
@@ -164,7 +164,7 @@ def test_should_purge_expired_tokens_when_called_explicitly(sql_revoked_token_re
     )
     active_token = Token(
         value="active-token",
-        user_id=uuid4(),
+        principal_id=uuid4(),
         email="user@example.com",
         roles=["user"],
         claims={},

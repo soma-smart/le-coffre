@@ -42,7 +42,7 @@ export interface UserPasswordEvent {
   eventType: string
   occurredOn: string
   passwordId: string
-  actorUserId: string
+  actorPrincipalId: string
   eventData: Record<string, unknown>
 }
 

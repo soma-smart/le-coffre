@@ -139,7 +139,7 @@ async def test_execute_success_should_publish_sso_configured_event(
 
     events = event_publisher.get_published_events_of_type(SsoConfiguredEvent)
     assert len(events) == 1
-    assert events[0].configured_by_user_id == admin_user.user_id
+    assert events[0].configured_by_principal_id == admin_user.user_id
     assert events[0].discovery_url == "https://provider.com/.well-known/openid_configuration"
 
 
@@ -160,4 +160,4 @@ async def test_execute_success_should_store_sso_configured_event(
     assert len(sso_event_repository.events) == 1
     stored = sso_event_repository.events[0]
     assert stored["event_type"] == "SsoConfiguredEvent"
-    assert stored["actor_user_id"] == admin_user.user_id
+    assert stored["actor_principal_id"] == admin_user.user_id

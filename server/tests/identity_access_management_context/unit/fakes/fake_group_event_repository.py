@@ -14,7 +14,7 @@ class FakeGroupEventRepository:
         event_id: UUID,
         event_type: str,
         occurred_on: datetime,
-        actor_user_id: UUID | None,
+        actor_principal_id: UUID | None,
         event_data: dict,
     ) -> None:
         self.events.append(
@@ -22,7 +22,7 @@ class FakeGroupEventRepository:
                 "event_id": event_id,
                 "event_type": event_type,
                 "occurred_on": occurred_on,
-                "actor_user_id": actor_user_id,
+                "actor_principal_id": actor_principal_id,
                 "event_data": event_data,
             }
         )
@@ -54,7 +54,7 @@ class FakeGroupEventRepository:
                 "event_id": str(event["event_id"]),
                 "event_type": event["event_type"],
                 "occurred_on": event["occurred_on"].isoformat(),
-                "actor_user_id": str(event["actor_user_id"]),
+                "actor_principal_id": str(event["actor_principal_id"]),
                 "event_data": event["event_data"],
             }
             for event in filtered

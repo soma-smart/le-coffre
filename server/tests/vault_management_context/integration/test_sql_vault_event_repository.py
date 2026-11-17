@@ -12,7 +12,7 @@ def test_get_last_event_type_should_return_the_most_recent_among_the_given_types
             event_id=uuid4(),
             event_type=event_type,
             occurred_on=now - timedelta(minutes=minutes_ago),
-            actor_user_id=None,
+            actor_principal_id=None,
             event_data={},
         )
 

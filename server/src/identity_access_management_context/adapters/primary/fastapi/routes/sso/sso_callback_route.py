@@ -21,6 +21,7 @@ from identity_access_management_context.application.commands.sso_login_command i
 )
 from identity_access_management_context.application.use_cases import SsoLoginUseCase
 from identity_access_management_context.domain.exceptions import (
+    EmailAlreadyUsedException,
     IdentityAccessManagementDomainError,
     InvalidSsoCodeException,
     SsoEncryptionUnavailableError,
@@ -144,6 +145,8 @@ async def sso_callback(
         )
     except InvalidSsoCodeException as e:
         raise HTTPException(status_code=400, detail="SSO authentication failed") from e
+    except EmailAlreadyUsedException as e:
+        raise HTTPException(status_code=409, detail=f"{e}. Ask an administrator.") from e
     except SsoEncryptionUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     except IdentityAccessManagementDomainError as e:

@@ -322,4 +322,4 @@ def test_given_owner_when_removing_member_then_should_store_user_removed_from_gr
     assert len(group_event_repository.events) == 1
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "UserRemovedFromGroupEvent"
-    assert stored["actor_user_id"] == owner_id
+    assert stored["actor_principal_id"] == owner_id

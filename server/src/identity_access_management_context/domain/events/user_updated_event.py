@@ -9,7 +9,7 @@ class UserUpdatedEvent(DomainEvent):
     def __init__(
         self,
         user_id: UUID,
-        updated_by_user_id: UUID,
+        updated_by_principal_id: UUID,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -19,4 +19,4 @@ class UserUpdatedEvent(DomainEvent):
             priority=EventPriority.MEDIUM,
         )
         self.user_id = user_id
-        self.updated_by_user_id = updated_by_user_id
+        self.updated_by_principal_id = updated_by_principal_id
