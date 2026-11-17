@@ -739,9 +739,7 @@ async def test_complete_authentication_workflow(
     print("✅ Override refused (400) and the client is pointed at the device flow")
 
     print("\n🚫 Step 8.3: Without the override, the loopback code cannot be redeemed either...")
-    no_override_response = cli_client.get(
-        "/api/auth/sso/callback?" + urlencode({"code": cli_code, "state": cli_state})
-    )
+    no_override_response = cli_client.get("/api/auth/sso/callback?" + urlencode({"code": cli_code, "state": cli_state}))
     assert no_override_response.status_code == 400
     assert no_override_response.json()["detail"] == "SSO authentication failed"
     assert no_override_response.cookies.get("access_token") is None
