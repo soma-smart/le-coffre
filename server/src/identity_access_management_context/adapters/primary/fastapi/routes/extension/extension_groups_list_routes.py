@@ -12,8 +12,8 @@ from identity_access_management_context.application.use_cases import ListGroupsU
 from identity_access_management_context.domain.exceptions import (
     IdentityAccessManagementDomainError,
 )
-from shared_kernel.adapters.primary.dependencies import get_current_principal
-from shared_kernel.domain.entities import AuthenticatedPrincipal
+from shared_kernel.adapters.primary.dependencies import get_current_requesting_user
+from shared_kernel.domain.entities import AuthenticatedUser
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class ListExtensionGroupsResponse(BaseModel):
     summary="List the groups the caller belongs to",
 )
 def list_extension_groups(
-    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    requesting_user: AuthenticatedUser = Depends(get_current_requesting_user),
     usecase: ListGroupsUseCase = Depends(get_list_groups_usecase),
 ):
     """
@@ -58,16 +58,19 @@ def list_extension_groups(
     Returns each group's id, name, whether it is personal, and whether the
     caller owns it, which is what the popup needs to offer a group picker and
     to decide whether to show "Add a password".
+
+    A service account token gets 403: it belongs to one group, which
+    `/iam/service-accounts/me` already names.
     """
     try:
-        result = usecase.execute(ListGroupsCommand(include_personal=True, only_for_user_id=principal.principal_id))
+        result = usecase.execute(ListGroupsCommand(include_personal=True, only_for_user_id=requesting_user.user_id))
 
         groups = [
             ExtensionGroupItem(
                 id=group.id,
                 name=group.name,
                 is_personal=group.is_personal,
-                is_owner=principal.principal_id in group.owners,
+                is_owner=requesting_user.user_id in group.owners,
             )
             for group in result.groups
         ]

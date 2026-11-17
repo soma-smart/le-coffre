@@ -104,3 +104,54 @@ def test_given_created_accounts_then_each_is_registered_as_a_service_account_pri
         principal = session.get(PrincipalTable, account.id)
         assert principal is not None
         assert principal.kind == PrincipalKind.SERVICE_ACCOUNT
+
+
+def test_given_a_use_when_recorded_then_it_reads_back_timezone_aware(sql_service_account_repository, session):
+    account = _account()
+    sql_service_account_repository.create([account])
+
+    sql_service_account_repository.record_use(account.id, NOW)
+    session.expunge_all()
+
+    (loaded,) = sql_service_account_repository.get_by_ids([account.id])
+    assert loaded.last_used_at == NOW
+    assert loaded.last_used_at.tzinfo is not None
+
+
+def test_given_a_later_use_already_recorded_when_recording_an_earlier_one_then_the_later_stands(
+    sql_service_account_repository, session
+):
+    """Two requests may finish out of order: the date never moves backwards."""
+    account = _account()
+    sql_service_account_repository.create([account])
+    sql_service_account_repository.record_use(account.id, LATER)
+
+    sql_service_account_repository.record_use(account.id, NOW)
+    session.expunge_all()
+
+    (loaded,) = sql_service_account_repository.get_by_ids([account.id])
+    assert loaded.last_used_at == LATER
+
+
+def test_given_a_used_account_when_revoking_then_its_last_use_is_kept(sql_service_account_repository, session):
+    account = _account()
+    sql_service_account_repository.create([account])
+    sql_service_account_repository.record_use(account.id, NOW)
+
+    sql_service_account_repository.revoke([account.id], LATER)
+    session.expunge_all()
+
+    (loaded,) = sql_service_account_repository.get_by_ids([account.id])
+    assert (loaded.revoked_at, loaded.last_used_at) == (LATER, NOW)
+
+
+def test_given_other_accounts_when_recording_a_use_then_only_that_account_changes(
+    sql_service_account_repository, session
+):
+    used, other = _account(name="used"), _account(name="other")
+    sql_service_account_repository.create([used, other])
+
+    sql_service_account_repository.record_use(used.id, NOW)
+    session.expunge_all()
+
+    assert [a.last_used_at for a in sql_service_account_repository.get_by_ids([used.id, other.id])] == [NOW, None]

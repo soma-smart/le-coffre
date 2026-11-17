@@ -1413,6 +1413,14 @@ export type ServiceAccountSummary = {
      * Revoked At
      */
     revoked_at: string | null;
+    /**
+     * Last Rotated At
+     */
+    last_rotated_at: string | null;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
 };
 
 /**

@@ -31,6 +31,11 @@ class FakeServiceAccountRepository(ServiceAccountRepository):
         wanted = set(group_ids)
         return [account for account in self.accounts.values() if account.group_id in wanted]
 
+    def record_use(self, service_account_id: UUID, now: datetime) -> None:
+        account = self.accounts.get(service_account_id)
+        if account is not None and (account.last_used_at is None or account.last_used_at < now):
+            account.last_used_at = now
+
     def revoke(self, ids: Iterable[UUID], now: datetime) -> None:
         ids = list(ids)
         for account_id in ids:

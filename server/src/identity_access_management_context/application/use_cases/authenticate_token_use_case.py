@@ -4,6 +4,7 @@ from datetime import timedelta
 from identity_access_management_context.application.commands import AuthenticateTokenCommand
 from identity_access_management_context.application.gateways import (
     AdminEventRepository,
+    ServiceAccountRepository,
     TokenCredentialRecordRepository,
 )
 from identity_access_management_context.application.responses import AuthenticateTokenResponse
@@ -40,6 +41,7 @@ class AuthenticateTokenUseCase(TracedUseCase):
         self,
         token_authenticator: TokenAuthenticator,
         token_credential_record_repository: TokenCredentialRecordRepository,
+        service_account_repository: ServiceAccountRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
         time_provider: TimeGateway,
@@ -47,6 +49,7 @@ class AuthenticateTokenUseCase(TracedUseCase):
     ):
         self._token_authenticator = token_authenticator
         self._token_credential_record_repository = token_credential_record_repository
+        self._service_account_repository = service_account_repository
         self._event_publisher = event_publisher
         self._admin_event_repository = admin_event_repository
         self._time_provider = time_provider
@@ -101,16 +104,23 @@ class AuthenticateTokenUseCase(TracedUseCase):
 
         # Best-effort: recording the use must never fail an authentication that succeeded.
         try:
-            self._token_credential_record_repository.touch_last_used(
-                credential_record.id, self._time_provider.get_current_time(), self._last_used_coarsening
+            now = self._time_provider.get_current_time()
+            touched = self._token_credential_record_repository.touch_last_used(
+                credential_record.token_hash, now, self._last_used_coarsening
             )
-        except Exception:  # noqa: BLE001
-            logger.warning("Could not record the use of a token credential", exc_info=True)
+            # Same coarsening for the account: it only writes when the token did.
+            # A rotation clears the token's date, so the new token's first use always shows.
+            if touched and isinstance(principal, ServiceAccount):
+                self._service_account_repository.record_use(principal.id, now)
+        except Exception as error:  # noqa: BLE001
+            logger.warning(
+                "Could not record the use of token credential %s: %s", credential_record.id, type(error).__name__
+            )
 
         return AuthenticateTokenResponse(
             principal_id=principal.id,
             principal_kind=kind,
             roles=list(principal.roles) if isinstance(principal, User) else [],
             credential_id=credential_record.id,
-            read_only=credential_record.read_only,
+            read_only=credential_record.read_only or kind != "user",
         )

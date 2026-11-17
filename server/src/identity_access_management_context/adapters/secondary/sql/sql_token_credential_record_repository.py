@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import override
 from uuid import UUID
 
-from sqlalchemy import case, or_
+from sqlalchemy import case, null, or_
 from sqlmodel import Session, delete, select, update
 
 from identity_access_management_context.application.gateways import (
@@ -118,7 +118,15 @@ class SqlTokenCredentialRecordRepository(SQLBaseRepository, TokenCredentialRecor
         result = self._session.exec(  # type: ignore[call-overload]
             update(TokenCredentialRecordTable)
             .where(TokenCredentialRecordTable.token_hash.in_(list(new_token_hash_by_old)))  # type: ignore[attr-defined]
-            .values(token_hash=case(new_token_hash_by_old, value=TokenCredentialRecordTable.token_hash))
+            .values(
+                token_hash=case(new_token_hash_by_old, value=TokenCredentialRecordTable.token_hash),
+                # A new token has not been used yet, whatever the old one was. Kept where
+                # it runs `max_idle`, or the new token would never go idle before its first use.
+                last_used_at=case(
+                    (TokenCredentialRecordTable.max_idle_seconds.is_(None), null()),  # type: ignore[union-attr]
+                    else_=TokenCredentialRecordTable.last_used_at,
+                ),
+            )
         )
 
         # Make sur all updates were done
@@ -155,14 +163,14 @@ class SqlTokenCredentialRecordRepository(SQLBaseRepository, TokenCredentialRecor
         return deleted
 
     @override
-    def touch_last_used(self, credential_id: UUID, now: datetime, coarsening: timedelta) -> None:
+    def touch_last_used(self, token_hash: str, now: datetime, coarsening: timedelta) -> bool:
         # One conditional UPDATE: no read first, and no write at all while the
         # stored value is recent enough.
         naive_now = to_naive_utc(now)
-        self._session.exec(  # type: ignore[call-overload]
+        result = self.execute_and_commit(
             update(TokenCredentialRecordTable)
             .where(
-                TokenCredentialRecordTable.credential_id == credential_id,
+                TokenCredentialRecordTable.token_hash == token_hash,
                 or_(
                     TokenCredentialRecordTable.last_used_at.is_(None),  # type: ignore[union-attr]
                     TokenCredentialRecordTable.last_used_at <= naive_now - coarsening,  # type: ignore[operator]
@@ -170,4 +178,4 @@ class SqlTokenCredentialRecordRepository(SQLBaseRepository, TokenCredentialRecor
             )
             .values(last_used_at=naive_now)
         )
-        self.commit()
+        return bool(result.rowcount)

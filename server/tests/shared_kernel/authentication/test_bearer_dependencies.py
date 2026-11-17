@@ -64,6 +64,7 @@ def client(service_account_and_token, admin_event_repository):
             time_provider=time_provider,
         ),
         token_credential_record_repository,
+        service_account_repository,
         FakeDomainEventPublisher(),
         admin_event_repository,
         time_provider,
@@ -88,6 +89,10 @@ def client(service_account_and_token, admin_event_repository):
 
     @app.get("/humans-and-machines")
     def humans_and_machines(principal: AuthenticatedPrincipal = Depends(get_current_principal)):
+        return {"id": str(principal.principal_id), "kind": principal.kind}
+
+    @app.post("/humans-and-machines")
+    def write_as_humans_and_machines(principal: AuthenticatedPrincipal = Depends(get_current_principal)):
         return {"id": str(principal.principal_id), "kind": principal.kind}
 
     app.dependency_overrides[get_authenticate_token_usecase] = lambda: authenticate_usecase
@@ -183,10 +188,31 @@ def test_given_a_valid_cookie_when_calling_a_shared_route_should_resolve_a_user(
     assert response.json() == {"id": str(USER_ID), "kind": "user"}
 
 
-def test_given_neither_cookie_nor_token_when_calling_a_shared_route_should_refuse(client):
+def test_given_neither_cookie_nor_token_when_calling_a_shared_route_should_refuse_and_ask_for_a_bearer(client):
     response = client.get("/humans-and-machines")
 
     assert response.status_code == 401
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+def test_given_a_service_account_token_when_writing_through_a_shared_route_should_refuse(
+    client, service_account_and_token
+):
+    """Its record is not read-only, as for every service account: the account's kind is what refuses."""
+    _, token = service_account_and_token
+
+    response = client.post("/humans-and-machines", headers=_bearer(token.value))
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "This credential is read-only"}
+
+
+def test_given_a_valid_cookie_when_writing_through_a_shared_route_should_resolve_the_user(client):
+    client.cookies.set("access_token", VALID_COOKIE)
+
+    response = client.post("/humans-and-machines")
+
+    assert response.status_code == 200
 
 
 def test_given_a_valid_cookie_and_a_bad_token_when_calling_a_shared_route_should_resolve_the_user(client):

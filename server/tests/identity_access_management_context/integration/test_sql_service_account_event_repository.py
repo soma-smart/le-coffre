@@ -1,18 +1,20 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from functools import partial
 from uuid import uuid4
 
 from identity_access_management_context.domain.events import (
     ServiceAccountCreatedEvent,
     ServiceAccountRevokedEvent,
     ServiceAccountsListedEvent,
+    ServiceAccountTokenRotatedEvent,
 )
 from identity_access_management_context.domain.value_objects import TokenCredential
 
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 
 
-def _created(service_account_id, user_id, name="nightly-backup", occurred_on=NOW, group_id=None):
-    return ServiceAccountCreatedEvent(
+def _event(event_class, service_account_id, user_id, name="nightly-backup", occurred_on=NOW, group_id=None):
+    return event_class(
         event_id=uuid4(),
         occurred_on=occurred_on,
         actor_principal_id=user_id,
@@ -23,6 +25,10 @@ def _created(service_account_id, user_id, name="nightly-backup", occurred_on=NOW
     )
 
 
+_created = partial(_event, ServiceAccountCreatedEvent)
+_rotated = partial(_event, ServiceAccountTokenRotatedEvent)
+
+
 def test_given_a_creation_event_when_reading_facts_back_then_they_round_trip(
     sql_service_account_event_repository, session
 ):
@@ -30,7 +36,7 @@ def test_given_a_creation_event_when_reading_facts_back_then_they_round_trip(
     sql_service_account_event_repository.extend([_created(account_id, user_id)])
     session.expunge_all()
 
-    (fact,) = sql_service_account_event_repository.get_creation_facts([account_id])
+    (fact,) = sql_service_account_event_repository.get_lifecycle_facts([account_id])
 
     assert fact.created_by_principal_id == user_id
     assert fact.created_at == NOW
@@ -44,7 +50,7 @@ def test_given_a_creation_event_when_reading_facts_back_then_the_timestamp_is_ti
     sql_service_account_event_repository.extend([_created(account_id, uuid4())])
     session.expunge_all()
 
-    (fact,) = sql_service_account_event_repository.get_creation_facts([account_id])
+    (fact,) = sql_service_account_event_repository.get_lifecycle_facts([account_id])
 
     assert fact.created_at.tzinfo is not None
 
@@ -55,7 +61,7 @@ def test_given_an_account_with_no_creation_event_when_reading_facts_then_its_slo
     known, unknown = uuid4(), uuid4()
     sql_service_account_event_repository.extend([_created(known, uuid4())])
 
-    facts = sql_service_account_event_repository.get_creation_facts([unknown, known])
+    facts = sql_service_account_event_repository.get_lifecycle_facts([unknown, known])
 
     assert facts[0].created_at is None
     assert facts[0].created_by_principal_id is None
@@ -69,13 +75,13 @@ def test_given_several_accounts_when_reading_facts_then_they_come_back_in_the_re
     users = {first: uuid4(), second: uuid4(), third: uuid4()}
     sql_service_account_event_repository.extend([_created(account_id, user) for account_id, user in users.items()])
 
-    facts = sql_service_account_event_repository.get_creation_facts([third, first, second])
+    facts = sql_service_account_event_repository.get_lifecycle_facts([third, first, second])
 
     assert [f.created_by_principal_id for f in facts] == [users[third], users[first], users[second]]
 
 
 def test_given_no_ids_when_reading_facts_then_nothing_is_queried(sql_service_account_event_repository):
-    assert sql_service_account_event_repository.get_creation_facts([]) == []
+    assert sql_service_account_event_repository.get_lifecycle_facts([]) == []
 
 
 def test_given_other_service_account_events_when_reading_facts_then_only_creations_count(
@@ -99,7 +105,7 @@ def test_given_other_service_account_events_when_reading_facts_then_only_creatio
         ]
     )
 
-    (fact,) = sql_service_account_event_repository.get_creation_facts([account_id])
+    (fact,) = sql_service_account_event_repository.get_lifecycle_facts([account_id])
 
     assert fact.created_by_principal_id == creator
 
@@ -123,3 +129,36 @@ def test_given_stored_events_then_no_token_or_hash_reaches_the_audit_rows(
     assert token.value not in stored
     assert token.hash not in stored
     assert "token" not in stored
+
+
+def test_given_several_rotations_when_reading_facts_then_the_latest_one_dates_the_last_rotation(
+    sql_service_account_event_repository, session
+):
+    account_id, creator = uuid4(), uuid4()
+    later = NOW + timedelta(days=2)
+    sql_service_account_event_repository.extend(
+        [
+            _created(account_id, creator),
+            _rotated(account_id, uuid4(), occurred_on=later),
+            _rotated(account_id, uuid4(), occurred_on=NOW + timedelta(days=1)),
+            _rotated(uuid4(), uuid4(), occurred_on=NOW + timedelta(days=3)),
+        ]
+    )
+    session.expunge_all()
+
+    (fact,) = sql_service_account_event_repository.get_lifecycle_facts([account_id])
+
+    assert fact.last_rotated_at == later
+    assert fact.last_rotated_at.tzinfo is not None
+    assert (fact.created_at, fact.created_by_principal_id) == (NOW, creator), "a rotation is not a creation"
+
+
+def test_given_an_account_never_rotated_when_reading_facts_then_it_has_no_last_rotation(
+    sql_service_account_event_repository,
+):
+    account_id = uuid4()
+    sql_service_account_event_repository.extend([_created(account_id, uuid4())])
+
+    (fact,) = sql_service_account_event_repository.get_lifecycle_facts([account_id])
+
+    assert fact.last_rotated_at is None

@@ -203,11 +203,15 @@ def test_given_a_recent_use_when_touching_again_then_the_last_use_is_only_moved_
     sql_token_credential_record_repository.create([record])
     coarsening = timedelta(minutes=5)
 
-    sql_token_credential_record_repository.touch_last_used(record.id, NOW + timedelta(minutes=4), coarsening)
+    assert not sql_token_credential_record_repository.touch_last_used(
+        record.token_hash, NOW + timedelta(minutes=4), coarsening
+    )
     session.expunge_all()
     assert sql_token_credential_record_repository.get_by_id(record.id).last_used_at == NOW
 
-    sql_token_credential_record_repository.touch_last_used(record.id, NOW + timedelta(minutes=6), coarsening)
+    assert sql_token_credential_record_repository.touch_last_used(
+        record.token_hash, NOW + timedelta(minutes=6), coarsening
+    )
     session.expunge_all()
     assert sql_token_credential_record_repository.get_by_id(record.id).last_used_at == NOW + timedelta(minutes=6)
 
@@ -228,3 +232,47 @@ def test_given_a_principal_at_its_limit_when_creating_within_it_then_only_unusab
     refused = _credential_record(principal_id=principal_id)
     assert not sql_token_credential_record_repository.create_within_limit(refused, 2, NOW)
     assert sql_token_credential_record_repository.get_by_id(refused.id) is None
+
+
+def test_given_a_used_credential_when_rotating_it_then_the_new_token_is_not_used_yet(
+    sql_token_credential_record_repository, session
+):
+    old = TokenCredentialRecord(principal_id=uuid4(), token_hash=TokenCredential.generate().hash, last_used_at=NOW)
+    untouched = TokenCredentialRecord(
+        principal_id=uuid4(), token_hash=TokenCredential.generate().hash, last_used_at=NOW
+    )
+    sql_token_credential_record_repository.create([old, untouched])
+
+    _rotate(sql_token_credential_record_repository, [old.token_hash])
+    session.expunge_all()
+
+    assert sql_token_credential_record_repository.get_by_id(old.id).last_used_at is None
+    assert sql_token_credential_record_repository.get_by_id(untouched.id).last_used_at == NOW
+
+
+def test_given_a_credential_with_an_idle_limit_when_rotating_it_then_its_idle_clock_keeps_running(
+    sql_token_credential_record_repository, session
+):
+    """Cleared, the date would keep the new token from ever going idle until its first use."""
+    record = TokenCredentialRecord(
+        principal_id=uuid4(), token_hash=TokenCredential.generate().hash, last_used_at=NOW, max_idle=timedelta(days=14)
+    )
+    sql_token_credential_record_repository.create([record])
+
+    _rotate(sql_token_credential_record_repository, [record.token_hash])
+    session.expunge_all()
+
+    assert sql_token_credential_record_repository.get_by_id(record.id).last_used_at == NOW
+
+
+def test_given_a_token_replaced_since_it_was_checked_when_touching_it_then_its_replacement_is_not_marked_used(
+    sql_token_credential_record_repository, session
+):
+    """A request still in flight with the old token, when the rotation commits."""
+    record = _credential_record()
+    sql_token_credential_record_repository.create([record])
+    _rotate(sql_token_credential_record_repository, [record.token_hash])
+
+    assert not sql_token_credential_record_repository.touch_last_used(record.token_hash, NOW, timedelta(minutes=5))
+    session.expunge_all()
+    assert sql_token_credential_record_repository.get_by_id(record.id).last_used_at is None

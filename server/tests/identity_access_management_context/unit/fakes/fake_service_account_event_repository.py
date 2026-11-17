@@ -3,10 +3,13 @@ from typing import Any
 from uuid import UUID
 
 from identity_access_management_context.application.gateways import (
-    ServiceAccountCreationFacts,
     ServiceAccountEventRepository,
+    ServiceAccountLifecycleFacts,
 )
-from identity_access_management_context.domain.events import ServiceAccountCreatedEvent
+from identity_access_management_context.domain.events import (
+    ServiceAccountCreatedEvent,
+    ServiceAccountTokenRotatedEvent,
+)
 from identity_access_management_context.domain.events.service_account import (
     ServiceAccountEvent,
     ServiceAccountItemEvent,
@@ -37,19 +40,24 @@ class FakeServiceAccountEventRepository(ServiceAccountEventRepository):
                         event.service_account_id if isinstance(event, ServiceAccountItemEvent) else None
                     ),
                     "is_creation": isinstance(event, ServiceAccountCreatedEvent),
+                    "is_rotation": isinstance(event, ServiceAccountTokenRotatedEvent),
                 }
             )
 
-    def get_creation_facts(self, service_account_ids: Sequence[UUID]) -> Sequence[ServiceAccountCreationFacts]:
-        # One slot per requested id, empty where no creation event was found.
+    def get_lifecycle_facts(self, service_account_ids: Sequence[UUID]) -> Sequence[ServiceAccountLifecycleFacts]:
+        # One slot per requested id, empty where no event was found.
         by_account = {event["service_account_id"]: event for event in self.events if event["is_creation"]}
         facts = []
         for account_id in service_account_ids:
             event = by_account.get(account_id)
+            rotations = [
+                e["occurred_on"] for e in self.events if e["is_rotation"] and e["service_account_id"] == account_id
+            ]
             facts.append(
-                ServiceAccountCreationFacts(
+                ServiceAccountLifecycleFacts(
                     created_at=event["occurred_on"] if event else None,
                     created_by_principal_id=event["actor_principal_id"] if event else None,
+                    last_rotated_at=max(rotations, default=None),
                 )
             )
         return facts

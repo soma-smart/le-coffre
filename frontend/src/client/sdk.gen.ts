@@ -1248,6 +1248,9 @@ export const listGroupEventsGroupsGroupIdEventsGet = <ThrowOnError extends boole
  * admits an administrator, who then sees every group's accounts — listing
  * carries no token, so this is a metadata view, never a way to a credential.
  * No token is returned, hashed or otherwise.
+ *
+ * `last_used_at` is null for an account whose token never authenticated. Compare
+ * it with `last_rotated_at` to tell whether the current token was used yet.
  */
 export const listServiceAccountsIamServiceAccountsGet = <ThrowOnError extends boolean = false>(options?: Options<ListServiceAccountsIamServiceAccountsGetData, ThrowOnError>): RequestResult<ListServiceAccountsIamServiceAccountsGetResponses, ListServiceAccountsIamServiceAccountsGetErrors, ThrowOnError> => (options?.client ?? client).get<ListServiceAccountsIamServiceAccountsGetResponses, ListServiceAccountsIamServiceAccountsGetErrors, ThrowOnError>({
     security: [{
@@ -1510,6 +1513,9 @@ export const getExtensionSessionExtensionSessionGet = <ThrowOnError extends bool
  * Returns each group's id, name, whether it is personal, and whether the
  * caller owns it, which is what the popup needs to offer a group picker and
  * to decide whether to show "Add a password".
+ *
+ * A service account token gets 403: it belongs to one group, which
+ * `/iam/service-accounts/me` already names.
  */
 export const listExtensionGroupsExtensionGroupsGet = <ThrowOnError extends boolean = false>(options?: Options<ListExtensionGroupsExtensionGroupsGetData, ThrowOnError>): RequestResult<ListExtensionGroupsExtensionGroupsGetResponses, unknown, ThrowOnError> => (options?.client ?? client).get<ListExtensionGroupsExtensionGroupsGetResponses, unknown, ThrowOnError>({
     security: [{

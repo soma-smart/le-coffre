@@ -944,3 +944,64 @@ def test_event_group_migration_gives_lifecycle_events_their_group(alembic_config
 
     command.downgrade(alembic_config, ORPHANED_ACCOUNTS_REVISION)
     assert payloads() == upgraded, "the code before ignores the keys: removing them would lose the names"
+
+
+LAST_USE_REVISION = "c0b216aa41a7"
+"""Revision giving each service account the date one of its tokens was last used."""
+
+
+def test_last_use_migration_takes_the_latest_use_among_the_accounts_tokens(alembic_config, temp_database):
+    """An account whose tokens were never used, or that holds none since its revocation, stays empty.
+
+    A downgrade drops the column.
+    """
+    database_url, _ = temp_database
+    used_id, unused_id, revoked_id = uuid4(), uuid4(), uuid4()
+    token_uses = {used_id: ["2026-01-01 12:00:00", "2026-01-02 08:00:00"], unused_id: [None], revoked_id: []}
+
+    command.upgrade(alembic_config, EVENT_GROUP_REVISION)
+    engine = create_engine(database_url)
+    with engine.begin() as conn:
+        for principal_id, uses in token_uses.items():
+            conn.execute(
+                text("INSERT INTO iam__principal (id, kind) VALUES (:id, 'service_account')"), {"id": principal_id.hex}
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO iam__principal__service_account (principal_id, group_id, name) "
+                    "VALUES (:id, :group_id, 'deploy')"
+                ),
+                {"id": principal_id.hex, "group_id": uuid4().hex},
+            )
+            for last_used_at in uses:
+                credential_id = uuid4()
+                conn.execute(
+                    text("INSERT INTO iam__credential (id, kind, principal_id) VALUES (:id, 'token', :principal_id)"),
+                    {"id": credential_id.hex, "principal_id": principal_id.hex},
+                )
+                conn.execute(
+                    text(
+                        "INSERT INTO iam__credential__token (credential_id, token_hash, last_used_at) "
+                        "VALUES (:id, :hash, :last_used_at)"
+                    ),
+                    {"id": credential_id.hex, "hash": f"hash-{credential_id.hex}", "last_used_at": last_used_at},
+                )
+    engine.dispose()
+
+    command.upgrade(alembic_config, LAST_USE_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        last_used = dict(
+            conn.execute(text("SELECT principal_id, last_used_at FROM iam__principal__service_account")).all()
+        )
+    engine.dispose()
+
+    assert last_used == {used_id.hex: "2026-01-02 08:00:00", unused_id.hex: None, revoked_id.hex: None}
+
+    command.downgrade(alembic_config, EVENT_GROUP_REVISION)
+    engine = create_engine(database_url)
+    with engine.connect() as conn:
+        columns = [row[1] for row in conn.execute(text("PRAGMA table_info(iam__principal__service_account)")).all()]
+    engine.dispose()
+
+    assert "last_used_at" not in columns

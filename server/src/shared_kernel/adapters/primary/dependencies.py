@@ -136,9 +136,8 @@ def get_authenticate_token_usecase(
     session: Session = Depends(get_session),
 ) -> AuthenticateTokenUseCase:
     token_credential_record_repository = SqlTokenCredentialRecordRepository(session)
-    principal_repository = SQLPrincipalRepository(
-        session, SqlUserRepository(session), SqlServiceAccountRepository(session)
-    )
+    service_account_repository = SqlServiceAccountRepository(session)
+    principal_repository = SQLPrincipalRepository(session, SqlUserRepository(session), service_account_repository)
     return AuthenticateTokenUseCase(
         TokenAuthenticator(
             principal_repository=principal_repository,
@@ -146,12 +145,16 @@ def get_authenticate_token_usecase(
             time_provider=request.app.state.time_provider,
         ),
         token_credential_record_repository,
+        service_account_repository,
         request.app.state.domain_event_publisher,
         SqlIamEventRepository(session),
         request.app.state.time_provider,
         get_extension_last_used_coarsening_seconds(),
     )
 
+
+# What a 401 asks for, on every route a token may reach.
+_BEARER_CHALLENGE = {"WWW-Authenticate": "Bearer"}
 
 # Methods a read-only credential may use. Everything else is refused before the
 # route body runs.
@@ -188,6 +191,8 @@ def _authenticate(
        A read-only one may only read, and never with admin privileges: an
        admin's own roles would make `/passwords/list` return the names, logins
        and URLs of every secret on the instance, into a browser profile.
+       A service account's token is always read-only: see
+       `AuthenticateTokenResponse.read_only`.
     3. Otherwise 401.
     """
     if access_token:
@@ -200,14 +205,14 @@ def _authenticate(
 
     token = _read_bearer_token(request)
     if token is None:
-        raise HTTPException(status_code=401, detail="No authentication token provided")
+        raise HTTPException(status_code=401, detail="No authentication token provided", headers=_BEARER_CHALLENGE)
 
     try:
         response = authenticate_token_usecase.execute(AuthenticateTokenCommand(token=token, client_ip=client_ip))
     except CredentialAuthenticationError as e:
         # One generic 401 for malformed, unknown, expired and idle alike, so a
         # token holder cannot tell which happened.
-        raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"}) from e
+        raise HTTPException(status_code=401, detail="Invalid token", headers=_BEARER_CHALLENGE) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service error") from e
 
@@ -296,7 +301,7 @@ def get_current_service_account(
             )
         )
     except CredentialAuthenticationError as e:
-        raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"}) from e
+        raise HTTPException(status_code=401, detail="Invalid token", headers=_BEARER_CHALLENGE) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service error") from e
     return AuthenticatedPrincipal(principal_id=response.principal_id, kind=response.principal_kind)

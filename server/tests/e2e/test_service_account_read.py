@@ -224,3 +224,72 @@ def test_given_a_human_session_when_reading_then_nothing_changed_for_humans(
     password_id = _create_password(authenticated_admin_client, deployments_group_id)
 
     assert authenticated_admin_client.get(f"/api/passwords/{password_id}").json() == {"password": SECRET}
+
+
+# ── Extension routes ─────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("path", ["/api/extension/groups", "/api/extension/session"])
+def test_given_a_service_account_token_when_calling_an_extension_route_then_it_is_refused(bearer_client, path):
+    response = bearer_client.get(path)
+
+    assert response.status_code == 403
+
+
+# ── Last use ─────────────────────────────────────────────────────────
+
+
+def _listed(client, group_id: str, account_id: str) -> dict:
+    response = client.get(SERVICE_ACCOUNTS, params={"group_id": group_id})
+    assert response.status_code == 200, response.text
+    return next(item for item in response.json()["items"] if item["id"] == account_id)
+
+
+def test_given_a_read_when_listing_then_the_owner_sees_when_the_account_was_last_used(
+    authenticated_admin_client, bearer_client, service_account, deployments_group_id
+):
+    password_id = _create_password(authenticated_admin_client, deployments_group_id)
+    new = _listed(authenticated_admin_client, deployments_group_id, service_account["id"])
+    assert (new["last_used_at"], new["last_rotated_at"]) == (None, None)
+    before = datetime.now(UTC)
+
+    assert bearer_client.get(f"/api/passwords/{password_id}").status_code == 200
+
+    listed = _listed(authenticated_admin_client, deployments_group_id, service_account["id"])
+    assert listed["last_used_at"] is not None
+    assert datetime.fromisoformat(listed["last_used_at"]) >= before - timedelta(seconds=1)
+
+
+def test_given_a_rotation_when_the_new_token_reads_then_its_use_is_dated_after_the_rotation(
+    authenticated_admin_client, bearer_client, service_account, deployments_group_id
+):
+    password_id = _create_password(authenticated_admin_client, deployments_group_id)
+    assert bearer_client.get(f"/api/passwords/{password_id}").status_code == 200
+    rotated = authenticated_admin_client.post(f"{SERVICE_ACCOUNTS}/{service_account['id']}/rotate")
+    assert rotated.status_code == 200, rotated.text
+    after_rotation = _listed(authenticated_admin_client, deployments_group_id, service_account["id"])
+    assert after_rotation["last_rotated_at"] is not None
+    assert datetime.fromisoformat(after_rotation["last_used_at"]) < datetime.fromisoformat(
+        after_rotation["last_rotated_at"]
+    ), "the new token is not used yet"
+
+    # Within the coarsening window of the old token's use: the new token's first use still shows.
+    bearer_client.headers["Authorization"] = f"Bearer {rotated.json()['token']}"
+    assert bearer_client.get(f"/api/passwords/{password_id}").status_code == 200
+
+    listed = _listed(authenticated_admin_client, deployments_group_id, service_account["id"])
+    assert datetime.fromisoformat(listed["last_used_at"]) >= datetime.fromisoformat(listed["last_rotated_at"])
+
+
+def test_given_a_revoked_account_when_listing_then_its_last_use_is_kept(
+    authenticated_admin_client, bearer_client, service_account, deployments_group_id
+):
+    password_id = _create_password(authenticated_admin_client, deployments_group_id)
+    assert bearer_client.get(f"/api/passwords/{password_id}").status_code == 200
+    used_at = _listed(authenticated_admin_client, deployments_group_id, service_account["id"])["last_used_at"]
+
+    assert authenticated_admin_client.delete(f"{SERVICE_ACCOUNTS}/{service_account['id']}").status_code in (200, 204)
+
+    listed = _listed(authenticated_admin_client, deployments_group_id, service_account["id"])
+    assert listed["revoked_at"] is not None
+    assert listed["last_used_at"] == used_at

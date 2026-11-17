@@ -132,10 +132,12 @@ def get_extension_pairing_poll_interval_seconds() -> int:
 
 
 def get_extension_last_used_coarsening_seconds() -> int:
-    """Minimum gap between two `last_used_at` writes for the same token.
+    """Minimum gap between two `last_used_at` writes for the same token, extension or service account.
 
-    The column only feeds a "last used" label on the connected-devices screen,
-    so writing on every request would be pure write amplification.
+    The column only feeds a "last used" label, on the connected-devices screen
+    and on a service account, so writing on every request would be pure write
+    amplification. A service account's own date is written only when its
+    token's is, so it is coarsened the same way.
     """
     return int(os.environ.get("EXTENSION_LAST_USED_COARSENING_SECONDS", "300"))
 

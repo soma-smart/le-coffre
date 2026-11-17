@@ -12,6 +12,7 @@ from identity_access_management_context.application.use_cases import (
     ListServiceAccountsUseCase,
 )
 from identity_access_management_context.domain.entities import Group, ServiceAccount, User
+from identity_access_management_context.domain.events import ServiceAccountTokenRotatedEvent
 from identity_access_management_context.domain.exceptions import UserNotOwnerOfGroupException
 from shared_kernel.domain.entities import AuthenticatedUser
 
@@ -98,6 +99,35 @@ def test_given_an_account_when_listing_then_the_creation_facts_come_from_the_eve
     assert summary.created_by_principal_id == OWNER_ID
     assert summary.created_by_user_name == "Ada Owner"
     assert summary.revoked_at is None
+    assert summary.last_rotated_at is None
+    assert summary.last_used_at is None
+
+
+def test_given_a_used_and_rotated_account_when_listing_then_its_last_use_and_rotation_show(
+    create_use_case, use_case, owner, groups, service_account_repository, service_account_event_repository
+):
+    created = create_use_case.execute(
+        CreateServiceAccountCommand(requesting_user=owner, group_id=GROUP_ID, name="nightly")
+    )
+    service_account_event_repository.extend(
+        [
+            ServiceAccountTokenRotatedEvent(
+                event_id=uuid4(),
+                occurred_on=LATER,
+                actor_principal_id=OWNER_ID,
+                service_account_id=created.id,
+                service_account_name="nightly",
+                group_id=GROUP_ID,
+                group_name="Team",
+            )
+        ]
+    )
+    service_account_repository.record_use(created.id, LATER)
+
+    summary = _list(use_case, owner).items[0]
+
+    assert (summary.last_rotated_at, summary.last_used_at) == (LATER, LATER)
+    assert summary.created_at == NOW, "a rotation is not a creation"
 
 
 def test_given_a_revoked_account_when_listing_then_it_appears_with_its_status(

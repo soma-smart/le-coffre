@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Field, Session, SQLModel, create_engine, insert, select, update
 
 from shared_kernel.adapters.secondary.sql import SQLBaseRepository
 
@@ -135,3 +135,27 @@ def test_multiple_operations_in_sequence_after_error(repository):
     # Verify all valid users were saved
     assert repository.get_by_email("seq1@example.com") is not None
     assert repository.get_by_email("seq3@example.com") is not None
+
+
+def test_execute_and_commit_commits_the_statement_and_returns_its_result(repository, session):
+    repository.save_with_commit(UserModel(id=str(uuid4()), email="rename@example.com", name="Before"))
+
+    result = repository.execute_and_commit(
+        update(UserModel).where(UserModel.email == "rename@example.com").values(name="After")
+    )
+
+    assert result.rowcount == 1
+    assert not session.in_transaction(), "committed"
+    session.expunge_all()
+    assert repository.get_by_email("rename@example.com").name == "After"
+
+
+def test_execute_and_commit_rolls_back_when_the_statement_fails(repository, session):
+    """On PostgreSQL a failed statement aborts the transaction: left open, it refuses every later query."""
+    repository.save_with_commit(UserModel(id=str(uuid4()), email="taken@example.com", name="User 1"))
+    repository.get_by_email("taken@example.com")  # A read opens the transaction, as earlier in a request.
+
+    with pytest.raises(IntegrityError):
+        repository.execute_and_commit(insert(UserModel).values(id=str(uuid4()), email="taken@example.com", name="Dup"))
+
+    assert not session.in_transaction()

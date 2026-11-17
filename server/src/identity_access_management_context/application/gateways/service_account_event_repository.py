@@ -8,22 +8,25 @@ from identity_access_management_context.domain.events.service_account._event imp
 
 
 @dataclass(frozen=True)
-class ServiceAccountCreationFacts:
-    """When a service account was created, and by whom.
+class ServiceAccountLifecycleFacts:
+    """When a service account was created and by whom, and when its token last rotated.
 
     These are not columns on the account: they are read back from its
-    ``ServiceAccountCreatedEvent``, which is the system of record for them.
+    ``ServiceAccountCreatedEvent`` and ``ServiceAccountTokenRotatedEvent``, which
+    are the system of record for them.
     """
 
     created_at: datetime | None
     created_by_principal_id: UUID | None
+    last_rotated_at: datetime | None
 
 
 class ServiceAccountEventRepository(Protocol):
     """Repository for service-account IAM audit events.
 
     Unlike the other IAM event ports this one also reads, because the creation
-    event is where a listing gets its creation date and creator.
+    and rotation events are where a listing gets its creation date, creator and
+    last rotation.
     """
 
     def extend(self, events: Sequence[ServiceAccountEvent]) -> None:
@@ -34,5 +37,5 @@ class ServiceAccountEventRepository(Protocol):
         per event instead of at every call site.
         """
 
-    def get_creation_facts(self, service_account_ids: Sequence[UUID]) -> Sequence[ServiceAccountCreationFacts]:
-        """Return creation facts for these accounts, in order."""
+    def get_lifecycle_facts(self, service_account_ids: Sequence[UUID]) -> Sequence[ServiceAccountLifecycleFacts]:
+        """Return lifecycle facts for these accounts, in order."""

@@ -32,9 +32,14 @@ class TokenCredentialRecord(CredentialRecord):
     """When the token stops working, whether used or not. Never, if None."""
 
     last_used_at: datetime | None = None
-    """When the token was last presented, coarsened. Set at issuance.
+    """When the token was last presented, coarsened.
 
-    Temporary: only kept to enforce `max_idle`.
+    Set at issuance for an extension token, empty until its first use for a
+    service account's. Cleared when the token is replaced, unless `max_idle`
+    runs on it.
+
+    Temporary: only kept to enforce `max_idle`, and to coarsen how often a
+    service account's own `last_used_at` is written.
     """
 
     max_idle: timedelta | None = None

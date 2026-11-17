@@ -76,8 +76,6 @@ class RotateServiceAccountTokenUseCase(
             raise ServiceAccountHasSeveralTokensException(account.id)
         (credential_record,) = credential_records
 
-        now = self._time_provider.get_current_time()
-
         # Rotate the token: generate a new one, then store its hash in place of the old one
         token = TokenCredential.generate()
         try:
@@ -86,6 +84,10 @@ class RotateServiceAccountTokenUseCase(
             )
         except CannotRotateTokenCredentialError as e:
             raise ServiceAccountAlreadyRevokedException(account.id) from e
+
+        # Dated once the old token stops working: a request of the old one, until then,
+        # must not look like a use of the new one next to this date.
+        now = self._time_provider.get_current_time()
 
         event = ServiceAccountTokenRotatedEvent(
             event_id=uuid4(),

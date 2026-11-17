@@ -23,6 +23,10 @@ class ServiceAccount(Principal):
     `occurred_on` and `actor_principal_id` of the ServiceAccountCreatedEvent, read
     back when a listing needs them. Revocation is a field, because whether a
     credential is dead must not depend on an audit row still existing.
+
+    Last use is a field too, rather than the token record's own `last_used_at`:
+    revocation deletes the token record, and an inventory still has to tell how
+    long a revoked account had been dormant.
     """
 
     _name_length_max: ClassVar[int] = 100
@@ -32,6 +36,7 @@ class ServiceAccount(Principal):
     group_id: UUID
     name: str
     revoked_at: datetime | None = None
+    last_used_at: datetime | None = None
 
     @classmethod
     def validated_service_account_name(cls, name: str) -> str:

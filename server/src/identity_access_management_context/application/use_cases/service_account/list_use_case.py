@@ -73,7 +73,7 @@ class ListServiceAccountsUseCase(
         # Retrieve the service accounts
         group_ids = self._readable_group_ids(command)
         accounts = tuple(self._repository.list_for_groups(group_ids))
-        facts = self._event_repository.get_creation_facts(tuple(account.id for account in accounts))
+        facts = self._event_repository.get_lifecycle_facts(tuple(account.id for account in accounts))
 
         # Get user names
         # NOTE: Repositories should handle bulk queries to avoid such loops
@@ -92,6 +92,8 @@ class ListServiceAccountsUseCase(
                 created_by_user_name=display_names.get(fact.created_by_principal_id),
                 created_at=fact.created_at,
                 revoked_at=account.revoked_at,
+                last_rotated_at=fact.last_rotated_at,
+                last_used_at=account.last_used_at,
             )
             for account, fact in zip(accounts, facts, strict=True)
         )

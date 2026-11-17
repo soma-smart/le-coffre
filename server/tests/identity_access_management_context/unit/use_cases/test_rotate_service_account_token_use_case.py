@@ -129,15 +129,31 @@ def test_given_a_rotation_when_it_succeeds_then_the_account_keeps_its_identity(
     assert (after.id, after.name, after.group_id) == (account.id, name, group_id)
 
 
-def test_given_a_rotation_when_it_succeeds_then_the_creation_facts_are_untouched(
-    use_case, owner, account, service_account_event_repository
+def test_given_a_rotation_when_it_succeeds_then_the_creation_facts_are_untouched_and_the_rotation_is_dated(
+    use_case,
+    owner,
+    account,
+    service_account_event_repository,
+    token_credential_record_repository,
+    time_provider,
+    monkeypatch,
 ):
-    before = service_account_event_repository.get_creation_facts([account.id])[0]
+    before = service_account_event_repository.get_lifecycle_facts([account.id])[0]
+    replace_token_hashes = token_credential_record_repository.replace_token_hashes
+
+    def replace_while_the_clock_moves(*args):
+        # The old token works until the swap: the rotation is dated after it.
+        replace_token_hashes(*args)
+        time_provider.set_current_time(LATER)
+
+    monkeypatch.setattr(token_credential_record_repository, "replace_token_hashes", replace_while_the_clock_moves)
 
     _rotate(use_case, owner, account.id)
 
-    after = service_account_event_repository.get_creation_facts([account.id])[0]
-    assert after == before
+    after = service_account_event_repository.get_lifecycle_facts([account.id])[0]
+    assert (after.created_at, after.created_by_principal_id) == (before.created_at, before.created_by_principal_id)
+    assert before.last_rotated_at is None
+    assert after.last_rotated_at == LATER
 
 
 def test_given_a_plain_member_when_rotating_then_it_is_refused(use_case, account, groups):

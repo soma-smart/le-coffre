@@ -31,6 +31,8 @@ class ServiceAccountSummary(BaseModel):
     created_by_user_name: str | None
     created_at: datetime | None
     revoked_at: datetime | None
+    last_rotated_at: datetime | None
+    last_used_at: datetime | None
 
 
 class ListServiceAccounts(BaseModel):
@@ -63,6 +65,9 @@ def list_service_accounts(
     admits an administrator, who then sees every group's accounts — listing
     carries no token, so this is a metadata view, never a way to a credential.
     No token is returned, hashed or otherwise.
+
+    `last_used_at` is null for an account whose token never authenticated. Compare
+    it with `last_rotated_at` to tell whether the current token was used yet.
     """
     try:
         command = ListServiceAccountsCommand(
@@ -80,6 +85,8 @@ def list_service_accounts(
                     created_by_user_name=item.created_by_user_name,
                     created_at=item.created_at,
                     revoked_at=item.revoked_at,
+                    last_rotated_at=item.last_rotated_at,
+                    last_used_at=item.last_used_at,
                 )
                 for item in response.items
             ],

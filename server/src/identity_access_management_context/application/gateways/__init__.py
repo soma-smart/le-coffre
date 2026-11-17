@@ -16,8 +16,8 @@ from .revoked_token_repository import (
     RevokedTokenRepository,
 )
 from .service_account_event_repository import (
-    ServiceAccountCreationFacts,
     ServiceAccountEventRepository,
+    ServiceAccountLifecycleFacts,
 )
 from .service_account_repository import (
     CannotRevokeServiceAccount,
@@ -73,5 +73,5 @@ __all__ = [
     "CannotRotateTokenCredentialError",
     "CannotRevokeServiceAccount",
     "ServiceAccountEventRepository",
-    "ServiceAccountCreationFacts",
+    "ServiceAccountLifecycleFacts",
 ]

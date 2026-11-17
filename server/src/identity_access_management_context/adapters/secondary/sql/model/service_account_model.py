@@ -13,6 +13,5 @@ class ServiceAccountPrincipalTable(PrincipalDetailsTable, table=True):
 
     group_id: UUID = Field(nullable=False, index=True)
     name: str = Field(nullable=False)
-    revoked_at: datetime | None = Field(
-        sa_type=DateTime, default=None, index=True, description="When the account was revoked"
-    )
+    revoked_at: datetime | None = Field(sa_type=DateTime, default=None, index=True)
+    last_used_at: datetime | None = Field(sa_type=DateTime, default=None)
