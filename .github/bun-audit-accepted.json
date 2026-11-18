@@ -9,6 +9,6 @@
     "advisory": "GHSA-fc5q-39xc-vjpf",
     "package": "picomatch",
     "reason": "No fixed release exists: the advisory covers every version up to 4.0.7, the latest published (both the 4.x line and the 2.3.2 pulled in by micromatch). It reaches frontend/ and extension/ only through build, test and lint tooling (vite, vitest, tinyglobby, unplugin, npm-run-all2, vue-router's build-time route generator, micromatch), where the glob patterns are written in the repository, never supplied by a user, and picomatch is never part of a build output. Drop this entry as soon as a patched picomatch is published.",
-    "review_by": "2027-01-06"
+    "review_by": "2026-12-02"
   }
 ]
