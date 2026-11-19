@@ -7,8 +7,8 @@ from identity_access_management_context.application.gateways import (
     REVOCATION_REASON_REFRESH_TOKEN_ROTATED,
     AdminEventRepository,
     AuthSessionRepository,
-    ExtensionTokenRepository,
     RevokedTokenRepository,
+    TokenCredentialRecordRepository,
     TokenGateway,
     UserRepository,
 )
@@ -35,7 +35,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         revoked_token_repository: RevokedTokenRepository,
         time_provider: TimeGateway,
         session_max_lifetime_seconds: int,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         event_publisher: DomainEventPublisher,
         admin_event_repository: AdminEventRepository,
     ):
@@ -45,7 +45,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         self.revoked_token_repository = revoked_token_repository
         self.time_provider = time_provider
         self.session_max_lifetime_seconds = session_max_lifetime_seconds
-        self.extension_token_repository = extension_token_repository
+        self.token_credential_record_repository = token_credential_record_repository
         self.event_publisher = event_publisher
         self.admin_event_repository = admin_event_repository
 
@@ -55,7 +55,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         if token_data is None:
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
-        user = self.user_repository.get_by_id(token_data.user_id)
+        user = self.user_repository.get_by_id(token_data.principal_id)
         if user is None:
             raise InvalidRefreshTokenException("User no longer exists")
 
@@ -78,7 +78,7 @@ class RefreshAccessTokenUseCase(TracedUseCase):
                 # the password-update flow): JWT iat has second precision, so a
                 # truncated cutoff would let the thief's same-second access token
                 # satisfy `iat < cutoff` and survive.
-                self.auth_session_repository.invalidate_all_for_user(token_data.user_id, now)
+                self.auth_session_repository.invalidate_all_for_principal(token_data.principal_id, now)
                 user.session_invalid_before = now
                 self.user_repository.update(user)
                 # "Every session" includes the browser extensions. The cutoff
@@ -87,13 +87,13 @@ class RefreshAccessTokenUseCase(TracedUseCase):
                 # rate limiter read the row, not the cutoff, so a token cut by
                 # the cutoff alone kept showing as active and kept charging the
                 # victim's bucket. Same reasoning as the password-change flow.
-                revoked = self.extension_token_repository.revoke_all_for_user(token_data.user_id, now)
+                revoked = self.token_credential_record_repository.delete_by_principal_ids([token_data.principal_id])
                 if revoked:
                     ExtensionRevocationRecordingService.record(
                         self.event_publisher,
                         self.admin_event_repository,
-                        user_id=token_data.user_id,
-                        actor_user_id=token_data.user_id,
+                        user_id=token_data.principal_id,
+                        actor_user_id=token_data.principal_id,
                         token_id=None,
                         reason=REVOCATION_REASON_REFRESH_TOKEN_REUSE,
                         revoked_count=revoked,
@@ -105,8 +105,8 @@ class RefreshAccessTokenUseCase(TracedUseCase):
             if token_data.issued_at < session_cutoff:
                 raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
-        session = self.auth_session_repository.get_active_by_user_id_and_refresh_jti(
-            user_id=token_data.user_id,
+        session = self.auth_session_repository.get_active_by_principal_id_and_refresh_jti(
+            principal_id=token_data.principal_id,
             refresh_token_jti=token_data.jti,
         )
         if session is None:
@@ -116,20 +116,20 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         # so without this cap an active session (or a stolen, undetected refresh
         # chain) could self-renew forever. Past the cap, force a re-login.
         if now - session.created_at >= timedelta(seconds=self.session_max_lifetime_seconds):
-            self.auth_session_repository.invalidate_by_user_id_and_refresh_jti(
-                user_id=token_data.user_id,
+            self.auth_session_repository.invalidate_by_principal_id_and_refresh_jti(
+                principal_id=token_data.principal_id,
                 refresh_token_jti=token_data.jti,
                 invalidated_at=now,
             )
             raise InvalidRefreshTokenException("Invalid or expired refresh token")
 
         new_access_token = self.token_gateway.generate_token(
-            user_id=token_data.user_id,
+            principal_id=token_data.principal_id,
             email=token_data.email,
             roles=user.roles,
         )
         new_refresh_token = self.token_gateway.generate_refresh_token(
-            user_id=token_data.user_id,
+            principal_id=token_data.principal_id,
             email=token_data.email,
             roles=user.roles,
         )
@@ -156,5 +156,5 @@ class RefreshAccessTokenUseCase(TracedUseCase):
         return RefreshAccessTokenResponse(
             access_token=new_access_token.value,
             refresh_token=new_refresh_token.value,
-            user_id=token_data.user_id,
+            user_id=token_data.principal_id,
         )

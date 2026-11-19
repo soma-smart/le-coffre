@@ -85,7 +85,7 @@ def test_given_passwords_exist_when_listing_all_folders_should_return_all_access
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password1.id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password1.id),
             "password_name": "Gmail",
@@ -98,7 +98,7 @@ def test_given_passwords_exist_when_listing_all_folders_should_return_all_access
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 2, 10, 0, 0),
         password_id=password2.id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password2.id),
             "password_name": "Slack",
@@ -160,7 +160,7 @@ def test_given_specific_folder_when_listing_passwords_should_return_only_folder_
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password1.id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password1.id),
             "password_name": "Gmail",
@@ -173,7 +173,7 @@ def test_given_specific_folder_when_listing_passwords_should_return_only_folder_
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 2, 10, 0, 0),
         password_id=password2.id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password2.id),
             "password_name": "Slack",
@@ -239,7 +239,7 @@ def test_given_mixed_access_when_listing_passwords_should_return_only_accessible
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password1.id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password1.id),
             "password_name": "Gmail",
@@ -313,7 +313,7 @@ def test_given_passwords_owned_by_other_users_when_listing_as_user_with_no_group
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password.id,
-        actor_user_id=other_user_id,
+        actor_principal_id=other_user_id,
         event_data={},
     )
 
@@ -350,7 +350,7 @@ def test_given_passwords_with_creation_events_when_listing_passwords_should_retu
         event_type="PasswordCreatedEvent",
         occurred_on=creation_date1,
         password_id=password1_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password1_id),
             "password_name": "Gmail",
@@ -375,7 +375,7 @@ def test_given_passwords_with_creation_events_when_listing_passwords_should_retu
         event_type="PasswordCreatedEvent",
         occurred_on=creation_date2,
         password_id=password2_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password2_id),
             "password_name": "Slack",
@@ -425,7 +425,7 @@ def test_given_passwords_with_password_updates_when_listing_passwords_should_ret
         event_type="PasswordCreatedEvent",
         occurred_on=creation_date,
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password_id),
             "password_name": "Gmail",
@@ -440,7 +440,7 @@ def test_given_passwords_with_password_updates_when_listing_passwords_should_ret
         event_type="PasswordUpdatedEvent",
         occurred_on=update_date,
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={
             "password_id": str(password_id),
             "has_name_changed": False,
@@ -483,7 +483,7 @@ def test_given_owner_user_when_listing_passwords_should_return_can_read_and_can_
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={},
     )
 
@@ -523,7 +523,7 @@ def test_given_read_only_shared_user_when_listing_passwords_should_return_can_re
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={},
     )
 
@@ -573,7 +573,7 @@ def test_given_admin_user_with_no_group_access_when_listing_passwords_should_ret
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password1.id,
-        actor_user_id=other_user_id,
+        actor_principal_id=other_user_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -581,7 +581,7 @@ def test_given_admin_user_with_no_group_access_when_listing_passwords_should_ret
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 2, 10, 0, 0),
         password_id=password2.id,
-        actor_user_id=other_user_id,
+        actor_principal_id=other_user_id,
         event_data={},
     )
 
@@ -632,7 +632,7 @@ def test_given_admin_user_with_group_ownership_when_listing_passwords_should_ret
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=admin_password.id,
-        actor_user_id=admin_id,
+        actor_principal_id=admin_id,
         event_data={},
     )
     password_event_repository.append_event(
@@ -640,7 +640,7 @@ def test_given_admin_user_with_group_ownership_when_listing_passwords_should_ret
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 2, 10, 0, 0),
         password_id=other_password.id,
-        actor_user_id=other_user_id,
+        actor_principal_id=other_user_id,
         event_data={},
     )
 
@@ -686,7 +686,7 @@ def test_given_passwords_with_login_and_url_when_listing_passwords_should_return
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={},
     )
 
@@ -724,7 +724,7 @@ def test_given_passwords_without_login_and_url_when_listing_passwords_should_ret
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={},
     )
 
@@ -762,7 +762,7 @@ def test_given_password_owned_by_group_when_listing_should_return_accessible_gro
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={},
     )
 
@@ -804,7 +804,7 @@ def test_given_password_shared_with_read_group_when_listing_as_owner_group_membe
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=requester_id,
+        actor_principal_id=requester_id,
         event_data={},
     )
 
@@ -848,7 +848,7 @@ def test_given_password_shared_with_read_group_when_listing_as_shared_member_sho
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=other_user_id,
+        actor_principal_id=other_user_id,
         event_data={},
     )
 
@@ -888,7 +888,7 @@ def test_given_admin_with_no_group_access_when_listing_should_return_accessible_
         event_type="PasswordCreatedEvent",
         occurred_on=datetime(2025, 1, 1, 10, 0, 0),
         password_id=password_id,
-        actor_user_id=other_user_id,
+        actor_principal_id=other_user_id,
         event_data={},
     )
 

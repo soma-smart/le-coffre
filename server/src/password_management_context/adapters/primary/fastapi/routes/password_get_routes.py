@@ -15,8 +15,8 @@ from password_management_context.domain.exceptions import (
     PasswordManagementDomainError,
     PasswordNotFoundError,
 )
-from shared_kernel.adapters.primary.dependencies import get_current_principal
-from shared_kernel.domain.entities import ApiPrincipal
+from shared_kernel.adapters.primary.dependencies import get_current_credential, get_current_principal
+from shared_kernel.domain.entities import AuthenticatedPrincipal, PresentedCredential
 from shared_kernel.domain.exceptions import AccessDeniedError
 
 logger = logging.getLogger(__name__)
@@ -37,22 +37,23 @@ class GetPasswordResponse(BaseModel):
 )
 def get_password(
     password_id: UUID,
-    principal: ApiPrincipal = Depends(get_current_principal),
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    credential: PresentedCredential | None = Depends(get_current_credential),
     usecase: GetPasswordUseCase = Depends(get_get_password_usecase),
 ):
     """
     Retrieve a password by its ID with user authentication.
 
     - **password_id**: The ID of the password to retrieve
-    - **Authentication**: an access_token cookie, or a browser-extension bearer
-      token. An extension token is read-only and never carries the admin role,
-      so it reaches only what its own user can read.
+    - **Authentication**: an access_token cookie, or a bearer token. A
+      read-only token, like a browser extension's, never carries the admin
+      role, so it reaches only what its own user can read.
     """
     try:
         command = GetPasswordCommand(
-            requester_id=principal.user.user_id,
+            requester_id=principal.principal_id,
             password_id=password_id,
-            credential_kind=principal.kind,
+            credential_id=None if credential is None else credential.credential_id,
         )
         decrypted_password = usecase.execute(command)
 

@@ -10,7 +10,7 @@ class GroupCreatedEvent(DomainEvent):
         self,
         group_id: UUID,
         group_name: str,
-        created_by_user_id: UUID,
+        created_by_principal_id: UUID,
         event_id: UUID | None = None,
         occurred_on: datetime | None = None,
     ):
@@ -21,4 +21,4 @@ class GroupCreatedEvent(DomainEvent):
         )
         self.group_id = group_id
         self.group_name = group_name
-        self.created_by_user_id = created_by_user_id
+        self.created_by_principal_id = created_by_principal_id

@@ -33,7 +33,7 @@ function makeLink(overrides: Partial<OneTimeLink> = {}): OneTimeLink {
   return {
     id: 'link-1',
     passwordId: 'pwd-1',
-    createdByUserId: 'user-1',
+    createdByPrincipalId: 'user-1',
     createdAt: new Date(now - HOUR).toISOString(),
     expiresAt: new Date(now + HOUR).toISOString(),
     readAt: null,

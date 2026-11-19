@@ -9,7 +9,7 @@ function seedWithEvents() {
       eventId: 'e1',
       eventType: 'PasswordCreatedEvent',
       occurredOn: '2024-01-01T00:00:00Z',
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'u@example.com',
       eventData: { folder: 'default' },
     })
@@ -17,7 +17,7 @@ function seedWithEvents() {
       eventId: 'e2',
       eventType: 'PasswordSharedEvent',
       occurredOn: '2024-01-05T00:00:00Z',
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'u@example.com',
       eventData: { sharedWithGroupId: 'g2' },
     })
@@ -25,7 +25,7 @@ function seedWithEvents() {
       eventId: 'e3',
       eventType: 'PasswordUpdatedEvent',
       occurredOn: '2024-02-01T00:00:00Z',
-      actorUserId: 'u',
+      actorPrincipalId: 'u',
       actorEmail: 'u@example.com',
       eventData: { hasNameChanged: true },
     })

@@ -9,24 +9,24 @@ class FakeGroupRepository:
         self._groups: Dict[UUID, Group] = {}
 
     def save_personal_group(self, group: PersonalGroup) -> None:
-        # Store as a Group with user_id
+        # Store as a Group with principal_id
         self._groups[group.id] = Group(
             id=group.id,
             name=group.name,
             is_personal=True,
-            user_id=group.user_id,
+            principal_id=group.principal_id,
         )
 
     def get_by_id(self, group_id: UUID) -> Group | None:
         return self._groups.get(group_id)
 
-    def get_by_user_id(self, user_id: UUID) -> PersonalGroup | None:
+    def get_by_principal_id(self, principal_id: UUID) -> PersonalGroup | None:
         for group in self._groups.values():
-            if group.is_personal and group.user_id == user_id:
+            if group.is_personal and group.principal_id == principal_id:
                 return PersonalGroup(
                     id=group.id,
                     name=group.name,
-                    user_id=group.user_id,  # type: ignore - we know it's not None
+                    principal_id=group.principal_id,  # type: ignore - we know it's not None
                 )
         return None
 

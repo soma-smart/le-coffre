@@ -7,13 +7,13 @@ from password_management_context.domain.value_objects import AccessRole, Passwor
 
 @dataclass
 class UserAccessResponse:
-    """One access link: a user reaches the password through a single group.
+    """One access link: a principal reaches the password through a single group.
 
-    A user who reaches the password through several groups produces several
+    A principal that reaches the password through several groups produces several
     links — one per group.
     """
 
-    user_id: UUID
+    principal_id: UUID
     group_id: UUID
     role_in_group: AccessRole
     group_role: AccessRole

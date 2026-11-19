@@ -83,7 +83,7 @@ class ConfigureSsoProviderUseCase(TracedUseCase):
             self._sso_configuration_repository.save(config)
 
             event = SsoConfiguredEvent(
-                configured_by_user_id=command.requesting_user.user_id,
+                configured_by_principal_id=command.requesting_user.user_id,
                 discovery_url=command.discovery_url,
             )
             self._event_publisher.publish(event)
@@ -91,7 +91,7 @@ class ConfigureSsoProviderUseCase(TracedUseCase):
                 event_id=event.event_id,
                 event_type=type(event).__name__,
                 occurred_on=event.occurred_on,
-                actor_user_id=command.requesting_user.user_id,
+                actor_principal_id=command.requesting_user.user_id,
                 event_data={"discovery_url": command.discovery_url},
             )
 

@@ -64,7 +64,7 @@ class UnshareAccessUseCase(TracedUseCase):
             raise PasswordAccessDeniedError(command.owner_id, command.password_id)
 
         # Check if the requester owns the group that owns the password
-        if not self.group_access_gateway.is_user_owner_of_group(command.owner_id, owner_group_id):
+        if not self.group_access_gateway.is_principal_owner_of_group(command.owner_id, owner_group_id):
             raise UserNotOwnerOfGroupError(command.owner_id, owner_group_id)
 
         # Cannot unshare with the owner group
@@ -88,7 +88,7 @@ class UnshareAccessUseCase(TracedUseCase):
             password_id=command.password_id,
             owner_group_id=owner_group_id,
             unshared_with_group_id=command.group_id,
-            unshared_by_user_id=command.owner_id,
+            unshared_by_principal_id=command.owner_id,
         )
         event_storage_service = PasswordEventStorageService(self.password_event_repository)
         event_storage_service.store_event(event)

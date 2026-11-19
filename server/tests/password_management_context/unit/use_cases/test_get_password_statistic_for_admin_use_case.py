@@ -112,7 +112,7 @@ def test_given_admin_should_report_total_and_active_one_time_link_counts(
     def issue() -> OneTimeLink:
         link = OneTimeLink.create(
             password_id=uuid4(),
-            created_by_user_id=uuid4(),
+            created_by_principal_id=uuid4(),
             token=OneTimeLinkToken.generate(),
             lifetime=OneTimeLinkLifetime.default(),
             now=T0,

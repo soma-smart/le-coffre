@@ -1,7 +1,5 @@
-from datetime import timedelta
-
 from identity_access_management_context.application.commands import ListExtensionTokensCommand
-from identity_access_management_context.application.gateways import ExtensionTokenRepository
+from identity_access_management_context.application.gateways import TokenCredentialRecordRepository
 from identity_access_management_context.application.responses import (
     ExtensionTokenSummary,
     ListExtensionTokensResponse,
@@ -13,37 +11,32 @@ from shared_kernel.application.tracing import TracedUseCase
 class ListExtensionTokensUseCase(TracedUseCase):
     """The connected-devices screen.
 
-    Returns revoked and expired entries too: a user checking "did I actually
-    disconnect that laptop" needs to see the answer, not an empty row.
+    Expired and idle tokens are listed as inactive, until revoked. A revoked
+    token is gone: its history lives in the audit trail.
     """
 
     def __init__(
         self,
-        extension_token_repository: ExtensionTokenRepository,
+        token_credential_record_repository: TokenCredentialRecordRepository,
         time_provider: TimeGateway,
-        inactivity_seconds: int,
     ):
-        self.extension_token_repository = extension_token_repository
+        self.token_credential_record_repository = token_credential_record_repository
         self.time_provider = time_provider
-        self.dormant_after = timedelta(seconds=inactivity_seconds)
 
     def execute(self, command: ListExtensionTokensCommand) -> ListExtensionTokensResponse:
         now = self.time_provider.get_current_time()
-        tokens = self.extension_token_repository.list_for_user(command.requesting_user.user_id)
+        tokens = self.token_credential_record_repository.list_by_principal_ids((command.requesting_user.user_id,))
 
         return ListExtensionTokensResponse(
             tokens=[
                 ExtensionTokenSummary(
                     id=token.id,
-                    device_name=token.device_name,
-                    created_at=token.created_at,
+                    device_name=token.label,
                     expires_at=token.expires_at,
                     last_used_at=token.last_used_at,
-                    revoked_at=token.revoked_at,
-                    created_from_ip=token.created_from_ip,
-                    # The same notion of active that validation applies, so a
-                    # token refused for inactivity is not listed as live.
-                    is_active=token.is_active(now, self.dormant_after),
+                    # The same notion of active that authentication applies, so
+                    # a token refused for inactivity is not listed as live.
+                    is_active=token.is_usable(now),
                 )
                 for token in tokens
             ]

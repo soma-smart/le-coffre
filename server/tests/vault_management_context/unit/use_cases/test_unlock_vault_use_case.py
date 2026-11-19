@@ -317,7 +317,7 @@ def test_given_valid_shares_when_unlocking_vault_should_store_vault_unlocked_eve
     assert len(vault_event_repository.events) == 1
     stored = vault_event_repository.events[0]
     assert stored["event_type"] == "VaultUnlockedEvent"
-    assert stored["actor_user_id"] is None
+    assert stored["actor_principal_id"] is None
 
 
 def test_given_shares_pending_in_another_session_when_unlocking_should_not_use_them(

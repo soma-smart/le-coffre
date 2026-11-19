@@ -30,7 +30,7 @@ def test_dummy_hash_never_matches_any_password(
     """The pre-computed dummy hash should never match any password,
     ensuring that the verify() call in the non-existent-user path
     always returns False (as intended)."""
-    from identity_access_management_context.application.use_cases.password_login_use_case import (
+    from identity_access_management_context.application.services.authentication.password_authenticator import (
         DUMMY_PASSWORD_HASH,
     )
 
@@ -56,7 +56,7 @@ def test_dummy_hash_is_valid_bcrypt_format(
     bcrypt_hashing_gateway: BcryptHashingGateway,
 ):
     """Verify that DUMMY_PASSWORD_HASH is a valid bcrypt hash that doesn't crash the verifier."""
-    from identity_access_management_context.application.use_cases.password_login_use_case import (
+    from identity_access_management_context.application.services.authentication.password_authenticator import (
         DUMMY_PASSWORD_HASH,
     )
 

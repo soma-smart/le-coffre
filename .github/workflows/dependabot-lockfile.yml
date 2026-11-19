@@ -1,15 +1,15 @@
-# Dependabot's npm ecosystem supports bun (GA Feb 2025, bun >= 1.1.39), but in
-# this repo it consistently emits manifest-only updates: PRs #351, #352 and #355
-# each changed `frontend/package.json` and left `bun.lock` untouched, so every
-# one of them fails the `--frozen-lockfile` gate in `front-ci`.
+# Under the `npm` ecosystem, Dependabot emitted manifest-only updates here: PRs
+# #351, #352 and #355 each changed `frontend/package.json` and left `bun.lock`
+# untouched, failing the `--frozen-lockfile` gate in `front-ci`. The `bun`
+# ecosystem now used in dependabot.yml updates `bun.lock` itself, so this is a
+# fallback: when the lockfile already matches, it exits without pushing.
 #
-# This workflow closes that gap by regenerating the lockfile on Dependabot's
-# behalf. It deliberately does NOT decide whether the result is correct — it
+# It regenerates the lockfile on Dependabot's behalf. It deliberately does NOT decide whether the result is correct — it
 # pushes the lockfile and lets CI re-run and judge, so the `--frozen-lockfile`
 # check stays the single arbiter.
 #
 # It covers every bun package in the repo (frontend/ and extension/), because
-# both gate on `--frozen-lockfile` and both receive Dependabot npm PRs. One job
+# both gate on `--frozen-lockfile` and both receive Dependabot PRs. One job
 # handles all of them rather than a matrix: matrix jobs would push to the same
 # PR branch concurrently and race.
 #

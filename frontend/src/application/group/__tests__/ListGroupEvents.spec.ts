@@ -15,23 +15,23 @@ function seedWithEvents() {
     eventId: 'e1',
     eventType: 'UserAddedToGroupEvent',
     occurredOn: '2024-01-01T00:00:00Z',
-    actorUserId: 'u1',
+    actorPrincipalId: 'u1',
     actorEmail: 'owner@example.com',
-    eventData: { groupId: 'g1', userId: 'u2', userEmail: 'u2@example.com' },
+    eventData: { groupId: 'g1', principalId: 'u2', userEmail: 'u2@example.com' },
   })
   repo.addEvent('g1', {
     eventId: 'e2',
     eventType: 'OwnerAddedToGroupEvent',
     occurredOn: '2024-01-05T00:00:00Z',
-    actorUserId: 'u1',
+    actorPrincipalId: 'u1',
     actorEmail: 'owner@example.com',
-    eventData: { groupId: 'g1', userId: 'u2', userEmail: 'u2@example.com' },
+    eventData: { groupId: 'g1', principalId: 'u2', userEmail: 'u2@example.com' },
   })
   repo.addEvent('g1', {
     eventId: 'e3',
     eventType: 'UserRemovedFromGroupEvent',
     occurredOn: '2024-02-01T00:00:00Z',
-    actorUserId: 'u1',
+    actorPrincipalId: 'u1',
     actorEmail: 'owner@example.com',
     eventData: { groupId: 'g1', userId: 'u3', userEmail: 'u3@example.com' },
   })
