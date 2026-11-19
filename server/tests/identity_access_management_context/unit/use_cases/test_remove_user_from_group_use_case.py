@@ -122,9 +122,7 @@ def test_given_member_when_leaving_group_then_member_is_removed(
 
     assert not group_member_repository.is_member(group_id, member_id)
 
-    # The whole point of self-removal: the actor recorded against the
-    # departure is the leaving member themselves, not some owner acting on
-    # their behalf.
+    # The recorded actor is the leaving member, not an owner.
     events = event_publisher.get_published_events_of_type(UserRemovedFromGroupEvent)
     assert len(events) == 1
     assert events[0].user_id == member_id
@@ -140,10 +138,7 @@ def test_given_non_member_when_leaving_group_then_raise_user_not_member_exceptio
     group_repository: FakeGroupRepository,
     group_member_repository: FakeGroupMemberRepository,
 ):
-    """A non-member, non-owner self-removal must fail on the membership check
-    (400 UserNotMemberOfGroupException), never on the ownership check (403
-    UserNotOwnerOfGroupException) — self-removal bypasses the ownership gate
-    entirely, so there must be no path where it's reached first."""
+    """Self-removal skips the ownership check: it fails as not-a-member, not as not-owner."""
     owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
     group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
     non_member_id = UUID("323e4567-e89b-12d3-a456-426614174002")

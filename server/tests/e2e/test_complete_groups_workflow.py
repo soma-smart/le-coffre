@@ -4,10 +4,11 @@ Complete End-to-End Groups Workflow.
 This test covers the entire group management system in one comprehensive workflow:
 1. List/get groups (structure, personal flag, owners/members fields)
 2. Authentication requirements
-3. Group CRUD (create, read, update)
-4. Member management (add, remove, idempotency, authorization)
-5. Owner promotion (promote, idempotency, authorization)
-6. Edge cases (non-existent user/group, personal group restrictions)
+3. Group update (rename, authorization, personal and non-existent groups)
+4. Member management (add, remove, idempotency, non-existent user)
+5. Member authorization (non-owner add/remove, owner removal)
+6. Owner promotion (promote, idempotency, non-member)
+7. Owner promotion authorization (non-owner, personal group)
 8. Leaving a group (self-removal, re-leave rejection, owner blocked)
 """
 
@@ -455,8 +456,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     )
     assert add_member_response.status_code == 201, add_member_response.text
 
-    # Step 8.2: A member can remove themselves via the same DELETE endpoint
-    # used by an owner removing someone else — called with their own id.
+    # Step 8.2: A member leaves through the remove-member endpoint, with their own id
     leave_response = user1_client.delete(f"/api/groups/{leave_group_id}/members/{user1_id}")
     assert leave_response.status_code == 200, leave_response.text
     assert leave_response.json()["message"] == "Member removed successfully"
@@ -468,8 +468,7 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     assert user1_id not in group_after_leave["members"]
     assert admin_id in group_after_leave["owners"]
 
-    # Step 8.4: Having already left, trying again is a 400 (not a member),
-    # never a 403 (not an owner) — self-removal bypasses the ownership gate.
+    # Step 8.4: Leaving again is a 400 (not a member), never a 403 (not an owner)
     leave_again_response = user1_client.delete(f"/api/groups/{leave_group_id}/members/{user1_id}")
     assert leave_again_response.status_code == 400
     assert "is not a member of group" in leave_again_response.json()["detail"]
