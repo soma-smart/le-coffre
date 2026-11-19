@@ -34,7 +34,7 @@ function makeEvent(overrides: Partial<GroupEvent>): GroupEvent {
     eventId: 'e1',
     eventType: 'UserRemovedFromGroupEvent',
     occurredOn: new Date().toISOString(),
-    actorUserId: 'user-1',
+    actorPrincipalId: 'user-1',
     actorEmail: 'actor@example.com',
     eventData: { userId: 'user-2', userEmail: 'user2@example.com' },
     ...overrides,
@@ -58,7 +58,10 @@ async function mountModal(repo: InMemoryGroupRepository) {
 describe('GroupHistoryModal self-leave labelling', () => {
   it('tags a self-removal as a voluntary departure, not a removal', async () => {
     const repo = new InMemoryGroupRepository().seed(group)
-    repo.addEvent(group.id, makeEvent({ actorUserId: 'user-2', eventData: { userId: 'user-2' } }))
+    repo.addEvent(
+      group.id,
+      makeEvent({ actorPrincipalId: 'user-2', eventData: { userId: 'user-2' } }),
+    )
 
     const wrapper = await mountModal(repo)
 
@@ -68,7 +71,10 @@ describe('GroupHistoryModal self-leave labelling', () => {
 
   it('tags an owner-initiated removal as a removal, not a departure', async () => {
     const repo = new InMemoryGroupRepository().seed(group)
-    repo.addEvent(group.id, makeEvent({ actorUserId: 'user-1', eventData: { userId: 'user-2' } }))
+    repo.addEvent(
+      group.id,
+      makeEvent({ actorPrincipalId: 'user-1', eventData: { userId: 'user-2' } }),
+    )
 
     const wrapper = await mountModal(repo)
 
@@ -80,11 +86,15 @@ describe('GroupHistoryModal self-leave labelling', () => {
     const repo = new InMemoryGroupRepository().seed(group)
     repo.addEvent(
       group.id,
-      makeEvent({ eventId: 'e-left', actorUserId: 'user-2', eventData: { userId: 'user-2' } }),
+      makeEvent({ eventId: 'e-left', actorPrincipalId: 'user-2', eventData: { userId: 'user-2' } }),
     )
     repo.addEvent(
       group.id,
-      makeEvent({ eventId: 'e-removed', actorUserId: 'user-1', eventData: { userId: 'user-2' } }),
+      makeEvent({
+        eventId: 'e-removed',
+        actorPrincipalId: 'user-1',
+        eventData: { userId: 'user-2' },
+      }),
     )
 
     const wrapper = await mountModal(repo)
@@ -110,11 +120,15 @@ describe('GroupHistoryModal self-leave labelling', () => {
     const repo = new InMemoryGroupRepository().seed(group)
     repo.addEvent(
       group.id,
-      makeEvent({ eventId: 'e-left', actorUserId: 'user-2', eventData: { userId: 'user-2' } }),
+      makeEvent({ eventId: 'e-left', actorPrincipalId: 'user-2', eventData: { userId: 'user-2' } }),
     )
     repo.addEvent(
       group.id,
-      makeEvent({ eventId: 'e-removed', actorUserId: 'user-1', eventData: { userId: 'user-2' } }),
+      makeEvent({
+        eventId: 'e-removed',
+        actorPrincipalId: 'user-1',
+        eventData: { userId: 'user-2' },
+      }),
     )
 
     const wrapper = await mountModal(repo)

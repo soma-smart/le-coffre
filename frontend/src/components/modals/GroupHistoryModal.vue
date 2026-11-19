@@ -322,7 +322,8 @@ const targetUserLabel = (eventData: Record<string, unknown>): string => {
 // kicked out by an owner) — the only distinguishing signal is the actor and
 // the target being the same user.
 const isSelfLeave = (event: GroupEvent): boolean =>
-  event.eventType === 'UserRemovedFromGroupEvent' && event.actorUserId === event.eventData.userId
+  event.eventType === 'UserRemovedFromGroupEvent' &&
+  event.actorPrincipalId === event.eventData.userId
 
 const formatEventType = (event: GroupEvent): string =>
   isSelfLeave(event)
