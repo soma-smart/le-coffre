@@ -114,14 +114,28 @@ describe('GroupDetailsModal leave action', () => {
     expect(wrapper.emitted('leaveGroup')![0][0]).toMatchObject({ id: group.id })
   })
 
-  it('is disabled for a non-sole owner, with the ownership tooltip described', async () => {
+  it('is enabled for an owner with a co-owner and emits leaveGroup', async () => {
     const repo = new InMemoryGroupRepository().seed(groupBeta)
     const wrapper = await mountModal(repo, groupBeta)
 
     const button = wrapper.find('.pi-sign-out').element.closest('button')
+    expect(button?.disabled).toBe(false)
+    expect(button?.getAttribute('aria-describedby')).toBeNull()
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+
+    expect(wrapper.emitted('leaveGroup')![0][0]).toMatchObject({ id: groupBeta.id })
+  })
+
+  it('is disabled for the last owner, with the reason described', async () => {
+    const group: Group = { ...groupBeta, owners: [USER_ID], members: ['member-2'] }
+    const repo = new InMemoryGroupRepository().seed(group)
+    const wrapper = await mountModal(repo, group)
+
+    const button = wrapper.find('.pi-sign-out').element.closest('button')
     expect(button?.disabled).toBe(true)
     expect(button?.getAttribute('aria-describedby')).toBe('leave-blocked-reason-modal')
-    expect(wrapper.text()).toContain('Demote yourself to member first')
+    expect(wrapper.text()).toContain('Promote another member to owner first')
   })
 
   it('leaves no trace of the prior group when the new group fails to load', async () => {

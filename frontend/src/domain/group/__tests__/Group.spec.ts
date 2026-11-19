@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   filterGroupsForUser,
   filterOwnedGroupsForUser,
+  isLeaveBlockedAsLastOwner,
   isSoleMemberOf,
   isUserMemberOf,
   isUserOwnerOf,
-  leaveBlockReason,
   pickDefaultGroupForUser,
   type Group,
 } from '@/domain/group/Group'
@@ -66,30 +66,30 @@ describe('isSoleMemberOf', () => {
   })
 })
 
-describe('leaveBlockReason', () => {
-  it('returns null for a plain member', () => {
+describe('isLeaveBlockedAsLastOwner', () => {
+  it('returns false for a plain member', () => {
     const group = makeGroup({ owners: ['u1'], members: ['u2'] })
-    expect(leaveBlockReason(group, 'u2')).toBeNull()
+    expect(isLeaveBlockedAsLastOwner(group, 'u2')).toBe(false)
   })
 
-  it('returns null for the sole member, even though they are also an owner', () => {
+  it('returns false for the sole member, even though they are also an owner', () => {
     const group = makeGroup({ owners: ['u1'], members: [] })
-    expect(leaveBlockReason(group, 'u1')).toBeNull()
+    expect(isLeaveBlockedAsLastOwner(group, 'u1')).toBe(false)
   })
 
-  it('returns "owner" when another owner already exists', () => {
-    const group = makeGroup({ owners: ['u1', 'u2'], members: [] })
-    expect(leaveBlockReason(group, 'u1')).toBe('owner')
+  it('returns false for an owner when another owner exists', () => {
+    const group = makeGroup({ owners: ['u1', 'u2'], members: ['u3'] })
+    expect(isLeaveBlockedAsLastOwner(group, 'u1')).toBe(false)
   })
 
-  it('returns "sole-owner" when the user is the only owner but other members exist', () => {
+  it('returns true for the last owner when other members exist', () => {
     const group = makeGroup({ owners: ['u1'], members: ['u2'] })
-    expect(leaveBlockReason(group, 'u1')).toBe('sole-owner')
+    expect(isLeaveBlockedAsLastOwner(group, 'u1')).toBe(true)
   })
 
-  it('returns null for someone outside the group', () => {
+  it('returns false for someone outside the group', () => {
     const group = makeGroup({ owners: ['u1'], members: ['u2'] })
-    expect(leaveBlockReason(group, 'nobody')).toBeNull()
+    expect(isLeaveBlockedAsLastOwner(group, 'nobody')).toBe(false)
   })
 })
 

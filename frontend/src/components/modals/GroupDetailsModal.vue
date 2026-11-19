@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
-import { isUserOwnerOf, leaveBlockReason, type Group } from '@/domain/group/Group'
+import { isLeaveBlockedAsLastOwner, isUserOwnerOf, type Group } from '@/domain/group/Group'
 import type { SearchUser, User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
@@ -92,17 +92,14 @@ const groupForLeaveCheck = computed(() => {
 
 const isLeaveBlockedByOwnership = computed(() => {
   if (!groupForLeaveCheck.value) return false
-  return leaveBlockReason(groupForLeaveCheck.value, currentUserId.value) !== null
+  return isLeaveBlockedAsLastOwner(groupForLeaveCheck.value, currentUserId.value)
 })
 
-const leaveButtonTooltip = computed(() => {
-  const reason = groupForLeaveCheck.value
-    ? leaveBlockReason(groupForLeaveCheck.value, currentUserId.value)
-    : null
-  if (reason === 'sole-owner') return t('pages.groups.leaveBlockedSoleOwner')
-  if (reason === 'owner') return t('pages.groups.leaveBlockedOwner')
-  return t('components.groupDetailsModal.leaveGroupButton')
-})
+const leaveButtonTooltip = computed(() =>
+  isLeaveBlockedByOwnership.value
+    ? t('pages.groups.leaveBlockedSoleOwner')
+    : t('components.groupDetailsModal.leaveGroupButton'),
+)
 
 const handleSearchAvailableUsers = debounce(async (event: { query: string }) => {
   availableUserSuggestions.value = await searchAvailableUsers(event.query)

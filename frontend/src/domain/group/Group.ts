@@ -54,16 +54,13 @@ export function isSoleMemberOf(group: Group, userId: string | null): boolean {
   return new Set([...group.owners, ...group.members]).size === 1
 }
 
-export type LeaveBlockReason = 'sole-owner' | 'owner' | null
-
 /**
- * Why the ownership rule blocks this user from leaving, or null. A sole member
- * is never blocked: they are offered deleting the group instead.
+ * The last owner cannot leave while others remain. A sole member is never
+ * blocked: they are offered deleting the group instead.
  */
-export function leaveBlockReason(group: Group, userId: string | null): LeaveBlockReason {
-  if (isSoleMemberOf(group, userId)) return null
-  if (!isUserOwnerOf(group, userId)) return null
-  return group.owners.length === 1 ? 'sole-owner' : 'owner'
+export function isLeaveBlockedAsLastOwner(group: Group, userId: string | null): boolean {
+  if (isSoleMemberOf(group, userId)) return false
+  return isUserOwnerOf(group, userId) && group.owners.length === 1
 }
 
 /**

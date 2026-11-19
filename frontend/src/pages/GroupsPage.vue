@@ -12,10 +12,10 @@ import GroupDetailsModal from '@/components/modals/GroupDetailsModal.vue'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import {
+  isLeaveBlockedAsLastOwner,
   isSoleMemberOf,
   isUserMemberOf,
   isUserOwnerOf,
-  leaveBlockReason,
   type Group,
 } from '@/domain/group/Group'
 import { sortGroups } from '../utils/groupSort'
@@ -132,16 +132,14 @@ const canLeaveGroup = (group: Group) => {
   return isUserOwnerOf(group, userId) || isUserMemberOf(group, userId)
 }
 
-// An owner must demote themselves first; a sole member is routed to deletion instead.
 const isLeaveBlockedByOwnership = (group: Group) => {
-  return leaveBlockReason(group, groupsStore.currentUserId) !== null
+  return isLeaveBlockedAsLastOwner(group, groupsStore.currentUserId)
 }
 
 const leaveButtonTooltip = (group: Group) => {
-  const reason = leaveBlockReason(group, groupsStore.currentUserId)
-  if (reason === 'sole-owner') return t('pages.groups.leaveBlockedSoleOwner')
-  if (reason === 'owner') return t('pages.groups.leaveBlockedOwner')
-  return t('pages.groups.leaveGroup')
+  return isLeaveBlockedByOwnership(group)
+    ? t('pages.groups.leaveBlockedSoleOwner')
+    : t('pages.groups.leaveGroup')
 }
 
 const leaveModalQuestion = computed(() => {

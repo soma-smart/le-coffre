@@ -206,16 +206,22 @@ describe('GroupsPage leave group', () => {
     expect(wrapper.find('[aria-describedby="leave-blocked-reason-group-owned"]').exists()).toBe(
       true,
     )
-    expect(wrapper.text()).toContain('Promote another member to owner, then demote yourself')
+    expect(wrapper.text()).toContain('Promote another member to owner first')
   })
 
-  it('disables the leave button for an owner who is not the sole owner', async () => {
+  it('opens the leave modal for an owner with a co-owner, without demoting first', async () => {
     const wrapper = await mountPage([
       sharedGroup({ owners: [USER_ID, 'owner-2'], members: ['member-1'] }),
     ])
 
     const button = wrapper.find('.pi-sign-out').element.closest('button')
-    expect(button?.disabled).toBe(true)
+    expect(button?.disabled).toBe(false)
+
+    await wrapper.find('.pi-sign-out').trigger('click')
+    await flushPromises()
+
+    expect(findConfirmationModal(wrapper, 'Leave group')?.props('visible')).toBe(true)
+    expect(findConfirmationModal(wrapper, 'Delete group')?.props('visible')).toBe(false)
   })
 
   it('routes a sole member straight to the delete modal instead of a leave modal', async () => {
