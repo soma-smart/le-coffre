@@ -124,10 +124,8 @@ export const useGroupsStore = defineStore('groups', () => {
   }
 
   /**
-   * Drops a group from the local lists without waiting on a fetch. Used right
-   * after a self-leave: `fetchGroups` stores its failures in `error` instead
-   * of rejecting, so a `refresh()` that happens to fail must not be able to
-   * resurrect a card for a group the user just successfully left.
+   * Used after a self-leave: `fetchGroups` swallows its errors, so a failed
+   * refresh must not bring back the card of a group the user just left.
    */
   function removeGroupLocally(groupId: string): void {
     groups.value = groups.value.filter((g) => g.id !== groupId)

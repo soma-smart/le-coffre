@@ -62,9 +62,7 @@ const showServiceAccountsModal = ref(false)
 // computeds read whichever group the service-accounts dialog last opened.
 const serviceAccountsGroup = ref<Group | null>(null)
 const newGroupName = ref('')
-// Only the id is kept selected state: the group itself is derived live from
-// groupsStore so a stale snapshot never drives a delete/leave decision after
-// the list refreshes underneath an open modal.
+// Derived live from the store so a stale snapshot never drives a delete/leave decision.
 const selectedGroupId = ref<string | null>(null)
 const selectedGroup = computed<Group | null>(() => {
   if (!selectedGroupId.value) return null
@@ -97,9 +95,7 @@ const canManageServiceAccounts = (group: Group) => {
 // In a future iteration, we could fetch this info from the API
 const groupHasPasswords = ref(false)
 
-// Set when the delete modal was reached via "Leave" on a sole-member group,
-// rather than via the explicit delete action — swaps in a standalone
-// description explaining why. Reset on every open, like `groupHasPasswords`.
+// 'leave' when a sole member reached the delete modal through "Leave".
 const deleteReason = ref<'leave' | null>(null)
 
 // Computed properties for delete modal
@@ -110,9 +106,6 @@ const deleteModalQuestion = computed(() => {
 })
 
 const deleteModalDescription = computed(() => {
-  // A standalone description, not a prefix on top of `deleteDescription`:
-  // that one says "all members will lose access", which contradicts having
-  // just told the user they're the only member.
   if (deleteReason.value === 'leave') {
     return t('pages.groups.deleteSoleMemberDescription')
   }
@@ -133,20 +126,13 @@ const canDeleteGroup = computed(() => {
   return selectedGroup.value ? canEditGroup(selectedGroup.value) : false
 })
 
-// Whether the current user belongs to this group at all (owner or member) —
-// a shared group an admin merely sees in the list but doesn't belong to
-// shouldn't offer a "leave" action.
+// Admins also see groups they don't belong to; those must not offer "Leave".
 const canLeaveGroup = (group: Group) => {
   const userId = groupsStore.currentUserId
   return isUserOwnerOf(group, userId) || isUserMemberOf(group, userId)
 }
 
-// An owner must demote themselves to member before leaving. (The sole-member
-// case isn't blocked here: `openLeaveGroupDialog` routes it to the delete
-// modal instead, since leaving would empty the group anyway.) Disabling the
-// button for this case, rather than opening a modal that only explains the
-// block, is what keeps the leave flow to a single actionable button
-// everywhere else.
+// An owner must demote themselves first; a sole member is routed to deletion instead.
 const isLeaveBlockedByOwnership = (group: Group) => {
   return leaveBlockReason(group, groupsStore.currentUserId) !== null
 }
@@ -158,8 +144,6 @@ const leaveButtonTooltip = (group: Group) => {
   return t('pages.groups.leaveGroup')
 }
 
-// Question for the leave-group modal. Reuses `selectedGroup`, same as the
-// delete modal — the two never show at the same time.
 const leaveModalQuestion = computed(() => {
   return t('pages.groups.leaveQuestion', { name: selectedGroup.value?.name })
 })
@@ -259,9 +243,7 @@ const handleMemberChanged = async () => {
   await groupsStore.refresh()
 }
 
-// Open delete group dialog. `reason: 'leave'` marks that this came from the
-// sole-member branch of `openLeaveGroupDialog`, so the modal can explain why
-// deleting is what's offered instead of leaving.
+// Open delete group dialog
 const openDeleteGroupDialog = (group: Group, reason: 'leave' | null = null) => {
   selectedGroupId.value = group.id
   groupHasPasswords.value = false // Reset - we'll get the actual error from API if there are passwords
@@ -327,25 +309,10 @@ const handleDeleteGroup = async () => {
   }
 }
 
-// Which group's leave button is currently waiting on the fresh re-read
-// below, so the card can show a spinner instead of looking unresponsive.
 const checkingLeaveGroupId = ref<string | null>(null)
 
-// Open leave-group dialog, from either the card icon or the details modal
-// (which closes itself before emitting). A sole member can't leave without
-// the group ending up without anyone in it, so this routes straight to the
-// existing delete-confirmation modal instead of opening a leave modal that
-// would only explain why leaving isn't on offer — one modal, one real choice.
-//
-// That decision must not be made on `groupsStore`'s 30s-cached list: a stale
-// "sole member" reading would route a group that has since gained a member
-// straight to deletion, destroying it for everyone instead of just leaving.
-// Re-read this one group directly (bypassing the store, and its cache)
-// rather than a full `fetchAllGroups(true)` — the latter flips the store's
-// shared `loading`, which the template uses to blank out the entire grid, a
-// worse flash for a single button click than it's worth. Falls back to the
-// cached group if the re-read itself fails; the leave/delete call right
-// after will surface a real error if that cache was actually wrong.
+// A sole member is offered deletion instead. The group is re-read first, not taken
+// from the 30s store cache: a stale "sole member" would delete a group someone joined.
 const openLeaveGroupDialog = async (group: Group) => {
   checkingLeaveGroupId.value = group.id
   let freshGroup = group
@@ -365,19 +332,17 @@ const openLeaveGroupDialog = async (group: Group) => {
   showLeaveGroupModal.value = true
 }
 
-// Guards against a double confirm (double click, or Enter held through the
-// modal's close animation) firing two DELETE requests before
-// `selectedGroupId` is cleared — the first succeeds, the second 400s as
-// "not a member" and shows an error toast right after the success one.
+// Blocks a double confirm from sending a second DELETE that would 400.
 const isLeavingGroup = ref(false)
 
 const handleConfirmLeaveGroup = async () => {
   const group = selectedGroup.value
-  if (!group || isLeavingGroup.value) return
+  const userId = groupsStore.currentUserId
+  if (!group || !userId || isLeavingGroup.value) return
 
   isLeavingGroup.value = true
   try {
-    await groupsStore.removeMemberFromGroup(group.id, groupsStore.currentUserId as string)
+    await groupsStore.removeMemberFromGroup(group.id, userId)
     toast.add({
       severity: 'success',
       summary: t('common.success'),
@@ -385,24 +350,12 @@ const handleConfirmLeaveGroup = async () => {
       life: 5000,
     })
     selectedGroupId.value = null
-    // Leaving changes the current user's own password access for this group,
-    // not just its membership list — the passwords cache must drop its stale
-    // view alongside the groups one.
     passwordAccessStore.invalidatePasswordAccess()
-    // Drop the group from the local list right away, rather than relying on
-    // `refresh()` below: `fetchGroups` swallows its own errors into
-    // `error.value` instead of rejecting, so an unlucky refresh failure would
-    // otherwise leave this card in place with a "Leave" button that 400s
-    // ("not a member") on the next click.
     groupsStore.removeGroupLocally(group.id)
     await groupsStore.refresh()
   } catch (error) {
     console.error('Failed to leave group:', error)
-    // Never surface `error.message` here: GroupNotFoundError / GroupAccessDeniedError
-    // are client-built, untranslated, and carry the raw group UUID, and the
-    // backend's own 400 messages aren't translated either. Only i18n strings
-    // reach the toast. Refresh so a stale button (e.g. already left in
-    // another tab) doesn't keep reoffering the same failing action.
+    // Not `error.message`: it is untranslated and may carry a raw group UUID.
     toast.add({
       severity: 'error',
       summary: t('common.error'),

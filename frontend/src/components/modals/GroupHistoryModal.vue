@@ -218,10 +218,7 @@ const loading = ref(false)
 const dateRange = ref<Date[]>([new Date(), new Date()])
 const selectedEventTypes = ref<string[]>([])
 
-// A self-leave has no eventType of its own on the backend — it's stored as a
-// plain UserRemovedFromGroupEvent (see `isSelfLeave` below) — so the filter
-// menu needs a virtual type to offer it as a distinct, correctly-labelled
-// entry instead of collapsing it under "User Removed From Group".
+// Client-side only: the backend stores a self-leave as a UserRemovedFromGroupEvent.
 const SELF_LEAVE_FILTER_TYPE = 'UserLeftGroupEvent'
 
 const filterEventType = (event: GroupEvent): string =>
@@ -240,10 +237,7 @@ const availableEventTypes = computed(() => {
     .sort((a, b) => a.label.localeCompare(b.label))
 })
 
-// The virtual type above only exists client-side: the backend has a single
-// UserRemovedFromGroupEvent type, so selecting it still fetches both self-
-// leaves and real removals, then this narrows the rows actually shown down
-// to the filter's label.
+// The backend returns removals and self-leaves together; split them here.
 const displayedEvents = computed(() => {
   if (selectedEventTypes.value.length === 0) return events.value
   const selected = new Set(selectedEventTypes.value)
@@ -318,9 +312,7 @@ const targetUserLabel = (eventData: Record<string, unknown>): string => {
     : t('common.unknownUser')
 }
 
-// A self-removal is stored as a plain UserRemovedFromGroupEvent (same as being
-// kicked out by an owner) — the only distinguishing signal is the actor and
-// the target being the same user.
+// Stored like a removal; only actor == target tells a self-leave apart.
 const isSelfLeave = (event: GroupEvent): boolean =>
   event.eventType === 'UserRemovedFromGroupEvent' &&
   event.actorPrincipalId === event.eventData.userId

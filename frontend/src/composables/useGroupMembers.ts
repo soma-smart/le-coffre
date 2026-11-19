@@ -73,11 +73,7 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
     if (!options.group.value) return
     const groupId = options.group.value.id
 
-    // Drop the previous group's data before fetching the new one: if the
-    // fetch below fails, `useAsyncStatus` swallows the rejection into
-    // `fetch.error` rather than throwing, so without this reset the member
-    // list would keep showing the prior group's owners/members under the new
-    // group's title.
+    // A failed fetch would otherwise keep showing the previous group's members.
     if (groupDetails.value && groupDetails.value.id !== groupId) {
       groupDetails.value = null
       ownerUsers.value = []

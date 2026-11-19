@@ -38,9 +38,7 @@ const { isAdmin } = storeToRefs(userStore)
 
 const showHistoryModal = ref(false)
 
-// Computed from the group prop directly rather than from `groupDetails`
-// below, which only resolves once `loadAll()`'s async fetch completes — this
-// keeps History visible immediately on open, without waiting on that fetch.
+// From the prop, not `groupDetails`, so History shows before `loadAll()` resolves.
 const canViewHistory = computed(
   () => props.group != null && (isAdmin.value || isUserOwnerOf(props.group, currentUserId.value)),
 )
@@ -83,15 +81,8 @@ const {
   },
 })
 
-// Read from `groupDetails` (reloaded after every mutation via `loadAll()`),
-// not the `group` prop, which is the parent's snapshot from whenever the
-// modal was opened and goes stale the moment a promote/demote/remove inside
-// this modal changes who's blocked. Only trusted once it actually matches the
-// group currently shown — `groupDetails` isn't reset when `props.group`
-// changes, so right after switching groups it can still hold the previous
-// group's data while `loadAll()` for the new one is in flight. Falls back to
-// the prop in that case. Shared with GroupsPage.vue's own computation via
-// `leaveBlockReason` so the two screens can't diverge again.
+// `groupDetails` is reloaded after each mutation in this modal, unlike the prop.
+// Fall back to the prop while a group switch is still loading.
 const groupForLeaveCheck = computed(() => {
   if (groupDetails.value && props.group && groupDetails.value.id === props.group.id) {
     return groupDetails.value
@@ -245,20 +236,13 @@ const handleDemoteOwner = (user: User) => {
 }
 
 const handleLeaveGroup = () => {
-  // Always emit `props.group`, never `groupForLeaveCheck`: on GroupsPage,
-  // `props.group` is `selectedGroup`, a computed backed live by the store, so
-  // it's never stale — unlike `groupDetails`, which can still belong to a
-  // previously selected group right after switching.
+  // Not `groupForLeaveCheck`: `groupDetails` may still hold the previous group.
   if (!props.group) return
   visible.value = false
   emit('leaveGroup', props.group)
 }
 
-// Single watcher for both triggers that should (re)load the member list:
-// the modal becoming visible, or the group it's showing changing. Watching
-// `props.group` by identity rather than `.id` double-fired `loadAll()`,
-// because each `groupsStore.refresh()` rebuilds group objects via `toGroup`
-// even when the id is unchanged.
+// Keyed on the id: `groupsStore.refresh()` rebuilds group objects, which double-fired `loadAll()`.
 watch(
   [() => props.group?.id, visible],
   ([groupId, isVisible]) => {
@@ -351,9 +335,8 @@ watch(
                   </div>
 
                   <!-- Step down to member: on your own card, or any owner's card
-                       if you're an admin. Leave: only on your own card, since it
-                       only ever acts on yourself. Neither applies to a personal
-                       group (its single owner can't be demoted or leave). -->
+                       if you're an admin. Leave: own card only. Neither applies
+                       to a personal group. -->
                   <div v-if="!group.isPersonal" class="flex gap-1">
                     <Button
                       v-if="user.id === currentUserId || isAdmin"
@@ -446,10 +429,8 @@ watch(
                   </div>
 
                   <!-- Promote: owners of the group, or any admin. Remove: owners
-                       of the group only. Leave: only on your own card, since it
-                       only ever acts on yourself — shown regardless of isOwner,
-                       which is exactly the case where no other action applies.
-                       Neither applies to personal groups. -->
+                       of the group only. Leave: own card only. Neither applies
+                       to personal groups. -->
                   <div v-if="!group.isPersonal" class="flex gap-1">
                     <Button
                       v-if="isOwner || isAdmin"

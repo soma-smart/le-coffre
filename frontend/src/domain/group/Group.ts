@@ -57,10 +57,8 @@ export function isSoleMemberOf(group: Group, userId: string | null): boolean {
 export type LeaveBlockReason = 'sole-owner' | 'owner' | null
 
 /**
- * Why leaving this group would currently be blocked for this user by the
- * ownership rule, or null if it isn't. A sole member is never blocked here —
- * they're offered deleting the group instead, handled separately by
- * `isSoleMemberOf`.
+ * Why the ownership rule blocks this user from leaving, or null. A sole member
+ * is never blocked: they are offered deleting the group instead.
  */
 export function leaveBlockReason(group: Group, userId: string | null): LeaveBlockReason {
   if (isSoleMemberOf(group, userId)) return null
