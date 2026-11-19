@@ -6,10 +6,10 @@ This test covers the entire group management system in one comprehensive workflo
 2. Authentication requirements
 3. Group update (rename, authorization, personal and non-existent groups)
 4. Member management (add, remove, idempotency, non-existent user)
-5. Member authorization (non-owner add/remove, owner removal)
+5. Member authorization (non-owner add/remove, sole owner self-removal)
 6. Owner promotion (promote, idempotency, non-member)
 7. Owner promotion authorization (non-owner, personal group)
-8. Leaving a group (self-removal, re-leave rejection, owner blocked)
+8. Leaving a group (self-removal, re-leave rejection, owner removal blocked, owner leave)
 """
 
 from uuid import uuid4
@@ -323,10 +323,10 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     # Step 5.5: Get admin's own user ID to test owner removal
     admin_id = admin_me_response.json()["id"]
 
-    # Step 5.6: Cannot remove an owner from the group
+    # Step 5.6: The sole owner cannot remove themselves
     remove_owner_response = authenticated_admin_client.delete(f"/api/groups/{admin_group_id}/members/{admin_id}")
-    assert remove_owner_response.status_code == 400
-    assert "Cannot remove owner" in remove_owner_response.json()["detail"]
+    assert remove_owner_response.status_code == 409
+    assert "would be left without an owner" in remove_owner_response.json()["detail"]
 
     # =========================================================================
     # PHASE 6: OWNER PROMOTION
@@ -473,7 +473,25 @@ def test_complete_groups_workflow(authenticated_admin_client, sso_user_factory, 
     assert leave_again_response.status_code == 400
     assert "is not a member of group" in leave_again_response.json()["detail"]
 
-    # Step 8.5: An owner still cannot leave without demoting themselves first.
+    # Step 8.5: With a co-owner, an owner still cannot remove another owner
+    add_co_owner_member_response = authenticated_admin_client.post(
+        f"/api/groups/{leave_group_id}/members", json={"user_id": owner_user_id}
+    )
+    assert add_co_owner_member_response.status_code == 201, add_co_owner_member_response.text
+    promote_co_owner_response = authenticated_admin_client.post(
+        f"/api/groups/{leave_group_id}/owners", json={"user_id": owner_user_id}
+    )
+    assert promote_co_owner_response.status_code == 201, promote_co_owner_response.text
+
+    remove_other_owner_response = owner_user_client.delete(f"/api/groups/{leave_group_id}/members/{admin_id}")
+    assert remove_other_owner_response.status_code == 400
+    assert "Cannot remove owner" in remove_other_owner_response.json()["detail"]
+
+    # Step 8.6: An owner with a co-owner leaves directly, without demoting first
     owner_leave_response = authenticated_admin_client.delete(f"/api/groups/{leave_group_id}/members/{admin_id}")
-    assert owner_leave_response.status_code == 400
-    assert "Cannot remove owner" in owner_leave_response.json()["detail"]
+    assert owner_leave_response.status_code == 200, owner_leave_response.text
+
+    group_after_owner_leave = owner_user_client.get(f"/api/groups/{leave_group_id}").json()
+    assert admin_id not in group_after_owner_leave["owners"]
+    assert admin_id not in group_after_owner_leave["members"]
+    assert owner_user_id in group_after_owner_leave["owners"]
