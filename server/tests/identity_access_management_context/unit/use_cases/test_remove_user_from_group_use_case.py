@@ -131,7 +131,7 @@ def test_given_member_when_leaving_group_then_member_is_removed(
     assert events[0].removed_by_user_id == member_id
 
     assert len(group_event_repository.events) == 1
-    assert group_event_repository.events[0]["actor_user_id"] == member_id
+    assert group_event_repository.events[0]["actor_principal_id"] == member_id
 
 
 def test_given_non_member_when_leaving_group_then_raise_user_not_member_exception(
