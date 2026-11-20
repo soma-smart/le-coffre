@@ -73,6 +73,13 @@ export function useGroupMembers(options: UseGroupMembersOptions) {
     if (!options.group.value) return
     const groupId = options.group.value.id
 
+    // A failed fetch would otherwise keep showing the previous group's members.
+    if (groupDetails.value && groupDetails.value.id !== groupId) {
+      groupDetails.value = null
+      ownerUsers.value = []
+      memberUsers.value = []
+    }
+
     await fetch.run(async () => {
       const details = await options.useCases.groups.get.execute({ groupId })
 

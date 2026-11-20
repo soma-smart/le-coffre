@@ -15,8 +15,10 @@ from identity_access_management_context.application.use_cases import (
 )
 from identity_access_management_context.domain.exceptions import (
     CannotModifyPersonalGroupException,
+    CannotRemoveLastOwnerException,
     CannotRemoveOwnerException,
     GroupNotFoundException,
+    IdentityAccessManagementDomainError,
     UserNotMemberOfGroupException,
     UserNotOwnerOfGroupException,
 )
@@ -50,9 +52,9 @@ def remove_member_from_group(
     - **group_id**: ID of the group (path parameter)
     - **user_id**: ID of the user to remove (path parameter)
     - **Authorization**: Bearer token required (access_token cookie)
-    - **Permission**: Only group owners can remove members
+    - **Permission**: Group owners can remove any member; a user can also remove themselves (leave the group)
 
-    Cannot remove owners from groups.
+    Owners cannot be removed by others; an owner can leave unless they are the last one.
     Cannot modify personal groups.
     The user to be removed must be a member of the group.
     """
@@ -77,7 +79,11 @@ def remove_member_from_group(
         raise HTTPException(status_code=403, detail=str(e)) from e
     except UserNotMemberOfGroupException as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
+    except CannotRemoveLastOwnerException as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except CannotRemoveOwnerException as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except IdentityAccessManagementDomainError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.exception("Unexpected error in remove member from group")

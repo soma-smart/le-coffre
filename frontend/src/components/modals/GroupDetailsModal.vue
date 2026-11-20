@@ -6,7 +6,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useGroupsStore } from '@/stores/groups'
 import { useUserStore } from '@/stores/user'
-import { isUserOwnerOf, type Group } from '@/domain/group/Group'
+import { isLeaveBlockedAsLastOwner, isUserOwnerOf, type Group } from '@/domain/group/Group'
 import type { SearchUser, User } from '@/domain/user/User'
 import { useContainer } from '@/plugins/container'
 import { useGroupMembers } from '@/composables/useGroupMembers'
@@ -25,6 +25,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'memberRemoved'): void
   (e: 'memberAdded'): void
+  (e: 'leaveGroup', group: Group): void
 }>()
 
 const toast = useToast()
@@ -37,9 +38,7 @@ const { isAdmin } = storeToRefs(userStore)
 
 const showHistoryModal = ref(false)
 
-// isOwner from useGroupMembers depends on a users.list call that's admin-only,
-// so it stays false for a real non-admin owner. Compute ownership from the
-// group prop directly (unrestricted) so History stays visible for them.
+// From the prop, not `groupDetails`, so History shows before `loadAll()` resolves.
 const canViewHistory = computed(
   () => props.group != null && (isAdmin.value || isUserOwnerOf(props.group, currentUserId.value)),
 )
@@ -53,6 +52,7 @@ const selectedUser = ref<SearchUser | null>(null)
 const availableUserSuggestions = ref<SearchUser[]>([])
 
 const {
+  groupDetails,
   ownerUsers,
   memberUsers,
   isOwner,
@@ -80,6 +80,26 @@ const {
     },
   },
 })
+
+// `groupDetails` is reloaded after each mutation in this modal, unlike the prop.
+// Fall back to the prop while a group switch is still loading.
+const groupForLeaveCheck = computed(() => {
+  if (groupDetails.value && props.group && groupDetails.value.id === props.group.id) {
+    return groupDetails.value
+  }
+  return props.group ?? null
+})
+
+const isLeaveBlockedByOwnership = computed(() => {
+  if (!groupForLeaveCheck.value) return false
+  return isLeaveBlockedAsLastOwner(groupForLeaveCheck.value, currentUserId.value)
+})
+
+const leaveButtonTooltip = computed(() =>
+  isLeaveBlockedByOwnership.value
+    ? t('pages.groups.leaveBlockedSoleOwner')
+    : t('components.groupDetailsModal.leaveGroupButton'),
+)
 
 const handleSearchAvailableUsers = debounce(async (event: { query: string }) => {
   availableUserSuggestions.value = await searchAvailableUsers(event.query)
@@ -212,17 +232,21 @@ const handleDemoteOwner = (user: User) => {
   })
 }
 
+const handleLeaveGroup = () => {
+  // Not `groupForLeaveCheck`: `groupDetails` may still hold the previous group.
+  if (!props.group) return
+  visible.value = false
+  emit('leaveGroup', props.group)
+}
+
+// Keyed on the id: `groupsStore.refresh()` rebuilds group objects, which double-fired `loadAll()`.
 watch(
-  () => props.group,
-  (newGroup) => {
-    if (newGroup && visible.value) void loadAll()
+  [() => props.group?.id, visible],
+  ([groupId, isVisible]) => {
+    if (groupId && isVisible) void loadAll()
   },
   { immediate: true },
 )
-
-watch(visible, (isVisible) => {
-  if (isVisible && props.group) void loadAll()
-})
 </script>
 
 <template>
@@ -308,20 +332,43 @@ watch(visible, (isVisible) => {
                   </div>
 
                   <!-- Step down to member: on your own card, or any owner's card
-                       if you're an admin. Never on a personal group (its single
-                       owner can't be demoted). -->
-                  <Button
-                    v-if="(user.id === currentUserId || isAdmin) && !group.isPersonal"
-                    icon="pi pi-arrow-circle-down"
-                    text
-                    rounded
-                    severity="warning"
-                    size="small"
-                    :aria-label="t('components.groupDetailsModal.demoteAria')"
-                    v-tooltip.top="t('components.groupDetailsModal.demoteTooltip')"
-                    :loading="isActing"
-                    @click="handleDemoteOwner(user)"
-                  />
+                       if you're an admin. Leave: own card only. Neither applies
+                       to a personal group. -->
+                  <div v-if="!group.isPersonal" class="flex gap-1">
+                    <Button
+                      v-if="user.id === currentUserId || isAdmin"
+                      icon="pi pi-arrow-circle-down"
+                      text
+                      rounded
+                      severity="warning"
+                      size="small"
+                      :aria-label="t('components.groupDetailsModal.demoteAria')"
+                      v-tooltip.top="t('components.groupDetailsModal.demoteTooltip')"
+                      :loading="isActing"
+                      @click="handleDemoteOwner(user)"
+                    />
+                    <span v-if="user.id === currentUserId" v-tooltip.top="leaveButtonTooltip">
+                      <Button
+                        icon="pi pi-sign-out"
+                        text
+                        rounded
+                        severity="danger"
+                        size="small"
+                        :disabled="isLeaveBlockedByOwnership"
+                        :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
+                        :aria-describedby="
+                          isLeaveBlockedByOwnership ? 'leave-blocked-reason-modal' : undefined
+                        "
+                        @click="handleLeaveGroup"
+                      />
+                      <span
+                        v-if="isLeaveBlockedByOwnership"
+                        id="leave-blocked-reason-modal"
+                        class="sr-only"
+                        >{{ leaveButtonTooltip }}</span
+                      >
+                    </span>
+                  </div>
                 </div>
               </template>
             </Card>
@@ -379,7 +426,8 @@ watch(visible, (isVisible) => {
                   </div>
 
                   <!-- Promote: owners of the group, or any admin. Remove: owners
-                       of the group only. Neither applies to personal groups. -->
+                       of the group only. Leave: own card only. Neither applies
+                       to personal groups. -->
                   <div v-if="!group.isPersonal" class="flex gap-1">
                     <Button
                       v-if="isOwner || isAdmin"
@@ -404,6 +452,17 @@ watch(visible, (isVisible) => {
                       v-tooltip.top="t('components.groupDetailsModal.removeTooltip')"
                       :loading="isActing"
                       @click="handleRemoveMember(user.id)"
+                    />
+                    <Button
+                      v-if="user.id === currentUserId"
+                      icon="pi pi-sign-out"
+                      text
+                      rounded
+                      severity="danger"
+                      size="small"
+                      :aria-label="t('components.groupDetailsModal.leaveGroupButton')"
+                      v-tooltip.top="leaveButtonTooltip"
+                      @click="handleLeaveGroup"
                     />
                   </div>
                 </div>
