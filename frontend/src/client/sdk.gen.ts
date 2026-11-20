@@ -928,9 +928,11 @@ export const getSsoUrlAuthSsoUrlGet = <ThrowOnError extends boolean = false>(opt
  *
  * - **code**: The authorization code provided by the SSO provider
  * - **state**: (Optional) State parameter for CSRF protection
- * - **redirect_uri**: (Optional) Redirect URI used during authorization, required for CLI auth flows
  *
  * Returns user information and sets HTTP-only secure cookies with JWT tokens.
+ *
+ * Browser only: the provider always redirects to the vault's own callback page.
+ * Non-browser clients (CLI, scripts) pair through `/extension/device/register`.
  */
 export const ssoCallbackAuthSsoCallbackGet = <ThrowOnError extends boolean = false>(options: Options<SsoCallbackAuthSsoCallbackGetData, ThrowOnError>): RequestResult<SsoCallbackAuthSsoCallbackGetResponses, SsoCallbackAuthSsoCallbackGetErrors, ThrowOnError> => (options.client ?? client).get<SsoCallbackAuthSsoCallbackGetResponses, SsoCallbackAuthSsoCallbackGetErrors, ThrowOnError>({ url: '/auth/sso/callback', ...options });
 

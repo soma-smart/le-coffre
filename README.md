@@ -77,6 +77,14 @@ Visit <http://localhost> and you're done
 - Authlib (SSO / OAuth2 OIDC), PyJWT (auth tokens)
 - passlib + bcrypt (password hashing)
 
+## Browser extension ([README.md](extension/README.md))
+
+Reads the vault through a paired, read-only token.
+
+## Command-line clients ([README.md](cli/README.md))
+
+No CLI ships with Le Coffre. Any command-line tool or script reading the vault for a person must pair like the extension; the SSO login is browser-only.
+
 # Development
 
 ## Using Devcontainer (Recommended)

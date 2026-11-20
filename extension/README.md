@@ -54,6 +54,9 @@ else, device management included, answers 401. Revocation: from the web app's
 profile page, by changing the account password, by deleting the account, or by
 expiry. Re-pairing is the only way back.
 
+Command-line tools and scripts pair the same way; see
+[`cli/README.md`](../cli/README.md).
+
 Two rules in `background/handlers/pairing.ts` and `popup/views/PairingView.vue`
 exist because breaking them is cheap and the failure is silent:
 

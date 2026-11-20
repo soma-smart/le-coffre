@@ -119,9 +119,7 @@ class OAuth2SsoGateway(SsoGateway):
 
         return authorization_url
 
-    async def validate_callback(
-        self, config: SsoConfiguration, code: str, redirect_uri: str | None = None
-    ) -> SsoUserInfo:
+    async def validate_callback(self, config: SsoConfiguration, code: str) -> SsoUserInfo:
         """
         Validate OAuth2 authorization code and return user information.
 
@@ -133,8 +131,9 @@ class OAuth2SsoGateway(SsoGateway):
         Args:
             config: SSO configuration with client credentials and endpoints
             code: The authorization code from the SSO provider
-            redirect_uri: Override redirect URI (for CLI auth flows using localhost).
-                          If None, uses the server's default redirect_uri.
+
+        The redirect URI is always the server's own: SSO only ever signs in a
+        browser. Non-browser clients pair through the device flow instead.
         """
 
         # Re-validate persisted endpoints before any outbound call (defense in depth:
@@ -142,16 +141,11 @@ class OAuth2SsoGateway(SsoGateway):
         self._url_validator.validate(config.token_endpoint)
         self._url_validator.validate(config.userinfo_endpoint)
 
-        # Use override redirect_uri if provided (for CLI auth), otherwise use default
-        effective_redirect_uri = redirect_uri or self.redirect_uri
-
-        # Reuse the shared client construction logic, overriding redirect_uri if needed
         client = self._get_oauth_client(config)
-        client.redirect_uri = effective_redirect_uri
 
         try:
             # Exchange authorization code for access token
-            auth_response = f"{effective_redirect_uri}?{urlencode({'code': code})}"
+            auth_response = f"{self.redirect_uri}?{urlencode({'code': code})}"
 
             token = await client.fetch_token(
                 config.token_endpoint,
