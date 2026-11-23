@@ -995,11 +995,13 @@ def get_revoke_all_extension_tokens_for_user_usecase(
     token_credential_record_repository: TokenCredentialRecordRepository = Depends(
         get_token_credential_record_repository
     ),
+    user_repository: UserRepository = Depends(get_user_repository),
     event_publisher: DomainEventPublisher = Depends(get_event_publisher),
     admin_event_repository: AdminEventRepository = Depends(get_admin_event_repository),
 ):
     return RevokeAllExtensionTokensForUserUseCase(
         token_credential_record_repository,
+        user_repository,
         event_publisher,
         admin_event_repository,
     )

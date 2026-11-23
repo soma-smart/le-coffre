@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Generator
 
@@ -33,6 +34,7 @@ from identity_access_management_context.application.use_cases import (
 from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
     SessionNotFoundException,
+    TokenAuthenticationFailureReason,
     UserNotFoundException,
 )
 from shared_kernel.domain.entities import (
@@ -46,6 +48,8 @@ from shared_kernel.domain.exceptions import CredentialAuthenticationError
 from .exceptions import (
     MissingTokenError,
 )
+
+logger = logging.getLogger(__name__)
 
 # Security schemes for Swagger documentation
 cookie_scheme = APIKeyCookie(name="access_token", scheme_name="CookieAuth", auto_error=False)
@@ -205,6 +209,14 @@ def _authenticate(
 
     token = _read_bearer_token(request)
     if token is None:
+        # Logged, not audited: the web app lands here at the end of every session,
+        # once the browser drops the expired cookie, and an event per request would
+        # bury the real token failures. Same line as AuthenticateTokenUseCase.
+        logger.warning(
+            "Token authentication failed reason='%s' client_ip=%s",
+            TokenAuthenticationFailureReason.MISSING_TOKEN.value,
+            client_ip,
+        )
         raise HTTPException(status_code=401, detail="No authentication token provided", headers=_BEARER_CHALLENGE)
 
     try:

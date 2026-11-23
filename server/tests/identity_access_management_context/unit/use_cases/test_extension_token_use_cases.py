@@ -79,9 +79,12 @@ def revoke_all_use_case(token_credential_record_repository, event_publisher, adm
 
 
 @pytest.fixture
-def revoke_all_for_user_use_case(token_credential_record_repository, event_publisher, admin_event_repository):
+def revoke_all_for_user_use_case(
+    token_credential_record_repository, user_repository, event_publisher, admin_event_repository
+):
     return RevokeAllExtensionTokensForUserUseCase(
         token_credential_record_repository=token_credential_record_repository,
+        user_repository=user_repository,
         event_publisher=event_publisher,
         admin_event_repository=admin_event_repository,
     )
@@ -203,8 +206,9 @@ class TestAdminRevokeAll:
     """An administrator's lever for an account whose owner they cannot reach."""
 
     def test_should_disconnect_every_device_of_the_target_when_an_admin_asks(
-        self, revoke_all_for_user_use_case, token_credential_record_repository, event_publisher, user
+        self, revoke_all_for_user_use_case, token_credential_record_repository, event_publisher, registered_user
     ):
+        user = registered_user
         admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
         _issue(token_credential_record_repository, user.user_id)
         _issue(token_credential_record_repository, user.user_id)
@@ -221,8 +225,9 @@ class TestAdminRevokeAll:
         assert event.reason == REVOCATION_REASON_ADMIN_REVOKED
 
     def test_should_record_the_admin_as_actor_and_the_user_as_owner(
-        self, revoke_all_for_user_use_case, token_credential_record_repository, admin_event_repository, user
+        self, revoke_all_for_user_use_case, token_credential_record_repository, admin_event_repository, registered_user
     ):
+        user = registered_user
         # A row that conflated the two could answer neither "who did it" nor
         # "whose devices were cut".
         admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
@@ -250,13 +255,30 @@ class TestAdminRevokeAll:
         assert token_credential_record_repository.get_by_id(record.id) is not None
 
     def test_should_report_zero_when_the_target_has_no_device(
-        self, revoke_all_for_user_use_case, admin_event_repository
+        self, revoke_all_for_user_use_case, admin_event_repository, registered_user
     ):
         admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
 
         revoked = revoke_all_for_user_use_case.execute(
-            RevokeAllExtensionTokensForUserCommand(requesting_user=admin, target_user_id=uuid4())
+            RevokeAllExtensionTokensForUserCommand(requesting_user=admin, target_user_id=registered_user.user_id)
         )
 
         assert revoked == 0
+        assert admin_event_repository.events == []
+
+    def test_should_leave_a_service_account_token_alone_when_given_its_id(
+        self, revoke_all_for_user_use_case, token_credential_record_repository, admin_event_repository
+    ):
+        # Deleting it would leave the account active without a token, and record
+        # an extension revocation for something that is not a user.
+        admin = AuthenticatedUser(user_id=uuid4(), roles=["admin"])
+        service_account_id = uuid4()
+        _, record = _issue(token_credential_record_repository, service_account_id)
+
+        revoked = revoke_all_for_user_use_case.execute(
+            RevokeAllExtensionTokensForUserCommand(requesting_user=admin, target_user_id=service_account_id)
+        )
+
+        assert revoked == 0
+        assert token_credential_record_repository.get_by_id(record.id) is not None
         assert admin_event_repository.events == []

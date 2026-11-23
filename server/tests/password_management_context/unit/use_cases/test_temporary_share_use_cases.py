@@ -67,8 +67,8 @@ def groups(
     password_permissions_repository.set_owner(OWNER_GROUP_ID, password.id)
     group_access_gateway.set_group_owner(OWNER_GROUP_ID, OWNER_ID)
     group_access_gateway.set_group_owner(RECIPIENT_GROUP_ID, RECIPIENT_ID)
-    # The listing path derives timestamps from the creation event. Stored naive,
-    # matching BasePasswordEvent.occurred_on, so the two sort together.
+    # The listing path derives timestamps from the creation event. Naive UTC, as
+    # the SQL repository stores every password event.
     password_event_repository.append_event(
         event_id=uuid4(),
         event_type="PasswordCreatedEvent",

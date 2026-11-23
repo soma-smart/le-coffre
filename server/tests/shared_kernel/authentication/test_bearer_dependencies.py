@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import Mock
 from uuid import UUID
 
@@ -193,6 +194,18 @@ def test_given_neither_cookie_nor_token_when_calling_a_shared_route_should_refus
 
     assert response.status_code == 401
     assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+def test_given_neither_cookie_nor_token_when_calling_a_shared_route_should_log_the_reason_without_an_audit_event(
+    client, admin_event_repository, caplog
+):
+    """Not audited: the web app calls these routes without a cookie at the end of every session."""
+    with caplog.at_level(logging.WARNING, logger="shared_kernel.adapters.primary.dependencies"):
+        client.get("/humans-and-machines")
+
+    assert "reason='missing_token'" in caplog.text
+    assert CLIENT_IP in caplog.text
+    assert admin_event_repository.events == []
 
 
 def test_given_a_service_account_token_when_writing_through_a_shared_route_should_refuse(
