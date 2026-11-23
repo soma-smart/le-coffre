@@ -9,7 +9,7 @@ This test covers the entire authentication system in one comprehensive workflow:
 5. SSO authentication flow (configuration, URL, callback)
 6. Refresh token workflow
 7. Token validation with protected endpoints
-8. CLI SSO flow (redirect_uri override on the callback)
+8. CLI SSO flow refused (no redirect_uri override on the callback)
 9. Browser-extension pairing (register, approve, exchange, revoke, deny)
 """
 
@@ -692,41 +692,30 @@ async def test_complete_authentication_workflow(
     print("✅ Lockout released after window elapsed — correct password succeeds end-to-end")
 
     # =========================================================================
-    # PHASE 8: CLI SSO FLOW (redirect_uri override)
+    # PHASE 8: CLI SSO FLOW IS REFUSED (no redirect_uri override)
     # =========================================================================
     print("\n" + "=" * 80)
-    print("💻 PHASE 8: CLI SSO FLOW (redirect_uri override)")
+    print("💻 PHASE 8: CLI SSO FLOW IS REFUSED")
     print("=" * 80)
 
-    # A CLI (no browser) drives the same two endpoints as the SPA, with two
-    # differences: it listens on a loopback port instead of APP_BASE_URL, and it
-    # therefore passes that URI back as ?redirect_uri= so the token exchange uses
-    # the same value the IdP saw. `/auth/sso/url` binds the CSRF state to an
-    # httpOnly `sso_state` cookie, so the CLI MUST reuse one cookie jar across
-    # both calls. Only the integration tier covered this override before, which is
-    # why the state check could land without turning anything red.
+    # A CLI used to drive the SPA's SSO endpoints from a loopback listener and
+    # pass that URI back as ?redirect_uri=, walking away with a full web session.
+    # Non-browser clients now pair through the device flow (PHASE 9), so the
+    # override is refused, and a code issued to a loopback listener cannot be
+    # redeemed against the vault's own redirect URI either.
     cli_redirect_uri = "http://127.0.0.1:9876/callback"
 
-    # Step 8.1: the CLI asks for the authorization URL on its own cookie jar
-    print("\n🔗 Step 8.1: CLI requests the SSO authorization URL...")
+    print("\n🔗 Step 8.1: CLI requests the SSO authorization URL and points it at a loopback listener...")
     cli_client = client_factory()
     cli_url_response = cli_client.get("/api/auth/sso/url")
     assert cli_url_response.status_code == 200
-    cli_sso_url = cli_url_response.json()
-    assert isinstance(cli_sso_url, str)
-    assert cli_client.cookies.get("sso_state"), "the CLI's jar must hold the sso_state cookie"
-
-    # The CLI swaps in its loopback listener; the state (and its cookie) is untouched.
-    parsed_authorize = urlparse(cli_sso_url)
+    parsed_authorize = urlparse(cli_url_response.json())
     authorize_params = parse_qs(parsed_authorize.query)
     cli_state = authorize_params.get("state", [None])[0]
     assert cli_state, "SSO authorization URL should carry a state parameter"
     authorize_params["redirect_uri"] = [cli_redirect_uri]
     cli_authorize_url = urlunparse(parsed_authorize._replace(query=urlencode(authorize_params, doseq=True)))
-    print(f"✅ Authorization URL rewritten to the CLI listener: {cli_redirect_uri}")
 
-    # Step 8.2: the user authorizes; the IdP redirects to the loopback listener
-    print("\n🔐 Step 8.2: Simulating user authorization against the loopback listener...")
     cli_auth_response = httpx.post(
         cli_authorize_url,
         data={"sub": oidc_test_user["sub"]},
@@ -734,40 +723,32 @@ async def test_complete_authentication_workflow(
     )
     assert cli_auth_response.status_code in [302, 303]
     cli_callback_url = cli_auth_response.headers.get("location")
-    assert cli_callback_url
-    assert cli_callback_url.startswith(cli_redirect_uri), (
-        f"IdP should redirect to the CLI listener, got {cli_callback_url}"
-    )
-    cli_query = parse_qs(urlparse(cli_callback_url).query)
-    cli_code = cli_query.get("code", [None])[0]
+    assert cli_callback_url and cli_callback_url.startswith(cli_redirect_uri)
+    cli_code = parse_qs(urlparse(cli_callback_url).query).get("code", [None])[0]
     assert cli_code
-    print(f"✅ Authorization code captured on the loopback listener: {cli_code[:10]}...")
+    print("✅ Authorization code captured on the loopback listener")
 
-    # Step 8.3: same jar → the state check passes and the override drives the exchange
-    print("\n✨ Step 8.3: CLI completes the callback with its redirect_uri override...")
-    cli_callback_response = cli_client.get(
+    print("\n🚫 Step 8.2: The redirect_uri override is refused before anything else...")
+    override_response = cli_client.get(
         "/api/auth/sso/callback?" + urlencode({"code": cli_code, "state": cli_state, "redirect_uri": cli_redirect_uri})
     )
-    assert cli_callback_response.status_code == 200, (
-        f"CLI callback failed: status={cli_callback_response.status_code} body={cli_callback_response.json()!r}"
-    )
-    assert cli_callback_response.json()["user"]["email"] == oidc_test_user["email"]
-    assert cli_callback_response.cookies.get("access_token") is not None
-    assert cli_callback_response.cookies.get("refresh_token") is not None
-    print("✅ CLI SSO login succeeded with the redirect_uri override")
+    assert override_response.status_code == 400
+    assert "/extension/device/register" in override_response.json()["detail"]
+    assert override_response.cookies.get("access_token") is None
+    assert override_response.cookies.get("refresh_token") is None
+    print("✅ Override refused (400) and the client is pointed at the device flow")
 
-    # Step 8.4: the token is a real session, not just a 200
-    print("\n👤 Step 8.4: Validating the CLI session against /users/me...")
-    cli_me_response = cli_client.get("/api/users/me")
-    assert cli_me_response.status_code == 200
-    assert cli_me_response.json()["email"] == oidc_test_user["email"]
-    print("✅ CLI session accepted by a protected endpoint")
+    print("\n🚫 Step 8.3: Without the override, the loopback code cannot be redeemed either...")
+    no_override_response = cli_client.get("/api/auth/sso/callback?" + urlencode({"code": cli_code, "state": cli_state}))
+    assert no_override_response.status_code == 400
+    assert no_override_response.json()["detail"] == "SSO authentication failed"
+    assert no_override_response.cookies.get("access_token") is None
+    assert cli_client.get("/api/users/me").status_code == 401
+    print("✅ Code bound to the loopback listener rejected by the provider; no session issued")
 
-    # Step 8.5: the regression this phase exists for. A CLI that opens a fresh HTTP
-    # client per call never sends `sso_state` back, so the callback is rejected
-    # before the code is ever exchanged — the state check runs first, so the code
-    # value is irrelevant here.
-    print("\n🚫 Step 8.5: A CLI that drops the cookie jar between calls must be rejected...")
+    # The state is still bound to the caller's cookie jar: a client that splits
+    # its jar between the two calls is rejected before the code is exchanged.
+    print("\n🚫 Step 8.4: A split cookie jar is rejected on the state check...")
     jar_a = client_factory()
     stateless_url_response = jar_a.get("/api/auth/sso/url")
     assert stateless_url_response.status_code == 200
@@ -775,10 +756,7 @@ async def test_complete_authentication_workflow(
     assert orphan_state
 
     jar_b = client_factory()  # second client: holds no sso_state cookie
-    orphan_response = jar_b.get(
-        "/api/auth/sso/callback?"
-        + urlencode({"code": "unused-code", "state": orphan_state, "redirect_uri": cli_redirect_uri})
-    )
+    orphan_response = jar_b.get("/api/auth/sso/callback?" + urlencode({"code": "unused-code", "state": orphan_state}))
     assert orphan_response.status_code == 400
     assert orphan_response.json()["detail"] == "Invalid SSO state"
     print("✅ Split cookie jar correctly rejected (400 Invalid SSO state)")
@@ -1015,7 +993,7 @@ async def test_complete_authentication_workflow(
     print("✅ Phase 5: SSO authentication")
     print("✅ Phase 6: Refresh token workflow")
     print("✅ Phase 7: Account lockout")
-    print("✅ Phase 8: CLI SSO flow (redirect_uri override)")
+    print("✅ Phase 8: CLI SSO flow refused")
     print("✅ Phase 9: Browser-extension pairing")
     print("\n" + "=" * 80)
     print("🎊 COMPLETE AUTHENTICATION WORKFLOW TEST PASSED!")

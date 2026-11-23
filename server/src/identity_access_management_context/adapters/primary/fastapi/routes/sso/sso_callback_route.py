@@ -32,6 +32,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+REDIRECT_URI_OVERRIDE_PARAM = "redirect_uri"
+REDIRECT_URI_OVERRIDE_DETAIL = (
+    "The redirect_uri override is no longer supported. "
+    "Non-browser clients must pair through /extension/device/register."
+)
+
 
 def _revoke_sso_state(request: Request, response: Response) -> None:
     revoke_cookie(request, response, SSO_STATE_COOKIE, secure=get_cookie_secure_setting(), samesite="lax")
@@ -72,7 +78,6 @@ async def sso_callback(
     response: Response,
     code: str = Query(..., description="Authorization code from SSO provider"),
     state: str = Query(None, description="State parameter for CSRF protection"),
-    redirect_uri: str = Query(None, description="Redirect URI used during authorization (for CLI auth)"),
     usecase: SsoLoginUseCase = Depends(get_sso_login_usecase),
 ):
     """
@@ -83,10 +88,20 @@ async def sso_callback(
 
     - **code**: The authorization code provided by the SSO provider
     - **state**: (Optional) State parameter for CSRF protection
-    - **redirect_uri**: (Optional) Redirect URI used during authorization, required for CLI auth flows
 
     Returns user information and sets HTTP-only secure cookies with JWT tokens.
+
+    Browser only: the provider always redirects to the vault's own callback page.
+    Non-browser clients (CLI, scripts) pair through `/extension/device/register`.
     """
+    if REDIRECT_URI_OVERRIDE_PARAM in request.query_params:
+        # This override let a CLI catch the code on a loopback listener and walk
+        # away with a full web session. Refused loudly rather than ignored, so a
+        # client still sending it learns where to go instead of seeing an
+        # opaque `invalid_grant` from the provider.
+        logger.warning("Rejecting SSO callback: redirect_uri override is no longer supported")
+        raise HTTPException(status_code=400, detail=REDIRECT_URI_OVERRIDE_DETAIL)
+
     expected_state = request.cookies.get(SSO_STATE_COOKIE)
     rejection_reason = _state_rejection_reason(state, expected_state)
     if rejection_reason:
@@ -100,7 +115,7 @@ async def sso_callback(
     _revoke_sso_state(request, response)
 
     try:
-        command = SsoLoginCommand(code=code, redirect_uri=redirect_uri)
+        command = SsoLoginCommand(code=code)
         result = await usecase.execute(command)
 
         # Set JWT tokens in HTTP-only cookies (not accessible by JavaScript)
