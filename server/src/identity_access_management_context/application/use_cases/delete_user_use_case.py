@@ -18,6 +18,7 @@ from identity_access_management_context.application.services import (
 )
 from identity_access_management_context.domain.entities import Group, PersonalGroup
 from identity_access_management_context.domain.events import UserDeletedEvent
+from identity_access_management_context.domain.exceptions import UserNotFoundError
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
@@ -55,6 +56,12 @@ class DeleteUserUseCase(TracedUseCase):
     def execute(self, command: DeleteUserCommand) -> None:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
         user_id = command.user_id
+
+        # Refused before any side effect. A service account's id would otherwise lose
+        # its token below, then fail on the missing user row: an active account left
+        # with no token, that its owners cannot renew.
+        if self.user_repository.get_by_id(user_id) is None:
+            raise UserNotFoundError(user_id)
 
         # Cut the user's one-time links first. They grant anonymous reads that
         # outlive the account: a link on a password owned by a shared group stays

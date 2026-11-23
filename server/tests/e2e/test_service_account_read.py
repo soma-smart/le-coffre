@@ -263,6 +263,16 @@ def test_given_a_service_account_id_when_an_admin_disconnects_its_extensions_the
     assert bearer_client.get(f"{SERVICE_ACCOUNTS}/me").status_code == 200
 
 
+def test_given_a_service_account_id_when_an_admin_deletes_it_as_a_user_then_its_token_still_works(
+    authenticated_admin_client, bearer_client, service_account
+):
+    """The user deletion route answers 404 for it, and must not cut its token on the way."""
+    response = authenticated_admin_client.delete(f"/api/users/{service_account['id']}")
+
+    assert response.status_code == 404, response.text
+    assert bearer_client.get(f"{SERVICE_ACCOUNTS}/me").status_code == 200
+
+
 # ── Every other route ────────────────────────────────────────────────
 
 # The only routes a service account may succeed on. Everything else is refused by

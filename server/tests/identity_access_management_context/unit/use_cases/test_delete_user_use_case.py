@@ -15,6 +15,7 @@ from identity_access_management_context.domain.events import (
     ExtensionTokenRevokedEvent,
     UserDeletedEvent,
 )
+from identity_access_management_context.domain.exceptions import UserNotFoundError
 from identity_access_management_context.domain.value_objects import TokenCredential
 from shared_kernel.adapters.primary.exceptions import NotAdminError
 from shared_kernel.domain.entities import AuthenticatedUser
@@ -497,6 +498,27 @@ def test_given_service_accounts_when_deleting_the_user_then_each_revocation_cred
         (e["event_data"]["service_account_id"], e["event_data"]["group_name"], e["actor_principal_id"])
         for e in revocations
     ] == [(str(account.id), "Personal", admin_id)]
+
+
+def test_given_a_service_account_id_when_deleting_it_as_a_user_then_nothing_is_touched(
+    use_case: DeleteUserUseCase,
+    service_account_repository,
+    token_credential_record_repository,
+    one_time_link_revocation_gateway,
+    domain_event_publisher: FakeDomainEventPublisher,
+    admin_event_repository,
+):
+    """Not a user: refused before any side effect, so the active account keeps its token."""
+    account = _service_account_with_token(service_account_repository, token_credential_record_repository, uuid4())
+
+    with pytest.raises(UserNotFoundError):
+        use_case.execute(DeleteUserCommand(user_id=account.id, requesting_user=AuthenticatedUser(uuid4(), ["admin"])))
+
+    assert service_account_repository.accounts[account.id].is_active
+    assert len(token_credential_record_repository.list_by_principal_id(account.id)) == 1
+    assert one_time_link_revocation_gateway.revoked_for == []
+    assert domain_event_publisher.published_events == []
+    assert admin_event_repository.events == []
 
 
 def test_given_a_failure_while_revoking_when_deleting_the_user_then_nothing_is_deleted_yet(
