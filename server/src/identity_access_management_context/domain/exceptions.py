@@ -175,6 +175,13 @@ class CannotRemoveOwnerException(IdentityAccessManagementDomainError):
         super().__init__(f"Cannot remove owner '{user_id}' from group '{group_id}'")
 
 
+class CannotRemoveLastOwnerException(IdentityAccessManagementDomainError):
+    """Raised when the last owner of a group tries to leave it"""
+
+    def __init__(self, user_id: UUID, group_id: UUID):
+        super().__init__(f"Cannot remove '{user_id}': group '{group_id}' would be left without an owner")
+
+
 class CannotDemoteLastOwnerException(IdentityAccessManagementDomainError):
     """Raised when demoting an owner would leave the group with no owners"""
 

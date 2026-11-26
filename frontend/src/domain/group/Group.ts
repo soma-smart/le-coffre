@@ -45,6 +45,25 @@ export function isUserMemberOf(group: Group, userId: string | null): boolean {
 }
 
 /**
+ * True when the user belongs to the group (owner or member) and is the
+ * only person in it — used to offer deleting the group instead of leaving it.
+ */
+export function isSoleMemberOf(group: Group, userId: string | null): boolean {
+  if (!userId) return false
+  if (!isUserOwnerOf(group, userId) && !isUserMemberOf(group, userId)) return false
+  return new Set([...group.owners, ...group.members]).size === 1
+}
+
+/**
+ * The last owner cannot leave while others remain. A sole member is never
+ * blocked: they are offered deleting the group instead.
+ */
+export function isLeaveBlockedAsLastOwner(group: Group, userId: string | null): boolean {
+  if (isSoleMemberOf(group, userId)) return false
+  return isUserOwnerOf(group, userId) && group.owners.length === 1
+}
+
+/**
  * Groups where the user is either an owner or a member.
  */
 export function filterGroupsForUser(groups: Group[], userId: string | null): Group[] {

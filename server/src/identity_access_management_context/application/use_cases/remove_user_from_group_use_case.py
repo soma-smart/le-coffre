@@ -10,6 +10,7 @@ from identity_access_management_context.application.gateways import (
 from identity_access_management_context.domain.events import UserRemovedFromGroupEvent
 from identity_access_management_context.domain.exceptions import (
     CannotModifyPersonalGroupException,
+    CannotRemoveLastOwnerException,
     CannotRemoveOwnerException,
     GroupNotFoundException,
     UserNotMemberOfGroupException,
@@ -42,17 +43,31 @@ class RemoveUserFromGroupUseCase(TracedUseCase):
         if group.is_personal:
             raise CannotModifyPersonalGroupException(command.group_id)
 
-        if not self.group_member_repository.is_owner(command.group_id, command.requester_id):
+        is_self_removal = command.requester_id == command.user_id
+        if not is_self_removal and not self.group_member_repository.is_owner(command.group_id, command.requester_id):
             raise UserNotOwnerOfGroupException(command.requester_id, command.group_id)
 
         if not self.group_member_repository.is_member(command.group_id, command.user_id):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
-        if self.group_member_repository.is_owner(command.group_id, command.user_id):
+        if not self.group_member_repository.is_owner(command.group_id, command.user_id):
+            # Conditional delete: a promotion since the read above leaves the row in place.
+            if self.group_member_repository.remove_non_owner_member(command.group_id, command.user_id):
+                self._record_removal(command)
+                return
+            if not self.group_member_repository.is_member(command.group_id, command.user_id):
+                raise UserNotMemberOfGroupException(command.user_id, command.group_id)
+
+        if not is_self_removal:
             raise CannotRemoveOwnerException(command.user_id, command.group_id)
+        # Locking read: two owners leaving at once must not both pass and orphan the group.
+        if self.group_member_repository.count_owners_for_update(command.group_id) <= 1:
+            raise CannotRemoveLastOwnerException(command.user_id, command.group_id)
 
         self.group_member_repository.remove_member(command.group_id, command.user_id)
+        self._record_removal(command)
 
+    def _record_removal(self, command: RemoveUserFromGroupCommand) -> None:
         event = UserRemovedFromGroupEvent(
             group_id=command.group_id,
             user_id=command.user_id,

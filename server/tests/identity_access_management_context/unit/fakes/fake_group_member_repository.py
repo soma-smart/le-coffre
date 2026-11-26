@@ -17,6 +17,14 @@ class FakeGroupMemberRepository:
         if key in self._members:
             del self._members[key]
 
+    def remove_non_owner_member(self, group_id: UUID, principal_id: UUID) -> bool:
+        key = (group_id, principal_id)
+        member = self._members.get(key)
+        if member is None or member.is_owner:
+            return False
+        del self._members[key]
+        return True
+
     def is_member(self, group_id: UUID, principal_id: UUID) -> bool:
         key = (group_id, principal_id)
         return key in self._members
