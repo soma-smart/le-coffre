@@ -51,6 +51,17 @@ class SqlGroupMemberRepository(SQLBaseRepository, GroupMemberRepository):
         self._session.execute(statement)
         self.commit()
 
+    def remove_non_owner_member(self, group_id: UUID, principal_id: UUID) -> bool:
+        """Atomically remove a non-owner member; see Protocol docstring."""
+        statement = delete(GroupMemberTable).where(
+            GroupMemberTable.group_id == group_id,
+            GroupMemberTable.principal_id == principal_id,
+            GroupMemberTable.is_owner.is_(False),
+        )
+        result = self._session.execute(statement)
+        self.commit()
+        return result.rowcount > 0
+
     def is_member(self, group_id: UUID, principal_id: UUID) -> bool:
         """Check if a user is a member of a group."""
         statement = select(GroupMemberTable).where(

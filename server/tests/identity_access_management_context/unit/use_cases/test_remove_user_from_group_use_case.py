@@ -498,3 +498,66 @@ def test_given_owner_when_removing_member_then_should_store_user_removed_from_gr
     stored = group_event_repository.events[0]
     assert stored["event_type"] == "UserRemovedFromGroupEvent"
     assert stored["actor_principal_id"] == owner_id
+
+
+def _promote_before_conditional_delete(
+    group_member_repository: FakeGroupMemberRepository, group_id: UUID, promoted_id: UUID, demoted_id: UUID | None
+) -> None:
+    """Interleave a concurrent promotion (and optional self-demotion) between the is_owner read and the delete."""
+    original = group_member_repository.remove_non_owner_member
+
+    def promote_then_remove(target_group_id: UUID, principal_id: UUID) -> bool:
+        group_member_repository.add_member(group_id, promoted_id, is_owner=True)
+        if demoted_id is not None:
+            group_member_repository.add_member(group_id, demoted_id, is_owner=False)
+        return original(target_group_id, principal_id)
+
+    group_member_repository.remove_non_owner_member = promote_then_remove
+
+
+def test_given_member_promoted_to_last_owner_while_leaving_then_raise_cannot_remove_last_owner_exception(
+    use_case: RemoveUserFromGroupUseCase,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    event_publisher: FakeDomainEventPublisher,
+    group_event_repository,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    member_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+
+    group_repository.save_group(Group(id=group_id, name="Development Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, member_id, is_owner=False)
+    _promote_before_conditional_delete(group_member_repository, group_id, member_id, demoted_id=owner_id)
+
+    command = RemoveUserFromGroupCommand(requester_id=member_id, group_id=group_id, user_id=member_id)
+
+    with pytest.raises(CannotRemoveLastOwnerException):
+        use_case.execute(command)
+
+    assert group_member_repository.is_owner(group_id, member_id)
+    assert event_publisher.get_published_events_of_type(UserRemovedFromGroupEvent) == []
+    assert group_event_repository.events == []
+
+
+def test_given_member_promoted_while_owner_removes_them_then_raise_cannot_remove_owner_exception(
+    use_case: RemoveUserFromGroupUseCase,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+):
+    owner_id = UUID("123e4567-e89b-12d3-a456-426614174000")
+    group_id = UUID("223e4567-e89b-12d3-a456-426614174001")
+    member_id = UUID("323e4567-e89b-12d3-a456-426614174002")
+
+    group_repository.save_group(Group(id=group_id, name="Development Team", is_personal=False))
+    group_member_repository.add_member(group_id, owner_id, is_owner=True)
+    group_member_repository.add_member(group_id, member_id, is_owner=False)
+    _promote_before_conditional_delete(group_member_repository, group_id, member_id, demoted_id=None)
+
+    command = RemoveUserFromGroupCommand(requester_id=owner_id, group_id=group_id, user_id=member_id)
+
+    with pytest.raises(CannotRemoveOwnerException):
+        use_case.execute(command)
+
+    assert group_member_repository.is_owner(group_id, member_id)

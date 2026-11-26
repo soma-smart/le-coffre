@@ -50,15 +50,24 @@ class RemoveUserFromGroupUseCase(TracedUseCase):
         if not self.group_member_repository.is_member(command.group_id, command.user_id):
             raise UserNotMemberOfGroupException(command.user_id, command.group_id)
 
-        if self.group_member_repository.is_owner(command.group_id, command.user_id):
-            if not is_self_removal:
-                raise CannotRemoveOwnerException(command.user_id, command.group_id)
-            # Locking read: two owners leaving at once must not both pass and orphan the group.
-            if self.group_member_repository.count_owners_for_update(command.group_id) <= 1:
-                raise CannotRemoveLastOwnerException(command.user_id, command.group_id)
+        if not self.group_member_repository.is_owner(command.group_id, command.user_id):
+            # Conditional delete: a promotion since the read above leaves the row in place.
+            if self.group_member_repository.remove_non_owner_member(command.group_id, command.user_id):
+                self._record_removal(command)
+                return
+            if not self.group_member_repository.is_member(command.group_id, command.user_id):
+                raise UserNotMemberOfGroupException(command.user_id, command.group_id)
+
+        if not is_self_removal:
+            raise CannotRemoveOwnerException(command.user_id, command.group_id)
+        # Locking read: two owners leaving at once must not both pass and orphan the group.
+        if self.group_member_repository.count_owners_for_update(command.group_id) <= 1:
+            raise CannotRemoveLastOwnerException(command.user_id, command.group_id)
 
         self.group_member_repository.remove_member(command.group_id, command.user_id)
+        self._record_removal(command)
 
+    def _record_removal(self, command: RemoveUserFromGroupCommand) -> None:
         event = UserRemovedFromGroupEvent(
             group_id=command.group_id,
             user_id=command.user_id,
