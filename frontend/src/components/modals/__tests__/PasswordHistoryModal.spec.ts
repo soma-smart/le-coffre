@@ -59,7 +59,7 @@ describe('PasswordHistoryModal', () => {
       eventType: 'PasswordCreatedEvent',
       occurredOn: twoDaysAgo.toISOString(),
       actorPrincipalId: 'u',
-      actorEmail: 'alice@example.com',
+      actor: { kind: 'user', displayName: 'alice@example.com' },
       eventData: { folder: 'Mail' },
     })
     repo.addEvent('pwd-1', {
@@ -67,7 +67,7 @@ describe('PasswordHistoryModal', () => {
       eventType: 'PasswordUpdatedEvent',
       occurredOn: yesterday.toISOString(),
       actorPrincipalId: 'u',
-      actorEmail: 'alice@example.com',
+      actor: { kind: 'user', displayName: 'alice@example.com' },
       eventData: { hasNameChanged: true },
     })
     ;({ pinia, container } = createTestContext({ passwordRepository: repo }))
@@ -164,7 +164,7 @@ describe('PasswordHistoryModal', () => {
       eventType: 'OneTimeLinkCreatedEvent',
       occurredOn: anHourAgo.toISOString(),
       actorPrincipalId: 'u',
-      actorEmail: 'alice@example.com',
+      actor: { kind: 'user', displayName: 'alice@example.com' },
       eventData: { linkId: 'l1', expiresAt: '2030-01-01T12:00:00Z' },
     })
     repo.addEvent('pwd-1', {
@@ -172,7 +172,7 @@ describe('PasswordHistoryModal', () => {
       eventType: 'OneTimeLinkReadEvent',
       occurredOn: anHourAgo.toISOString(),
       actorPrincipalId: 'u',
-      actorEmail: 'alice@example.com',
+      actor: { kind: 'user', displayName: 'alice@example.com' },
       eventData: { linkId: 'l1', actor: 'anonymous' },
     })
 
@@ -205,7 +205,7 @@ describe('PasswordHistoryModal', () => {
       eventType: 'PasswordSharedEvent',
       occurredOn: yesterday.toISOString(),
       actorPrincipalId: 'u',
-      actorEmail: 'alice@example.com',
+      actor: { kind: 'user', displayName: 'alice@example.com' },
       eventData: { sharedWithGroupName: 'Contractors', expiresAt: '2026-09-01T10:00:00Z' },
     })
 
@@ -232,7 +232,7 @@ describe('PasswordHistoryModal', () => {
       eventType: 'PasswordSharedEvent',
       occurredOn: yesterday.toISOString(),
       actorPrincipalId: 'u',
-      actorEmail: 'alice@example.com',
+      actor: { kind: 'user', displayName: 'alice@example.com' },
       eventData: { sharedWithGroupName: 'Platform', expiresAt: null },
     })
 

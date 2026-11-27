@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue'
 import { useToast } from 'primevue'
 import { useI18n } from 'vue-i18n'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
+import GroupHistoryModal from '@/components/modals/GroupHistoryModal.vue'
+import ServiceAccountConnectionGuide from '@/components/serviceAccounts/ServiceAccountConnectionGuide.vue'
 import { useContainer } from '@/plugins/container'
 import type { Group } from '@/domain/group/Group'
 import {
@@ -12,15 +14,23 @@ import {
   revokedAccounts,
   severityForStatus,
   statusOf,
+  usageOf,
   SERVICE_ACCOUNT_NAME_MAX_LENGTH,
   type ServiceAccount,
   type ServiceAccountPage,
 } from '@/domain/serviceAccount/ServiceAccount'
 import {
+  ServiceAccountAlreadyRevokedError,
   ServiceAccountDomainError,
+  ServiceAccountNotFoundError,
   ServiceAccountNotOwnerError,
+  TooManyActiveServiceAccountsError,
 } from '@/domain/serviceAccount/errors'
-import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
+import {
+  formatAbsoluteTime,
+  formatPastRelativeTime,
+  formatRelativeTime,
+} from '@/utils/relativeTime'
 
 const props = defineProps<{
   visible: boolean
@@ -39,6 +49,7 @@ const { t } = useI18n()
 const newName = ref('')
 const page = ref<ServiceAccountPage>({ accounts: [], active: 0, maxActive: 0 })
 const showHistory = ref(false)
+const showGroupHistory = ref(false)
 const revealedToken = ref<string | null>(null)
 const revealedTokenFor = ref<string | null>(null)
 const revealedTokenIsRotation = ref(false)
@@ -73,6 +84,7 @@ watch(
       revealedTokenIsRotation.value = false
       error.value = null
       showHistory.value = false
+      showGroupHistory.value = false
       newName.value = ''
       canManage.value = true
       // A reopen must not flash the previous group's accounts before its own load.
@@ -97,7 +109,7 @@ async function refresh() {
     page.value = result
   } catch (err) {
     if (isStale()) return
-    handle(err, t('components.serviceAccountsModal.loadFailed'))
+    handle(err, t('components.serviceAccountsModal.loadFailed'), 'load')
   }
 }
 
@@ -119,7 +131,7 @@ async function create() {
       life: 5000,
     })
   } catch (err) {
-    handle(err, t('components.serviceAccountsModal.createFailed'))
+    handle(err, t('components.serviceAccountsModal.createFailed'), 'create')
   } finally {
     loading.value = false
   }
@@ -184,7 +196,7 @@ async function confirmRotate() {
       life: 5000,
     })
   } catch (err) {
-    handle(err, t('components.serviceAccountsModal.rotateFailed'))
+    handle(err, t('components.serviceAccountsModal.rotateFailed'), 'rotate')
   }
 }
 
@@ -220,27 +232,90 @@ async function confirmRevoke() {
       life: 5000,
     })
   } catch (err) {
-    handle(err, t('components.serviceAccountsModal.revokeFailed'))
+    handle(err, t('components.serviceAccountsModal.revokeFailed'), 'revoke')
   }
 }
 
-function handle(err: unknown, fallback: string) {
+type Operation = 'load' | 'create' | 'rotate' | 'revoke'
+
+function messageFor(err: unknown, fallback: string, operation: Operation): string {
+  if (err instanceof ServiceAccountNotOwnerError) {
+    return t('components.serviceAccountsModal.notOwnerError')
+  }
+  if (operation === 'create' && err instanceof TooManyActiveServiceAccountsError) {
+    return t('components.serviceAccountsModal.capReachedError')
+  }
+  if (operation === 'revoke' && err instanceof ServiceAccountAlreadyRevokedError) {
+    return t('components.serviceAccountsModal.alreadyRevokedError')
+  }
+  if (operation === 'rotate' && err instanceof ServiceAccountAlreadyRevokedError) {
+    return t('components.serviceAccountsModal.rotateConflictError')
+  }
+  if (err instanceof ServiceAccountNotFoundError) {
+    // A listing or a creation only answers 404 when the group itself is gone.
+    return operation === 'load' || operation === 'create'
+      ? t('components.serviceAccountsModal.groupNotFoundError')
+      : t('components.serviceAccountsModal.notFoundError')
+  }
+  return err instanceof ServiceAccountDomainError ? err.message : fallback
+}
+
+function listIsStale(err: unknown, operation: Operation): boolean {
+  if (operation === 'create') return err instanceof TooManyActiveServiceAccountsError
+  if (operation === 'rotate' || operation === 'revoke') {
+    return (
+      err instanceof ServiceAccountAlreadyRevokedError || err instanceof ServiceAccountNotFoundError
+    )
+  }
+  return false
+}
+
+function handle(err: unknown, fallback: string, operation: Operation) {
   if (err instanceof ServiceAccountNotOwnerError) {
     // The card that opened this dialog is stale; let the page refresh its groups.
     canManage.value = false
     emit('notOwner')
   }
-  error.value = err instanceof ServiceAccountDomainError ? err.message : fallback
+  // Reload so the counters, the cap banner and the account states tell the truth again.
+  if (listIsStale(err, operation)) {
+    void refresh()
+  }
+  const message = messageFor(err, fallback, operation)
+  // A full cap already has its banner, brought back by the reload: the same news
+  // twice on screen would read as two problems.
+  const capReached = operation === 'create' && err instanceof TooManyActiveServiceAccountsError
+  error.value = capReached ? null : message
   toast.add({
     severity: 'error',
     summary: t('components.serviceAccountsModal.errorSummary'),
-    detail: error.value,
+    detail: message,
     life: 5000,
   })
 }
 
 function severityFor(account: ServiceAccount) {
   return severityForStatus(statusOf(account))
+}
+
+function creatorName(account: ServiceAccount): string {
+  if (account.createdByUserName) return account.createdByUserName
+  // The creation event names a creator the server no longer knows: a deleted user.
+  return account.createdByUserId
+    ? t('components.serviceAccountsModal.creatorDeleted')
+    : t('components.serviceAccountsModal.creatorUnknown')
+}
+
+function usageLabel(account: ServiceAccount): { text: string; exact?: string } {
+  const usage = usageOf(account)
+  if (usage.kind === 'used') {
+    return {
+      text: t('components.serviceAccountsModal.lastUsedLabel', {
+        relative: formatPastRelativeTime(usage.at),
+      }),
+      exact: formatAbsoluteTime(usage.at),
+    }
+  }
+  return { text: t(`components.serviceAccountsModal.${usage.kind}Label`) }
 }
 </script>
 
@@ -261,7 +336,14 @@ function severityFor(account: ServiceAccount) {
          flush against the top edge therefore loses that outline to the clip.
          One pixel of headroom keeps the frame whole. -->
     <div class="pt-px">
-      <Message v-if="error" severity="error" :closable="false" class="mb-3">{{ error }}</Message>
+      <Message
+        v-if="error"
+        severity="error"
+        :closable="false"
+        class="mb-3"
+        data-testid="error-message"
+        >{{ error }}</Message
+      >
 
       <Message severity="warn" :closable="false" class="mb-3">
         {{ t('components.serviceAccountsModal.disclaimer') }}
@@ -355,14 +437,25 @@ function severityFor(account: ServiceAccount) {
             : t('components.serviceAccountsModal.activeAccountsTitle')
         }}
       </h4>
-      <span class="text-sm text-muted-color" data-testid="account-counters">
-        <span data-testid="active-accounts">{{
-          t('components.serviceAccountsModal.activeCount', {
-            active: activeCount,
-            max: maxActiveCount,
-          })
-        }}</span>
-      </span>
+      <div class="flex gap-2 items-baseline">
+        <span class="text-sm text-muted-color" data-testid="account-counters">
+          <span data-testid="active-accounts">{{
+            t('components.serviceAccountsModal.activeCount', {
+              active: activeCount,
+              max: maxActiveCount,
+            })
+          }}</span>
+        </span>
+        <Button
+          v-if="canManage"
+          :label="t('components.serviceAccountsModal.historyButton')"
+          icon="pi pi-history"
+          size="small"
+          text
+          data-testid="group-history"
+          @click="showGroupHistory = true"
+        />
+      </div>
     </div>
 
     <div v-if="revokedList.length > 0" class="flex gap-2 items-center mb-3">
@@ -413,13 +506,12 @@ function severityFor(account: ServiceAccount) {
             }}</span>
             <span class="ml-2" data-testid="creator-label">
               {{
-                t('components.serviceAccountsModal.creatorLabel', {
-                  name:
-                    account.createdByUserName ??
-                    t('components.serviceAccountsModal.creatorUnknown'),
-                })
+                t('components.serviceAccountsModal.creatorLabel', { name: creatorName(account) })
               }}
             </span>
+            <span class="ml-2" :title="usageLabel(account).exact" data-testid="usage-label">{{
+              usageLabel(account).text
+            }}</span>
             <span
               v-if="account.revokedAt"
               class="ml-2"
@@ -455,7 +547,11 @@ function severityFor(account: ServiceAccount) {
         </div>
       </li>
     </ul>
+
+    <ServiceAccountConnectionGuide />
   </Dialog>
+
+  <GroupHistoryModal v-if="showGroupHistory" v-model:visible="showGroupHistory" :group="group" />
 
   <ConfirmationModal
     v-model:visible="showRotateConfirm"

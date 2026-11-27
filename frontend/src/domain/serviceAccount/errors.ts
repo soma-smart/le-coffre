@@ -14,7 +14,8 @@ export class ServiceAccountNotOwnerError extends ServiceAccountDomainError {
 
 /**
  * The group already has as many usable accounts as the server allows.
- * Carries the backend's wording, which names the actual count and limit.
+ * Its message keeps the backend's wording, which names the actual count and
+ * limit. The dialog does not show it: it says the same in the UI's language.
  */
 export class TooManyActiveServiceAccountsError extends ServiceAccountDomainError {
   constructor(detail?: string | null) {

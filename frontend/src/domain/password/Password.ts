@@ -1,3 +1,5 @@
+import type { EventActor } from '@/domain/principal/EventActor'
+
 /**
  * Password domain types. Pure TypeScript — no Vue, no fetch, no SDK.
  *
@@ -67,7 +69,7 @@ export interface PasswordEvent {
   eventType: string
   occurredOn: string
   actorPrincipalId: string
-  actorEmail: string | null
+  actor: EventActor | null
   eventData: Record<string, unknown>
 }
 

@@ -2,6 +2,15 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class EventActor:
+    """Who did it, as shown to humans."""
+
+    kind: str
+    """`user` or `service_account`."""
+    display_name: str
+
+
+@dataclass(frozen=True)
 class PasswordEventItem:
     """Single password event item for response"""
 
@@ -9,7 +18,8 @@ class PasswordEventItem:
     event_type: str
     occurred_on: str
     actor_principal_id: str
-    actor_email: str | None
+    actor: EventActor | None
+    """None when the actor no longer exists."""
     event_data: dict
 
 

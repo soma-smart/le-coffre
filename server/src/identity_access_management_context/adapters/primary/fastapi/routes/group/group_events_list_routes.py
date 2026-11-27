@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from identity_access_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_group_events_usecase,
@@ -19,6 +19,7 @@ from identity_access_management_context.domain.exceptions import (
     UserNotOwnerOfGroupException,
 )
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.adapters.primary.event_actor import EventActorResponse
 from shared_kernel.domain.entities import ValidatedUser
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ class GroupEventResponse(BaseModel):
     event_type: str
     occurred_on: str
     actor_principal_id: str
-    actor_email: str | None
+    actor: EventActorResponse | None = Field(description="Who acted, as shown to humans. Null once deleted.")
     event_data: dict
 
 
@@ -43,7 +44,7 @@ class ListGroupEventsResponse(BaseModel):
     "/{group_id}/events",
     response_model=ListGroupEventsResponse,
     status_code=200,
-    summary="List membership events for a group",
+    summary="List a group's history: membership and service account events",
 )
 def list_group_events(
     group_id: UUID,
@@ -54,8 +55,9 @@ def list_group_events(
     usecase: ListGroupEventsUseCase = Depends(get_list_group_events_usecase),
 ):
     """
-    Retrieve the membership event history for a group: members added, owners
-    added/promoted, and members removed.
+    Retrieve the history of a group: members added, owners added/promoted,
+    members removed, and service accounts created, given a new token, or revoked.
+    Service account events name the account and never carry its token.
 
     Only group owners and admins can list events for a group.
 
@@ -82,7 +84,9 @@ def list_group_events(
                     event_type=event.event_type,
                     occurred_on=event.occurred_on,
                     actor_principal_id=event.actor_principal_id,
-                    actor_email=event.actor_email,
+                    actor=None
+                    if event.actor is None
+                    else EventActorResponse(kind=event.actor.kind, display_name=event.actor.display_name),
                     event_data=event.event_data,
                 )
                 for event in response.events

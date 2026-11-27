@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from shared_kernel.utils import to_naive_utc
+
 
 class FakePasswordEventRepository:
     """Fake implementation of PasswordEventRepository for testing"""
@@ -23,7 +25,7 @@ class FakePasswordEventRepository:
             {
                 "event_id": event_id,
                 "event_type": event_type,
-                "occurred_on": occurred_on,
+                "occurred_on": to_naive_utc(occurred_on),
                 "password_id": password_id,
                 "actor_principal_id": actor_principal_id,
                 "event_data": event_data,
@@ -48,10 +50,10 @@ class FakePasswordEventRepository:
             filtered = [event for event in filtered if event["event_type"] in event_types]
 
         if start_date:
-            filtered = [event for event in filtered if event["occurred_on"] >= start_date]
+            filtered = [event for event in filtered if event["occurred_on"] >= to_naive_utc(start_date)]
 
         if end_date:
-            filtered = [event for event in filtered if event["occurred_on"] <= end_date]
+            filtered = [event for event in filtered if event["occurred_on"] <= to_naive_utc(end_date)]
 
         return sorted(filtered, key=lambda e: e["occurred_on"], reverse=True)
 
@@ -82,9 +84,9 @@ class FakePasswordEventRepository:
             filtered = [event for event in filtered if event["event_type"] in event_types]
 
         if start_date:
-            filtered = [event for event in filtered if event["occurred_on"] >= start_date]
+            filtered = [event for event in filtered if event["occurred_on"] >= to_naive_utc(start_date)]
 
         if end_date:
-            filtered = [event for event in filtered if event["occurred_on"] <= end_date]
+            filtered = [event for event in filtered if event["occurred_on"] <= to_naive_utc(end_date)]
 
         return sorted(filtered, key=lambda e: e["occurred_on"], reverse=True)

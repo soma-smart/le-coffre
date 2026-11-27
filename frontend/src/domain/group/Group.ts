@@ -1,3 +1,5 @@
+import type { EventActor } from '@/domain/principal/EventActor'
+
 /**
  * Group domain types. Pure TypeScript — no Vue, no fetch, no SDK.
  *
@@ -21,7 +23,7 @@ export interface GroupEvent {
   eventType: string
   occurredOn: string
   actorPrincipalId: string
-  actorEmail: string | null
+  actor: EventActor | null
   eventData: Record<string, unknown>
 }
 
@@ -33,6 +35,9 @@ export function groupEventSeverity(eventType: string): GroupEventSeverity {
   if (eventType === 'OwnerAddedToGroupEvent') return 'info'
   if (eventType === 'UserRemovedFromGroupEvent') return 'danger'
   if (eventType === 'OwnerDemotedToMemberEvent') return 'warn'
+  if (eventType === 'ServiceAccountCreatedEvent') return 'success'
+  if (eventType === 'ServiceAccountTokenRotatedEvent') return 'warn'
+  if (eventType === 'ServiceAccountRevokedEvent') return 'danger'
   return 'secondary'
 }
 

@@ -31,6 +31,9 @@ class ServiceAccountRepository(Protocol):
     def list_for_groups(self, group_ids: Sequence[UUID]) -> Iterable[ServiceAccount]:
         """Return every account of these groups, revoked ones included."""
 
+    def record_use(self, service_account_id: UUID, now: datetime) -> None:
+        """Record that a token of this account authenticated at `now`, unless a later use is already recorded."""
+
     def revoke(self, ids: Iterable[UUID], now: datetime) -> None:
         """Mark service accounts as revoked.
 

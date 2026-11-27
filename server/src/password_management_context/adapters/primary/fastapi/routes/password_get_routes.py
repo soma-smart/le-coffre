@@ -33,7 +33,11 @@ class GetPasswordResponse(BaseModel):
     response_model=GetPasswordResponse,
     status_code=200,
     summary="Get a password by ID",
-    responses={503: {"description": "Vault is locked"}},
+    responses={
+        401: {"description": "Not authenticated, or the Bearer token is invalid, revoked or regenerated"},
+        404: {"description": "Unknown password, or one the caller cannot read"},
+        503: {"description": "Vault is locked: an operator must unlock it, retrying will not help until then"},
+    },
 )
 def get_password(
     password_id: UUID,
@@ -42,12 +46,15 @@ def get_password(
     usecase: GetPasswordUseCase = Depends(get_get_password_usecase),
 ):
     """
-    Retrieve a password by its ID with user authentication.
+    Retrieve a password by its ID.
 
     - **password_id**: The ID of the password to retrieve
     - **Authentication**: an access_token cookie, or a bearer token. A
       read-only token, like a browser extension's, never carries the admin
       role, so it reaches only what its own user can read.
+
+    A service account reads what its group can read, shares included until they
+    expire. This is the only password route it may call.
     """
     try:
         command = GetPasswordCommand(
@@ -59,8 +66,9 @@ def get_password(
 
         return GetPasswordResponse(password=decrypted_password)
     except (PasswordNotFoundError, PasswordAccessDeniedError) as e:
-        # For security, treat both not found and access denied as 404
-        raise HTTPException(status_code=404, detail=str(e)) from e
+        # Same status and same words for both: a different message would tell a
+        # caller probing ids which ones exist.
+        raise HTTPException(status_code=404, detail="Password not found") from e
     except PasswordEncryptionUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     except AccessDeniedError as e:

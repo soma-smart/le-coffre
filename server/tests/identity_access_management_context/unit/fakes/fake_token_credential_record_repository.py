@@ -64,10 +64,12 @@ class FakeTokenCredentialRecordRepository(TokenCredentialRecordRepository):
         self.credential_records = kept
         return count
 
-    def touch_last_used(self, credential_id: UUID, now: datetime, coarsening: timedelta) -> None:
-        record = self.get_by_id(credential_id)
+    def touch_last_used(self, token_hash: str, now: datetime, coarsening: timedelta) -> bool:
+        record = self.get_by_token_hash(token_hash)
         if record is not None and (record.last_used_at is None or now - record.last_used_at >= coarsening):
             record.last_used_at = now
+            return True
+        return False
 
     def list_by_principal_ids(self, principal_ids: Iterable[UUID]) -> list[TokenCredentialRecord]:
         wanted = set(principal_ids)
@@ -80,9 +82,10 @@ class FakeTokenCredentialRecordRepository(TokenCredentialRecordRepository):
         if not stored.issuperset(new_token_hash_by_old):
             raise CannotRotateTokenCredentialError()
         for credential_record in self.credential_records:
-            credential_record.token_hash = new_token_hash_by_old.get(
-                credential_record.token_hash, credential_record.token_hash
-            )
+            if credential_record.token_hash in new_token_hash_by_old:
+                credential_record.token_hash = new_token_hash_by_old[credential_record.token_hash]
+                if credential_record.max_idle is None:
+                    credential_record.last_used_at = None
 
     def get_by_token_hash(self, token_hash: str) -> TokenCredentialRecord | None:
         return next((c for c in self.credential_records if c.token_hash == token_hash), None)

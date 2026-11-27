@@ -381,6 +381,7 @@ def test_given_a_group_with_service_accounts_when_deleting_then_each_revocation_
     ]
     assert len(revocations) == 2
     assert all(e["actor_principal_id"] == owner_id for e in revocations)
+    assert all(e["event_data"]["group_name"] == "Team" for e in revocations)
 
 
 def test_given_an_already_revoked_service_account_when_deleting_the_group_then_it_is_left_alone(

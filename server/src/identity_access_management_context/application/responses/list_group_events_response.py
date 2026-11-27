@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from .get_principal_response import GetPrincipalResponse
+
 
 @dataclass(frozen=True)
 class GroupEventItem:
@@ -9,7 +11,8 @@ class GroupEventItem:
     event_type: str
     occurred_on: str
     actor_principal_id: str
-    actor_email: str | None
+    actor: GetPrincipalResponse | None
+    """None when the actor no longer exists."""
     event_data: dict
 
 

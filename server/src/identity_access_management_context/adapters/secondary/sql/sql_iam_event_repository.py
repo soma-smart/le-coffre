@@ -8,19 +8,25 @@ from identity_access_management_context.adapters.secondary.sql.model.iam_event i
     IamEventTable,
 )
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
+from shared_kernel.utils import to_naive_utc
 
 
-class GroupMembershipEventType(Enum):
-    """Group event types that make up a group's membership history.
+class GroupHistoryEventType(Enum):
+    """Event types that make up a group's history: its membership and its service accounts.
 
     Values match the domain event class names stored as ``event_type`` in
     IamEvent rows (see identity_access_management_context.domain.events).
+    Listing the service accounts is deliberately absent: it records a read,
+    once per opening of the dialog, and would drown out the changes.
     """
 
     USER_ADDED = "UserAddedToGroupEvent"
     OWNER_ADDED = "OwnerAddedToGroupEvent"
     USER_REMOVED = "UserRemovedFromGroupEvent"
     OWNER_DEMOTED = "OwnerDemotedToMemberEvent"
+    SERVICE_ACCOUNT_CREATED = "ServiceAccountCreatedEvent"
+    SERVICE_ACCOUNT_ROTATED = "ServiceAccountTokenRotatedEvent"
+    SERVICE_ACCOUNT_REVOKED = "ServiceAccountRevokedEvent"
 
 
 class SqlIamEventRepository(SQLBaseRepository):
@@ -41,7 +47,7 @@ class SqlIamEventRepository(SQLBaseRepository):
         event = IamEventTable(
             event_id=event_id,
             event_type=event_type,
-            occurred_on=occurred_on,
+            occurred_on=to_naive_utc(occurred_on),
             actor_principal_id=actor_principal_id,
             event_data=event_data,
         )
@@ -55,14 +61,14 @@ class SqlIamEventRepository(SQLBaseRepository):
         start_date: datetime | None = None,
         end_date: datetime | None = None,
     ) -> list[dict]:
-        """List membership events for a specific group with optional filters.
+        """List the history events of a specific group with optional filters.
 
         IamEventTable is shared across the whole IAM context (users, groups,
         SSO, admin) and has no dedicated group_id column, so this narrows by
         event_type at the SQL level first, then filters on unstructured event_data
         in Python.
         """
-        allowed_types = {member.value for member in GroupMembershipEventType}
+        allowed_types = {member.value for member in GroupHistoryEventType}
         if event_types:
             allowed_types &= set(event_types)
 

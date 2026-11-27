@@ -18,6 +18,7 @@ from shared_kernel.domain.entities import AuthenticatedUser
 
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 GROUP_ID = UUID("00000000-0000-0000-0000-0000000000b1")
+GROUP_NAME = "Team"
 OTHER_GROUP_ID = UUID("00000000-0000-0000-0000-0000000000b2")
 OWNER_ID = UUID("00000000-0000-0000-0000-0000000000a1")
 MEMBER_ID = UUID("00000000-0000-0000-0000-0000000000a2")
@@ -43,7 +44,7 @@ def admin():
 
 @pytest.fixture
 def groups(group_repository, group_member_repository):
-    group_repository.save_group(Group(id=GROUP_ID, name="Team", is_personal=False))
+    group_repository.save_group(Group(id=GROUP_ID, name=GROUP_NAME, is_personal=False))
     group_repository.save_group(Group(id=OTHER_GROUP_ID, name="Other", is_personal=False))
     group_member_repository.add_member(GROUP_ID, OWNER_ID, is_owner=True)
     group_member_repository.add_member(GROUP_ID, MEMBER_ID, is_owner=False)
@@ -160,6 +161,9 @@ def test_given_a_creation_when_it_succeeds_then_it_is_audited_without_the_token(
     assert event["event_type"] == "ServiceAccountCreatedEvent"
     assert event["actor_principal_id"] == OWNER_ID
     assert event["occurred_on"] == NOW
+    # The group files the event in that group's history.
+    assert event["event_data"]["group_id"] == str(GROUP_ID)
+    assert event["event_data"]["group_name"] == GROUP_NAME
 
     payload = json.dumps(event["event_data"])
     assert response.token not in payload

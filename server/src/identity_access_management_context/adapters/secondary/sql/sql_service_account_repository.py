@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import override
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlmodel import Session, select, update
 
 from identity_access_management_context.adapters.secondary.sql.model.principal_model import (
@@ -36,6 +37,7 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
             group_id=row.group_id,
             name=row.name,
             revoked_at=as_utc(row.revoked_at),
+            last_used_at=as_utc(row.last_used_at),
         )
 
     @override
@@ -49,6 +51,7 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
                 group_id=account.group_id,
                 name=account.name,
                 revoked_at=to_naive_utc(account.revoked_at),
+                last_used_at=to_naive_utc(account.last_used_at),
             )
             for account in accounts
         ]
@@ -69,6 +72,22 @@ class SqlServiceAccountRepository(SQLBaseRepository, ServiceAccountRepository):
         query = select(ServiceAccountPrincipalTable).where(ServiceAccountPrincipalTable.group_id.in_(group_ids))  # type: ignore[attr-defined]
         rows = self._session.exec(query).all()
         return [self._to_entity(row) for row in rows]
+
+    @override
+    def record_use(self, service_account_id: UUID, now: datetime) -> None:
+        naive_now = to_naive_utc(now)
+        # One conditional UPDATE: never moves the date backwards, never reads first.
+        self.execute_and_commit(
+            update(ServiceAccountPrincipalTable)
+            .where(
+                ServiceAccountPrincipalTable.principal_id == service_account_id,
+                or_(
+                    ServiceAccountPrincipalTable.last_used_at.is_(None),  # type: ignore[union-attr]
+                    ServiceAccountPrincipalTable.last_used_at < naive_now,  # type: ignore[operator]
+                ),
+            )
+            .values(last_used_at=naive_now)
+        )
 
     @override
     def revoke(self, ids: Iterable[UUID], now: datetime) -> None:

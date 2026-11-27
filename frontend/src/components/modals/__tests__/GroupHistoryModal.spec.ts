@@ -35,16 +35,16 @@ function makeEvent(overrides: Partial<GroupEvent>): GroupEvent {
     eventType: 'UserRemovedFromGroupEvent',
     occurredOn: new Date().toISOString(),
     actorPrincipalId: 'user-1',
-    actorEmail: 'actor@example.com',
+    actor: { kind: 'user', displayName: 'Actor' },
     eventData: { userId: 'user-2', userEmail: 'user2@example.com' },
     ...overrides,
   }
 }
 
-async function mountModal(repo: InMemoryGroupRepository) {
+async function mountModal(repo: InMemoryGroupRepository, shown: Group = group) {
   const { pinia, container } = createTestContext({ groupRepository: repo })
   const wrapper = mount(GroupHistoryModal, {
-    props: { visible: true, group },
+    props: { visible: true, group: shown },
     global: {
       plugins: [pinia],
       provide: { [CONTAINER_KEY as symbol]: container },
@@ -140,5 +140,60 @@ describe('GroupHistoryModal self-leave labelling', () => {
 
     expect(wrapper.text()).toContain(t('components.groupHistoryModal.leftGroupEventType'))
     expect(wrapper.text()).not.toContain(t('common.eventTypes.UserRemovedFromGroupEvent'))
+  })
+})
+
+const personalGroup: Group = {
+  id: 'group-2',
+  name: 'Personal',
+  isPersonal: true,
+  userId: 'user-1',
+  owners: ['user-1'],
+  members: [],
+}
+
+function serviceAccountEvent(eventType: string, eventId: string): GroupEvent {
+  return {
+    eventId,
+    eventType,
+    occurredOn: new Date(Date.now() - 60_000).toISOString(),
+    actorPrincipalId: 'user-1',
+    actor: { kind: 'user', displayName: 'Ada Owner' },
+    eventData: {
+      actorPrincipalId: 'user-1',
+      serviceAccountId: 'account-1',
+      serviceAccountName: 'nightly-deploy',
+      groupId: personalGroup.id,
+    },
+  }
+}
+
+describe('GroupHistoryModal service accounts', () => {
+  it('tells the lifecycle of a service account by its name, with its author', async () => {
+    const repo = new InMemoryGroupRepository().seed(personalGroup)
+    for (const [eventType, eventId] of [
+      ['ServiceAccountCreatedEvent', 'e1'],
+      ['ServiceAccountTokenRotatedEvent', 'e2'],
+      ['ServiceAccountRevokedEvent', 'e3'],
+    ]) {
+      repo.addEvent(personalGroup.id, serviceAccountEvent(eventType, eventId))
+    }
+
+    const wrapper = await mountModal(repo, personalGroup)
+
+    const text = wrapper.text()
+    for (const key of [
+      'serviceAccountCreated',
+      'serviceAccountTokenRotated',
+      'serviceAccountRevoked',
+    ]) {
+      expect(text).toContain(
+        t(`components.groupHistoryModal.${key}`, { name: 'nightly-deploy' }).replace(/\s+/g, ' '),
+      )
+    }
+    expect(text).toContain(t('common.eventTypes.ServiceAccountCreatedEvent'))
+    expect(text).toContain('Ada Owner')
+    // Rendered as sentences, never as the raw payload.
+    expect(text).not.toContain('serviceAccountId')
   })
 })

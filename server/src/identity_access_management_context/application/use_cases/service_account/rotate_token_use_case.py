@@ -59,7 +59,7 @@ class RotateServiceAccountTokenUseCase(
             raise ServiceAccountNotFoundException(command.service_account_id)
 
         # Check the user has permission to manage the service account
-        self._permissions.ensure_user_can_manage_group(command.requesting_user, account.group_id)
+        group = self._permissions.ensure_user_can_manage_group(command.requesting_user, account.group_id)
 
         # Check the service account is active
         if not account.is_active:
@@ -76,8 +76,6 @@ class RotateServiceAccountTokenUseCase(
             raise ServiceAccountHasSeveralTokensException(account.id)
         (credential_record,) = credential_records
 
-        now = self._time_provider.get_current_time()
-
         # Rotate the token: generate a new one, then store its hash in place of the old one
         token = TokenCredential.generate()
         try:
@@ -87,12 +85,18 @@ class RotateServiceAccountTokenUseCase(
         except CannotRotateTokenCredentialError as e:
             raise ServiceAccountAlreadyRevokedException(account.id) from e
 
+        # Dated once the old token stops working: a request of the old one, until then,
+        # must not look like a use of the new one next to this date.
+        now = self._time_provider.get_current_time()
+
         event = ServiceAccountTokenRotatedEvent(
             event_id=uuid4(),
             occurred_on=now,
             actor_principal_id=command.requesting_user.user_id,
             service_account_id=account.id,
             service_account_name=account.name,
+            group_id=account.group_id,
+            group_name=group.name,
         )
         response = RotateServiceAccountTokenResponse(id=account.id, token=token.value)
 

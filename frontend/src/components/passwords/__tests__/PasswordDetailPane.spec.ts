@@ -183,6 +183,22 @@ describe('PasswordDetailPane', () => {
     expect(revealButton.attributes('disabled')).toBeDefined()
   })
 
+  it('copies the identifier an automation reads the secret by, even without read access', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const wrapper = mountPane(container, pinia, {
+      password: { ...samplePassword, canRead: false, canWrite: false },
+      contextGroupId: 'group-personal',
+    })
+
+    expect(wrapper.get('[data-testid="password-id"]').text()).toBe('pwd-1')
+    await wrapper.get('button[aria-label="Copy identifier"]').trigger('click')
+    await flushPromises()
+
+    expect(writeText).toHaveBeenCalledWith('pwd-1')
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }))
+  })
+
   it('disables write actions (edit/delete/one-time-link) when the viewer lacks write access', () => {
     const wrapper = mountPane(container, pinia, {
       password: { ...samplePassword, canWrite: false },

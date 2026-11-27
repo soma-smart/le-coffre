@@ -7,6 +7,20 @@ from password_management_context.adapters.secondary.sql.model.password_event imp
     PasswordEventTable,
 )
 from shared_kernel.adapters.secondary.sql.sql_base_repository import SQLBaseRepository
+from shared_kernel.utils import to_naive_utc
+
+
+def _naive_utc_bound(value: datetime) -> datetime:
+    """A date filter bound, in naive UTC like the stored dates.
+
+    A bound a few hours from the edge of the calendar has no UTC equivalent. It
+    excludes no event anyway, so it keeps its own wall clock instead of failing
+    the request.
+    """
+    try:
+        return to_naive_utc(value)
+    except OverflowError:
+        return value.replace(tzinfo=None)
 
 
 class SqlPasswordEventRepository(SQLBaseRepository):
@@ -28,7 +42,7 @@ class SqlPasswordEventRepository(SQLBaseRepository):
         event = PasswordEventTable(
             event_id=event_id,
             event_type=event_type,
-            occurred_on=occurred_on,
+            occurred_on=to_naive_utc(occurred_on),
             password_id=password_id,
             actor_principal_id=actor_principal_id,
             event_data=event_data,
@@ -54,10 +68,10 @@ class SqlPasswordEventRepository(SQLBaseRepository):
             query = query.where(PasswordEventTable.event_type.in_(event_types))  # type: ignore[attr-defined]
 
         if start_date:
-            query = query.where(PasswordEventTable.occurred_on >= start_date)
+            query = query.where(PasswordEventTable.occurred_on >= _naive_utc_bound(start_date))
 
         if end_date:
-            query = query.where(PasswordEventTable.occurred_on <= end_date)
+            query = query.where(PasswordEventTable.occurred_on <= _naive_utc_bound(end_date))
 
         query = query.order_by(PasswordEventTable.occurred_on.desc())  # type: ignore[attr-defined]
 
@@ -121,10 +135,10 @@ class SqlPasswordEventRepository(SQLBaseRepository):
             query = query.where(PasswordEventTable.event_type.in_(event_types))  # type: ignore[attr-defined]
 
         if start_date:
-            query = query.where(PasswordEventTable.occurred_on >= start_date)
+            query = query.where(PasswordEventTable.occurred_on >= _naive_utc_bound(start_date))
 
         if end_date:
-            query = query.where(PasswordEventTable.occurred_on <= end_date)
+            query = query.where(PasswordEventTable.occurred_on <= _naive_utc_bound(end_date))
 
         query = query.order_by(PasswordEventTable.occurred_on.desc())  # type: ignore[attr-defined]
 

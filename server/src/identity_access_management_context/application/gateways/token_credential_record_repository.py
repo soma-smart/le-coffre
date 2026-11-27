@@ -21,7 +21,10 @@ class TokenCredentialRecordRepository(Protocol):
         """Store token credential records, alongside any the principals already hold."""
 
     def replace_token_hashes(self, token_hashes: Iterable[str], new_token_hashes: Iterable[str]) -> None:
-        """Replace token hashes with new token hashes.
+        """Replace token hashes with new token hashes, and forget when the old tokens were last used.
+
+        Kept where `max_idle` applies: forgetting it would stop the replacement
+        from ever going idle until its first use.
 
         Raises:
             CannotRotateTokenCredentialError: if any of the token hashes is no longer stored. Nothing is replaced then.
@@ -50,8 +53,10 @@ class TokenCredentialRecordRepository(Protocol):
     def delete_by_principal_ids(self, principal_ids: Iterable[UUID]) -> int:
         """Delete every token credential record of these principals. Returns how many existed."""
 
-    def touch_last_used(self, credential_id: UUID, now: datetime, coarsening: timedelta) -> None:
-        """Record that the token was presented, unless it already was less than `coarsening` ago.
+    def touch_last_used(self, token_hash: str, now: datetime, coarsening: timedelta) -> bool:
+        """Record that the token with this hash was presented, unless it already was less than `coarsening` ago.
 
         Coarsened so that a busy client does not write on every request.
+        Found by its hash, not its record: a token replaced since it was checked
+        must not mark its replacement as used. Returns whether it wrote.
         """

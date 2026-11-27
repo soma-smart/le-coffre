@@ -22,6 +22,7 @@ from .group import (
 from .service_account import (
     service_account_create_router,
     service_account_list_router,
+    service_account_me_router,
     service_account_revoke_router,
     service_account_rotate_token_router,
 )
@@ -107,6 +108,7 @@ def get_service_account_router():
 
     service_account_management_router.include_router(service_account_create_router)
     service_account_management_router.include_router(service_account_list_router)
+    service_account_management_router.include_router(service_account_me_router)
     service_account_management_router.include_router(service_account_rotate_token_router)
     service_account_management_router.include_router(service_account_revoke_router)
 

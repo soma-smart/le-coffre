@@ -107,7 +107,7 @@ export function usePasswordSharedAccess(options: UsePasswordSharedAccessOptions)
 
       const actorUsername = await resolveActorUsername(
         matching.actorPrincipalId,
-        matching.actorEmail,
+        matching.actor?.displayName ?? null,
       )
       if (currentVersion !== loadVersion) return
 

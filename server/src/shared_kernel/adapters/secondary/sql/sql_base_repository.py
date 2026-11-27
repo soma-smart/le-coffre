@@ -8,6 +8,7 @@ from forgetting to add rollback logic in individual repository methods.
 import logging
 from typing import Any
 
+from sqlalchemy import Executable
 from sqlmodel import Session
 
 try:
@@ -84,6 +85,24 @@ class SQLBaseRepository:
                 logger.exception("Transaction failed")
                 self._session.rollback()
                 raise
+
+    def execute_and_commit(self, statement: Executable) -> Any:
+        """
+        Run one write statement and commit it, rolling back if either fails.
+
+        A statement that fails leaves a PostgreSQL transaction aborted: without
+        the rollback, the session would refuse every later query of the request.
+
+        Returns:
+            The statement's result, e.g. for its rowcount.
+        """
+        try:
+            result = self._session.exec(statement)  # type: ignore[call-overload]
+        except Exception:
+            self._session.rollback()
+            raise
+        self.commit()
+        return result
 
     def commit_and_refresh(self, obj: Any) -> None:
         """

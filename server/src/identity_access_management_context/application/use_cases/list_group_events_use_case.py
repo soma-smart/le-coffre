@@ -10,6 +10,7 @@ from identity_access_management_context.application.gateways import (
     UserRepository,
 )
 from identity_access_management_context.application.responses import (
+    GetPrincipalResponse,
     GroupEventItem,
     ListGroupEventsResponse,
 )
@@ -17,6 +18,7 @@ from identity_access_management_context.domain.exceptions import (
     GroupNotFoundException,
     UserNotOwnerOfGroupException,
 )
+from shared_kernel.application.gateways import PrincipalRepository
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
 
@@ -28,11 +30,13 @@ class ListGroupEventsUseCase(TracedUseCase):
         group_member_repository: GroupMemberRepository,
         user_repository: UserRepository,
         group_event_repository: GroupEventRepository,
+        principal_repository: PrincipalRepository,
     ):
         self.group_repository = group_repository
         self.group_member_repository = group_member_repository
         self.user_repository = user_repository
         self.group_event_repository = group_event_repository
+        self.principal_repository = principal_repository
 
     def execute(self, command: ListGroupEventsCommand) -> ListGroupEventsResponse:
         group = self.group_repository.get_by_id(command.group_id)
@@ -68,13 +72,13 @@ class ListGroupEventsUseCase(TracedUseCase):
                     if hasattr(event["occurred_on"], "isoformat")
                     else event["occurred_on"],
                     actor_principal_id=str(event["actor_principal_id"]),
-                    actor_email=self._get_actor_email(event["actor_principal_id"]),
+                    actor=self._get_actor(event["actor_principal_id"]),
                     event_data=enriched_event_data,
                 )
             )
 
         return ListGroupEventsResponse(events=event_items)
 
-    def _get_actor_email(self, actor_principal_id: str) -> str | None:
-        actor = self.user_repository.get_by_id(UUID(str(actor_principal_id)))
-        return actor.email if actor else None
+    def _get_actor(self, actor_principal_id: str) -> GetPrincipalResponse | None:
+        actor = self.principal_repository.get_by_id(UUID(str(actor_principal_id)))
+        return GetPrincipalResponse.of(actor) if actor else None

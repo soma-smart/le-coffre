@@ -6,6 +6,7 @@ import pytest
 from password_management_context.application.commands import (
     ListPasswordEventsCommand,
 )
+from password_management_context.application.responses import EventActor
 from password_management_context.application.use_cases import (
     ListPasswordEventsUseCase,
 )
@@ -328,3 +329,39 @@ def test_given_locked_vault_when_listing_password_events_should_raise_encryption
                 requesting_user=ADMIN_USER,
             )
         )
+
+
+# ── Actors ───────────────────────────────────────────────────────────
+
+SERVICE_ACCOUNT_ID = UUID("5a5a5a5a-0000-0000-0000-000000000001")
+DELETED_USER_ID = UUID("dededede-0000-0000-0000-000000000001")
+
+
+def test_given_reads_by_a_human_and_a_machine_when_listing_events_then_each_actor_is_named_with_its_kind(
+    use_case: ListPasswordEventsUseCase,
+    password_repository: FakePasswordRepository,
+    password_event_repository: FakePasswordEventRepository,
+    user_info_gateway: FakeUserInfoGateway,
+):
+    password_id = UUID("e0e2eb69-5d6b-4500-947a-6636c8755b3f")
+    password_repository.save(Password(id=password_id, name="deploy-key", encrypted_value="x", folder="default"))
+    user_info_gateway.set_principal(ADMIN_USER.user_id, "user", "Ada Admin")
+    user_info_gateway.set_principal(SERVICE_ACCOUNT_ID, "service_account", "nightly-deploy")
+    for hour, actor in enumerate((ADMIN_USER.user_id, SERVICE_ACCOUNT_ID, DELETED_USER_ID)):
+        password_event_repository.append_event(
+            event_id=UUID(int=hour + 1),
+            event_type="PasswordAccessedEvent",
+            occurred_on=datetime(2026, 2, 6, 10 + hour, 0, 0),
+            password_id=password_id,
+            actor_principal_id=actor,
+            event_data={"password_id": str(password_id), "password_name": "deploy-key"},
+        )
+
+    response = use_case.execute(ListPasswordEventsCommand(password_id=password_id, requesting_user=ADMIN_USER))
+
+    actors = {event.actor_principal_id: event.actor for event in response.events}
+    assert actors == {
+        str(ADMIN_USER.user_id): EventActor(kind="user", display_name="Ada Admin"),
+        str(SERVICE_ACCOUNT_ID): EventActor(kind="service_account", display_name="nightly-deploy"),
+        str(DELETED_USER_ID): None,
+    }

@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from password_management_context.adapters.primary.fastapi.app_dependencies import (
     get_list_password_events_usecase,
@@ -21,6 +21,7 @@ from password_management_context.domain.exceptions import (
     PasswordNotFoundError,
 )
 from shared_kernel.adapters.primary.dependencies import get_current_user
+from shared_kernel.adapters.primary.event_actor import EventActorResponse
 from shared_kernel.domain.entities import ValidatedUser
 
 router = APIRouter(prefix="/passwords", tags=["Password Management"])
@@ -31,7 +32,7 @@ class PasswordEventResponse(BaseModel):
     event_type: str
     occurred_on: str
     actor_principal_id: str
-    actor_email: str | None
+    actor: EventActorResponse | None = Field(description="Who acted, as shown to humans. Null once deleted.")
     event_data: dict
 
 
@@ -83,7 +84,9 @@ def list_password_events(
                     event_type=event.event_type,
                     occurred_on=event.occurred_on,
                     actor_principal_id=event.actor_principal_id,
-                    actor_email=event.actor_email,
+                    actor=None
+                    if event.actor is None
+                    else EventActorResponse(kind=event.actor.kind, display_name=event.actor.display_name),
                     event_data=event.event_data,
                 )
                 for event in response.events

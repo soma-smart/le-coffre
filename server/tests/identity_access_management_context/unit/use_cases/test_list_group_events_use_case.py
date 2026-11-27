@@ -6,6 +6,7 @@ import pytest
 from identity_access_management_context.application.commands import (
     ListGroupEventsCommand,
 )
+from identity_access_management_context.application.responses import GetPrincipalResponse
 from identity_access_management_context.application.use_cases import (
     ListGroupEventsUseCase,
 )
@@ -27,12 +28,14 @@ def use_case(
     group_member_repository: FakeGroupMemberRepository,
     user_repository: FakeUserRepository,
     group_event_repository: FakeGroupEventRepository,
+    principal_repository,
 ):
     return ListGroupEventsUseCase(
         group_repository=group_repository,
         group_member_repository=group_member_repository,
         user_repository=user_repository,
         group_event_repository=group_event_repository,
+        principal_repository=principal_repository,
     )
 
 
@@ -72,7 +75,7 @@ def test_given_owner_when_listing_group_events_then_events_are_returned(
     assert len(response.events) == 1
     event = response.events[0]
     assert event.event_type == "UserAddedToGroupEvent"
-    assert event.actor_email == "owner@example.com"
+    assert event.actor == GetPrincipalResponse(principal_id=owner_id, kind="user", display_name="Owner")
     assert event.event_data["user_email"] == "newuser@example.com"
 
 
@@ -179,3 +182,23 @@ def test_given_events_from_another_group_when_listing_group_events_then_they_are
     response = use_case.execute(ListGroupEventsCommand(group_id=group_id, requesting_user=ADMIN_USER))
 
     assert len(response.events) == 0
+
+
+def test_given_an_actor_that_no_longer_exists_when_listing_group_events_then_it_has_no_actor(
+    use_case: ListGroupEventsUseCase,
+    group_repository: FakeGroupRepository,
+    group_member_repository: FakeGroupMemberRepository,
+    group_event_repository: FakeGroupEventRepository,
+):
+    group_id, owner_id = _save_group_with_owner(group_repository, group_member_repository)
+    group_event_repository.append_event(
+        event_id=UUID("a3333333-3333-3333-3333-333333333333"),
+        event_type="UserAddedToGroupEvent",
+        occurred_on=datetime(2026, 2, 6, 10, 0, 0),
+        actor_principal_id=UUID("923e4567-e89b-12d3-a456-426614174009"),
+        event_data={"group_id": str(group_id)},
+    )
+
+    response = use_case.execute(ListGroupEventsCommand(group_id=group_id, requesting_user=ADMIN_USER))
+
+    assert response.events[0].actor is None

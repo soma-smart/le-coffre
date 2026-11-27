@@ -1,14 +1,17 @@
+import logging
 from dataclasses import dataclass
 from typing import Generator
 
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Security
+from fastapi.security import HTTPBearer
 from fastapi.security.api_key import APIKeyCookie, APIKeyHeader
+from fastapi.security.utils import get_authorization_scheme_param
 from sqlmodel import Session
 from starlette.requests import Request
 
 from config import get_extension_last_used_coarsening_seconds
 from identity_access_management_context.adapters.secondary.sql import (
+    SqlIamEventRepository,
     SQLPrincipalRepository,
     SqlRevokedTokenRepository,
     SqlServiceAccountRepository,
@@ -31,6 +34,7 @@ from identity_access_management_context.application.use_cases import (
 from identity_access_management_context.domain.exceptions import (
     InvalidTokenException,
     SessionNotFoundException,
+    TokenAuthenticationFailureReason,
     UserNotFoundException,
 )
 from shared_kernel.domain.entities import (
@@ -44,6 +48,8 @@ from shared_kernel.domain.exceptions import CredentialAuthenticationError
 from .exceptions import (
     MissingTokenError,
 )
+
+logger = logging.getLogger(__name__)
 
 # Security schemes for Swagger documentation
 cookie_scheme = APIKeyCookie(name="access_token", scheme_name="CookieAuth", auto_error=False)
@@ -117,14 +123,25 @@ def get_current_user(
         raise HTTPException(status_code=500, detail="Authentication service error") from e
 
 
+def get_client_ip(request: Request) -> str:
+    """The caller's IP, trusting X-Forwarded-For exactly as far as the rate limiter does."""
+    # Imported here: the `security` package imports this module for its own routes.
+    from security.client_ip import resolve_client_ip
+
+    return resolve_client_ip(
+        request,
+        trusted_proxies=request.app.state.rate_limit_trusted_proxies,
+        hops=request.app.state.rate_limit_trusted_proxy_hops,
+    )
+
+
 def get_authenticate_token_usecase(
     request: Request,
     session: Session = Depends(get_session),
 ) -> AuthenticateTokenUseCase:
     token_credential_record_repository = SqlTokenCredentialRecordRepository(session)
-    principal_repository = SQLPrincipalRepository(
-        session, SqlUserRepository(session), SqlServiceAccountRepository(session)
-    )
+    service_account_repository = SqlServiceAccountRepository(session)
+    principal_repository = SQLPrincipalRepository(session, SqlUserRepository(session), service_account_repository)
     return AuthenticateTokenUseCase(
         TokenAuthenticator(
             principal_repository=principal_repository,
@@ -132,10 +149,16 @@ def get_authenticate_token_usecase(
             time_provider=request.app.state.time_provider,
         ),
         token_credential_record_repository,
+        service_account_repository,
+        request.app.state.domain_event_publisher,
+        SqlIamEventRepository(session),
         request.app.state.time_provider,
         get_extension_last_used_coarsening_seconds(),
     )
 
+
+# What a 401 asks for, on every route a token may reach.
+_BEARER_CHALLENGE = {"WWW-Authenticate": "Bearer"}
 
 # Methods a read-only credential may use. Everything else is refused before the
 # route body runs.
@@ -154,7 +177,10 @@ class _Authentication:
 def _authenticate(
     request: Request,
     access_token: str | None = Depends(cookie_scheme),
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    # Read from the raw header below, declared for the OpenAPI security scheme only:
+    # HTTPBearer folds a missing and a malformed header into the same `None`.
+    _bearer: object = Security(bearer_scheme),
+    client_ip: str = Depends(get_client_ip),
     validate_usecase: ValidateUserTokenUseCase = Depends(get_validate_token_usecase),
     authenticate_token_usecase: AuthenticateTokenUseCase = Depends(get_authenticate_token_usecase),
 ) -> _Authentication:
@@ -169,6 +195,8 @@ def _authenticate(
        A read-only one may only read, and never with admin privileges: an
        admin's own roles would make `/passwords/list` return the names, logins
        and URLs of every secret on the instance, into a browser profile.
+       A service account's token is always read-only: see
+       `AuthenticateTokenResponse.read_only`.
     3. Otherwise 401.
     """
     if access_token:
@@ -179,15 +207,24 @@ def _authenticate(
             credential=None,
         )
 
-    if credentials is None or not credentials.credentials:
-        raise HTTPException(status_code=401, detail="No authentication token provided")
+    token = _read_bearer_token(request)
+    if token is None:
+        # Logged, not audited: the web app lands here at the end of every session,
+        # once the browser drops the expired cookie, and an event per request would
+        # bury the real token failures. Same line as AuthenticateTokenUseCase.
+        logger.warning(
+            "Token authentication failed reason='%s' client_ip=%s",
+            TokenAuthenticationFailureReason.MISSING_TOKEN.value,
+            client_ip,
+        )
+        raise HTTPException(status_code=401, detail="No authentication token provided", headers=_BEARER_CHALLENGE)
 
     try:
-        response = authenticate_token_usecase.execute(AuthenticateTokenCommand(token=credentials.credentials))
+        response = authenticate_token_usecase.execute(AuthenticateTokenCommand(token=token, client_ip=client_ip))
     except CredentialAuthenticationError as e:
         # One generic 401 for malformed, unknown, expired and idle alike, so a
         # token holder cannot tell which happened.
-        raise HTTPException(status_code=401, detail="Invalid token") from e
+        raise HTTPException(status_code=401, detail="Invalid token", headers=_BEARER_CHALLENGE) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service error") from e
 
@@ -245,3 +282,38 @@ def _validate_session(
         raise HTTPException(status_code=401, detail=str(e)) from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="Authentication service error") from e
+
+
+def _read_bearer_token(request: Request) -> str | None:
+    authorization = request.headers.get("Authorization")
+    if authorization is None:
+        return None
+    scheme, token = get_authorization_scheme_param(authorization)
+    # A header that is not a Bearer one is a malformed token, not a missing one.
+    return token if scheme.lower() == "bearer" else ""
+
+
+def get_current_service_account(
+    request: Request,
+    # Read from the raw header below, declared for the OpenAPI security scheme only:
+    # HTTPBearer folds a missing and a malformed header into the same `None`.
+    _bearer: object = Security(bearer_scheme),
+    client_ip: str = Depends(get_client_ip),
+    authenticate_token_usecase: AuthenticateTokenUseCase = Depends(get_authenticate_token_usecase),
+) -> AuthenticatedPrincipal:
+    """The service account calling, from its token in the 'Authorization: Bearer' header.
+
+    Never reads the cookie: a route depending on this is a machine-only route.
+    Every failure gets the same 401, so probing cannot tell why a token was refused.
+    """
+    try:
+        response = authenticate_token_usecase.execute(
+            AuthenticateTokenCommand(
+                token=_read_bearer_token(request), client_ip=client_ip, required_kind="service_account"
+            )
+        )
+    except CredentialAuthenticationError as e:
+        raise HTTPException(status_code=401, detail="Invalid token", headers=_BEARER_CHALLENGE) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Authentication service error") from e
+    return AuthenticatedPrincipal(principal_id=response.principal_id, kind=response.principal_kind)

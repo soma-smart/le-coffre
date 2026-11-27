@@ -27,6 +27,7 @@ from shared_kernel.domain.entities import AuthenticatedUser
 NOW = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
 LATER = datetime(2026, 2, 1, 12, 0, 0, tzinfo=UTC)
 GROUP_ID = UUID("00000000-0000-0000-0000-0000000000b1")
+GROUP_NAME = "Team"
 OWNER_ID = UUID("00000000-0000-0000-0000-0000000000a1")
 MEMBER_ID = UUID("00000000-0000-0000-0000-0000000000a2")
 ADMIN_ID = UUID("00000000-0000-0000-0000-0000000000a3")
@@ -39,7 +40,7 @@ def owner():
 
 @pytest.fixture
 def groups(group_repository, group_member_repository):
-    group_repository.save_group(Group(id=GROUP_ID, name="Team", is_personal=False))
+    group_repository.save_group(Group(id=GROUP_ID, name=GROUP_NAME, is_personal=False))
     group_member_repository.add_member(GROUP_ID, OWNER_ID, is_owner=True)
     group_member_repository.add_member(GROUP_ID, MEMBER_ID, is_owner=False)
 
@@ -128,15 +129,31 @@ def test_given_a_rotation_when_it_succeeds_then_the_account_keeps_its_identity(
     assert (after.id, after.name, after.group_id) == (account.id, name, group_id)
 
 
-def test_given_a_rotation_when_it_succeeds_then_the_creation_facts_are_untouched(
-    use_case, owner, account, service_account_event_repository
+def test_given_a_rotation_when_it_succeeds_then_the_creation_facts_are_untouched_and_the_rotation_is_dated(
+    use_case,
+    owner,
+    account,
+    service_account_event_repository,
+    token_credential_record_repository,
+    time_provider,
+    monkeypatch,
 ):
-    before = service_account_event_repository.get_creation_facts([account.id])[0]
+    before = service_account_event_repository.get_lifecycle_facts([account.id])[0]
+    replace_token_hashes = token_credential_record_repository.replace_token_hashes
+
+    def replace_while_the_clock_moves(*args):
+        # The old token works until the swap: the rotation is dated after it.
+        replace_token_hashes(*args)
+        time_provider.set_current_time(LATER)
+
+    monkeypatch.setattr(token_credential_record_repository, "replace_token_hashes", replace_while_the_clock_moves)
 
     _rotate(use_case, owner, account.id)
 
-    after = service_account_event_repository.get_creation_facts([account.id])[0]
-    assert after == before
+    after = service_account_event_repository.get_lifecycle_facts([account.id])[0]
+    assert (after.created_at, after.created_by_principal_id) == (before.created_at, before.created_by_principal_id)
+    assert before.last_rotated_at is None
+    assert after.last_rotated_at == LATER
 
 
 def test_given_a_plain_member_when_rotating_then_it_is_refused(use_case, account, groups):
@@ -225,6 +242,8 @@ def test_given_a_rotation_when_it_succeeds_then_it_is_audited_without_the_token(
     event = service_account_event_repository.events[-1]
     assert event["event_type"] == "ServiceAccountTokenRotatedEvent"
     assert event["actor_principal_id"] == OWNER_ID
+    assert event["event_data"]["group_id"] == str(GROUP_ID)
+    assert event["event_data"]["group_name"] == GROUP_NAME
 
     payload = json.dumps(event["event_data"])
     assert rotated.token not in payload

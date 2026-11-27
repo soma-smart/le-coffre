@@ -9,7 +9,7 @@ function makeEvent(overrides: Partial<PasswordEvent> = {}): PasswordEvent {
     eventType: 'PasswordAccessedEvent',
     occurredOn: '2026-01-01T00:00:00Z',
     actorPrincipalId: 'u1',
-    actorEmail: 'alice@example.com',
+    actor: { kind: 'user', displayName: 'alice@example.com' },
     eventData: {},
     ...overrides,
   }

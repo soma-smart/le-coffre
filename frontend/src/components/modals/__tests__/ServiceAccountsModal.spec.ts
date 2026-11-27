@@ -1,12 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
+import GroupHistoryModal from '@/components/modals/GroupHistoryModal.vue'
 import ServiceAccountsModal from '@/components/modals/ServiceAccountsModal.vue'
 import { CONTAINER_KEY } from '@/plugins/container'
 import { createTestContext } from '@/test/componentTestHelpers'
 import { InMemoryServiceAccountRepository } from '@/infrastructure/in_memory/InMemoryServiceAccountRepository'
 import type { Group } from '@/domain/group/Group'
 import type { ServiceAccount, ServiceAccountPage } from '@/domain/serviceAccount/ServiceAccount'
+import {
+  ServiceAccountAlreadyRevokedError,
+  ServiceAccountNotFoundError,
+} from '@/domain/serviceAccount/errors'
+import { formatAbsoluteTime } from '@/utils/relativeTime'
 
 const group: Group = {
   id: 'group-1',
@@ -26,6 +32,8 @@ function makeAccount(overrides: Partial<ServiceAccount> = {}): ServiceAccount {
     createdByUserName: 'Ada Owner',
     createdAt: new Date(Date.now() - 3_600_000).toISOString(),
     revokedAt: null,
+    lastUsedAt: null,
+    lastRotatedAt: null,
     ...overrides,
   }
 }
@@ -135,6 +143,63 @@ describe('ServiceAccountsModal', () => {
     expect(wrapper.html()).not.toContain('Invalid Date')
   })
 
+  it('says the creator was deleted when the server no longer knows the user it names', async () => {
+    const repo = new InMemoryServiceAccountRepository().seed(
+      makeAccount({ createdByUserId: 'gone-user', createdByUserName: null }),
+    )
+    const wrapper = await openModal(repo)
+
+    expect(wrapper.find('[data-testid="creator-label"]').text()).toBe('· by a deleted user')
+  })
+
+  it('says an account was never used', async () => {
+    const wrapper = await openModal(new InMemoryServiceAccountRepository().seed(makeAccount()))
+
+    expect(wrapper.find('[data-testid="usage-label"]').text()).toBe('· never used')
+  })
+
+  it('tells when an account was last used, with the exact time on hover', async () => {
+    const lastUsedAt = new Date(Date.now() - 3 * 3_600_000).toISOString()
+    const repo = new InMemoryServiceAccountRepository().seed(makeAccount({ lastUsedAt }))
+    const wrapper = await openModal(repo)
+    const label = wrapper.find('[data-testid="usage-label"]')
+
+    expect(label.text()).toBe('· used 3 hours ago')
+    expect(label.attributes('title')).toBe(formatAbsoluteTime(lastUsedAt))
+  })
+
+  it('never tells a use in the future, when the browser clock lags behind the server', async () => {
+    const lastUsedAt = new Date(Date.now() + 4_000).toISOString()
+    const repo = new InMemoryServiceAccountRepository().seed(makeAccount({ lastUsedAt }))
+    const wrapper = await openModal(repo)
+
+    expect(wrapper.find('[data-testid="usage-label"]').text()).toBe('· used 0 seconds ago')
+  })
+
+  it('says the new token was never used once renewed, until it is', async () => {
+    const lastUsedAt = new Date(Date.now() - 3 * 3_600_000).toISOString()
+    const repo = new InMemoryServiceAccountRepository().seed(makeAccount({ lastUsedAt }))
+    const wrapper = await openModal(repo)
+
+    await wrapper.find('[data-testid="rotate-account"]').trigger('click')
+    await wrapper.find('[data-testid="confirm-yes"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="usage-label"]').text()).toBe('· new token never used')
+  })
+
+  it('never shows the token in its connection guide, even right after showing it once', async () => {
+    const repo = new InMemoryServiceAccountRepository().useTokenGenerator(() => 'lc_sa_s3cr3t')
+    const wrapper = await openModal(repo)
+    await createAccount(wrapper)
+
+    await wrapper.find('[data-testid="connection-guide-toggle"]').trigger('click')
+
+    const guide = wrapper.find('[data-testid="connection-guide"]')
+    expect(guide.find('[data-testid="command-whoami"]').text()).toContain('$LECOFFRE_TOKEN')
+    expect(guide.html()).not.toContain('lc_sa_s3cr3t')
+  })
+
   it('reports how much of the cap is used', async () => {
     const repo = new InMemoryServiceAccountRepository()
       .withMaxActive(3)
@@ -233,11 +298,79 @@ describe('ServiceAccountsModal', () => {
     const repo = new InMemoryServiceAccountRepository().seed(makeAccount()).denyGroup('group-1')
     const wrapper = await openModal(repo)
 
-    expect(wrapper.text()).toContain('Only an owner of this group can manage its service accounts')
+    expect(wrapper.text()).toContain(
+      'Only the owners of this group can manage its service accounts.',
+    )
     expect(wrapper.find('[data-testid="create-account"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="rotate-account"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="revoke-account"]').exists()).toBe(false)
     expect(wrapper.emitted('notOwner')).toBeTruthy()
+  })
+
+  it('translates a cap reached behind its back, reloads the list, and says it once', async () => {
+    const repo = new InMemoryServiceAccountRepository()
+      .withMaxActive(2)
+      .seed(makeAccount({ id: 'a1' }))
+    const wrapper = await openModal(repo)
+    const toastAdd = vi.spyOn(wrapper.vm.$toast, 'add')
+    // Another owner fills the last slot while this dialog is open.
+    repo.seed(makeAccount({ id: 'a2', name: 'other-session' }))
+
+    await createAccount(wrapper, 'one-too-many')
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        severity: 'error',
+        detail: expect.stringContaining(
+          'This group has reached its maximum of active service accounts.',
+        ),
+      }),
+    )
+    expect(wrapper.text()).not.toContain('maximum 2')
+    expect(wrapper.find('[data-testid="active-accounts"]').text()).toBe('2/2 active')
+    // The banner says it on screen; an error message on top would say it twice.
+    expect(wrapper.find('[data-testid="cap-reached"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="error-message"]').exists()).toBe(false)
+  })
+
+  it('does not reload over and over when the group is gone', async () => {
+    const repo = new InMemoryServiceAccountRepository()
+    const list = vi.spyOn(repo, 'listForGroup').mockRejectedValue(new ServiceAccountNotFoundError())
+    const wrapper = await openModal(repo)
+    await flushPromises()
+
+    expect(list).toHaveBeenCalledTimes(1)
+    expect(wrapper.text()).toContain('This group no longer exists.')
+  })
+
+  it('names both causes when a rotation is refused as a conflict, and reloads', async () => {
+    const repo = new InMemoryServiceAccountRepository().seed(makeAccount())
+    const wrapper = await openModal(repo)
+    vi.spyOn(repo, 'rotate').mockRejectedValueOnce(
+      new ServiceAccountAlreadyRevokedError('holds several tokens'),
+    )
+    const list = vi.spyOn(repo, 'listForGroup')
+
+    await wrapper.find('[data-testid="rotate-account"]').trigger('click')
+    await wrapper.find('[data-testid="confirm-yes"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(
+      'the account was revoked in the meantime, or it holds several tokens',
+    )
+    expect(list).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens the group history, where the lifecycle of its accounts is audited', async () => {
+    const wrapper = await openModal(new InMemoryServiceAccountRepository().seed(makeAccount()))
+    expect(wrapper.findComponent(GroupHistoryModal).exists()).toBe(false)
+
+    await wrapper.find('[data-testid="group-history"]').trigger('click')
+    await flushPromises()
+
+    const history = wrapper.findComponent(GroupHistoryModal)
+    expect(history.exists()).toBe(true)
+    expect(history.props('group')).toEqual(group)
   })
 
   it('ignores a list response that arrives after the dialog moved on to another group', async () => {

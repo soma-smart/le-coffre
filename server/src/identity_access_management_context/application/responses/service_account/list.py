@@ -32,6 +32,12 @@ class ServiceAccountSummaryResponse(ServiceAccountItemResponse):
     revoked_at: datetime | None
     """Time of revocation of the service account."""
 
+    last_rotated_at: datetime | None
+    """Time the token was last regenerated."""
+
+    last_used_at: datetime | None
+    """Time a token of the account last authenticated, coarsened."""
+
 
 @dataclass(frozen=True)
 class ListServiceAccountsResponse(ServiceAccountResponse, ListResponse[ServiceAccountSummaryResponse]):

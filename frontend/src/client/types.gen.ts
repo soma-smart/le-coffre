@@ -370,6 +370,22 @@ export type DemoteOwnerToMemberResponse = {
 };
 
 /**
+ * EventActorResponse
+ *
+ * Who performed an event, as shown to humans. Shared by every history endpoint.
+ */
+export type EventActorResponse = {
+    /**
+     * Kind
+     */
+    kind: 'user' | 'service_account';
+    /**
+     * Display Name
+     */
+    display_name: string;
+};
+
+/**
  * ExchangeExtensionDeviceRequest
  */
 export type ExchangeExtensionDeviceRequest = {
@@ -733,9 +749,9 @@ export type GroupEventResponse = {
      */
     actor_principal_id: string;
     /**
-     * Actor Email
+     * Who acted, as shown to humans. Null once deleted.
      */
-    actor_email: string | null;
+    actor: EventActorResponse | null;
     /**
      * Event Data
      */
@@ -1145,9 +1161,9 @@ export type PasswordEventResponse = {
      */
     actor_principal_id: string;
     /**
-     * Actor Email
+     * Who acted, as shown to humans. Null once deleted.
      */
-    actor_email: string | null;
+    actor: EventActorResponse | null;
     /**
      * Event Data
      */
@@ -1344,6 +1360,28 @@ export type SearchUserResponse = {
 };
 
 /**
+ * ServiceAccountMe
+ */
+export type ServiceAccountMe = {
+    /**
+     * Service Account Id
+     */
+    service_account_id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Group Id
+     */
+    group_id: string;
+    /**
+     * Group Name
+     */
+    group_name: string;
+};
+
+/**
  * ServiceAccountSummary
  */
 export type ServiceAccountSummary = {
@@ -1375,6 +1413,14 @@ export type ServiceAccountSummary = {
      * Revoked At
      */
     revoked_at: string | null;
+    /**
+     * Last Rotated At
+     */
+    last_rotated_at: string | null;
+    /**
+     * Last Used At
+     */
+    last_used_at: string | null;
 };
 
 /**
@@ -2325,11 +2371,19 @@ export type GetPasswordPasswordsPasswordIdGetData = {
 
 export type GetPasswordPasswordsPasswordIdGetErrors = {
     /**
+     * Not authenticated, or the Bearer token is invalid, revoked or regenerated
+     */
+    401: unknown;
+    /**
+     * Unknown password, or one the caller cannot read
+     */
+    404: unknown;
+    /**
      * Validation Error
      */
     422: HttpValidationError;
     /**
-     * Vault is locked
+     * Vault is locked: an operator must unlock it, retrying will not help until then
      */
     503: unknown;
 };
@@ -3331,6 +3385,29 @@ export type CreateServiceAccountIamServiceAccountsPostResponses = {
 };
 
 export type CreateServiceAccountIamServiceAccountsPostResponse = CreateServiceAccountIamServiceAccountsPostResponses[keyof CreateServiceAccountIamServiceAccountsPostResponses];
+
+export type GetServiceAccountMeIamServiceAccountsMeGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/iam/service-accounts/me';
+};
+
+export type GetServiceAccountMeIamServiceAccountsMeGetErrors = {
+    /**
+     * The Bearer token is missing, invalid, revoked or regenerated
+     */
+    401: unknown;
+};
+
+export type GetServiceAccountMeIamServiceAccountsMeGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: ServiceAccountMe;
+};
+
+export type GetServiceAccountMeIamServiceAccountsMeGetResponse = GetServiceAccountMeIamServiceAccountsMeGetResponses[keyof GetServiceAccountMeIamServiceAccountsMeGetResponses];
 
 export type RotateServiceAccountTokenIamServiceAccountsServiceAccountIdRotatePostData = {
     body?: never;

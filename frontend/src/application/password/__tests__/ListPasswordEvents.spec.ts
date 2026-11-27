@@ -10,7 +10,7 @@ function seedWithEvents() {
       eventType: 'PasswordCreatedEvent',
       occurredOn: '2024-01-01T00:00:00Z',
       actorPrincipalId: 'u',
-      actorEmail: 'u@example.com',
+      actor: { kind: 'user', displayName: 'u@example.com' },
       eventData: { folder: 'default' },
     })
     repo.addEvent('pwd-1', {
@@ -18,7 +18,7 @@ function seedWithEvents() {
       eventType: 'PasswordSharedEvent',
       occurredOn: '2024-01-05T00:00:00Z',
       actorPrincipalId: 'u',
-      actorEmail: 'u@example.com',
+      actor: { kind: 'user', displayName: 'u@example.com' },
       eventData: { sharedWithGroupId: 'g2' },
     })
     repo.addEvent('pwd-1', {
@@ -26,7 +26,7 @@ function seedWithEvents() {
       eventType: 'PasswordUpdatedEvent',
       occurredOn: '2024-02-01T00:00:00Z',
       actorPrincipalId: 'u',
-      actorEmail: 'u@example.com',
+      actor: { kind: 'user', displayName: 'u@example.com' },
       eventData: { hasNameChanged: true },
     })
     return repo

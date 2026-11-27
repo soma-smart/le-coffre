@@ -105,12 +105,7 @@
           :style="{ width: '20%' }"
         >
           <template #body="slotProps">
-            <div class="flex items-center gap-2">
-              <i class="pi pi-user text-sm"></i>
-              <span class="text-sm">{{
-                slotProps.data.actorEmail || t('common.unknownUser')
-              }}</span>
-            </div>
+            <EventActorLabel :actor="slotProps.data.actor" />
           </template>
         </Column>
 
@@ -171,6 +166,16 @@
                   <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
                 </template>
               </i18n-t>
+              <i18n-t
+                v-else-if="serviceAccountDetailKey(slotProps.data.eventType)"
+                :keypath="serviceAccountDetailKey(slotProps.data.eventType)!"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ serviceAccountLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
               <span v-else>
                 {{ JSON.stringify(slotProps.data.eventData) }}
               </span>
@@ -196,6 +201,7 @@ import { useContainer } from '@/plugins/container'
 import { translateEventType } from '@/utils/eventTypeLabel'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
 import { activeLocale } from '@/utils/relativeTime'
+import EventActorLabel from '@/components/shared/EventActorLabel.vue'
 
 const props = defineProps<{
   group: Group | null
@@ -311,6 +317,20 @@ const targetUserLabel = (eventData: Record<string, unknown>): string => {
     ? `${principalId.substring(0, 8)}...`
     : t('common.unknownUser')
 }
+
+const SERVICE_ACCOUNT_DETAIL_KEYS: Record<string, string> = {
+  ServiceAccountCreatedEvent: 'components.groupHistoryModal.serviceAccountCreated',
+  ServiceAccountTokenRotatedEvent: 'components.groupHistoryModal.serviceAccountTokenRotated',
+  ServiceAccountRevokedEvent: 'components.groupHistoryModal.serviceAccountRevoked',
+}
+
+const serviceAccountDetailKey = (eventType: string): string | undefined =>
+  SERVICE_ACCOUNT_DETAIL_KEYS[eventType]
+
+const serviceAccountLabel = (eventData: Record<string, unknown>): string =>
+  typeof eventData.serviceAccountName === 'string'
+    ? eventData.serviceAccountName
+    : t('common.unknown')
 
 // Stored like a removal; only actor == target tells a self-leave apart.
 const isSelfLeave = (event: GroupEvent): boolean =>

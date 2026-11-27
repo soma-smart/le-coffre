@@ -16,7 +16,9 @@ from identity_access_management_context.application.services import (
     ExtensionRevocationRecordingService,
     ServiceAccountRevocationService,
 )
+from identity_access_management_context.domain.entities import Group, PersonalGroup
 from identity_access_management_context.domain.events import UserDeletedEvent
+from identity_access_management_context.domain.exceptions import UserNotFoundError
 from shared_kernel.application.gateways import DomainEventPublisher, TimeGateway
 from shared_kernel.application.tracing import TracedUseCase
 from shared_kernel.domain.services import AdminPermissionChecker
@@ -54,6 +56,12 @@ class DeleteUserUseCase(TracedUseCase):
     def execute(self, command: DeleteUserCommand) -> None:
         AdminPermissionChecker().ensure_admin(command.requesting_user, "delete users")
         user_id = command.user_id
+
+        # Refused before any side effect. A service account's id would otherwise lose
+        # its token below, then fail on the missing user row: an active account left
+        # with no token, that its owners cannot renew.
+        if self.user_repository.get_by_id(user_id) is None:
+            raise UserNotFoundError(user_id)
 
         # Cut the user's one-time links first. They grant anonymous reads that
         # outlive the account: a link on a password owned by a shared group stays
@@ -101,10 +109,10 @@ class DeleteUserUseCase(TracedUseCase):
         ]
 
         # Revoke the service accounts of every group about to go
-        doomed_group_ids = [group.id for group in orphaned_groups]
-        if personal_group_id is not None:
-            doomed_group_ids.append(personal_group_id)
-        self._service_account_revocation_service.revoke_for_groups(doomed_group_ids, command.requesting_user.user_id)
+        doomed_groups: list[Group | PersonalGroup] = list(orphaned_groups)
+        if personal_group is not None:
+            doomed_groups.append(personal_group)
+        self._service_account_revocation_service.revoke_for_groups(doomed_groups, command.requesting_user.user_id)
 
         for group in orphaned_groups:
             self.group_member_repository.delete_by_group_id(group.id)

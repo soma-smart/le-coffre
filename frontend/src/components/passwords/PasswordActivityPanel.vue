@@ -62,12 +62,10 @@
               :severity="eventSeverity(item.eventType)"
               :title="translateEventType(t, item.eventType)"
             />
-            <span
-              class="shrink-0 text-sm text-muted-color whitespace-nowrap"
-              :title="item.actorEmail || t('common.unknownUser')"
-            >
-              {{ item.actorEmail || t('common.unknownUser') }}
-            </span>
+            <EventActorLabel
+              class="shrink-0 text-muted-color whitespace-nowrap"
+              :actor="item.actor"
+            />
           </div>
           <div v-else class="flex items-center justify-between gap-3">
             <Skeleton
@@ -92,6 +90,7 @@ import { useContainer } from '@/plugins/container'
 import { useRecentPasswordActivity } from '@/composables/useRecentPasswordActivity'
 import { translateEventType } from '@/utils/eventTypeLabel'
 import { activeLocale } from '@/utils/relativeTime'
+import EventActorLabel from '@/components/shared/EventActorLabel.vue'
 
 const { t } = useI18n()
 
