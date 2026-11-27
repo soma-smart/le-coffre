@@ -55,7 +55,7 @@
 
       <!-- Events Table -->
       <DataTable
-        :value="events"
+        :value="displayedEvents"
         :loading="loading"
         paginator
         :rows="10"
@@ -93,8 +93,8 @@
         >
           <template #body="slotProps">
             <Tag
-              :value="formatEventType(slotProps.data.eventType)"
-              :severity="getEventSeverity(slotProps.data.eventType)"
+              :value="formatEventType(slotProps.data)"
+              :severity="getEventSeverity(slotProps.data)"
             />
           </template>
         </Column>
@@ -129,6 +129,16 @@
               <i18n-t
                 v-else-if="slotProps.data.eventType === 'OwnerAddedToGroupEvent'"
                 keypath="components.groupHistoryModal.promotedToOwner"
+                tag="span"
+                scope="global"
+              >
+                <template #name>
+                  <strong>{{ targetUserLabel(slotProps.data.eventData) }}</strong>
+                </template>
+              </i18n-t>
+              <i18n-t
+                v-else-if="isSelfLeave(slotProps.data)"
+                keypath="components.groupHistoryModal.leftGroup"
                 tag="span"
                 scope="global"
               >
@@ -181,7 +191,12 @@
 import { ref, watch, computed } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useI18n } from 'vue-i18n'
-import { groupEventSeverity, type Group, type GroupEvent } from '@/domain/group/Group'
+import {
+  groupEventSeverity,
+  type Group,
+  type GroupEvent,
+  type GroupEventSeverity,
+} from '@/domain/group/Group'
 import { useContainer } from '@/plugins/container'
 import { translateEventType } from '@/utils/eventTypeLabel'
 import { buildPageReportTemplate } from '@/utils/dataTablePageReport'
@@ -209,11 +224,30 @@ const loading = ref(false)
 const dateRange = ref<Date[]>([new Date(), new Date()])
 const selectedEventTypes = ref<string[]>([])
 
+// Client-side only: the backend stores a self-leave as a UserRemovedFromGroupEvent.
+const SELF_LEAVE_FILTER_TYPE = 'UserLeftGroupEvent'
+
+const filterEventType = (event: GroupEvent): string =>
+  isSelfLeave(event) ? SELF_LEAVE_FILTER_TYPE : event.eventType
+
 const availableEventTypes = computed(() => {
-  const types = new Set(events.value.map((event) => event.eventType))
+  const types = new Set(events.value.map((event) => filterEventType(event)))
   return Array.from(types)
-    .map((eventType) => ({ label: translateEventType(t, eventType), value: eventType }))
+    .map((type) => ({
+      label:
+        type === SELF_LEAVE_FILTER_TYPE
+          ? t('components.groupHistoryModal.leftGroupEventType')
+          : translateEventType(t, type),
+      value: type,
+    }))
     .sort((a, b) => a.label.localeCompare(b.label))
+})
+
+// The backend returns removals and self-leaves together; split them here.
+const displayedEvents = computed(() => {
+  if (selectedEventTypes.value.length === 0) return events.value
+  const selected = new Set(selectedEventTypes.value)
+  return events.value.filter((event) => selected.has(filterEventType(event)))
 })
 
 const fetchEvents = async () => {
@@ -235,9 +269,20 @@ const fetchEvents = async () => {
       endDate = end.toISOString()
     }
 
+    const backendEventTypes =
+      selectedEventTypes.value.length > 0
+        ? Array.from(
+            new Set(
+              selectedEventTypes.value.map((type) =>
+                type === SELF_LEAVE_FILTER_TYPE ? 'UserRemovedFromGroupEvent' : type,
+              ),
+            ),
+          )
+        : undefined
+
     events.value = await groupUseCases.listEvents.execute({
       groupId: props.group.id,
-      eventTypes: selectedEventTypes.value.length > 0 ? selectedEventTypes.value : undefined,
+      eventTypes: backendEventTypes,
       startDate,
       endDate,
     })
@@ -287,8 +332,18 @@ const serviceAccountLabel = (eventData: Record<string, unknown>): string =>
     ? eventData.serviceAccountName
     : t('common.unknown')
 
-const formatEventType = (eventType: string): string => translateEventType(t, eventType)
-const getEventSeverity = groupEventSeverity
+// Stored like a removal; only actor == target tells a self-leave apart.
+const isSelfLeave = (event: GroupEvent): boolean =>
+  event.eventType === 'UserRemovedFromGroupEvent' &&
+  event.actorPrincipalId === event.eventData.userId
+
+const formatEventType = (event: GroupEvent): string =>
+  isSelfLeave(event)
+    ? t('components.groupHistoryModal.leftGroupEventType')
+    : translateEventType(t, event.eventType)
+
+const getEventSeverity = (event: GroupEvent): GroupEventSeverity =>
+  isSelfLeave(event) ? 'secondary' : groupEventSeverity(event.eventType)
 
 // Fetch events when modal opens and group changes
 watch(

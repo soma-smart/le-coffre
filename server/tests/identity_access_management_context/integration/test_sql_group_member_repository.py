@@ -391,3 +391,38 @@ def test_given_two_sequential_promotion_attempts_when_promoting_should_only_the_
 
     assert first is True
     assert second is False
+
+
+# Method: remove_non_owner_member
+def test_given_non_owner_member_when_removing_non_owner_should_return_true_and_delete(
+    sql_group_member_repository,
+):
+    group_id = uuid4()
+    user_id = uuid4()
+    sql_group_member_repository.add_member(group_id, user_id, is_owner=False)
+
+    removed = sql_group_member_repository.remove_non_owner_member(group_id, user_id)
+
+    assert removed is True
+    assert not sql_group_member_repository.is_member(group_id, user_id)
+
+
+def test_given_owner_when_removing_non_owner_should_return_false_and_keep_owner(
+    sql_group_member_repository,
+):
+    group_id = uuid4()
+    user_id = uuid4()
+    sql_group_member_repository.add_member(group_id, user_id, is_owner=True)
+
+    removed = sql_group_member_repository.remove_non_owner_member(group_id, user_id)
+
+    assert removed is False
+    assert sql_group_member_repository.is_owner(group_id, user_id)
+
+
+def test_given_nonexistent_member_when_removing_non_owner_should_return_false(
+    sql_group_member_repository,
+):
+    removed = sql_group_member_repository.remove_non_owner_member(uuid4(), uuid4())
+
+    assert removed is False

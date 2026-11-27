@@ -13,6 +13,13 @@ class GroupMemberRepository(Protocol):
         """Remove a member from a group."""
         ...
 
+    def remove_non_owner_member(self, group_id: UUID, principal_id: UUID) -> bool:
+        """Atomically remove a member only if they are not an owner.
+
+        Returns False when nothing was deleted (absent, or promoted since the caller's read).
+        """
+        ...
+
     def is_member(self, group_id: UUID, principal_id: UUID) -> bool:
         """Check if a principal is a member of a group."""
         ...
