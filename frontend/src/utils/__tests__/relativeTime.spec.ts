@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import i18n from '@/i18n'
-import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
+import {
+  formatAbsoluteTime,
+  formatPastRelativeTime,
+  formatRelativeTime,
+} from '@/utils/relativeTime'
 
 const NOW = new Date('2026-07-21T12:40:00Z')
 
@@ -81,5 +85,20 @@ describe('formatRelativeTime', () => {
   it('returns an empty string rather than "Invalid Date" for junk input', () => {
     expect(formatRelativeTime('not-a-date', NOW)).toBe('')
     expect(formatAbsoluteTime('not-a-date')).toBe('')
+  })
+})
+
+describe('formatPastRelativeTime', () => {
+  it('renders a past instant as elapsed time', () => {
+    expect(formatPastRelativeTime('2026-07-21T12:35:00Z', NOW)).toBe('5 minutes ago')
+  })
+
+  it('never puts a recorded instant in the future, when the browser clock lags', () => {
+    expect(formatPastRelativeTime('2026-07-21T12:40:04Z', NOW)).toBe('0 seconds ago')
+    expect(formatPastRelativeTime('2026-07-21T12:40:00Z', NOW)).toBe('0 seconds ago')
+  })
+
+  it('returns an empty string for junk input', () => {
+    expect(formatPastRelativeTime('not-a-date', NOW)).toBe('')
   })
 })

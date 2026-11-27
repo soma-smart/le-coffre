@@ -55,6 +55,7 @@ import { RevokeOneTimeLinkUseCase } from '@/application/oneTimeLink/RevokeOneTim
 import { CreateServiceAccountUseCase } from '@/application/serviceAccount/CreateServiceAccount'
 import { ListServiceAccountsUseCase } from '@/application/serviceAccount/ListServiceAccounts'
 import { RevokeServiceAccountUseCase } from '@/application/serviceAccount/RevokeServiceAccount'
+import { GetServiceAccountApiUrlUseCase } from '@/application/serviceAccount/GetServiceAccountApiUrl'
 import { RotateServiceAccountTokenUseCase } from '@/application/serviceAccount/RotateServiceAccountToken'
 import { CreatePasswordUseCase } from '@/application/password/CreatePassword'
 import { DeletePasswordUseCase } from '@/application/password/DeletePassword'
@@ -201,6 +202,7 @@ export interface Container {
     list: ListServiceAccountsUseCase
     rotate: RotateServiceAccountTokenUseCase
     revoke: RevokeServiceAccountUseCase
+    apiUrl: GetServiceAccountApiUrlUseCase
   }
   notifications: {
     getPreferences: GetNotificationPreferencesUseCase
@@ -302,6 +304,7 @@ export function buildContainer(ports: Ports): Container {
       list: new ListServiceAccountsUseCase(ports.serviceAccountRepository),
       rotate: new RotateServiceAccountTokenUseCase(ports.serviceAccountRepository),
       revoke: new RevokeServiceAccountUseCase(ports.serviceAccountRepository),
+      apiUrl: new GetServiceAccountApiUrlUseCase(ports.serviceAccountRepository),
     },
     notifications: {
       getPreferences: new GetNotificationPreferencesUseCase(

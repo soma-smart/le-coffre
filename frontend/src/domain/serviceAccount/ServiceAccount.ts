@@ -20,6 +20,8 @@ export interface ServiceAccount {
   createdByUserName: string | null
   createdAt: string | null
   revokedAt: string | null
+  lastUsedAt: string | null
+  lastRotatedAt: string | null
 }
 
 export interface CreatedServiceAccount {
@@ -70,6 +72,25 @@ export function isActive(account: ServiceAccount): boolean {
 /** PrimeVue Tag severity for an account's lifecycle state. */
 export function severityForStatus(status: ServiceAccountStatus): 'success' | 'secondary' {
   return status === 'active' ? 'success' : 'secondary'
+}
+
+export type ServiceAccountUsage =
+  { kind: 'neverUsed' } | { kind: 'newTokenNeverUsed' } | { kind: 'used'; at: string }
+
+/**
+ * What the owner learns about an account's use.
+ *
+ * After a renewal, an earlier use says nothing about the new token, so an
+ * active account renewed since its last use reads as "new token never used":
+ * it answers "does the token I just handed out work?". A revoked account has
+ * no token left to ask about, so it only tells its last use.
+ */
+export function usageOf(account: ServiceAccount): ServiceAccountUsage {
+  const { lastUsedAt, lastRotatedAt } = account
+  const usedSinceRenewal =
+    !lastRotatedAt || (lastUsedAt !== null && Date.parse(lastUsedAt) >= Date.parse(lastRotatedAt))
+  if (isActive(account) && !usedSinceRenewal) return { kind: 'newTokenNeverUsed' }
+  return lastUsedAt ? { kind: 'used', at: lastUsedAt } : { kind: 'neverUsed' }
 }
 
 export function activeAccounts(page: ServiceAccountPage): ServiceAccount[] {

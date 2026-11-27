@@ -33,8 +33,22 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 export const formatRelativeTime = (isoDate: string, now: Date = new Date()): string => {
   const target = new Date(isoDate)
   if (Number.isNaN(target.getTime())) return ''
+  return formatOffset(target.getTime() - now.getTime())
+}
 
-  const diffMs = target.getTime() - now.getTime()
+/**
+ * `formatRelativeTime` for an instant the server recorded, such as a last use:
+ * it cannot lie ahead of now. A browser clock running a few seconds behind the
+ * server's would otherwise read a use that just happened as "in 4 seconds".
+ */
+export const formatPastRelativeTime = (isoDate: string, now: Date = new Date()): string => {
+  const target = new Date(isoDate)
+  if (Number.isNaN(target.getTime())) return ''
+  // -0 rather than 0: Intl reads it as past, "0 seconds ago" and not "in 0 seconds".
+  return formatOffset(Math.min(target.getTime() - now.getTime(), -0))
+}
+
+const formatOffset = (diffMs: number): string => {
   const formatter = new Intl.RelativeTimeFormat(activeLocale(), { numeric: 'always' })
 
   for (const [unit, unitMs] of UNITS) {

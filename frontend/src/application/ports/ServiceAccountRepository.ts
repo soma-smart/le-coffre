@@ -12,4 +12,6 @@ export interface ServiceAccountRepository {
   /** Issues a new token and kills the current one. The account itself survives. */
   rotate(serviceAccountId: string): Promise<RotatedServiceAccountToken>
   revoke(serviceAccountId: string): Promise<void>
+  /** The API's absolute address, without a trailing slash, for a script outside the browser. */
+  apiUrl(): string
 }

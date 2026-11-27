@@ -102,13 +102,33 @@
           </div>
         </div>
 
-        <p class="text-xs text-muted-color">
-          {{
-            t('components.passwordIdentityPanel.lastModified', {
-              date: formatDate(password.lastUpdatedAt),
-            })
-          }}
-        </p>
+        <div class="flex flex-col gap-1 text-xs text-muted-color">
+          <p>
+            {{
+              t('components.passwordIdentityPanel.lastModified', {
+                date: formatDate(password.lastUpdatedAt),
+              })
+            }}
+          </p>
+
+          <div class="flex items-center gap-2 w-full min-w-0">
+            <span class="shrink-0">{{ t('components.passwordIdentityPanel.identifier') }}</span>
+            <code class="font-mono truncate min-w-0" data-testid="password-id">{{
+              password.id
+            }}</code>
+            <Button
+              icon="pi pi-copy"
+              text
+              rounded
+              size="small"
+              severity="secondary"
+              :aria-label="t('components.passwordIdentityPanel.copyIdentifier')"
+              v-tooltip.top="t('components.passwordIdentityPanel.identifierHint')"
+              data-testid="copy-password-id"
+              @click="copyIdentifier"
+            />
+          </div>
+        </div>
       </div>
     </template>
   </Card>
@@ -196,6 +216,9 @@ const copyWebsite = () => {
   if (props.password.url)
     copyText(props.password.url, t('components.passwordIdentityPanel.website'))
 }
+
+const copyIdentifier = () =>
+  copyText(props.password.id, t('components.passwordIdentityPanel.identifier'))
 
 const copyPassword = async () => {
   const value = await revealAndCopy()

@@ -679,7 +679,10 @@
       "fetchFailedDetail": "Failed to fetch password",
       "copiedSummary": "Copied",
       "copiedDetail": "{label} copied to clipboard",
-      "copyFailedDetail": "Failed to copy {label}"
+      "copyFailedDetail": "Failed to copy {label}",
+      "identifier": "Identifier",
+      "copyIdentifier": "Copy identifier",
+      "identifierHint": "To read this secret from an automation, with a service account"
     },
     "passwordListPane": {
       "backToGroups": "Back to groups",
@@ -786,7 +789,28 @@
       "alreadyRevokedError": "This service account was already revoked. The list has been refreshed.",
       "notFoundError": "This service account no longer exists. The list has been refreshed.",
       "rotateConflictError": "Could not rotate this token: the account was revoked in the meantime, or it holds several tokens. The list has been refreshed.",
-      "groupNotFoundError": "This group no longer exists."
+      "groupNotFoundError": "This group no longer exists.",
+      "creatorDeleted": "a deleted user",
+      "lastUsedLabel": "· used {relative}",
+      "neverUsedLabel": "· never used",
+      "newTokenNeverUsedLabel": "· new token never used"
+    },
+    "serviceAccountConnectionGuide": {
+      "title": "Connect an automation",
+      "tokenStep": "Hand the token to the automation in the {variable} environment variable, for instance from your CI's secrets. Never write it into a script or a repository.",
+      "whoAmILabel": "Check the connection:",
+      "whoAmIAnswer": "Answers with the account's name and its group's.",
+      "readSecretLabel": "Read one of the group's secrets, once its identifier is in the {idVariable} variable (“Copy identifier” button on the secret):",
+      "readSecretAnswer": "Nothing is printed: the secret goes into the {secretVariable} variable, for the rest of the script. Never print it: the CI log would keep it.",
+      "statusTitle": "When it fails:",
+      "status401": "token missing, invalid, revoked or renewed;",
+      "status403": "route refused: a service account only makes these two reads;",
+      "status404": "no such secret, or outside this account's group. Both answer the same, on purpose;",
+      "status422": "malformed identifier: the variable does not hold an identifier copied from a secret;",
+      "status503": "vault locked. An administrator has to unlock it, then the automation can retry.",
+      "copyCommandAria": "Copy the command",
+      "commandCopied": "Command copied",
+      "copyFailed": "Could not copy the command"
     },
     "oneTimeLinksTable": {
       "emptyMessage": "No one-time link to show.",

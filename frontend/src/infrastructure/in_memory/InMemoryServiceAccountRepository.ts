@@ -24,6 +24,7 @@ export class InMemoryServiceAccountRepository implements ServiceAccountRepositor
   private maxActive = 3
   private deniedGroups = new Set<string>()
   private creator = { id: 'user-1', name: 'Ada Owner' }
+  private api = 'https://vault.example.com/api'
   private idGenerator: () => string = () => `account-${this.accounts.size + 1}`
   private tokenGenerator: () => string = () => `token-${this.accounts.size + 1}`
 
@@ -82,6 +83,8 @@ export class InMemoryServiceAccountRepository implements ServiceAccountRepositor
       createdByUserName: this.creator.name || null,
       createdAt: new Date().toISOString(),
       revokedAt: null,
+      lastUsedAt: null,
+      lastRotatedAt: null,
     })
     return { id, groupId, name, token }
   }
@@ -98,13 +101,25 @@ export class InMemoryServiceAccountRepository implements ServiceAccountRepositor
 
   async rotate(serviceAccountId: string): Promise<RotatedServiceAccountToken> {
     const account = this.usableAccount(serviceAccountId)
-    // Only the token changes: the entry keeps its name, group and creation facts.
+    // Only the token changes: the entry keeps its name, group, creation facts and
+    // last use. Its renewal date moves, as on the server.
+    this.accounts.set(account.id, { ...account, lastRotatedAt: new Date().toISOString() })
     return { id: account.id, token: this.tokenGenerator() }
   }
 
   async revoke(serviceAccountId: string): Promise<void> {
     const account = this.usableAccount(serviceAccountId)
     this.accounts.set(account.id, { ...account, revokedAt: new Date().toISOString() })
+  }
+
+  apiUrl(): string {
+    return this.api
+  }
+
+  /** Test-only: where the API answers. */
+  servedAt(url: string): this {
+    this.api = url
+    return this
   }
 
   private accountsOf(groupId: string): ServiceAccount[] {

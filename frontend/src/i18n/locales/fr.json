@@ -679,7 +679,10 @@
       "fetchFailedDetail": "Échec de la récupération du mot de passe",
       "copiedSummary": "Copié",
       "copiedDetail": "{label} copié dans le presse-papiers",
-      "copyFailedDetail": "Échec de la copie de {label}"
+      "copyFailedDetail": "Échec de la copie de {label}",
+      "identifier": "Identifiant",
+      "copyIdentifier": "Copier l'identifiant",
+      "identifierHint": "Pour lire ce secret depuis un automate, avec un compte de service"
     },
     "passwordListPane": {
       "backToGroups": "Retour aux groupes",
@@ -786,7 +789,28 @@
       "alreadyRevokedError": "Ce compte de service a déjà été révoqué. La liste a été actualisée.",
       "notFoundError": "Ce compte de service n'existe plus. La liste a été actualisée.",
       "rotateConflictError": "Impossible de renouveler ce jeton : le compte a été révoqué entre-temps, ou il détient plusieurs jetons. La liste a été actualisée.",
-      "groupNotFoundError": "Ce groupe n'existe plus."
+      "groupNotFoundError": "Ce groupe n'existe plus.",
+      "creatorDeleted": "un utilisateur supprimé",
+      "lastUsedLabel": "· utilisé {relative}",
+      "neverUsedLabel": "· jamais utilisé",
+      "newTokenNeverUsedLabel": "· nouveau jeton jamais utilisé"
+    },
+    "serviceAccountConnectionGuide": {
+      "title": "Brancher un automate",
+      "tokenStep": "Donnez le jeton à l'automate dans la variable d'environnement {variable}, par exemple depuis les secrets de votre CI. Ne l'écrivez jamais dans un script ni dans un dépôt.",
+      "whoAmILabel": "Vérifier le branchement :",
+      "whoAmIAnswer": "Répond le nom du compte et celui de son groupe.",
+      "readSecretLabel": "Lire un secret du groupe, une fois son identifiant dans la variable {idVariable} (bouton « Copier l'identifiant » sur le secret) :",
+      "readSecretAnswer": "Rien ne s'affiche : le secret est placé dans la variable {secretVariable}, pour la suite du script. Ne l'affichez jamais : le journal de la CI le conserverait.",
+      "statusTitle": "En cas d'échec :",
+      "status401": "jeton absent, invalide, révoqué ou renouvelé ;",
+      "status403": "route refusée : un compte de service ne fait que ces deux lectures ;",
+      "status404": "secret inexistant, ou hors du groupe de ce compte. Les deux cas répondent pareil, exprès ;",
+      "status422": "identifiant mal formé : la variable ne contient pas un identifiant copié depuis un secret ;",
+      "status503": "coffre verrouillé. Un administrateur doit le déverrouiller, puis l'automate peut réessayer.",
+      "copyCommandAria": "Copier la commande",
+      "commandCopied": "Commande copiée",
+      "copyFailed": "Impossible de copier la commande"
     },
     "oneTimeLinksTable": {
       "emptyMessage": "Aucun lien à usage unique à afficher.",

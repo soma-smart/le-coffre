@@ -1,3 +1,4 @@
+import { client } from '@/client/client.gen'
 import {
   createServiceAccountIamServiceAccountsPost,
   listServiceAccountsIamServiceAccountsGet,
@@ -89,6 +90,11 @@ export class BackendServiceAccountRepository implements ServiceAccountRepository
       (detail) => new ServiceAccountAlreadyRevokedError(detail),
     )
   }
+
+  apiUrl(): string {
+    const base = new URL(client.getConfig().baseUrl ?? '/api', window.location.origin)
+    return base.href.replace(/\/+$/, '')
+  }
 }
 
 /**
@@ -123,6 +129,8 @@ function toServiceAccount(dto: ServiceAccountSummary): ServiceAccount {
     createdByUserName: dto.created_by_user_name ?? null,
     createdAt: dto.created_at ?? null,
     revokedAt: dto.revoked_at ?? null,
+    lastUsedAt: dto.last_used_at ?? null,
+    lastRotatedAt: dto.last_rotated_at ?? null,
   }
 }
 

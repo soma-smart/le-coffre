@@ -6,6 +6,7 @@ import {
   revokedAccounts,
   severityForStatus,
   statusOf,
+  usageOf,
   validateServiceAccountName,
   SERVICE_ACCOUNT_NAME_MAX_LENGTH,
   type ServiceAccount,
@@ -22,6 +23,8 @@ function account(overrides: Partial<ServiceAccount> = {}): ServiceAccount {
     createdByUserName: 'Ada Owner',
     createdAt: '2026-01-01T12:00:00Z',
     revokedAt: null,
+    lastUsedAt: null,
+    lastRotatedAt: null,
     ...overrides,
   }
 }
@@ -78,6 +81,42 @@ describe('the creation cap', () => {
     expect(canCreateAnotherServiceAccount(page({ accounts: [], active: 3, maxActive: 3 }))).toBe(
       false,
     )
+  })
+})
+
+describe('service account usage', () => {
+  const USED = '2026-03-01T12:00:00Z'
+  const RENEWED_BEFORE = '2026-02-01T12:00:00Z'
+  const RENEWED_AFTER = '2026-04-01T12:00:00Z'
+
+  it('is never used until a token authenticates', () => {
+    expect(usageOf(account())).toEqual({ kind: 'neverUsed' })
+  })
+
+  it('tells its last use', () => {
+    expect(usageOf(account({ lastUsedAt: USED }))).toEqual({ kind: 'used', at: USED })
+  })
+
+  it('tells its last use when it came after the last renewal', () => {
+    const renewedThenUsed = account({ lastUsedAt: USED, lastRotatedAt: RENEWED_BEFORE })
+    expect(usageOf(renewedThenUsed)).toEqual({ kind: 'used', at: USED })
+  })
+
+  it('says the new token was never used when the renewal came after the last use', () => {
+    const usedThenRenewed = account({ lastUsedAt: USED, lastRotatedAt: RENEWED_AFTER })
+    expect(usageOf(usedThenRenewed)).toEqual({ kind: 'newTokenNeverUsed' })
+  })
+
+  it('says the new token was never used when nothing ever authenticated', () => {
+    expect(usageOf(account({ lastRotatedAt: RENEWED_AFTER }))).toEqual({
+      kind: 'newTokenNeverUsed',
+    })
+  })
+
+  it('only tells the last use of a revoked account, whose token is gone', () => {
+    const revoked = { revokedAt: '2026-05-01T12:00:00Z', lastRotatedAt: RENEWED_AFTER }
+    expect(usageOf(account({ ...revoked, lastUsedAt: USED }))).toEqual({ kind: 'used', at: USED })
+    expect(usageOf(account(revoked))).toEqual({ kind: 'neverUsed' })
   })
 })
 

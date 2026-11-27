@@ -4,6 +4,7 @@ import { useToast } from 'primevue'
 import { useI18n } from 'vue-i18n'
 import ConfirmationModal from '@/components/modals/ConfirmationModal.vue'
 import GroupHistoryModal from '@/components/modals/GroupHistoryModal.vue'
+import ServiceAccountConnectionGuide from '@/components/serviceAccounts/ServiceAccountConnectionGuide.vue'
 import { useContainer } from '@/plugins/container'
 import type { Group } from '@/domain/group/Group'
 import {
@@ -13,6 +14,7 @@ import {
   revokedAccounts,
   severityForStatus,
   statusOf,
+  usageOf,
   SERVICE_ACCOUNT_NAME_MAX_LENGTH,
   type ServiceAccount,
   type ServiceAccountPage,
@@ -24,7 +26,11 @@ import {
   ServiceAccountNotOwnerError,
   TooManyActiveServiceAccountsError,
 } from '@/domain/serviceAccount/errors'
-import { formatAbsoluteTime, formatRelativeTime } from '@/utils/relativeTime'
+import {
+  formatAbsoluteTime,
+  formatPastRelativeTime,
+  formatRelativeTime,
+} from '@/utils/relativeTime'
 
 const props = defineProps<{
   visible: boolean
@@ -274,17 +280,42 @@ function handle(err: unknown, fallback: string, operation: Operation) {
   if (listIsStale(err, operation)) {
     void refresh()
   }
-  error.value = messageFor(err, fallback, operation)
+  const message = messageFor(err, fallback, operation)
+  // A full cap already has its banner, brought back by the reload: the same news
+  // twice on screen would read as two problems.
+  const capReached = operation === 'create' && err instanceof TooManyActiveServiceAccountsError
+  error.value = capReached ? null : message
   toast.add({
     severity: 'error',
     summary: t('components.serviceAccountsModal.errorSummary'),
-    detail: error.value,
+    detail: message,
     life: 5000,
   })
 }
 
 function severityFor(account: ServiceAccount) {
   return severityForStatus(statusOf(account))
+}
+
+function creatorName(account: ServiceAccount): string {
+  if (account.createdByUserName) return account.createdByUserName
+  // The creation event names a creator the server no longer knows: a deleted user.
+  return account.createdByUserId
+    ? t('components.serviceAccountsModal.creatorDeleted')
+    : t('components.serviceAccountsModal.creatorUnknown')
+}
+
+function usageLabel(account: ServiceAccount): { text: string; exact?: string } {
+  const usage = usageOf(account)
+  if (usage.kind === 'used') {
+    return {
+      text: t('components.serviceAccountsModal.lastUsedLabel', {
+        relative: formatPastRelativeTime(usage.at),
+      }),
+      exact: formatAbsoluteTime(usage.at),
+    }
+  }
+  return { text: t(`components.serviceAccountsModal.${usage.kind}Label`) }
 }
 </script>
 
@@ -305,7 +336,14 @@ function severityFor(account: ServiceAccount) {
          flush against the top edge therefore loses that outline to the clip.
          One pixel of headroom keeps the frame whole. -->
     <div class="pt-px">
-      <Message v-if="error" severity="error" :closable="false" class="mb-3">{{ error }}</Message>
+      <Message
+        v-if="error"
+        severity="error"
+        :closable="false"
+        class="mb-3"
+        data-testid="error-message"
+        >{{ error }}</Message
+      >
 
       <Message severity="warn" :closable="false" class="mb-3">
         {{ t('components.serviceAccountsModal.disclaimer') }}
@@ -468,13 +506,12 @@ function severityFor(account: ServiceAccount) {
             }}</span>
             <span class="ml-2" data-testid="creator-label">
               {{
-                t('components.serviceAccountsModal.creatorLabel', {
-                  name:
-                    account.createdByUserName ??
-                    t('components.serviceAccountsModal.creatorUnknown'),
-                })
+                t('components.serviceAccountsModal.creatorLabel', { name: creatorName(account) })
               }}
             </span>
+            <span class="ml-2" :title="usageLabel(account).exact" data-testid="usage-label">{{
+              usageLabel(account).text
+            }}</span>
             <span
               v-if="account.revokedAt"
               class="ml-2"
@@ -510,6 +547,8 @@ function severityFor(account: ServiceAccount) {
         </div>
       </li>
     </ul>
+
+    <ServiceAccountConnectionGuide />
   </Dialog>
 
   <GroupHistoryModal v-if="showGroupHistory" v-model:visible="showGroupHistory" :group="group" />
